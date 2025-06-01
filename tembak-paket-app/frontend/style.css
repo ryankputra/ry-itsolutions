@@ -1,0 +1,467 @@
+/* Reset dasar dan variabel */
+:root {
+    --bg-color: #f0f4f8; /* Latar belakang lebih terang dan modern */
+    --card-bg-color: #ffffff;
+    --text-color: #334155; /* Warna teks utama lebih lembut */
+    --heading-color: #1e293b; /* Warna heading lebih gelap */
+    --primary-color: #3b82f6; /* Biru yang lebih vibrant */
+    --primary-hover-color: #2563eb;
+    --secondary-color: #64748b; /* Abu-abu netral */
+    --secondary-hover-color: #475569;
+    --border-color: #e2e8f0; /* Border lebih halus */
+    --input-bg-color: #f8fafc;
+    --danger-color: #ef4444;
+    --success-color: #22c55e;
+    --warning-color: #f59e0b;
+    --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-family-heading: 'Poppins', var(--font-family-base);
+    --border-radius: 0.5rem; /* 8px */
+    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --box-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --box-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-base);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.7;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    width: 90%;
+    max-width: 800px; /* Sedikit lebih lebar untuk konten utama */
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 1rem; /* Padding standar 16px */
+}
+
+/* Header */
+.app-header {
+    background-color: var(--primary-color);
+    /* background: linear-gradient(90deg, var(--primary-color), #60a5fa); */
+    color: white;
+    padding: 2rem 0; /* Padding lebih besar */
+    text-align: center;
+    margin-bottom: 2.5rem; /* 40px */
+}
+.app-header .header-content {
+    /* Jika perlu styling khusus untuk konten di dalam header container */
+}
+.app-header h1 {
+    font-family: var(--font-family-heading);
+    font-weight: 700;
+    font-size: 2em; /* 32px */
+    margin: 0 0 0.25rem 0;
+    color: white; 
+}
+.app-header .subtitle {
+    font-size: 1.125em; /* 18px */
+    font-weight: 300;
+    opacity: 0.9;
+}
+
+
+/* Main Content & Card Styling */
+.main-content {
+    padding-bottom: 2.5rem; /* 40px */
+}
+
+.section-card {
+    background-color: var(--card-bg-color);
+    padding: 2rem; /* 32px */
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-md);
+    margin-bottom: 2.5rem; /* 40px */
+}
+.section-card:last-child {
+    margin-bottom: 0;
+}
+
+.section-title, .section-subtitle { /* Judul di dalam card */
+    font-family: var(--font-family-heading);
+    font-weight: 600;
+    color: var(--heading-color);
+    margin-top: 0;
+    margin-bottom: 1.5rem; /* 24px */
+}
+.section-title { /* Untuk judul utama section, seperti "Panduan Pembelian" */
+    font-size: 1.75em; /* 28px */
+    text-align: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.section-subtitle { /* Untuk sub-judul di dalam card, seperti "1. Autentikasi OTP" */
+    font-size: 1.25em; /* 20px */
+    color: var(--primary-color);
+}
+
+.sub-section {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.sub-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.25rem; /* 20px */
+}
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem; /* 8px */
+    font-weight: 500;
+    font-size: 0.9em; /* 14.4px */
+    color: #4b5563; /* Abu-abu lebih gelap untuk label */
+}
+
+input[type="text"],
+input[type="tel"],
+select {
+    width: 100%;
+    padding: 0.75rem 1rem; /* 12px 16px */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1em;
+    font-family: var(--font-family-base);
+    background-color: var(--card-bg-color);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+input[type="text"]:focus,
+input[type="tel"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); 
+}
+input[readonly] {
+    background-color: var(--input-bg-color);
+    color: #6b7280;
+    cursor: default;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1.5rem; /* 12px 24px */
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: var(--font-family-heading);
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    margin-right: 0.5rem; /* 8px */
+    margin-bottom: 0.5rem; 
+    box-shadow: var(--box-shadow-sm);
+}
+button:hover {
+    background-color: var(--primary-hover-color);
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-md);
+}
+button:active {
+    transform: translateY(0px);
+    box-shadow: var(--box-shadow-sm);
+}
+button:disabled {
+    background-color: #94a3b8; 
+    color: #e2e8f0;
+    cursor: not-allowed;
+    transform: translateY(0px);
+    box-shadow: none;
+}
+button.secondary {
+    background-color: var(--secondary-color);
+    box-shadow: var(--box-shadow-sm);
+}
+button.secondary:hover {
+    background-color: var(--secondary-hover-color);
+}
+button.secondary:disabled {
+    background-color: #cbd5e1;
+    color: #94a3b8;
+}
+
+.form-group-inline {
+    display: flex;
+    align-items: center; 
+    gap: 0.75rem; /* 12px */
+}
+.form-group-inline input {
+    flex-grow: 1;
+    margin-bottom: 0; 
+}
+.form-group-inline button {
+    flex-shrink: 0;
+    margin-bottom: 0;
+    margin-right: 0; /* Hapus margin kanan jika ini satu-satunya tombol */
+}
+.button-group { /* Untuk beberapa tombol dalam satu baris/grup */
+    display: flex;
+    flex-wrap: wrap; /* Agar tombol pindah baris jika tidak cukup tempat */
+    gap: 0.75rem;
+}
+.button-group button {
+    margin-bottom: 0; 
+    margin-right: 0; /* Margin diatur oleh gap */
+}
+
+/* Tata Cara Pembelian */
+.featured-section {
+    background-color: #f0f9ff; /* Latar belakang khusus untuk bagian unggulan */
+    border: 1px solid #bae6fd;
+    padding-top: 2.5rem; /* Padding atas lebih */
+}
+.featured-section .section-title {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tutorial-steps {
+    display: grid;
+    grid-template-columns: 1fr; 
+    gap: 1.5rem; /* 24px */
+}
+.step-card {
+    background-color: var(--card-bg-color); 
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius); 
+    padding: 1.5rem; /* 24px */
+    box-shadow: var(--box-shadow-sm); 
+    transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+    position: relative; 
+    overflow: hidden; 
+}
+.step-card::before { 
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px; 
+    background-color: var(--primary-color);
+}
+.step-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--box-shadow-md); 
+}
+
+.step-card h4 { 
+    font-size: 0.9em; /* 14.4px */
+    font-weight: 600;
+    color: white;
+    background-color: var(--primary-color); 
+    padding: 0.375rem 0.75rem; /* 6px 12px */
+    border-radius: 9999px; /* Pil shape */
+    display: inline-block; 
+    margin-top: 0;
+    margin-bottom: 1rem; /* 16px */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.step-card ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0; 
+}
+.step-card ul li {
+    margin-bottom: 0.625rem; /* 10px */
+    padding-left: 1.75rem; /* 28px, ruang untuk ikon */
+    position: relative;
+    font-size: 0.95em;
+    color: var(--text-color);
+}
+.step-card ul li::before { 
+    content: '✓'; 
+    position: absolute;
+    left: 0.25rem; /* 4px */
+    top: 1px; /* Penyesuaian vertikal */
+    color: var(--success-color); 
+    font-weight: bold;
+    font-size: 1.2em; 
+}
+
+.step-card.önemli-step::before { 
+    background-color: var(--danger-color);
+}
+.step-card.önemli-step h4 {
+    background-color: var(--danger-color); 
+}
+.step-card .final-instruction {
+    font-weight: 600; 
+    color: var(--danger-color);
+    text-align: center;
+    font-size: 1.1em; 
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: rgba(239, 68, 68, 0.05); 
+    border-radius: var(--border-radius);
+    border: 1px dashed rgba(239, 68, 68, 0.2);
+}
+
+/* Specific Areas Lainnya */
+.balance-info {
+    margin-top: 1rem;
+    font-size: 1.1em;
+}
+.balance-info strong {
+    color: var(--success-color); /* Saldo pakai warna sukses */
+    font-weight: 600;
+}
+#packageDetailsArea {
+    border: 1px solid var(--border-color);
+    padding: 1.25rem; /* 20px */
+    margin-top: 1.25rem;
+    background-color: #f9fafb; 
+    border-radius: var(--border-radius);
+}
+#packageDetailsArea h4 { 
+    font-family: var(--font-family-heading);
+    margin-top: 0;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.125em; /* 18px */
+    margin-bottom: 1rem;
+}
+#packageDetailsArea p, #packageDetailsArea ul {
+    margin-bottom: 0.625rem;
+    font-size: 0.9em;
+    color: var(--text-color);
+}
+#packageDetailsArea ul {
+    padding-left: 1.25rem;
+    list-style: disc;
+}
+pre#apiResponse {
+    background-color: var(--heading-color); 
+    color: #cbd5e1; 
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.875em; /* 14px */
+    line-height: 1.6;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #475569;
+}
+#qris-area { margin-top: 1.25rem; text-align: center; }
+#qris-area img { 
+    max-width: 200px; 
+    height: auto; 
+    margin: 0 auto 0.75rem auto; 
+    display: block;
+    border: 4px solid white;
+    box-shadow: var(--box-shadow-sm);
+}
+#qris-area p { font-size: 0.9em; }
+
+/* Footer */
+.app-footer {
+    text-align: center;
+    padding: 2rem 0;
+    background-color: var(--heading-color); 
+    color: #94a3b8; 
+    font-size: 0.875em;
+    margin-top: 2.5rem; 
+}
+.app-footer p {
+    margin: 0;
+}
+
+/* Fleksibilitas/Responsif */
+@media (max-width: 768px) { /* Tablet dan di bawahnya */
+    .container {
+        width: 90%;
+    }
+    .app-header h1 {
+        font-size: 1.75em;
+    }
+    .app-header .subtitle {
+        font-size: 1em;
+    }
+    .section-title {
+        font-size: 1.5em;
+    }
+    .section-subtitle {
+        font-size: 1.15em;
+    }
+
+    .form-group-inline {
+        flex-direction: column; 
+        align-items: stretch; 
+    }
+    .form-group-inline input {
+        margin-bottom: 0.75rem;
+    }
+    .form-group-inline button {
+        margin-top: 0;
+        width: 100%; 
+    }
+    .button-group {
+        flex-direction: column;
+    }
+    .button-group button {
+        width: 100%;
+    }
+    .tutorial-steps { 
+        grid-template-columns: 1fr;
+    }
+     #purchasing-guide-section .section-title { /* Judul panduan di mobile */
+        font-size: 1.5em; 
+        display: block; 
+        left: auto;
+        position: static;
+        transform: none;
+    }
+}
+
+@media (min-width: 769px) { /* Untuk layar lebih besar dari tablet */
+    .tutorial-steps {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Kolom adaptif */
+    }
+}
+
+@media (max-width: 480px) { /* Mobile kecil */
+    body {
+        font-size: 15px;
+    }
+    .main-container .card, .card { /* Card padding di mobile */
+        padding: 1.5rem; /* 24px */
+    }
+    input[type="text"],
+    input[type="tel"],
+    select,
+    button {
+        padding: 0.75rem 0.875rem; /* 12px 14px */
+        font-size: 0.95em;
+    }
+    .app-header {
+        padding: 1.5rem 0;
+    }
+    .app-header h1 {
+        font-size: 1.5em;
+    }
+     .app-header .subtitle {
+        font-size: 0.9em;
+    }
+}
