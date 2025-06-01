@@ -1,21 +1,21 @@
 /* Reset dasar dan variabel */
 :root {
-    --bg-color: #f0f4f8; /* Latar belakang lebih terang dan modern */
+    --bg-color: #eef2f7; 
     --card-bg-color: #ffffff;
-    --text-color: #334155; /* Warna teks utama lebih lembut */
-    --heading-color: #1e293b; /* Warna heading lebih gelap */
-    --primary-color: #3b82f6; /* Biru yang lebih vibrant */
+    --text-color: #34495e; 
+    --heading-color: #1e293b; 
+    --primary-color: #3b82f6; 
     --primary-hover-color: #2563eb;
-    --secondary-color: #64748b; /* Abu-abu netral */
+    --secondary-color: #64748b; 
     --secondary-hover-color: #475569;
-    --border-color: #e2e8f0; /* Border lebih halus */
+    --border-color: #e2e8f0; 
     --input-bg-color: #f8fafc;
     --danger-color: #ef4444;
-    --success-color: #22c55e;
+    --success-color: #22c55e; 
     --warning-color: #f59e0b;
     --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-family-heading: 'Poppins', var(--font-family-base);
-    --border-radius: 0.5rem; /* 8px */
+    --border-radius: 0.5rem; 
     --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
     --box-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     --box-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
@@ -39,73 +39,65 @@ body {
 
 .container {
     width: 90%;
-    max-width: 800px; /* Sedikit lebih lebar untuk konten utama */
+    max-width: 800px; 
     margin-left: auto;
     margin-right: auto;
-    padding: 0 1rem; /* Padding standar 16px */
+    padding: 0 1rem; 
 }
 
 /* Header */
 .app-header {
     background-color: var(--primary-color);
-    /* background: linear-gradient(90deg, var(--primary-color), #60a5fa); */
     color: white;
-    padding: 2rem 0; /* Padding lebih besar */
+    padding: 2rem 0; 
     text-align: center;
-    margin-bottom: 2.5rem; /* 40px */
-}
-.app-header .header-content {
-    /* Jika perlu styling khusus untuk konten di dalam header container */
+    margin-bottom: 2.5rem; 
 }
 .app-header h1 {
     font-family: var(--font-family-heading);
     font-weight: 700;
-    font-size: 2em; /* 32px */
+    font-size: 2em; 
     margin: 0 0 0.25rem 0;
     color: white; 
 }
 .app-header .subtitle {
-    font-size: 1.125em; /* 18px */
+    font-size: 1.125em; 
     font-weight: 300;
     opacity: 0.9;
 }
 
-
 /* Main Content & Card Styling */
-.main-content {
-    padding-bottom: 2.5rem; /* 40px */
-}
-
-.section-card {
+.main-content .container > .section-card { /* Hanya card langsung di bawah .main-content .container */
     background-color: var(--card-bg-color);
-    padding: 2rem; /* 32px */
+    padding: 2rem; 
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow-md);
-    margin-bottom: 2.5rem; /* 40px */
+    margin-bottom: 2.5rem; 
 }
-.section-card:last-child {
+.main-content .container > .section-card:last-child {
     margin-bottom: 0;
 }
 
-.section-title, .section-subtitle { /* Judul di dalam card */
+
+.section-title, .section-subtitle { 
     font-family: var(--font-family-heading);
     font-weight: 600;
     color: var(--heading-color);
     margin-top: 0;
-    margin-bottom: 1.5rem; /* 24px */
+    margin-bottom: 1.5rem; 
 }
-.section-title { /* Untuk judul utama section, seperti "Panduan Pembelian" */
-    font-size: 1.75em; /* 28px */
+.section-title { 
+    font-size: 1.75em; 
     text-align: center;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
 }
-.section-subtitle { /* Untuk sub-judul di dalam card, seperti "1. Autentikasi OTP" */
-    font-size: 1.25em; /* 20px */
+.section-subtitle { 
+    font-size: 1.25em; 
     color: var(--primary-color);
 }
 
-.sub-section {
+.sub-section { /* Untuk mengelompokkan konten di dalam .section-card */
     padding-bottom: 1.5rem;
     margin-bottom: 1.5rem;
     border-bottom: 1px solid var(--border-color);
@@ -119,7 +111,7 @@ body {
 
 /* Form Elements */
 .form-group {
-    margin-bottom: 1.25rem; /* 20px */
+    margin-bottom: 1.25rem; 
 }
 .form-group:last-child {
     margin-bottom: 0;
@@ -127,17 +119,17 @@ body {
 
 label {
     display: block;
-    margin-bottom: 0.5rem; /* 8px */
+    margin-bottom: 0.5rem; 
     font-weight: 500;
-    font-size: 0.9em; /* 14.4px */
-    color: #4b5563; /* Abu-abu lebih gelap untuk label */
+    font-size: 0.9em; 
+    color: #4b5563; 
 }
 
 input[type="text"],
 input[type="tel"],
 select {
     width: 100%;
-    padding: 0.75rem 1rem; /* 12px 16px */
+    padding: 0.75rem 1rem; 
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     font-size: 1em;
@@ -161,7 +153,7 @@ input[readonly] {
 button {
     background-color: var(--primary-color);
     color: white;
-    padding: 0.75rem 1.5rem; /* 12px 24px */
+    padding: 0.75rem 1.5rem; 
     border: none;
     border-radius: var(--border-radius);
     cursor: pointer;
@@ -169,7 +161,7 @@ button {
     font-weight: 500;
     font-family: var(--font-family-heading);
     transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
-    margin-right: 0.5rem; /* 8px */
+    margin-right: 0.5rem; 
     margin-bottom: 0.5rem; 
     box-shadow: var(--box-shadow-sm);
 }
@@ -204,7 +196,7 @@ button.secondary:disabled {
 .form-group-inline {
     display: flex;
     align-items: center; 
-    gap: 0.75rem; /* 12px */
+    gap: 0.75rem; 
 }
 .form-group-inline input {
     flex-grow: 1;
@@ -213,39 +205,63 @@ button.secondary:disabled {
 .form-group-inline button {
     flex-shrink: 0;
     margin-bottom: 0;
-    margin-right: 0; /* Hapus margin kanan jika ini satu-satunya tombol */
+    margin-right: 0; 
 }
-.button-group { /* Untuk beberapa tombol dalam satu baris/grup */
+.button-group { 
     display: flex;
-    flex-wrap: wrap; /* Agar tombol pindah baris jika tidak cukup tempat */
+    flex-wrap: wrap; 
     gap: 0.75rem;
 }
 .button-group button {
     margin-bottom: 0; 
-    margin-right: 0; /* Margin diatur oleh gap */
+    margin-right: 0; 
 }
+
+/* Styling untuk Checkbox */
+.form-group-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem; /* Spasi setelah checkbox group */
+}
+.form-group-checkbox input[type="checkbox"] {
+    width: auto; 
+    margin-right: 0.5rem; /* 8px */
+    accent-color: var(--primary-color); 
+    height: 1.2em; 
+    width: 1.2em;
+    cursor: pointer;
+}
+.form-group-checkbox .checkbox-label {
+    margin-bottom: 0; 
+    font-weight: normal; 
+    font-size: 0.95em;
+    cursor: pointer;
+    user-select: none; /* Agar teks label tidak terseleksi saat klik checkbox */
+}
+
 
 /* Tata Cara Pembelian */
 .featured-section {
-    background-color: #f0f9ff; /* Latar belakang khusus untuk bagian unggulan */
+    background-color: #f0f9ff; 
     border: 1px solid #bae6fd;
-    padding-top: 2.5rem; /* Padding atas lebih */
+    padding-top: 1.5rem; /* Kurangi padding atas agar judul lebih dekat ke border atas card */
 }
-.featured-section .section-title {
+.featured-section .section-title { /* Judul "Panduan Pembelian" */
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
+    font-size: 1.6em; /* Sedikit disesuaikan */
 }
 
 .tutorial-steps {
     display: grid;
     grid-template-columns: 1fr; 
-    gap: 1.5rem; /* 24px */
+    gap: 1.5rem; 
 }
 .step-card {
     background-color: var(--card-bg-color); 
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius); 
-    padding: 1.5rem; /* 24px */
+    padding: 1.25rem; /* 20px */
     box-shadow: var(--box-shadow-sm); 
     transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
     position: relative; 
@@ -266,15 +282,15 @@ button.secondary:disabled {
 }
 
 .step-card h4 { 
-    font-size: 0.9em; /* 14.4px */
+    font-size: 0.9em; 
     font-weight: 600;
     color: white;
     background-color: var(--primary-color); 
-    padding: 0.375rem 0.75rem; /* 6px 12px */
-    border-radius: 9999px; /* Pil shape */
+    padding: 0.375rem 0.75rem; 
+    border-radius: 9999px; 
     display: inline-block; 
     margin-top: 0;
-    margin-bottom: 1rem; /* 16px */
+    margin-bottom: 1rem; 
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -284,8 +300,8 @@ button.secondary:disabled {
     margin-bottom: 0; 
 }
 .step-card ul li {
-    margin-bottom: 0.625rem; /* 10px */
-    padding-left: 1.75rem; /* 28px, ruang untuk ikon */
+    margin-bottom: 0.625rem; 
+    padding-left: 1.75rem; 
     position: relative;
     font-size: 0.95em;
     color: var(--text-color);
@@ -293,14 +309,14 @@ button.secondary:disabled {
 .step-card ul li::before { 
     content: '✓'; 
     position: absolute;
-    left: 0.25rem; /* 4px */
-    top: 1px; /* Penyesuaian vertikal */
+    left: 0.25rem; 
+    top: 1px; 
     color: var(--success-color); 
     font-weight: bold;
     font-size: 1.2em; 
 }
 
-.step-card.önemli-step::before { 
+.step-card.önemli-step::before { /* Pastikan class 'önemli-step' ada di HTML jika ingin ini berlaku */
     background-color: var(--danger-color);
 }
 .step-card.önemli-step h4 {
@@ -324,12 +340,12 @@ button.secondary:disabled {
     font-size: 1.1em;
 }
 .balance-info strong {
-    color: var(--success-color); /* Saldo pakai warna sukses */
+    color: var(--success-color); 
     font-weight: 600;
 }
 #packageDetailsArea {
     border: 1px solid var(--border-color);
-    padding: 1.25rem; /* 20px */
+    padding: 1.25rem; 
     margin-top: 1.25rem;
     background-color: #f9fafb; 
     border-radius: var(--border-radius);
@@ -339,7 +355,7 @@ button.secondary:disabled {
     margin-top: 0;
     color: var(--primary-color);
     font-weight: 600;
-    font-size: 1.125em; /* 18px */
+    font-size: 1.125em; 
     margin-bottom: 1rem;
 }
 #packageDetailsArea p, #packageDetailsArea ul {
@@ -358,7 +374,7 @@ pre#apiResponse {
     border-radius: var(--border-radius);
     white-space: pre-wrap;
     word-wrap: break-word;
-    font-size: 0.875em; /* 14px */
+    font-size: 0.875em; 
     line-height: 1.6;
     max-height: 300px;
     overflow-y: auto;
@@ -389,7 +405,7 @@ pre#apiResponse {
 }
 
 /* Fleksibilitas/Responsif */
-@media (max-width: 768px) { /* Tablet dan di bawahnya */
+@media (max-width: 768px) { 
     .container {
         width: 90%;
     }
@@ -405,7 +421,13 @@ pre#apiResponse {
     .section-subtitle {
         font-size: 1.15em;
     }
-
+    #purchasing-guide-section .section-title { 
+        font-size: 1.4em; /* Sedikit lebih kecil di mobile untuk judul panduan */
+        display: block; 
+        left: auto;
+        position: static;
+        transform: none;
+    }
     .form-group-inline {
         flex-direction: column; 
         align-items: stretch; 
@@ -426,33 +448,26 @@ pre#apiResponse {
     .tutorial-steps { 
         grid-template-columns: 1fr;
     }
-     #purchasing-guide-section .section-title { /* Judul panduan di mobile */
-        font-size: 1.5em; 
-        display: block; 
-        left: auto;
-        position: static;
-        transform: none;
-    }
 }
 
-@media (min-width: 769px) { /* Untuk layar lebih besar dari tablet */
+@media (min-width: 769px) { 
     .tutorial-steps {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Kolom adaptif */
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
     }
 }
 
-@media (max-width: 480px) { /* Mobile kecil */
+@media (max-width: 480px) { 
     body {
         font-size: 15px;
     }
-    .main-container .card, .card { /* Card padding di mobile */
-        padding: 1.5rem; /* 24px */
+    .main-content .container > .section-card, .card { 
+        padding: 1.25rem; /* Kurangi padding card di mobile kecil */
     }
     input[type="text"],
     input[type="tel"],
     select,
     button {
-        padding: 0.75rem 0.875rem; /* 12px 14px */
+        padding: 0.625rem 0.75rem; /* 10px 12px */
         font-size: 0.95em;
     }
     .app-header {
