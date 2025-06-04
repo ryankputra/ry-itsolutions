@@ -68,7 +68,7 @@
                     <div class="form-group">
                         <label for="phoneReqOtp">Nomor HP (Format: 628...):</label>
                         <div class="form-group-inline">
-                            <input type="tel" id="phoneReqOtp" placeholder="628xxxxxxxxxx">
+                            <input type="tel" id="phoneReqOtp" placeholder="628xxxxxxxxxx" oninput="validateAndSyncPhone(this)">
                             <button id="btnRequestOtp" onclick="requestOtp(this)">Kirim OTP</button>
                         </div>
                     </div>
@@ -162,6 +162,7 @@
                     <div class="form-group">
                         <button id="btnCheckActive" onclick="checkActivePackages(this)">Cek Paket Aktif Saya</button>
                     </div>
+                    <div id="activePackagesResult" class="result-display-area"></div>
                 </div>
                 <div class="sub-section" id="transaction-status-section">
                     <h3 class="section-subtitle">4. Cek Status Transaksi</h3>

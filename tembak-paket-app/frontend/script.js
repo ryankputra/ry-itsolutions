@@ -44,9 +44,28 @@ async function makeApiCall(url, buttonElement = null, method = 'GET', body = nul
     }
 }
 
+// --- FUNGSI VALIDASI DAN SINKRONISASI NOMOR TELEPON ---
+function validateAndSyncPhone(inputElement) {
+    let phoneNumber = inputElement.value;
+
+    // 1. Validasi: Ubah awalan '0' menjadi '62'
+    if (phoneNumber.startsWith('0')) {
+        phoneNumber = '62' + phoneNumber.substring(1);
+        inputElement.value = phoneNumber; // Update nilai input field phoneReqOtp
+    }
+
+    // 2. Sinkronisasi: Isi otomatis nomor tujuan
+    const targetPhoneInput = document.getElementById('targetPhone');
+    if (targetPhoneInput) {
+        targetPhoneInput.value = phoneNumber;
+    }
+}
+
 // --- FUNGSI-FUNGSI TERKAIT DAFTAR PAKET DENGAN FILTER ---
 async function fetchPackageList(buttonElement) {
     const backendUrl = `${BACKEND_BASE_URL}/packages`;
+    // Pastikan nomor tujuan juga bersih jika ada interaksi yang mungkin memicunya
+    // Namun, fetchPackageList biasanya tidak terkait langsung dengan input nomor OTP.
     const result = await makeApiCall(backendUrl, buttonElement);
 
     const packageSelect = document.getElementById('packageSelect');
@@ -161,7 +180,11 @@ async function checkAccountBalance(buttonElement) {
 }
 
 async function requestOtp(buttonElement) {
-    const phone = document.getElementById('phoneReqOtp').value;
+    const phoneElement = document.getElementById('phoneReqOtp');
+    // Panggil validasi dan sinkronisasi SEBELUM mendapatkan nilainya
+    validateAndSyncPhone(phoneElement); 
+    const phone = phoneElement.value; // Ambil nilai yang sudah divalidasi
+
     if (!phone || !/^62\d{9,13}$/.test(phone)) {
         alert('Format Nomor HP salah. Gunakan format 628xxxxxxxxxx.');
         return;
@@ -433,16 +456,44 @@ function startQrisTimer(duration, timerId) {
 
 async function checkActivePackages(buttonElement) {
     const accessToken = document.getElementById('accessToken').value; 
+    const displayElement = document.getElementById('activePackagesResult');
+
     if (!accessToken) {
         alert('Access Token diperlukan. Harap login OTP dahulu (untuk nomor yang ingin dicek).');
+        if (displayElement) displayElement.textContent = 'Access Token diperlukan untuk mengecek paket aktif.';
         return;
     }
+
+    if (displayElement) {
+        displayElement.innerHTML = 'Mengecek paket aktif...'; // Pesan loading
+    }
+
     const backendUrl = `${BACKEND_BASE_URL}/active-packages?access_token=${accessToken}`;
     const result = await makeApiCall(backendUrl, buttonElement);
-    if(result && result.message){
-         alert(`Paket Aktif: ${result.message}`);
-    } else if(result && !result.status) {
-        alert(`Gagal cek paket aktif: ${result.message || 'Error tidak diketahui'}`);
+
+    if (displayElement) {
+        if (result && result.status && result.data) {
+            if (Array.isArray(result.data) && result.data.length > 0) {
+                let htmlContent = `<p><strong>${result.message || 'Paket Aktif Ditemukan:'}</strong></p><ul>`;
+                result.data.forEach(pkg => {
+                    // Sesuaikan properti (pkg.nama_paket, pkg.kadaluarsa) dengan respons API Anda
+                    const packageName = pkg.package_name || pkg.name || JSON.stringify(pkg); 
+                    const expiry = pkg.expiry_date || pkg.valid_until || '';
+                    htmlContent += `<li>${packageName} ${expiry ? `(Berlaku s/d: ${expiry})` : ''}</li>`;
+                });
+                htmlContent += `</ul>`;
+                displayElement.innerHTML = htmlContent;
+            } else if (Array.isArray(result.data) && result.data.length === 0) {
+                displayElement.textContent = result.message || 'Tidak ada paket aktif yang ditemukan.';
+            } else {
+                // Jika data ada tapi bukan array, tampilkan pesan dan data sebagai JSON
+                displayElement.innerHTML = `<p>${result.message || 'Respons diterima:'}</p><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+            }
+        } else if (result && result.message) { // Menangani pesan error atau info dari API
+            displayElement.textContent = `Info: ${result.message}`;
+        } else { // Fallback jika ada masalah tak terduga
+            displayElement.textContent = 'Gagal mengambil data paket aktif atau respons tidak valid.';
+        }
     }
 }
 
@@ -464,5 +515,10 @@ async function checkTransactionStatus(buttonElement) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tidak ada aksi otomatis saat load, tunggu interaksi pengguna
+    // Panggil validasi dan sinkronisasi saat halaman dimuat jika phoneReqOtp sudah ada nilainya
+    const phoneReqOtpInput = document.getElementById('phoneReqOtp');
+    if (phoneReqOtpInput && phoneReqOtpInput.value) {
+        validateAndSyncPhone(phoneReqOtpInput);
+    }
+    // Aksi lain saat load bisa ditambahkan di sini
 });
