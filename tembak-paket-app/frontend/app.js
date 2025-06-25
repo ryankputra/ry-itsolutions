@@ -1,0 +1,2024 @@
+// frontend/app.js
+
+const app = document.getElementById('app');
+const API_BASE_URL = '/api';
+
+// Variabel global untuk menyimpan state aplikasi
+let currentUser = null;
+let visiblePackages = [];
+let phoneAuth = {
+    phone: null,
+    accessToken: null,
+    authId: null
+};
+let kmspBalance = null; // Diatur ke null untuk menandakan belum dimuat atau error
+let latestAnnouncement = null;
+
+// ===============================================
+// === INITIALISASI APLIKASI & LOGIKA ROUTING ====
+// ===============================================
+
+/**
+ * Fungsi utama yang dipanggil saat aplikasi dimuat atau hash URL berubah.
+ * Menginisialisasi data pengguna dan merender tampilan yang sesuai.
+ */
+
+async function main() {
+    await checkLoginStatus(); // Memeriksa status login pengguna
+    if (currentUser) { // Jika ada currentUser yang berhasil diidentifikasi
+        const promises = [
+            initKMSPsession(), // Ini hanya akan berfungsi jika ada kmspAuth di localStorage
+            fetchAnnouncement() // <-- Endpoint ini sekarang harusnya hanya memerlukan isAuthenticated (di server.js)
+        ];
+
+        // HANYA ambil saldo KMSP jika pengguna adalah admin
+        if (currentUser.role === 'admin') { // <-- Kunci di sini
+            promises.push(fetchKMSPBalance()); // Endpoint ini memerlukan isAdmin
+        }
+
+        await Promise.all(promises);
+    }
+    renderApp();
+    window.addEventListener('hashchange', renderApp); 
+}
+
+/**
+ * Menginisialisasi atau memperpanjang sesi login nomor HP KMSP dari localStorage.
+ * Memperbarui objek phoneAuth global.
+ */
+async function initKMSPsession() {
+    try {
+        const savedKMSPAuth = JSON.parse(localStorage.getItem('kmspAuth'));
+        if (savedKMSPAuth && savedKMSPAuth.phone && savedKMSPAuth.authId) {
+            const { data, status } = await apiFetch('/auth/extend-session', {
+                method: 'POST',
+                body: { phone: savedKMSPAuth.phone, auth_id: savedKMSPAuth.authId }
+            });
+            // Pastikan status HTTP 200 dan status API true dari backend
+            if (status === 200 && data.status && data.data) {
+                phoneAuth.phone = savedKMSPAuth.phone;
+                phoneAuth.accessToken = data.data.access_token;
+                phoneAuth.authId = data.data.auth_id;
+                // Simpan ulang info sesi KMSP ke localStorage (mungkin ada token baru)
+                localStorage.setItem('kmspAuth', JSON.stringify({ phone: phoneAuth.phone, authId: phoneAuth.authId }));
+            } else {
+                 // Jika respons tidak valid, lempar error
+                 throw new Error(data.message || "Sesi KMSP tidak valid lagi atau respons tidak sesuai.");
+            }
+        }
+    } catch (error) {
+        console.error("Gagal memperpanjang sesi KMSP:", error.message);
+        localStorage.removeItem('kmspAuth'); // Hapus sesi yang rusak dari localStorage
+        phoneAuth = { phone: null, accessToken: null, authId: null }; // Reset objek phoneAuth
+    }
+}
+
+/**
+ * Mengambil saldo KMSP dari backend. Hasilnya disimpan di variabel kmspBalance global.
+ * Digunakan terutama untuk panel admin atau kondisi pembelian paket.
+ */
+async function fetchKMSPBalance() {
+    try {
+        const { data, status } = await apiFetch('/admin/kmsp-balance');
+        // Periksa status HTTP, status dari data API, dan properti 'balance'
+        if (status === 200 && data.status && typeof data.data?.balance !== 'undefined') {
+            kmspBalance = data.data.balance;
+        } else {
+            // Jika respons tidak valid, atur kmspBalance ke null dan log peringatan
+            kmspBalance = null;
+            console.warn("Respons saldo KMSP tidak valid:", data.message || "Format data balance tidak ditemukan.");
+            // Tampilkan feedback error di dashboard jika sedang di halaman admin
+            if (window.location.hash === '#admin') {
+                displayFeedback('balance-feedback', data.message || "Gagal memuat saldo KMSP. Cek API Key & koneksi.", true);
+            }
+        }
+    } catch (error) {
+        // Tangani error jika gagal terhubung ke API
+        console.warn("Tidak dapat mengambil saldo KMSP:", error.message);
+        kmspBalance = null; // Atur ke null jika ada error
+        if (window.location.hash === '#admin') {
+            displayFeedback('balance-feedback', `Gagal memuat saldo KMSP: ${error.message}`, true);
+        }
+    }
+}
+
+/**
+ * Mengambil pengumuman terbaru dari backend. Hasilnya disimpan di variabel latestAnnouncement global.
+ */
+async function fetchAnnouncement() {
+    try {
+        const { data, status } = await apiFetch('/user/announcement');
+        // Periksa status HTTP, status dari data API, dan properti 'data'
+        if (status === 200 && data.status && data.data) {
+            latestAnnouncement = data.data;
+        } else {
+            latestAnnouncement = null; // Atur ke null jika tidak ada pengumuman atau respons tidak valid
+            console.warn("Respons pengumuman tidak valid:", data.message || "Data pengumuman tidak ditemukan.");
+        }
+    } catch (error) {
+        console.warn("Tidak dapat mengambil pengumuman:", error.message);
+        latestAnnouncement = null;
+    }
+}
+
+/**
+ * Merender tampilan utama aplikasi berdasarkan hash URL.
+ * Mengarahkan pengguna yang sudah login ke dashboard dan pengguna belum login ke halaman autentikasi.
+ */
+function renderApp() {
+    const hash = window.location.hash || '#';
+    
+    app.innerHTML = '<div class="loading-spinner"></div>';
+
+    if (currentUser) {
+        // Jika pengguna sudah login
+        // Jika hash kosong atau masih di halaman login/register, arahkan ke dashboard
+        const targetHash = (hash === '#' || hash === '#login' || hash === '#register') ? '#dashboard' : hash;
+        if (window.location.hash !== targetHash) {
+            window.location.hash = targetHash; // Paksa perubahan hash
+            return; // Hentikan eksekusi, renderApp akan dipanggil lagi oleh hashchange event
+        }
+        // Render halaman berdasarkan hash yang sudah divalidasi
+        switch (targetHash) {
+            case '#history':
+                renderDashboard('history'); // Render dashboard dengan tab riwayat transaksi
+                break;
+            case '#admin':
+                // Hanya izinkan admin mengakses panel admin
+                if (currentUser.role === 'admin') {
+                    renderDashboard('admin'); // Render dashboard dengan tab panel admin
+                } else {
+                    window.location.hash = '#dashboard'; // Arahkan kembali ke dashboard jika bukan admin
+                }
+                break;
+            case '#dashboard':
+            default:
+                renderDashboard('packages'); // Default ke dashboard dengan tab beli paket
+        }
+    } else {
+        // Jika pengguna belum login, arahkan ke halaman login atau register
+        const targetHash = (hash === '#register') ? '#register' : '#login';
+        if (window.location.hash !== targetHash) {
+            window.location.hash = targetHash; // Paksa perubahan hash
+            return; // Hentikan eksekusi
+        }
+        // Render halaman login atau register
+        switch (targetHash) {
+            case '#register':
+                renderRegisterPage();
+                break;
+            case '#login':
+            default:
+                renderLoginPage();
+        }
+    }
+}
+
+// ===============================================
+// === FUNGSI LOGIKA PEMBELIAN & PEMBAYARAN EKSTERNAL ===
+// (Dipindahkan ke sini agar dapat diakses sebelum dipanggil di renderPackagesPage)
+// ===============================================
+
+/**
+ * Memulai alur pembelian paket. Merender modal pilihan pembayaran.
+ * @param {Event} e - Objek event dari klik tombol.
+ * @param {string} packageId - ID paket yang akan dibeli.
+ */
+function handlePurchase(e, packageId) {
+    const button = e.currentTarget;
+    if (!button) return;
+    
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span>`;
+    renderPaymentChoiceModal(packageId, button);
+}
+
+/**
+ * Merender modal untuk memilih metode pembayaran provider.
+ * @param {string} packageId - ID paket yang akan dibeli.
+ * @param {HTMLElement} originalButton - Tombol "Beli Sekarang" asli untuk direset.
+ */
+function renderPaymentChoiceModal(packageId, originalButton) {
+    const pkg = visiblePackages.find(p => p.package_code === packageId);
+    if (!pkg) { 
+        alert('Error: Paket tidak ditemukan.');
+        if (originalButton) { // Pastikan tombol ada sebelum mengaktifkan
+            originalButton.disabled = false;
+            originalButton.textContent = 'Beli Sekarang';
+        }
+        return;
+    }
+
+    const platformFee = pkg.platform_fee || 0;
+    const originalPrice = pkg.original_price || 0;
+    const pkgNameLower = (pkg.name || '').toLowerCase();
+    const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
+    const paymentMethods = pkg.payment_methods || [];
+    
+    let paymentSelectionUI = '';
+
+    if (isPulsaMethod) {
+        paymentSelectionUI = `
+            <div class="form-group">
+               <label>Metode Pembayaran:</label>
+               <p><strong>Pulsa (Memotong Saldo)</strong></p>
+               <input type="hidden" id="payment-method-select" value="balance">
+            </div>
+        `;
+    } else if (paymentMethods.length > 0) {
+        const paymentOptionsHTML = paymentMethods.map(method => `<option value="${method.payment_method}">${method.payment_method_display_name}</option>`).join('');
+        paymentSelectionUI = `
+            <div class="form-group">
+               <label for="payment-method-select">Pilih Metode Pembayaran Provider:</label>
+               <select id="payment-method-select">${paymentOptionsHTML}</select>
+            </div>
+        `;
+    } else {
+        paymentSelectionUI = `<p class="error-message">Tidak ada metode pembayaran yang tersedia untuk paket ini.</p>`;
+    }
+
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return; // Tambahkan pengecekan
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header"><h2>Konfirmasi Pembelian</h2><button class="modal-close">&times;</button></div>
+                <h4>${pkg.name}</h4>
+                <div class="form-group">
+                    <label>Harga dari Provider:</label>
+                    <p><strong>Rp ${originalPrice.toLocaleString('id-ID')}</strong></p>
+                </div>
+                <div class="form-group">
+                    <label>Biaya Layanan:</label>
+                    <p><strong>Rp ${platformFee.toLocaleString('id-ID')}</strong> (dipotong dari saldo)</p>
+                </div>
+                ${paymentSelectionUI}
+                <div id="modal-error-container"></div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                     <button id="cancel-purchase-btn" class="secondary" style="flex: 1;">Batal</button>
+                     <button id="confirm-purchase-btn" style="flex: 1;" ${paymentMethods.length === 0 && !isPulsaMethod ? 'disabled' : ''}>Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const closeModal = () => {
+        modalContainer.innerHTML = '';
+        if (originalButton) { // Pastikan tombol ada sebelum mengaktifkan
+            originalButton.disabled = false;
+            originalButton.textContent = 'Beli Sekarang';
+        }
+    };
+
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+    document.getElementById('cancel-purchase-btn')?.addEventListener('click', closeModal);
+
+    const confirmBtn = document.getElementById('confirm-purchase-btn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async (e) => {
+            const selectedMethodElement = document.getElementById('payment-method-select');
+            const selectedMethod = selectedMethodElement ? selectedMethodElement.value : '';
+            await executePurchase(e.currentTarget, packageId, selectedMethod, platformFee);
+        });
+    }
+}
+
+/**
+ * Melakukan pembelian paket dengan memanggil API backend.
+ * @param {HTMLElement} button - Tombol yang memicu pembelian.
+ * @param {string} packageId - ID paket yang dibeli.
+ * @param {string} paymentMethod - Metode pembayaran yang dipilih.
+ * @param {number} fee - Biaya layanan paket.
+ */
+async function executePurchase(button, packageId, paymentMethod, fee) {
+    if (!button) return;
+    
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Mengirim...`;
+    displayFeedback('modal-error-container', '', false);
+    
+    try {
+        const { data, status } = await apiFetch('/purchase', {
+            method: 'POST',
+            body: { packageId, phone: phoneAuth.phone, accessToken: phoneAuth.accessToken, paymentMethod }
+        });
+        
+        // Perbarui saldo pengguna di UI setelah pembelian
+        if (currentUser && typeof data.newBalance === 'number') {
+            currentUser.balance = data.newBalance;
+            const userBalanceElement = document.getElementById('user-balance');
+            if (userBalanceElement) {
+                userBalanceElement.textContent = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
+            }
+        }
+
+        if (status === 202) { // Kode status 202 menunjukkan pembayaran eksternal diperlukan
+            renderExternalPaymentModal(data.payment_data);
+        } else if (status === 200 && data.status) { // Pembelian berhasil langsung
+            renderFinalStatusModal("Status Transaksi", data.message || 'Sukses');
+        } else { // Pembelian gagal dengan respons non-202/non-200
+            throw new Error(data.message || 'Pembelian gagal dengan respons yang tidak diharapkan.');
+        }
+    } catch (error) {
+        let friendlyErrorMessage = "Terjadi kesalahan. Silakan coba lagi.";
+        if (error.message.toLowerCase().includes('maximum pending transaction')) {
+            friendlyErrorMessage = " Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)";
+        } else if (error.message) {
+            friendlyErrorMessage = error.message; 
+        }
+        displayFeedback('modal-error-container', friendlyErrorMessage, true);
+        button.disabled = false;
+        button.textContent = 'Lanjutkan';
+    }
+}
+
+/**
+ * Merender modal untuk menyelesaikan pembayaran eksternal (QRIS/DeepLink).
+ * @param {Object} paymentData - Data pembayaran dari backend.
+ */
+function renderExternalPaymentModal(paymentData) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    let paymentContent = '';
+    let hasValidPaymentMethod = false;
+
+    // Cek jika pembayaran QRIS
+    if (paymentData.is_qris && paymentData.qris_data && paymentData.qris_data.qr_code) {
+        paymentContent = `
+            <h3>Scan QR Code di Bawah</h3>
+            <div id="qris-image-container" style="padding: 1rem; background: white; display: inline-block; border-radius: 8px; margin: 0 auto;"></div>
+            <p>Total Bayar ke Provider: <strong>Rp ${(paymentData.amount || 0).toLocaleString('id-ID')}</strong></p>
+        `;
+        hasValidPaymentMethod = true;
+    } 
+    // Cek jika pembayaran menggunakan Deeplink (aplikasi lain)
+    else if (paymentData.have_deeplink && paymentData.deeplink_data && paymentData.deeplink_data.deeplink_url) {
+         paymentContent = `
+            <h3>Klik untuk Membayar</h3>
+            <a href="${decodeURIComponent(paymentData.deeplink_data.deeplink_url)}" target="_blank" class="button" style="text-decoration: none;">Buka Aplikasi ${paymentData.deeplink_data.payment_method || 'Pembayaran'}</a>
+            <p>Total Bayar ke Provider: <strong>Rp ${(paymentData.amount || 0).toLocaleString('id-ID')}</strong></p>
+         `;
+         hasValidPaymentMethod = true;
+    } 
+    // Jika tidak ada metode pembayaran yang valid
+    else {
+        paymentContent = `<p class="error-message">Data pembayaran tidak valid dari provider.</p>`;
+    }
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <div class="modal-header">
+                    <h2>Selesaikan Pembayaran</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                ${paymentContent}
+                <p style="font-size: 0.9em; margin-top: 1.5rem; color: #555;">Biaya layanan telah dipotong dari saldo Anda. Mohon selesaikan pembayaran ini.</p>
+                <p id="payment-status">Menunggu Konfirmasi Pembayaran dari Provider...</p>
+                <div class="loading-spinner" id="payment-spinner" style="display: block; border-top-color: var(--primary-color);"></div>
+            </div>
+        </div>
+    `;
+
+    // Inisialisasi QR Code jika ada data QRIS
+    if (hasValidPaymentMethod && paymentData.is_qris && paymentData.qris_data && paymentData.qris_data.qr_code) {
+        const qrContainer = document.getElementById('qris-image-container');
+        if (qrContainer && typeof QRCode !== 'undefined') {
+            new QRCode(qrContainer, {
+                text: paymentData.qris_data.qr_code,
+                width: 220,
+                height: 220,
+            });
+        }
+    }
+
+    let pollingInterval = setInterval(async () => {
+        try {
+            const { data, status } = await apiFetch(`/purchase/status/${paymentData.trx_id}`);
+            if (status === 200 && data.status && data.data?.status === 'success') {
+                clearInterval(pollingInterval);
+                const spinnerEl = document.getElementById('payment-spinner');
+                const statusEl = document.getElementById('payment-status');
+                if (spinnerEl) spinnerEl.style.display = 'none';
+                
+                if(statusEl) {
+                    statusEl.textContent = 'Pembayaran Berhasil Dikonfirmasi!';
+                    statusEl.style.color = 'var(--success-color)';
+                }
+                setTimeout(() => {
+                    closeModal(); // Tutup modal
+                    renderApp(); // Render app untuk update riwayat, saldo dll.
+                }, 2500);
+            }
+        } catch (error) {
+            console.error("Polling error:", error);
+            if (error.message.includes('404')) clearInterval(pollingInterval);
+        }
+    }, 5000);
+
+    const closeModal = () => {
+        clearInterval(pollingInterval);
+        modalContainer.innerHTML = '';
+        renderApp();
+    };
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+}
+
+/**
+ * Merender modal tampilan status akhir transaksi (sukses/gagal).
+ * @param {string} title - Judul modal.
+ * @param {string} message - Pesan status.
+ */
+function renderFinalStatusModal(title, message) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header"><h2>${title}</h2></div>
+                <p>${message}</p>
+                <div style="text-align: right; margin-top: 1.5rem;">
+                    <button id="close-final-modal" class="secondary" style="width: auto;">Tutup</button>
+                </div>
+            </div>
+        </div>
+    `;
+    const closeModal = () => {
+        modalContainer.innerHTML = '';
+        renderApp(); // Render ulang aplikasi setelah modal ditutup
+    };
+    document.getElementById('close-final-modal')?.addEventListener('click', closeModal);
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeModal(); });
+}
+
+
+// ===============================================
+// === FUNGSI TEMPLATE & RENDER HALAMAN ==========
+// ===============================================
+
+/**
+ * Merender halaman login ke elemen 'app'.
+ * Mengatur event listener untuk form login.
+ */
+function renderLoginPage() {
+    app.innerHTML = `
+        <div class="auth-container">
+            <h1>Login ke Panel</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" required autocomplete="current-password">
+                        <span class="password-toggle" onclick="togglePasswordVisibility(this)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </span>
+                    </div>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+            <div id="feedback-container"></div>
+            <p class="auth-link">Belum punya akun? <a href="#register">Daftar di sini</a></p>
+        </div>
+    `;
+    document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+}
+
+/**
+ * Merender halaman registrasi ke elemen 'app'.
+ * Mengatur event listener untuk form registrasi.
+ */
+function renderRegisterPage() {
+    app.innerHTML = `
+        <div class="auth-container">
+            <h1>Buat Akun Baru</h1>
+            <form id="register-form">
+                 <div class="form-group">
+                    <label for="name">Nama Lengkap</label>
+                    <input type="text" id="name" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password (min. 6 karakter)</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" minlength="6" required autocomplete="new-password">
+                        <span class="password-toggle" onclick="togglePasswordVisibility(this)">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </span>
+                    </div>
+                </div>
+                <button type="submit">Daftar</button>
+            </form>
+            <div id="feedback-container"></div>
+            <p class="auth-link">Sudah punya akun? <a href="#login">Login di sini</a></p>
+        </div>
+    `;
+    document.getElementById('register-form')?.addEventListener('submit', handleRegister);
+}
+
+/**
+ * Merender struktur dashboard utama (sidebar dan area konten).
+ * Berdasarkan activePage, ia akan memuat konten yang sesuai (paket, riwayat, atau admin).
+ * @param {string} activePage - Halaman yang aktif: 'packages', 'history', atau 'admin'.
+ */
+function renderDashboard(activePage = 'packages') {
+    const isAdmin = currentUser.role === 'admin';
+    app.innerHTML = `
+        <button class="menu-toggle" id="menu-toggle-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <div class="dashboard-container">
+            <aside class="sidebar" id="sidebar">
+                <h2>Ryystore V2</h2>
+                <div class="user-info">
+                    <p>Selamat datang,</p>
+                    <strong id="user-name">${currentUser.name}</strong>
+                    <p>Saldo Anda:</p>
+                    <p id="user-balance">Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
+                </div>
+                <button id="topup-btn">Top Up Saldo</button>
+                <nav>
+                    <ul>
+                        <li><a href="#dashboard" class="${activePage === 'packages' ? 'active' : ''}">Beli Paket</a></li>
+                        <li><a href="#history" class="${activePage === 'history' ? 'active' : ''}">Riwayat Transaksi</a></li>
+                        ${isAdmin ? `<li><a href="#admin" class="${activePage === 'admin' ? 'active' : ''}">Panel Admin</a></li>` : ''}
+                    </ul>
+                </nav>
+                <button id="logout-btn" class="secondary">Logout</button>
+            </aside>
+            <main class="main-content" id="page-content-area">
+                <div class="loading-spinner"></div>
+            </main>
+        </div>
+        <div id="modal-container"></div>
+    `;
+    
+    // Atur event listener untuk tombol logout dan top up
+    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+    document.getElementById('topup-btn')?.addEventListener('click', renderTopUpModal);
+    
+    // Logika untuk toggle sidebar di perangkat mobile
+    const menuToggleBtn = document.getElementById('menu-toggle-btn');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggleBtn && sidebar) {
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Mencegah event menyebar dan menutup sidebar
+            sidebar.classList.toggle('open');
+        });
+        // Menutup sidebar jika klik di luar sidebar (hanya jika sidebar terbuka)
+        document.body.addEventListener('click', (e) => {
+            if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !menuToggleBtn.contains(e.target)) {
+                 sidebar.classList.remove('open');
+            }
+        }, true); // Use capture phase to ensure this runs before other click handlers
+    }
+    
+    const mainContent = document.getElementById('page-content-area');
+    
+    // Tampilkan banner pengumuman jika ada
+    let announcementHTML = '';
+    if (latestAnnouncement && latestAnnouncement.message) {
+        announcementHTML = `
+            <div class="announcement-banner" id="announcement-banner">
+                <p><strong>Informasi:</strong> ${latestAnnouncement.message}</p>
+                <button class="announcement-close" id="announcement-close-btn">&times;</button>
+            </div>
+        `;
+    }
+
+    // Muat konten spesifik berdasarkan halaman aktif
+    if (activePage === 'packages') {
+        mainContent.innerHTML = announcementHTML + renderPhoneVerificationPanel();
+        renderPackagesPage(mainContent);
+        setupPhoneVerificationListeners();
+    } else if (activePage === 'history') {
+        mainContent.innerHTML = announcementHTML;
+        renderHistoryPage(mainContent);
+    } else if (activePage === 'admin') {
+        mainContent.innerHTML = announcementHTML;
+        renderAdminDashboard(mainContent);
+    }
+
+    // Event listener untuk tombol tutup pengumuman
+    const closeBtn = document.getElementById('announcement-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            document.getElementById('announcement-banner').style.display = 'none';
+        });
+    }
+}
+
+/**
+ * Merender tampilan panel admin dengan semua fitur manajemen.
+ * Ini adalah bagian dari `renderDashboard`.
+ * @param {HTMLElement} container - Elemen DOM tempat konten admin akan dirender (misal: page-content-area).
+ */
+function renderAdminDashboard(container) {
+    // Validasi container untuk mencegah error
+    if (!container) {
+        console.error("Container untuk panel admin tidak ditemukan.");
+        app.innerHTML = '<p class="error-message">Error: Container untuk panel admin tidak ditemukan. Silakan refresh halaman.</p>';
+        return;
+    }
+
+    // HTML untuk admin panel
+    container.innerHTML = `
+        <div class="admin-container">
+            <div class="admin-section">
+                <h1>Panel Kontrol Admin</h1>
+                <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
+            </div>
+
+            <div class="admin-section">
+                <h2>Manajemen Database</h2>
+                <div id="db-feedback"></div>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <button id="backup-db-btn" style="flex: 1;">Unduh Backup Database</button>
+                </div>
+                <h3>Pulihkan Database (Unggah db.json)</h3>
+                <form id="restore-db-form" class="file-upload-form" enctype="multipart/form-data">
+                    <input type="file" id="db-file-input" name="dbFile" accept=".json" required>
+                    <button type="submit">Pulihkan Database</button>
+                </form>
+            </div>
+
+            <div class="admin-section">
+                <h2>Informasi & Manajemen Saldo</h2>
+                <div id="balance-feedback"></div>
+                <div class="balance-info-display">
+                    <p>Saldo KMSP Anda Saat Ini:</p>
+                    <strong id="kmsp-balance-display">${typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...'}</strong>
+                </div>
+                <button id="check-kmsp-balance-btn" style="width:100%; margin-bottom: 2rem;">Cek Saldo KMSP</button>
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0;">
+                <h3>Tambah Saldo Pengguna</h3>
+                <form id="add-balance-form" class="balance-controls">
+                    <label for="user-select">Pilih Pengguna:</label>
+                    <select id="user-select" required style="flex-grow: 1;"></select>
+                    <label for="amount-input">Jumlah:</label>
+                    <input type="number" id="amount-input" placeholder="e.g., 50000" required>
+                    <button type="submit">Tambah Saldo</button>
+                </form>
+            </div>
+
+            <div class="admin-section">
+                <h2>Manajemen Paket</h2>
+                <div id="sync-feedback"></div>
+                <button id="sync-btn" style="width:100%; margin-bottom: 2rem;">Sinkronisasi Ulang Paket dari KMSP</button>
+                
+                <div id="manage-feedback"></div>
+                
+                <input type="text" id="search-package-input" placeholder="Cari nama paket...">
+                
+                <div class="admin-toolbar">
+                    <button id="load-packages-btn">Muat Ulang Paket</button>
+                    <button id="select-all-btn">Tampilkan Semua</button>
+                    <button id="deselect-all-btn">Sembunyikan Semua</button>
+                </div>
+                <ul id="package-list" class="package-list"><div class="loading-spinner"></div></ul>
+                <button id="save-all-btn">Simpan Semua Perubahan</button>
+            </div>
+
+            <div class="admin-section">
+                <h2>Kirim Pengumuman</h2>
+                <div id="announcement-feedback"></div>
+                <form id="announcement-form">
+                    <div class="form-group">
+                        <label for="announcement-message">Pesan Pengumuman:</label>
+                        <textarea id="announcement-message" rows="4" placeholder="Ketik pengumuman di sini..." required></textarea>
+                    </div>
+                    <button type="submit">Kirim Pengumuman</button>
+                </form>
+            </div>
+            
+        </div>
+    `;
+
+    // JavaScript untuk Admin Panel (di dalam fungsi renderAdminDashboard)
+    
+    /**
+     * Merender daftar paket ke elemen list di panel admin.
+     * @param {Array<Object>} packages - Array objek paket.
+     */
+    function renderPackageList(packages) {
+        const listElement = document.getElementById('package-list');
+        if (!listElement) { console.error("Elemen package-list tidak ditemukan."); return; }
+        
+        if (!packages || packages.length === 0) {
+            listElement.innerHTML = '<li>Tidak ada paket ditemukan. Coba sinkronisasi terlebih dahulu.</li>';
+            return;
+        }
+        packages.sort((a, b) => (a.name || '').localeCompare(b.name || '')); // Urutkan berdasarkan nama
+        listElement.innerHTML = packages.map(pkg => `
+            <li class="package-item" data-package-id="${pkg.package_code}">
+                <div class="package-info">
+                    <strong>${pkg.name || 'Nama Tidak Tersedia'}</strong>
+                    <small>Harga Provider: Rp ${pkg.original_price.toLocaleString('id-ID')}</small>
+                </div>
+                <div class="package-controls">
+                    <label>Biaya Layanan (Fee): <input type="number" class="fee-input" value="${pkg.platform_fee || 0}"></label>
+                    <label>Tampilkan: <input type="checkbox" class="visibility-checkbox" ${pkg.isVisible ? 'checked' : ''}></label>
+                </div>
+            </li>
+        `).join('');
+    }
+
+    /**
+     * Memuat daftar pengguna dari backend dan mengisi dropdown pemilihan pengguna.
+     */
+    async function loadUsers() {
+        try {
+            const { data, status } = await apiFetch('/admin/users');
+            const userSelect = document.getElementById('user-select');
+            if (!userSelect) { console.error("Elemen user-select tidak ditemukan."); return; }
+            
+            userSelect.innerHTML = '<option value="">-- Pilih Pengguna --</option>'; // Opsi default
+            if (status === 200 && data.status && Array.isArray(data.data)) {
+                data.data.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
+                    userSelect.appendChild(option);
+                });
+            } else {
+                 displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
+            }
+        } catch (error) { 
+            console.error('Gagal memuat pengguna:', error);
+            displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
+        }
+    }
+    
+    // Perbarui tampilan saldo KMSP saat admin panel dimuat
+    const kmspBalanceDisplay = document.getElementById('kmsp-balance-display');
+    if (kmspBalanceDisplay) {
+        kmspBalanceDisplay.textContent = typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...';
+    }
+
+    /**
+     * Event handler untuk tombol 'Cek Saldo KMSP'.
+     * Memanggil API untuk mendapatkan saldo KMSP terbaru.
+     */
+    document.getElementById('check-kmsp-balance-btn')?.addEventListener('click', async (e) => {
+        const button = e.target;
+        button.disabled = true; button.textContent = 'Mengecek...';
+        displayFeedback('balance-feedback', '', false); // Bersihkan feedback sebelumnya
+        try {
+            const { data, status } = await apiFetch('/admin/kmsp-balance');
+            if (status === 200 && data.status && typeof data.data?.balance !== 'undefined') {
+                kmspBalance = data.data.balance; // Update variabel global
+                const balanceDisplay = document.getElementById('kmsp-balance-display');
+                if (balanceDisplay) {
+                    balanceDisplay.textContent = `Rp ${kmspBalance.toLocaleString('id-ID')}`;
+                }
+                displayFeedback('balance-feedback', 'Saldo KMSP berhasil diperbarui.', false);
+            } else {
+                throw new Error(data.message || 'Respons saldo tidak valid dari server.');
+            }
+        } catch (error) {
+            displayFeedback('balance-feedback', `Gagal cek saldo KMSP: ${error.message}`, true);
+        } finally {
+            button.disabled = false; button.textContent = 'Cek Saldo KMSP';
+        }
+    });
+    
+    /**
+     * Event handler untuk form 'Tambah Saldo Pengguna'.
+     * Memanggil API untuk memperbarui saldo pengguna tertentu.
+     */
+    document.getElementById('add-balance-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true; button.textContent = '...';
+        displayFeedback('balance-feedback', '', false);
+        try {
+            const userId = document.getElementById('user-select')?.value;
+            const amount = parseFloat(document.getElementById('amount-input')?.value);
+            if (!userId || isNaN(amount) || amount <= 0) {
+                throw new Error('Pilih pengguna dan masukkan jumlah yang valid.');
+            }
+            const { data, status } = await apiFetch('/admin/update-balance', { method: 'POST', body: { userId, amount } });
+            if (status === 200 && data.status) {
+                displayFeedback('balance-feedback', data.message, false);
+                const amountInput = document.getElementById('amount-input');
+                if (amountInput) amountInput.value = ''; // Bersihkan input
+                loadUsers(); // Muat ulang daftar pengguna untuk update saldo
+            } else {
+                throw new Error(data.message || 'Gagal memperbarui saldo: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('balance-feedback', error.message, true);
+        } finally {
+            button.disabled = false; button.textContent = originalText;
+        }
+    });
+    
+    /**
+     * Event handler untuk tombol 'Sinkronisasi Ulang Paket dari KMSP'.
+     * Memanggil API untuk menyinkronkan daftar paket dari sumber eksternal.
+     */
+    document.getElementById('sync-btn')?.addEventListener('click', async (e) => {
+        if (!confirm('Apakah Anda yakin ingin melakukan sinkronisasi? Ini akan memperbarui daftar paket dari KMSP dan dapat mengatur ulang status terlihat/tidak terlihat dan fee default untuk paket baru.')) return;
+        const button = e.target;
+        button.disabled = true; button.textContent = 'Menyinkronkan...';
+        displayFeedback('sync-feedback', '', false);
+        try {
+            const { data, status } = await apiFetch('/admin/sync-packages', { method: 'POST' });
+            if (status === 200 && data.status) {
+                displayFeedback('sync-feedback', data.message, false);
+                document.getElementById('load-packages-btn')?.click(); // Muat ulang paket setelah sinkronisasi
+            } else {
+                throw new Error(data.message || 'Gagal sinkronisasi: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('sync-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Sinkronisasi Ulang Paket dari KMSP';
+        }
+    });
+    
+    /**
+     * Event handler untuk tombol 'Muat Ulang Paket'.
+     * Memanggil API untuk mendapatkan daftar paket yang tersimpan di database lokal.
+     */
+    document.getElementById('load-packages-btn')?.addEventListener('click', async (e) => {
+        const button = e.target;
+        button.disabled = true; button.textContent = 'Memuat...';
+        displayFeedback('manage-feedback', '', false);
+        try {
+            const { data, status } = await apiFetch('/admin/packages');
+            if (status === 200 && data.status && Array.isArray(data.data)) {
+                renderPackageList(data.data);
+                displayFeedback('manage-feedback', `Berhasil memuat ${data.data.length} paket.`, false);
+            } else {
+                throw new Error(data.message || 'Gagal memuat paket: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('manage-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Muat Ulang Paket';
+        }
+    });
+
+    /**
+     * Event handler untuk tombol 'Tampilkan Semua' (paket).
+     */
+    document.getElementById('select-all-btn')?.addEventListener('click', () => {
+        document.querySelectorAll('.visibility-checkbox').forEach(cb => cb.checked = true);
+    });
+
+    /**
+     * Event handler untuk tombol 'Sembunyikan Semua' (paket).
+     */
+    document.getElementById('deselect-all-btn')?.addEventListener('click', () => {
+        document.querySelectorAll('.visibility-checkbox').forEach(cb => cb.checked = false);
+    });
+
+    /**
+     * Event handler untuk tombol 'Simpan Semua Perubahan' pada paket.
+     * Mengirim semua perubahan fee dan visibilitas paket ke backend.
+     */
+    document.getElementById('save-all-btn')?.addEventListener('click', async (e) => {
+        const button = e.target;
+        if (!confirm('Apakah Anda yakin ingin menyimpan semua perubahan pada paket (biaya layanan dan visibilitas)?')) return;
+        
+        const updates = [];
+        document.querySelectorAll('.package-item').forEach(item => {
+            const id = item.dataset.packageId;
+            const feeInput = item.querySelector('.fee-input');
+            const visibilityCheckbox = item.querySelector('.visibility-checkbox');
+            
+            const fee = parseFloat(feeInput?.value || '0'); // Gunakan optional chaining
+            const isVisible = visibilityCheckbox?.checked || false; // Gunakan optional chaining
+
+            updates.push({ 
+                package_code: id, 
+                platform_fee: isNaN(fee) ? 0 : fee, 
+                isVisible: isVisible 
+            });
+        });
+        
+        button.disabled = true; button.textContent = 'Menyimpan...';
+        displayFeedback('manage-feedback', '', false);
+        try {
+            const { data, status } = await apiFetch('/admin/packages/bulk-update', {
+                method: 'PUT',
+                body: { packages: updates }
+            });
+            if (status === 200 && data.status) {
+                displayFeedback('manage-feedback', data.message, false);
+            } else {
+                throw new Error(data.message || 'Gagal menyimpan perubahan: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('manage-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Simpan Semua Perubahan';
+        }
+    });
+
+    /**
+     * Event handler untuk input pencarian paket.
+     * Menyaring daftar paket yang ditampilkan berdasarkan nama.
+     */
+    document.getElementById('search-package-input')?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('.package-item').forEach(item => {
+            const packageName = item.querySelector('strong')?.textContent.toLowerCase();
+            if (packageName && packageName.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    /**
+     * Event handler untuk form 'Kirim Pengumuman'.
+     * Mengirim pesan pengumuman ke backend untuk ditampilkan kepada pengguna.
+     */
+    document.getElementById('announcement-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Mengirim...';
+        displayFeedback('announcement-feedback', '', false);
+        try {
+            const message = document.getElementById('announcement-message')?.value;
+            if (!message || !message.trim()) {
+                throw new Error('Pesan pengumuman tidak boleh kosong.');
+            }
+            const { data, status } = await apiFetch('/admin/announcement', {
+                method: 'POST',
+                body: { message }
+            });
+            if (status === 200 && data.status) {
+                displayFeedback('announcement-feedback', data.message, false);
+                const announcementMessageInput = document.getElementById('announcement-message');
+                if (announcementMessageInput) announcementMessageInput.value = ''; // Bersihkan input
+                fetchAnnouncement(); // Muat ulang pengumuman untuk diperbarui di dashboard pengguna
+            } else {
+                throw new Error(data.message || 'Gagal mengirim pengumuman: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('announcement-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+
+    /**
+     * Event handler untuk tombol 'Unduh Backup Database'.
+     * Memulai proses unduh file database dari backend.
+     */
+    document.getElementById('backup-db-btn')?.addEventListener('click', () => {
+        window.location.href = `${API_BASE_URL}/admin/backup-database`; // Langsung unduh file
+        displayFeedback('db-feedback', 'Proses unduh backup database dimulai. Harap tunggu.', false);
+    });
+
+    /**
+     * Event handler untuk form 'Pulihkan Database'.
+     * Mengunggah file database ke backend untuk dipulihkan.
+     */
+    document.getElementById('restore-db-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Memulihkan...';
+        displayFeedback('db-feedback', '', false);
+
+        const formData = new FormData();
+        const fileInput = document.getElementById('db-file-input');
+        if (!fileInput || fileInput.files.length === 0) {
+            displayFeedback('db-feedback', 'Harap pilih file db.json untuk diunggah.', true);
+            button.disabled = false;
+            button.textContent = originalText;
+            return;
+        }
+        formData.append('dbFile', fileInput.files[0]); // Tambahkan file ke FormData
+
+        try {
+            // Menggunakan fetch standar karena FormData akan mengatur Content-Type secara otomatis
+            const response = await fetch(`${API_BASE_URL}/admin/restore-database`, {
+                method: 'POST',
+                body: formData, 
+                credentials: 'include' // Penting untuk mengirim cookie sesi
+            });
+
+            const data = await response.json(); // Respons diharapkan JSON
+
+            if (response.ok && data.status) {
+                displayFeedback('db-feedback', data.message, false);
+                setTimeout(() => {
+                    alert('Restore database selesai. Aplikasi akan dimuat ulang untuk menerapkan perubahan.');
+                    window.location.reload(); // Muat ulang halaman untuk memuat data database yang baru
+                }, 1500);
+            } else {
+                throw new Error(data.message || 'Gagal memulihkan database.');
+            }
+        } catch (error) {
+            displayFeedback('db-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+
+    // Inisialisasi data saat admin panel dimuat
+    // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
+    setTimeout(async () => {
+        document.getElementById('load-packages-btn')?.click(); // Muat paket
+        loadUsers(); // Muat pengguna
+        await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
+    }, 0);
+}
+
+
+/**
+ * Merender panel verifikasi nomor telepon (KMSP).
+ * Ini adalah bagian dari halaman dashboard pembelian paket.
+ * @returns {string} - HTML string untuk panel verifikasi telepon.
+ */
+function renderPhoneVerificationPanel() {
+    const isVerified = !!phoneAuth.accessToken; // Cek apakah sudah ada accessToken
+    const verificationPanelHTML = `
+        <div class="page-content phone-verification-panel ${isVerified ? 'verified' : ''}">
+            <div class="page-header" style="border-color: ${isVerified ? 'var(--success-color)' : 'var(--border-color)'};">
+                <h2 style="color: ${isVerified ? 'var(--success-color)' : 'inherit'};">${isVerified ? 'Nomor Terverifikasi' : 'Verifikasi Nomor Tujuan'}</h2>
+            </div>
+            ${isVerified 
+                ? `<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                       <p style="margin:0;">Nomor <strong>${phoneAuth.phone}</strong> siap digunakan.</p>
+                       <button id="change-phone-btn" class="secondary" style="width: auto; padding: 0.5rem 1rem;">Ganti Nomor</button>
+                   </div>`
+                : `<p>Verifikasi nomor Anda satu kali untuk melakukan banyak pembelian.</p>
+                   <div id="phone-verification-form">
+                       <div id="phone-step">
+                           <div class="form-group">
+                               <label for="targetPhone">Nomor HP Tujuan (Format: 62...)</label>
+                               <input type="tel" id="targetPhone" required pattern="^62\\d{9,13}$" placeholder="628xxxxxxxxxx">
+                           </div>
+                           <button type="button" id="request-otp-btn">Kirim OTP</button>
+                       </div>
+                       <div id="otp-step" style="display: none;">
+                           <p>Kode OTP telah dikirim ke <strong>${phoneAuth.phone || ''}</strong>. Masukkan kode di bawah.</p>
+                           <div class="form-group">
+                               <label for="otp-code">Kode OTP</label>
+                               <input type="text" id="otp-code" required>
+                           </div>
+                           <button type="button" id="verify-otp-btn">Verifikasi Nomor</button>
+                       </div>
+                   </div>`
+            }
+            <div id="phone-feedback-container"></div>
+        </div>
+    `;
+    
+    // HTML untuk manajemen sesi (opsional)
+    const sessionManagementHTML = `
+        <div class="page-content">
+             <div class="page-header"><h2>Info Login & Sesi (Opsional)</h2></div>
+             <p>Gunakan fitur di bawah ini untuk mengambil atau memperpanjang sesi login nomor HP dari perangkat lain.</p>
+             <div class="form-group">
+                <label for="active-access-token">Access Token Saat Ini:</label>
+                <input type="text" id="active-access-token" value="${phoneAuth.accessToken || 'Didapatkan setelah login OTP atau extend'}" readonly>
+             </div>
+             <button id="get-token-list-btn" style="margin-bottom: 1.5rem;">Dapatkan Daftar Token Saya</button>
+             <div id="token-list-feedback"></div>
+             
+             <hr style="margin: 1.5rem 0;">
+
+             <div class="form-group">
+                <label for="extend-phone">Nomor HP untuk Extend:</label>
+                <input type="tel" id="extend-phone" placeholder="Otomatis dari token pertama">
+             </div>
+             <div class="form-group">
+                <label for="extend-auth-id">Auth ID untuk Extend:</label>
+                <input type="text" id="extend-auth-id" placeholder="Format: session_id:token">
+             </div>
+             <button id="extend-session-btn">Perpanjang Sesi Token Ini</button>
+        </div>
+    `;
+
+    return verificationPanelHTML + sessionManagementHTML;
+}
+
+/**
+ * Merender halaman pemilihan paket ke dalam container.
+ * Memuat paket yang tersedia dari backend.
+ * @param {HTMLElement} container - Elemen DOM tempat halaman paket akan dirender.
+ */
+async function renderPackagesPage(container) {
+    const packageSection = document.createElement('div');
+    packageSection.innerHTML = `
+        <div class="page-content" id="package-selection-area">
+            <div class="page-header"><h1>Pilih Paket</h1></div>
+            <div class="form-group">
+                <label for="package-dropdown">Pilih paket yang tersedia:</label>
+                <select id="package-dropdown">
+                    <option value="">-- Muat paket... --</option>
+                </select>
+            </div>
+            <div id="package-details-area" style="display: none; margin-top: 2rem;"></div>
+        </div>
+    `;
+    container.appendChild(packageSection);
+    
+    const packageDropdown = document.getElementById('package-dropdown');
+    packageDropdown?.addEventListener('change', (e) => {
+        displaySelectedPackageDetails(e.target.value);
+    });
+
+    try {
+        const { data, status } = await apiFetch('/user/packages');
+        
+        if (status === 200 && data.status && Array.isArray(data.data) && data.data.length > 0) {
+            visiblePackages = data.data; // Simpan paket yang terlihat secara global
+            if (packageDropdown) {
+                packageDropdown.innerHTML = '<option value="">-- Silakan pilih paket --</option>'; 
+                visiblePackages.forEach(pkg => {
+                    const option = document.createElement('option');
+                    option.value = pkg.package_code;
+                    const feeText = `(Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})`;
+                    option.textContent = `${pkg.name} ${feeText}`;
+                    packageDropdown.appendChild(option);
+                });
+            }
+        } else {
+            if (packageDropdown) packageDropdown.innerHTML = `<option value="">Tidak ada paket tersedia.</option>`;
+            console.warn("Gagal memuat paket pengguna:", data.message || "Data paket tidak valid.");
+        }
+    } catch (error) { 
+        if (packageDropdown) packageDropdown.innerHTML = `<option value="">Gagal memuat paket.</option>`;
+        console.error("Gagal memuat paket:", error);
+    }
+}
+
+/**
+ * Menampilkan detail paket yang dipilih dari dropdown.
+ * @param {string} packageCode - Kode paket yang dipilih.
+ */
+function displaySelectedPackageDetails(packageCode) {
+    const detailsArea = document.getElementById('package-details-area');
+    if (!detailsArea) return;
+    
+    if (!packageCode) {
+        detailsArea.style.display = 'none';
+        detailsArea.innerHTML = '';
+        return;
+    }
+
+    const pkg = visiblePackages.find(p => p.package_code === packageCode);
+    if (!pkg) {
+        detailsArea.innerHTML = '<p class="error-message">Detail paket tidak ditemukan.</p>';
+        detailsArea.style.display = 'block';
+        return;
+    }
+    
+    const platformFee = pkg.platform_fee || 0;
+    const isFeeCovered = currentUser.balance >= platformFee;
+    // Cek stok provider: Jika kmspBalance adalah angka dan 0, dan harga paket > 0, maka stok habis.
+    const isProviderStocked = !(typeof kmspBalance === 'number' && kmspBalance <= 0 && (pkg.original_price || 0) > 0);
+    const canPurchase = phoneAuth.accessToken && isFeeCovered && isProviderStocked;
+
+    let buttonText = 'Beli Sekarang';
+    if (!canPurchase) {
+        if (!phoneAuth.accessToken) buttonText = "Verifikasi Nomor Dulu";
+        else if (!isProviderStocked) buttonText = "Stok Habis";
+        else buttonText = 'Saldo Kurang';
+    }
+
+    detailsArea.innerHTML = `
+        <div class="page-content" style="background-color: var(--light-color);">
+            <div class="page-header"><h2>Detail Paket Terpilih</h2></div>
+            <h4>${pkg.name}</h4>
+            <p><strong>Biaya Layanan:</strong> Rp ${platformFee.toLocaleString('id-ID')}</p>
+            <p><strong>Deskripsi:</strong> ${pkg.description || 'Tidak ada deskripsi.'}</p>
+            <button class="purchase-btn" data-package-id="${pkg.package_code}" ${!canPurchase ? 'disabled' : ''}>
+                ${buttonText}
+            </button>
+        </div>
+    `;
+    detailsArea.style.display = 'block';
+
+    const purchaseBtn = detailsArea.querySelector('.purchase-btn');
+    // Pastikan purchaseBtn ada sebelum menambahkan event listener
+    if (purchaseBtn) {
+        purchaseBtn.addEventListener('click', (e) => {
+            handlePurchase(e, e.currentTarget.dataset.packageId);
+        });
+    }
+}
+
+/**
+ * Merender halaman riwayat transaksi ke dalam container.
+ * Menggabungkan riwayat pembelian dan top up.
+ * @param {HTMLElement} container - Elemen DOM tempat halaman riwayat akan dirender.
+ */
+async function renderHistoryPage(container) {
+    container.innerHTML = `
+        <div class="page-content">
+            <div class="page-header"><h1>Riwayat Transaksi</h1></div>
+            <div id="history-content"><div class="loading-spinner"></div></div>
+        </div>
+    `;
+    const historyContent = document.getElementById('history-content');
+    if (!historyContent) return;
+
+    try {
+        const { data, status } = await apiFetch('/user/transactions');
+        if (status === 200 && data.status && Array.isArray(data.data) && data.data.length > 0) {
+            historyContent.innerHTML = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Tipe</th>
+                            <th>Nama/ID</th>
+                            <th>Jumlah/Fee</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.data.map(trx => {
+                            let type = 'Pembelian';
+                            let nameOrId = trx.packageName || 'N/A';
+                            let amountOrFee = `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
+                            let actionButton = '';
+
+                            if (trx.type === 'topup') { // Jika tipe transaksi adalah topup
+                                type = 'Top Up';
+                                nameOrId = trx.id; // Gunakan ID transaksi topup
+                                amountOrFee = `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`;
+                                // Tambahkan tombol "Lihat QRIS" jika statusnya pending dan ada data QRIS
+                                if (trx.status === 'pending' && trx.qrisData?.base64Image && typeof trx.qrisData?.uniqueAmount === 'number' && trx.createdAt) {
+                                    actionButton = `<button class="open-qris-btn" 
+                                                        data-topup-id="${trx.id}" 
+                                                        data-base64-image="${trx.qrisData.base64Image}" 
+                                                        data-unique-amount="${trx.qrisData.uniqueAmount}"
+                                                        data-created-at="${trx.createdAt}">Lihat QRIS</button>`; // Sertakan createdAt
+                                }
+                            }
+
+                            return `
+                                <tr>
+                                    <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                                    <td data-label="Tipe">${type}</td>
+                                    <td data-label="Nama/ID">${nameOrId}</td>
+                                    <td data-label="Jumlah/Fee">${amountOrFee}</td>
+                                    <td data-label="Status"><span class="status-badge status-${(trx.status || 'failed').toLowerCase()}">${trx.api_response || trx.status}</span></td>
+                                    <td data-label="Aksi">${actionButton}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            // Attach event listeners for "Lihat QRIS" buttons
+            document.querySelectorAll('.open-qris-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const topUpId = e.target.dataset.topupId;
+                    const base64Image = e.target.dataset.base64Image;
+                    const uniqueAmount = parseFloat(e.target.dataset.uniqueAmount);
+                    const createdAt = e.target.dataset.createdAt; // Dapatkan createdAt
+
+                    // Pastikan semua data ada sebelum memanggil renderQrisDisplay
+                    if (topUpId && base64Image && !isNaN(uniqueAmount) && createdAt) {
+                        renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt); // Teruskan createdAt
+                    } else {
+                        alert('Data QRIS tidak lengkap atau tidak valid.');
+                    }
+                });
+            });
+
+        } else {
+            historyContent.innerHTML = `<p>Anda belum memiliki riwayat transaksi.</p>`;
+            console.warn("Gagal memuat riwayat transaksi pengguna:", data.message || "Data transaksi tidak valid.");
+        }
+    } catch (error) {
+        historyContent.innerHTML = `<p class="error-message">Gagal memuat riwayat: ${error.message}</p>`;
+    }
+}
+
+/**
+ * Merender modal untuk permintaan top up saldo.
+ */
+function renderTopUpModal() {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header"><h2>Top Up Saldo</h2><button class="modal-close">&times;</button></div>
+                <form id="topup-form">
+                    <div class="form-group">
+                        <label for="topup-amount">Jumlah Top Up (Minimal Rp 10.000)</label>
+                        <input type="number" id="topup-amount" min="10000" placeholder="Contoh: 50000" required>
+                    </div>
+                    <button type="submit">Lanjutkan ke Pembayaran</button>
+                </form>
+                <div id="modal-error-container"></div>
+            </div>
+        </div>
+    `;
+    const closeModal = () => modalContainer.innerHTML = '';
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+    document.getElementById('topup-form')?.addEventListener('submit', handleRequestQris);
+}
+
+/**
+ * Event handler untuk mengirim permintaan QRIS top up ke backend.
+ * Jika ada transaksi pending, akan menampilkan kembali QRIS yang sudah ada.
+ */
+async function handleRequestQris(e) {
+    e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    if (!button) return;
+    
+    button.disabled = true; button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
+    displayFeedback('modal-error-container', '', false); // Bersihkan feedback sebelumnya
+
+    try {
+        const amountInput = document.getElementById('topup-amount');
+        if (!amountInput) throw new Error("Input jumlah top-up tidak ditemukan.");
+
+        const amount = parseInt(amountInput.value);
+        if(isNaN(amount) || amount < 10000) throw new Error("Jumlah top-up minimal adalah Rp 10.000.");
+        
+        const { data, status } = await apiFetch('/topup/request-qris', { 
+            method: 'POST', 
+            body: { amount } 
+        });
+        
+        // Skenario 1: Transaksi baru berhasil dibuat (status: true)
+        if (status === 200 && data.status && data.base64Image && typeof data.uniqueAmount === 'number' && data.topUpId && data.createdAt) {
+            renderQrisDisplay(data.base64Image, data.uniqueAmount, data.topUpId, data.createdAt);
+        // Skenario 2: Ada transaksi tertunda (status: false dari backend, tapi ada data QRIS)
+        } else if (status === 200 && !data.status && data.topUpId && data.base64Image && typeof data.uniqueAmount === 'number' && data.createdAt) {
+            displayFeedback('modal-error-container', data.message, true); // Tampilkan pesan bahwa ada transaksi tertunda
+            renderQrisDisplay(data.base64Image, data.uniqueAmount, data.topUpId, data.createdAt); // Tampilkan QRIS yang tertunda
+        } else {
+            // Skenario 3: Gagal total atau respons tidak sesuai format
+            throw new Error(data.message || 'Gagal request QRIS: Respons tidak valid atau tidak lengkap.');
+        }
+
+    } catch (error) {
+        displayFeedback('modal-error-container', error.message, true);
+        button.disabled = false; button.textContent = 'Lanjutkan ke Pembayaran';
+    }
+}
+
+/**
+ * Merender modal tampilan QRIS untuk pembayaran.
+ * Mengatur timer hitung mundur dan polling status pembayaran.
+ * @param {string} base64Image - Data base64 dari gambar QRIS.
+ * @param {number} uniqueAmount - Jumlah unik yang harus dibayar.
+ * @param {string} topUpId - ID transaksi top up.
+ * @param {string} createdAt - Timestamp ISO string kapan transaksi top up dibuat.
+ */
+function renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    // Pastikan untuk membersihkan interval polling dan countdown sebelumnya
+    if (window.activeQrisPollingInterval) clearInterval(window.activeQrisPollingInterval);
+    if (window.activeQrisCountdownInterval) clearInterval(window.activeQrisCountdownInterval);
+
+    // Hitung sisa waktu yang sebenarnya berdasarkan waktu pembuatan
+    const QRIS_EXPIRATION_DURATION_MS = 5 * 60 * 1000; // 5 menit
+    const timeCreated = new Date(createdAt).getTime();
+    const timeRemainingMs = Math.max(0, timeCreated + QRIS_EXPIRATION_DURATION_MS - Date.now());
+    let timeLeftInSeconds = Math.floor(timeRemainingMs / 1000);
+
+    // Jika waktu sudah habis, beritahu pengguna dan jangan tampilkan modal
+    if (timeLeftInSeconds <= 0) {
+        alert('QR Code ini sudah kadaluarsa. Silakan buat transaksi top-up baru.');
+        modalContainer.innerHTML = ''; // Pastikan modal kosong
+        renderApp(); // Render ulang aplikasi untuk update riwayat/status
+        return;
+    }
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header"><h2>Scan untuk Membayar</h2><button class="modal-close" id="qris-modal-close-btn">&times;</button></div>
+                <div id="qrcode-container" style="padding: 1rem; background: white; display: inline-block; border-radius: 8px; margin: 0 auto;">
+                    <img src="${base64Image}" alt="QR Code Pembayaran" width="220" height="220">
+                </div>
+                <p style="margin-top: 1.5rem;">Total yang harus dibayar (Pastikan Tepat):</p>
+                <h3 style="font-size: 1.8rem; color: var(--danger-color); letter-spacing: 1px;">Rp ${uniqueAmount.toLocaleString('id-ID')}</h3>
+                <p id="payment-status">Menunggu pembayaran...</p>
+                <p style="font-size: 0.9em; margin-top: 1rem;">Batas Waktu: <strong id="qris-timer">${formatTime(timeLeftInSeconds)}</strong></p>
+                <div class="loading-spinner" id="payment-spinner" style="display: block;"></div>
+                <button id="cancel-topup-btn" class="secondary" style="margin-top: 1.5rem; width: 100%;">Batalkan Top Up</button>
+            </div>
+        </div>
+    `;
+
+    window.activeQrisPollingInterval = null;
+    window.activeQrisCountdownInterval = null;
+
+    /** Fungsi untuk menutup modal dan membersihkan interval */
+    const closeModal = () => {
+        clearInterval(window.activeQrisPollingInterval);
+        clearInterval(window.activeQrisCountdownInterval);
+        window.activeQrisPollingInterval = null;
+        window.activeQrisCountdownInterval = null;
+        modalContainer.innerHTML = '';
+        renderApp(); // Render ulang aplikasi untuk update riwayat/saldo
+    };
+
+    // Event listener untuk overlay dan tombol close modal
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.getElementById('qris-modal-close-btn')?.addEventListener('click', closeModal);
+
+    // Event listener untuk tombol 'Batalkan Top Up'
+    document.getElementById('cancel-topup-btn')?.addEventListener('click', async () => {
+        if (confirm('Apakah Anda yakin ingin membatalkan transaksi top up ini?')) {
+            try {
+                // Panggil API untuk membatalkan transaksi top up
+                const { data, status } = await apiFetch(`/topup/cancel/${topUpId}`, { method: 'POST' });
+                if (status === 200 && data.status) {
+                    alert('Transaksi top up berhasil dibatalkan.');
+                    closeModal(); // Tutup modal setelah pembatalan
+                } else {
+                    alert('Gagal membatalkan transaksi: ' + (data.message || 'Terjadi kesalahan.'));
+                }
+            } catch (error) {
+                alert('Terjadi kesalahan saat membatalkan transaksi: ' + error.message);
+            }
+        }
+    });
+
+
+    // Mulai timer hitung mundur
+    const timerElement = document.getElementById('qris-timer');
+    if (timerElement) {
+        window.activeQrisCountdownInterval = setInterval(() => {
+            timeLeftInSeconds--;
+            if (timeLeftInSeconds >= 0) {
+                timerElement.textContent = formatTime(timeLeftInSeconds);
+            } else {
+                clearInterval(window.activeQrisCountdownInterval); // Hentikan countdown
+                const statusEl = document.getElementById('payment-status');
+                if(statusEl) statusEl.textContent = 'Waktu pembayaran habis.';
+                const spinnerEl = document.getElementById('payment-spinner');
+                if(spinnerEl) spinnerEl.style.display = 'none';
+                document.getElementById('cancel-topup-btn')?.setAttribute('disabled', 'true'); // Nonaktifkan tombol batal
+            }
+        }, 1000); // Update setiap 1 detik
+    }
+
+    // Render QR Code menggunakan library QRCode.js
+    if (typeof QRCode !== 'undefined' && base64Image) {
+        const qrContainer = document.getElementById('qrcode-container');
+        if (qrContainer) {
+            // Hapus img tag yang sudah ada jika QR code dirender ulang (dari Lihat QRIS)
+            const existingImg = qrContainer.querySelector('img');
+            if (existingImg) existingImg.remove();
+            
+            new QRCode(qrContainer, {
+                text: base64Image, // Data base64 dari QRIS
+                width: 220,
+                height: 220,
+            });
+        }
+    }
+
+
+    // Mulai polling status pembayaran
+    window.activeQrisPollingInterval = setInterval(async () => {
+        // Hentikan polling jika waktu habis
+        if (timeLeftInSeconds <= 0) {
+            clearInterval(window.activeQrisPollingInterval);
+            return;
+        }
+        try {
+            const { data, status } = await apiFetch(`/topup/status/${topUpId}`);
+            // Periksa status 'completed', 'expired', atau 'canceled' dari backend
+            if (status === 200 && (data.status === 'completed' || data.status === 'expired' || data.status === 'canceled')) {
+                clearInterval(window.activeQrisPollingInterval); // Hentikan polling
+                clearInterval(window.activeQrisCountdownInterval); // Hentikan countdown
+                const spinnerEl = document.getElementById('payment-spinner');
+                const statusEl = document.getElementById('payment-status');
+                const cancelBtn = document.getElementById('cancel-topup-btn');
+                if (spinnerEl) spinnerEl.style.display = 'none';
+                if (cancelBtn) cancelBtn.style.display = 'none'; // Sembunyikan tombol batal setelah status final
+                
+                if(data.status === 'completed') {
+                    if (statusEl) {
+                        statusEl.textContent = 'Pembayaran Berhasil!';
+                        statusEl.style.color = 'var(--success-color)';
+                    }
+                    alert('Top up berhasil! Saldo Anda telah ditambahkan.');
+                    await checkLoginStatus(); 
+                    closeModal(); // Tutup modal setelah sukses
+                } else if (data.status === 'expired') {
+                     if (statusEl) statusEl.textContent = 'Waktu pembayaran habis.';
+                } else if (data.status === 'canceled') {
+                    if (statusEl) {
+                        statusEl.textContent = 'Transaksi dibatalkan.';
+                        statusEl.style.color = 'var(--danger-color)';
+                    }
+                }
+                setTimeout(() => closeModal(), 2000); // Tutup modal setelah 2 detik menampilkan status
+            }
+        } catch (error) {
+            console.error("Polling error:", error);
+            // Jika transaksi tidak ditemukan (misal dihapus dari backend), hentikan polling
+            if (error.message.includes('404')) clearInterval(window.activeQrisPollingInterval);
+        }
+    }, 10000); // Polling setiap 10 detik
+}
+
+/**
+ * Fungsi helper untuk memformat waktu dari detik ke MM:SS.
+ * @param {number} seconds - Jumlah detik.
+ * @returns {string} - Waktu dalam format MM:SS.
+ */
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Merender modal tampilan status akhir transaksi (sukses/gagal).
+ * @param {string} title - Judul modal.
+ * @param {string} message - Pesan status.
+ */
+function renderFinalStatusModal(title, message) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header"><h2>${title}</h2></div>
+                <p>${message}</p>
+                <div style="text-align: right; margin-top: 1.5rem;">
+                    <button id="close-final-modal" class="secondary" style="width: auto;">Tutup</button>
+                </div>
+            </div>
+        </div>
+    `;
+    const closeModal = () => {
+        modalContainer.innerHTML = '';
+        renderApp(); // Render ulang aplikasi setelah modal ditutup
+    };
+    document.getElementById('close-final-modal')?.addEventListener('click', closeModal);
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeModal(); });
+}
+
+
+// ===============================================
+// === FUNGSI TEMPLATE & RENDER HALAMAN ==========
+// ===============================================
+
+/**
+ * Merender halaman login ke elemen 'app'.
+ * Mengatur event listener untuk form login.
+ */
+// (Fungsi-fungsi seperti renderLoginPage, renderRegisterPage, renderDashboard, renderAdminDashboard,
+// renderPhoneVerificationPanel, renderPackagesPage, renderHistoryPage, renderTopUpModal,
+// handleRequestQris, renderQrisDisplay, formatTime, renderFinalStatusModal sudah didefinisikan sebelumnya,
+// dan tidak diulang di sini untuk brevity)
+
+// ===============================================
+// === EVENT HANDLERS & LOGIKA API UMUM ==========
+// ===============================================
+
+/**
+ * Menyiapkan event listener untuk fitur verifikasi telepon.
+ */
+function setupPhoneVerificationListeners() {
+    document.getElementById('request-otp-btn')?.addEventListener('click', handleRequestPhoneOtp);
+    document.getElementById('verify-otp-btn')?.addEventListener('click', handlePhoneLogin);
+    document.getElementById('change-phone-btn')?.addEventListener('click', () => {
+        if (confirm('Apakah Anda yakin ingin mengganti nomor terverifikasi?')) {
+            phoneAuth = { phone: null, accessToken: null, authId: null };
+            localStorage.removeItem('kmspAuth');
+            renderApp(); // Render ulang untuk menampilkan form verifikasi
+        }
+    });
+    document.getElementById('extend-session-btn')?.addEventListener('click', handleManualExtend);
+    document.getElementById('get-token-list-btn')?.addEventListener('click', handleGetTokenList);
+}
+
+/**
+ * Event handler untuk mendapatkan daftar token KMSP.
+ */
+async function handleGetTokenList(e) {
+    const button = e.currentTarget;
+    if (!button) return;
+    
+    button.disabled = true;
+    button.textContent = 'Mendapatkan...';
+    displayFeedback('token-list-feedback', '', false); // Bersihkan feedback sebelumnya
+    
+    try {
+        const { data, status } = await apiFetch('/auth/token-list');
+        if (status === 200 && data.status && Array.isArray(data.data) && data.data.length > 0) {
+            const firstToken = data.data[0];
+            const extendPhoneInput = document.getElementById('extend-phone');
+            const extendAuthIdInput = document.getElementById('extend-auth-id');
+
+            if (extendPhoneInput) extendPhoneInput.value = firstToken.msisdn;
+            if (extendAuthIdInput) extendAuthIdInput.value = `${firstToken.session_id}:${firstToken.token}`;
+            
+            displayFeedback('token-list-feedback', 'Token pertama berhasil dimuat ke dalam form.', false);
+        } else {
+            throw new Error(data.message || 'Tidak ada token aktif yang ditemukan atau respons tidak valid.');
+        }
+    } catch(error) {
+        displayFeedback('token-list-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Dapatkan Daftar Token Saya';
+    }
+}
+
+/**
+ * Event handler untuk memperpanjang sesi KMSP secara manual.
+ */
+async function handleManualExtend(e) {
+    const button = e.currentTarget;
+    if (!button) return;
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Memperpanjang...`;
+    displayFeedback('token-list-feedback', '', false); // Bersihkan feedback sebelumnya
+
+    const phoneInput = document.getElementById('extend-phone');
+    const authIdInput = document.getElementById('extend-auth-id');
+    
+    if (!phoneInput || !authIdInput) {
+        displayFeedback('token-list-feedback', 'Elemen input telepon atau auth ID tidak ditemukan.', true);
+        button.disabled = false;
+        button.textContent = 'Perpanjang Sesi Token Ini';
+        return;
+    }
+
+    const phone = phoneInput.value;
+    const authId = authIdInput.value;
+
+    if (!phone || !authId) {
+        displayFeedback('token-list-feedback', 'Nomor HP dan Auth ID untuk extend tidak boleh kosong.', true);
+        button.disabled = false;
+        button.textContent = 'Perpanjang Sesi Token Ini';
+        return;
+    }
+
+    try {
+        const { data, status } = await apiFetch('/auth/extend-session', {
+            method: 'POST',
+            body: { phone, auth_id: authId }
+        });
+
+        if (status === 200 && data.status && data.data) {
+            phoneAuth.phone = phone;
+            phoneAuth.accessToken = data.data.access_token;
+            phoneAuth.authId = data.data.auth_id;
+            localStorage.setItem('kmspAuth', JSON.stringify({ phone: phoneAuth.phone, authId: data.data.auth_id }));
+            displayFeedback('token-list-feedback', 'Sesi berhasil diperpanjang!', false);
+            renderApp(); // Render ulang untuk update status verifikasi
+        } else {
+            throw new Error(data.message || 'Gagal memperpanjang sesi: Respons tidak valid.');
+        }
+    } catch (error) {
+        displayFeedback('token-list-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Perpanjang Sesi Token Ini';
+    }
+}
+
+/**
+ * Event handler untuk meminta kode OTP verifikasi telepon.
+ */
+async function handleRequestPhoneOtp(e) {
+    const button = e.target;
+    if (!button) return;
+
+    const phoneInput = document.getElementById('targetPhone');
+    if (!phoneInput) {
+        displayFeedback('phone-feedback-container', 'Elemen input nomor telepon tidak ditemukan.', true);
+        return;
+    }
+
+    if (!phoneInput.checkValidity()) {
+        displayFeedback('phone-feedback-container', 'Format nomor telepon salah. Gunakan format 62xxx (contoh: 6281234567890).', true);
+        return;
+    }
+    button.disabled = true; button.innerHTML = `<span class="button-spinner"></span> Mengirim...`;
+    displayFeedback('phone-feedback-container', '', false); // Bersihkan feedback sebelumnya
+    try {
+        const { data, status } = await apiFetch('/phone/request-otp', { method: 'POST', body: { phone: phoneInput.value } });
+        if (status === 200 && data.status && data.data) {
+            phoneAuth.phone = phoneInput.value;
+            phoneAuth.authId = data.data.auth_id;
+            const phoneStep = document.getElementById('phone-step');
+            const otpStep = document.getElementById('otp-step');
+            if (phoneStep) phoneStep.style.display = 'none';
+            if (otpStep) {
+                otpStep.style.display = 'block';
+                const otpStrong = otpStep.querySelector('strong');
+                if (otpStrong) otpStrong.textContent = phoneAuth.phone;
+            }
+            displayFeedback('phone-feedback-container', data.message || 'OTP berhasil dikirim!', false);
+        } else {
+            throw new Error(data.message || 'Gagal meminta OTP dari provider: Respons tidak valid.');
+        }
+    } catch(error) {
+        displayFeedback('phone-feedback-container', error.message, true);
+        button.disabled = false; button.textContent = 'Kirim OTP';
+    }
+}
+
+/**
+ * Event handler untuk memverifikasi kode OTP dan login telepon.
+ */
+async function handlePhoneLogin(e) {
+    const button = e.target;
+    if (!button) return;
+
+    button.disabled = true; button.innerHTML = `<span class="button-spinner"></span> Memverifikasi...`;
+    displayFeedback('phone-feedback-container', '', false); // Bersihkan feedback sebelumnya
+    try {
+        const otpInput = document.getElementById('otp-code');
+        if (!otpInput) throw new Error("Elemen input OTP tidak ditemukan.");
+        const otp = otpInput.value;
+
+        if (!phoneAuth.phone || !phoneAuth.authId) {
+            throw new Error("Sesi verifikasi nomor tidak lengkap. Coba minta OTP lagi.");
+        }
+
+        const { data, status } = await apiFetch('/phone/verify-otp', {
+            method: 'POST', body: { phone: phoneAuth.phone, auth_id: phoneAuth.authId, otp }
+        });
+        
+        if (status === 200 && data.status && data.data) {
+            phoneAuth.accessToken = data.data.access_token;
+            phoneAuth.authId = data.data.auth_id;
+            localStorage.setItem('kmspAuth', JSON.stringify({ phone: phoneAuth.phone, authId: phoneAuth.authId }));
+            renderApp(); // Render ulang untuk update status verifikasi
+        } else {
+            throw new Error(data.message || "Gagal memverifikasi OTP, respons tidak valid.");
+        }
+
+    } catch(error) {
+        displayFeedback('phone-feedback-container', error.message, true);
+        button.disabled = false;
+        button.textContent = 'Verifikasi Nomor';
+    }
+}
+
+/**
+ * Fungsi utilitas untuk melakukan permintaan API ke backend.
+ * Menangani parsing respons, error HTTP, dan redirect otentikasi.
+ * @param {string} endpoint - URL endpoint API relatif terhadap API_BASE_URL.
+ * @param {Object} options - Opsi fetch, termasuk method, headers, dan body.
+ * @returns {Promise<Object>} - Promise yang me-resolve dengan { data, status } dari respons.
+ * @throws {Error} - Jika terjadi error jaringan atau respons API tidak valid.
+ */
+async function apiFetch(endpoint, options = {}) {
+    try {
+        const config = {
+            method: options.method || 'GET',
+            headers: { ...options.headers },
+            credentials: 'include', // Penting untuk mengirim cookie sesi
+        };
+        
+        // Atur Content-Type dan body jika bukan FormData
+        if (options.body && !(options.body instanceof FormData)) {
+            config.headers['Content-Type'] = 'application/json';
+            config.body = JSON.stringify(options.body); 
+        } else if (options.body instanceof FormData) {
+            config.body = options.body;
+            // Penting: Jangan atur 'Content-Type' untuk FormData, browser akan melakukannya otomatis
+        }
+
+        const response = await fetch(API_BASE_URL + endpoint, config);
+        
+        const contentType = response.headers.get("content-type");
+        let data;
+
+        // Coba parsing JSON hanya jika Content-Type adalah application/json
+        if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+        } else {
+            // Jika bukan JSON, coba baca sebagai teks dan lempar error
+            const textResponse = await response.text();
+            console.error(`API ${endpoint} response not JSON:`, textResponse);
+            if (!response.ok) { // Jika respons HTTP bukan 2xx, sertakan teks respons
+                throw new Error(`Terjadi kesalahan pada server (HTTP ${response.status}). Respons: ${textResponse.substring(0, 100)}...`);
+            }
+            // Jika status OK tapi bukan JSON, mungkin ada miskonfigurasi backend
+            throw new Error(`Respons dari server untuk ${endpoint} bukan format JSON yang diharapkan.`);
+        }
+
+        // Tangani respons 401 (Unauthorized) atau 403 (Forbidden) secara terpusat
+        if (response.status === 401 || response.status === 403) {
+            alert('Sesi Anda tidak valid atau Anda tidak memiliki izin. Harap login kembali.');
+            window.location.hash = '#login'; // Arahkan ke halaman login
+            main(); // Panggil main() untuk memastikan aplikasi dirender ulang setelah perubahan hash
+            throw new Error(data.message || `Akses Ditolak (HTTP ${response.status})`);
+        }
+
+        // Lempar error jika status HTTP bukan 2xx dan bukan 202 (Accepted, untuk pembayaran eksternal)
+        if (!response.ok && response.status !== 202) { 
+            throw new Error(data.message || `Terjadi kesalahan pada server (HTTP ${response.status})`);
+        }
+        
+        // Kembalikan data dan status HTTP
+        return { data, status: response.status };
+    } catch (error) {
+        console.error("Kesalahan API Fetch:", error);
+        // Tangani error jaringan (misal: server tidak berjalan)
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            throw new Error("Gagal terhubung ke server backend. Pastikan server berjalan dan koneksi internet Anda stabil.");
+        }
+        throw error; // Lempar error kembali
+    }
+}
+
+/**
+ * Fungsi utilitas untuk menampilkan pesan feedback (sukses/error) di UI.
+ * Pesan akan otomatis hilang setelah beberapa detik.
+ * @param {string} containerId - ID elemen HTML tempat pesan akan ditampilkan.
+ * @param {string} message - Pesan yang akan ditampilkan.
+ * @param {boolean} isError - True jika pesan error, false jika pesan sukses.
+ */
+function displayFeedback(containerId, message, isError = true) {
+    const container = document.getElementById(containerId);
+    if(container) {
+        // Hapus pesan lama jika ada
+        const existingP = container.querySelector('p');
+        if (existingP) existingP.remove();
+
+        if (!message) return; // Jangan tampilkan apa-apa jika pesan kosong
+
+        const messageClass = isError ? 'error-message' : 'success-message';
+        const p = document.createElement('p');
+        p.className = messageClass;
+        p.style.margin = '1rem 0'; // Style inline untuk margin
+        p.textContent = message;
+        container.appendChild(p);
+
+        // Pesan akan hilang setelah 7 detik
+        setTimeout(() => {
+            if (p.parentNode) {
+                p.remove();
+            }
+        }, 7000);
+    }
+}
+
+/**
+ * Event handler untuk form registrasi.
+ * Mengirim data registrasi ke backend.
+ */
+async function handleRegister(e) {
+    e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    if (!button) return;
+    
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
+    displayFeedback('feedback-container', '', false); // Bersihkan feedback sebelumnya
+
+    try {
+        const name = e.target.elements.name.value;
+        const email = e.target.elements.email.value;
+        const password = e.target.elements.password.value;
+        const { data, status } = await apiFetch('/auth/register', { method: 'POST', body: { name, email, password } });
+        
+        // Periksa status HTTP dan status dari data API
+        if (status === 201 && data.status) { // Status 201 Created untuk sukses registrasi
+            displayFeedback('feedback-container', data.message, false);
+            // Arahkan ke halaman login setelah 2 detik
+            setTimeout(() => { window.location.hash = 'login'; renderApp() }, 2000);
+        } else {
+            throw new Error(data.message || 'Registrasi gagal: Respons tidak valid.');
+        }
+    } catch (error) {
+        displayFeedback('feedback-container', error.message, true); // Tampilkan pesan error
+        button.disabled = false;
+        button.textContent = 'Daftar';
+    }
+}
+
+/**
+ * Event handler untuk form login.
+ * Mengirim kredensial login ke backend dan menyimpan data pengguna.
+ */
+async function handleLogin(e) {
+    e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    if (!button) return;
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
+    displayFeedback('feedback-container', '', false); // Bersihkan feedback sebelumnya
+
+    try {
+        const email = e.target.elements.email.value;
+        const password = e.target.elements.password.value;
+        const { data, status } = await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
+        
+        // Periksa status HTTP dan data pengguna
+        if (status === 200 && data.user) {
+            currentUser = data.user; // Simpan data pengguna yang login
+            window.location.hash = '#dashboard'; // Arahkan ke dashboard
+            main(); // Panggil main untuk inisialisasi ulang dengan pengguna baru
+        } else {
+            throw new Error(data.message || 'Login gagal: Respons tidak valid.');
+        }
+    } catch (error) {
+        displayFeedback('feedback-container', error.message, true); // Tampilkan pesan error
+        button.disabled = false;
+        button.textContent = 'Login';
+    }
+}
+
+/**
+ * Event handler untuk logout.
+ * Menghapus sesi pengguna dan mengarahkan ke halaman login.
+ */
+async function handleLogout() {
+    try {
+        // apiFetch akan otomatis menangani 401/403 dan redirect ke login jika perlu
+        await apiFetch('/auth/logout', { method: 'POST' }); 
+    } catch (error) { 
+        console.error("Logout gagal (mungkin sudah ter-redirect oleh API Fetch):", error); 
+    } finally {
+        // Bersihkan data pengguna dan sesi di frontend
+        currentUser = null;
+        phoneAuth = { phone: null, accessToken: null, authId: null };
+        localStorage.removeItem('kmspAuth');
+        window.location.hash = 'login'; // Arahkan ke halaman login
+        renderApp(); // Render ulang aplikasi
+    }
+}
+
+/**
+ * Memeriksa status login pengguna saat ini dari backend.
+ * Memperbarui variabel currentUser global.
+ */
+async function checkLoginStatus() {
+    try {
+        const { data, status } = await apiFetch('/auth/me');
+        // Jika status 200 dan ada data user, set currentUser
+        if (status === 200 && data.user) {
+            currentUser = data.user;
+        } else {
+            currentUser = null;
+            // Jika API /auth/me mengembalikan status OK tapi user null, itu skenario valid (tidak login)
+        }
+    } catch (error) {
+        currentUser = null;
+        console.warn("Gagal cek status login:", error.message);
+        // Jangan redirect ke login di sini, karena bisa terjadi saat refresh halaman non-login.
+        // Redirect ditangani oleh apiFetch untuk 401/403.
+    }
+}
+
+/**
+ * Fungsi utilitas untuk mengubah visibilitas input password.
+ * @param {HTMLElement} icon - Elemen ikon (SVG) yang memicu toggle.
+ */
+function togglePasswordVisibility(icon) {
+    const passwordInput = icon.previousElementSibling;
+    if (!passwordInput) return; // Pastikan input password ada
+    
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    // Ganti ikon mata terbuka/tertutup
+    icon.innerHTML = type === 'password' 
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+}
+
+// Jalankan fungsi main saat DOM selesai dimuat
+document.addEventListener('DOMContentLoaded', main);
