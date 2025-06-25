@@ -1,6 +1,3 @@
-/* frontend/style.css */
-
-/* Variabel CSS Global */
 :root {
     --primary-color: #4f46e5; /* Indigo 600 */
     --primary-dark-color: #4338ca; /* Indigo 700 */
@@ -560,6 +557,7 @@ select#package-dropdown {
     align-items: center;
     justify-content: center;
     z-index: 2000;
+    padding: 1rem; /* Tambahkan padding di overlay untuk ruang di tepi layar */
 }
 
 .modal-content {
@@ -570,10 +568,15 @@ select#package-dropdown {
     max-width: 500px;
     width: 90%; /* Responsive width */
     position: relative;
-    text-align: left; /* Default text alignment */
-    display: flex; /* Tambahkan display flex */
-    flex-direction: column; /* Tata letak vertikal */
-    gap: 1rem; /* Jarak antar elemen di modal */
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    /* PERBAIKAN: Batasi tinggi modal dan tambahkan scroll */
+    max-height: 95vh; /* Batasi tinggi modal hingga 95% dari tinggi viewport */
+    overflow-y: auto; /* Tambahkan scroll vertikal jika konten melebihi max-height */
+    -webkit-overflow-scrolling: touch; /* Untuk scroll lebih mulus di iOS */
 }
 
 .modal-header {
@@ -583,6 +586,7 @@ select#package-dropdown {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 1rem;
     margin-bottom: 0.5rem; /* Kurangi margin-bottom */
+    flex-shrink: 0; /* Pastikan header tidak menyusut saat ada scroll */
 }
 .modal-header h2 {
     margin: 0;
@@ -601,26 +605,27 @@ select#package-dropdown {
 }
 
 .modal-content #qrcode-container {
-    text-align: center; /* Center QR code */
-    display: block; /* Ensure it takes full width to center */
-    margin: 0 auto 1.5rem auto; /* Atur margin bawah lebih besar untuk memisahkan dari teks */
+    text-align: center;
+    display: block;
+    margin: 0 auto 1.5rem auto;
+    flex-shrink: 0; /* Pastikan QR code tidak menyusut */
 }
 .modal-content #qrcode-container img {
-    max-width: 100%; /* Make image responsive */
+    max-width: 100%;
     height: auto;
 }
 .modal-content h3 {
     text-align: center;
-    margin-top: 0.5rem; /* Kurangi margin-top */
+    margin-top: 0.5rem;
     margin-bottom: 0.5rem;
 }
 .modal-content p {
-    margin-bottom: 0.5rem; /* Atur margin default p dalam modal */
+    margin-bottom: 0.5rem;
 }
 .modal-content #payment-status {
     text-align: center;
     font-weight: 500;
-    margin-top: 0.5rem; /* Kurangi margin-top */
+    margin-top: 0.5rem;
     color: var(--text-color);
 }
 .modal-content #qris-timer {
@@ -629,19 +634,18 @@ select#package-dropdown {
 }
 .modal-content .loading-spinner {
     margin-top: 1rem;
-    margin-bottom: 1rem; /* Beri margin bawah */
+    margin-bottom: 1rem;
 }
-/* Style untuk tombol Batalkan Top Up di modal */
 .modal-content #cancel-topup-btn {
-    width: 100%; /* Pastikan lebar penuh */
-    margin-top: 0; /* Margin diatur oleh gap flexbox di modal-content */
-    background-color: var(--danger-color); /* Beri warna danger */
+    width: 100%;
+    margin-top: 0; /* Gap sudah mengaturnya */
+    background-color: var(--danger-color);
     border-color: var(--danger-color);
+    flex-shrink: 0; /* Pastikan tombol tidak menyusut */
 }
 .modal-content #cancel-topup-btn:hover {
     background-color: #c01e1e;
 }
-/* Pastikan tombol lain di modal juga konsisten */
 .modal-content button {
     width: 100%;
 }
