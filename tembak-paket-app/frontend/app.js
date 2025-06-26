@@ -636,34 +636,93 @@ function renderAdminDashboard(container) {
     container.innerHTML = `
         <div class="admin-container">
             <div class="admin-section">
+                <h1>Panel Kontrol Admin</h1>
+                <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
+            </div>
+
+            <div class="admin-section">
+                <h2>Mode Pemeliharaan</h2>
+                <div id="maintenance-feedback"></div>
+                <p>Status: <strong id="maintenance-status">${isMaintenanceMode ? 'AKTIF' : 'NONAKTIF'}</strong></p>
+                <button id="toggle-maintenance-btn" style="width:100%; background: ${isMaintenanceMode ? 'var(--danger-color)' : 'var(--success-color)'};">
+                    ${isMaintenanceMode ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan'}
+                </button>
+            </div>
+
+            ${/* Sisa bagian admin dashboard (Manajemen Database, Saldo, Paket, Pengumuman kecil) */''}
+            <div class="admin-section">
+                <h2>Manajemen Database</h2>
+                <div id="db-feedback"></div>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <button id="backup-db-btn" style="flex: 1;">Unduh Backup Database</button>
+                </div>
+                <h3>Pulihkan Database (Unggah db.json)</h3>
+                <form id="restore-db-form" class="file-upload-form" enctype="multipart/form-data">
+                    <input type="file" id="db-file-input" name="dbFile" accept=".json" required>
+                    <button type="submit">Pulihkan Database</button>
+                </form>
+            </div>
+
+            <div class="admin-section">
                 <h2>Informasi & Manajemen Saldo</h2>
                 <div id="balance-feedback"></div>
+                <div class="balance-info-display">
+                    <p>Saldo KMSP Anda Saat Ini:</p>
+                    <strong id="kmsp-balance-display">${typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...'}</strong>
+                </div>
+                <button id="check-kmsp-balance-btn" style="width:100%; margin-bottom: 2rem;">Cek Saldo KMSP</button>
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0;">
-                
                 <h3>Tambah Saldo Pengguna</h3>
                 <form id="add-balance-form" class="balance-controls">
-                    <label for="user-select-add">Pilih Pengguna:</label>
-                    <select id="user-select-add" required style="flex-grow: 1;"></select> <label for="amount-input">Jumlah:</label>
+                    <label for="user-select">Pilih Pengguna:</label>
+                    <select id="user-select" required style="flex-grow: 1;"></select>
+                    <label for="amount-input">Jumlah:</label>
                     <input type="number" id="amount-input" placeholder="e.g., 50000" required>
                     <button type="submit">Tambah Saldo</button>
                 </form>
-
-                <h3>Kurangi Saldo Pengguna</h3>
+                <h3>Hapus Saldo Pengguna</h3>
                 <form id="remove-balance-form" class="balance-controls">
                     <label for="user-select-remove">Pilih Pengguna:</label>
-                    <select id="user-select-remove" required style="flex-grow: 1;"></select> <label for="amount-remove-input">Jumlah:</label>
+                    <select id="user-select-remove" required style="flex-grow: 1;"></select>
+                    <label for="amount-remove-input">Jumlah:</label>
                     <input type="number" id="amount-remove-input" placeholder="e.g., 50000" required>
                     <button type="submit" style="background: var(--danger-color); color: #fff;">Kurangi Saldo</button>
                 </form>
-
                 <h3>Hapus Akun Pengguna</h3>
                 <form id="delete-user-form" class="balance-controls">
                     <label for="user-select-delete">Pilih Pengguna:</label>
-                    <select id="user-select-delete" required style="flex-grow: 1;"></select> <button type="submit" style="background: var(--danger-color); color: #fff;">Hapus Akun</button>
+                    <select id="user-select-delete" required style="flex-grow: 1;"></select>
+                    <button type="submit" style="background: var(--danger-color); color: #fff;">Hapus Akun</button>
                 </form>
             </div>
 
+            <div class="admin-section">
+                <h2>Manajemen Paket</h2>
+                <div id="sync-feedback"></div>
+                <button id="sync-btn" style="width:100%; margin-bottom: 2rem;">Sinkronisasi Ulang Paket dari KMSP</button>
+                <div id="manage-feedback"></div>
+                <input type="text" id="search-package-input" placeholder="Cari nama paket...">
+                <div class="admin-toolbar">
+                    <button id="load-packages-btn">Muat Ulang Paket</button>
+                    <button id="select-all-btn">Tampilkan Semua</button>
+                    <button id="deselect-all-btn">Sembunyikan Semua</button>
+                </div>
+                <ul id="package-list" class="package-list"><div class="loading-spinner"></div></ul>
+                <button id="save-all-btn">Simpan Semua Perubahan</button>
             </div>
+
+            <div class="admin-section">
+                <h2>Kirim Pengumuman (Kecil)</h2>
+                <div id="announcement-feedback"></div>
+                <form id="announcement-form">
+                    <div class="form-group">
+                        <label for="announcement-message">Pesan Pengumuman:</label>
+                        <textarea id="announcement-message" rows="4" placeholder="Ketik pengumuman di sini..." required></textarea>
+                    </div>
+                    <button type="submit">Kirim Pengumuman</button>
+                </form>
+            </div>
+        </div>
     `;
 
      // --- TEMPAT ANDA MELETAKKAN KODE YANG DIBERIKAN ---
@@ -731,8 +790,9 @@ function renderAdminDashboard(container) {
     async function loadUsers() {
         try {
             const { data, status } = await apiFetch('/admin/users');
+            // Isi semua dropdown user di admin panel
             const userSelects = [
-                document.getElementById('user-select-add'),    // <--- UBAH INI
+                document.getElementById('user-select'),
                 document.getElementById('user-select-remove'),
                 document.getElementById('user-select-delete')
             ];
@@ -751,9 +811,9 @@ function renderAdminDashboard(container) {
                     });
                 });
             } else {
-                displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
+                 displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
             }
-        } catch (error) {
+        } catch (error) { 
             console.error('Gagal memuat pengguna:', error);
             displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
         }
@@ -803,7 +863,7 @@ function renderAdminDashboard(container) {
         button.disabled = true; button.textContent = '...';
         displayFeedback('balance-feedback', '', false);
         try {
-            const userId = document.getElementById('user-select-add')?.value; // <--- UBAH INI
+            const userId = document.getElementById('user-select')?.value;
             const amount = parseFloat(document.getElementById('amount-input')?.value);
             if (!userId || isNaN(amount) || amount <= 0) {
                 throw new Error('Pilih pengguna dan masukkan jumlah yang valid.');
@@ -1115,9 +1175,10 @@ function renderAdminDashboard(container) {
     // Inisialisasi data saat admin panel dimuat
     // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
         setTimeout(async () => {
-        document.getElementById('load-packages-btn')?.click();
-        loadUsers(); // Ini akan memanggil fungsi loadUsers yang sudah diperbaiki
-        await fetchKMSPBalance();
+        document.getElementById('load-packages-btn')?.click(); // Muat paket
+        loadUsers(); // Muat pengguna
+        await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
+
         // Ambil status maintenance saat load admin panel (ini akan memperbarui UI status awal)
         try {
             const { data: maintenanceData } = await apiFetch('/admin/maintenance');
