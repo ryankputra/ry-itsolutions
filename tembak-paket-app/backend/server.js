@@ -29,7 +29,14 @@ if (!KMSP_API_KEY) {
 // --- Inisialisasi Database dan Middleware ---
 const file = path.join(__dirname, 'db.json');
 const adapter = new JSONFile(file);
-const defaultData = { users: [], packages: [], transactions: [], topups: [], announcements: [] };
+const defaultData = {
+    users: [],
+    packages: [],
+    transactions: [],
+    topups: [],
+    announcements: [],
+    maintenanceMode: false // <-- TAMBAHKAN INI
+};
 const db = new Low(adapter, defaultData);
 
 async function initializeDatabase() {
@@ -40,15 +47,18 @@ async function initializeDatabase() {
     db.data.transactions = db.data.transactions || [];
     db.data.topups = db.data.topups || [];
     db.data.announcements = db.data.announcements || [];
-    // PASTIKAN SEMUA PENGGUNA MEMILIKI FIELD 'verifiedPhone'
+    // Pastikan properti baru ada
+    db.data.maintenanceMode = db.data.maintenanceMode !== undefined ? db.data.maintenanceMode : false; // <-- PASTIKAN ADA
+
     db.data.users = db.data.users.map(user => ({
         ...user,
-        verifiedPhone: user.verifiedPhone || null // Tambahkan field ini jika belum ada
+        verifiedPhone: user.verifiedPhone || null
     }));
     await db.write();
     console.log("Database initialized successfully.");
 }
 initializeDatabase();
+
 
 app.use(express.json());
 app.use(cors({ origin: `http://localhost:3001`, credentials: true }));
@@ -149,15 +159,19 @@ app.post('/api/admin/restore-database', isAuthenticated, isAdmin, upload.single(
     }
 });
 
+
 app.get('/api/auth/me', (req, res) => {
     const user = db.data.users.find(u => u.id === req.session.userId);
+    const maintenanceMode = db.data.maintenanceMode; // <-- AMBIL STATUS MAINTENANCE DARI DB
+
     if (!user) {
-        if(req.session) req.session.destroy(); 
+        if(req.session) req.session.destroy();
         res.clearCookie('connect.sid');
-        return res.status(200).json({ status: true, user: null, message: "Pengguna tidak login." }); 
+        // Kirim juga status maintenance jika user tidak login
+        return res.status(200).json({ status: true, user: null, message: "Pengguna tidak login.", maintenanceMode: maintenanceMode }); // <-- KIRIM MAINTENANCE MODE
     }
     const { password: _, ...userWithoutPassword } = user;
-    res.status(200).json({ status: true, user: userWithoutPassword });
+    res.status(200).json({ status: true, user: userWithoutPassword, maintenanceMode: maintenanceMode }); // <-- KIRIM MAINTENANCE MODE
 });
 
 app.post('/api/auth/extend-session', isAuthenticated, async (req, res) => {
@@ -852,6 +866,21 @@ app.get('/api/user/announcement', isAuthenticated, (req, res) => { // MODIFIKASI
         ? db.data.announcements[0] 
         : null;
     res.json({ status: true, data: announcement });
+});
+
+app.post('/api/admin/maintenance', isAuthenticated, isAdmin, async (req, res) => {
+    const { enable } = req.body;
+    if (typeof enable !== 'boolean') {
+        return res.status(400).json({ status: false, message: 'Parameter "enable" harus boolean.' });
+    }
+    db.data.maintenanceMode = enable;
+    await db.write();
+    res.status(200).json({ status: true, message: `Mode maintenance berhasil ${enable ? 'diaktifkan' : 'dinonaktifkan'}.` });
+});
+
+// Endpoint untuk admin mendapatkan status mode maintenance
+app.get('/api/admin/maintenance', isAuthenticated, isAdmin, (req, res) => {
+    res.status(200).json({ status: true, data: { enabled: db.data.maintenanceMode } });
 });
 
 // Endpoint untuk admin menghapus akun pengguna

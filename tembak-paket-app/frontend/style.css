@@ -1389,3 +1389,103 @@ select#package-dropdown {
     }
 }
 
+
+/* Container utama untuk pesan maintenance */
+.maintenance-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 80px - 2rem); /* Sesuaikan tinggi dengan tinggi header dan margin */
+    text-align: center;
+    padding: 3rem; /* Sedikit lebih banyak padding */
+    margin: 2rem auto; /* Pusatkan dan beri margin lebih besar dari tepi */
+    background-color: var(--card-background); /* Menggunakan card-background yang sudah Anda definisikan */
+    border-radius: var(--border-radius); /* Menggunakan border-radius yang sudah Anda definisikan */
+    box-shadow: var(--box-shadow); /* Menggunakan box-shadow yang sudah Anda definisikan */
+    max-width: 700px; /* Lebar maksimal container */
+    border: 1px solid var(--border-color); /* Menggunakan border-color */
+    transition: all 0.3s ease-out; /* Transisi halus untuk perubahan */
+
+    /* Animasi muncul */
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInSlideUp 0.6s forwards ease-out; /* Durasi sedikit lebih lama */
+}
+
+/* Judul utama maintenance */
+.maintenance-container h2 {
+    font-size: 2.5rem; /* Ukuran font lebih besar */
+    color: var(--danger-color); /* Warna merah untuk perhatian */
+    margin-bottom: 25px; /* Jarak bawah lebih lega */
+    letter-spacing: 1.5px; /* Lebih banyak jarak antar huruf */
+    text-transform: uppercase;
+    font-weight: 700;
+    text-shadow: 1px 1px 3px rgba(63, 62, 62, 0.411); /* Sedikit bayangan teks */
+}
+
+/* Sub-teks atau pesan utama */
+.maintenance-container p {
+    font-size: 1.15rem; /* Ukuran font sedikit lebih besar */
+    color: var(--text-color); /* Warna teks utama Anda */
+    line-height: 1.7; /* Jarak antar baris yang nyaman */
+    margin-bottom: 25px;
+    max-width: 550px; /* Batasi lebar teks untuk keterbacaan */
+}
+
+/* Teks link di pesan maintenance */
+.maintenance-container p a {
+    color: var(--primary-color); /* Warna link yang menarik */
+    text-decoration: underline; /* Garis bawah */
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.maintenance-container p a:hover {
+    color: var(--primary-dark-color); /* Perubahan warna saat hover */
+}
+
+/* Keyframes untuk animasi muncul */
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* --- Responsive Design for smaller screens --- */
+@media (max-width: 768px) {
+    .maintenance-container {
+        padding: 2rem;
+        margin: 1rem auto;
+    }
+
+    .maintenance-container h2 {
+        font-size: 2rem;
+        margin-bottom: 20px;
+    }
+
+    .maintenance-container p {
+        font-size: 1rem;
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .maintenance-container {
+        padding: 1.5rem;
+        margin: 0.5rem auto;
+    }
+    .maintenance-container h2 {
+        font-size: 1.6rem;
+    }
+
+    .maintenance-container p {
+        font-size: 0.9rem;
+    }
+}

@@ -3583,6 +3583,6 @@
       "id": "ann_1750853213435"
     }
   ],
-  "maintenanceMode": false,
+  "maintenanceMode": true,
   "fullScreenAnnouncement": null
 }

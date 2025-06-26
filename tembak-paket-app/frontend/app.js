@@ -13,6 +13,7 @@ let phoneAuth = {
 };
 let kmspBalance = null; // Diatur ke null untuk menandakan belum dimuat atau error
 let latestAnnouncement = null;
+let isMaintenanceMode = false; 
 
 
 // ===============================================
@@ -503,6 +504,7 @@ function renderRegisterPage() {
  * Jika toggle di klik, sidebar akan muncul dan header ikut bergeser (smooth).
  * @param {string} activePage - Halaman yang aktif: 'packages', 'history', atau 'admin'.
  */
+
 function renderDashboard(activePage = 'packages') {
     const isAdmin = currentUser.role === 'admin';
     app.innerHTML = `
@@ -588,8 +590,7 @@ function renderDashboard(activePage = 'packages') {
 
     const mainContent = document.getElementById('page-content-area');
 
-    // Tampilkan banner pengumuman jika ada
-    let announcementHTML = '';
+   let announcementHTML = '';
     if (latestAnnouncement && latestAnnouncement.message) {
         announcementHTML = `
             <div class="announcement-banner" id="announcement-banner">
@@ -601,8 +602,8 @@ function renderDashboard(activePage = 'packages') {
 
     // Muat konten spesifik berdasarkan halaman aktif
     if (activePage === 'packages') {
-        mainContent.innerHTML = announcementHTML + renderPhoneVerificationPanel();
-        renderPackagesPage(mainContent);
+        mainContent.innerHTML = announcementHTML + renderPhoneVerificationPanel(); // Panel verifikasi telepon jika diperlukan
+        renderPackagesPage(mainContent); // Panggil renderPackagesPage
         setupPhoneVerificationListeners();
     } else if (activePage === 'history') {
         mainContent.innerHTML = announcementHTML;
@@ -612,116 +613,88 @@ function renderDashboard(activePage = 'packages') {
         renderAdminDashboard(mainContent);
     }
 
-    // Event listener untuk tombol tutup pengumuman
+    // Event listener untuk tombol tutup pengumuman kecil
     const closeBtn = document.getElementById('announcement-close-btn');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             document.getElementById('announcement-banner').style.display = 'none';
         });
     }
-
-    // Hapus style inline, gunakan style.css untuk pengaturan header dan toggle
 }
-
 /**
  * Merender tampilan panel admin dengan semua fitur manajemen.
  * Ini adalah bagian dari `renderDashboard`.
  * @param {HTMLElement} container - Elemen DOM tempat konten admin akan dirender (misal: page-content-area).
  */
 function renderAdminDashboard(container) {
-    // Validasi container untuk mencegah error
     if (!container) {
         console.error("Container untuk panel admin tidak ditemukan.");
         app.innerHTML = '<p class="error-message">Error: Container untuk panel admin tidak ditemukan. Silakan refresh halaman.</p>';
         return;
     }
 
-    // HTML untuk admin panel
     container.innerHTML = `
         <div class="admin-container">
             <div class="admin-section">
-                <h1>Panel Kontrol Admin</h1>
-                <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
-            </div>
-
-            <div class="admin-section">
-                <h2>Manajemen Database</h2>
-                <div id="db-feedback"></div>
-                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                    <button id="backup-db-btn" style="flex: 1;">Unduh Backup Database</button>
-                </div>
-                <h3>Pulihkan Database (Unggah db.json)</h3>
-                <form id="restore-db-form" class="file-upload-form" enctype="multipart/form-data">
-                    <input type="file" id="db-file-input" name="dbFile" accept=".json" required>
-                    <button type="submit">Pulihkan Database</button>
-                </form>
-            </div>
-
-            <div class="admin-section">
                 <h2>Informasi & Manajemen Saldo</h2>
                 <div id="balance-feedback"></div>
-                <div class="balance-info-display">
-                    <p>Saldo KMSP Anda Saat Ini:</p>
-                    <strong id="kmsp-balance-display">${typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...'}</strong>
-                </div>
-                <button id="check-kmsp-balance-btn" style="width:100%; margin-bottom: 2rem;">Cek Saldo KMSP</button>
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0;">
+                
                 <h3>Tambah Saldo Pengguna</h3>
                 <form id="add-balance-form" class="balance-controls">
-                    <label for="user-select">Pilih Pengguna:</label>
-                    <select id="user-select" required style="flex-grow: 1;"></select>
-                    <label for="amount-input">Jumlah:</label>
+                    <label for="user-select-add">Pilih Pengguna:</label>
+                    <select id="user-select-add" required style="flex-grow: 1;"></select> <label for="amount-input">Jumlah:</label>
                     <input type="number" id="amount-input" placeholder="e.g., 50000" required>
                     <button type="submit">Tambah Saldo</button>
                 </form>
-                <h3>Hapus Saldo Pengguna</h3>
+
+                <h3>Kurangi Saldo Pengguna</h3>
                 <form id="remove-balance-form" class="balance-controls">
                     <label for="user-select-remove">Pilih Pengguna:</label>
-                    <select id="user-select-remove" required style="flex-grow: 1;"></select>
-                    <label for="amount-remove-input">Jumlah:</label>
+                    <select id="user-select-remove" required style="flex-grow: 1;"></select> <label for="amount-remove-input">Jumlah:</label>
                     <input type="number" id="amount-remove-input" placeholder="e.g., 50000" required>
                     <button type="submit" style="background: var(--danger-color); color: #fff;">Kurangi Saldo</button>
                 </form>
+
                 <h3>Hapus Akun Pengguna</h3>
                 <form id="delete-user-form" class="balance-controls">
                     <label for="user-select-delete">Pilih Pengguna:</label>
-                    <select id="user-select-delete" required style="flex-grow: 1;"></select>
-                    <button type="submit" style="background: var(--danger-color); color: #fff;">Hapus Akun</button>
+                    <select id="user-select-delete" required style="flex-grow: 1;"></select> <button type="submit" style="background: var(--danger-color); color: #fff;">Hapus Akun</button>
                 </form>
             </div>
 
-            <div class="admin-section">
-                <h2>Manajemen Paket</h2>
-                <div id="sync-feedback"></div>
-                <button id="sync-btn" style="width:100%; margin-bottom: 2rem;">Sinkronisasi Ulang Paket dari KMSP</button>
-                
-                <div id="manage-feedback"></div>
-                
-                <input type="text" id="search-package-input" placeholder="Cari nama paket...">
-                
-                <div class="admin-toolbar">
-                    <button id="load-packages-btn">Muat Ulang Paket</button>
-                    <button id="select-all-btn">Tampilkan Semua</button>
-                    <button id="deselect-all-btn">Sembunyikan Semua</button>
-                </div>
-                <ul id="package-list" class="package-list"><div class="loading-spinner"></div></ul>
-                <button id="save-all-btn">Simpan Semua Perubahan</button>
             </div>
-
-            <div class="admin-section">
-                <h2>Kirim Pengumuman</h2>
-                <div id="announcement-feedback"></div>
-                <form id="announcement-form">
-                    <div class="form-group">
-                        <label for="announcement-message">Pesan Pengumuman:</label>
-                        <textarea id="announcement-message" rows="4" placeholder="Ketik pengumuman di sini..." required></textarea>
-                    </div>
-                    <button type="submit">Kirim Pengumuman</button>
-                </form>
-            </div>
-            
-        </div>
     `;
+
+     // --- TEMPAT ANDA MELETAKKAN KODE YANG DIBERIKAN ---
+
+    // Event listener untuk tombol 'Toggle Maintenance Mode'
+    document.getElementById('toggle-maintenance-btn')?.addEventListener('click', async () => {
+        const button = document.getElementById('toggle-maintenance-btn');
+        button.disabled = true;
+        button.textContent = 'Memperbarui...';
+        displayFeedback('maintenance-feedback', '', false);
+
+        const newStatus = !isMaintenanceMode;
+        try {
+            const { data, status } = await apiFetch('/admin/maintenance', { method: 'POST', body: { enable: newStatus } });
+            if (status === 200 && data.status) {
+                isMaintenanceMode = newStatus; // Update global state
+                document.getElementById('maintenance-status').textContent = newStatus ? 'AKTIF' : 'NONAKTIF';
+                button.style.background = newStatus ? 'var(--danger-color)' : 'var(--success-color)';
+                button.textContent = newStatus ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan';
+                displayFeedback('maintenance-feedback', data.message, false);
+                renderApp(); // Render ulang untuk melihat efek maintenance di halaman paket
+            } else {
+                throw new Error(data.message || 'Gagal mengubah status maintenance.');
+            }
+        } catch (error) {
+            displayFeedback('maintenance-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+        }
+    });
+
 
     // JavaScript untuk Admin Panel (di dalam fungsi renderAdminDashboard)
     
@@ -758,9 +731,8 @@ function renderAdminDashboard(container) {
     async function loadUsers() {
         try {
             const { data, status } = await apiFetch('/admin/users');
-            // Isi semua dropdown user di admin panel
             const userSelects = [
-                document.getElementById('user-select'),
+                document.getElementById('user-select-add'),    // <--- UBAH INI
                 document.getElementById('user-select-remove'),
                 document.getElementById('user-select-delete')
             ];
@@ -779,9 +751,9 @@ function renderAdminDashboard(container) {
                     });
                 });
             } else {
-                 displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
+                displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
             }
-        } catch (error) { 
+        } catch (error) {
             console.error('Gagal memuat pengguna:', error);
             displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
         }
@@ -831,7 +803,7 @@ function renderAdminDashboard(container) {
         button.disabled = true; button.textContent = '...';
         displayFeedback('balance-feedback', '', false);
         try {
-            const userId = document.getElementById('user-select')?.value;
+            const userId = document.getElementById('user-select-add')?.value; // <--- UBAH INI
             const amount = parseFloat(document.getElementById('amount-input')?.value);
             if (!userId || isNaN(amount) || amount <= 0) {
                 throw new Error('Pilih pengguna dan masukkan jumlah yang valid.');
@@ -1142,12 +1114,28 @@ function renderAdminDashboard(container) {
 
     // Inisialisasi data saat admin panel dimuat
     // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
-    setTimeout(async () => {
-        document.getElementById('load-packages-btn')?.click(); // Muat paket
-        loadUsers(); // Muat pengguna
-        await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
+        setTimeout(async () => {
+        document.getElementById('load-packages-btn')?.click();
+        loadUsers(); // Ini akan memanggil fungsi loadUsers yang sudah diperbaiki
+        await fetchKMSPBalance();
+        // Ambil status maintenance saat load admin panel (ini akan memperbarui UI status awal)
+        try {
+            const { data: maintenanceData } = await apiFetch('/admin/maintenance');
+            if (maintenanceData.status) {
+                isMaintenanceMode = maintenanceData.data.enabled;
+                document.getElementById('maintenance-status').textContent = isMaintenanceMode ? 'AKTIF' : 'NONAKTIF';
+                const toggleBtn = document.getElementById('toggle-maintenance-btn');
+                if(toggleBtn) {
+                    toggleBtn.style.background = isMaintenanceMode ? 'var(--danger-color)' : 'var(--success-color)';
+                    toggleBtn.textContent = isMaintenanceMode ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan';
+                }
+            }
+        } catch (error) {
+            console.error("Gagal memuat status maintenance di admin:", error);
+        }
     }, 0);
 }
+
 
     async function loadUsers() {
         try {
@@ -1490,11 +1478,28 @@ function renderAdminDashboard(container) {
 
     // Inisialisasi data saat admin panel dimuat
     // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
-    setTimeout(async () => {
+        setTimeout(async () => {
         document.getElementById('load-packages-btn')?.click(); // Muat paket
         loadUsers(); // Muat pengguna
         await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
+
+        // Ambil status maintenance saat load admin panel (ini akan memperbarui UI status awal)
+        try {
+            const { data: maintenanceData } = await apiFetch('/admin/maintenance');
+            if (maintenanceData.status) {
+                isMaintenanceMode = maintenanceData.data.enabled;
+                document.getElementById('maintenance-status').textContent = isMaintenanceMode ? 'AKTIF' : 'NONAKTIF';
+                const toggleBtn = document.getElementById('toggle-maintenance-btn');
+                if(toggleBtn) {
+                    toggleBtn.style.background = isMaintenanceMode ? 'var(--danger-color)' : 'var(--success-color)';
+                    toggleBtn.textContent = isMaintenanceMode ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan';
+                }
+            }
+        } catch (error) {
+            console.error("Gagal memuat status maintenance di admin:", error);
+        }
     }, 0);
+
 
 
 
@@ -1573,6 +1578,18 @@ function renderPhoneVerificationPanel() {
  * @param {HTMLElement} container - Elemen DOM tempat halaman paket akan dirender.
  */
 async function renderPackagesPage(container) {
+    // Cek mode maintenance
+    if (isMaintenanceMode) {
+        container.innerHTML = `
+            <div class="maintenance-container" style="text-align: center; padding: 3rem;">
+                <h2 style="color: var(--danger-color);">MODE MAINTENANCE AKTIF</h2>
+                <p>Maaf, layanan pembelian paket sedang dalam maintenance. Layanan Kami Akan Segera Kembali, coba beberapa saat lagi.</p>
+                <p>Untuk saat ini, Anda masih bisa melihat <a href="#history">riwayat transaksi</a>.</p>
+            </div>
+        `;
+        return; // Hentikan render halaman paket jika maintenance
+    }
+
     const packageSection = document.createElement('div');
     packageSection.innerHTML = `
         <div class="page-content" id="package-selection-area">
@@ -2472,21 +2489,22 @@ async function handleLogout() {
  * Memeriksa status login pengguna saat ini dari backend.
  * Memperbarui variabel currentUser global.
  */
+
 async function checkLoginStatus() {
     try {
         const { data, status } = await apiFetch('/auth/me');
-        // Jika status 200 dan ada data user, set currentUser
-        if (status === 200 && data.user) {
+        if (status === 200 && data.status) {
             currentUser = data.user;
+            // Update status maintenance dari respons backend
+            isMaintenanceMode = data.maintenanceMode !== undefined ? data.maintenanceMode : false; // <-- UPDATE INI
         } else {
             currentUser = null;
-            // Jika API /auth/me mengembalikan status OK tapi user null, itu skenario valid (tidak login)
+            isMaintenanceMode = false; // Reset jika tidak login atau error
         }
     } catch (error) {
+        console.error("Gagal memeriksa status login:", error);
         currentUser = null;
-        console.warn("Gagal cek status login:", error.message);
-        // Jangan redirect ke login di sini, karena bisa terjadi saat refresh halaman non-login.
-        // Redirect ditangani oleh apiFetch untuk 401/403.
+        isMaintenanceMode = false; // Reset jika ada error
     }
 }
 
