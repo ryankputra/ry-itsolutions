@@ -468,7 +468,7 @@ function renderFinalStatusModal(title, message) {
 function renderLoginPage() {
     app.innerHTML = `
         <div class="auth-container">
-            <h1>Login ke Panel</h1>
+            <h1>RYYSTORE Panel</h1>
             <form id="login-form">
                 <div class="form-group">
                     <label for="email">Email</label>
@@ -526,18 +526,23 @@ function renderRegisterPage() {
     `;
     document.getElementById('register-form')?.addEventListener('submit', handleRegister);
 }
-
 /**
- * Merender struktur dashboard utama (sidebar dan area konten).
- * Berdasarkan activePage, ia akan memuat konten yang sesuai (paket, riwayat, atau admin).
+ * Merender struktur dashboard utama (header, sidebar, dan area konten).
+ * Header berisi judul "RYYSTORE" dan tombol toggle menu.
+ * Jika toggle di klik, sidebar akan muncul dan header ikut bergeser (smooth).
  * @param {string} activePage - Halaman yang aktif: 'packages', 'history', atau 'admin'.
  */
 function renderDashboard(activePage = 'packages') {
     const isAdmin = currentUser.role === 'admin';
     app.innerHTML = `
-        <button class="menu-toggle" id="menu-toggle-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
+        <header class="main-header" id="main-header">
+            <div class="header-inner" style="display: flex; align-items: center; height: 100%;">
+                <button class="menu-toggle" id="menu-toggle-btn" aria-label="Buka Menu" style="margin-right: 12px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <h1 class="header-title" style="margin: 0; font-size: 1.4rem; letter-spacing: 2px;">RYYSTORE</h1>
+            </div>
+        </header>
         <div class="dashboard-container">
             <aside class="sidebar" id="sidebar">
                 <h2>Ryystore V2</h2>
@@ -563,29 +568,55 @@ function renderDashboard(activePage = 'packages') {
         </div>
         <div id="modal-container"></div>
     `;
-    
+
     // Atur event listener untuk tombol logout dan top up
     document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
     document.getElementById('topup-btn')?.addEventListener('click', renderTopUpModal);
-    
-    // Logika untuk toggle sidebar di perangkat mobile
+
+    // Sidebar toggle logic
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
     const sidebar = document.getElementById('sidebar');
-    if (menuToggleBtn && sidebar) {
-        menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Mencegah event menyebar dan menutup sidebar
-            sidebar.classList.toggle('open');
-        });
-        // Menutup sidebar jika klik di luar sidebar (hanya jika sidebar terbuka)
-        document.body.addEventListener('click', (e) => {
-            if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !menuToggleBtn.contains(e.target)) {
-                 sidebar.classList.remove('open');
-            }
-        }, true); // Use capture phase to ensure this runs before other click handlers
+    const mainHeader = document.getElementById('main-header');
+    const dashboardContainer = document.querySelector('.dashboard-container');
+    let sidebarOpen = false;
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        mainHeader.classList.add('shifted');
+        dashboardContainer.classList.add('shifted');
+        sidebarOpen = true;
     }
-    
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        mainHeader.classList.remove('shifted');
+        dashboardContainer.classList.remove('shifted');
+        sidebarOpen = false;
+    }
+
+    if (menuToggleBtn && sidebar && mainHeader && dashboardContainer) {
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!sidebarOpen) openSidebar();
+            else closeSidebar();
+        });
+        // Tutup sidebar jika klik di luar sidebar dan header
+        document.addEventListener('click', (e) => {
+            if (
+                sidebarOpen &&
+                !sidebar.contains(e.target) &&
+                !mainHeader.contains(e.target)
+            ) {
+                closeSidebar();
+            }
+        });
+        // Tutup sidebar jika resize ke mobile
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 600) closeSidebar();
+        });
+    }
+
     const mainContent = document.getElementById('page-content-area');
-    
+
     // Tampilkan banner pengumuman jika ada
     let announcementHTML = '';
     if (latestAnnouncement && latestAnnouncement.message) {
@@ -617,6 +648,8 @@ function renderDashboard(activePage = 'packages') {
             document.getElementById('announcement-banner').style.display = 'none';
         });
     }
+
+    // Hapus style inline, gunakan style.css untuk pengaturan header dan toggle
 }
 
 /**
