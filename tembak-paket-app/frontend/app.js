@@ -14,6 +14,7 @@ let phoneAuth = {
 let kmspBalance = null; // Diatur ke null untuk menandakan belum dimuat atau error
 let latestAnnouncement = null;
 
+
 // ===============================================
 // === INITIALISASI APLIKASI & LOGIKA ROUTING ====
 // ===============================================
@@ -24,22 +25,29 @@ let latestAnnouncement = null;
  */
 
 async function main() {
-    await checkLoginStatus(); // Memeriksa status login pengguna
-    if (currentUser) { // Jika ada currentUser yang berhasil diidentifikasi
-        const promises = [
+    // Jalankan semua async ops secara paralel jika memungkinkan
+    const promises = [];
+    promises.push(checkLoginStatus()); // Periksa status login pengguna. Ini harus pertama.
+
+    // Menunggu checkLoginStatus selesai sebelum melanjutkan logika rendering
+    await Promise.all(promises);
+
+    // Setelah checkLoginStatus, baru inisialisasi KMSP dan pengumuman jika sudah login
+    if (currentUser) {
+        const loggedInPromises = [
             initKMSPsession(), // Ini hanya akan berfungsi jika ada kmspAuth di localStorage
-            fetchAnnouncement() // <-- Endpoint ini sekarang harusnya hanya memerlukan isAuthenticated (di server.js)
+            fetchAnnouncement() // Endpoint ini sekarang harusnya hanya memerlukan isAuthenticated
         ];
 
         // HANYA ambil saldo KMSP jika pengguna adalah admin
-        if (currentUser.role === 'admin') { // <-- Kunci di sini
-            promises.push(fetchKMSPBalance()); // Endpoint ini memerlukan isAdmin
+        if (currentUser.role === 'admin') {
+            loggedInPromises.push(fetchKMSPBalance()); // Endpoint ini memerlukan isAdmin
         }
-
-        await Promise.all(promises);
+        await Promise.all(loggedInPromises); // Tunggu semua promise ini selesai
     }
     renderApp();
-    window.addEventListener('hashchange', renderApp); 
+    window.removeEventListener('hashchange', renderApp); // Hapus listener lama jika ada
+    window.addEventListener('hashchange', renderApp);
 }
 
 /**
@@ -334,6 +342,7 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
     }
 }
 
+
 /**
  * Merender modal untuk menyelesaikan pembayaran eksternal (QRIS/DeepLink).
  * @param {Object} paymentData - Data pembayaran dari backend.
@@ -353,16 +362,16 @@ function renderExternalPaymentModal(paymentData) {
             <p>Total Bayar ke Provider: <strong>Rp ${(paymentData.amount || 0).toLocaleString('id-ID')}</strong></p>
         `;
         hasValidPaymentMethod = true;
-    } 
+    }
     // Cek jika pembayaran menggunakan Deeplink (aplikasi lain)
     else if (paymentData.have_deeplink && paymentData.deeplink_data && paymentData.deeplink_data.deeplink_url) {
-         paymentContent = `
+        paymentContent = `
             <h3>Klik untuk Membayar</h3>
             <a href="${decodeURIComponent(paymentData.deeplink_data.deeplink_url)}" target="_blank" class="button" style="text-decoration: none;">Buka Aplikasi ${paymentData.deeplink_data.payment_method || 'Pembayaran'}</a>
             <p>Total Bayar ke Provider: <strong>Rp ${(paymentData.amount || 0).toLocaleString('id-ID')}</strong></p>
-         `;
-         hasValidPaymentMethod = true;
-    } 
+           `;
+        hasValidPaymentMethod = true;
+    }
     // Jika tidak ada metode pembayaran yang valid
     else {
         paymentContent = `<p class="error-message">Data pembayaran tidak valid dari provider.</p>`;
@@ -376,9 +385,9 @@ function renderExternalPaymentModal(paymentData) {
                     <button class="modal-close">&times;</button>
                 </div>
                 ${paymentContent}
-                <p style="font-size: 0.9em; margin-top: 1.5rem; color: #555;">Biaya layanan telah dipotong dari saldo Anda. Mohon selesaikan pembayaran ini.</p>
-                <p id="payment-status">Menunggu Konfirmasi Pembayaran dari Provider...</p>
-                <div class="loading-spinner" id="payment-spinner" style="display: block; border-top-color: var(--primary-color);"></div>
+                <p style="font-size: 0.9em; margin-top: 1.5rem; color: #555;">Biaya layanan telah dipotong dari saldo Anda. Transaksi ini sudah sukses di sistem kami. Mohon selesaikan pembayaran ini di aplikasi eksternal.</p>
+                <p id="payment-status" style="color: var(--success-color);">Transaksi berhasil dibuat!</p>
+                <div class="loading-spinner" id="payment-spinner" style="display: none;"></div> <button id="external-payment-close-btn" class="secondary" style="margin-top: 1.5rem; width: 100%; display: block;">Tutup</button>
             </div>
         </div>
     `;
@@ -395,65 +404,26 @@ function renderExternalPaymentModal(paymentData) {
         }
     }
 
-    let pollingInterval = setInterval(async () => {
-        try {
-            const { data, status } = await apiFetch(`/purchase/status/${paymentData.trx_id}`);
-            if (status === 200 && data.status && data.data?.status === 'success') {
-                clearInterval(pollingInterval);
-                const spinnerEl = document.getElementById('payment-spinner');
-                const statusEl = document.getElementById('payment-status');
-                if (spinnerEl) spinnerEl.style.display = 'none';
-                
-                if(statusEl) {
-                    statusEl.textContent = 'Pembayaran Berhasil Dikonfirmasi!';
-                    statusEl.style.color = 'var(--success-color)';
-                }
-                setTimeout(() => {
-                    closeModal(); // Tutup modal
-                    renderApp(); // Render app untuk update riwayat, saldo dll.
-                }, 2500);
-            }
-        } catch (error) {
-            console.error("Polling error:", error);
-            if (error.message.includes('404')) clearInterval(pollingInterval);
-        }
-    }, 5000);
+    // >>>>>>> Hapus Seluruh Bagian Polling Interval Ini <<<<<<<
+    // let pollingInterval = setInterval(async () => {
+    //    // ... kode polling yang sekarang tidak perlu ...
+    // }, 5000);
+    // >>>>>>> Akhir Bagian Polling Interval <<<<<<<
 
+    // Pastikan untuk membersihkan interval polling dan countdown sebelumnya (jika ada dari TopUp QRIS)
+    if (window.activeQrisPollingInterval) clearInterval(window.activeQrisPollingInterval);
+    if (window.activeQrisCountdownInterval) clearInterval(window.activeQrisCountdownInterval);
+
+    // Fungsi closeModal tetap sama
     const closeModal = () => {
-        clearInterval(pollingInterval);
+        // Tidak perlu clearInterval(pollingInterval); di sini lagi
         modalContainer.innerHTML = '';
-        renderApp();
+        renderApp(); // Render app untuk update riwayat, saldo dll.
     };
     document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
     document.querySelector('.modal-close')?.addEventListener('click', closeModal);
-}
-
-/**
- * Merender modal tampilan status akhir transaksi (sukses/gagal).
- * @param {string} title - Judul modal.
- * @param {string} message - Pesan status.
- */
-function renderFinalStatusModal(title, message) {
-    const modalContainer = document.getElementById('modal-container');
-    if (!modalContainer) return;
-
-    modalContainer.innerHTML = `
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header"><h2>${title}</h2></div>
-                <p>${message}</p>
-                <div style="text-align: right; margin-top: 1.5rem;">
-                    <button id="close-final-modal" class="secondary" style="width: auto;">Tutup</button>
-                </div>
-            </div>
-        </div>
-    `;
-    const closeModal = () => {
-        modalContainer.innerHTML = '';
-        renderApp(); // Render ulang aplikasi setelah modal ditutup
-    };
-    document.getElementById('close-final-modal')?.addEventListener('click', closeModal);
-    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeModal(); });
+    // Tombol tutup manual akan selalu terlihat
+    document.getElementById('external-payment-close-btn')?.addEventListener('click', closeModal);
 }
 
 
@@ -1704,6 +1674,7 @@ function displaySelectedPackageDetails(packageCode) {
     }
 }
 
+
 /**
  * Merender halaman riwayat transaksi ke dalam container.
  * Menggabungkan riwayat pembelian dan top up.
@@ -1721,6 +1692,7 @@ async function renderHistoryPage(container) {
 
     try {
         const { data, status } = await apiFetch('/user/transactions');
+
         if (status === 200 && data.status && Array.isArray(data.data) && data.data.length > 0) {
             historyContent.innerHTML = `
                 <table class="history-table">
@@ -1740,18 +1712,42 @@ async function renderHistoryPage(container) {
                             let nameOrId = trx.packageName || 'N/A';
                             let amountOrFee = `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
                             let actionButton = '';
+                            let statusClass = (trx.status || 'failed').toLowerCase();
 
-                            if (trx.type === 'topup') { // Jika tipe transaksi adalah topup
+                            // >>>>> START PERUBAHAN PENTING DI SINI <<<<<<<
+                            // Logika untuk transaksi pembelian eksternal (QRIS/Deeplink)
+                            // Tampilkan tombol jika ada paymentDetails, TERLEPAS DARI STATUS
+                            if (trx.type === 'purchase' && trx.paymentDetails) {
+                                // Cek apakah ada data QRIS
+                                if (trx.paymentDetails.is_qris && trx.paymentDetails.qris_data && trx.paymentDetails.qris_data.qr_code) {
+                                    actionButton = `<button class="open-external-payment-btn"
+                                                            data-type="qris"
+                                                            data-trx-id="${trx.id}"
+                                                            data-payment-data='${JSON.stringify(trx.paymentDetails)}'
+                                                            style="white-space: nowrap;">Lihat QRIS</button>`;
+                                // Cek apakah ada data Deeplink
+                                } else if (trx.paymentDetails.have_deeplink && trx.paymentDetails.deeplink_data && trx.paymentDetails.deeplink_data.deeplink_url) {
+                                    actionButton = `<button class="open-external-payment-btn"
+                                                            data-type="deeplink"
+                                                            data-trx-id="${trx.id}"
+                                                            data-payment-data='${JSON.stringify(trx.paymentDetails)}'
+                                                            style="white-space: nowrap;">Lihat DANA/App</button>`;
+                                }
+                            }
+                            // >>>>> END PERUBAHAN PENTING DI SINI <<<<<<<
+
+                            // Logika untuk transaksi topup (sama, tidak berubah)
+                            else if (trx.type === 'topup') {
                                 type = 'Top Up';
-                                nameOrId = trx.id; // Gunakan ID transaksi topup
+                                nameOrId = trx.id;
                                 amountOrFee = `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`;
-                                // Tambahkan tombol "Lihat QRIS" jika statusnya pending dan ada data QRIS
                                 if (trx.status === 'pending' && trx.qrisData?.base64Image && typeof trx.qrisData?.uniqueAmount === 'number' && trx.createdAt) {
-                                    actionButton = `<button class="open-qris-btn" 
-                                                        data-topup-id="${trx.id}" 
-                                                        data-base64-image="${trx.qrisData.base64Image}" 
-                                                        data-unique-amount="${trx.qrisData.uniqueAmount}"
-                                                        data-created-at="${trx.createdAt}">Lihat QRIS</button>`; // Sertakan createdAt
+                                    actionButton = `<button class="open-qris-btn"
+                                                             data-topup-id="${trx.id}"
+                                                             data-base64-image="${trx.qrisData.base64Image}"
+                                                             data-unique-amount="${trx.qrisData.uniqueAmount}"
+                                                             data-created-at="${trx.createdAt}"
+                                                             style="white-space: nowrap;">Lihat QRIS</button>`;
                                 }
                             }
 
@@ -1761,7 +1757,7 @@ async function renderHistoryPage(container) {
                                     <td data-label="Tipe">${type}</td>
                                     <td data-label="Nama/ID">${nameOrId}</td>
                                     <td data-label="Jumlah/Fee">${amountOrFee}</td>
-                                    <td data-label="Status"><span class="status-badge status-${(trx.status || 'failed').toLowerCase()}">${trx.api_response || trx.status}</span></td>
+                                    <td data-label="Status"><span class="status-badge status-${statusClass}">${trx.api_response || trx.status}</span></td>
                                     <td data-label="Aksi">${actionButton}</td>
                                 </tr>
                             `;
@@ -1769,19 +1765,32 @@ async function renderHistoryPage(container) {
                     </tbody>
                 </table>
             `;
-            // Attach event listeners for "Lihat QRIS" buttons
+            // Event listeners tetap sama
             document.querySelectorAll('.open-qris-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const topUpId = e.target.dataset.topupId;
                     const base64Image = e.target.dataset.base64Image;
                     const uniqueAmount = parseFloat(e.target.dataset.uniqueAmount);
-                    const createdAt = e.target.dataset.createdAt; // Dapatkan createdAt
+                    const createdAt = e.target.dataset.createdAt;
 
-                    // Pastikan semua data ada sebelum memanggil renderQrisDisplay
                     if (topUpId && base64Image && !isNaN(uniqueAmount) && createdAt) {
-                        renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt); // Teruskan createdAt
+                        renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt);
                     } else {
-                        alert('Data QRIS tidak lengkap atau tidak valid.');
+                        alert('Data QRIS top-up tidak lengkap atau tidak valid.');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.open-external-payment-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const paymentDataString = e.target.dataset.paymentData;
+                    try {
+                        const paymentData = JSON.parse(paymentDataString);
+                        paymentData.trx_id = e.target.dataset.trxId; // Pastikan trx_id juga di-pass
+                        renderExternalPaymentModal(paymentData);
+                    } catch (error) {
+                        console.error('Error parsing payment data for purchase:', error);
+                        alert('Gagal memuat detail pembayaran pembelian. Data tidak valid.');
                     }
                 });
             });
@@ -1792,8 +1801,10 @@ async function renderHistoryPage(container) {
         }
     } catch (error) {
         historyContent.innerHTML = `<p class="error-message">Gagal memuat riwayat: ${error.message}</p>`;
+        console.error("Kesalahan saat mengambil riwayat transaksi:", error);
     }
 }
+
 
 /**
  * Merender modal untuk permintaan top up saldo.
@@ -2285,57 +2296,56 @@ async function apiFetch(endpoint, options = {}) {
             headers: { ...options.headers },
             credentials: 'include', // Penting untuk mengirim cookie sesi
         };
-        
-        // Atur Content-Type dan body jika bukan FormData
+
         if (options.body && !(options.body instanceof FormData)) {
             config.headers['Content-Type'] = 'application/json';
-            config.body = JSON.stringify(options.body); 
+            config.body = JSON.stringify(options.body);
         } else if (options.body instanceof FormData) {
             config.body = options.body;
-            // Penting: Jangan atur 'Content-Type' untuk FormData, browser akan melakukannya otomatis
         }
 
         const response = await fetch(API_BASE_URL + endpoint, config);
-        
+
+        // Langsung tangani 401/403 DI SINI sebelum mencoba membaca body
+        if (response.status === 401 || response.status === 403) {
+            // Hanya tampilkan alert jika belum di halaman login
+            if (window.location.hash !== '#login') {
+                alert('Sesi Anda tidak valid atau Anda tidak memiliki izin. Harap login kembali.');
+            }
+            currentUser = null; // Pastikan currentUser direset
+            phoneAuth = { phone: null, accessToken: null, authId: null };
+            localStorage.removeItem('kmspAuth'); // Hapus sesi KMSP jika ada
+            window.location.hash = '#login'; // Arahkan ke halaman login
+            // Tidak perlu panggil main() lagi di sini, karena hashchange event akan memanggil renderApp
+            throw new Error(`Akses Ditolak (HTTP ${response.status})`);
+        }
+
         const contentType = response.headers.get("content-type");
         let data;
 
-        // Coba parsing JSON hanya jika Content-Type adalah application/json
         if (contentType && contentType.includes("application/json")) {
             data = await response.json();
         } else {
-            // Jika bukan JSON, coba baca sebagai teks dan lempar error
             const textResponse = await response.text();
             console.error(`API ${endpoint} response not JSON:`, textResponse);
-            if (!response.ok) { // Jika respons HTTP bukan 2xx, sertakan teks respons
+            if (!response.ok) {
                 throw new Error(`Terjadi kesalahan pada server (HTTP ${response.status}). Respons: ${textResponse.substring(0, 100)}...`);
             }
-            // Jika status OK tapi bukan JSON, mungkin ada miskonfigurasi backend
             throw new Error(`Respons dari server untuk ${endpoint} bukan format JSON yang diharapkan.`);
         }
 
-        // Tangani respons 401 (Unauthorized) atau 403 (Forbidden) secara terpusat
-        if (response.status === 401 || response.status === 403) {
-            alert('Sesi Anda tidak valid atau Anda tidak memiliki izin. Harap login kembali.');
-            window.location.hash = '#login'; // Arahkan ke halaman login
-            main(); // Panggil main() untuk memastikan aplikasi dirender ulang setelah perubahan hash
-            throw new Error(data.message || `Akses Ditolak (HTTP ${response.status})`);
-        }
-
-        // Lempar error jika status HTTP bukan 2xx dan bukan 202 (Accepted, untuk pembayaran eksternal)
-        if (!response.ok && response.status !== 202) { 
+        // Lempar error jika status HTTP bukan 2xx dan bukan 202
+        if (!response.ok && response.status !== 202) {
             throw new Error(data.message || `Terjadi kesalahan pada server (HTTP ${response.status})`);
         }
-        
-        // Kembalikan data dan status HTTP
+
         return { data, status: response.status };
     } catch (error) {
         console.error("Kesalahan API Fetch:", error);
-        // Tangani error jaringan (misal: server tidak berjalan)
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
             throw new Error("Gagal terhubung ke server backend. Pastikan server berjalan dan koneksi internet Anda stabil.");
         }
-        throw error; // Lempar error kembali
+        throw error;
     }
 }
 

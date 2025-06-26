@@ -5,10 +5,10 @@
       "name": "ayusiawan",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$5A93ZUF9LvuRD8COsb2PAuCg/OvHVyKwpUCRudkky5ddOJjnLbLpm",
-      "balance": 21500,
+      "balance": 20000,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
-      "verifiedPhone": "6287767287284"
+      "verifiedPhone": "6287737210539"
     },
     {
       "id": "user_1750926529288",
@@ -3339,6 +3339,187 @@
       "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message:  )",
       "paymentMethod": "balance",
       "createdAt": "2025-06-25T14:22:20.364Z"
+    },
+    {
+      "id": "trx_1750941161915",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOSUPERXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": "f258baf0-34aa-4e8e-b21f-4fbf9aa4e7b0",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T12:32:41.915Z"
+    },
+    {
+      "id": "trx_1750942221294",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOPREMIUMXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": "26ce68f0-97c1-4b2a-809d-97664b3a9899",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T12:50:21.294Z"
+    },
+    {
+      "id": "trx_1750943493603_8dbaa219",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOTIKTOKXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": "6377cd8a-3355-48f4-b1f7-fd8a265fe6a9",
+      "status": "pending",
+      "api_response": "Menunggu Pembayaran Eksternal",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:11:33.604Z",
+      "paymentDetails": {
+        "is_qris": false,
+        "qris_data": [],
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250626111212800110166672656685077&timestamp=1750943493012&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=dim7flO48bZATMs8VxetVlyO5ZJZid7hLZRaWqg95yYvXtDRnKkPu%2F0BMS1JAIGgZzCdWTUuMqGTpNzJ5%2FiMMTf4borTmwOb8E4FrpIM2lR3ikuMPI805%2FYfFFPbYpT25oJSBj0Ooexeyub0aeIwqeDtGDmvI1oe%2F4VlIaMPEF0aokge6lersbFsI4jryoUEJLrRs1sDwIx8NAw41A7NhTMa%2Fknhd%2Bi%2BBO21lYo8Qrbo4gbFM%2F89X80iRKwEGd%2BTd%2FoRNuMQC86USVsJ%2Bko2U9aVSGAOdU50lEXUhiplT7CRPfxpt%2FQmIk9IrHqt23Qyi6qzRpV4p8JOlBcmqFRK3Q%3D%3D&forceToH5=false&newRegistrationPage=true"
+        }
+      }
+    },
+    {
+      "id": "trx_1750945177913_78f0cfac",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: )",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:39:37.915Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750945213908_88067ab5",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOPREMIUMXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:40:13.908Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750945267776_16f2f3bf",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOPREMIUMXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:41:07.776Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750945304719_36216957",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOHSTANDARD7H",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Standard bayar ke XL Rp3.000 (Untuk Xtra Hotrod/Xtra Combo)",
+      "platformFee": 0,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)",
+      "paymentMethod": "QRIS",
+      "createdAt": "2025-06-26T13:41:44.719Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750945328573_e75911f4",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOHSTANDARD7H",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Standard bayar ke XL Rp3.000 (Untuk Xtra Hotrod/Xtra Combo)",
+      "platformFee": 0,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:42:08.574Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750945380281_41063e7f",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOPREMIUMXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! Error Code: PACKAGE_NOT_FOUND in iteration attempt, with reason: serviceId does not match",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:43:00.281Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750945401874_da604776",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOSUPERXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-26T13:43:21.874Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750945459207_ebf0e98d",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOTIKTOKXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": "dec65794-0b8a-4436-96b0-f79756e99ebc",
+      "status": "success",
+      "api_response": "Pembelian Berhasil. Silakan Selesaikan Pembayaran di Aplikasi External.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:44:19.207Z"
+    },
+    {
+      "id": "trx_1750945839005_64119915",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan",
+      "packageId": "XLUNLITURBOPREMIUMXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": "81cb4bcc-afcc-4c59-adaf-81e324fb79e5",
+      "status": "success",
+      "api_response": "PEMBELIAN BERHASIL. SILAKAN SELESAIKAN PEMBAYARAN DI APLIKASI EKSTERNAL.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T13:50:39.007Z",
+      "paymentDetails": {
+        "is_qris": false,
+        "qris_data": [],
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250626111212800110166896656897299&timestamp=1750945838382&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=WSbGWg%2BxMqcO%2BBPaewmNMwrVlCTFOeu%2F%2Bw91BaA8HDRcojL4S7GqjOOP2c199c6s%2BfTn7xqYrF929gaxOwRaOa9NKPdSI8Q8WUtZoxIeZ%2F3rF%2BGDiQkROPykdwCzBR%2BrRpEFmIP4%2FfXTPICyLvLlfQryPWgzyVP%2FwVoRWelK3TFcZmF4ej1B0LW8kOHtg%2BVKdrSudaYlQ52o6cYB%2Fvm47Xj0zsJGfcm%2F6%2BN2yjwLORPHRgZ4Zj%2Fq0gG94d6H4H4lmKr2iBxE6iEYrh1tkx01%2F1MLtlZ4gfOFLfwrzF89l6KiRAPLIGj%2BfMYk6EAsf3H6s39u6Q9vJVaZ5DihP9B3ng%3D%3D&forceToH5=false&newRegistrationPage=true"
+        }
+      }
     }
   ],
   "topups": [
@@ -3401,5 +3582,7 @@
       "createdAt": "2025-06-25T12:06:53.435Z",
       "id": "ann_1750853213435"
     }
-  ]
+  ],
+  "maintenanceMode": false,
+  "fullScreenAnnouncement": null
 }

@@ -256,18 +256,130 @@ app.post('/api/phone/verify-otp', isAuthenticated, async (req, res) => {
     }
 });
 
+
+app.get('/api/purchase/status/:kmspTrxId', isAuthenticated, async (req, res) => {
+    const { kmspTrxId } = req.params;
+    const userId = req.session.userId;
+
+    // Log untuk debugging awal: apa yang diterima dari frontend
+    console.log(`[STATUS_POLLING] Incoming polling request for kmspTrxId: ${kmspTrxId} by userId: ${userId} at ${new Date().toISOString()}`);
+
+    // Cari transaksi di database lokal berdasarkan kmspTrxId dan userId
+    const transaction = db.data.transactions.find(t => t.kmspTrxId === kmspTrxId && t.userId === userId);
+
+    // Jika transaksi tidak ditemukan
+    if (!transaction) {
+        console.warn(`[STATUS_POLLING] Transaction NOT FOUND in DB for kmspTrxId: ${kmspTrxId} and userId: ${userId}. Returning 404.`);
+        return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
+    }
+
+    // Jika status transaksi di database lokal sudah final (sukses atau gagal/dikembalikan)
+    // Langsung berikan respons tanpa perlu memanggil API KMSP lagi
+    if (transaction.status === 'success' || transaction.status.startsWith('failed')) {
+        console.log(`[STATUS_POLLING] Transaction ${kmspTrxId} already in final status: ${transaction.status}. Returning current status from DB.`);
+        return res.status(200).json({
+            status: true, // Status respons dari server lokal (berhasil mengirim data)
+            data: {
+                status: transaction.status, // Status sebenarnya dari transaksi di DB
+                message: transaction.api_response || `Status: ${transaction.status}`
+            }
+        });
+    }
+
+    // Jika status masih 'pending', lakukan polling ke KMSP API
+    try {
+        const kmspUrl = `https://golang-openapi-checktransaction-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}&trx_id=${kmspTrxId}`;
+        const response = await fetch(kmspUrl);
+        const kmspResponseData = await response.json(); // Mengganti 'data' menjadi 'kmspResponseData' untuk kejelasan
+
+        // Log respons mentah dari KMSP
+        console.log(`[STATUS_POLLING] KMSP API Raw Response for ${kmspTrxId}: ${JSON.stringify(kmspResponseData, null, 2)}`);
+
+        // Jika respons dari KMSP tidak OK (misal HTTP error) atau KMSP mengembalikan status: false
+        if (!response.ok || !kmspResponseData.status) {
+            console.warn(`[STATUS_POLLING] KMSP returned non-success for ${kmspTrxId}: ${kmspResponseData.message || 'No specific message.'}`);
+            // Kembalikan status 'pending' ke frontend agar polling terus berjalan
+            return res.status(200).json({
+                status: true, // Respons dari server lokal sukses (informasi dikirim)
+                data: {
+                    status: 'pending', // Status transaksi di KMSP masih belum final/sukses
+                    message: kmspResponseData.message || 'Menunggu konfirmasi pembayaran dari provider.'
+                }
+            });
+        }
+
+        // Jika KMSP mengembalikan status sukses (dan status KMSP-nya juga 'success')
+        if (kmspResponseData.status && kmspResponseData.data?.status === 'success') {
+            // Update status transaksi di database lokal menjadi 'success'
+            transaction.status = 'success';
+            transaction.api_response = 'Pembelian Berhasil Dikonfirmasi';
+            // PENTING: Jangan hapus paymentDetails karena Anda ingin tombol tetap ada di riwayat
+            // delete transaction.paymentDetails; // BARIS INI TIDAK LAGI DIGUNAKAN
+            await db.write(); // Simpan perubahan ke database
+            console.log(`[STATUS_POLLING] Transaction ${kmspTrxId} updated to SUCCESS in DB.`);
+        }
+        // Jika KMSP mengembalikan status gagal, kadaluarsa, atau dibatalkan
+        else if (kmspResponseData.status && (kmspResponseData.data?.status === 'failed' || kmspResponseData.data?.status === 'expired' || kmspResponseData.data?.status === 'cancelled')) {
+             // Hanya proses jika status transaksi lokal masih 'pending'
+             if (transaction.status === 'pending') {
+                 transaction.status = 'failed'; // Set status lokal menjadi 'failed'
+                 transaction.api_response = kmspResponseData.data.message || `Transaksi ${kmspResponseData.data.status}`;
+                 // PENTING: Jangan hapus paymentDetails
+                 // delete transaction.paymentDetails; // BARIS INI TIDAK LAGI DIGUNAKAN
+
+                 // Logika pengembalian saldo (refund) jika transaksi gagal dan biaya layanan sudah terpotong
+                 // Pastikan belum pernah direfund untuk transaksi ini (status 'failed_refunded')
+                 if (transaction.platformFee > 0 && transaction.status !== 'failed_refunded') {
+                     const user = db.data.users.find(u => u.id === userId);
+                     if (user) {
+                         user.balance += transaction.platformFee; // Kembalikan saldo
+                         transaction.status = 'failed_refunded'; // Tandai transaksi sebagai gagal & sudah direfund
+                         transaction.api_response += ' (Saldo dikembalikan)';
+                         await db.write(); // Simpan perubahan saldo dan status
+                         console.log(`[STATUS_POLLING][REFUND] Saldo ${user.name} dikembalikan sebesar Rp ${transaction.platformFee} for TRX ${transaction.id}.`);
+                     }
+                 }
+                 await db.write(); // Simpan perubahan transaksi (status dan pesan)
+                 console.log(`[STATUS_POLLING] Transaction ${kmspTrxId} updated to FAILED/EXPIRED/CANCELLED in DB.`);
+             }
+        }
+
+        // Setelah memproses respons dari KMSP (dan mungkin memperbarui DB),
+        // kirim status terbaru transaksi dari database lokal ke frontend
+        return res.status(200).json({
+            status: true, // Status respons dari server lokal (berhasil mengirim data)
+            data: {
+                status: transaction.status, // Status transaksi yang paling update dari DB
+                message: transaction.api_response
+            }
+        });
+
+    } catch (error) {
+        // Tangani error yang terjadi saat memanggil/memproses respons dari KMSP API
+        console.error(`[STATUS_POLLING] Error in try-catch block for ${kmspTrxId}:`, error);
+        return res.status(500).json({
+            status: false, // Status respons dari server lokal (ada error)
+            message: error.message || 'Terjadi kesalahan saat memeriksa status pembelian.'
+        });
+    }
+});
+
+
 app.post('/api/purchase', isAuthenticated, async (req, res) => {
     const { packageId, phone, accessToken, paymentMethod } = req.body;
     const userId = req.session.userId;
-    
+
     // Keamanan: Pastikan phone yang digunakan untuk pembelian adalah verifiedPhone milik user yang login
     const user = db.data.users.find(u => u.id === userId);
-    if (!user || user.verifiedPhone !== phone) {
-        return res.status(403).json({ status: false, message: "Nomor telepon ini tidak terverifikasi untuk akun Anda atau tidak cocok." });
+    if (!user) {
+        return res.status(404).json({ status: false, message: "Pengguna tidak ditemukan." });
+    }
+    if (user.verifiedPhone !== phone) {
+        return res.status(403).json({ status: false, message: "Nomor telepon ini tidak terverifikasi untuk akun Anda atau tidak cocok. Mohon verifikasi nomor HP Anda di halaman utama." });
     }
 
     if (!packageId || !phone || !accessToken || !paymentMethod) {
-        return res.status(400).json({ status: false, message: "Parameter tidak lengkap." });
+        return res.status(400).json({ status: false, message: "Parameter tidak lengkap (packageId, phone, accessToken, atau paymentMethod missing)." });
     }
 
     const pkg = db.data.packages.find(p => p.package_code === packageId);
@@ -276,16 +388,17 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
 
     const platformFee = pkg.platform_fee || 0;
     if (user.balance < platformFee) {
-        return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk membayar biaya layanan sebesar Rp ${platformFee.toLocaleString()}.` });
+        return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString('id-ID')}) tidak cukup untuk membayar biaya layanan sebesar Rp ${platformFee.toLocaleString('id-ID')}.` });
     }
 
+    // --- PENTING: Saldo dipotong di sini, sebelum memanggil API KMSP ---
     user.balance -= platformFee;
-    await db.write();
+    await db.write(); // Simpan perubahan saldo segera ke database
 
     try {
         const pkgNameLower = (pkg.name || '').toLowerCase();
         const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
-        
+
         const purchaseParams = new URLSearchParams({
             api_key: KMSP_API_KEY,
             package_code: pkg.package_code,
@@ -294,87 +407,92 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
             payment_method: paymentMethod
         });
         const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
-        
+
         const purchaseResponse = await fetch(purchaseUrl);
         const purchaseData = await purchaseResponse.json();
-        
-        const transactionSucceeded = purchaseResponse.ok && purchaseData.status;
 
-        const newTransaction = { 
-            id: `trx_${Date.now()}`, userId, userName: user.name, 
+        console.log(`KMSP Purchase API Response for package ${packageId} and method ${paymentMethod}:`, JSON.stringify(purchaseData, null, 2));
+
+        const transactionSucceededFromKMSP = purchaseResponse.ok && purchaseData.status;
+
+        let paymentDetails = null;
+        let kmspTransactionId = null;
+
+        if (purchaseData.data) {
+            kmspTransactionId = purchaseData.data.trx_id || null;
+            if (purchaseData.data.is_qris || purchaseData.data.have_deeplink) {
+                paymentDetails = {
+                    amount: purchaseData.data.amount,
+                    payment_method: purchaseData.data.payment_method,
+                    is_qris: purchaseData.data.is_qris || false,
+                    qris_data: purchaseData.data.qris_data || null,
+                    have_deeplink: purchaseData.data.have_deeplink || false,
+                    deeplink_data: purchaseData.data.deeplink_data || null
+                };
+            }
+        }
+
+        const newTransaction = {
+            id: `trx_${Date.now()}_${uuidv4().substring(0, 8)}`,
+            userId, userName: user.name,
             packageId, packageName: pkg.name, platformFee,
-            kmspTrxId: purchaseData.data?.trx_id || null, 
-            status: transactionSucceeded ? 'success' : 'failed',
-            api_response: purchaseData.message || (transactionSucceeded ? 'Success' : 'Failed'),
-            paymentMethod, createdAt: new Date().toISOString() 
+            kmspTrxId: kmspTransactionId,
+            status: transactionSucceededFromKMSP ? 'success' : 'failed', // Default status
+            api_response: purchaseData.message || (transactionSucceededFromKMSP ? 'Success' : 'Failed'),
+            paymentMethod,
+            createdAt: new Date().toISOString(),
+            paymentDetails: paymentDetails // <<< PENTING: TETAP SIMPAN paymentDetails
         };
+
+        // Jika KMSP mengembalikan Deeplink/QRIS, itu berarti transaksi SUDAH berhasil di sisi KMSP.
+        // Kita set status lokal menjadi 'success', namun tetap simpan paymentDetails untuk tampilan di riwayat.
+        if (paymentDetails) {
+            newTransaction.status = 'success'; // <<< TETAP SET KE SUKSES
+            newTransaction.api_response = 'PEMBELIAN BERHASIL. SILAKAN SELESAIKAN PEMBAYARAN DI APLIKASI EKSTERNAL.';
+            // JANGAN HAPUS newTransaction.paymentDetails di sini
+        }
+
         db.data.transactions.push(newTransaction);
-        
         await db.write();
 
-        if (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) {
-            return res.status(202).json({ 
+        if (paymentDetails) {
+            // Jika ada paymentDetails, kirim respons 202 (Accepted)
+            const responsePaymentData = {
+                ...newTransaction.paymentDetails, // Ambil semua detail yang sudah disimpan
+                trx_id: newTransaction.kmspTrxId // Tetap kirim trx_id untuk referensi
+            };
+            return res.status(202).json({
                 status: true,
-                message: "Pembayaran eksternal diperlukan.", 
-                payment_data: purchaseData.data,
-                newBalance: user.balance 
+                message: "Transaksi berhasil dibuat. Silakan selesaikan pembayaran di aplikasi eksternal.",
+                payment_data: responsePaymentData,
+                newBalance: user.balance
             });
         }
-        
-        if (transactionSucceeded) {
-            return res.status(200).json({ 
-                status: true, 
+
+        if (transactionSucceededFromKMSP) {
+            return res.status(200).json({
+                status: true,
                 message: purchaseData.message || "Pembelian berhasil!",
                 newBalance: user.balance
             });
         } else {
             if (!isPulsaMethod) {
-                user.balance += platformFee; 
+                user.balance += platformFee;
                 await db.write();
                 return res.status(500).json({ status: false, message: purchaseData.message || 'Pembelian ke provider gagal.' });
             } else {
                 return res.status(200).json({
                     status: true,
-                    message: `Transaksi pulsa diproses. (API Response: ${purchaseData.message})`,
+                    message: `Transaksi pulsa diproses. (API Response: ${purchaseData.message || 'Tidak ada pesan spesifik dari provider.'})`,
                     newBalance: user.balance
                 });
             }
         }
-    } catch(error) {
-        user.balance += platformFee; 
-        await db.write();
-        console.error("Error saat pembelian:", error);
-        return res.status(500).json({ status: false, message: error.message || 'Terjadi kesalahan internal saat pembelian.' });
-    }
-});
-
-
-app.get('/api/purchase/status/:kmspTrxId', isAuthenticated, async (req, res) => {
-    const { kmspTrxId } = req.params;
-    const userId = req.session.userId;
-    const transaction = db.data.transactions.find(t => t.kmspTrxId === kmspTrxId && t.userId === userId);
-
-    if (!transaction) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
-    if (transaction.status === 'success') return res.json({ status: true, data: { status: 'success', message: 'Pembayaran sudah dikonfirmasi.' } });
-
-    try {
-        const kmspUrl = `https://golang-openapi-checktransaction-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}&trx_id=${kmspTrxId}`;
-        const response = await fetch(kmspUrl);
-        const data = await response.json();
-
-        if (!response.ok || !data.status) {
-            throw new Error(data.message || 'Gagal cek status ke KMSP.');
-        }
-
-        if (data.status && data.data?.status === 'success' && transaction.status !== 'success') {
-            transaction.status = 'success';
-            await db.write();
-        }
-
-        res.json(data);
     } catch (error) {
-        console.error("Error checking purchase status:", error);
-        res.status(500).json({ status: false, message: error.message || 'Terjadi kesalahan saat memeriksa status pembelian.' });
+        user.balance += platformFee;
+        await db.write();
+        console.error("Error saat memproses pembelian:", error);
+        return res.status(500).json({ status: false, message: error.message || 'Terjadi kesalahan internal pada server saat memproses pembelian.' });
     }
 });
 
@@ -384,28 +502,32 @@ app.get('/api/user/packages', isAuthenticated, (req, res) => {
     res.status(200).json({ status: true, data: visiblePackages });
 });
 
-// MODIFIKASI: Mengambil semua transaksi termasuk topups untuk riwayat
+
 app.get('/api/user/transactions', isAuthenticated, (req, res) => {
     const userTransactions = db.data.transactions
         .filter(t => t.userId === req.session.userId)
-        .map(t => ({ ...t, type: 'purchase' })); // Tambahkan tipe untuk pembelian
+        .map(t => ({
+            ...t,
+            type: 'purchase' // Pastikan type ada untuk konsistensi
+            // paymentDetails akan otomatis disertakan karena sudah ada di objek transaksi 't'
+        }));
 
     const userTopups = db.data.topups
         .filter(tu => tu.userId === req.session.userId)
-        .map(tu => ({ 
-            id: tu.id, 
-            userId: tu.userId, 
-            type: 'topup', 
-            status: tu.status, 
+        .map(tu => ({
+            id: tu.id,
+            userId: tu.userId,
+            type: 'topup',
+            status: tu.status,
             createdAt: tu.createdAt,
             baseAmount: tu.baseAmount,
             uniqueAmount: tu.uniqueAmount,
             qrisData: tu.qrisBase64Image && typeof tu.uniqueAmount === 'number' ? { base64Image: tu.qrisBase64Image, uniqueAmount: tu.uniqueAmount } : undefined,
-            api_response: tu.status === 'pending' ? 'Menunggu Pembayaran' : 
-                          (tu.status === 'completed' ? 'Selesai' : 
-                           (tu.status === 'expired' ? 'Kadaluarsa' : 
+            api_response: tu.status === 'pending' ? 'Menunggu Pembayaran' :
+                          (tu.status === 'completed' ? 'Selesai' :
+                           (tu.status === 'expired' ? 'Kadaluarsa' :
                             (tu.status === 'canceled' ? 'Dibatalkan' : 'Unknown'))),
-        })); 
+        }));
 
     const allUserActivities = [...userTransactions, ...userTopups];
 
