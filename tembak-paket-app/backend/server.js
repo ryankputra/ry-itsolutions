@@ -732,9 +732,35 @@ app.get('/api/user/announcement', isAuthenticated, (req, res) => { // MODIFIKASI
     res.json({ status: true, data: announcement });
 });
 
+// Endpoint untuk admin menghapus akun pengguna
+app.post('/api/admin/delete-user', isAuthenticated, isAdmin, async (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ status: false, message: "User ID diperlukan." });
+
+    // Tidak boleh hapus diri sendiri (opsional, keamanan)
+    if (req.session.userId === userId) {
+        return res.status(400).json({ status: false, message: "Anda tidak dapat menghapus akun Anda sendiri." });
+    }
+
+    // Hapus user dari database
+    const userIndex = db.data.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) return res.status(404).json({ status: false, message: "Pengguna tidak ditemukan." });
+
+    db.data.users.splice(userIndex, 1);
+
+    // Hapus semua transaksi & topup terkait user
+    db.data.transactions = db.data.transactions.filter(t => t.userId !== userId);
+    db.data.topups = db.data.topups.filter(t => t.userId !== userId);
+
+    await db.write();
+    res.json({ status: true, message: "Akun pengguna dan seluruh data terkait berhasil dihapus." });
+});
+
 // --- SAJIKAN FRONTEND & CATCH-ALL ---
 const frontendPath = path.join(__dirname, '..', 'frontend');
 app.use(express.static(frontendPath));
+
+// PENTING: Pindahkan catch-all route ini KE PALING BAWAH SETELAH SEMUA ENDPOINT API
 app.get('*', (req, res) => { res.sendFile(path.join(frontendPath, 'index.html')); });
 
 app.listen(PORT, () => { console.log(`Server BARU dengan alur dinamis berjalan di http://localhost:${PORT}`); });

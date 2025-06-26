@@ -324,7 +324,7 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
     } catch (error) {
         let friendlyErrorMessage = "Terjadi kesalahan. Silakan coba lagi.";
         if (error.message.toLowerCase().includes('maximum pending transaction')) {
-            friendlyErrorMessage = " Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)";
+            friendlyErrorMessage = " Semoga Berhasil! Masuk Tunggu 1 Jam Untuk Menerima Paket. jika tidak masuk, belum hoki. Silakan coba lagi nanti.";
         } else if (error.message) {
             friendlyErrorMessage = error.message; 
         }
@@ -526,6 +526,7 @@ function renderRegisterPage() {
     `;
     document.getElementById('register-form')?.addEventListener('submit', handleRegister);
 }
+
 /**
  * Merender struktur dashboard utama (header, sidebar, dan area konten).
  * Header berisi judul "RYYSTORE" dan tombol toggle menu.
@@ -703,6 +704,20 @@ function renderAdminDashboard(container) {
                     <input type="number" id="amount-input" placeholder="e.g., 50000" required>
                     <button type="submit">Tambah Saldo</button>
                 </form>
+                <h3>Hapus Saldo Pengguna</h3>
+                <form id="remove-balance-form" class="balance-controls">
+                    <label for="user-select-remove">Pilih Pengguna:</label>
+                    <select id="user-select-remove" required style="flex-grow: 1;"></select>
+                    <label for="amount-remove-input">Jumlah:</label>
+                    <input type="number" id="amount-remove-input" placeholder="e.g., 50000" required>
+                    <button type="submit" style="background: var(--danger-color); color: #fff;">Kurangi Saldo</button>
+                </form>
+                <h3>Hapus Akun Pengguna</h3>
+                <form id="delete-user-form" class="balance-controls">
+                    <label for="user-select-delete">Pilih Pengguna:</label>
+                    <select id="user-select-delete" required style="flex-grow: 1;"></select>
+                    <button type="submit" style="background: var(--danger-color); color: #fff;">Hapus Akun</button>
+                </form>
             </div>
 
             <div class="admin-section">
@@ -773,16 +788,25 @@ function renderAdminDashboard(container) {
     async function loadUsers() {
         try {
             const { data, status } = await apiFetch('/admin/users');
-            const userSelect = document.getElementById('user-select');
-            if (!userSelect) { console.error("Elemen user-select tidak ditemukan."); return; }
-            
-            userSelect.innerHTML = '<option value="">-- Pilih Pengguna --</option>'; // Opsi default
+            // Isi semua dropdown user di admin panel
+            const userSelects = [
+                document.getElementById('user-select'),
+                document.getElementById('user-select-remove'),
+                document.getElementById('user-select-delete')
+            ];
+            userSelects.forEach(sel => {
+                if (sel) sel.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+            });
             if (status === 200 && data.status && Array.isArray(data.data)) {
                 data.data.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
-                    userSelect.appendChild(option);
+                    userSelects.forEach(sel => {
+                        if (sel) {
+                            const option = document.createElement('option');
+                            option.value = user.id;
+                            option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
+                            sel.appendChild(option);
+                        }
+                    });
                 });
             } else {
                  displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
@@ -857,7 +881,78 @@ function renderAdminDashboard(container) {
             button.disabled = false; button.textContent = originalText;
         }
     });
+
+    /**
+     * Event handler untuk form 'Kurangi Saldo Pengguna'.
+     * Memanggil API untuk mengurangi saldo pengguna tertentu.
+     */
+    document.getElementById('remove-balance-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true; button.textContent = '...';
+        displayFeedback('balance-feedback', '', false);
+        try {
+            const userId = document.getElementById('user-select-remove')?.value;
+            const amount = parseFloat(document.getElementById('amount-remove-input')?.value);
+            if (!userId || isNaN(amount) || amount <= 0) {
+                throw new Error('Pilih pengguna dan masukkan jumlah yang valid.');
+            }
+            const { data, status } = await apiFetch('/admin/update-balance', { method: 'POST', body: { userId, amount: -amount } });
+            if (status === 200 && data.status) {
+                displayFeedback('balance-feedback', data.message, false);
+                const amountInput = document.getElementById('amount-remove-input');
+                if (amountInput) amountInput.value = '';
+                loadUsers();
+            } else {
+                throw new Error(data.message || 'Gagal mengurangi saldo: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('balance-feedback', error.message, true);
+        } finally {
+            button.disabled = false; button.textContent = originalText;
+        }
+    });
+
+    /**
+     * Event handler untuk form 'Hapus Akun Pengguna'.
+     * Memanggil API untuk menghapus akun pengguna tertentu.
+     */
+    document.getElementById('delete-user-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true; button.textContent = '...';
+        displayFeedback('balance-feedback', '', false);
+        try {
+            const userId = document.getElementById('user-select-delete')?.value;
+            if (!userId) {
+                throw new Error('Pilih pengguna yang ingin dihapus.');
+            }
+            if (!confirm('Apakah Anda yakin ingin menghapus akun pengguna ini? Tindakan ini tidak dapat dibatalkan.')) {
+                button.disabled = false; button.textContent = originalText;
+                return;
+            }
+            const { data, status } = await apiFetch('/admin/delete-user', { method: 'POST', body: { userId } });
+            if (status === 200 && data.status) {
+                displayFeedback('balance-feedback', data.message, false);
+                loadUsers();
+            } else {
+                throw new Error(data.message || 'Gagal menghapus pengguna: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('balance-feedback', error.message, true);
+        } finally {
+            button.disabled = false; button.textContent = originalText;
+        }
+    });
     
+    // Perbarui tampilan saldo KMSP saat admin panel dimuat
+    const kmspBalanceDisplay2 = document.getElementById('kmsp-balance-display');
+    if (kmspBalanceDisplay2) {
+        kmspBalanceDisplay2.textContent = typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...';
+    }
+
     /**
      * Event handler untuk tombol 'Sinkronisasi Ulang Paket dari KMSP'.
      * Memanggil API untuk menyinkronkan daftar paket dari sumber eksternal.
@@ -1083,6 +1178,354 @@ function renderAdminDashboard(container) {
         await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
     }, 0);
 }
+
+    async function loadUsers() {
+        try {
+            const { data, status } = await apiFetch('/admin/users');
+            const userSelect = document.getElementById('user-select');
+            if (!userSelect) { console.error("Elemen user-select tidak ditemukan."); return; }
+            
+            userSelect.innerHTML = '<option value="">-- Pilih Pengguna --</option>'; // Opsi default
+            if (status === 200 && data.status && Array.isArray(data.data)) {
+                data.data.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
+                    userSelect.appendChild(option);
+                });
+            } else {
+                 displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
+            }
+        } catch (error) { 
+            console.error('Gagal memuat pengguna:', error);
+            displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
+        }
+    }
+    
+    // Perbarui tampilan saldo KMSP saat admin panel dimuat
+    const kmspBalanceDisplay = document.getElementById('kmsp-balance-display');
+    if (kmspBalanceDisplay) {
+        kmspBalanceDisplay.textContent = typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...';
+    }
+
+    /**
+     * Event handler untuk tombol 'Cek Saldo KMSP'.
+     * Memanggil API untuk mendapatkan saldo KMSP terbaru.
+     */
+    document.getElementById('check-kmsp-balance-btn')?.addEventListener('click', async (e) => {
+        const button = e.target;
+        button.disabled = true; button.textContent = 'Mengecek...';
+        displayFeedback('balance-feedback', '', false); // Bersihkan feedback sebelumnya
+        try {
+            const { data, status } = await apiFetch('/admin/kmsp-balance');
+            if (status === 200 && data.status && typeof data.data?.balance !== 'undefined') {
+                kmspBalance = data.data.balance; // Update variabel global
+                const balanceDisplay = document.getElementById('kmsp-balance-display');
+                if (balanceDisplay) {
+                    balanceDisplay.textContent = `Rp ${kmspBalance.toLocaleString('id-ID')}`;
+                }
+                displayFeedback('balance-feedback', 'Saldo KMSP berhasil diperbarui.', false);
+            } else {
+                throw new Error(data.message || 'Respons saldo tidak valid dari server.');
+            }
+        } catch (error) {
+            displayFeedback('balance-feedback', `Gagal cek saldo KMSP: ${error.message}`, true);
+        } finally {
+            button.disabled = false; button.textContent = 'Cek Saldo KMSP';
+        }
+    });
+    
+    /**
+     * Event handler untuk form 'Tambah Saldo Pengguna'.
+     * Memanggil API untuk memperbarui saldo pengguna tertentu.
+     */
+    document.getElementById('add-balance-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true; button.textContent = '...';
+        displayFeedback('balance-feedback', '', false);
+        try {
+            const userId = document.getElementById('user-select')?.value;
+            const amount = parseFloat(document.getElementById('amount-input')?.value);
+            if (!userId || isNaN(amount) || amount <= 0) {
+                throw new Error('Pilih pengguna dan masukkan jumlah yang valid.');
+            }
+            const { data, status } = await apiFetch('/admin/update-balance', { method: 'POST', body: { userId, amount } });
+            if (status === 200 && data.status) {
+                displayFeedback('balance-feedback', data.message, false);
+                const amountInput = document.getElementById('amount-input');
+                if (amountInput) amountInput.value = ''; // Bersihkan input
+                loadUsers(); // Muat ulang daftar pengguna untuk update saldo
+            } else {
+                throw new Error(data.message || 'Gagal memperbarui saldo: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('balance-feedback', error.message, true);
+        } finally {
+            button.disabled = false; button.textContent = originalText;
+        }
+    });
+
+    /**
+     * Event handler untuk form 'Hapus Akun Pengguna'.
+     * Memanggil API untuk menghapus akun pengguna tertentu.
+     */
+    document.getElementById('delete-user-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true; button.textContent = '...';
+        displayFeedback('balance-feedback', '', false);
+        try {
+            const userId = document.getElementById('user-select-delete')?.value;
+            if (!userId) {
+                throw new Error('Pilih pengguna yang ingin dihapus.');
+            }
+            if (!confirm('Apakah Anda yakin ingin menghapus akun pengguna ini? Tindakan ini tidak dapat dibatalkan.')) {
+                button.disabled = false; button.textContent = originalText;
+                return;
+            }
+            // Pastikan endpoint benar: /admin/delete-user (POST)
+            const { data, status } = await apiFetch('/admin/delete-user', { method: 'POST', body: { userId } });
+            if (status === 200 && data.status) {
+                displayFeedback('balance-feedback', data.message, false);
+                loadUsers();
+            } else {
+                throw new Error(data.message || 'Gagal menghapus pengguna: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('balance-feedback', error.message, true);
+        } finally {
+            button.disabled = false; button.textContent = originalText;
+        }
+    });
+
+    /**
+     * Event handler untuk tombol 'Sinkronisasi Ulang Paket dari KMSP'.
+     * Memanggil API untuk menyinkronkan daftar paket dari sumber eksternal.
+     */
+    document.getElementById('sync-btn')?.addEventListener('click', async (e) => {
+        if (!confirm('Apakah Anda yakin ingin melakukan sinkronisasi? Ini akan memperbarui daftar paket dari KMSP dan dapat mengatur ulang status terlihat/tidak terlihat dan fee default untuk paket baru.')) return;
+        const button = e.target;
+        button.disabled = true; button.textContent = 'Menyinkronkan...';
+        displayFeedback('sync-feedback', '', false);
+        try {
+            const { data, status } = await apiFetch('/admin/sync-packages', { method: 'POST' });
+            if (status === 200 && data.status) {
+                displayFeedback('sync-feedback', data.message, false);
+                document.getElementById('load-packages-btn')?.click(); // Muat ulang paket setelah sinkronisasi
+            } else {
+                throw new Error(data.message || 'Gagal sinkronisasi: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('sync-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Sinkronisasi Ulang Paket dari KMSP';
+        }
+    });
+    
+    /**
+     * Event handler untuk tombol 'Muat Ulang Paket'.
+     * Memanggil API untuk mendapatkan daftar paket yang tersimpan di database lokal.
+     */
+    document.getElementById('load-packages-btn')?.addEventListener('click', async (e) => {
+        const button = e.target;
+        button.disabled = true; button.textContent = 'Memuat...';
+        displayFeedback('manage-feedback', '', false);
+        try {
+            const { data, status } = await apiFetch('/admin/packages');
+            if (status === 200 && data.status && Array.isArray(data.data)) {
+                renderPackageList(data.data);
+                displayFeedback('manage-feedback', `Berhasil memuat ${data.data.length} paket.`, false);
+            } else {
+                throw new Error(data.message || 'Gagal memuat paket: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('manage-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Muat Ulang Paket';
+        }
+    });
+
+    /**
+     * Event handler untuk tombol 'Tampilkan Semua' (paket).
+     */
+    document.getElementById('select-all-btn')?.addEventListener('click', () => {
+        document.querySelectorAll('.visibility-checkbox').forEach(cb => cb.checked = true);
+    });
+
+    /**
+     * Event handler untuk tombol 'Sembunyikan Semua' (paket).
+     */
+    document.getElementById('deselect-all-btn')?.addEventListener('click', () => {
+        document.querySelectorAll('.visibility-checkbox').forEach(cb => cb.checked = false);
+    });
+
+    /**
+     * Event handler untuk tombol 'Simpan Semua Perubahan' pada paket.
+     * Mengirim semua perubahan fee dan visibilitas paket ke backend.
+     */
+    document.getElementById('save-all-btn')?.addEventListener('click', async (e) => {
+        const button = e.target;
+        if (!confirm('Apakah Anda yakin ingin menyimpan semua perubahan pada paket (biaya layanan dan visibilitas)?')) return;
+        
+        const updates = [];
+        document.querySelectorAll('.package-item').forEach(item => {
+            const id = item.dataset.packageId;
+            const feeInput = item.querySelector('.fee-input');
+            const visibilityCheckbox = item.querySelector('.visibility-checkbox');
+            
+            const fee = parseFloat(feeInput?.value || '0'); // Gunakan optional chaining
+            const isVisible = visibilityCheckbox?.checked || false; // Gunakan optional chaining
+
+            updates.push({ 
+                package_code: id, 
+                platform_fee: isNaN(fee) ? 0 : fee, 
+                isVisible: isVisible 
+            });
+        });
+        
+        button.disabled = true; button.textContent = 'Menyimpan...';
+        displayFeedback('manage-feedback', '', false);
+        try {
+            const { data, status } = await apiFetch('/admin/packages/bulk-update', {
+                method: 'PUT',
+                body: { packages: updates }
+            });
+            if (status === 200 && data.status) {
+                displayFeedback('manage-feedback', data.message, false);
+            } else {
+                throw new Error(data.message || 'Gagal menyimpan perubahan: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('manage-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Simpan Semua Perubahan';
+        }
+    });
+
+    /**
+     * Event handler untuk input pencarian paket.
+     * Menyaring daftar paket yang ditampilkan berdasarkan nama.
+     */
+    document.getElementById('search-package-input')?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('.package-item').forEach(item => {
+            const packageName = item.querySelector('strong')?.textContent.toLowerCase();
+            if (packageName && packageName.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    /**
+     * Event handler untuk form 'Kirim Pengumuman'.
+     * Mengirim pesan pengumuman ke backend untuk ditampilkan kepada pengguna.
+     */
+    document.getElementById('announcement-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Mengirim...';
+        displayFeedback('announcement-feedback', '', false);
+        try {
+            const message = document.getElementById('announcement-message')?.value;
+            if (!message || !message.trim()) {
+                throw new Error('Pesan pengumuman tidak boleh kosong.');
+            }
+            const { data, status } = await apiFetch('/admin/announcement', {
+                method: 'POST',
+                body: { message }
+            });
+            if (status === 200 && data.status) {
+                displayFeedback('announcement-feedback', data.message, false);
+                const announcementMessageInput = document.getElementById('announcement-message');
+                if (announcementMessageInput) announcementMessageInput.value = ''; // Bersihkan input
+                fetchAnnouncement(); // Muat ulang pengumuman untuk diperbarui di dashboard pengguna
+            } else {
+                throw new Error(data.message || 'Gagal mengirim pengumuman: Respons tidak valid.');
+            }
+        } catch (error) {
+            displayFeedback('announcement-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+
+    /**
+     * Event handler untuk tombol 'Unduh Backup Database'.
+     * Memulai proses unduh file database dari backend.
+     */
+    document.getElementById('backup-db-btn')?.addEventListener('click', () => {
+        window.location.href = `${API_BASE_URL}/admin/backup-database`; // Langsung unduh file
+        displayFeedback('db-feedback', 'Proses unduh backup database dimulai. Harap tunggu.', false);
+    });
+
+    /**
+     * Event handler untuk form 'Pulihkan Database'.
+     * Mengunggah file database ke backend untuk dipulihkan.
+     */
+    document.getElementById('restore-db-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.submitter;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Memulihkan...';
+        displayFeedback('db-feedback', '', false);
+
+        const formData = new FormData();
+        const fileInput = document.getElementById('db-file-input');
+        if (!fileInput || fileInput.files.length === 0) {
+            displayFeedback('db-feedback', 'Harap pilih file db.json untuk diunggah.', true);
+            button.disabled = false;
+            button.textContent = originalText;
+            return;
+        }
+        formData.append('dbFile', fileInput.files[0]); // Tambahkan file ke FormData
+
+        try {
+            // Menggunakan fetch standar karena FormData akan mengatur Content-Type secara otomatis
+            const response = await fetch(`${API_BASE_URL}/admin/restore-database`, {
+                method: 'POST',
+                body: formData, 
+                credentials: 'include' // Penting untuk mengirim cookie sesi
+            });
+
+            const data = await response.json(); // Respons diharapkan JSON
+
+            if (response.ok && data.status) {
+                displayFeedback('db-feedback', data.message, false);
+                setTimeout(() => {
+                    alert('Restore database selesai. Aplikasi akan dimuat ulang untuk menerapkan perubahan.');
+                    window.location.reload(); // Muat ulang halaman untuk memuat data database yang baru
+                }, 1500);
+            } else {
+                throw new Error(data.message || 'Gagal memulihkan database.');
+            }
+        } catch (error) {
+            displayFeedback('db-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+
+    // Inisialisasi data saat admin panel dimuat
+    // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
+    setTimeout(async () => {
+        document.getElementById('load-packages-btn')?.click(); // Muat paket
+        loadUsers(); // Muat pengguna
+        await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
+    }, 0);
+
 
 
 /**
