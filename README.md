@@ -1,288 +1,166 @@
-# Aplikasi Tembak Paket Ryystore Panel
+# Ryystore Panel (Tembak Paket App)
 
-Aplikasi web untuk manajemen dan pembelian paket XL/AXIS menggunakan API KMSP-STORE, dengan backend Node.js/Express dan frontend HTML/CSS/JS. Akses ke aplikasi diamankan dengan HTTP Basic Authentication.
+Aplikasi panel manajemen layanan (tembak paket) dengan fitur otentikasi pengguna, pembelian paket, riwayat transaksi, top-up saldo via QRIS, dan panel admin.
 
-## Daftar Isi
-1.  [Prasyarat](#prasyarat)
-2.  [Instalasi Awal di VPS](#instalasi-awal-di-vps)
-    * [Persiapan Awal VPS](#persiapan-awal-vps)
-    * [Instalasi Perangkat Lunak](#instalasi-perangkat-lunak)
-    * [Deploy Kode Aplikasi](#deploy-kode-aplikasi)
-    * [Konfigurasi dan Jalankan Backend](#konfigurasi-dan-jalankan-backend)
-    * [Konfigurasi Nginx (Web Server & Reverse Proxy)](#konfigurasi-nginx)
-    * [Konfigurasi Firewall (UFW)](#konfigurasi-firewall-ufw)
-    * [Pengaturan Cloudflare (Jika Digunakan)](#pengaturan-cloudflare-jika-digunakan)
-    * [Setup HTTPS dengan Certbot (Let's Encrypt)](#setup-https-dengan-certbot)
-    * [Mengakses Aplikasi Anda](#mengakses-aplikasi-anda)
-3.  [Cara Mengupdate Aplikasi di VPS](#cara-mengupdate-aplikasi-di-vps)
-4.  [Catatan Penting](#catatan-penting)
-5.  [Troubleshooting Umum](#troubleshooting-umum)
+## Fitur Utama
 
----
+* **Otentikasi Pengguna:** Login dan Registrasi akun.
+* **Pembelian Paket:** Memilih dan membeli paket layanan.
+* **Verifikasi Nomor HP (KMSP):** Verifikasi nomor telepon satu kali untuk pembelian berulang.
+* **Riwayat Transaksi:** Melihat riwayat pembelian dan top-up saldo.
+* **Top Up Saldo:** Menambah saldo pengguna melalui pembayaran QRIS dinamis.
+* **Panel Admin:**
+    * Manajemen Saldo Pengguna.
+    * Sinkronisasi dan Manajemen Paket dari KMSP.
+    * Pengelolaan Pengumuman Sistem.
+    * Backup dan Restore Database.
+* **Responsif:** Tampilan yang menyesuaikan dengan berbagai ukuran layar (desktop dan mobile).
 
-## 1. Prasyarat
+## Teknologi yang Digunakan
 
-Sebelum memulai, pastikan Anda memiliki:
-* VPS baru dengan akses root atau sudo (disarankan Ubuntu 20.04 LTS atau lebih baru).
-* Nama domain yang sudah Anda beli (contoh: `tembak.cloudrystore.xyz`).
-* Akun Cloudflare (opsional, jika Anda ingin menggunakan layanan mereka untuk DNS dan proteksi).
-* API Key KMSP-STORE yang valid.
-* Git sudah terinstal di komputer lokal Anda.
-* Kode proyek ini sudah di-push ke repository GitHub privat Anda.
+* **Frontend:** HTML, CSS (Vanilla), JavaScript (Vanilla)
+* **Backend:** Node.js, Express.js
+* **Database:** LowDB (berbasis file JSON sederhana)
+* **Autentikasi:** `express-session`, `bcrypt`
+* **Integrasi API:** KMSP XL Tembak Service, QRISku.my.id, OkeConnect (Mutasi QRIS)
+* **Manajemen Proses:** PM2
+* **Web Server/Reverse Proxy:** Nginx
+* **SSL/HTTPS:** Certbot (Let's Encrypt)
 
----
+## Struktur Proyek
 
-## 2. Instalasi Awal di VPS
 
-Langkah-langkah ini untuk setup aplikasi dari awal di VPS baru.
 
-### Persiapan Awal VPS
-1.  **Hubungkan ke VPS via SSH:**
+
+
+## Cara Menjalankan di Lingkungan Lokal (Development)
+
+1.  **Kloning repositori:**
     ```bash
-    ssh root@ALAMAT_IP_VPS_ANDA
+    git clone [https://github.com/ryankputra/webtembak.git](https://github.com/ryankputra/webtembak.git) ryystore-app
+    cd ryystore-app/tembak-paket-app/ # Masuk ke folder utama aplikasi Node.js
     ```
-2.  **Buat User Baru (Non-Root dengan Sudo - Sangat Direkomendasikan):**
+2.  **Instal dependensi:**
     ```bash
-    adduser namauserbaru
-    usermod -aG sudo namauserbaru
-    su - namauserbaru 
+    npm install
     ```
-    Selanjutnya, semua perintah dijalankan sebagai `namauserbaru` (gunakan `sudo` jika diperlukan).
-3.  **Update Sistem:**
+3.  **Buat file `.env`:**
+    Buat file bernama `.env` di direktori `tembak-paket-app/` (di mana `backend/` dan `frontend/` berada), dan isi dengan variabel-variabel berikut (ganti nilai dengan API Key Anda):
+    ```
+    PORT=3001
+    SESSION_SECRET=string_rahasia_dan_panjang_untuk_sesi_anda
+    KMSP_API_KEY=API_KEY_ANDA_DARI_KMSP
+    QRIS_STATIS_STRING=QRIS_STATIS_STRING_ANDA_DARI_QRISKU
+    OKE_API_KEY=OKE_API_KEY_ANDA_DARI_OKECONNECT
+    OKE_API_BASE=OKE_API_BASE_ANDA_DARI_OKECONNECT
+    ```
+4.  **Jalankan aplikasi backend:**
     ```bash
-    sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove -y
+    cd backend/
+    node server.js
     ```
+    (Server akan berjalan di `http://localhost:3001`)
+5.  **Akses aplikasi:** Buka browser Anda dan navigasi ke `http://localhost:3001`.
 
-### Instalasi Perangkat Lunak
-1.  **Install Node.js dan npm (via NVM):**
+## Cara Deployment ke VPS (Production)
+
+Bagian ini mengasumsikan Anda sudah memiliki VPS dengan Ubuntu Server, Node.js, npm, Git, Nginx, dan PM2 terinstal.
+
+1.  **Akses VPS:** SSH ke server Anda.
+
+2.  **Kloning repositori:**
     ```bash
-    curl -o- [https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh](https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh) | bash
-    ```
-    Tutup dan buka kembali sesi SSH Anda, atau jalankan:
-    ```bash
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-    ```
-    Install versi LTS Node.js:
-    ```bash
-    nvm install --lts
-    nvm use --lts
-    node -v # Cek versi Node.js
-    npm -v  # Cek versi npm
-    ```
-2.  **Install Git:**
-    ```bash
-    sudo apt install git -y
-    ```
-3.  **Install Nginx:**
-    ```bash
-    sudo apt install nginx -y
-    sudo systemctl start nginx
-    sudo systemctl enable nginx
-    ```
-4.  **Install PM2 (Process Manager untuk Node.js):**
-    ```bash
-    sudo npm install pm2 -g
+    cd /var/www/ # Direktori umum untuk proyek web
+    sudo git clone [https://github.com/ryankputra/webtembak.git](https://github.com/ryankputra/webtembak.git) ryystore-app-production
+    cd ryystore-app-production/tembak-paket-app/ # Masuk ke folder utama aplikasi Node.js
     ```
 
-### Deploy Kode Aplikasi
-1.  **Konfigurasi Akses Git ke GitHub dari VPS (Pilih Salah Satu):**
-    * **Via HTTPS dengan PAT (Personal Access Token):** Ini yang sudah Anda gunakan. Pastikan Anda memiliki PAT dengan scope `repo`.
-    * **Via SSH Key (Direkomendasikan untuk jangka panjang):** Buat pasangan kunci SSH di VPS (`ssh-keygen`), lalu tambahkan kunci publik (`~/.ssh/id_rsa.pub`) ke pengaturan SSH keys di akun GitHub Anda.
-2.  **Buat Direktori Proyek di VPS:**
+3.  **Konfigurasi Izin File:**
     ```bash
-    sudo mkdir -p /var/www/tembak-paket-app 
-    sudo chown $(whoami):$(whoami) /var/www/tembak-paket-app 
-    cd /var/www/tembak-paket-app
+    sudo chown -R www-data:www-data . # Ubah kepemilikan ke user Nginx
+    sudo find . -type d -exec chmod 755 {} \; # Ubah izin folder
+    sudo find . -type f -exec chmod 644 {} \; # Ubah izin file
     ```
-3.  **Clone Repository dari GitHub:**
-    Ganti `URL_REPOSITORY_ANDA` dengan URL HTTPS (jika pakai PAT) atau SSH (jika pakai SSH key) repository GitHub privat Anda.
-    ```bash
-    git clone URL_REPOSITORY_ANDA .
-    ```
-    (Tanda `.` berarti clone ke direktori saat ini: `/var/www/tembak-paket-app`). Jika menggunakan HTTPS, Anda akan diminta username GitHub dan password (masukkan PAT Anda di sini).
 
-### Konfigurasi dan Jalankan Backend
-1.  **Masuk ke Direktori Backend:**
-    ```bash
-    cd /var/www/tembak-paket-app/backend 
-    ```
-2.  **Install Dependencies Backend:**
+4.  **Instal dependensi:**
     ```bash
     npm install --production
     ```
-3.  **Buat File `.env`:**
+
+5.  **Buat file `.env` (isi dengan kredensial produksi Anda):**
     ```bash
     nano .env
     ```
-    Isi dengan konten berikut, ganti placeholder dengan nilai Anda:
-    ```env
-    KMSP_API_KEY=MASUKKAN_API_KEY_KMSP_ANDA_DI_SINI
-    PORT=3001
-    NODE_ENV=production
-    # Username dan Password untuk Basic Auth (hardcoded di server.js, ini hanya catatan)
-    # ADMIN_USERNAME=RyyStore26
-    # ADMIN_PASSWORD=@Ayusiawan1R
-    # SESSION_SECRET=JIKA_ANDA_PINDAH_KE_SESSION_BASED_LOGIN_NANTI_GANTI_INI_DENGAN_STRING_ACAK_PANJANG
-    ```
-    Simpan file (Ctrl+X, Y, Enter).
-4.  **Jalankan Aplikasi Backend dengan PM2:**
+    *(Gunakan nilai produksi untuk API Key dan SESSION_SECRET yang lebih kuat!)*
+
+6.  **Mulai aplikasi dengan PM2:**
     ```bash
-    pm2 start server.js --name "webtembak-backend"
+    cd backend/
+    pm2 start server.js --name "ryystore-backend" --update-env
     pm2 save
-    sudo pm2 startup 
     ```
-    (Ikuti instruksi dari `pm2 startup`). Cek status dengan `pm2 list`.
 
-### Konfigurasi Nginx
-1.  **Buat File Konfigurasi Server Block Nginx:**
-    Ganti `tembak.cloudrystore.xyz` dengan domain Anda.
-    ```bash
-    sudo nano /etc/nginx/sites-available/tembak.cloudrystore.xyz
-    ```
-    Tempelkan konfigurasi berikut:
-    ```nginx
-    server {
-        listen 80;
-        listen [::]:80;
-
-        server_name tembak.cloudrystore.xyz; # Domain/Subdomain Anda
-
-        root /var/www/tembak-paket-app/frontend; # Path ke folder frontend
-        index index.html index.htm;
-
-        location / {
-            try_files $uri $uri/ /index.html;
+7.  **Konfigurasi Nginx:**
+    * Buat file konfigurasi Nginx baru:
+        ```bash
+        sudo nano /etc/nginx/sites-available/tembak.cloudrystore.xyz
+        ```
+    * Tempel konfigurasi berikut (ganti `your_domain` dan `path_to_frontend`):
+        ```nginx
+        server {
+            listen 80;
+            server_name tembak.cloudrystore.xyz www.tembak.cloudrystore.xyz; # Ganti dengan domain Anda
+            return 301 https://$server_name$request_uri;
         }
 
-        location /api {
-            proxy_pass http://localhost:3001; # Arahkan ke backend Node.js Anda (sesuai PORT di .env)
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_cache_bypass $http_upgrade;
+        server {
+            listen 443 ssl http2;
+            server_name tembak.cloudrystore.xyz www.tembak.cloudrystore.xyz; # Ganti dengan domain Anda
+
+            # **PASTIKAN PATH SERTIFIKAT INI BENAR SETELAH MENJALANKAN CERTBOT**
+            ssl_certificate /etc/letsencrypt/live/tembak.cloudrystore.xyz/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/tembak.cloudrystore.xyz/privkey.pem;
+            include /etc/letsencrypt/options-ssl-nginx.conf;
+            ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+            # Root untuk file statis frontend
+            root /var/www/ryystore-app-production/tembak-paket-app/frontend; # <--- UBAH PATH INI!
+            index index.html index.htm;
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+
+            location /api/ {
+                proxy_pass http://localhost:3001; # Port internal Node.js backend
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            error_page 500 502 503 504 /50x.html;
+            location = /50x.html {
+                root /usr/share/nginx/html;
+            }
         }
+        ```
+    * Aktifkan konfigurasi: `sudo ln -s /etc/nginx/sites-available/tembak.cloudrystore.xyz /etc/nginx/sites-enabled/`
+    * Hapus default Nginx (jika ada): `sudo rm /etc/nginx/sites-enabled/default`
+    * Uji Nginx: `sudo nginx -t`
+    * Muat ulang Nginx: `sudo systemctl reload nginx`
 
-        access_log /var/log/nginx/tembak.cloudrystore.xyz.access.log;
-        error_log /var/log/nginx/tembak.cloudrystore.xyz.error.log;
-    }
-    ```
-    Simpan file.
-
-2.  **Aktifkan Situs dan Tes Konfigurasi:**
+8.  **Instal dan Konfigurasi SSL dengan Certbot:**
     ```bash
-    sudo ln -s /etc/nginx/sites-available/tembak.cloudrystore.xyz /etc/nginx/sites-enabled/
-    # Hapus konfigurasi default Nginx jika ada dan tidak dipakai:
-    # sudo rm /etc/nginx/sites-enabled/default 
-    sudo nginx -t 
+    sudo certbot --nginx -d tembak.cloudrystore.xyz -d www.tembak.cloudrystore.xyz
     sudo systemctl reload nginx
     ```
 
-### Konfigurasi Firewall (UFW)
-1.  Izinkan koneksi yang diperlukan:
-    ```bash
-    sudo ufw allow OpenSSH # Atau port SSH kustom Anda
-    sudo ufw allow 'Nginx Full' # Izinkan HTTP (80) dan HTTPS (443)
-    ```
-2.  Aktifkan UFW (jika belum):
-    ```bash
-    sudo ufw enable 
-    ```
-    Jawab `y` pada konfirmasi.
-3.  Cek status:
-    ```bash
-    sudo ufw status
-    ```
-
-### Pengaturan Cloudflare (Jika Digunakan)
-1.  Pastikan domain `cloudrystore.xyz` Anda sudah ditambahkan ke Cloudflare dan nameserver di registrar domain Anda sudah diubah ke nameserver Cloudflare.
-2.  Di dashboard DNS Cloudflare untuk `cloudrystore.xyz`, buat **`A record`**:
-    * **Type:** `A`
-    * **Name:** `tembak`
-    * **IPv4 address:** Alamat IP Publik VPS Anda
-    * **Proxy status:** **Proxied (awan oranye)**
-    * **TTL:** Auto
-3.  Tunggu propagasi DNS jika baru diubah.
-
-### Setup HTTPS dengan Certbot
-1.  **Install Certbot (jika belum):**
-    ```bash
-    sudo apt install certbot python3-certbot-nginx -y
-    ```
-2.  **Dapatkan Sertifikat SSL:**
-    ```bash
-    sudo certbot --nginx -d tembak.cloudrystore.xyz
-    ```
-    * Ikuti instruksi: masukkan email, setujui Terms of Service.
-    * Pilih opsi untuk me-redirect semua traffic HTTP ke HTTPS (biasanya pilihan 2).
-3.  **Konfigurasi SSL/TLS di Cloudflare (Jika Menggunakan Cloudflare):**
-    * Di dashboard Cloudflare, domain `cloudrystore.xyz` -> SSL/TLS -> Overview.
-    * Set mode enkripsi ke **"Full (strict)"**.
-    * (Opsional) SSL/TLS -> Edge Certificates -> Aktifkan "Always Use HTTPS".
-
-### Mengakses Aplikasi Anda
-1.  Buka browser dan navigasi ke: `https://tembak.cloudrystore.xyz`
-2.  Anda akan diminta login HTTP Basic Authentication. Masukkan:
-    * Username: `RyyStore26`
-    * Password: `@Ayusiawan1R`
-3.  Aplikasi Anda seharusnya sudah bisa diakses.
+9.  **Uji Aplikasi:** Bersihkan cache browser Anda dan akses `https://tembak.cloudrystore.xyz`.
 
 ---
 
-## 3. Cara Mengupdate Aplikasi di VPS
-
-Setelah melakukan perubahan pada kode di komputer lokal Anda:
-
-1.  **Di Komputer Lokal Anda:**
-    * Tambahkan perubahan ke Git: `git add .`
-    * Commit perubahan: `git commit -m "Pesan update yang deskriptif"`
-    * Push ke GitHub: `git push origin main` (atau branch Anda)
-
-2.  **Di VPS Anda:**
-    * Login ke VPS via SSH.
-    * Navigasi ke direktori root proyek Anda:
-        ```bash
-        cd /var/www/tembak-paket-app 
-        ```
-    * Tarik perubahan terbaru dari GitHub:
-        ```bash
-        git pull origin main 
-        ```
-        (Anda mungkin diminta PAT jika menggunakan HTTPS).
-    * **Update Backend (jika ada perubahan di folder `backend`):**
-        ```bash
-        cd backend
-        npm install --production # Jalankan jika package.json berubah
-        pm2 restart webtembak-backend # Atau nama proses PM2 Anda
-        cd .. # Kembali ke root proyek
-        ```
-    * **Update Frontend:** Perubahan frontend sudah otomatis ter-update dengan `git pull`. Pengguna mungkin perlu melakukan Hard Refresh (Ctrl+Shift+R atau Cmd+Shift+R) di browser mereka.
-    * **Update Konfigurasi Nginx (HANYA JIKA Anda mengubah file konfigurasi Nginx):**
-        ```bash
-        sudo nginx -t
-        sudo systemctl reload nginx
-        ```
-
-3.  **Uji Kembali:** Akses `https://tembak.cloudrystore.xyz` dan pastikan semua update berfungsi. Periksa log jika ada masalah.
-
----
-
-## 4. Catatan Penting
-* **Keamanan:** Password Basic Auth (`ADMIN_PASSWORD`) disimpan langsung di `server.js`. Untuk keamanan lebih tinggi di masa depan, pertimbangkan metode penyimpanan yang lebih aman jika aplikasi ini berkembang. Selalu gunakan HTTPS.
-* **`frontend/script.js`:** Pastikan `const BACKEND_BASE_URL = '/api';` saat disajikan oleh Nginx dari domain yang sama.
-* **Backup:** Pertimbangkan untuk melakukan backup VPS Anda secara berkala.
-
----
-
-## 5. Troubleshooting Umum
-* **`EADDRINUSE` (Port sudah digunakan) saat menjalankan `node server.js` atau PM2:** Hentikan proses lama yang menggunakan port tersebut. Gunakan `lsof -i :PORT` untuk mencari PID-nya, lalu `kill -9 PID`.
-* **Nginx `502 Bad Gateway`:** Biasanya berarti aplikasi backend Node.js Anda tidak berjalan atau Nginx tidak bisa menghubunginya di `proxy_pass http://localhost:3001;`. Cek status PM2 (`pm2 list`, `pm2 logs nama_proses`).
-* **Perubahan Frontend Tidak Muncul:** Lakukan Hard Refresh di browser (Ctrl+Shift+R atau Cmd+Shift+R) atau bersihkan cache browser.
-* **Error Certbot:** Pastikan DNS domain Anda sudah benar-benar mengarah ke IP VPS dan Nginx sudah berjalan dan merespons di port 80 untuk domain tersebut sebelum menjalankan Certbot. Jika pakai Cloudflare, pastikan untuk sementara nonaktifkan proxy (grey cloud) untuk domain/subdomain saat validasi Certbot HTTP-01, lalu aktifkan lagi setelahnya. Atau, gunakan metode validasi DNS Certbot jika HTTP-01 bermasalah dengan proxy Cloudflare.
-
----
+Selamat, dan semoga dokumentasi ini membantu Anda dan pengguna lainnya di masa mendatang!
