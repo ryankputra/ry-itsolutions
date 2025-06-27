@@ -2,10 +2,10 @@
   "users": [
     {
       "id": "user_1750832245659",
-      "name": "ayusiawan Ryan",
+      "name": "admin",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$qDjzr6cBjZYzEBRRrZ3Y5eQN5F5pnuwyLQQmOyj/ja2pRDS5QGO2y",
-      "balance": 17800,
+      "balance": 17100,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
       "verifiedPhone": "6287737210539"
@@ -15,7 +15,7 @@
       "name": "bhre",
       "email": "bresudiwo@gmail.com",
       "password": "$2b$10$.lvpNymugKvQJvQrBJ6XMupDxGJOc5NF6LT4vFYpYH0oS37cg731m",
-      "balance": 0,
+      "balance": 5000,
       "role": "user",
       "verifiedPhone": null,
       "createdAt": "2025-06-26T08:28:49.288Z"
@@ -26,7 +26,7 @@
       "package_code": "b0012edd21983678eb7ebc08d8f04ecd",
       "name": "Masa Aktif Kartu XL 1 Tahun",
       "description": "<b>JANGAN BARBAR ATAU SAYA TUTUP, SOALNYA COCOK TERUTAMA BUAT JAGA MASA AKTIF PENGELOLA PAKET AKRAB</b>\r\n\r\n- Masa aktif selama 1 tahun (12 bulan).\r\n- Jangan kaget jika masa aktif kartu tidak langsung bertambah. Masa aktif akan diperpanjang setiap bulan, tidak langsung dapat 1 tahun (12 bulan). Pemicu perpanjangan masa aktif kartu nanti saat paket setahun perpanjangan Rp0 pada tanggal xx xx xxxx 00.00 WIB. Akan tambah 30 hari tiap bulannya.\r\nJika kartunya mendekati masa tenggang, sebaiknya bisa tembak masa aktif sebulan dulu yang ada di panel.\r\n- Tidak dapat diakumulasi.\r\n- Tidak bisa dalam keadaan masa tenggang. Jika sudah terlanjur masa tenggang, tembak masa aktif sebulan di panel.\r\n- Sisa pulsa boleh dalam posisi Rp0 (kosongan).\r\n- Terdapat fee/biaya pembelian paket ini untuk mendukung biaya infrastruktur server kami (tertera).\r\n- NO GARANSI.",
-      "original_price": 0.5,
+      "original_price": 5000,
       "custom_price": 15000,
       "isVisible": true,
       "requires_otp": true,
@@ -39,13 +39,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 15000
+      "platform_fee": 15000,
+      "category": "reguler"
     },
     {
       "package_code": "XL_XC1PLUS1DISC_EWALLET",
       "name": "[Method E-Wallet] Xtra Combo 1+1GB Disc (Gandengan XUT Super 30000)",
       "description": "- Ini bukan Xtra Combo Special ya.. Beda lagi...\r\n- XL Xtra Combo 1+1GB / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Xtra Unlimited Turbo Super (XUT SUPER) 30000\r\n- Kartu usahakan jangan posisi masa tenggang saat ditembak.\r\n- Sediakan saldo E-wallet Rp12.500 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.2,
+      "original_price": 2500,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": true,
@@ -64,13 +65,14 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XL_XC1PLUS1DISC_PULSA",
       "name": "[Method Pulsa] Xtra Combo 1+1GB Disc (Gandengan XUT Super 30000)",
       "description": "- Ini bukan Xtra Combo Special ya.. Beda lagi...\r\n- XL Xtra Combo 1+1GB / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Xtra Unlimited Turbo Super (XUT SUPER) 30000\r\n- Kartu usahakan jangan posisi masa tenggang saat ditembak.\r\n- Sediakan Pulsa Rp12.500 (Akan terpotong segini).\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.2,
+      "original_price": 2500,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": true,
@@ -83,15 +85,16 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLMINISUPERV2",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI 30 HARI] Akrab Anggota SUPER MINI PROMO (BACA DESKRIPSI)",
       "description": "Akrab Anggota SUPER MINI PROMO\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 13 - 15 GB\r\n- AREA 2 = 15 - 17 GB\r\n- AREA 3 = 20 - 22 GB\r\n- AREA 4 = 30 - 32 GB\r\n- Apabila Kuota MyRewards belum masuk (belum masuk full sesuai deskripsi di atas), tunggu 1x24 jam dulu ya baru laporan ke Admin.\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF -+30 HARI.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.4,
+      "original_price": 40000,
       "custom_price": 0.4,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -102,15 +105,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 50000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLMINI",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI 30 HARI] Akrab Anggota MINI (BACA DESKRIPSI)",
       "description": "Akrab Anggota MINI\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 : 31.75 GB - 33.75 GB\r\n~ AREA 2 : 33.75 - 35.75 GB\r\n~ AREA 3 : 38.75 - 40.75 GB\r\n~ AREA 4 : 48.75 - 50.75 GB\r\n- Apabila Kuota MyRewards belum masuk (belum masuk full sesuai deskripsi di atas), tunggu 1x24 jam dulu ya baru laporan ke Admin.\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF -+30 HARI.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.49,
+      "original_price": 49000,
       "custom_price": 0.49,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -121,15 +125,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 55000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBIG",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI 30 HARI] Akrab Anggota BIG (BACA DESKRIPSI)",
       "description": "Akrab Anggota BIG\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 : 38 GB - 40 GB\r\n~ AREA 2 : 40 GB - 42 GB\r\n~ AREA 3 : 45 GB - 47 GB\r\n~ AREA 4 : 55 GB - 57 GB\r\n- Apabila Kuota MyRewards belum masuk (belum masuk full sesuai deskripsi di atas), tunggu 1x24 jam dulu ya baru laporan ke Admin.\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF -+30 HARI.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.53,
+      "original_price": 53000,
       "custom_price": 0.53,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -140,15 +145,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 60000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLJUMBOV2",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI 30 HARI] Akrab Anggota JUMBO LITE (BACA DESKRIPSI)",
       "description": "Akrab Anggota JUMBO LITE\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 50.5 - 52.5 GB\r\n- AREA 2 = 52.5 - 54.5 GB\r\n- AREA 3 = 57.5 - 59.5 GB\r\n- AREA 4 = 67.5 - 69.5 GB\r\n- Apabila Kuota MyRewards belum masuk (belum masuk full sesuai deskripsi di atas), tunggu 1x24 jam dulu ya baru laporan ke Admin.\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF -+30 HARI.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.64,
+      "original_price": 64000,
       "custom_price": 0.64,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -159,15 +165,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 75000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBIGMEGA",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI 30 HARI] Akrab Anggota MEGA BIG (BACA DESKRIPSI)",
       "description": "Akrab Anggota MEGA BIG\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 : 88 GB - 90 GB\r\n~ AREA 2 : 90 GB - 92 GB\r\n~ AREA 3 : 95 GB - 97 GB\r\n~ AREA 4 : 105 GB - 107 GB\r\n- Apabila Kuota MyRewards belum masuk (belum masuk full sesuai deskripsi di atas), tunggu 1x24 jam dulu ya baru laporan ke Admin.\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF -+30 HARI.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.89,
+      "original_price": 89000,
       "custom_price": 0.89,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -178,15 +185,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 95000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLJUMBO",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI 30 HARI] Akrab Anggota JUMBO (BACA DESKRIPSI)",
       "description": "Akrab Anggota JUMBO\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ Area 1 = 65 GB\r\n~ Area 2 = 70 GB\r\n~ Area 3 = 83 GB\r\n~ Area 4 = 123 GB\r\n- Apabila Kuota MyRewards belum masuk (belum masuk full sesuai deskripsi di atas), tunggu 1x24 jam dulu ya baru laporan ke Admin.\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF -+30 HARI.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.78,
+      "original_price": 78000,
       "custom_price": 0.78,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -197,15 +205,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 85000,
+      "category": "non-otp"
     },
     {
       "package_code": "BEBASPUAS15GB30HR_PREV",
       "name": "[OTOMATIS][RESMI][GARANSI 30 HARI] XL Data Bebas Puas 30 Hari 75GB - Promo Triple Quota",
       "description": "- TIDAK PERLU KODE OTP.\r\n- Paket Resmi (OFFICIAL) jalur Sidompul.\r\n- MASA AKTIF 30 HARI.\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Hanya bisa untuk XL Prepaid/Prabayar.\r\n- Kuota bersifat full reguler 24 jam.\r\n- Triple Quota Utama: 75GB.\r\n- Tidak wajib ada pulsa.\r\n- Jika ada paket bebas puas, maka akan keakumulasi sisa kuota dan masa aktifnya.\r\n- Kalau mau nimpa, bonusnya claim dlu di myxl (kalau dapat). Nanti rugi klo gk diambil dulu sebelum timpa, soalnya bakal dapet bonus lgi.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.",
-      "original_price": 0.79,
+      "original_price": 79000,
       "custom_price": 0.79,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -216,15 +225,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 85000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLDBEPU5430D_PREV",
       "name": "[OTOMATIS][RESMI][GARANSI 30 HARI] XL Data Bebas Puas 30 Hari 234GB - Promo Triple Quota",
       "description": "- TIDAK PERLU KODE OTP.\r\n- Paket Resmi (OFFICIAL) jalur Sidompul.\r\n- MASA AKTIF 30 HARI.\r\n- GARANSI 30 HARI.\r\n- Bisa untuk semua Area.\r\n- Hanya bisa untuk XL Prepaid/Prabayar.\r\n- Kuota bersifat full reguler 24 jam.\r\n- Triple Quota Utama: 234GB.\r\n- Tidak wajib ada pulsa.\r\n- Jika ada paket bebas puas, maka akan keakumulasi sisa kuota dan masa aktifnya.\r\n- Kalau mau nimpa, bonusnya claim dlu di myxl. Nanti rugi klo gk diambil dulu sebelum timpa, soalnya bakal dapet bonus lgi.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.",
-      "original_price": 0.14,
+      "original_price": 140000,
       "custom_price": 0.14,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -235,7 +245,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 150000,
+      "category": "non-otp"
     },
     {
       "package_code": "63e8a5744a9d2d80f3fe5874f03e8c7a",
@@ -260,7 +271,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "582333b996179d9a11ece82485f0ba5e",
@@ -279,15 +291,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLBEKASAN5",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 5 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 5 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 5 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 5 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.6,
+      "original_price": 6000,
       "custom_price": 0.6,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -298,15 +311,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 10000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBEKASAN7",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 7 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 7 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 7 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 7 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.8,
+      "original_price": 8000,
       "custom_price": 0.8,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -317,13 +331,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 9000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBEKASAN9",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 9 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 9 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 9 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 9 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.1,
+      "original_price": 10000,
       "custom_price": 0.1,
       "isVisible": false,
       "requires_otp": false,
@@ -336,15 +351,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLBEKASAN11",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 11 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 11 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 11 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 11 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.13,
+      "original_price": 13000,
       "custom_price": 0.13,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -355,15 +371,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 15000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBEKASAN13",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 13 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 13 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 13 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 13 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.14,
+      "original_price": 14000,
       "custom_price": 0.14,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -374,15 +391,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 18000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBEKASAN15",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 15 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 15 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 15 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 15 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.16,
+      "original_price": 16000,
       "custom_price": 0.16,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -393,15 +411,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 18900,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBEKASAN17",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 17 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 17 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 17 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 17 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.18,
+      "original_price": 18000,
       "custom_price": 0.18,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -412,13 +431,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 21000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLBEKASAN19",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 19 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota BEKASAN 19 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 19 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n- AREA 1 = 8 GB\r\n- AREA 2 = 10 GB\r\n- AREA 3 = 15 GB\r\n- AREA 4 = 25 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 19 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.2,
+      "original_price": 20000,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": false,
@@ -431,13 +451,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN5",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 5 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 5 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 5 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 5 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.9,
+      "original_price": 9000,
       "custom_price": 0.9,
       "isVisible": false,
       "requires_otp": false,
@@ -450,13 +471,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN7",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 7 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 7 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 7 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 7 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.12,
+      "original_price": 12000,
       "custom_price": 0.12,
       "isVisible": false,
       "requires_otp": false,
@@ -469,13 +491,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN9",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 9 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 9 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 9 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 9 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.14,
+      "original_price": 14000,
       "custom_price": 0.14,
       "isVisible": false,
       "requires_otp": false,
@@ -488,13 +511,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN11",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 11 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 11 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 11 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 11 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.15,
+      "original_price": 15000,
       "custom_price": 0.15,
       "isVisible": false,
       "requires_otp": false,
@@ -507,13 +531,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN13",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 13 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 13 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 13 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 13 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.18,
+      "original_price": 18000,
       "custom_price": 0.18,
       "isVisible": false,
       "requires_otp": false,
@@ -526,13 +551,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN15",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 15 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 15 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 15 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 15 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.2,
+      "original_price": 20000,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": false,
@@ -545,13 +571,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN17",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 17 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 17 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 17 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 17 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.22,
+      "original_price": 22000,
       "custom_price": 0.22,
       "isVisible": false,
       "requires_otp": false,
@@ -564,13 +591,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XXLBEKASAN19",
       "name": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota XXL BEKASAN 19 HARI (BACA DESKRIPSI)",
       "description": "Akrab Anggota XXL BEKASAN 19 HARI\r\n\r\nAKRAB BEKASAN BISA UNTUK XL/AXIS & LIVEON 19 HARI.\r\nCOCOK BUAT YANG LOW BUDGET TAPI LAGI KEBELET PENGEN DOWNLOAD, STREAMING, BROWSING :P\r\n\r\n- WAKTU PROSES OTOMATIS 1-5 MENIT BY SYSTEM.\r\n- Paket Resmi (OFFICIAL).\r\n- GARANSI FULL.\r\n- Bisa untuk semua Area.\r\n- Bisa untuk XL / AXIS / LIVEON.\r\n- Cara Unreg paket akrab yang benar:\r\nhttps://kmsp-store.com/cara-unreg-paket-akrab-yang-benar\r\n- Kuota bersifat full reguler 24 jam. Total kuota yang akan kamu dapat adalah sebagai berikut:\r\n~ AREA 1 = 7.5 GB\r\n~ AREA 2 = 12 GB\r\n~ AREA 3 = 25 GB\r\n~ AREA 4 = 65 GB\r\n- Cek area kamu di:\r\nhttp://bit.ly/area_akrab\r\n- Pastikan Anda telah memasukkan kartu perdana yang ingin ditembak ke Handphone/Modem/Mifi agar dapat mendeteksi lokasi BTS terdekat dan mendapatkan bonus kuota lokal.\r\n- MASA AKTIF 19 HARI (HARI INI KEHITUNG). KALAU BERUNTUNG, BISA DAPAT LEBIH DARI ITU.\r\n- Tidak wajib ada pulsa.\r\n- Jika transaksi status GAGAL maka saldo panel akan otomatis di-refund.\r\n- Memerlukan waktu 10-30 detik. Jangan tinggalkan halaman atau memutuskan koneksi internet.",
-      "original_price": 0.23,
+      "original_price": 23000,
       "custom_price": 0.23,
       "isVisible": false,
       "requires_otp": false,
@@ -583,7 +611,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "REINVIT",
@@ -602,7 +631,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "BELI_SLOT_AKRAB_BARU",
@@ -621,13 +651,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "AKRAB_L75_PENGELOLA_PULSA",
       "name": "[Metode Pulsa] Pengelola Akrab L Kuber 75GB dan Bonus Paket Akrab untuk 3 Anggota 30 Hari",
       "description": "Buat yang tau-tau saja hehe..\r\n\r\nSediakan Pulsa Rp140.000 (memotong Rp140.000)\r\n\r\nBisa dijadwalkeun tembak dengan fitur Multi Trx, set tembak jam 02-05 WIB biar dapat myrewards pengelola dan anggotanya nanti yang diinvite.",
-      "original_price": 0.2,
+      "original_price": 2000,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": true,
@@ -640,13 +671,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "AKRAB_L75_PENGELOLA_DANA",
       "name": "[Metode E-Wallet] Pengelola Akrab L Kuber 75GB dan Bonus Paket Akrab untuk 3 Anggota 30 Hari",
       "description": "Buat yang tau-tau saja hehe..\r\n\r\nSediakan Saldo E-Wallet DANA Rp140.000 (memotong Rp140.000)",
-      "original_price": 0.2,
+      "original_price": 2000,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": true,
@@ -665,15 +697,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLMA1BLN_PREV",
       "name": "[RESMI] Tambah Masa Aktif Kartu XL 1 Bulan (30 Hari)",
       "description": "Masa Aktif Kartu XL Prabayar 1 Bulan atau 30 Hari\r\n\r\nPENTING:\r\nHanya mengisi kembali masa aktif kartu XL prabayar agar balik ke 30 hari, bukan untuk mengakumulasinya.\r\n\r\nCONTOH\r\nMASA AKTIF NOMOR SAAT MEMBELI TERSISA 25 HARI MAKA YANG DITERIMA HANYA 5 HARI, JIKA MASA AKTIF TERSISA 30 HARI ATAU LEBIH, MAKA TRANSAKSI TETAP SUKSES DAN ANDA TIDAK MENDAPATKAN TAMBAHAN MASA AKTIF\r\n\r\nTidak bisa untuk kartu XL yang sudah terlanjur di masa tenggang/hangus",
-      "original_price": 0.6,
+      "original_price": 6000,
       "custom_price": 0.6,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -684,13 +717,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 10000,
+      "category": "non-otp"
     },
     {
       "package_code": "TRIMA2_PREV",
       "name": "[RESMI] Tri Tambah Masa Aktif Kartu 4 Bulan",
       "description": "MISI.. NUMPANG JUALAN MASA AKTIF THREE :v\r\n\r\nAMAN DI BOM TRX\r\n\r\n1 nomor max 2-3 kali\r\n\r\nAkumulasi maksimal 365 hari ya\r\nJika pengisian produk dilakukan di kartu Three dengan masa aktif lebih dari 365 hari maka transaksi tetap akan sukses namun masa aktif tidak bertambah",
-      "original_price": 0.5,
+      "original_price": 5000,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": false,
@@ -703,15 +737,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "AXISMA4BLN_PREV",
       "name": "[RESMI] Tambah Masa Aktif Kartu AXIS 4 Bulan (120 Hari)",
       "description": "MISI.. NUMPANG JUALAN MASA AKTIF AXIS :v\r\n\r\nTambah Masa Aktif Kartu AXIS 4 Bulan atau 120 Hari\r\n\r\nTidak support untuk kartu AXIS yang sudah lewat masa tenggang/hangus",
-      "original_price": 0.9,
+      "original_price": 9000,
       "custom_price": 0.9,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -722,15 +757,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 15000,
+      "category": "non-otp"
     },
     {
       "package_code": "AXISMA1BLN_PREV",
       "name": "[RESMI] Tambah Masa Aktif Kartu AXIS 1 Bulan (30 Hari)",
       "description": "MISI.. NUMPANG JUALAN MASA AKTIF AXIS :v\r\n\r\nTambah Masa Aktif Kartu AXIS 1 Bulan atau 30 Hari\r\n\r\nTidak support untuk kartu AXIS yang sudah lewat masa tenggang/hangus",
-      "original_price": 0.6,
+      "original_price": 6000,
       "custom_price": 0.6,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -741,13 +777,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 11000,
+      "category": "non-otp"
     },
     {
       "package_code": "TSELMA90HARI_PREV",
       "name": "[RESMI] Tambah Masa Aktif Kartu TELKOMSEL 3 BULAN (90 Hari)",
       "description": "MISI.. NUMPANG JUALAN MASA AKTIF TELKOMSEL :v\r\n\r\nTambah Masa Aktif Kartu TELKOMSEL 3 BULAN (90 Hari)\r\n\r\nAkumulasi masa aktif pastikan tidak melebihi 360 hari.",
-      "original_price": 0.35,
+      "original_price": 35000,
       "custom_price": 0.35,
       "isVisible": false,
       "requires_otp": false,
@@ -760,15 +797,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "TSELMA30HARI_PREV",
       "name": "[RESMI] Tambah Masa Aktif Kartu TELKOMSEL 1 BULAN (30 Hari)",
       "description": "MISI.. NUMPANG JUALAN MASA AKTIF TELKOMSEL :v\r\n\r\nTambah Masa Aktif Kartu TELKOMSEL 1 BULAN (30 Hari)\r\n\r\n- Akumulasi masa aktif pastikan tidak melebihi 360 hari",
-      "original_price": 0.14,
+      "original_price": 14000,
       "custom_price": 0.14,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -779,15 +817,16 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 20000,
+      "category": "non-otp"
     },
     {
       "package_code": "ISATMA30D_PREV",
       "name": "[RESMI] Tambah Masa Aktif Kartu INDOSAT 1 BULAN (30 Hari)",
       "description": "MISI.. NUMPANG JUALAN MASA AKTIF INDOSAT :v\r\n\r\nTambah Masa Aktif Kartu INDOSAT 1 BULAN (30 Hari)\r\n\r\nSEBELUM ORDER, BACA PESAN PENTING BERIKUT:\r\n\r\n✅ PRODUK AKTIF 24 JAM SELAMA GAK MAINTENANCE/PEMELIHARAAN SISTEM DARI INDOSAT\r\n✅ AKUMULASI MAKSIMAL 30 HARI\r\n\r\nSEBAGAI CONTOH:\r\nMASA AKTIF NOMOR SAAT MEMBELI TERSISA 25 HARI MAKA YANG DITERIMA HANYA 5 HARI, JIKA MASA AKTIF TERSISA 30 HARI ATAU LEBIH MAKA TRANSAKSI TETAP SUKSES DAN ANDA TIDAK MENDAPATKAN TAMBAHAN MASA AKTIF",
-      "original_price": 0.11,
+      "original_price": 11000,
       "custom_price": 0.11,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": false,
       "payment_methods": [
         {
@@ -798,13 +837,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 15000,
+      "category": "non-otp"
     },
     {
       "package_code": "XLXCVIP5PLUS10DBLYT_PREV",
       "name": "[RESMI] XL Xtra Combo 5GB + 10GB VIP Double YouTube 30 Hari",
       "description": "✅ KUOTA FULL 24 JAM NASIONAL\r\n✅ 5GB KUOTA UTAMA (REGULER)\r\n✅ 10GB KUOTA YOUTUBE\r\n✅ 20 MENIT TELPON ALL OPERATOR\r\n✅ AKTIF 30 HARI",
-      "original_price": 0.69,
+      "original_price": 69000,
       "custom_price": 0.69,
       "isVisible": false,
       "requires_otp": false,
@@ -817,13 +857,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "f2fa05f28c146fdb67488ec53ce5c2cc",
       "name": "[METODE PULSA] XL DATA REGULER 2.8GB 27 JAM",
       "description": "MASA AKTIF PAKET GAK 2 HARI FULL. PATOKANNYA EXPIRED PAKETNYA ADA DI APLIKASI MYXL (CEK KLO UDAH MASUK).\r\n\r\nSediakan pulsa Rp500 (akan terpotong Rp500) di kartu XL kamu (dan kunci/lock) untuk setiap kali tembak/eksekusi.\r\n\r\nHanya bisa untuk XL Prabayar/Prepaid.\r\n\r\nSISA KUOTA GAK BISA AKUMULASI (BERSIFAT REFILLABLE/ISI ULANG SAJA)\r\nKALAU MASA AKTIF PAKET BISA AKUMULASI.\r\n\r\nJIKA TIDAK BISA DITEMBAK ULANG, SILAKAN TUNGGU 2 HARI ATAU LEBIH KEMUDIAN COBA TEMBAK ULANG NANTI...",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -836,13 +877,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "6b699877e423e526d8c2502f48ba0a1d",
       "name": "[Method E-Wallet] Xtra Combo Flex S Promo",
       "description": "- Xtra Combo Flex S disc/versi murah.\r\n- Sediakan saldo E-Wallet Dana Rp16.000 (akan terpotong segini)\r\n- Jangan ada Paket Flex lainnya yang aktif.\r\n- Di sebagian kasus tidak dapat digandeng dengan Paket Akrab, jadi pastikan kalau mau lebih aman jangan ada paket akrabnya.\r\n- Terdapat fee/biaya Admin pembelian paket (tertera).\r\n- Bisa dipakai untuk Claim Addon/Bonus Xtra Combo Flex.",
-      "original_price": 0.2,
+      "original_price": 2500,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": true,
@@ -861,13 +903,14 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_WA_10GB_3K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus WhatsApp 10GB",
       "description": "- Bonus Kuota 10GB WhatsApp Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -886,13 +929,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_TT_10GB_3K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus TikTok 10GB",
       "description": "- Bonus Kuota 10GB TikTok Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -911,13 +955,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_FB_10GB_3K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus Facebook 10GB",
       "description": "- Bonus Kuota 10GB Facebook Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -936,13 +981,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_IG_10GB_3K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus Instagram 10GB",
       "description": "- Bonus Kuota 10GB Instagram Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -961,13 +1007,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_WA_10GB_3K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus WhatsApp 10GB",
       "description": "- Bonus Kuota 10GB WhatsApp Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -980,13 +1027,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_TT_10GB_3K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus TikTok 10GB",
       "description": "- Bonus Kuota 10GB TikTok Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -999,13 +1047,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_FB_10GB_3K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus Facebook 10GB",
       "description": "- Bonus Kuota 10GB Facebook Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1018,13 +1067,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_IG_10GB_3K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus Instagram 10GB",
       "description": "- Bonus Kuota 10GB Instagram Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 10GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.3.000 (AKAN TERPOTONG RP3.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1037,13 +1087,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_FB_15GB_5K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus Facebook 15GB",
       "description": "- Bonus Kuota 15GB Facebook Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1062,13 +1113,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_WA_15GB_5K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus WhatsApp 15GB",
       "description": "- Bonus Kuota 15GB WhatsApp Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1087,13 +1139,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_SOCMED_15GB_7K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus 15GB Social Media Spotify, Instagram, TikTok (Masing-Masing 5GB)",
       "description": "- Bonus Kuota 15GB Social Media (Spotify, Instagram, TikTok Masing-Masing 5GB) Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus. Berikan jeda 10 menit setelah tembak paket Xtra Combo Plus/Xtra Combo VIP Plus baru tembak ini.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke posisi semula lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.7.500 (AKAN TERPOTONG RP7.500). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.1,
+      "original_price": 1000,
       "custom_price": 0.1,
       "isVisible": false,
       "requires_otp": true,
@@ -1112,13 +1165,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_SOCMED_15GB_7K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus 15GB Social Media Spotify, Instagram, TikTok (Masing-Masing 5GB)",
       "description": "- Bonus Kuota 15GB Social Media (Spotify, Instagram, TikTok Masing-Masing 5GB) Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus. Berikan jeda 10 menit setelah tembak paket Xtra Combo Plus/Xtra Combo VIP Plus baru tembak ini.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke posisi semula lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.7.500 (AKAN TERPOTONG RP7.500).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.1,
+      "original_price": 1000,
       "custom_price": 0.1,
       "isVisible": false,
       "requires_otp": true,
@@ -1131,13 +1185,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_STREAMING_15GB_7K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus 15GB Streaming Iflix, Viu, YouTube (Masing-Masing 5GB)",
       "description": "- Bonus Kuota 15GB Streaming (Iflix, Viu, YouTube Masing-Masing 5GB) Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus. Berikan jeda 10 menit setelah tembak paket Xtra Combo Plus/Xtra Combo VIP Plus baru tembak ini.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke posisi semula lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.7.500 (AKAN TERPOTONG RP7.500). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.1,
+      "original_price": 1000,
       "custom_price": 0.1,
       "isVisible": false,
       "requires_otp": true,
@@ -1156,13 +1211,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_STREAMING_15GB_7K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus 15GB Streaming Iflix, Viu, YouTube (Masing-Masing 5GB)",
       "description": "- Bonus Kuota 15GB Streaming (Iflix, Viu, YouTube Masing-Masing 5GB) Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus. Berikan jeda 10 menit setelah tembak paket Xtra Combo Plus/Xtra Combo VIP Plus baru tembak ini.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke posisi semula lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.7.500 (AKAN TERPOTONG RP7.500).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.1,
+      "original_price": 1000,
       "custom_price": 0.1,
       "isVisible": false,
       "requires_otp": true,
@@ -1175,13 +1231,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_GAMES_15GB_7K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus 15GB Games Mobile Legends, Free Fire, PUBG (Masing-Masing 5GB)",
       "description": "- Bonus Kuota 15GB Games (Mobile Legends, Free Fire, PUBG Masing-Masing 5GB) Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus. Berikan jeda 10 menit setelah tembak paket Xtra Combo Plus/Xtra Combo VIP Plus baru tembak ini.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke posisi semula lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.7.500 (AKAN TERPOTONG RP7.500). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.1,
+      "original_price": 1000,
       "custom_price": 0.1,
       "isVisible": false,
       "requires_otp": true,
@@ -1200,13 +1257,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_GAMES_15GB_7K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus 15GB Games Mobile Legends, Free Fire, PUBG (Masing-Masing 5GB)",
       "description": "- Bonus Kuota 15GB Games (Mobile Legends, Free Fire, PUBG Masing-Masing 5GB) Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus. Berikan jeda 10 menit setelah tembak paket Xtra Combo Plus/Xtra Combo VIP Plus baru tembak ini.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke posisi semula lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.7.500 (AKAN TERPOTONG RP7.500).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.1,
+      "original_price": 1000,
       "custom_price": 0.1,
       "isVisible": false,
       "requires_otp": true,
@@ -1219,13 +1277,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_YT_15GB_5K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus YouTube 15GB",
       "description": "- Bonus Kuota 15GB YouTube Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1238,13 +1297,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_TT_15GB_5K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus TikTok 15GB",
       "description": "- Bonus Kuota 15GB TikTok Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1257,13 +1317,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_IG_15GB_5K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus Instagram 15GB",
       "description": "- Bonus Kuota 15GB Instagram Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1276,13 +1337,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_FB_15GB_5K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus Facebook 15GB",
       "description": "- Bonus Kuota 15GB Facebook Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1295,13 +1357,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_WA_15GB_5K_P",
       "name": "[Metode Pulsa] Bonus Kuota Xtra Combo Plus/VIP Plus WhatsApp 15GB",
       "description": "- Bonus Kuota 15GB WhatsApp Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN PULSA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000).\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1314,13 +1377,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_YT_15GB_5K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus YouTube 15GB",
       "description": "- Bonus Kuota 15GB YouTube Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1339,13 +1403,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_TT_15GB_5K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus TikTok 15GB",
       "description": "- Bonus Kuota 15GB TikTok Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1364,13 +1429,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ADN_XCP_IG_15GB_5K_D",
       "name": "[Metode E-Wallet] Bonus Kuota Xtra Combo Plus/VIP Plus Instagram 15GB",
       "description": "- Bonus Kuota 15GB Instagram Paket Xtra Combo Plus/Xtra Combo VIP Plus. Cocok untuk Mix Paket XCP/XCVIP Plus ke pelanggan.\r\n- Harus ada paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Masa aktif paket mengikuti sisa masa aktif paket Xtra Combo Plus/Xtra Combo VIP Plus.\r\n- Tidak dapat diakumulasi, jika kamu membelinya ulang maka kuota akan tereset ke 15GB lagi.\r\n- SEDIAKAN SALDO E-WALLET DANA MINIMAL RP.5.000 (AKAN TERPOTONG RP5.000). SEGERA KLIK TOMBOL BAYAR YANG MUNCUL.\r\n- Jika tidak dapat dibeli, silakan coba secara berkala.",
-      "original_price": 0.5,
+      "original_price": 500,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1389,13 +1455,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "97520d9ebea7d72cec0ae29e7b65e1fc",
       "name": "[Method E-Wallet] Xtra Combo Plus 10GB (Unlimited Apps Produktivitas Mirip Paket Biz) BACA DESKRIPSI!!!",
       "description": "- Xtra Combo Plus 10GB (Unlimited Apps Produktivitas Mirip Paket Biz untuk Inject SSH/VPN). Bagi yang tau-tau aja.\r\n- Abaikan FUP Kuota Harian Aplikasi Produktivitas 20 GB atau 100MB. Tetap Unlimited walaupun sudah lewat 20GB atau 100MB.\r\n- Kartu jangan posisi masa tenggang saat ditembak.\r\n- Bisa juga untuk syarat sikat bonus Addon Xtra Combo Plus, seperti Addon XCP 15GB / 10GB.\r\n- JIKA MASIH ADA PAKET XTRA COMBO PLUS LAINNYA, WAJIB UNREG DULU SEBELUM TEMBAK PAKET INI, JIKA TIDAK MAKA TIDAK UNLIMITED SAAT DIINJECT UNTUK SSH/VPN.\r\n- Pastikan tidak ada paket Xtra Combo Plus yang NGUMPET sedang aktif di kartu XL kamu walau di MyXL tidak nampak. Pastikan unreg via dial *808# > INFO > Info kartu xl ku > Stop Langganan > Unreg semua yang berbau Xtra Combo Plus.\r\n- Sediakan saldo E-wallet Dana Rp64.000 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.5,
+      "original_price": 5000,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1414,13 +1481,14 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "24072ce794a78f4c490f2b36678b085b",
       "name": "[Method Pulsa] Xtra Combo Plus 10GB (Unlimited Apps Produktivitas Mirip Paket Biz) BACA DESKRIPSI!!!",
       "description": "- Xtra Combo Plus 10GB (Unlimited Apps Produktivitas Mirip Paket Biz untuk Inject SSH/VPN). Bagi yang tau-tau aja.\r\n- Abaikan FUP Kuota Harian Aplikasi Produktivitas 20 GB atau 100MB. Tetap Unlimited walaupun sudah lewat 20GB atau 100MB.\r\n- Kartu jangan posisi masa tenggang saat ditembak.\r\n- Bisa juga untuk syarat sikat bonus Addon Xtra Combo Plus, seperti Addon XCP 15GB / 10GB.\r\n- JIKA MASIH ADA PAKET XTRA COMBO PLUS LAINNYA, WAJIB UNREG DULU SEBELUM TEMBAK PAKET INI, JIKA TIDAK MAKA TIDAK UNLIMITED SAAT DIINJECT UNTUK SSH/VPN.\r\n- Pastikan tidak ada paket Xtra Combo Plus yang NGUMPET sedang aktif di kartu XL kamu walau di MyXL tidak nampak. Pastikan unreg via dial *808# > INFO > Info kartu xl ku > Stop Langganan > Unreg semua yang berbau Xtra Combo Plus.\r\n- Sediakan Pulsa Rp64.000 (Akan terpotong segini).\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.5,
+      "original_price": 5000,
       "custom_price": 0.5,
       "isVisible": false,
       "requires_otp": true,
@@ -1433,13 +1501,14 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "cae84e917d1da32a00d20b388b1b883b",
       "name": "[Metode Pulsa] Xtra Combo Plus 5GB (3GB-5GB atau bisa lebih kalau beruntung)",
       "description": "- Pastikan tidak ada paket Xtra Combo Plus yang sedang aktif di kartu XL kamu. Jika ada, unreg via dial *808#\r\n- Cocok untuk syarat sikat bonus Addon Xtra Combo Plus.\r\n- Sediakan pulsa Rp28.000 (akan terpotong segini).\r\n- Terdapat fee/biaya Admin pembelian paket (tertera).",
-      "original_price": 0.2,
+      "original_price": 2500,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": true,
@@ -1452,13 +1521,14 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "62a49f0f7585e542fc195914ee11d2de",
       "name": "[Method E-Wallet] Xtra Combo Plus 5GB (3GB-5GB atau bisa lebih kalau beruntung)",
       "description": "- Kartu jangan posisi masa tenggang saat didor.\r\n- Cocok untuk syarat sikat bonus Addon Xtra Combo Plus.\r\n- Pastikan tidak ada paket Xtra Combo Plus yang sedang aktif di kartu XL kamu. Jika ada, unreg via dial *808#\r\n- Sediakan saldo E-wallet Dana Rp28.000 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- APABILA SUDAH BELI TAPI PAKET GAK MASUK MAKA DILUAR TANGGUNG JAWAB KMSP, KAMI TETAP MEREKOMENDASIKAN METODE PULSA.\r\nNOTE: JANGAN NGADU KE CS XL KARENA BISA BERABE :v\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.2,
+      "original_price": 2500,
       "custom_price": 0.2,
       "isVisible": false,
       "requires_otp": true,
@@ -1477,13 +1547,14 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "c03be70fb3523ac2ac440966d3a5920e",
       "name": "[Method E-Wallet] Xtra Combo Special 8GB Disc (1GB-8GB)",
       "description": "- XL Xtra Combo Special Up to (hingga) 8 GB tergantung Area / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area. Karena beda dengan paket akrab, maka kami tidak bisa memastikan dapat berapa GB, bisa dari 1GB hingga 8GB. Jangan kaget apabila nanti ada yang dapat kuota 1GB/2GB/3GB/4GB/5GB/6GB/7GB/8GB. Membeli = SETUJU ya.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Unlimited Turbo di aplikasi MyXL untuk kebutuhan inject/trik internet murah menggunakan SSH/VPN.\r\n- Kartu jangan posisi masa tenggang saat ditembak.\r\n- Sediakan saldo E-wallet Dana Rp16.850 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.2,
+      "original_price": 2500,
       "custom_price": 5000,
       "isVisible": true,
       "requires_otp": true,
@@ -1502,13 +1573,14 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 5000
+      "platform_fee": 5000,
+      "category": "reguler"
     },
     {
       "package_code": "bdb392a7aa12b21851960b7e7d54af2c",
       "name": "[Method Pulsa] Xtra Combo Special 8GB Disc (1GB-8GB)",
       "description": "- XL Xtra Combo Special Up to (hingga) 8 GB tergantung Area / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area. Karena beda dengan paket akrab, maka kami tidak bisa memastikan dapat berapa GB, bisa dari 1GB hingga 8GB. Jangan kaget apabila nanti ada yang dapat kuota 1GB/2GB/3GB/4GB/5GB/6GB/7GB/8GB. Membeli = SETUJU ya.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Unlimited Turbo di aplikasi MyXL untuk kebutuhan inject/trik internet murah menggunakan SSH/VPN.\r\n- Kartu jangan posisi masa tenggang saat ditembak.\r\n- Sediakan Pulsa Rp16.850 (Akan terpotong segini).\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.2,
+      "original_price": 2500,
       "custom_price": 5000,
       "isVisible": true,
       "requires_otp": true,
@@ -1521,13 +1593,14 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 5000
+      "platform_fee": 5000,
+      "category": "reguler"
     },
     {
       "package_code": "3885e70df05fff67dddc3c29adeb485c",
       "name": "[Method E-Wallet] Xtra Combo Special 14GB Disc (1GB-14GB)",
       "description": "- XL Xtra Combo Special Up to (hingga) 14 GB tergantung Area / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area. Karena beda dengan paket akrab, maka kami tidak bisa memastikan dapat berapa GB, bisa dari 1GB hingga 14GB. Jangan kaget apabila nanti ada yang dapat kuota 1GB/2GB/3GB/4GB/5GB/6GB/7GB/8GB/seterusnya. Membeli = SETUJU ya.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Unlimited Turbo di aplikasi MyXL untuk kebutuhan inject/trik internet murah menggunakan SSH/VPN.\r\n- Kartu jangan posisi masa tenggang saat ditembak.\r\n- Sediakan saldo E-wallet Dana Rp21.500 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.3,
+      "original_price": 3500,
       "custom_price": 0.3,
       "isVisible": false,
       "requires_otp": true,
@@ -1546,13 +1619,14 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "8da735b24b39aacc7edc29a7c2226f4a",
       "name": "[Method Pulsa] Xtra Combo Special 14GB Disc (1GB-14GB)",
       "description": "- XL Xtra Combo Special Up to (hingga) 14 GB tergantung Area / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area. Karena beda dengan paket akrab, maka kami tidak bisa memastikan dapat berapa GB, bisa dari 1GB hingga 14GB. Jangan kaget apabila nanti ada yang dapat kuota 1GB/2GB/3GB/4GB/5GB/6GB/7GB/8GB/seterusnya. Membeli = SETUJU ya.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Unlimited Turbo di aplikasi MyXL untuk kebutuhan inject/trik internet murah menggunakan SSH/VPN.\r\n- Kartu jangan posisi masa tenggang saat ditembak.\r\n- Sediakan Pulsa minimal Rp21.500 (Akan terpotong segini).\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
-      "original_price": 0.3,
+      "original_price": 3500,
       "custom_price": 0.3,
       "isVisible": false,
       "requires_otp": true,
@@ -1565,7 +1639,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBONETFLIXXC",
@@ -1590,7 +1665,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOYOUTUBEXC",
@@ -1615,7 +1691,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOVIUXC",
@@ -1640,7 +1717,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 200
+      "platform_fee": 200,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOJOOXXC",
@@ -1665,7 +1743,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOTIKTOKXC",
@@ -1690,7 +1769,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 200
+      "platform_fee": 200,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHPREMIUM7H",
@@ -1715,7 +1795,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHSUPER7H",
@@ -1740,7 +1821,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHSTANDARD7H",
@@ -1748,7 +1830,7 @@
       "description": "- Xtra Unlimited Turbo Standard untuk akses LINE, Gojek, dan Facebook secara Unlimited dengan Kuota WhatsApp Harian 50MB/hari.\r\n- Masa Aktif 7 Hari mengikuti paket utama Xtra Hotrod 7 Hari ATAU menjadi <b>30 Hari</b> (jika digabung dengan Xtra Combo Special 8GB/14GB yang dapat ditembak di panel tembak XL Reborn ini).\r\n- Dapat dipakai untuk Inject SSH/VPN (bagi yang tau-tau saja).\r\n- FUP paket random/acak tergantung kartu XL dan lokasi kamu. Jika terkena FUP, saat diinject untuk VPN akan terasa lemot/tidak bisa konek. Solusinya adalah bisa tembak ulang paket Xtra Unlimited Turbo ini maka FUP akan reset.\r\n- Sediakan saldo E-wallet Dana Rp3.000 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.",
       "original_price": 0,
       "custom_price": 200,
-      "isVisible": true,
+      "isVisible": false,
       "requires_otp": true,
       "payment_methods": [
         {
@@ -1765,7 +1847,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHBASIC7H",
@@ -1790,7 +1873,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOVIU_PULSA",
@@ -1809,7 +1893,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 500
+      "platform_fee": 500,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOTIKTOK_PULSA",
@@ -1828,7 +1913,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 500
+      "platform_fee": 500,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBONETFLIXXC_PULSA",
@@ -1847,7 +1933,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 500
+      "platform_fee": 500,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHBASIC7H_P",
@@ -1866,7 +1953,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOJOOXXC_PULSA",
@@ -1885,7 +1973,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHSTANDARD7H_P",
@@ -1904,7 +1993,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOYOUTUBEXC_PULSA",
@@ -1923,7 +2013,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHSUPER7H_P",
@@ -1942,7 +2033,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOHPREMIUM7H_P",
@@ -1961,7 +2053,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOIFLIXXC_PULSA",
@@ -1980,7 +2073,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOVIDIO_DANA",
@@ -2005,7 +2099,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOVIDIO_PULSA",
@@ -2024,7 +2119,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "BONUS_XCP_15GB_STREAMING_7500_P",
@@ -2043,7 +2139,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "BONUS_XCP_15GB_STREAMING_7500_D",
@@ -2068,7 +2165,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "BONUS_XCP_2GB_FB_1000_P",
@@ -2087,7 +2185,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "BONUS_XCP_2GB_FB_1000_D",
@@ -2112,7 +2211,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XL_EDU_5GB_2C5K",
@@ -2131,7 +2231,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XL_EDU_15GB_7C5K",
@@ -2150,7 +2251,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XL_EDU_2GB_1K",
@@ -2169,7 +2271,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XL_EDU_2GB_1K_DANA",
@@ -2194,7 +2297,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XL_EDU_5GB_2C5K_DANA",
@@ -2219,7 +2323,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XL_EDU_15GB_7C5K_DANA",
@@ -2244,7 +2349,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOPREMIUMXC",
@@ -2269,7 +2375,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 200
+      "platform_fee": 200,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOSUPERXC",
@@ -2294,7 +2401,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 200
+      "platform_fee": 200,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOSTANDARDXC",
@@ -2319,7 +2427,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 200
+      "platform_fee": 200,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOBASICXC",
@@ -2344,7 +2453,8 @@
         }
       ],
       "payment_type": "e-wallet",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOSUPERXC_PULSA",
@@ -2363,7 +2473,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 500
+      "platform_fee": 500,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOPREMIUMXC_PULSA",
@@ -2382,7 +2493,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 500
+      "platform_fee": 500,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOSTANDARDXC_PULSA",
@@ -2401,7 +2513,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 500
+      "platform_fee": 500,
+      "category": "reguler"
     },
     {
       "package_code": "XLUNLITURBOBASICXC_PULSA",
@@ -2420,7 +2533,8 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 500
+      "platform_fee": 500,
+      "category": "reguler"
     },
     {
       "package_code": "49d1e047f7fc09be77dcb1bb2d4393cd",
@@ -2445,7 +2559,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "7edb228a26f1cdb8691d2fc23d75766e",
@@ -2470,7 +2585,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "e4b9610293057bf3bc0bc35288e22faa",
@@ -2495,7 +2611,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "dac06dd11e66ae88c09d43f8866ddd5e",
@@ -2520,7 +2637,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     },
     {
       "package_code": "ce6a05ce7c0b47b7cfb5412e58b6222f",
@@ -2545,7 +2663,8 @@
         }
       ],
       "payment_type": "balance",
-      "platform_fee": 0
+      "platform_fee": 0,
+      "category": "reguler"
     }
   ],
   "transactions": [
@@ -3681,6 +3800,175 @@
       "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)",
       "paymentMethod": "DANA",
       "createdAt": "2025-06-27T09:09:18.009Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751024104930",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLBEKASAN7",
+      "packageName": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 7 HARI (BACA DESKRIPSI)",
+      "platformFee": 9000,
+      "status": "failed",
+      "api_response": "API_CHANNEL_INSUFFICIENT_BALANCE",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-27T11:35:04.930Z"
+    },
+    {
+      "id": "trx_1751024146853",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLBEKASAN5",
+      "packageName": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 5 HARI (BACA DESKRIPSI)",
+      "platformFee": 10000,
+      "status": "failed",
+      "api_response": "API_CHANNEL_INSUFFICIENT_BALANCE",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-27T11:35:46.853Z"
+    },
+    {
+      "id": "trx_1751024158221",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLBEKASAN5",
+      "packageName": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 5 HARI (BACA DESKRIPSI)",
+      "platformFee": 10000,
+      "status": "failed",
+      "api_response": "API_CHANNEL_INSUFFICIENT_BALANCE",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-27T11:35:58.221Z"
+    },
+    {
+      "id": "trx_1751025699981",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": "87bde07e-dbe6-47e1-becd-11924d4fd8f3",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-27T12:01:39.981Z",
+      "paymentDetails": {
+        "msisdn": "6287737210539",
+        "package_code": "XLUNLITURBOVIUXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+        "package_processing_fee": 0,
+        "trx_id": "87bde07e-dbe6-47e1-becd-11924d4fd8f3",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250627111212800110166534556830182&timestamp=1751025699204&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=GHV7IhOyzsUuFfQULxsKWx1EAbki0eoWtKA8YsAq1lY%2BM8j1GL6nXvJ1p%2BhxxhqXA%2FO%2Bk4iIwKCFuEYX7KxAlKHpuVaCoGzfn2%2Fqp2bDYfTEMO%2FhwerFBAS%2FJobV9YWX23uOmyeJormDgeMqiJLglF1o%2FYEkZqMgrafbZAnpcKhdIgyuuAw1ggogaHvG9%2BGyPoKP9Gk%2FHHvj9uILM2vrdPfdk2I5C9ET2747Py8672TNUjGpmwggCBv32mWKcR3d%2FA8fo6udA4ncqqsj5lS30kfYnPxfmDk7Lq7I8Kdflo2NE9bOaZUyl79oTukFCk2xXAA1FQoR%2Bpm0BQYi5PuC7g%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
+    },
+    {
+      "id": "trx_1751026608254",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLBEKASAN11",
+      "packageName": "[PROSES OTOMATIS] [RESMI] [GARANSI] Akrab Anggota BEKASAN 11 HARI (BACA DESKRIPSI)",
+      "platformFee": 15000,
+      "status": "failed",
+      "api_response": "API_CHANNEL_INSUFFICIENT_BALANCE",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-27T12:16:48.254Z"
+    },
+    {
+      "id": "trx_1751045583420_0.9322374755628164",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOVIU_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: Bizz-err.Amount.Total = 0 )",
+      "createdAt": "2025-06-27T17:33:03.421Z"
+    },
+    {
+      "id": "trx_1751045583429_0.8562510260523029",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOTIKTOK_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Mohon berikan jeda minimal 10 detik setiap kali percobaan transaksi pembelian paket!",
+      "createdAt": "2025-06-27T17:33:03.429Z"
+    },
+    {
+      "id": "trx_1751045583434_0.11344041331572696",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBONETFLIXXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Netflix untuk Xtra Combo",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: Bizz-err.Amount.Total = 0 )",
+      "createdAt": "2025-06-27T17:33:03.434Z"
+    },
+    {
+      "id": "trx_1751045583438_0.6408110122237778",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOSUPERXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Mohon berikan jeda minimal 10 detik setiap kali percobaan transaksi pembelian paket!",
+      "createdAt": "2025-06-27T17:33:03.438Z"
+    },
+    {
+      "id": "trx_1751045583444_0.4340762896929218",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOPREMIUMXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: Bizz-err.Amount.Total = 369000 )",
+      "createdAt": "2025-06-27T17:33:03.444Z"
+    },
+    {
+      "id": "trx_1751045583449_0.22038864506004852",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOBASICXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Basic bayar ke XL Rp10.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Mohon berikan jeda minimal 10 detik setiap kali percobaan transaksi pembelian paket!",
+      "createdAt": "2025-06-27T17:33:03.449Z"
+    },
+    {
+      "id": "trx_1751050050600",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOTIKTOK_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: Bizz-err.Amount.Total = 25000 )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-27T18:47:30.600Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751050090705",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOTIKTOKXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: NumberFormatException: empty String)",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-27T18:48:10.705Z",
       "paymentDetails": null
     }
   ],

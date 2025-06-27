@@ -1,4 +1,4 @@
-// backend/server.js - VERSI SUPER LENGKAP FINAL (ASLI + SEMUA FITUR BARU)
+// backend/server.js - VERSI LENGKAP FINAL (TERMASUK FITUR PAKET NON-OTP)
 
 require('dotenv').config();
 const express = require('express');
@@ -58,7 +58,6 @@ async function sendTelegramNotification(message) {
     }
 }
 
-
 // --- Inisialisasi Database dan Middleware ---
 const file = path.join(__dirname, 'db.json');
 const adapter = new JSONFile(file);
@@ -105,7 +104,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-
 const isAuthenticated = (req, res, next) => {
     if (req.session.userId) return next();
     res.status(401).json({ status: false, message: 'Unauthorized: Anda harus login.' });
@@ -116,7 +114,6 @@ const isAdmin = (req, res, next) => {
     if (user && user.role === 'admin') return next();
     res.status(403).json({ status: false, message: 'Forbidden: Akses ditolak. Anda bukan Admin.' });
 };
-
 
 // --- RUTE AUTENTIKASI PENGGUNA ---
 app.post('/api/auth/register', async (req, res) => {
@@ -318,16 +315,13 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
 <b>Nama Pengguna:</b> ${user.name}
 <b>Nama Paket:</b> ${pkg.name}
 <b>Nomor Tujuan:</b> ${maskedPhone}`;
-
         if (platformFee > 0) {
             notifMessage += `\n<b>Biaya Layanan:</b> Rp ${platformFee.toLocaleString('id-ID')}`;
         }
-        
         notifMessage += `
 <b>Status:Sukses</b>
 <b>──────────────────────</b>
 <b>Notif:tembak.cloudrystore.xyz</b>`;
-        
         sendTelegramNotification(notifMessage);
 
         if (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) {
@@ -351,6 +345,95 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         return res.status(500).json({ status: false, message: error.message || 'Terjadi kesalahan internal saat pembelian.' });
     }
 });
+
+
+// RUTE BARU UNTUK PEMBELIAN NON-OTP (PAKET AKRAB)
+app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
+    // Hanya butuh packageId dan phone dari frontend
+    const { packageId, phone } = req.body; 
+    const userId = req.session.userId;
+    const user = db.data.users.find(u => u.id === userId);
+
+    if (!packageId || !phone) {
+        return res.status(400).json({ status: false, message: "Parameter paket dan nomor telepon tidak lengkap." });
+    }
+
+    const pkg = db.data.packages.find(p => p.package_code === packageId);
+    if (!pkg) {
+        return res.status(404).json({ status: false, message: "Paket tidak ditemukan." });
+    }
+
+    if (pkg.category !== 'non-otp') {
+        return res.status(403).json({ status: false, message: "Paket ini bukan kategori Non-OTP. Silakan beli melalui halaman Beli Paket biasa." });
+    }
+
+    const platformFee = pkg.platform_fee || 0;
+    if (user.balance < platformFee) {
+        return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk biaya layanan.` });
+    }
+
+    user.balance -= platformFee;
+    await db.write();
+
+    try {
+        const purchaseParams = new URLSearchParams({
+            api_key: KMSP_API_KEY,
+            package_code: pkg.package_code,
+            phone: phone,
+            payment_method: 'balance'
+        });
+        const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
+        
+        const purchaseResponse = await fetch(purchaseUrl);
+        const purchaseData = await purchaseResponse.json();
+        const transactionSucceeded = purchaseResponse.ok && purchaseData.status;
+
+        const newTransaction = { 
+            id: `trx_${Date.now()}`, userId, userName: user.name, packageId, packageName: pkg.name, platformFee,
+            status: transactionSucceeded ? 'success' : 'failed',
+            api_response: purchaseData.message || (transactionSucceeded ? 'Success' : 'Failed'),
+            paymentMethod: 'balance', createdAt: new Date().toISOString()
+        };
+        db.data.transactions.push(newTransaction);
+        await db.write();
+        
+        // --- BLOK NOTIFIKASI TELEGRAM YANG DITAMBAHKAN ---
+        const maskedPhone = phone.length > 7 ? phone.slice(0, 4) + '****' + phone.slice(-3) : '*******';
+        let notifMessage = `<b>──────────────────────</b>
+<b>✅ Transaksi Baru! (Non-OTP)</b>
+<b>──────────────────────</b>
+<b>Nama Pengguna:</b> ${user.name}
+<b>Nama Paket:</b> ${pkg.name}
+<b>Nomor Tujuan:</b> ${maskedPhone}`;
+        if (platformFee > 0) {
+            notifMessage += `\n<b>Biaya Layanan:</b> Rp ${platformFee.toLocaleString('id-ID')}`;
+        }
+        notifMessage += `
+<b>Status:</b> ${transactionSucceeded ? 'Sukses' : 'Gagal'}
+<b>Pesan API:</b> ${purchaseData.message || 'N/A'}
+<b>──────────────────────</b>
+<b>Notif:tembak.cloudrystore.xyz</b>`;
+        sendTelegramNotification(notifMessage);
+        // --- AKHIR BLOK NOTIFIKASI ---
+
+        if (transactionSucceeded) {
+            return res.status(200).json({ status: true, message: purchaseData.message || "Pembelian berhasil!", newBalance: user.balance });
+        } else {
+            user.balance += platformFee;
+            await db.write();
+            return res.status(500).json({ status: false, message: purchaseData.message || 'Pembelian ke provider gagal.' });
+        }
+    } catch (error) {
+        user.balance += platformFee;
+        await db.write();
+        console.error("Error pembelian non-otp:", error);
+        return res.status(500).json({ status: false, message: 'Terjadi kesalahan internal.' });
+    }
+});
+
+
+
+
 
 app.get('/api/purchase/status/:kmspTrxId', isAuthenticated, async (req, res) => {
     const { kmspTrxId } = req.params;
@@ -381,6 +464,32 @@ app.get('/api/user/packages', isAuthenticated, (req, res) => {
     const visiblePackages = db.data.packages.filter(p => p.isVisible);
     res.status(200).json({ status: true, data: visiblePackages });
 });
+
+app.get('/api/packages/stock/:packageId', isAuthenticated, async (req, res) => {
+    const { packageId } = req.params;
+
+    if (!packageId || packageId === "undefined") { // Tambahan pengecekan untuk string "undefined"
+        return res.status(400).json({ status: false, message: "Package ID tidak valid atau kosong." });
+    }
+
+    try {
+        const url = `https://golang-openapi-checkpackagestock-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}&package_id=${packageId}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok || !data.status) {
+            throw new Error(data.message || 'Gagal mengambil data stok dari provider.');
+        }
+
+        res.status(200).json(data);
+
+    } catch (error) {
+        console.error("Error checking package stock:", error.message);
+        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan pada server." });
+    }
+});
+
 
 app.get('/api/user/transactions', isAuthenticated, (req, res) => {
     const userTransactions = db.data.transactions.filter(t => t.userId === req.session.userId).map(t => ({ ...t, type: 'purchase' }));
@@ -423,7 +532,81 @@ app.post('/api/user/update-profile', isAuthenticated, async (req, res) => {
     } catch (error) { console.error("Update profile error:", error); res.status(500).json({ status: false, message: 'Terjadi kesalahan pada server.' }); }
 });
 
+app.get('/api/user/active-packages', isAuthenticated, async (req, res) => {
+    const { accessToken } = req.query; // Ambil accessToken dari query URL
+
+    if (!accessToken) {
+        return res.status(400).json({ status: false, message: "Parameter accessToken diperlukan." });
+    }
+
+    try {
+        const url = `https://golang-openapi-quotadetails-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}&access_token=${accessToken}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok || !data.status) {
+            throw new Error(data.message || 'Gagal mengambil data paket aktif dari provider.');
+        }
+
+        // Kirim kembali data ke frontend
+        res.status(200).json(data);
+
+    } catch (error) {
+        console.error("Error checking active packages:", error.message);
+        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan pada server." });
+    }
+});
+
 // --- RUTE ADMIN ---
+
+app.get('/api/admin/statistics', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await db.read(); // Pastikan membaca data terbaru
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        const successfulTransactions = db.data.transactions.filter(t => t.status === 'success');
+
+        // 1. Kalkulasi Pendapatan (dari platform_fee)
+        const revenueToday = successfulTransactions
+            .filter(t => new Date(t.createdAt) >= todayStart)
+            .reduce((sum, t) => sum + (t.platformFee || 0), 0);
+
+        // 2. Jumlah Transaksi Hari Ini
+        const transactionsTodayCount = db.data.transactions.filter(t => new Date(t.createdAt) >= todayStart).length;
+
+        // 3. Pengguna Baru Minggu Ini
+        const newUsersThisWeek = db.data.users.filter(u => new Date(u.createdAt) >= sevenDaysAgo).length;
+
+        // 4. Paket Terlaris
+        const packageCounts = successfulTransactions.reduce((counts, t) => {
+            counts[t.packageName] = (counts[t.packageName] || 0) + 1;
+            return counts;
+        }, {});
+        
+        const topPackages = Object.entries(packageCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([name, count]) => ({ name, count }));
+
+        res.status(200).json({
+            status: true,
+            data: {
+                revenueToday,
+                transactionsTodayCount,
+                newUsersThisWeek,
+                topPackages
+            }
+        });
+
+    } catch (error) {
+        console.error("Error fetching statistics:", error);
+        res.status(500).json({ status: false, message: "Gagal mengambil data statistik." });
+    }
+});
+
 app.get('/api/admin/maintenance', isAuthenticated, isAdmin, (req, res) => {
     res.status(200).json({ status: true, data: { enabled: db.data.settings.maintenanceMode } });
 });
@@ -450,14 +633,28 @@ app.post('/api/admin/sync-packages', isAuthenticated, isAdmin, async (req, res) 
         let updatedCount = 0;
         for (const pkg of kmspData.data) {
             const existingPackage = db.data.packages.find(p => p.package_code === pkg.package_code);
-            const packagePrice = parseFloat(pkg.package_harga.replace(/[^0-9.,]+/g, "").replace(',', '.')) || 0;
+            const packagePrice = (parseInt(String(pkg.package_harga).replace(/\D/g, '')) || 0) / 100;
+            
             if (existingPackage) {
-                Object.assign(existingPackage, { name: pkg.package_name, description: pkg.package_description, original_price: packagePrice, payment_methods: pkg.available_payment_methods || [] });
+                // GANTI BAGIAN Object.assign INI
+                Object.assign(existingPackage, { 
+                    name: pkg.package_name, 
+                    description: pkg.package_description || '', // Tambahkan '|| ""'
+                    original_price: packagePrice,
+                    payment_methods: pkg.available_payment_methods || []
+                });
                 updatedCount++;
             } else {
+                // GANTI BAGIAN db.data.packages.push INI
                 db.data.packages.push({
-                    package_code: pkg.package_code, name: pkg.package_name, description: pkg.package_description,
-                    original_price: packagePrice, platform_fee: 0, isVisible: false, payment_methods: pkg.available_payment_methods || []
+                    package_code: pkg.package_code,
+                    name: pkg.package_name,
+                    description: pkg.package_description || '', // Tambahkan '|| ""'
+                    original_price: packagePrice,
+                    platform_fee: 0,
+                    isVisible: false,
+                    category: 'reguler',
+                    payment_methods: pkg.available_payment_methods || []
                 });
                 addedCount++;
             }
@@ -479,13 +676,12 @@ app.put('/api/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req,
         packages.forEach(update => {
             const packageToUpdate = db.data.packages.find(p => p.package_code === update.package_code);
             if (packageToUpdate) {
-                const oldFee = packageToUpdate.platform_fee;
-                const oldVisibility = packageToUpdate.isVisible;
                 packageToUpdate.platform_fee = typeof update.platform_fee === 'number' ? update.platform_fee : 0;
                 packageToUpdate.isVisible = typeof update.isVisible === 'boolean' ? update.isVisible : false;
-                if (oldFee !== packageToUpdate.platform_fee || oldVisibility !== packageToUpdate.isVisible) {
-                    changesMade++;
+                if (update.category === 'reguler' || update.category === 'non-otp') {
+                    packageToUpdate.category = update.category;
                 }
+                changesMade++;
             }
         });
         await db.write();
@@ -737,4 +933,4 @@ app.use(express.static(frontendPath));
 
 app.get('*', (req, res) => { res.sendFile(path.join(frontendPath, 'index.html')); });
 
-app.listen(PORT, () => { console.log(`Server BARU dengan alur dinamis berjalan di http://localhost:${PORT}`); });
+app.listen(PORT, () => { console.log(`Server final dengan semua fitur berjalan di http://localhost:${PORT}`); });

@@ -156,6 +156,9 @@ function renderApp() {
             case '#profile':
                 renderDashboard('profile');
                 break;
+            case '#paket-akrab':
+                renderDashboard('paket-akrab');
+                break;
             case '#admin':
                 // Hanya izinkan admin mengakses panel admin
                 if (currentUser.role === 'admin') {
@@ -281,14 +284,14 @@ async function handleChangeName(e) {
 
         if (status === 200 && data.status && data.user) {
             currentUser = data.user; 
-            displayFeedback('name-feedback', data.message, false);
+            showToast(data.message);
             renderApp();
         } else {
             throw new Error(data.message || 'Gagal memperbarui nama.');
         }
 
     } catch (error) {
-        displayFeedback('name-feedback', error.message, true);
+            showToast(error.message, true);
     } finally {
         const currentButton = document.querySelector('#change-name-form button');
         if(currentButton) {
@@ -298,6 +301,51 @@ async function handleChangeName(e) {
     }
 }
 
+async function handleCheckActivePackages(e) {
+    const button = e.currentTarget;
+    const resultContainer = document.getElementById('active-packages-result');
+
+    if (!button || !resultContainer) return;
+
+    // Cek apakah pengguna sudah memverifikasi nomornya
+    if (!phoneAuth.accessToken) {
+        alert('Silakan verifikasi nomor Anda terlebih dahulu.');
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<span class="button-spinner"></span> Mengecek...';
+    resultContainer.style.display = 'block';
+    resultContainer.innerHTML = '<div class="loading-spinner"></div>';
+
+    try {
+        const { data, status } = await apiFetch(`/user/active-packages?accessToken=${phoneAuth.accessToken}`);
+
+        if (status === 200 && data.status) {
+            if (Array.isArray(data.data) && data.data.length > 0) {
+                // Buat daftar paket aktif
+                const packageListHTML = data.data.map(pkg => `
+                    <li style="margin-bottom: 0.75rem; border-bottom: 1px solid #eee; padding-bottom: 0.75rem;">
+                        <strong>${pkg.name}</strong><br>
+                        <small>Sisa Kuota: ${pkg.total_quota}</small><br>
+                        <small>Berlaku Hingga: ${new Date(pkg.expired).toLocaleString('id-ID')}</small>
+                    </li>
+                `).join('');
+                resultContainer.innerHTML = `<ul style="list-style: none; padding: 0;">${packageListHTML}</ul>`;
+            } else {
+                resultContainer.innerHTML = '<p>Tidak ada paket aktif yang ditemukan untuk nomor ini.</p>';
+            }
+        } else {
+            throw new Error(data.message || 'Gagal mengambil data paket.');
+        }
+
+    } catch (error) {
+        resultContainer.innerHTML = `<p class="error-message">${error.message}</p>`;
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Cek Paket Aktif';
+    }
+}
 /**
  * Handler untuk form ubah password.
  */
@@ -330,14 +378,14 @@ async function handleChangePassword(e) {
         if (status === 200 && data.status) {
             displayFeedback('profile-feedback', data.message, false);
             e.target.reset();
-            alert(data.message);
+            showToast(data.message);
             handleLogout();
         } else {
             throw new Error(data.message || 'Gagal mengubah password.');
         }
 
     } catch (error) {
-        displayFeedback('profile-feedback', error.message, true);
+          showToast(error.message, true); 
     } finally {
         button.disabled = false;
         button.textContent = 'Ubah Password';
@@ -688,9 +736,10 @@ function renderDashboard(activePage = 'packages') {
                     <p id="user-balance">Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
                 </div>
                 <button id="topup-btn">Top Up Saldo</button>
-                <nav>
+                  <nav>
                     <ul>
                         <li><a href="#dashboard" class="${activePage === 'packages' ? 'active' : ''}">Beli Paket</a></li>
+                        <li><a href="#paket-akrab" class="${activePage === 'paket-akrab' ? 'active' : ''}">Paket Akrab & Lainnya</a></li>
                         <li><a href="#history" class="${activePage === 'history' ? 'active' : ''}">Riwayat Transaksi</a></li>
                         <li><a href="#profile" class="${activePage === 'profile' ? 'active' : ''}">Profil Saya</a></li>
                         ${isAdmin ? `<li><a href="#admin" class="${activePage === 'admin' ? 'active' : ''}">Panel Admin</a></li>` : ''}
@@ -730,7 +779,9 @@ function renderDashboard(activePage = 'packages') {
     } else if (activePage === 'history') {
         renderHistoryPage(mainContent);
     } else if (activePage === 'profile') {
-        renderProfilePage(mainContent); // Ini akan mengisi konten profil
+        renderProfilePage(mainContent);
+     } else if (activePage === 'paket-akrab') {
+        renderNonOtpPage(mainContent); // Ini akan mengisi konten profil
     } else if (activePage === 'admin') {
         if (isAdmin) {
             renderAdminDashboard(mainContent);
@@ -792,6 +843,7 @@ function renderDashboard(activePage = 'packages') {
         });
     }
 }
+
 /**
  * Merender tampilan panel admin dengan semua fitur manajemen.
  * Ini adalah bagian dari `renderDashboard`.
@@ -810,7 +862,29 @@ function renderAdminDashboard(container) {
                 <h1>Panel Kontrol Admin</h1>
                 <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
             </div>
-
+            <div class="admin-section">
+                <h2>Statistik Ringkas</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Pendapatan Hari Ini (Fee)</h4>
+                        <p id="revenue-today">Memuat...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Transaksi Hari Ini</h4>
+                        <p id="transactions-today">Memuat...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Pengguna Baru (7 Hari)</h4>
+                        <p id="new-users-week">Memuat...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="admin-section">
+                <h2>5 Paket Terlaris</h2>
+                <div style="max-width: 600px; margin: auto; padding: 1rem; background: white; border-radius: 8px;">
+                    <canvas id="package-chart"></canvas>
+                </div>
+            </div>
             <div class="admin-section">
                 <h2>Mode Pemeliharaan</h2>
                 <div id="maintenance-feedback"></div>
@@ -933,27 +1007,33 @@ function renderAdminDashboard(container) {
      * @param {Array<Object>} packages - Array objek paket.
      */
     function renderPackageList(packages) {
-        const listElement = document.getElementById('package-list');
-        if (!listElement) { console.error("Elemen package-list tidak ditemukan."); return; }
-        
-        if (!packages || packages.length === 0) {
-            listElement.innerHTML = '<li>Tidak ada paket ditemukan. Coba sinkronisasi terlebih dahulu.</li>';
-            return;
-        }
-        packages.sort((a, b) => (a.name || '').localeCompare(b.name || '')); // Urutkan berdasarkan nama
-        listElement.innerHTML = packages.map(pkg => `
-            <li class="package-item" data-package-id="${pkg.package_code}">
-                <div class="package-info">
-                    <strong>${pkg.name || 'Nama Tidak Tersedia'}</strong>
-                    <small>Harga Provider: Rp ${pkg.original_price.toLocaleString('id-ID')}</small>
-                </div>
-                <div class="package-controls">
-                    <label>Biaya Layanan (Fee): <input type="number" class="fee-input" value="${pkg.platform_fee || 0}"></label>
-                    <label>Tampilkan: <input type="checkbox" class="visibility-checkbox" ${pkg.isVisible ? 'checked' : ''}></label>
-                </div>
-            </li>
-        `).join('');
+    const listElement = document.getElementById('package-list');
+    if (!listElement) { console.error("Elemen package-list tidak ditemukan."); return; }
+    
+    if (!packages || packages.length === 0) {
+        listElement.innerHTML = '<li>Tidak ada paket ditemukan. Coba sinkronisasi terlebih dahulu.</li>';
+        return;
     }
+    packages.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    listElement.innerHTML = packages.map(pkg => `
+        <li class="package-item" data-package-id="${pkg.package_code}">
+            <div class="package-info">
+                <strong>${pkg.name || 'Nama Tidak Tersedia'}</strong>
+                <small>Harga Provider: Rp ${(pkg.original_price || 0).toLocaleString('id-ID')}</small>
+            </div>
+            <div class="package-controls">
+                <label>Biaya: <input type="number" class="fee-input" value="${pkg.platform_fee || 0}"></label>
+                <label>Kategori: 
+                    <select class="category-select">
+                        <option value="reguler" ${(!pkg.category || pkg.category === 'reguler') ? 'selected' : ''}>Reguler (OTP)</option>
+                        <option value="non-otp" ${pkg.category === 'non-otp' ? 'selected' : ''}>Non-OTP (Akrab)</option>
+                    </select>
+                </label>
+                <label>Tampilkan: <input type="checkbox" class="visibility-checkbox" ${pkg.isVisible ? 'checked' : ''}></label>
+            </div>
+        </li>
+    `).join('');
+}
 
     /**
      * Memuat daftar pengguna dari backend dan mengisi dropdown pemilihan pengguna.
@@ -1198,19 +1278,18 @@ function renderAdminDashboard(container) {
         if (!confirm('Apakah Anda yakin ingin menyimpan semua perubahan pada paket (biaya layanan dan visibilitas)?')) return;
         
         const updates = [];
-        document.querySelectorAll('.package-item').forEach(item => {
-            const id = item.dataset.packageId;
-            const feeInput = item.querySelector('.fee-input');
-            const visibilityCheckbox = item.querySelector('.visibility-checkbox');
-            
-            const fee = parseFloat(feeInput?.value || '0'); // Gunakan optional chaining
-            const isVisible = visibilityCheckbox?.checked || false; // Gunakan optional chaining
+         document.querySelectorAll('.package-item').forEach(item => {
+        const id = item.dataset.packageId;
+        const feeInput = item.querySelector('.fee-input');
+        const visibilityCheckbox = item.querySelector('.visibility-checkbox');
+        const categorySelect = item.querySelector('.category-select'); // Ambil elemen select
 
-            updates.push({ 
-                package_code: id, 
-                platform_fee: isNaN(fee) ? 0 : fee, 
-                isVisible: isVisible 
-            });
+        updates.push({ 
+            package_code: id, 
+            platform_fee: parseFloat(feeInput?.value || '0'), 
+            isVisible: visibilityCheckbox?.checked || false,
+            category: categorySelect?.value || 'reguler' // Ambil nilainya
+        });
         });
         
         button.disabled = true; button.textContent = 'Menyimpan...';
@@ -1347,6 +1426,7 @@ function renderAdminDashboard(container) {
     // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
         setTimeout(async () => {
         document.getElementById('load-packages-btn')?.click(); // Muat paket
+        loadAdminStats();
         loadUsers(); // Muat pengguna
         await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
 
@@ -1748,10 +1828,16 @@ function renderPhoneVerificationPanel() {
                 <h2 style="color: ${isVerified ? 'var(--success-color)' : 'inherit'};">${isVerified ? 'Nomor Terverifikasi' : 'Verifikasi Nomor Tujuan'}</h2>
             </div>
             ${isVerified 
-                ? `<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                       <p style="margin:0;">Nomor <strong>${phoneAuth.phone}</strong> siap digunakan.</p>
-                       <button id="change-phone-btn" class="secondary" style="width: auto; padding: 0.5rem 1rem;">Ganti Nomor</button>
-                   </div>`
+                ? `<div>
+       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+           <p style="margin:0;">Nomor <strong>${phoneAuth.phone}</strong> siap digunakan.</p>
+           <div>
+               <button id="check-active-btn" style="margin-right: 0.5rem;">Cek Paket Aktif</button>
+               <button id="change-phone-btn" class="secondary" style="width: auto; padding: 0.5rem 1rem;">Ganti Nomor</button>
+           </div>
+       </div>
+       <div id="active-packages-result" class="page-content" style="margin-top: 1rem; padding: 1rem; display: none;"></div>
+   </div>`
                 : `<p>Verifikasi nomor Anda satu kali untuk melakukan banyak pembelian.</p>
                    <div id="phone-verification-form">
                        <div id="phone-step">
@@ -1804,63 +1890,98 @@ function renderPhoneVerificationPanel() {
     return verificationPanelHTML + sessionManagementHTML;
 }
 
+// frontend/app.js -> Ganti fungsi ini sepenuhnya
+
 /**
  * Merender halaman pemilihan paket ke dalam container.
- * Memuat paket yang tersedia dari backend.
- * @param {HTMLElement} container - Elemen DOM tempat halaman paket akan dirender.
+ * Versi ini menggunakan dropdown dengan fitur pencarian dan TIDAK menghapus panel verifikasi.
+ * @param {HTMLElement} container - Elemen DOM utama yang akan diisi (mainContent).
  */
 async function renderPackagesPage(container) {
-    // Cek mode maintenance
-    if (isMaintenanceMode) {
-        container.innerHTML = `
+    // Cek mode maintenance dulu
+    if (isMaintenanceMode && currentUser.role !== 'admin') {
+        container.innerHTML += `
             <div class="maintenance-container" style="text-align: center; padding: 3rem;">
                 <h2 style="color: var(--danger-color);">MODE MAINTENANCE AKTIF</h2>
-                <p>Maaf, layanan pembelian paket sedang dalam maintenance. Layanan Kami Akan Segera Kembali, coba beberapa saat lagi.</p>
-                <p>Untuk saat ini, Anda masih bisa melihat <a href="#history">riwayat transaksi</a>.</p>
+                <p>Maaf, layanan pembelian paket sedang dalam maintenance.</p>
             </div>
         `;
-        return; // Hentikan render halaman paket jika maintenance
+        return;
     }
 
+    // 1. Buat elemen baru untuk bagian paket, JANGAN timpa container.
     const packageSection = document.createElement('div');
+    packageSection.className = 'page-content';
+    packageSection.id = 'package-selection-area';
+
+    // 2. Isi elemen baru tersebut dengan HTML yang kita inginkan
     packageSection.innerHTML = `
-        <div class="page-content" id="package-selection-area">
-            <div class="page-header"><h1>Pilih Paket</h1></div>
-            <div class="form-group">
-                <label for="package-dropdown">Pilih paket yang tersedia:</label>
-                <select id="package-dropdown">
-                    <option value="">-- Muat paket... --</option>
-                </select>
-            </div>
-            <div id="package-details-area" style="display: none; margin-top: 2rem;"></div>
+        <div class="page-header"><h1>Pilih Paket</h1></div>
+        <div class="form-group">
+            <input type="text" id="package-search-input" placeholder="🔍 Cari nama paket...">
         </div>
+        <div class="form-group">
+            <label for="package-dropdown">Pilih paket yang tersedia:</label>
+            <select id="package-dropdown">
+                <option value="">-- Muat paket... --</option>
+            </select>
+        </div>
+        <div id="package-details-area" style="display: none; margin-top: 2rem;"></div>
     `;
+
+    // 3. Tambahkan elemen baru ini ke dalam container utama.
     container.appendChild(packageSection);
     
-    const packageDropdown = document.getElementById('package-dropdown');
+    // Ambil referensi elemen dari dalam packageSection yang baru dibuat
+    const packageDropdown = packageSection.querySelector('#package-dropdown');
+    const searchInput = packageSection.querySelector('#package-search-input');
+
+    // Fungsi untuk mengisi ulang dropdown berdasarkan filter
+    const populateDropdown = (searchTerm = '') => {
+        if (!packageDropdown) return;
+        
+        const regulerPackages = visiblePackages.filter(pkg => 
+            (!pkg.category || pkg.category === 'reguler') &&
+            pkg.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        packageDropdown.innerHTML = '<option value="">-- Silakan pilih paket --</option>'; 
+        
+        if (regulerPackages.length > 0) {
+            regulerPackages.forEach(pkg => {
+                const option = document.createElement('option');
+                option.value = pkg.package_code;
+                const feeText = `(Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})`;
+                option.textContent = `${pkg.name} ${feeText}`;
+                packageDropdown.appendChild(option);
+            });
+        } else {
+             packageDropdown.innerHTML = '<option value="">Paket tidak ditemukan</option>';
+        }
+    };
+    
+    // Event listener untuk dropdown
     packageDropdown?.addEventListener('change', (e) => {
         displaySelectedPackageDetails(e.target.value);
     });
 
+    // Event listener untuk kolom pencarian
+    searchInput?.addEventListener('input', (e) => {
+        populateDropdown(e.target.value);
+        displaySelectedPackageDetails(''); // Sembunyikan detail saat mencari
+    });
+
+    // Ambil data dan isi dropdown untuk pertama kali
     try {
-        const { data, status } = await apiFetch('/user/packages');
-        
-        if (status === 200 && data.status && Array.isArray(data.data) && data.data.length > 0) {
-            visiblePackages = data.data; // Simpan paket yang terlihat secara global
-            if (packageDropdown) {
-                packageDropdown.innerHTML = '<option value="">-- Silakan pilih paket --</option>'; 
-                visiblePackages.forEach(pkg => {
-                    const option = document.createElement('option');
-                    option.value = pkg.package_code;
-                    const feeText = `(Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})`;
-                    option.textContent = `${pkg.name} ${feeText}`;
-                    packageDropdown.appendChild(option);
-                });
+        if (visiblePackages.length === 0) {
+            const { data, status } = await apiFetch('/user/packages');
+            if (status === 200 && data.status && Array.isArray(data.data)) {
+                visiblePackages = data.data;
+            } else {
+                 throw new Error(data.message || "Gagal memuat paket");
             }
-        } else {
-            if (packageDropdown) packageDropdown.innerHTML = `<option value="">Tidak ada paket tersedia.</option>`;
-            console.warn("Gagal memuat paket pengguna:", data.message || "Data paket tidak valid.");
         }
+        populateDropdown(); // Panggil untuk mengisi dropdown saat pertama kali
     } catch (error) { 
         if (packageDropdown) packageDropdown.innerHTML = `<option value="">Gagal memuat paket.</option>`;
         console.error("Gagal memuat paket:", error);
@@ -1868,13 +1989,13 @@ async function renderPackagesPage(container) {
 }
 
 /**
- * Menampilkan detail paket yang dipilih dari dropdown.
- * @param {string} packageCode - Kode paket yang dipilih.
+ * Menampilkan detail paket di halaman Beli Paket (Reguler/OTP).
+ * Versi ini TIDAK menampilkan atau memeriksa stok.
  */
 function displaySelectedPackageDetails(packageCode) {
     const detailsArea = document.getElementById('package-details-area');
     if (!detailsArea) return;
-    
+
     if (!packageCode) {
         detailsArea.style.display = 'none';
         detailsArea.innerHTML = '';
@@ -1887,17 +2008,16 @@ function displaySelectedPackageDetails(packageCode) {
         detailsArea.style.display = 'block';
         return;
     }
-    
+
     const platformFee = pkg.platform_fee || 0;
     const isFeeCovered = currentUser.balance >= platformFee;
-    // Cek stok provider: Jika kmspBalance adalah angka dan 0, dan harga paket > 0, maka stok habis.
     const isProviderStocked = !(typeof kmspBalance === 'number' && kmspBalance <= 0 && (pkg.original_price || 0) > 0);
     const canPurchase = phoneAuth.accessToken && isFeeCovered && isProviderStocked;
 
     let buttonText = 'Beli Sekarang';
     if (!canPurchase) {
         if (!phoneAuth.accessToken) buttonText = "Verifikasi Nomor Dulu";
-        else if (!isProviderStocked) buttonText = "Stok Habis";
+        else if (!isProviderStocked) buttonText = "Stok Habis (Perkiraan)";
         else buttonText = 'Saldo Kurang';
     }
 
@@ -1905,22 +2025,18 @@ function displaySelectedPackageDetails(packageCode) {
         <div class="page-content" style="background-color: var(--light-color);">
             <div class="page-header"><h2>Detail Paket Terpilih</h2></div>
             <h4>${pkg.name}</h4>
-            <p><strong>Biaya Layanan:</strong> Rp ${platformFee.toLocaleString('id-ID')}</p>
             <p><strong>Deskripsi:</strong> ${pkg.description || 'Tidak ada deskripsi.'}</p>
+            <p><strong>Biaya Layanan:</strong> Rp ${platformFee.toLocaleString('id-ID')}</p>
             <button class="purchase-btn" data-package-id="${pkg.package_code}" ${!canPurchase ? 'disabled' : ''}>
                 ${buttonText}
             </button>
         </div>
     `;
     detailsArea.style.display = 'block';
-
-    const purchaseBtn = detailsArea.querySelector('.purchase-btn');
-    // Pastikan purchaseBtn ada sebelum menambahkan event listener
-    if (purchaseBtn) {
-        purchaseBtn.addEventListener('click', (e) => {
-            handlePurchase(e, e.currentTarget.dataset.packageId);
-        });
-    }
+    
+    document.querySelector('.purchase-btn')?.addEventListener('click', (e) => {
+        handlePurchase(e, e.currentTarget.dataset.packageId);
+    });
 }
 
 
@@ -2352,6 +2468,7 @@ function renderFinalStatusModal(title, message) {
 function setupPhoneVerificationListeners() {
     document.getElementById('request-otp-btn')?.addEventListener('click', handleRequestPhoneOtp);
     document.getElementById('verify-otp-btn')?.addEventListener('click', handlePhoneLogin);
+     document.getElementById('check-active-btn')?.addEventListener('click', handleCheckActivePackages);
     document.getElementById('change-phone-btn')?.addEventListener('click', () => {
         if (confirm('Apakah Anda yakin ingin mengganti nomor terverifikasi?')) {
             phoneAuth = { phone: null, accessToken: null, authId: null };
@@ -2717,6 +2834,193 @@ async function handleLogout() {
         renderApp(); // Render ulang aplikasi
     }
 }
+/**
+ * Merender halaman untuk pembelian paket Non-OTP (seperti Paket Akrab).
+ */
+async function renderNonOtpPage(container) {
+    container.innerHTML = `<div class="page-content" id="non-otp-page"><div class="loading-spinner"></div></div>`;
+    const pageContent = document.getElementById('non-otp-page');
+
+    if (isMaintenanceMode && currentUser.role !== 'admin') {
+        pageContent.innerHTML = '<h2>Halaman Tidak Tersedia</h2><p>Layanan sedang dalam pemeliharaan.</p>';
+        return;
+    }
+    
+    if (visiblePackages.length === 0) {
+        try {
+            const { data } = await apiFetch('/user/packages');
+            visiblePackages = data.data || [];
+        } catch (error) {
+            pageContent.innerHTML = '<p class="error-message">Gagal memuat daftar paket.</p>';
+            return;
+        }
+    }
+
+    const nonOtpPackages = visiblePackages.filter(p => p.category === 'non-otp' && p.isVisible);
+
+    if (nonOtpPackages.length === 0) {
+        pageContent.innerHTML = '<div class="page-header"><h1>Paket Akrab & Lainnya</h1></div><p>Saat ini tidak ada paket yang tersedia di kategori ini.</p>';
+        return;
+    }
+
+    const packageOptions = nonOtpPackages.map(pkg => `<option value="${pkg.package_code}">${pkg.name} (Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})</option>`).join('');
+
+    pageContent.innerHTML = `
+        <div class="page-header"><h1>Paket Akrab & Lainnya</h1></div>
+        <p>Beli paket tanpa perlu verifikasi nomor OTP di halaman ini. Cukup masukkan nomor tujuan.</p>
+        
+        <div class="page-content" style="margin-top: 1.5rem;">
+            <form id="non-otp-purchase-form">
+                <div class="form-group">
+                    <label for="non-otp-phone">Nomor HP Tujuan (Format: 62...)</label>
+                    <input type="tel" id="non-otp-phone" required pattern="^62\\d{9,13}$" placeholder="628xxxxxxxxxx">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="non-otp-search-input" placeholder="🔍 Cari paket...">
+                </div>
+                <div class="form-group">
+                    <label for="non-otp-package">Pilih Paket</label>
+                    <select id="non-otp-package" required>
+                        <option value="">-- Pilih Paket --</option>
+                        ${packageOptions}
+                    </select>
+                </div>
+                <div id="non-otp-details-area" style="margin-top: 1rem;"></div>
+                <button type="submit">Beli Sekarang</button>
+            </form>
+            <div id="non-otp-feedback" style="margin-top: 1rem;"></div>
+        </div>
+    `;
+
+    document.getElementById('non-otp-search-input')?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const dropdown = document.getElementById('non-otp-package');
+        dropdown.innerHTML = '<option value="">-- Pilih Paket --</option>';
+        nonOtpPackages
+            .filter(pkg => pkg.name.toLowerCase().includes(searchTerm))
+            .forEach(pkg => {
+                const option = document.createElement('option');
+                option.value = pkg.package_code;
+                option.textContent = `${pkg.name} (Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})`;
+                dropdown.appendChild(option);
+            });
+    });
+
+    document.getElementById('non-otp-package')?.addEventListener('change', (e) => {
+        const packageCode = e.target.value;
+        const detailsArea = document.getElementById('non-otp-details-area');
+        
+        if (!packageCode) {
+            detailsArea.innerHTML = '';
+            return;
+        }
+
+        const pkg = nonOtpPackages.find(p => p.package_code === packageCode);
+        if (!pkg) {
+            detailsArea.innerHTML = '<p class="error-message">Paket tidak ditemukan.</p>';
+            return;
+        }
+
+        const stocklessKeywords = ['MASA AKTIF', 'SLOT AKRAB', 'REINVITE'];
+        const isStockless = stocklessKeywords.some(keyword => pkg.name.toUpperCase().includes(keyword));
+
+        detailsArea.innerHTML = `
+            <div class="package-detail-card" style="padding: 1rem; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 1rem;">
+                <p><strong>Deskripsi:</strong> ${pkg.description || 'Tidak ada deskripsi.'}</p>
+                ${!isStockless ? '<div id="non-otp-stock-info" style="font-weight: bold;"></div>' : ''}
+            </div>
+        `;
+        
+        if (!isStockless) {
+            checkPackageStock(packageCode, document.getElementById('non-otp-stock-info'));
+        }
+    });
+
+    document.getElementById('non-otp-purchase-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.target.querySelector('button[type="submit"]');
+        button.disabled = true;
+        button.innerHTML = '<span class="button-spinner"></span> Memproses...';
+        displayFeedback('non-otp-feedback', '', false);
+
+        const phone = document.getElementById('non-otp-phone').value;
+        const packageId = document.getElementById('non-otp-package').value;
+        
+        try {
+            const { data, status } = await apiFetch('/purchase/non-otp', {
+                method: 'POST',
+                body: { phone, packageId, paymentMethod: 'balance' }
+            });
+
+            if (status === 200 && data.status) {
+                if (typeof data.newBalance === 'number') {
+                    currentUser.balance = data.newBalance;
+                    const userBalanceElement = document.getElementById('user-balance');
+                    if(userBalanceElement) {
+                        userBalanceElement.textContent = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
+                    }
+                }
+                showToast(data.message); 
+                e.target.reset();
+                document.getElementById('non-otp-details-area').innerHTML = '';
+            } else {
+                throw new Error(data.message || "Pembelian gagal.");
+            }
+        } catch (error) {
+            showToast(error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Beli Sekarang';
+        }
+    });
+}
+
+/**
+ * Mengecek stok paket ke backend dan memperbarui UI.
+ * @param {string} packageId - Kode paket yang akan dicek.
+ * @param {HTMLElement} targetElement - Elemen DOM untuk menampilkan info stok.
+ */
+async function checkPackageStock(packageId, targetElement) {
+    if (!targetElement) return;
+
+    // Pengecekan penting di frontend untuk mencegah pemanggilan API yang tidak perlu
+    if (!packageId) {
+        targetElement.innerHTML = ''; // Kosongkan info stok jika tidak ada paket dipilih
+        return;
+    }
+
+    targetElement.innerHTML = `<p>Memeriksa stok...</p>`;
+
+    try {
+        // Panggil endpoint GET dengan ID paket di URL
+        const { data, status } = await apiFetch(`/packages/stock/${packageId}`);
+
+        if (status === 200 && data.status) {
+            const stock = data.data.stock;
+            
+            targetElement.innerHTML = `<p style="color: ${stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">Stok: ${stock > 0 ? stock : 'Habis'}</p>`;
+            
+            const purchaseBtn = targetElement.closest('form')?.querySelector('button[type="submit"]');
+            
+            if (purchaseBtn) {
+                if (stock <= 0) {
+                    purchaseBtn.disabled = true;
+                    purchaseBtn.textContent = 'Stok Habis';
+                } else {
+                    purchaseBtn.disabled = false;
+                    purchaseBtn.textContent = 'Beli Sekarang';
+                }
+            }
+        } else {
+            // Gunakan pesan error dari server jika ada
+            throw new Error(data.message || 'Gagal mendapat info stok.');
+        }
+    } catch (error) {
+        console.error("Gagal cek stok:", error.message);
+        targetElement.innerHTML = `<p style="color: var(--danger-color);">${error.message}</p>`;
+    }
+}
+
 
 /**
  * Memeriksa status login pengguna saat ini dari backend.
@@ -2741,6 +3045,83 @@ async function checkLoginStatus() {
     }
 }
 
+async function loadAdminStats() {
+    try {
+        const { data } = await apiFetch('/admin/statistics');
+        if (data.status) {
+            const stats = data.data;
+            document.getElementById('revenue-today').textContent = `Rp ${stats.revenueToday.toLocaleString('id-ID')}`;
+            document.getElementById('transactions-today').textContent = stats.transactionsTodayCount;
+            document.getElementById('new-users-week').textContent = stats.newUsersThisWeek;
+            renderPackageChart(stats.topPackages);
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error("Gagal memuat statistik admin:", error.message);
+        document.getElementById('revenue-today').textContent = 'Error';
+        document.getElementById('transactions-today').textContent = 'Error';
+        document.getElementById('new-users-week').textContent = 'Error';
+    }
+}
+
+function renderPackageChart(topPackages) {
+    const ctx = document.getElementById('package-chart');
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    if (window.myPackageChart instanceof Chart) {
+        window.myPackageChart.destroy();
+    }
+
+    window.myPackageChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: topPackages.map(p => p.name),
+            datasets: [{
+                label: 'Jumlah Transaksi',
+                data: topPackages.map(p => p.count),
+                backgroundColor: 'rgba(138, 43, 226, 0.7)',
+                borderColor: 'rgba(138, 43, 226, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+/**
+ * Menampilkan notifikasi toast yang modern.
+ * @param {string} message - Pesan yang akan ditampilkan.
+ * @param {boolean} isError - True untuk toast error (merah), false untuk sukses (hijau).
+ */
+function showToast(message, isError = false) {
+    Toastify({
+        text: message,
+        duration: 3000,
+        close: true,
+        gravity: "top", // `top` atau `bottom`
+        position: "right", // `left`, `center`, atau `right`
+        stopOnFocus: true, // Mencegah toast hilang saat di-hover
+        style: {
+            background: isError 
+                ? "linear-gradient(to right, #e53935, #b71c1c)" 
+                : "linear-gradient(to right, #00b09b, #96c93d)",
+        }
+    }).showToast();
+}
 /**
  * Fungsi utilitas untuk mengubah visibilitas input password.
  * @param {HTMLElement} icon - Elemen ikon (SVG) yang memicu toggle.

@@ -1489,3 +1489,48 @@ select#package-dropdown {
         font-size: 0.9rem;
     }
 }
+
+.form-group select {
+    width: 100%; /* Membuat dropdown memenuhi lebar container */
+    padding: 0.75rem; /* Menyamakan padding dengan input lain */
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #fff;
+    font-size: 1rem;
+    cursor: pointer; /* Menambahkan ikon pointer saat di-hover */
+}
+
+/* Memberi sedikit ruang di atas tombol jika ada detail yang muncul */
+.package-detail-card {
+    margin-bottom: 1rem;
+}
+
+/* frontend/style.css -> Tambahkan di akhir file */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.stat-card {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.stat-card h4 {
+    margin: 0 0 0.5rem 0;
+    color: #555;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.stat-card p {
+    margin: 0;
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
