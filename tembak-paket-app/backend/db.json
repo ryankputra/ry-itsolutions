@@ -5,7 +5,7 @@
       "name": "ayusiawan Ryan",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$qDjzr6cBjZYzEBRRrZ3Y5eQN5F5pnuwyLQQmOyj/ja2pRDS5QGO2y",
-      "balance": 19200,
+      "balance": 17800,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
       "verifiedPhone": "6287737210539"
@@ -3586,6 +3586,88 @@
         "is_qris": false,
         "qris_data": []
       }
+    },
+    {
+      "id": "trx_1750998150039",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": "2c9eaad6-7b45-4850-bb1c-42d33426f121",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-27T04:22:30.040Z",
+      "paymentDetails": {
+        "msisdn": "6287737210539",
+        "package_code": "XLUNLITURBOVIUXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+        "package_processing_fee": 0,
+        "trx_id": "2c9eaad6-7b45-4850-bb1c-42d33426f121",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250627111212800110166888456631763&timestamp=1750998149322&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=PxnwwbWarn%2F9N6eBWAHkrHpZJjAqXeY5p5Ku59cJ05rxYvarzj8oE9HubDakEWmPU4r0YNz2Nb8pxupkxHw8cRB0qrN8UxQGtkaKoNeq%2FAlejTaZqJS1OZyFgbgScY6sbPM0HzQZxqv%2FQH5AkifHeU%2BaZAPeuyy6LrbIwHaDnbvZPtR8e5Bu%2BNyWrQ%2FIPYSsxL66XFNXeSgFTV5aE8aGvjGaU59Ik1HjQXXv20OAyzjMFeWLsD4d93GAx3GzHLxO%2FX%2FTyvAWn3joI3JQzfBzJcS0FfP3dJC125rXu7hGY52Ug4isL6E2wZG%2BsFE4kRtiK0HWz9Ws6OUUK3DEeArJ1g%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
+    },
+    {
+      "id": "trx_1750998415241",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOTIKTOK_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-27T04:26:55.241Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750998768717",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOVIU_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-27T04:32:48.717Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1750999505410",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": "56ff8991-79bd-4fb3-bdab-fd9a2609f96a",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-27T04:45:05.410Z",
+      "paymentDetails": {
+        "msisdn": "6287737210539",
+        "package_code": "XLUNLITURBOVIUXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+        "package_processing_fee": 0,
+        "trx_id": "56ff8991-79bd-4fb3-bdab-fd9a2609f96a",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250627111212800110166203657265926&timestamp=1750999504858&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=KhuS%2BI6GsxG965b9gynwH763DUHyq7H%2B2DvhcpWEJ10YPR8vKDSywYg4JZhQX1CHUZBEpSdeV3QOr6NoMH6dKSZWM%2FP%2FScxpY0D6iaYQuM0mfitfzWpWiJ05mEqVBY5SqYitgR4PxyCrQSh6k92DDPI1gC0u0yNIAy5%2Bfzq%2Fw6cUDpAqvMgpQ3eQwBNmIe4%2Be%2FM1diUM9OJey40Z9cNsoM3zbBcG1MC2KlIFEFqE6m01WpEE6fMclgKprx4HjDeCTAjuSXqbxEdrpbR%2FVf2Xr1G8mz1EkHFJcAuAv7HVH9teX%2BOji6FyH0kvhkmWGNqTswWBBh6HSDmQo274y8r5dQ%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
     }
   ],
   "topups": [
@@ -3640,6 +3722,33 @@
       "status": "canceled",
       "createdAt": "2025-06-26T08:29:43.232Z",
       "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADk0lEQVR4nO2aQY7jMAwEBfgBeVK+7iflAQG0scgm6djYnYs0e6g+ZGxZKs+hLbQotYYQQgghhND/pu56t/HT2uOtR5+rvj8+zfZzdB5XQzsMGCsZe/Tvr61/rnpvz8+VD2qbM/zp+zQMBoxVDHPz2/p/WjYZOUceD55i2IcBA8YvMszh/dVO1j8ma/M/DBi/zPj0Gi2Hr5UQjGtX8S4YMH6BMf7Ys96zLV3v07H61WEwYCxiuMa66wc/+RHAgLGOUXXkBHN9WYvJ8D8UDBgzGJ5n+/vUGpY2X+u2ZbLYYcBYyBDI04EGxdLskf2zcAADxmKGukZVwNwcqy1N0VY48I/g/GHAgDGfkautwejqWpGjS/dkodoCDBgLGWbzYWGj5RSdc7IXuNLrX3MyDBiTGUO7sqtXrzSyFL38SxASBoyVDPXKOLCVJde4suXa/lCF9uJ1GDBmM+o+q1ZbpZflhNzOet2VumDAmM2wkU0d0uH+Bm0ieKjodxkXBozpjKfsm2FB5o5jLP1UOChbsTBgrGFUN3cfdHJ9Kvx/nddhwJjMyN2A80ZAj9ybM3Efuq7nYMCYzUgNww89s1Ej/113gAFjHsNAe6uzs7rm8Hja6hUMGKsYI7tqZOwaBG1XqevU9v0vwIAxmxHNpdT6DF/b/Ks3ZD8YMJYymhu510zghldbnY57uYUBYxWjDj/Fhq9zK2o7nl7OBsKAMZ1hdSzZ1wsH73rl7/pb/oABYy5jF2i4XLsBuvVTgnpNBGIYMJYy3OaPPLeyxayr2FAWaWOK/p6TYcCYzgi5uZuvz/wqno628SXAgLGc4XFAP2pT5XUP/9sbRgx+VTgMGAsYGRbaOAUwkm2GBadl2vV5+iwYMGYzvAwgw/vEvJVCbKpnlWuHAWMlw9ZdsU1glo7Vln0EYfNdxQQYMNYyDinAdptwVUIIUNdZFt+KvRMMGDMZY2TuFUSo9RQhZBq+3ZzXhgFjLkPDVS6w7KAUYfKZ2J9eswMMGLMZhVYC7CO6nmKDht9lBxgwJjLk58wOdbjqWLmJ8C6GhwFjGcNu9EzHA1orIDf3FvB+yQ4wYExmRG2rZy0gLZ11BCu/HrrZb4ABYxHja2Seb/GPoClKXGpbMGCsZAzlhHs+CvAc8FbPC8KAsY5h/X1O9v6vDAubuV6bsneFWBgwpjNcHmV1qiqmXsUGPzdghwdOHwEMGPMZCCGEEEII/R/6AydUc5dPT8o2AAAAAElFTkSuQmCC"
+    },
+    {
+      "id": "9d7e1802-7568-4dec-a80c-f71bef7ff555",
+      "userId": "user_1750832245659",
+      "baseAmount": 10000,
+      "uniqueAmount": 10533,
+      "status": "canceled",
+      "createdAt": "2025-06-27T04:31:45.057Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADkUlEQVR4nO2aS27rMAxFBWQBXlK27iVlAQbUmLwk5dQPrxOpHZw7SP2hjjugiCtKrSGEEEIIIfTX1KWj9X07Wnva3et8tdmz953/nMF2ZdphwFjJ8Jszvkb21yMGtYcY5zN7Ow6DAWMVw7P5iPh6VSPfL9ozGJoYMGD8MsOyPpK7v4f3s1hb/sOA8cuMd5Q9OfM6HIJz/Sq/BQPGLzDsT/hZy+tIfWW9ynHEjcNgwFjEkHLkf35qEsCAsY4xyFL6+QruHimtRdqPBAPGFIb8bLhYsw1ahqUyw1s5ix0GjKWMsxz319gVkIHItpbiKwQGjNWM3X5iLaYiXKutLb9wTgdNgqNdBAPGdIZyvWWoirCaWU1+Iop19RZgwFjIsDVWguRxY4cgarIaXM6964/BgDGX4RrsbZReS3OvycPwQMKAsZIRTdeux8+IF9LS3EyF1+mrs4ABYw1DpjbWWHEyQC/kE2o766Uuw0UwYMxmxBpLuwGS0Vrmda7U1AODAWM1o2UO79Vg3XosyHq0uqpx4A0uGDAWMuydstlsQ++XJsGgR+T/974DDBiTGbWyqr0CD+2Xq2wm3KznYMCYzSiVd3jWw5dCftB3gAFjGsNBexv9bITW8HzbxisYMFYxyjt0FeG49Z8Wuwb1he//AgwYkxlqF5w0da+05NKzNn5BuX7fM4ABYyJj8ARRjj99wliO+3ALA8YqRjlbb2b5Wix/st+qQdH0ggFjLcPbr9vHPutx20L4t/+AAWMuQ7kepdeVnYIWJwNqw6BmBwwYqxh1lkUgj+qjbfAebMBVmGHAWMlIKblbleg21F/VaWsrwICxmiE7kJ5ApTdNRea/f2E78gUMGOsYcTzFrvOAYNL8QMvgdlWnr4IBYzKjOgV92FON41Yf5btXl2uHAWMho3LdC7MU2eyTINM8mwkwYKxlnFLpjSVXHQqIz8T+gbZi7wQDxkzGGaByXLbBNmBzF7ZfEl5WAgaMhYyP4VaQteRKqRLr7Z3/gAFjLmOgDQZ2y9CLbYjhd94BBoyJjMjnDK34oY9VmwjHkPAwYCxj+I3HP8Z91r3F+mwveAtD3GDAWMqw+psF99ToE6Lz1WwmuG72G2DAWMQYtwS2CE1F8F1vCwaMhYyrlf08CvC01G/jeUEYMNYxPP7Gz6ZjsN5W9rsEggFjJUOSlY1TVVl6YxLI/LoDvkwCGDDmMxBCCCGEEPob+gIlExYSVwQ9IwAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "a4bd4e22-a23f-4236-bd7e-205cf730972a",
+      "userId": "user_1750832245659",
+      "baseAmount": 10000,
+      "uniqueAmount": 10946,
+      "status": "expired",
+      "createdAt": "2025-06-27T04:45:46.684Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADk0lEQVR4nO2ayW3EMAxFBbgAl+TWXZILMMCMxUXU2BPkIk0O7x8SL9SbC018kSoFIYQQQgih/yYxnUX29Sxl625ff143+ucKrldVOwwYMxl6c8XLUWylXunbxRhyLFLj8jIYMGYxNJvPWBRqK1+gsjnDvgQYML7FWKz01ly35JbXcrmK9bFYHAwYX2S8ouqTK6/dIShXr+K3YMD4AqP+81yved2qc816K8cel5fBgDGJYWqbr9//tI8ABox5jKSa0tvh3L10Cf83wYAxhGF+trpYsd5WKeEYlOYZXpqz2GHAmMgwP3vEu+QOvK1l8a1xAAPGZIaH2l7MinDbbdXN12Hm1/pdcpZOMGAMZ0jL9SP3B6yZVcxPWLFOvQUYMCYy0h5L+wPF26+pJhu8mKm498dgwBjLyO88m4uv9CGWp754/sOAMZexe5Q+3jw+78r08IBNt+TD9wIDxjjGWxH2kwHmds0ntHHW8djqggFjNKP0pVe12pXEEMGbs08eFwaM0Yycw96DNWfrRdgqcTQO0igWBoxJDBHx3lbMClKTIGnx/H/uO8CAMZDR+li60YpZQbRaJSqxb8PuezEYMMYymmK5zbmqDgvJHVoYMGYzFLSX7Gc9tC2PtyVfwYAxkWGV2HM9pgH1WfGpQX52FwwYQxntse/KbMtlz+IXUq4/9wxgwBjISAqfYEdWxHxCLseSbmHAmMVQ6UZrjdlrlXde9bd2jVu88wUDxkSGVthN3uas0WrtWgifvAMMGKMZdtzKS+9DdfaWrDmL1FuAAWMSw/zs2nK9Vd3G9WGX2ttbXYcBYzQjZMld+v1ZvNU6fdFgwJjOkOYJLKXPYjU5hljiYwI783JkOAwYExjdlmu5mYWYzLrbtTr9JhgwBjMiVLUrV1Ijtklal2uHAWMmI2n1vVjbbelHEGkezQQYMOYzkoHdJB8KMJD4WRYbxT4JBoyRjE0rsXUK7FkdwMYUVrqENysBA8ZExtvyWpJTdW4levO+7N07wIAxmpFoycCuEdrZBl/+0X/AgDGG4fl8hcaEQONTH6sNEc6U8DBgTGPojSby0rW1iuW6J/cS+S837wADxmBGzfDI60vZJ6zSt18v3eYNMGBMY+SRwOqhIQ9+6m3BgDGR0VtZtxKuraZ+yecFYcCYx9D4Bz8bjqH2tqLfZSAYMGYyTOFxdVcWpdc/AjO/6oC7jwAGjPEMhBBCCCGE/od+AJmYh76JENMbAAAAAElFTkSuQmCC"
+    },
+    {
+      "id": "d2a74da4-03e9-4138-8e00-55e70f431713",
+      "userId": "user_1750832245659",
+      "baseAmount": 10000,
+      "uniqueAmount": 10356,
+      "status": "pending",
+      "createdAt": "2025-06-27T08:30:07.827Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADoUlEQVR4nO2aQbKjMAxEXZUD5Ehc3UfKAajyBEttCcifmcXYmcXTgoAxL5tG1W5TCkVRFEVRFEX9b9W89vf5s7Wyvc9afR4H3X3f0GV9an6FAWMlwy6e+/nyoL0e/njrZ8Uv8zwYMFYxDvnWmNrPDulv6dDFne/CgPElRlf4G/Q+OWRu7XhTD7axCgPGtxmma3t8l6k49O9+osGA8T1G/wlPYC724nH1Evyl/4AB418zvMYK7A8HzYcBYyUj09R/Q81hJULmvysYMOYwWvgEMxCvUmQR+piyrfQPVxoMGLMZZgyOQCAxLDN4nf8m3ehRFwwYSxn7WF4JdOStXdwaazoUNesKA8ZChnXdkRQY0sZ6U345zRS+NXXnAgPGSoa12daSvZWpbVY+zxiCVxgwFjJkEbQR0LeutleR2y2jMad/bRfvAAPGfIbacT8zo9vVfIq1fMPgRIMBYxXDRkzwPR8oj7TP6lPsJYjJN/8BA8Zkhi25tGuldVe43d3hpvWRcsGAsZJhoHoc3eOGlb3N90ulBzBgLGPY1OZJgaQftiFo+U2AAWMpQ+lV0NxA+JjdGD25uPRhwFjLqIqwwu2a9NOY4q8YgwHjC4yqs1JOYZYJvsjo3h+HAWMJI5ZcrmSzCHs6WE8uwzaY0YABYyEjHGvzr1UGqJwWX9cxGDDWMvw568Shdac9tNkaYzYZBox1DA9YFQi4xw3VN308sGnNdtc6DBjTGSMp8PTA5qv/2icDTRsGFibc/AcMGJMZLUVY5hP24rTRju3sJaTTYMBYx1AgEKmAg2Lx5RnsSznCfb8BBozJjHAMSg8k7jJ0nTJYU/2ntRgMGFMZZTiG1sV9YTjXz0r+GAsGjHUMmQVpuCPHqswUrtmb/AQMGIsZJt/m6VVV3prSg5pU32X+uOZjMGBMZvi66zhX19XjZ9Wb4H9Yz8GAMZVhoKF1X3I9s5UoSdx247aegwFjMsOmDtrIsfRlwK7Qq0+OFwMGjIWMvLwa3sEMRGhdwYGP/eQ/YMCYxcg0zTfbUPUPnsHqneicjwQYMGYxJOo97W5pVTY2ZfWQ3yjXDBYGjNmM2n/UjmVgH0PXu+b1Zi0QDBiLGSPWsnppLCo1a5ty8x8wYKxi6FMAOYYyUi7b9jrvx37WOgwYsxlJw9uwErEMG8s1cWHAWMnoP+rJeSdLq7LTjuvF3sKAsYbhJY+b3e64cUzchtv98K01DBhzGRRFURRFURT1f9Qv8rHTrXwy+GIAAAAASUVORK5CYII="
     }
   ],
   "announcements": [
@@ -3652,6 +3761,6 @@
   "maintenanceMode": false,
   "fullScreenAnnouncement": null,
   "settings": {
-    "maintenanceMode": true
+    "maintenanceMode": false
   }
 }
