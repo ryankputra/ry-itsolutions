@@ -130,6 +130,7 @@ async function fetchAnnouncement() {
     }
 }
 
+
 /**
  * Merender tampilan utama aplikasi berdasarkan hash URL.
  * Mengarahkan pengguna yang sudah login ke dashboard dan pengguna belum login ke halaman autentikasi.
@@ -151,6 +152,9 @@ function renderApp() {
         switch (targetHash) {
             case '#history':
                 renderDashboard('history'); // Render dashboard dengan tab riwayat transaksi
+                break;
+            case '#profile':
+                renderDashboard('profile');
                 break;
             case '#admin':
                 // Hanya izinkan admin mengakses panel admin
@@ -183,6 +187,162 @@ function renderApp() {
     }
 }
 
+
+
+/**
+ * Merender halaman profil pengguna secara lengkap.
+ * @param {HTMLElement} container - Elemen DOM (main-content) yang akan diisi.
+ */
+function renderProfilePage(container) {
+    if (!currentUser) {
+        container.innerHTML = '<div class="page-content"><p class="error-message">Gagal memuat data pengguna.</p></div>';
+        return;
+    }
+
+    let announcementHTML = '';
+    if (latestAnnouncement && latestAnnouncement.message) {
+        announcementHTML = `
+            <div class="announcement-banner">
+                <p><strong>Informasi:</strong> ${latestAnnouncement.message}</p>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = `
+        ${announcementHTML}
+        <div class="page-content">
+            <div class="page-header"><h1>Profil Saya</h1></div>
+            
+            <div class="profile-info-card">
+                <h3>Informasi Akun</h3>
+                
+                <form id="change-name-form" style="margin-bottom: 2rem;">
+                    <div class="form-group">
+                        <label for="userName">Nama</label>
+                        <input type="text" id="userName" value="${currentUser.name}" required>
+                    </div>
+                    <button type="submit">Simpan Nama</button>
+                </form>
+                <div id="name-feedback" style="margin-top: 1rem;"></div>
+                
+                <hr>
+
+                <div class="info-grid">
+                    <p><strong>Email:</strong></p><p>${currentUser.email}</p>
+                    <p><strong>No. HP Terverifikasi:</strong></p><p>${currentUser.verifiedPhone ? currentUser.verifiedPhone : '<em>Belum ada</em>'}</p>
+                </div>
+            </div>
+
+            <div class="profile-info-card">
+                <h3>Ubah Password</h3>
+                <form id="change-password-form">
+                    <div class="form-group">
+                        <label for="currentPassword">Password Saat Ini</label>
+                        <input type="password" id="currentPassword" required autocomplete="current-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Password Baru (min. 6 karakter)</label>
+                        <input type="password" id="newPassword" required minlength="6" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Konfirmasi Password Baru</label>
+                        <input type="password" id="confirmPassword" required minlength="6" autocomplete="new-password">
+                    </div>
+                    <button type="submit">Ubah Password</button>
+                </form>
+                <div id="profile-feedback" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('change-name-form')?.addEventListener('submit', handleChangeName);
+    document.getElementById('change-password-form')?.addEventListener('submit', handleChangePassword);
+}
+
+/**
+ * Handler untuk form ubah nama.
+ */
+async function handleChangeName(e) {
+    e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    if (!button) return;
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Menyimpan...`;
+    displayFeedback('name-feedback', '', false);
+
+    const newName = document.getElementById('userName').value;
+
+    try {
+        const { data, status } = await apiFetch('/user/update-profile', {
+            method: 'POST',
+            body: { name: newName }
+        });
+
+        if (status === 200 && data.status && data.user) {
+            currentUser = data.user; 
+            displayFeedback('name-feedback', data.message, false);
+            renderApp();
+        } else {
+            throw new Error(data.message || 'Gagal memperbarui nama.');
+        }
+
+    } catch (error) {
+        displayFeedback('name-feedback', error.message, true);
+    } finally {
+        const currentButton = document.querySelector('#change-name-form button');
+        if(currentButton) {
+            currentButton.disabled = false;
+            currentButton.textContent = 'Simpan Nama';
+        }
+    }
+}
+
+/**
+ * Handler untuk form ubah password.
+ */
+async function handleChangePassword(e) {
+    e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    if (!button) return;
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
+    displayFeedback('profile-feedback', '', false);
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (newPassword !== confirmPassword) {
+        displayFeedback('profile-feedback', 'Password baru dan konfirmasi password tidak cocok.', true);
+        button.disabled = false;
+        button.textContent = 'Ubah Password';
+        return;
+    }
+
+    try {
+        const { data, status } = await apiFetch('/user/change-password', {
+            method: 'POST',
+            body: { currentPassword, newPassword }
+        });
+
+        if (status === 200 && data.status) {
+            displayFeedback('profile-feedback', data.message, false);
+            e.target.reset();
+            alert(data.message);
+            handleLogout();
+        } else {
+            throw new Error(data.message || 'Gagal mengubah password.');
+        }
+
+    } catch (error) {
+        displayFeedback('profile-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Ubah Password';
+    }
+}
 // ===============================================
 // === FUNGSI LOGIKA PEMBELIAN & PEMBAYARAN EKSTERNAL ===
 // (Dipindahkan ke sini agar dapat diakses sebelum dipanggil di renderPackagesPage)
@@ -505,6 +665,8 @@ function renderRegisterPage() {
  * @param {string} activePage - Halaman yang aktif: 'packages', 'history', atau 'admin'.
  */
 
+// frontend/app.js -> GANTI FUNGSI renderDashboard LAMA ANDA DENGAN INI
+
 function renderDashboard(activePage = 'packages') {
     const isAdmin = currentUser.role === 'admin';
     app.innerHTML = `
@@ -530,67 +692,24 @@ function renderDashboard(activePage = 'packages') {
                     <ul>
                         <li><a href="#dashboard" class="${activePage === 'packages' ? 'active' : ''}">Beli Paket</a></li>
                         <li><a href="#history" class="${activePage === 'history' ? 'active' : ''}">Riwayat Transaksi</a></li>
+                        <li><a href="#profile" class="${activePage === 'profile' ? 'active' : ''}">Profil Saya</a></li>
                         ${isAdmin ? `<li><a href="#admin" class="${activePage === 'admin' ? 'active' : ''}">Panel Admin</a></li>` : ''}
                     </ul>
                 </nav>
                 <button id="logout-btn" class="secondary">Logout</button>
             </aside>
             <main class="main-content" id="page-content-area">
-                <div class="loading-spinner"></div>
-            </main>
+                </main>
         </div>
         <div id="modal-container"></div>
     `;
+    
 
-    // Atur event listener untuk tombol logout dan top up
-    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-    document.getElementById('topup-btn')?.addEventListener('click', renderTopUpModal);
-
-    // Sidebar toggle logic
-    const menuToggleBtn = document.getElementById('menu-toggle-btn');
-    const sidebar = document.getElementById('sidebar');
-    const mainHeader = document.getElementById('main-header');
-    const dashboardContainer = document.querySelector('.dashboard-container');
-    let sidebarOpen = false;
-
-    function openSidebar() {
-        sidebar.classList.add('open');
-        mainHeader.classList.add('shifted');
-        dashboardContainer.classList.add('shifted');
-        sidebarOpen = true;
-    }
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        mainHeader.classList.remove('shifted');
-        dashboardContainer.classList.remove('shifted');
-        sidebarOpen = false;
-    }
-
-    if (menuToggleBtn && sidebar && mainHeader && dashboardContainer) {
-        menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (!sidebarOpen) openSidebar();
-            else closeSidebar();
-        });
-        // Tutup sidebar jika klik di luar sidebar dan header
-        document.addEventListener('click', (e) => {
-            if (
-                sidebarOpen &&
-                !sidebar.contains(e.target) &&
-                !mainHeader.contains(e.target)
-            ) {
-                closeSidebar();
-            }
-        });
-        // Tutup sidebar jika resize ke mobile
-        window.addEventListener('resize', () => {
-            if (window.innerWidth <= 600) closeSidebar();
-        });
-    }
-
+    // --- Logika untuk mengisi konten utama ---
     const mainContent = document.getElementById('page-content-area');
+    mainContent.innerHTML = ''; // Kosongkan dulu untuk menghapus spinner
 
-   let announcementHTML = '';
+    let announcementHTML = '';
     if (latestAnnouncement && latestAnnouncement.message) {
         announcementHTML = `
             <div class="announcement-banner" id="announcement-banner">
@@ -599,25 +718,77 @@ function renderDashboard(activePage = 'packages') {
             </div>
         `;
     }
+    // Tambahkan pengumuman ke konten utama
+    mainContent.innerHTML = announcementHTML;
 
-    // Muat konten spesifik berdasarkan halaman aktif
+    // Panggil fungsi render spesifik untuk halaman yang aktif
     if (activePage === 'packages') {
-        mainContent.innerHTML = announcementHTML + renderPhoneVerificationPanel(); // Panel verifikasi telepon jika diperlukan
-        renderPackagesPage(mainContent); // Panggil renderPackagesPage
+        // Gabungkan panel verifikasi dan halaman paket untuk #dashboard
+        mainContent.innerHTML += renderPhoneVerificationPanel(); // append
+        renderPackagesPage(mainContent); // append
         setupPhoneVerificationListeners();
     } else if (activePage === 'history') {
-        mainContent.innerHTML = announcementHTML;
         renderHistoryPage(mainContent);
+    } else if (activePage === 'profile') {
+        renderProfilePage(mainContent); // Ini akan mengisi konten profil
     } else if (activePage === 'admin') {
-        mainContent.innerHTML = announcementHTML;
-        renderAdminDashboard(mainContent);
+        if (isAdmin) {
+            renderAdminDashboard(mainContent);
+        } else {
+            window.location.hash = '#dashboard';
+        }
+    } else {
+        // Fallback ke halaman paket
+        mainContent.innerHTML += renderPhoneVerificationPanel();
+        renderPackagesPage(mainContent);
+        setupPhoneVerificationListeners();
     }
+    
+    // Pasang listener setelah semua konten dirender
+    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+    document.getElementById('topup-btn')?.addEventListener('click', renderTopUpModal);
+    document.getElementById('announcement-close-btn')?.addEventListener('click', () => {
+        document.getElementById('announcement-banner').style.display = 'none';
+    });
+    const menuToggleBtn = document.getElementById('menu-toggle-btn');
+    const sidebar = document.getElementById('sidebar');
+    const mainHeader = document.getElementById('main-header');
+    const dashboardContainer = document.querySelector('.dashboard-container');
 
-    // Event listener untuk tombol tutup pengumuman kecil
-    const closeBtn = document.getElementById('announcement-close-btn');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            document.getElementById('announcement-banner').style.display = 'none';
+    // Cek elemen sebelum menambahkan listener untuk menghindari error
+    if (menuToggleBtn && sidebar && mainHeader && dashboardContainer) {
+        
+        const openSidebar = () => {
+            sidebar.classList.add('open');
+            // Buat overlay untuk menggelapkan konten utama
+            const overlay = document.createElement('div');
+            overlay.className = 'sidebar-overlay';
+            overlay.onclick = () => closeSidebar();
+            dashboardContainer.appendChild(overlay);
+        };
+
+        const closeSidebar = () => {
+            sidebar.classList.remove('open');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        };
+
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Hentikan event agar tidak langsung menutup sidebar lagi
+            if (sidebar.classList.contains('open')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+
+        // Tambahkan listener untuk menutup saat menekan tombol Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && sidebar.classList.contains('open')) {
+                closeSidebar();
+            }
         });
     }
 }
@@ -1758,6 +1929,7 @@ function displaySelectedPackageDetails(packageCode) {
  * Menggabungkan riwayat pembelian dan top up.
  * @param {HTMLElement} container - Elemen DOM tempat halaman riwayat akan dirender.
  */
+
 async function renderHistoryPage(container) {
     container.innerHTML = `
         <div class="page-content">

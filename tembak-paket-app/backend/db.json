@@ -2,10 +2,10 @@
   "users": [
     {
       "id": "user_1750832245659",
-      "name": "ayusiawan",
+      "name": "ayusiawan Ryan",
       "email": "ayusiawanryan@gmail.com",
-      "password": "$2b$10$5A93ZUF9LvuRD8COsb2PAuCg/OvHVyKwpUCRudkky5ddOJjnLbLpm",
-      "balance": 20000,
+      "password": "$2b$10$qDjzr6cBjZYzEBRRrZ3Y5eQN5F5pnuwyLQQmOyj/ja2pRDS5QGO2y",
+      "balance": 19200,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
       "verifiedPhone": "6287737210539"
@@ -3520,6 +3520,72 @@
           "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250626111212800110166896656897299&timestamp=1750945838382&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=WSbGWg%2BxMqcO%2BBPaewmNMwrVlCTFOeu%2F%2Bw91BaA8HDRcojL4S7GqjOOP2c199c6s%2BfTn7xqYrF929gaxOwRaOa9NKPdSI8Q8WUtZoxIeZ%2F3rF%2BGDiQkROPykdwCzBR%2BrRpEFmIP4%2FfXTPICyLvLlfQryPWgzyVP%2FwVoRWelK3TFcZmF4ej1B0LW8kOHtg%2BVKdrSudaYlQ52o6cYB%2Fvm47Xj0zsJGfcm%2F6%2BN2yjwLORPHRgZ4Zj%2Fq0gG94d6H4H4lmKr2iBxE6iEYrh1tkx01%2F1MLtlZ4gfOFLfwrzF89l6KiRAPLIGj%2BfMYk6EAsf3H6s39u6Q9vJVaZ5DihP9B3ng%3D%3D&forceToH5=false&newRegistrationPage=true"
         }
       }
+    },
+    {
+      "id": "trx_1750957403747",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryan",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "kmspTrxId": "3e612344-7622-49ef-9b13-a5ef455e5712",
+      "status": "success",
+      "api_response": "Paket berhasil dibeli. Silakan cek kuotanya via aplikasi MyXL (disarankan) dan/atau via SMS kamu",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T17:03:23.747Z"
+    },
+    {
+      "id": "trx_1750959860120",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryann",
+      "packageId": "XLUNLITURBOSUPERXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": "ac409c0b-fbbd-4f18-b8e3-b9d5ef1af614",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-26T17:44:20.120Z"
+    },
+    {
+      "id": "trx_1750988011158",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryann",
+      "packageId": "XLUNLITURBOSUPERXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": "f4512b2b-3651-4a41-9708-aca7905a5644",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-27T01:33:31.158Z"
+    },
+    {
+      "id": "trx_1750988885457",
+      "userId": "user_1750832245659",
+      "userName": "ayusiawan Ryann",
+      "packageId": "XLUNLITURBOPREMIUMXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": "2abf9971-a779-4ff1-830c-d8d2493a9815",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-27T01:48:05.457Z",
+      "paymentDetails": {
+        "msisdn": "6287737210539",
+        "package_code": "XLUNLITURBOPREMIUMXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+        "package_processing_fee": 0,
+        "trx_id": "2abf9971-a779-4ff1-830c-d8d2493a9815",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250627111212800110166187357369385&timestamp=1750988883929&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=EUFXEICGYfbP2e8nX4vsnBg3r502VyWSaFKqKacBgA99fzvMyD1j026e3%2BY8EGYTYegPJANFMBFlgOISqcEvesjgIOFkI2mTovQl%2FMMwuH9NxL8RXCM4TV3zmp8NN6jcIFF3TeKKPblbE2BwJIJGcBhDSiW8wL3YRHWKGpWUpX2XlPSMHH0RFMGPoRJuzue6IpBkEO%2F4TRCyItcOWhpEGOXXOYWCanKIRwBgbSmGnDwn7A63URbUx0k42jCTT%2FEktPyfHqSXHmqBw%2BDIXNBANFuUvjHmuVWxKANJiMhAUzrdN74xoXCLV7ubqVjXw%2FT6UMALouIGOFH4JVHNZLfW%2Fg%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
     }
   ],
   "topups": [
@@ -3583,6 +3649,9 @@
       "id": "ann_1750853213435"
     }
   ],
-  "maintenanceMode": true,
-  "fullScreenAnnouncement": null
+  "maintenanceMode": false,
+  "fullScreenAnnouncement": null,
+  "settings": {
+    "maintenanceMode": true
+  }
 }
