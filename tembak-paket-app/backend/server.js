@@ -1,4 +1,4 @@
-// backend/server.js - VERSI LENGKAP DENGAN PERBAIKAN NOTIFIKASI TOPUP
+// backend/server.js - VERSI SUPER LENGKAP FINAL (ASLI + SEMUA FITUR BARU)
 
 require('dotenv').config();
 const express = require('express');
@@ -312,16 +312,22 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         await db.write();
 
         const maskedPhone = phone.length > 7 ? phone.slice(0, 4) + '****' + phone.slice(-3) : '*******';
-        const notifMessage = `
-<b>──────────────────────</b>
+        let notifMessage = `<b>──────────────────────</b>
 <b>✅Transaksi Paket Baru!</b>
 <b>──────────────────────</b>
 <b>Nama Pengguna:</b> ${user.name}
 <b>Nama Paket:</b> ${pkg.name}
-<b>Nomor Tujuan:</b> ${maskedPhone}
+<b>Nomor Tujuan:</b> ${maskedPhone}`;
+
+        if (platformFee > 0) {
+            notifMessage += `\n<b>Biaya Layanan:</b> Rp ${platformFee.toLocaleString('id-ID')}`;
+        }
+        
+        notifMessage += `
 <b>Status:Sukses</b>
 <b>──────────────────────</b>
-<b>Notif:tembak.cloudrystore.xyz</b>`.trim();
+<b>Notif:tembak.cloudrystore.xyz</b>`;
+        
         sendTelegramNotification(notifMessage);
 
         if (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) {
