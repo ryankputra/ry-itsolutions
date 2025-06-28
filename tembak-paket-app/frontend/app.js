@@ -3051,13 +3051,13 @@ async function checkPackageStock(packageId, targetElement) {
             // Langsung gunakan data.data.stock yang sudah diolah backend
             const stock = data.data.stock;
             
-            targetElement.innerHTML = `<p style="color: ${stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">Stok: ${stock > 0 ? stock : 'Habis'}</p>`;
+            targetElement.innerHTML = `<p style="color: ${stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">Stok: ${stock > 0 ? stock : '0'}</p>`;
             
             const purchaseBtn = targetElement.closest('form')?.querySelector('button[type="submit"]');
             if (purchaseBtn) {
                 purchaseBtn.disabled = (stock <= 0);
                 if (stock <= 0) {
-                    purchaseBtn.textContent = 'Stok Habis';
+                    purchaseBtn.textContent = 'Stok 0';
                 }
             }
         } else {
