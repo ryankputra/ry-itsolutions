@@ -2017,7 +2017,7 @@ function displaySelectedPackageDetails(packageCode) {
     let buttonText = 'Beli Sekarang';
     if (!canPurchase) {
         if (!phoneAuth.accessToken) buttonText = "Verifikasi Nomor Dulu";
-        else if (!isProviderStocked) buttonText = "Stok Habis (Perkiraan)";
+        else if (!isProviderStocked) buttonText = "Stok 0 (Perkiraan)";
         else buttonText = 'Saldo Kurang';
     }
 
@@ -2934,7 +2934,7 @@ async function renderNonOtpPage(container) {
             <li style="display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #eee;">
                 <span>${result.name}</span>
                 <strong style="color: ${result.stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">
-                    ${result.success ? (result.stock > 0 ? `Stok: ${result.stock}` : 'Habis') : 'Gagal Cek'}
+                    ${result.success ? (result.stock > 0 ? `Stok: ${result.stock}` : '0') : 'Gagal Cek'}
                 </strong>
             </li>
         `).join('');
