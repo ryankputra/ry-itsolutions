@@ -1535,3 +1535,27 @@ select#package-dropdown {
     color: var(--primary-color);
 }
 
+/* frontend/style.css -> Tambahkan di akhir file */
+
+.contact-card {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.contact-card h3 {
+    margin-top: 0;
+}
+
+.contact-card p {
+    color: #555;
+    margin-bottom: 1.5rem;
+}
+
+.contact-card .button {
+    text-decoration: none;
+    display: inline-block;
+}

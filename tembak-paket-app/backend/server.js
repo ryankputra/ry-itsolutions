@@ -116,18 +116,51 @@ const isAdmin = (req, res, next) => {
 };
 
 // --- RUTE AUTENTIKASI PENGGUNA ---
+
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
         if (!name || !email || !password) return res.status(400).json({ status: false, message: "Nama, email, dan password wajib diisi." });
         const existingUser = db.data.users.find(u => u.email === email);
         if (existingUser) return res.status(409).json({ status: false, message: "Email sudah terdaftar." });
+        
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = { id: `user_${Date.now()}`, name, email, password: hashedPassword, balance: 0, role: 'user', verifiedPhone: null, createdAt: new Date().toISOString() };
+        
+        // --- PERUBAHAN DI SINI ---
+        // Pengguna baru akan memiliki status 'pending' secara default
+        const newUser = { 
+            id: `user_${Date.now()}`, 
+            name, 
+            email, 
+            password: hashedPassword, 
+            balance: 0, 
+            role: 'user', 
+            verifiedPhone: null, 
+            createdAt: new Date().toISOString(),
+            status: 'pending' // Status default untuk persetujuan admin
+        };
+        // --- AKHIR PERUBAHAN ---
+
         db.data.users.push(newUser);
         await db.write();
-        res.status(201).json({ status: true, message: "Registrasi berhasil! Silakan login." });
-    } catch (error) { console.error("Register error:", error); res.status(500).json({ status: false, message: "Terjadi kesalahan pada server." }); }
+        
+        // Mengirim notifikasi ke admin bahwa ada pengguna baru yang mendaftar
+        sendTelegramNotification(
+`<b>──────────────────────</b>
+<b>👤 Registrasi Baru Menunggu Persetujuan</b>
+<b>──────────────────────</b>
+<b>Nama:</b> ${name}
+<b>Email:</b> ${email}
+<b>──────────────────────</b>
+<b>Harap setujui akun ini di Panel Admin.</b>
+<b>Notif:tembak.cloudrystore.xyz</b>`
+        );
+
+        res.status(201).json({ status: true, message: "Registrasi berhasil! Akun Anda sedang menunggu persetujuan dari Admin. Silakan hubungi admin untuk aktivasi." });
+    } catch (error) { 
+        console.error("Register error:", error); 
+        res.status(500).json({ status: false, message: "Terjadi kesalahan pada server." }); 
+    }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -135,12 +168,46 @@ app.post('/api/auth/login', async (req, res) => {
         const { email, password } = req.body;
         const user = db.data.users.find(u => u.email === email);
         if (!user) return res.status(401).json({ status: false, message: "Email atau password salah." });
+        
         const isPasswordMatch = await bcrypt.compare(password, user.password);
         if (!isPasswordMatch) return res.status(401).json({ status: false, message: "Email atau password salah." });
+
+        // --- PERUBAHAN DI SINI ---
+        // Periksa status persetujuan jika pengguna bukan admin
+        if (user.role !== 'admin' && user.status !== 'approved') {
+            return res.status(403).json({ status: false, message: "Akun Anda belum disetujui oleh Admin. Silakan hubungi Admin untuk aktivasi." });
+        }
+        // --- AKHIR PERUBAHAN ---
+
         req.session.userId = user.id;
         const { password: _, ...userWithoutPassword } = user;
         res.status(200).json({ status: true, message: "Login berhasil!", user: userWithoutPassword });
-    } catch (error) { console.error("Login error:", error); res.status(500).json({ status: false, message: "Terjadi kesalahan pada server." }); }
+    } catch (error) { 
+        console.error("Login error:", error); 
+        res.status(500).json({ status: false, message: "Terjadi kesalahan pada server." }); 
+    }
+});
+
+app.post('/api/admin/approve-user', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ status: false, message: "User ID diperlukan." });
+        }
+
+        const userToApprove = db.data.users.find(u => u.id === userId);
+        if (!userToApprove) {
+            return res.status(404).json({ status: false, message: "Pengguna tidak ditemukan." });
+        }
+
+        userToApprove.status = 'approved';
+        await db.write();
+
+        res.status(200).json({ status: true, message: `Pengguna ${userToApprove.name} berhasil disetujui.` });
+    } catch (error) {
+        console.error("Error approving user:", error);
+        res.status(500).json({ status: false, message: "Gagal menyetujui pengguna." });
+    }
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -715,7 +782,17 @@ app.get('/api/admin/kmsp-balance', isAuthenticated, isAdmin, (req, res) => {
 });
 
 app.get('/api/admin/users', isAuthenticated, isAdmin, (req, res) => {
-    const users = db.data.users.map(u => ({ id: u.id, name: u.name, email: u.email, balance: u.balance, role: u.role }));
+    const users = db.data.users.map(u => ({ 
+        id: u.id, 
+        name: u.name, 
+        email: u.email, 
+        balance: u.balance, 
+        role: u.role,
+        // --- PERUBAHAN DI SINI ---
+        // Tambahkan fallback untuk pengguna lama yang mungkin belum punya status
+        status: u.status || (u.role === 'admin' ? 'approved' : 'pending') 
+        // --- AKHIR PERUBAHAN ---
+    }));
     res.status(200).json({ status: true, data: users });
 });
 

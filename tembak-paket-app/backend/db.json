@@ -20,7 +20,8 @@
       "balance": 5000,
       "role": "user",
       "verifiedPhone": null,
-      "createdAt": "2025-06-26T08:28:49.288Z"
+      "createdAt": "2025-06-26T08:28:49.288Z",
+      "status": "approved"
     }
   ],
   "packages": [

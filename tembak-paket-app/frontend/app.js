@@ -138,20 +138,24 @@ async function fetchAnnouncement() {
 function renderApp() {
     const hash = window.location.hash || '#';
     
+    // Tampilkan spinner setiap kali halaman berubah
     app.innerHTML = '<div class="loading-spinner"></div>';
 
+    // Logika UTAMA: Periksa apakah pengguna sudah login atau belum
     if (currentUser) {
-        // Jika pengguna sudah login
-        // Jika hash kosong atau masih di halaman login/register, arahkan ke dashboard
+        // ---- JIKA PENGGUNA SUDAH LOGIN ----
+        
+        // Arahkan ke dashboard jika pengguna masih di halaman auth
         const targetHash = (hash === '#' || hash === '#login' || hash === '#register') ? '#dashboard' : hash;
         if (window.location.hash !== targetHash) {
-            window.location.hash = targetHash; // Paksa perubahan hash
-            return; // Hentikan eksekusi, renderApp akan dipanggil lagi oleh hashchange event
+            window.location.hash = targetHash;
+            return; // Hentikan eksekusi, renderApp akan dipanggil lagi oleh event hashchange
         }
-        // Render halaman berdasarkan hash yang sudah divalidasi
+
+        // Render halaman yang sesuai untuk pengguna yang sudah login
         switch (targetHash) {
             case '#history':
-                renderDashboard('history'); // Render dashboard dengan tab riwayat transaksi
+                renderDashboard('history');
                 break;
             case '#profile':
                 renderDashboard('profile');
@@ -159,37 +163,39 @@ function renderApp() {
             case '#paket-akrab':
                 renderDashboard('paket-akrab');
                 break;
+            case '#tutorial':
+                renderDashboard('tutorial');
+                break;
+            case '#kontak-admin':
+                renderDashboard('kontak-admin');
+                break;
             case '#admin':
-                // Hanya izinkan admin mengakses panel admin
                 if (currentUser.role === 'admin') {
-                    renderDashboard('admin'); // Render dashboard dengan tab panel admin
+                    renderDashboard('admin');
                 } else {
-                    window.location.hash = '#dashboard'; // Arahkan kembali ke dashboard jika bukan admin
+                    // Jika bukan admin mencoba akses, lempar ke dashboard
+                    window.location.hash = '#dashboard';
                 }
                 break;
             case '#dashboard':
             default:
-                renderDashboard('packages'); // Default ke dashboard dengan tab beli paket
+                renderDashboard('packages');
+                break;
         }
     } else {
-        // Jika pengguna belum login, arahkan ke halaman login atau register
-        const targetHash = (hash === '#register') ? '#register' : '#login';
-        if (window.location.hash !== targetHash) {
-            window.location.hash = targetHash; // Paksa perubahan hash
-            return; // Hentikan eksekusi
-        }
-        // Render halaman login atau register
-        switch (targetHash) {
+        // ---- JIKA PENGGUNA BELUM LOGIN (currentUser is null) ----
+        
+        switch (hash) {
             case '#register':
                 renderRegisterPage();
                 break;
             case '#login':
-            default:
+            default: // Jika hash tidak dikenali atau kosong, arahkan ke login
                 renderLoginPage();
+                break;
         }
     }
 }
-
 
 
 /**
@@ -260,6 +266,73 @@ function renderProfilePage(container) {
 
     document.getElementById('change-name-form')?.addEventListener('submit', handleChangeName);
     document.getElementById('change-password-form')?.addEventListener('submit', handleChangePassword);
+}
+
+// frontend/app.js -> Pastikan Anda memiliki DUA fungsi ini
+
+/**
+ * Merender halaman tutorial cara melakukan pembelian.
+ * @param {HTMLElement} container - Elemen DOM yang akan diisi (mainContent).
+ */
+function renderTutorialPage(container) {
+    // Tanda '+=' menambahkan konten ini setelah banner pengumuman (jika ada)
+    container.innerHTML += `
+        <div class="page-content">
+            <div class="page-header"><h1>Cara Pembelian</h1></div>
+
+            <div class="tutorial-card">
+                <h2>A. Beli Paket (Verifikasi OTP Terpusat)</h2>
+                <ol class="tutorial-steps">
+                    <li>Pergi ke halaman <strong>Beli Paket</strong>.</li>
+                    <li>Di bagian atas, verifikasi nomor HP Anda <strong>satu kali saja</strong> dengan memasukkan nomor dan kode OTP yang dikirim.</li>
+                    <li>Setelah nomor terverifikasi, nomor Anda akan tersimpan selama sesi login.</li>
+                    <li>Pilih paket yang Anda inginkan dari dropdown. Anda bisa menggunakan kolom pencarian untuk memfilter daftar.</li>
+                    <li>Detail paket akan muncul. Klik <strong>"Beli Sekarang"</strong>.</li>
+                    <li>Pilih metode pembayaran (jika ada pilihan) dan selesaikan transaksi.</li>
+                </ol>
+            </div>
+
+            <div class="tutorial-card">
+                <h2>B. Paket Akrab & Lainnya (Tanpa OTP per Transaksi)</h2>
+                <ol class="tutorial-steps">
+                    <li>Pergi ke halaman <strong>Paket Akrab & Lainnya</strong>.</li>
+                    <li>Langsung masukkan <strong>Nomor HP Tujuan</strong> yang berbeda-beda setiap kali transaksi.</li>
+                    <li>Pilih paket dari dropdown. Gunakan pencarian jika perlu.</li>
+                    <li>Cek deskripsi dan stok (jika ada) yang muncul.</li>
+                    <li>Klik <strong>"Beli Sekarang"</strong> untuk memproses. Biaya layanan akan langsung dipotong dari saldo Anda.</li>
+                </ol>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Merender halaman statis untuk menampilkan informasi kontak admin.
+ * @param {HTMLElement} container - Elemen DOM yang akan diisi (mainContent).
+ */
+function renderKontakAdminPage(container) {
+    // GANTI DENGAN INFORMASI KONTAK ANDA YANG SEBENARNYA
+    const adminWhatsapp = "6287767287284"; // Ganti dengan nomor WA Anda (format 62...)
+    const adminTelegram = "RyyStorevp1"; // Ganti dengan username Telegram Anda
+
+    container.innerHTML += `
+        <div class="page-content">
+            <div class="page-header"><h1>Kontak Admin</h1></div>
+            <p>Jika Anda mengalami kendala atau memiliki pertanyaan, jangan ragu untuk menghubungi kami melalui kontak di bawah ini.</p>
+            
+            <div class="contact-card">
+                <h3>WhatsApp</h3>
+                <p>Klik untuk langsung chat dengan admin. (Respon Cepat)</p>
+                <a href="https://wa.me/${adminWhatsapp}?text=Halo%20Admin%20Ryystore,%20saya%20butuh%20bantuan." target="_blank" class="button">Chat via WhatsApp</a>
+            </div>
+
+            <div class="contact-card">
+                <h3>Telegram</h3>
+                <p>Klik untuk memulai percakapan di Telegram.</p>
+                <a href="https://t.me/${adminTelegram}" target="_blank" class="button secondary">Chat via Telegram</a>
+            </div>
+        </div>
+    `;
 }
 
 /**
@@ -645,6 +718,10 @@ function renderExternalPaymentModal(paymentData) {
  * Mengatur event listener untuk form login.
  */
 function renderLoginPage() {
+    const adminWhatsapp = "6287767287284"; // Nomor WA Admin
+    const prefilledMessage = "acc min"; // Pesan pre-fill
+    const whatsappLink = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(prefilledMessage)}`;
+
     app.innerHTML = `
         <div class="auth-container">
             <h1>RYYSTORE Panel</h1>
@@ -665,6 +742,10 @@ function renderLoginPage() {
                 <button type="submit">Login</button>
             </form>
             <div id="feedback-container"></div>
+            
+            <a href="${whatsappLink}" target="_blank" class="button secondary" style="text-decoration: none; margin-top: 1rem; text-align: center;">
+                Hubungi Admin untuk Aktivasi
+            </a>
             <p class="auth-link">Belum punya akun? <a href="#register">Daftar di sini</a></p>
         </div>
     `;
@@ -742,6 +823,8 @@ function renderDashboard(activePage = 'packages') {
                         <li><a href="#paket-akrab" class="${activePage === 'paket-akrab' ? 'active' : ''}">Paket Akrab & Lainnya</a></li>
                         <li><a href="#history" class="${activePage === 'history' ? 'active' : ''}">Riwayat Transaksi</a></li>
                         <li><a href="#profile" class="${activePage === 'profile' ? 'active' : ''}">Profil Saya</a></li>
+                        <li><a href="#tutorial" class="${activePage === 'tutorial' ? 'active' : ''}">Cara Pembelian</a></li>
+                        <li><a href="#kontak-admin" class="${activePage === 'kontak-admin' ? 'active' : ''}">Kontak Admin</a></li>
                         ${isAdmin ? `<li><a href="#admin" class="${activePage === 'admin' ? 'active' : ''}">Panel Admin</a></li>` : ''}
                     </ul>
                 </nav>
@@ -780,6 +863,10 @@ function renderDashboard(activePage = 'packages') {
         renderHistoryPage(mainContent);
     } else if (activePage === 'profile') {
         renderProfilePage(mainContent);
+    } else if (activePage === 'tutorial') {
+        renderTutorialPage(mainContent);
+    } else if (activePage === 'kontak-admin') {
+        renderKontakAdminPage(mainContent);
      } else if (activePage === 'paket-akrab') {
         renderNonOtpPage(mainContent); // Ini akan mengisi konten profil
     } else if (activePage === 'admin') {
@@ -862,6 +949,13 @@ function renderAdminDashboard(container) {
                 <h1>Panel Kontrol Admin</h1>
                 <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
             </div>
+
+            <div class="admin-section">
+                <h2>Persetujuan Pengguna Baru</h2>
+                <p>Pengguna di bawah ini sedang menunggu persetujuan Anda untuk bisa login.</p>
+                <div id="approval-feedback"></div>
+                <ul id="pending-users-list" class="user-list-admin"><div class="loading-spinner"></div></ul>
+            </div>
             <div class="admin-section">
                 <h2>Statistik Ringkas</h2>
                 <div class="stats-grid">
@@ -894,7 +988,6 @@ function renderAdminDashboard(container) {
                 </button>
             </div>
 
-            ${/* Sisa bagian admin dashboard (Manajemen Database, Saldo, Paket, Pengumuman kecil) */''}
             <div class="admin-section">
                 <h2>Manajemen Database</h2>
                 <div id="db-feedback"></div>
@@ -917,21 +1010,13 @@ function renderAdminDashboard(container) {
                 </div>
                 <button id="check-kmsp-balance-btn" style="width:100%; margin-bottom: 2rem;">Cek Saldo KMSP</button>
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0;">
-                <h3>Tambah Saldo Pengguna</h3>
-                <form id="add-balance-form" class="balance-controls">
+                <h3>Tambah/Kurangi Saldo Pengguna</h3>
+                 <form id="update-balance-form" class="balance-controls">
                     <label for="user-select">Pilih Pengguna:</label>
                     <select id="user-select" required style="flex-grow: 1;"></select>
-                    <label for="amount-input">Jumlah:</label>
-                    <input type="number" id="amount-input" placeholder="e.g., 50000" required>
-                    <button type="submit">Tambah Saldo</button>
-                </form>
-                <h3>Hapus Saldo Pengguna</h3>
-                <form id="remove-balance-form" class="balance-controls">
-                    <label for="user-select-remove">Pilih Pengguna:</label>
-                    <select id="user-select-remove" required style="flex-grow: 1;"></select>
-                    <label for="amount-remove-input">Jumlah:</label>
-                    <input type="number" id="amount-remove-input" placeholder="e.g., 50000" required>
-                    <button type="submit" style="background: var(--danger-color); color: #fff;">Kurangi Saldo</button>
+                    <label for="amount-input">Jumlah (Gunakan '-' untuk mengurangi):</label>
+                    <input type="number" id="amount-input" placeholder="e.g., 50000 atau -10000" required>
+                    <button type="submit">Update Saldo</button>
                 </form>
                 <h3>Hapus Akun Pengguna</h3>
                 <form id="delete-user-form" class="balance-controls">
@@ -969,6 +1054,7 @@ function renderAdminDashboard(container) {
             </div>
         </div>
     `;
+
 
      // --- TEMPAT ANDA MELETAKKAN KODE YANG DIBERIKAN ---
 
@@ -1038,37 +1124,67 @@ function renderAdminDashboard(container) {
     /**
      * Memuat daftar pengguna dari backend dan mengisi dropdown pemilihan pengguna.
      */
-    async function loadUsers() {
-        try {
-            const { data, status } = await apiFetch('/admin/users');
-            // Isi semua dropdown user di admin panel
-            const userSelects = [
-                document.getElementById('user-select'),
-                document.getElementById('user-select-remove'),
-                document.getElementById('user-select-delete')
-            ];
-            userSelects.forEach(sel => {
-                if (sel) sel.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
-            });
-            if (status === 200 && data.status && Array.isArray(data.data)) {
-                data.data.forEach(user => {
-                    userSelects.forEach(sel => {
-                        if (sel) {
-                            const option = document.createElement('option');
-                            option.value = user.id;
-                            option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
-                            sel.appendChild(option);
-                        }
-                    });
-                });
-            } else {
-                 displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
-            }
-        } catch (error) { 
-            console.error('Gagal memuat pengguna:', error);
-            displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
+   async function loadUsers() {
+    try {
+        const { data, status } = await apiFetch('/admin/users');
+        if (status !== 200 || !data.status || !Array.isArray(data.data)) {
+            throw new Error(data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`);
         }
+
+        const users = data.data;
+
+        // --- MENGISI DROPDOWN (seperti sebelumnya) ---
+        const userSelects = [
+            document.getElementById('user-select'),
+            document.getElementById('user-select-delete')
+        ];
+        
+        userSelects.forEach(sel => {
+            if (sel) {
+                sel.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+                // Hanya tampilkan pengguna yang sudah disetujui atau admin di dropdown
+                users.filter(u => u.status === 'approved' || u.role === 'admin').forEach(user => {
+                    if (currentUser.id !== user.id) { // Jangan tampilkan admin yang sedang login
+                       const option = document.createElement('option');
+                       option.value = user.id;
+                       option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
+                       sel.appendChild(option);
+                    }
+                });
+            }
+        });
+
+        // --- MENGISI DAFTAR PERSETUJUAN (BAGIAN BARU) ---
+        const pendingList = document.getElementById('pending-users-list');
+        if (pendingList) {
+            const pendingUsers = users.filter(u => u.status === 'pending');
+            
+            if (pendingUsers.length > 0) {
+                pendingList.innerHTML = pendingUsers.map(user => `
+                    <li class="user-item-admin" data-user-id="${user.id}">
+                        <div class="user-info-admin">
+                            <strong>${user.name}</strong>
+                            <span>${user.email}</span>
+                        </div>
+                        <button class="approve-user-btn">Setujui</button>
+                    </li>
+                `).join('');
+            } else {
+                pendingList.innerHTML = '<li>Tidak ada pengguna yang menunggu persetujuan.</li>';
+            }
+
+            // Tambahkan event listener ke tombol 'Setujui'
+            document.querySelectorAll('.approve-user-btn').forEach(button => {
+                button.addEventListener('click', handleApproveUser);
+            });
+        }
+
+    } catch (error) {
+        console.error('Gagal memuat pengguna:', error);
+        displayFeedback('approval-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
+        displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
     }
+}
     
     // Perbarui tampilan saldo KMSP saat admin panel dimuat
     const kmspBalanceDisplay = document.getElementById('kmsp-balance-display');
@@ -1103,6 +1219,42 @@ function renderAdminDashboard(container) {
         }
     });
     
+    async function handleApproveUser(e) {
+    const button = e.currentTarget;
+    const userItem = button.closest('.user-item-admin');
+    const userId = userItem?.dataset.userId;
+
+    if (!userId || !button) return;
+
+    if (!confirm(`Apakah Anda yakin ingin menyetujui pengguna ini?`)) {
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span>`;
+    displayFeedback('approval-feedback', '', false);
+
+    try {
+        const { data, status } = await apiFetch('/admin/approve-user', {
+            method: 'POST',
+            body: { userId }
+        });
+
+        if (status === 200 && data.status) {
+            showToast(data.message);
+            // Muat ulang daftar pengguna untuk menghapus pengguna dari daftar pending
+            // dan menambahkannya ke dropdown.
+            loadUsers(); 
+        } else {
+            throw new Error(data.message || "Gagal menyetujui pengguna.");
+        }
+
+    } catch (error) {
+        showToast(error.message, true);
+        button.disabled = false;
+        button.textContent = 'Setujui';
+    }
+}
     /**
      * Event handler untuk form 'Tambah Saldo Pengguna'.
      * Memanggil API untuk memperbarui saldo pengguna tertentu.
