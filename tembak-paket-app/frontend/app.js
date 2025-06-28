@@ -2867,10 +2867,14 @@ async function renderNonOtpPage(container) {
 
     pageContent.innerHTML = `
         <div class="page-header"><h1>Paket Akrab & Lainnya</h1></div>
-        <p>Beli paket tanpa perlu verifikasi nomor OTP di halaman ini. Cukup masukkan nomor tujuan.</p>
+        <p>Beli paket tanpa perlu verifikasi OTP di halaman ini. Cukup masukkan nomor tujuan.</p>
         
         <div class="page-content" style="margin-top: 1.5rem;">
             <form id="non-otp-purchase-form">
+                
+                <div class="form-group">
+                    <button type="button" id="check-all-stock-btn" class="secondary">Cek Stok Semua Paket Akrab</button>
+                </div>
                 <div class="form-group">
                     <label for="non-otp-phone">Nomor HP Tujuan (Format: 62...)</label>
                     <input type="tel" id="non-otp-phone" required pattern="^62\\d{9,13}$" placeholder="628xxxxxxxxxx">
@@ -2887,11 +2891,64 @@ async function renderNonOtpPage(container) {
                 </div>
                 <div id="non-otp-details-area" style="margin-top: 1rem;"></div>
                 <button type="submit">Beli Sekarang</button>
+                 <div id="all-stock-results-container" style="margin-top: 1rem;"></div>
             </form>
             <div id="non-otp-feedback" style="margin-top: 1rem;"></div>
         </div>
     `;
+       document.getElementById('check-all-stock-btn')?.addEventListener('click', async (e) => {
+        const button = e.currentTarget;
+        const resultsContainer = document.getElementById('all-stock-results-container');
+        if (!button || !resultsContainer) return;
 
+        button.disabled = true;
+        button.innerHTML = '<span class="button-spinner"></span> Mengecek semua...';
+        resultsContainer.innerHTML = '<div class="loading-spinner"></div>';
+        
+        // Buat array "promise" untuk setiap pengecekan stok
+        const stockCheckPromises = nonOtpPackages
+            // Filter hanya paket yang tidak termasuk kata kunci "stockless"
+            .filter(pkg => {
+                const stocklessKeywords = ['MASA AKTIF', 'SLOT AKRAB', 'REINVITE'];
+                return !stocklessKeywords.some(keyword => pkg.name.toUpperCase().includes(keyword));
+            })
+            .map(pkg => 
+                apiFetch(`/packages/stock/${pkg.package_code}`)
+                    .then(response => ({
+                        name: pkg.name,
+                        stock: response.data.data.stock,
+                        success: response.data.status,
+                    }))
+                    .catch(() => ({
+                        name: pkg.name,
+                        stock: 'Error',
+                        success: false,
+                    }))
+            );
+
+        // Tunggu semua promise selesai
+        const results = await Promise.all(stockCheckPromises);
+
+        // Render hasilnya menjadi daftar HTML
+        const resultsHTML = results.map(result => `
+            <li style="display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #eee;">
+                <span>${result.name}</span>
+                <strong style="color: ${result.stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">
+                    ${result.success ? (result.stock > 0 ? `Stok: ${result.stock}` : 'Habis') : 'Gagal Cek'}
+                </strong>
+            </li>
+        `).join('');
+
+        resultsContainer.innerHTML = `
+            <div class="page-content" style="padding: 1rem; background: #f9f9f9;">
+                <h3>Hasil Pengecekan Stok</h3>
+                <ul style="list-style: none; padding: 0;">${resultsHTML}</ul>
+            </div>
+        `;
+
+        button.disabled = false;
+        button.textContent = 'Cek Stok Semua Paket Akrab';
+    });
     document.getElementById('non-otp-search-input')?.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const dropdown = document.getElementById('non-otp-package');
@@ -2982,42 +3039,33 @@ async function renderNonOtpPage(container) {
  */
 async function checkPackageStock(packageId, targetElement) {
     if (!targetElement) return;
-
-    // Pengecekan penting di frontend untuk mencegah pemanggilan API yang tidak perlu
     if (!packageId) {
-        targetElement.innerHTML = ''; // Kosongkan info stok jika tidak ada paket dipilih
+        targetElement.innerHTML = '';
         return;
     }
-
     targetElement.innerHTML = `<p>Memeriksa stok...</p>`;
-
     try {
-        // Panggil endpoint GET dengan ID paket di URL
         const { data, status } = await apiFetch(`/packages/stock/${packageId}`);
 
         if (status === 200 && data.status) {
+            // Langsung gunakan data.data.stock yang sudah diolah backend
             const stock = data.data.stock;
             
             targetElement.innerHTML = `<p style="color: ${stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">Stok: ${stock > 0 ? stock : 'Habis'}</p>`;
             
             const purchaseBtn = targetElement.closest('form')?.querySelector('button[type="submit"]');
-            
             if (purchaseBtn) {
+                purchaseBtn.disabled = (stock <= 0);
                 if (stock <= 0) {
-                    purchaseBtn.disabled = true;
                     purchaseBtn.textContent = 'Stok Habis';
-                } else {
-                    purchaseBtn.disabled = false;
-                    purchaseBtn.textContent = 'Beli Sekarang';
                 }
             }
         } else {
-            // Gunakan pesan error dari server jika ada
             throw new Error(data.message || 'Gagal mendapat info stok.');
         }
     } catch (error) {
         console.error("Gagal cek stok:", error.message);
-        targetElement.innerHTML = `<p style="color: var(--danger-color);">${error.message}</p>`;
+        targetElement.innerHTML = `<p style="color: var(--danger-color);">Gagal memuat stok.</p>`;
     }
 }
 

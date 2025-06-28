@@ -467,26 +467,34 @@ app.get('/api/user/packages', isAuthenticated, (req, res) => {
 
 app.get('/api/packages/stock/:packageId', isAuthenticated, async (req, res) => {
     const { packageId } = req.params;
-
-    if (!packageId || packageId === "undefined") { // Tambahan pengecekan untuk string "undefined"
-        return res.status(400).json({ status: false, message: "Package ID tidak valid atau kosong." });
+    if (!packageId || packageId === "undefined") {
+        return res.status(400).json({ status: false, message: "Package ID tidak valid." });
     }
-
     try {
         const url = `https://golang-openapi-checkpackagestock-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}&package_id=${packageId}`;
-        
         const response = await fetch(url);
         const data = await response.json();
 
-        if (!response.ok || !data.status) {
-            throw new Error(data.message || 'Gagal mengambil data stok dari provider.');
+        if (!response.ok || !data.status || !data.data) {
+            throw new Error(data.message || 'Gagal mengambil data stok.');
         }
 
-        res.status(200).json(data);
+        // --- LOGIKA BARU ---
+        // Kita simpulkan stok berdasarkan is_out_of_stock terlebih dahulu
+        const stockValue = data.data.is_out_of_stock ? 0 : (data.data.real_stock_from_suppliers || data.data.real_stock || 0);
+
+        // Kirim kembali format yang sudah disederhanakan
+        res.status(200).json({
+            status: true,
+            message: "Success",
+            data: {
+                stock: stockValue
+            }
+        });
 
     } catch (error) {
         console.error("Error checking package stock:", error.message);
-        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan pada server." });
+        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan." });
     }
 });
 
