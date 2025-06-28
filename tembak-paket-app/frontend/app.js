@@ -2169,7 +2169,7 @@ function displaySelectedPackageDetails(packageCode) {
     let buttonText = 'Beli Sekarang';
     if (!canPurchase) {
         if (!phoneAuth.accessToken) buttonText = "Verifikasi Nomor Dulu";
-        else if (!isProviderStocked) buttonText = "Stok 0 (Perkiraan)";
+        else if (!isProviderStocked) buttonText = "Stok (Perkiraan)";
         else buttonText = 'Saldo Kurang';
     }
 
@@ -3196,28 +3196,45 @@ async function checkPackageStock(packageId, targetElement) {
         return;
     }
     targetElement.innerHTML = `<p>Memeriksa stok...</p>`;
+    
+    // Ambil referensi tombol beli sekarang di awal
+    const purchaseBtn = targetElement.closest('form')?.querySelector('button[type="submit"]');
+
     try {
         const { data, status } = await apiFetch(`/packages/stock/${packageId}`);
 
         if (status === 200 && data.status) {
-            // Langsung gunakan data.data.stock yang sudah diolah backend
             const stock = data.data.stock;
             
+            // Perbarui teks info stok
             targetElement.innerHTML = `<p style="color: ${stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">Stok: ${stock > 0 ? stock : '0'}</p>`;
             
-            const purchaseBtn = targetElement.closest('form')?.querySelector('button[type="submit"]');
+            // --- BAGIAN YANG DIPERBAIKI ---
             if (purchaseBtn) {
+                // Nonaktifkan tombol jika stok habis
                 purchaseBtn.disabled = (stock <= 0);
+
                 if (stock <= 0) {
+                    // Jika stok 0, ubah teks tombol
                     purchaseBtn.textContent = 'Stok 0';
+                } else {
+                    // JIKA STOK ADA, KEMBALIKAN TEKS TOMBOL KE SEMULA
+                    purchaseBtn.textContent = 'Beli Sekarang';
                 }
             }
+            // --- AKHIR BAGIAN PERBAIKAN ---
+
         } else {
             throw new Error(data.message || 'Gagal mendapat info stok.');
         }
     } catch (error) {
         console.error("Gagal cek stok:", error.message);
         targetElement.innerHTML = `<p style="color: var(--danger-color);">Gagal memuat stok.</p>`;
+        // Jika gagal cek stok, nonaktifkan juga tombolnya
+        if (purchaseBtn) {
+            purchaseBtn.disabled = true;
+            purchaseBtn.textContent = 'Gagal Cek Stok';
+        }
     }
 }
 
