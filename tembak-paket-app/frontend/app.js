@@ -3115,12 +3115,18 @@ async function renderNonOtpPage(container) {
             });
     });
 
-    document.getElementById('non-otp-package')?.addEventListener('change', (e) => {
+     document.getElementById('non-otp-package')?.addEventListener('change', (e) => {
         const packageCode = e.target.value;
         const detailsArea = document.getElementById('non-otp-details-area');
-        
+        const purchaseBtn = document.querySelector('#non-otp-purchase-form button[type="submit"]');
+
         if (!packageCode) {
             detailsArea.innerHTML = '';
+            // Jika tidak ada paket yang dipilih, nonaktifkan tombol
+            if (purchaseBtn) {
+                purchaseBtn.disabled = true;
+                purchaseBtn.textContent = 'Beli Sekarang'; // Reset teksnya juga
+            }
             return;
         }
 
@@ -3140,10 +3146,20 @@ async function renderNonOtpPage(container) {
             </div>
         `;
         
-        if (!isStockless) {
+        // <-- LOGIKA PERBAIKAN DI SINI -->
+        if (isStockless) {
+            if (purchaseBtn) {
+                purchaseBtn.disabled = false;
+                purchaseBtn.textContent = 'Beli Sekarang';
+            }
+        } else {
             checkPackageStock(packageCode, document.getElementById('non-otp-stock-info'));
         }
     });
+    
+    // Inisialisasi: nonaktifkan tombol beli di awal
+    const initialPurchaseBtn = document.querySelector('#non-otp-purchase-form button[type="submit"]');
+    if(initialPurchaseBtn) initialPurchaseBtn.disabled = true;
 
     document.getElementById('non-otp-purchase-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
