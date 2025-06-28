@@ -1538,7 +1538,7 @@ select#package-dropdown {
 /* frontend/style.css -> Tambahkan di akhir file */
 
 .contact-card {
-    background-color: #ffffff;
+    background-color: #fff;
     padding: 1.5rem;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
@@ -1559,3 +1559,12 @@ select#package-dropdown {
     text-decoration: none;
     display: inline-block;
 }
+.contact-card .button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+}
+

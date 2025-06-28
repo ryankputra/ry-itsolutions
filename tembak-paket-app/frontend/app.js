@@ -724,7 +724,12 @@ function renderLoginPage() {
 
     app.innerHTML = `
         <div class="auth-container">
-            <h1>RYYSTORE Panel</h1>
+        <div class="auth-banner">
+                <img src="assets/images/logo.png" alt="RYYSTORE Logo" style="width: 100px; height: auto;">
+            </div>
+            <h1>RYYSTORE PANEL</h1>
+            <p>Dapatkan Semua Kebutuhan Digitalmu.</p>
+             <hr>
             <form id="login-form">
                 <div class="form-group">
                     <label for="email">Email</label>
