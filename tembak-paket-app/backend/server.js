@@ -98,6 +98,11 @@ app.use(session({
     cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
+app.use((req, res, next) => {
+    console.log(`[LOGGER] Request Masuk: Method=${req.method}, URL=${req.originalUrl}`);
+    next();
+});
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) { cb(null, __dirname); },
     filename: function (req, file, cb) { cb(null, 'db.json'); }
@@ -498,8 +503,96 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
     }
 });
 
+// RUTE BARU UNTUK PEMBELIAN MULTI PAKET PULSA
+app.post('/api/purchase/multi-pulsa', isAuthenticated, async (req, res) => {
+    const { packageIds, phone, accessToken } = req.body;
+    const userId = req.session.userId;
+    const user = db.data.users.find(u => u.id === userId);
 
+    if (!user || user.verifiedPhone !== phone) {
+        return res.status(403).json({ status: false, message: "Nomor telepon ini tidak terverifikasi untuk akun Anda." });
+    }
+    if (!Array.isArray(packageIds) || packageIds.length === 0 || !phone || !accessToken) {
+        return res.status(400).json({ status: false, message: "Parameter tidak lengkap atau format paket salah." });
+    }
 
+    const successResults = [];
+    const failedResults = [];
+    const KMSP_API_DELAY_MS = 12000; // Jeda 12 detik untuk keamanan
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    for (const [index, packageId] of packageIds.entries()) {
+        const pkg = db.data.packages.find(p => p.package_code === packageId);
+        if (!pkg) {
+            failedResults.push({ name: `ID: ${packageId}`, reason: "Paket tidak ditemukan di database." });
+            continue;
+        }
+
+        const platformFee = pkg.platform_fee || 0;
+        if (user.balance < platformFee) {
+            failedResults.push({ name: pkg.name, reason: `Saldo tidak cukup (Butuh Rp ${platformFee.toLocaleString()})` });
+            continue;
+        }
+
+        user.balance -= platformFee;
+        await db.write();
+
+        try {
+            const purchaseParams = new URLSearchParams({
+                api_key: KMSP_API_KEY,
+                package_code: pkg.package_code,
+                phone,
+                access_token: accessToken,
+                payment_method: 'balance'
+            });
+            const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
+
+            const purchaseResponse = await fetch(purchaseUrl);
+            const purchaseData = await purchaseResponse.json();
+
+            const transactionSucceeded = (purchaseResponse.ok && purchaseData.status) || (purchaseData.message && purchaseData.message.toLowerCase().includes("diproses"));
+
+            const newTransaction = {
+                id: `trx_${Date.now()}_${index}`, userId, userName: user.name, packageId, packageName: pkg.name, platformFee,
+                status: transactionSucceeded ? 'success' : 'failed',
+                api_response: purchaseData.message || (transactionSucceeded ? 'Success' : 'Gagal'),
+                paymentMethod: 'balance', createdAt: new Date().toISOString()
+            };
+            db.data.transactions.push(newTransaction);
+            await db.write();
+
+            if (transactionSucceeded) {
+                successResults.push({ name: pkg.name, message: purchaseData.message || "Sukses" });
+            } else {
+                user.balance += platformFee;
+                await db.write();
+                failedResults.push({ name: pkg.name, reason: purchaseData.message || 'Gagal dari provider.' });
+            }
+
+        } catch (error) {
+            user.balance += platformFee;
+            await db.write();
+            failedResults.push({ name: pkg.name, reason: `Error server: ${error.message}` });
+        }
+
+        if (index < packageIds.length - 1) {
+            await delay(KMSP_API_DELAY_MS);
+        }
+    }
+
+    const finalUser = db.data.users.find(u => u.id === userId);
+
+    res.status(200).json({
+        status: true,
+        message: "Proses eksekusi semua paket selesai.",
+        data: {
+            successes: successResults,
+            failures: failedResults,
+            newBalance: finalUser.balance
+        }
+    });
+});
 
 
 app.get('/api/purchase/status/:kmspTrxId', isAuthenticated, async (req, res) => {
@@ -753,6 +846,10 @@ app.put('/api/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req,
             if (packageToUpdate) {
                 packageToUpdate.platform_fee = typeof update.platform_fee === 'number' ? update.platform_fee : 0;
                 packageToUpdate.isVisible = typeof update.isVisible === 'boolean' ? update.isVisible : false;
+                
+                // TAMBAHKAN INI
+                packageToUpdate.isMultiPurchase = typeof update.isMultiPurchase === 'boolean' ? update.isMultiPurchase : false;
+
                 if (update.category === 'reguler' || update.category === 'non-otp') {
                     packageToUpdate.category = update.category;
                 }
@@ -763,7 +860,6 @@ app.put('/api/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req,
         res.status(200).json({ status: true, message: `${changesMade} perubahan paket berhasil disimpan!` });
     } catch (error) { console.error("Error bulk updating packages:", error); res.status(500).json({ status: false, message: "Gagal menyimpan perubahan." }); }
 });
-
 app.get('/api/admin/kmsp-balance', isAuthenticated, isAdmin, (req, res) => {
     const kmspUrl = `https://golang-openapi-panelaccountbalance-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}`;
     fetch(kmspUrl)

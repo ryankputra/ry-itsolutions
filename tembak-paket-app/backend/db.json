@@ -5,12 +5,23 @@
       "name": "admin",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$qDjzr6cBjZYzEBRRrZ3Y5eQN5F5pnuwyLQQmOyj/ja2pRDS5QGO2y",
-      "balance": 16100,
+      "balance": 12600,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
-      "verifiedPhone": "6287831861485",
+      "verifiedPhone": "6287767287284",
       "resetPasswordToken": "c7bd0035-6cce-4821-a61c-0683072bdf89",
       "resetPasswordExpires": 1751055944348
+    },
+    {
+      "id": "user_1751188248045",
+      "name": "nana",
+      "email": "nana@gmail.com",
+      "password": "$2b$10$Ts2fz3SvffE8Dqbf0qpjB.XyCGH/lf7rcQL1anqBtkrN4AVVZNte2",
+      "balance": 0,
+      "role": "user",
+      "verifiedPhone": null,
+      "createdAt": "2025-06-29T09:10:48.045Z",
+      "status": "approved"
     }
   ],
   "packages": [
@@ -32,7 +43,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 15000,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_XC1PLUS1DISC_EWALLET",
@@ -58,7 +70,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_XC1PLUS1DISC_PULSA",
@@ -78,7 +91,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLMINISUPERV2",
@@ -98,7 +112,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 50000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLMINI",
@@ -118,7 +133,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 55000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBIG",
@@ -138,7 +154,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 60000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLJUMBOV2",
@@ -158,7 +175,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 75000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBIGMEGA",
@@ -178,7 +196,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 95000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLJUMBO",
@@ -198,7 +217,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 85000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "BEBASPUAS15GB30HR_PREV",
@@ -218,7 +238,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 85000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLDBEPU5430D_PREV",
@@ -238,7 +259,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 150000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "63e8a5744a9d2d80f3fe5874f03e8c7a",
@@ -264,7 +286,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "582333b996179d9a11ece82485f0ba5e",
@@ -284,7 +307,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN5",
@@ -304,7 +328,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 10000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN7",
@@ -324,7 +349,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 9000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN9",
@@ -344,7 +370,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 15000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN11",
@@ -364,7 +391,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 15000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN13",
@@ -384,7 +412,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 18000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN15",
@@ -404,7 +433,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 18900,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN17",
@@ -424,7 +454,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 21000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLBEKASAN19",
@@ -444,7 +475,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 30000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN5",
@@ -464,7 +496,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 13000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN7",
@@ -484,7 +517,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 14000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN9",
@@ -504,7 +538,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 16000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN11",
@@ -524,7 +559,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 18000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN13",
@@ -544,7 +580,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 20000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN15",
@@ -564,7 +601,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 25000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN17",
@@ -584,7 +622,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 25000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XXLBEKASAN19",
@@ -604,7 +643,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 25000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "REINVIT",
@@ -624,7 +664,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "BELI_SLOT_AKRAB_BARU",
@@ -644,7 +685,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "AKRAB_L75_PENGELOLA_PULSA",
@@ -664,7 +706,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "AKRAB_L75_PENGELOLA_DANA",
@@ -690,7 +733,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLMA1BLN_PREV",
@@ -710,7 +754,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 10000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "TRIMA2_PREV",
@@ -730,7 +775,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "AXISMA4BLN_PREV",
@@ -750,7 +796,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 15000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "AXISMA1BLN_PREV",
@@ -770,7 +817,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 11000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "TSELMA90HARI_PREV",
@@ -790,7 +838,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "TSELMA30HARI_PREV",
@@ -810,7 +859,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 20000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ISATMA30D_PREV",
@@ -830,7 +880,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 15000,
-      "category": "non-otp"
+      "category": "non-otp",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLXCVIP5PLUS10DBLYT_PREV",
@@ -850,7 +901,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "f2fa05f28c146fdb67488ec53ce5c2cc",
@@ -870,7 +922,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "6b699877e423e526d8c2502f48ba0a1d",
@@ -896,7 +949,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_WA_10GB_3K_D",
@@ -922,7 +976,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_TT_10GB_3K_D",
@@ -948,7 +1003,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_FB_10GB_3K_D",
@@ -974,7 +1030,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_IG_10GB_3K_D",
@@ -1000,7 +1057,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_WA_10GB_3K_P",
@@ -1020,7 +1078,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_TT_10GB_3K_P",
@@ -1040,7 +1099,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_FB_10GB_3K_P",
@@ -1060,7 +1120,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_IG_10GB_3K_P",
@@ -1080,7 +1141,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_FB_15GB_5K_D",
@@ -1106,7 +1168,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_WA_15GB_5K_D",
@@ -1132,7 +1195,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_SOCMED_15GB_7K_D",
@@ -1158,7 +1222,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_SOCMED_15GB_7K_P",
@@ -1178,7 +1243,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_STREAMING_15GB_7K_D",
@@ -1204,7 +1270,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_STREAMING_15GB_7K_P",
@@ -1224,7 +1291,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_GAMES_15GB_7K_D",
@@ -1250,7 +1318,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_GAMES_15GB_7K_P",
@@ -1270,7 +1339,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_YT_15GB_5K_P",
@@ -1290,7 +1360,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_TT_15GB_5K_P",
@@ -1310,7 +1381,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_IG_15GB_5K_P",
@@ -1330,7 +1402,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_FB_15GB_5K_P",
@@ -1350,7 +1423,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_WA_15GB_5K_P",
@@ -1370,7 +1444,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_YT_15GB_5K_D",
@@ -1396,7 +1471,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_TT_15GB_5K_D",
@@ -1422,7 +1498,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ADN_XCP_IG_15GB_5K_D",
@@ -1448,7 +1525,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "97520d9ebea7d72cec0ae29e7b65e1fc",
@@ -1474,7 +1552,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "24072ce794a78f4c490f2b36678b085b",
@@ -1494,7 +1573,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "cae84e917d1da32a00d20b388b1b883b",
@@ -1514,7 +1594,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "62a49f0f7585e542fc195914ee11d2de",
@@ -1540,7 +1621,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "c03be70fb3523ac2ac440966d3a5920e",
@@ -1566,7 +1648,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 5000,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "bdb392a7aa12b21851960b7e7d54af2c",
@@ -1586,7 +1669,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 5000,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "3885e70df05fff67dddc3c29adeb485c",
@@ -1612,7 +1696,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "8da735b24b39aacc7edc29a7c2226f4a",
@@ -1632,7 +1717,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBONETFLIXXC",
@@ -1658,7 +1744,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOYOUTUBEXC",
@@ -1684,7 +1771,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOVIUXC",
@@ -1710,7 +1798,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 200,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOJOOXXC",
@@ -1736,7 +1825,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOTIKTOKXC",
@@ -1762,7 +1852,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 200,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOHPREMIUM7H",
@@ -1788,7 +1879,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOHSUPER7H",
@@ -1814,7 +1906,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOHSTANDARD7H",
@@ -1840,7 +1933,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOHBASIC7H",
@@ -1866,7 +1960,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOVIU_PULSA",
@@ -1886,7 +1981,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 500,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "XLUNLITURBOTIKTOK_PULSA",
@@ -1906,7 +2002,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 500,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "XLUNLITURBONETFLIXXC_PULSA",
@@ -1926,7 +2023,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 500,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "XLUNLITURBOHBASIC7H_P",
@@ -1946,7 +2044,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOJOOXXC_PULSA",
@@ -1966,7 +2065,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOHSTANDARD7H_P",
@@ -1986,7 +2086,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOYOUTUBEXC_PULSA",
@@ -1994,7 +2095,7 @@
       "description": "- Xtra Unlimited Turbo YouTube untuk akses YouTube secara Unlimited.\r\n- Masa Aktif mengikuti paket Xtra Combo Special 8GB/14GB yang dapat ditembak di panel tembak XL Reborn ini.\r\n- Sediakan Pulsa Rp25.000 (Akan terpotong segini).",
       "original_price": 0,
       "custom_price": 0,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": true,
       "payment_methods": [
         {
@@ -2005,8 +2106,9 @@
         }
       ],
       "payment_type": "pulsa",
-      "platform_fee": 0,
-      "category": "reguler"
+      "platform_fee": 500,
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "XLUNLITURBOHSUPER7H_P",
@@ -2026,7 +2128,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOHPREMIUM7H_P",
@@ -2046,7 +2149,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOIFLIXXC_PULSA",
@@ -2066,7 +2170,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOVIDIO_DANA",
@@ -2092,7 +2197,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOVIDIO_PULSA",
@@ -2112,7 +2218,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "BONUS_XCP_15GB_STREAMING_7500_P",
@@ -2132,7 +2239,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "BONUS_XCP_15GB_STREAMING_7500_D",
@@ -2158,7 +2266,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "BONUS_XCP_2GB_FB_1000_P",
@@ -2178,7 +2287,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "BONUS_XCP_2GB_FB_1000_D",
@@ -2204,7 +2314,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_EDU_5GB_2C5K",
@@ -2224,7 +2335,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_EDU_15GB_7C5K",
@@ -2244,7 +2356,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_EDU_2GB_1K",
@@ -2264,7 +2377,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_EDU_2GB_1K_DANA",
@@ -2290,7 +2404,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_EDU_5GB_2C5K_DANA",
@@ -2316,7 +2431,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XL_EDU_15GB_7C5K_DANA",
@@ -2342,7 +2458,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOPREMIUMXC",
@@ -2368,7 +2485,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 200,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOSUPERXC",
@@ -2394,7 +2512,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 200,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOSTANDARDXC",
@@ -2420,7 +2539,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 200,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOBASICXC",
@@ -2446,7 +2566,8 @@
       ],
       "payment_type": "e-wallet",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "XLUNLITURBOSUPERXC_PULSA",
@@ -2466,7 +2587,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 500,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "XLUNLITURBOPREMIUMXC_PULSA",
@@ -2486,7 +2608,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 500,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "XLUNLITURBOSTANDARDXC_PULSA",
@@ -2506,7 +2629,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 500,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "XLUNLITURBOBASICXC_PULSA",
@@ -2526,7 +2650,8 @@
       ],
       "payment_type": "pulsa",
       "platform_fee": 500,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": true
     },
     {
       "package_code": "49d1e047f7fc09be77dcb1bb2d4393cd",
@@ -2552,7 +2677,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "7edb228a26f1cdb8691d2fc23d75766e",
@@ -2578,7 +2704,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "e4b9610293057bf3bc0bc35288e22faa",
@@ -2604,7 +2731,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "dac06dd11e66ae88c09d43f8866ddd5e",
@@ -2630,7 +2758,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     },
     {
       "package_code": "ce6a05ce7c0b47b7cfb5412e58b6222f",
@@ -2656,7 +2785,8 @@
       ],
       "payment_type": "balance",
       "platform_fee": 0,
-      "category": "reguler"
+      "category": "reguler",
+      "isMultiPurchase": false
     }
   ],
   "transactions": [
@@ -4144,6 +4274,200 @@
       "paymentMethod": "balance",
       "createdAt": "2025-06-28T16:12:30.068Z",
       "paymentDetails": null
+    },
+    {
+      "id": "trx_1751177002833",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOSUPERXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T06:03:22.833Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751177020341",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOPREMIUMXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Mohon berikan jeda minimal 10 detik setiap kali percobaan transaksi pembelian paket!",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T06:03:40.341Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751183360919_0",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOVIU_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:49:20.919Z"
+    },
+    {
+      "id": "trx_1751183382306_1",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOTIKTOK_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:49:42.306Z"
+    },
+    {
+      "id": "trx_1751183404223_2",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBONETFLIXXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Netflix untuk Xtra Combo",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:50:04.223Z"
+    },
+    {
+      "id": "trx_1751183425516_3",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOYOUTUBEXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo YouTube untuk Xtra Combo",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:50:25.516Z"
+    },
+    {
+      "id": "trx_1751183448861_4",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOSUPERXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:50:48.861Z"
+    },
+    {
+      "id": "trx_1751183475603_5",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOPREMIUMXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Premium bayar ke XL Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:51:15.603Z"
+    },
+    {
+      "id": "trx_1751183502821_6",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOSTANDARDXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Standard bayar ke XL Rp20.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:51:42.821Z"
+    },
+    {
+      "id": "trx_1751183524330_7",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOBASICXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Basic bayar ke XL Rp10.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T07:52:04.330Z"
+    },
+    {
+      "id": "trx_1751185849794",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOVIU_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T08:30:49.794Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751185877029",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOTIKTOK_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T08:31:17.029Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751185898336",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBONETFLIXXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Netflix untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T08:31:38.336Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751186085826",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOVIU_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T08:34:45.826Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751186111938",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOTIKTOK_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T08:35:11.938Z",
+      "paymentDetails": null
     }
   ],
   "topups": [
@@ -4216,23 +4540,40 @@
       "status": "expired",
       "createdAt": "2025-06-27T08:30:07.827Z",
       "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADoUlEQVR4nO2aQbKjMAxEXZUD5Ehc3UfKAajyBEttCcifmcXYmcXTgoAxL5tG1W5TCkVRFEVRFEX9b9W89vf5s7Wyvc9afR4H3X3f0GV9an6FAWMlwy6e+/nyoL0e/njrZ8Uv8zwYMFYxDvnWmNrPDulv6dDFne/CgPElRlf4G/Q+OWRu7XhTD7axCgPGtxmma3t8l6k49O9+osGA8T1G/wlPYC724nH1Evyl/4AB418zvMYK7A8HzYcBYyUj09R/Q81hJULmvysYMOYwWvgEMxCvUmQR+piyrfQPVxoMGLMZZgyOQCAxLDN4nf8m3ehRFwwYSxn7WF4JdOStXdwaazoUNesKA8ZChnXdkRQY0sZ6U345zRS+NXXnAgPGSoa12daSvZWpbVY+zxiCVxgwFjJkEbQR0LeutleR2y2jMad/bRfvAAPGfIbacT8zo9vVfIq1fMPgRIMBYxXDRkzwPR8oj7TP6lPsJYjJN/8BA8Zkhi25tGuldVe43d3hpvWRcsGAsZJhoHoc3eOGlb3N90ulBzBgLGPY1OZJgaQftiFo+U2AAWMpQ+lV0NxA+JjdGD25uPRhwFjLqIqwwu2a9NOY4q8YgwHjC4yqs1JOYZYJvsjo3h+HAWMJI5ZcrmSzCHs6WE8uwzaY0YABYyEjHGvzr1UGqJwWX9cxGDDWMvw568Shdac9tNkaYzYZBox1DA9YFQi4xw3VN308sGnNdtc6DBjTGSMp8PTA5qv/2icDTRsGFibc/AcMGJMZLUVY5hP24rTRju3sJaTTYMBYx1AgEKmAg2Lx5RnsSznCfb8BBozJjHAMSg8k7jJ0nTJYU/2ntRgMGFMZZTiG1sV9YTjXz0r+GAsGjHUMmQVpuCPHqswUrtmb/AQMGIsZJt/m6VVV3prSg5pU32X+uOZjMGBMZvi66zhX19XjZ9Wb4H9Yz8GAMZVhoKF1X3I9s5UoSdx247aegwFjMsOmDtrIsfRlwK7Qq0+OFwMGjIWMvLwa3sEMRGhdwYGP/eQ/YMCYxcg0zTfbUPUPnsHqneicjwQYMGYxJOo97W5pVTY2ZfWQ3yjXDBYGjNmM2n/UjmVgH0PXu+b1Zi0QDBiLGSPWsnppLCo1a5ty8x8wYKxi6FMAOYYyUi7b9jrvx37WOgwYsxlJw9uwErEMG8s1cWHAWMnoP+rJeSdLq7LTjuvF3sKAsYbhJY+b3e64cUzchtv98K01DBhzGRRFURRFURT1f9Qv8rHTrXwy+GIAAAAASUVORK5CYII="
+    },
+    {
+      "id": "6ecbff1f-c844-41b0-8ee1-4a67a982a3f5",
+      "userId": "user_1751188248045",
+      "baseAmount": 10000,
+      "uniqueAmount": 10650,
+      "status": "canceled",
+      "createdAt": "2025-06-29T09:12:04.439Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADg0lEQVR4nO2aQZLrIAxEqZoD5Ei5OkfyAVKlHyO1hDPJ7CB/8XrhMUE8z0JWNcKtIYQQQggh9L/JQo9m/RaX1nR5Dp9zfjmDx91QhwFjJ8MHZ7wd486s3Y+a/QmGHT8W8FoGA8YuhmfzQ/G6DFqsPId3MeLFgAHjq4zmWa/kPlP/uWgwPA4GjC8yVInPvJZDcK7f5bNgwPgCY/zxOTP/LaPcT3g5Vty8DAaMTYzQvBf761IvAQwY+xgXpYs95CLGxY5PC2DA2MMIP2ujmRU12f1sKTO8lbPoMGDsZZzxag2EjpHmamtFfDUOYMDYzYjQ2IuN4cjmmFeJ9saB97vs0S6CAWM5I/I6s950puXNLM/w50/OnXoLMGBsZHiam+buR5naqslRrGUqfvfHYMBYy3Bds3lU4l5bs1qu/IcBYy+j56LMcJ1kmXzvKNvaqX16X2DAWMloLV1spXRMhE+o46ypYsOAsY+hKHVeTRnuT8hDhDAV6TFgwNjKyHI8dQ/S3ob5tUvjwBtcMGBsZMgYZKjJRYR3KGX+/6rrMGCsZkzdq6OaBKq/Le/uMrrv9mIwYCxmlKIcN0/z0BEhamvBgPENhoN6m/2sQmt5zrb5DgaMXYxytuUYyk94xfYGVz7h3b8AA8ZaxpTDcgfhIl6ecImDAWMrQyCpjx9uNcw0n+I+JDwMGKsYlo51ispzruq3+qLrdg0GjG2M0Vutz1K9wXp7zHce95d3gAFjMaMLNFRfX/nQvxZw8/uIuOotwICxieFz8aHKCVLVbbUD8x7sgI4S/VqTYcBYzkhFcrfYkMXWLGfz2AsGjG8wbvIE2Qu4MJT//gTFwYCxnxFbLrW1pi9YstUltxt1+kUwYKxlKIeV3GOYoJeUtupydRgwdjLmcpwpnbuteAmU5l3NBBgwtjIEslS6gwIp/y2OYt8JBoyVjDMgyuxwuzK1U2G2S8KHlYABYyPD4isAtQtOxZYr1WWDY9h+eQcYMNYyJtpkYG825X9L26Dl77wDDBgLGcrnh04DhuQdXhtcPV8CGDC2Mnzg8ZePAjLXldw/Vm9CazBgbGWM+ivGjBwpfbNr+zXfBBgwvsKIfde1MKcU/KE/BgPGLoZrKriX0PtJ6m0u2zBg7GP4yvQOI179Vtnb+O1DIxYGjOWMUFhZfVWVpVe2wU+3/OJZDwPGPgZCCCGEEEL/h/4BLz7Yufo5ezIAAAAASUVORK5CYII="
     }
   ],
   "announcements": [
     {
-      "message": "LANGKAH 1\nLogin OTP untuk nomor yang akan didor.\nSiapkan saldo DANA minimal 50K.\nBeli Turbo Premium & bayar 50K via DANA.\nSaldo akan direfund ke akun DANA.\nLANGKAH 2\nBeli Turbo SUPER - 30K\nBeli Turbo BASIC - 10K\nBeli Turbo STANDART - 20K\nAdd-ons (TikTok, dll) - 25K (semua refund)\nLANGKAH 3\nBeli XTRA COMBO SPESIAL 8GB - 16K (tidak refund)\nTunggu 1 jam, add-ons akan masuk otomatis.\nWAJIB top-up ke BOT untuk saldo.\nLANGKAH 4\nJANGAN NANYA LAGI..........!",
-      "createdAt": "2025-06-25T12:06:53.435Z",
-      "id": "ann_1750853213435"
+      "message": "cek",
+      "createdAt": "2025-06-29T13:05:23.743Z",
+      "id": "ann_1751202323743"
     }
   ],
   "maintenanceMode": false,
   "fullScreenAnnouncement": null,
   "settings": {
-    "maintenanceMode": true,
+    "maintenanceMode": false,
     "maintenance": {
       "manual_on": false,
       "start_time": null,
       "end_time": null
     }
-  }
+  },
+  "tutorials": [],
+  "tutorialContent": [
+    {
+      "id": "step_1751174170484",
+      "type": "text",
+      "content": "test"
+    }
+  ]
 }

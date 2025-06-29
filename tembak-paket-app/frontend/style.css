@@ -1536,3 +1536,154 @@ select#package-dropdown {
     margin: 0;
     padding: 0;
 }
+
+.checkbox-package-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    background-color: #f9f9f9;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.checkbox-item:last-child {
+    border-bottom: none;
+}
+
+.checkbox-item input[type="checkbox"] {
+    margin-right: 1rem;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.checkbox-item label {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    width: 100%;
+}
+
+.checkbox-item label strong {
+    font-size: 1em;
+}
+
+.checkbox-item label small {
+    font-size: 0.85em;
+    color: #555;
+}
+
+.info-message {
+    padding: 1rem;
+    background-color: #e0f7fa;
+    border: 1px solid #4dd0e1;
+    color: #006064;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.realtime-log {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fdfdfd;
+}
+
+.realtime-log li {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e0e0e0;
+    transition: background-color 0.3s;
+}
+
+.realtime-log li:last-child {
+    border-bottom: none;
+}
+
+.log-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.log-message {
+    font-size: 0.9em;
+    padding-left: 28px; /* Sejajarkan dengan teks header */
+    color: #555;
+}
+
+.log-message.success {
+    color: #2e7d32; /* Hijau tua */
+}
+
+.log-message.error {
+    color: #c62828; /* Merah tua */
+}
+
+.log-message .delay-message {
+    font-style: italic;
+    color: #757575;
+    font-size: 0.9em;
+    margin-top: 4px;
+}
+
+.log-icon {
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+.log-icon.success {
+    color: var(--success-color);
+}
+
+.log-icon.error {
+    color: var(--danger-color);
+}
+
+/* Spinner sederhana untuk status proses */
+.log-icon.processing::before {
+    content: '⚙️';
+    display: inline-block;
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: transparent; /* Latar belakang transparan */
+    backdrop-filter: blur(2px); /* Efek blur */
+    -webkit-backdrop-filter: blur(5px); /* Untuk dukungan Safari */
+    z-index: 999;
+    transition: backdrop-filter 0.3s ease-in-out, -webkit-backdrop-filter 0.3s ease-in-out;
+}
+
+/* Tambahkan style untuk kontainer utama agar efek blur bekerja dengan baik */
+.dashboard-container {
+    transition: filter 0.3s ease-in-out, -webkit-filter 0.3s ease-in-out;
+}
+
+.sidebar-open .dashboard-container {
+    filter: blur(3px);
+    -webkit-filter: blur(3px);
+}
+
+

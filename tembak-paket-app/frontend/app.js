@@ -1159,6 +1159,8 @@ function renderAdminDashboard(container) {
                         <option value="non-otp" ${pkg.category === 'non-otp' ? 'selected' : ''}>Non-OTP (Akrab)</option>
                     </select>
                 </label>
+                
+                <label>Multi Tembak: <input type="checkbox" class="multi-purchase-checkbox" ${pkg.isMultiPurchase ? 'checked' : ''}></label>
                 <label>Tampilkan: <input type="checkbox" class="visibility-checkbox" ${pkg.isVisible ? 'checked' : ''}></label>
             </div>
         </li>
@@ -1475,43 +1477,52 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
      * Mengirim semua perubahan fee dan visibilitas paket ke backend.
      */
     document.getElementById('save-all-btn')?.addEventListener('click', async (e) => {
-        const button = e.target;
-        if (!confirm('Apakah Anda yakin ingin menyimpan semua perubahan pada paket (biaya layanan dan visibilitas)?')) return;
-        
-        const updates = [];
-         document.querySelectorAll('.package-item').forEach(item => {
+    const button = e.target;
+    if (!confirm('Apakah Anda yakin ingin menyimpan semua perubahan pada paket?')) return;
+
+    const updates = [];
+    document.querySelectorAll('.package-item').forEach(item => {
+        // Ambil semua elemen dari dalam setiap item paket
         const id = item.dataset.packageId;
         const feeInput = item.querySelector('.fee-input');
         const visibilityCheckbox = item.querySelector('.visibility-checkbox');
-        const categorySelect = item.querySelector('.category-select'); // Ambil elemen select
+        const categorySelect = item.querySelector('.category-select'); // Baris ini penting
+        const multiPurchaseCheckbox = item.querySelector('.multi-purchase-checkbox');
 
-        updates.push({ 
-            package_code: id, 
-            platform_fee: parseFloat(feeInput?.value || '0'), 
+        // Dorong objek yang lengkap ke array updates
+        updates.push({
+            package_code: id,
+            platform_fee: parseFloat(feeInput?.value || '0'),
             isVisible: visibilityCheckbox?.checked || false,
-            category: categorySelect?.value || 'reguler' // Ambil nilainya
+            category: categorySelect ? categorySelect.value : 'reguler',
+            isMultiPurchase: multiPurchaseCheckbox?.checked || false
         });
-        });
-        
-        button.disabled = true; button.textContent = 'Menyimpan...';
-        displayFeedback('manage-feedback', '', false);
-        try {
-            const { data, status } = await apiFetch('/admin/packages/bulk-update', {
-                method: 'PUT',
-                body: { packages: updates }
-            });
-            if (status === 200 && data.status) {
-                displayFeedback('manage-feedback', data.message, false);
-            } else {
-                throw new Error(data.message || 'Gagal menyimpan perubahan: Respons tidak valid.');
-            }
-        } catch (error) {
-            displayFeedback('manage-feedback', error.message, true);
-        } finally {
-            button.disabled = false;
-            button.textContent = 'Simpan Semua Perubahan';
-        }
     });
+
+    button.disabled = true;
+    button.textContent = 'Menyimpan...';
+    displayFeedback('manage-feedback', '', false);
+
+    try {
+        const { data, status } = await apiFetch('/admin/packages/bulk-update', {
+            method: 'PUT',
+            body: { packages: updates }
+        });
+
+        if (status === 200 && data.status) {
+            displayFeedback('manage-feedback', data.message, false);
+            showToast('Perubahan paket berhasil disimpan!', false);
+        } else {
+            throw new Error(data.message || 'Gagal menyimpan perubahan.');
+        }
+    } catch (error) {
+        displayFeedback('manage-feedback', error.message, true);
+        showToast(error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Simpan Semua Perubahan';
+    }
+});
 
     /**
      * Event handler untuk input pencarian paket.
@@ -1836,50 +1847,6 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
     });
 
     /**
-     * Event handler untuk tombol 'Simpan Semua Perubahan' pada paket.
-     * Mengirim semua perubahan fee dan visibilitas paket ke backend.
-     */
-    document.getElementById('save-all-btn')?.addEventListener('click', async (e) => {
-        const button = e.target;
-        if (!confirm('Apakah Anda yakin ingin menyimpan semua perubahan pada paket (biaya layanan dan visibilitas)?')) return;
-        
-        const updates = [];
-        document.querySelectorAll('.package-item').forEach(item => {
-            const id = item.dataset.packageId;
-            const feeInput = item.querySelector('.fee-input');
-            const visibilityCheckbox = item.querySelector('.visibility-checkbox');
-            
-            const fee = parseFloat(feeInput?.value || '0'); // Gunakan optional chaining
-            const isVisible = visibilityCheckbox?.checked || false; // Gunakan optional chaining
-
-            updates.push({ 
-                package_code: id, 
-                platform_fee: isNaN(fee) ? 0 : fee, 
-                isVisible: isVisible 
-            });
-        });
-        
-        button.disabled = true; button.textContent = 'Menyimpan...';
-        displayFeedback('manage-feedback', '', false);
-        try {
-            const { data, status } = await apiFetch('/admin/packages/bulk-update', {
-                method: 'PUT',
-                body: { packages: updates }
-            });
-            if (status === 200 && data.status) {
-                displayFeedback('manage-feedback', data.message, false);
-            } else {
-                throw new Error(data.message || 'Gagal menyimpan perubahan: Respons tidak valid.');
-            }
-        } catch (error) {
-            displayFeedback('manage-feedback', error.message, true);
-        } finally {
-            button.disabled = false;
-            button.textContent = 'Simpan Semua Perubahan';
-        }
-    });
-
-    /**
      * Event handler untuk input pencarian paket.
      * Menyaring daftar paket yang ditampilkan berdasarkan nama.
      */
@@ -2099,83 +2066,231 @@ function renderPhoneVerificationPanel() {
  * @param {HTMLElement} container - Elemen DOM utama yang akan diisi (mainContent).
  */
 async function renderPackagesPage(container) {
-    // 1. Buat elemen baru untuk bagian paket, JANGAN timpa container.
-    const packageSection = document.createElement('div');
-    packageSection.className = 'page-content';
-    packageSection.id = 'package-selection-area';
 
-    // 2. Isi elemen baru tersebut dengan HTML yang kita inginkan
-    packageSection.innerHTML = `
-        <div class="page-header"><h1>Pilih Paket</h1></div>
-        <div class="form-group">
-            <input type="text" id="package-search-input" placeholder="🔍 Cari nama paket...">
+    // KODE BARU: Cek saldo pengguna terlebih dahulu
+    if (currentUser && currentUser.balance <= 0) {
+        
+        // Jika saldo 0, tampilkan panel terkunci
+        const lockedHTML = `
+        <div class="packages-locked-container">
+            <svg class="locked-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="url(#icon-gradient)">
+                <defs>
+                    <linearGradient id="icon-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#a855f7;" />
+                        <stop offset="100%" style="stop-color:#6d28d9;" />
+                    </linearGradient>
+                </defs>
+                <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3A5.25 5.25 0 0012 1.5zM8.25 6.75a3.75 3.75 0 117.5 0v3h-7.5v-3zM12.75 12a.75.75 0 00-1.5 0v2.25a.75.75 0 001.5 0V12z" clip-rule="evenodd" />
+            </svg>
+            
+            <h3>Kepo isinya? Top up solusinya</h3>
+            <p>Saldo Anda saat ini tidak mencukupi untuk melihat dan membeli paket.</p>
+            <button id="locked-topup-btn" class="topup-cta-btn">Top Up Saldo Sekarang</button>
         </div>
-        <div class="form-group">
-            <label for="package-dropdown">Pilih paket yang tersedia:</label>
-            <select id="package-dropdown">
-                <option value="">-- Muat paket... --</option>
-            </select>
-        </div>
-        <div id="package-details-area" style="display: none; margin-top: 2rem;"></div>
     `;
 
-    // 3. Tambahkan elemen baru ini ke dalam container utama.
-    container.appendChild(packageSection);
+    // Sisa kode di bawahnya tidak perlu diubah...
+    const packageSection = document.getElementById('package-selection-area');
+    if (packageSection) packageSection.remove();
+    container.innerHTML += lockedHTML;
     
-    // Ambil referensi elemen dari dalam packageSection yang baru dibuat
-    const packageDropdown = packageSection.querySelector('#package-dropdown');
-    const searchInput = packageSection.querySelector('#package-search-input');
+    document.getElementById('locked-topup-btn')?.addEventListener('click', renderTopUpModal);
 
-    // Fungsi untuk mengisi ulang dropdown berdasarkan filter
-    const populateDropdown = (searchTerm = '') => {
-        if (!packageDropdown) return;
-        
-        const regulerPackages = visiblePackages.filter(pkg => 
-            (!pkg.category || pkg.category === 'reguler') &&
-            pkg.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        packageDropdown.innerHTML = '<option value="">-- Silakan pilih paket --</option>'; 
-        
-        if (regulerPackages.length > 0) {
-            regulerPackages.forEach(pkg => {
-                const option = document.createElement('option');
-                option.value = pkg.package_code;
-                const feeText = `(Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})`;
-                option.textContent = `${pkg.name} ${feeText}`;
-                packageDropdown.appendChild(option);
-            });
-        } else {
-             packageDropdown.innerHTML = '<option value="">Paket tidak ditemukan</option>';
-        }
-    };
+    return;
+}
     
-    // Event listener untuk dropdown
-    packageDropdown?.addEventListener('change', (e) => {
-        displaySelectedPackageDetails(e.target.value);
-    });
+    // --- KODE LAMA ANDA YANG AKAN DIJALANKAN JIKA SALDO LEBIH DARI 0 ---
+    // (Kode di bawah ini tidak berubah, hanya dipindahkan ke dalam blok 'else')
 
-    // Event listener untuk kolom pencarian
-    searchInput?.addEventListener('input', (e) => {
-        populateDropdown(e.target.value);
-        displaySelectedPackageDetails(''); // Sembunyikan detail saat mencari
-    });
+    const existingSection = document.getElementById('package-selection-area');
+    if (existingSection) existingSection.remove();
 
-    // Ambil data dan isi dropdown untuk pertama kali
-    try {
-        if (visiblePackages.length === 0) {
+    if (visiblePackages.length === 0) {
+        try {
             const { data, status } = await apiFetch('/user/packages');
             if (status === 200 && data.status && Array.isArray(data.data)) {
                 visiblePackages = data.data;
             } else {
-                 throw new Error(data.message || "Gagal memuat paket");
+                throw new Error(data.message || "Gagal memuat paket");
             }
+        } catch (error) {
+            container.innerHTML += `<div class="page-content"><p class="error-message">Gagal memuat daftar paket: ${error.message}</p></div>`;
+            return;
         }
-        populateDropdown(); // Panggil untuk mengisi dropdown saat pertama kali
-    } catch (error) { 
-        if (packageDropdown) packageDropdown.innerHTML = `<option value="">Gagal memuat paket.</option>`;
-        console.error("Gagal memuat paket:", error);
     }
+
+    const packageSection = document.createElement('div');
+    packageSection.id = 'package-selection-area';
+
+    const multiPurchasePackages = visiblePackages.filter(pkg => pkg.isMultiPurchase === true && pkg.isVisible);
+    const regularPackages = visiblePackages.filter(pkg => !pkg.isMultiPurchase && pkg.category !== 'non-otp' && pkg.isVisible);
+
+    const multiPurchaseHTML = multiPurchasePackages.length > 0 ? `
+        <div class="page-content" id="multi-purchase-section">
+            <div class="page-header"><h3>Beli Multi Paket</h3></div>
+            <p>Pilih satu atau lebih paket di bawah ini untuk dieksekusi secara berurutan. (Gunakan Metode ini YTTA)</p>
+            <div id="multi-pulsa-feedback"></div>
+            <div id="pulsa-package-list" class="checkbox-package-list">
+                ${multiPurchasePackages.map(pkg => `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="pkg-${pkg.package_code}" data-package-id="${pkg.package_code}" class="pulsa-checkbox">
+                        <label for="pkg-${pkg.package_code}">
+                            <strong>${pkg.name}</strong>
+                            <small>Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')}</small>
+                        </label>
+                    </div>
+                `).join('')}
+            </div>
+            <button id="execute-multi-pulsa-btn" style="margin-top: 1rem;">Tembak Paket Terpilih</button>
+        </div>
+    ` : '';
+
+    const regularPackagesHTML = regularPackages.length > 0 ? `
+        <div class="page-content" id="regular-package-section">
+            <div class="page-header"><h3>Beli Paket Satuan</h3></div>
+            <div class="form-group">
+                <input type="text" id="package-search-input" placeholder="🔍 Cari nama paket reguler...">
+            </div>
+            <div class="form-group">
+                <label for="package-dropdown">Pilih paket yang tersedia:</label>
+                <select id="package-dropdown">
+                    <option value="">-- Muat paket... --</option>
+                </select>
+            </div>
+            <div id="package-details-area" style="display: none; margin-top: 2rem;"></div>
+        </div>
+    ` : '';
+    
+    packageSection.innerHTML = multiPurchaseHTML + regularPackagesHTML;
+    container.appendChild(packageSection);
+
+    const packageDropdown = document.getElementById('package-dropdown');
+    const searchInput = document.getElementById('package-search-input');
+    const populateRegularDropdown = (searchTerm = '') => {
+        if (!packageDropdown) return;
+        const filtered = regularPackages.filter(pkg => pkg.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        packageDropdown.innerHTML = '<option value="">-- Silakan pilih paket --</option>';
+        if (filtered.length > 0) {
+            filtered.forEach(pkg => {
+                const option = document.createElement('option');
+                option.value = pkg.package_code;
+                option.textContent = `${pkg.name} (Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})`;
+                packageDropdown.appendChild(option);
+            });
+        } else {
+            packageDropdown.innerHTML = '<option value="">Paket tidak ditemukan</option>';
+        }
+    };
+    if (packageDropdown) {
+        populateRegularDropdown();
+        packageDropdown.addEventListener('change', (e) => displaySelectedPackageDetails(e.target.value));
+    }
+    searchInput?.addEventListener('input', (e) => {
+        populateRegularDropdown(e.target.value);
+        displaySelectedPackageDetails('');
+    });
+
+    document.getElementById('execute-multi-pulsa-btn')?.addEventListener('click', handleMultiPulsaPurchase);
+}
+
+async function handleMultiPulsaPurchase(e) {
+    const button = e.currentTarget;
+    const feedbackContainer = document.getElementById('multi-pulsa-feedback');
+    if (!button || !feedbackContainer) return;
+
+    if (!phoneAuth.accessToken) {
+        showToast("Silakan verifikasi nomor Anda terlebih dahulu di bagian atas.", true);
+        return;
+    }
+
+    const selectedCheckboxes = document.querySelectorAll('.pulsa-checkbox:checked');
+    const packagesToProcess = Array.from(selectedCheckboxes).map(cb => {
+        return visiblePackages.find(p => p.package_code === cb.dataset.packageId);
+    });
+
+    if (packagesToProcess.length === 0) {
+        showToast("Pilih minimal satu paket untuk dieksekusi.", true);
+        return;
+    }
+
+    if (!confirm(`Anda akan mengeksekusi ${packagesToProcess.length} paket. Proses akan berjalan di browser. JANGAN tutup tab ini sampai proses selesai. Lanjutkan?`)) {
+        return;
+    }
+
+    button.disabled = true;
+    // Buat struktur daftar untuk log
+    feedbackContainer.innerHTML = `<h4>Memulai Proses...</h4><ul id="realtime-log-list" class="realtime-log"></ul>`;
+    const logList = document.getElementById('realtime-log-list');
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    for (let i = 0; i < packagesToProcess.length; i++) {
+        const pkg = packagesToProcess[i];
+        
+        // Buat list item baru untuk setiap paket
+        const logItem = document.createElement('li');
+        logItem.id = `log-item-${pkg.package_code}`;
+        logItem.innerHTML = `
+            <div class="log-entry-header">
+                <span class="log-icon processing"></span>
+                <span>(${i + 1}/${packagesToProcess.length}) Memproses: <strong>${pkg.name}</strong></span>
+            </div>
+        `;
+        logList.appendChild(logItem);
+
+        try {
+            const { data, status } = await apiFetch('/purchase', {
+                method: 'POST',
+                body: {
+                    packageId: pkg.package_code,
+                    phone: phoneAuth.phone,
+                    accessToken: phoneAuth.accessToken,
+                    paymentMethod: 'balance'
+                }
+            });
+
+            if (currentUser && typeof data.newBalance === 'number') {
+                currentUser.balance = data.newBalance;
+                document.getElementById('user-balance').textContent = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
+            }
+
+            if (status === 200 && data.status) {
+                // Update log item menjadi status BERHASIL
+                logItem.innerHTML = `
+                    <div class="log-entry-header">
+                        <span class="log-icon success">✔</span>
+                        <span>(${i + 1}/${packagesToProcess.length}) <strong>${pkg.name}</strong></span>
+                    </div>
+                    <div class="log-message success">${data.message}</div>
+                `;
+            } else {
+                throw new Error(data.message || "Gagal dari provider.");
+            }
+
+        } catch (error) {
+            // Update log item menjadi status GAGAL
+            logItem.innerHTML = `
+                <div class="log-entry-header">
+                    <span class="log-icon error">❌</span>
+                    <span>(${i + 1}/${packagesToProcess.length}) <strong>${pkg.name}</strong></span>
+                </div>
+                <div class="log-message error">${error.message}</div>
+            `;
+        }
+        
+        // Tambahkan pesan jeda jika bukan item terakhir
+        if (i < packagesToProcess.length - 1) {
+            const delayMessageDiv = document.createElement('div');
+            delayMessageDiv.className = 'log-message';
+            delayMessageDiv.innerHTML = `<div class="delay-message">Menunggu jeda ${12000 / 1000} detik...</div>`;
+            logItem.appendChild(delayMessageDiv);
+            await delay(11000);
+        }
+    }
+
+    feedbackContainer.innerHTML += '<h4 style="margin-top: 1rem; text-align: center; color: var(--success-color);">✔ Semua Proses Selesai.</h4>';
+    button.disabled = false;
+    selectedCheckboxes.forEach(cb => cb.checked = false);
 }
 
 /**
