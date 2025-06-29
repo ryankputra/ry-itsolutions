@@ -21,36 +21,53 @@ let isMaintenanceMode = false;
 // ===============================================
 
 /**
- * Fungsi utama yang dipanggil saat aplikasi dimuat atau hash URL berubah.
- * Menginisialisasi data pengguna dan merender tampilan yang sesuai.
+ * Fungsi utama yang dipanggil saat aplikasi dimuat.
  */
-
 async function main() {
-    // Jalankan semua async ops secara paralel jika memungkinkan
-    const promises = [];
-    promises.push(checkLoginStatus()); // Periksa status login pengguna. Ini harus pertama.
+    await checkLoginStatus();
 
-    // Menunggu checkLoginStatus selesai sebelum melanjutkan logika rendering
-    await Promise.all(promises);
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const isAdminLoginAttempt = params.get('admin_login') === 'true';
 
-    // Setelah checkLoginStatus, baru inisialisasi KMSP dan pengumuman jika sudah login
+    if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin') && !isAdminLoginAttempt) {
+        renderGlobalMaintenancePage();
+        return;
+    }
+
     if (currentUser) {
         const loggedInPromises = [
-            initKMSPsession(), // Ini hanya akan berfungsi jika ada kmspAuth di localStorage
-            fetchAnnouncement() // Endpoint ini sekarang harusnya hanya memerlukan isAuthenticated
+            initKMSPsession(),
+            fetchAnnouncement()
         ];
-
-        // HANYA ambil saldo KMSP jika pengguna adalah admin
         if (currentUser.role === 'admin') {
-            loggedInPromises.push(fetchKMSPBalance()); // Endpoint ini memerlukan isAdmin
+            loggedInPromises.push(fetchKMSPBalance());
         }
-        await Promise.all(loggedInPromises); // Tunggu semua promise ini selesai
+        await Promise.all(loggedInPromises);
     }
-    renderApp();
-    window.removeEventListener('hashchange', renderApp); // Hapus listener lama jika ada
-    window.addEventListener('hashchange', renderApp);
+    
+    renderApp(isAdminLoginAttempt); 
+    
+    window.removeEventListener('hashchange', renderApp);
+    window.addEventListener('hashchange', () => renderApp(false));
 }
 
+/**
+ * Fungsi BARU untuk merender halaman maintenance global yang menutupi seluruh situs.
+ */
+function renderGlobalMaintenancePage() {
+    // Langsung menimpa seluruh konten elemen #app
+    app.innerHTML = `
+        <div class="maintenance-container">
+            <svg class="maintenance-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.4l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1 0-2.4l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            
+            <h2>MAINTENANCE</h2>
+            <p>Maaf, layanan sedang dalam pemeliharaan untuk meningkatkan kualitas.<br>Silakan coba lagi beberapa saat nanti.</p>
+            <p class="by-line">By RyyStore</p>
+        </div>
+    `;
+}
 /**
  * Menginisialisasi atau memperpanjang sesi login nomor HP KMSP dari localStorage.
  * Memperbarui objek phoneAuth global.
@@ -130,52 +147,31 @@ async function fetchAnnouncement() {
     }
 }
 
-
 /**
  * Merender tampilan utama aplikasi berdasarkan hash URL.
- * Mengarahkan pengguna yang sudah login ke dashboard dan pengguna belum login ke halaman autentikasi.
  */
-function renderApp() {
+function renderApp(isAdminLoginAttempt = false) {
     const hash = window.location.hash || '#';
-    
-    // Tampilkan spinner setiap kali halaman berubah
+    const cleanHash = hash.split('?')[0] || '#'; 
+
     app.innerHTML = '<div class="loading-spinner"></div>';
 
-    // Logika UTAMA: Periksa apakah pengguna sudah login atau belum
     if (currentUser) {
-        // ---- JIKA PENGGUNA SUDAH LOGIN ----
-        
-        // Arahkan ke dashboard jika pengguna masih di halaman auth
-        const targetHash = (hash === '#' || hash === '#login' || hash === '#register') ? '#dashboard' : hash;
-        if (window.location.hash !== targetHash) {
+        const targetHash = (cleanHash === '#' || cleanHash === '#login' || cleanHash === '#register') ? '#dashboard' : cleanHash;
+        if (window.location.hash.split('?')[0] !== targetHash) {
             window.location.hash = targetHash;
-            return; // Hentikan eksekusi, renderApp akan dipanggil lagi oleh event hashchange
+            return; 
         }
 
-        // Render halaman yang sesuai untuk pengguna yang sudah login
         switch (targetHash) {
-            case '#history':
-                renderDashboard('history');
-                break;
-            case '#profile':
-                renderDashboard('profile');
-                break;
-            case '#paket-akrab':
-                renderDashboard('paket-akrab');
-                break;
-            case '#tutorial':
-                renderDashboard('tutorial');
-                break;
-            case '#kontak-admin':
-                renderDashboard('kontak-admin');
-                break;
+            case '#history': renderDashboard('history'); break;
+            case '#profile': renderDashboard('profile'); break;
+            case '#paket-akrab': renderDashboard('paket-akrab'); break;
+            case '#tutorial': renderDashboard('tutorial'); break;
+            case '#kontak-admin': renderDashboard('kontak-admin'); break;
             case '#admin':
-                if (currentUser.role === 'admin') {
-                    renderDashboard('admin');
-                } else {
-                    // Jika bukan admin mencoba akses, lempar ke dashboard
-                    window.location.hash = '#dashboard';
-                }
+                if (currentUser.role === 'admin') renderDashboard('admin');
+                else window.location.hash = '#dashboard';
                 break;
             case '#dashboard':
             default:
@@ -183,20 +179,22 @@ function renderApp() {
                 break;
         }
     } else {
-        // ---- JIKA PENGGUNA BELUM LOGIN (currentUser is null) ----
-        
-        switch (hash) {
+        switch (cleanHash) {
             case '#register':
                 renderRegisterPage();
                 break;
             case '#login':
-            default: // Jika hash tidak dikenali atau kosong, arahkan ke login
+            default: 
                 renderLoginPage();
                 break;
         }
     }
-}
 
+    if (isAdminLoginAttempt) {
+        // Ganti URL menjadi #login bersih setelah semuanya selesai dirender
+        window.history.replaceState(null, null, window.location.pathname + '#login');
+    }
+}
 
 /**
  * Merender halaman profil pengguna secara lengkap.
@@ -2966,7 +2964,7 @@ async function apiFetch(endpoint, options = {}) {
         const config = {
             method: options.method || 'GET',
             headers: { ...options.headers },
-            credentials: 'include', // Penting untuk mengirim cookie sesi
+            credentials: 'include',
         };
 
         if (options.body && !(options.body instanceof FormData)) {
@@ -2978,46 +2976,43 @@ async function apiFetch(endpoint, options = {}) {
 
         const response = await fetch(API_BASE_URL + endpoint, config);
 
-        // Langsung tangani 401/403 DI SINI sebelum mencoba membaca body
+        // --- PERBAIKAN UTAMA DI SINI ---
         if (response.status === 401 || response.status === 403) {
-            // Hanya tampilkan alert jika belum di halaman login
-            if (window.location.hash !== '#login') {
-                alert('Sesi Anda tidak valid atau Anda tidak memiliki izin. Harap login kembali.');
+            currentUser = null;
+            localStorage.removeItem('kmspAuth');
+            
+            const currentHash = window.location.hash.split('?')[0];
+
+            // Hanya redirect paksa jika pengguna TIDAK sedang berada di halaman login atau register.
+            // Ini mencegah 'reset' URL saat mencoba admin login.
+            if (currentHash !== '#login' && currentHash !== '#register') {
+                window.location.hash = '#login';
             }
-            currentUser = null; // Pastikan currentUser direset
-            phoneAuth = { phone: null, accessToken: null, authId: null };
-            localStorage.removeItem('kmspAuth'); // Hapus sesi KMSP jika ada
-            window.location.hash = '#login'; // Arahkan ke halaman login
-            // Tidak perlu panggil main() lagi di sini, karena hashchange event akan memanggil renderApp
-            throw new Error(`Akses Ditolak (HTTP ${response.status})`);
+            
+            // Tetap lempar error agar proses lain tahu bahwa permintaan gagal.
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Akses Ditolak (HTTP ${response.status})`);
         }
+        // --- AKHIR PERBAIKAN ---
 
         const contentType = response.headers.get("content-type");
-        let data;
-
         if (contentType && contentType.includes("application/json")) {
-            data = await response.json();
+            const data = await response.json();
+            if (!response.ok && response.status !== 202) {
+                 throw new Error(data.message || `Terjadi kesalahan pada server (HTTP ${response.status})`);
+            }
+            return { data, status: response.status };
         } else {
             const textResponse = await response.text();
-            console.error(`API ${endpoint} response not JSON:`, textResponse);
-            if (!response.ok) {
-                throw new Error(`Terjadi kesalahan pada server (HTTP ${response.status}). Respons: ${textResponse.substring(0, 100)}...`);
-            }
-            throw new Error(`Respons dari server untuk ${endpoint} bukan format JSON yang diharapkan.`);
+            throw new Error(`Respons dari server bukan format JSON. Respons: ${textResponse.substring(0, 150)}...`);
         }
-
-        // Lempar error jika status HTTP bukan 2xx dan bukan 202
-        if (!response.ok && response.status !== 202) {
-            throw new Error(data.message || `Terjadi kesalahan pada server (HTTP ${response.status})`);
-        }
-
-        return { data, status: response.status };
     } catch (error) {
-        console.error("Kesalahan API Fetch:", error);
-        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error("Gagal terhubung ke server backend. Pastikan server berjalan dan koneksi internet Anda stabil.");
+        // Jangan redirect dari sini, biarkan penanganan error di atas yang melakukannya.
+        console.error("Kesalahan API Fetch:", error.message);
+        if (error.message.includes('Failed to fetch')) {
+             throw new Error("Gagal terhubung ke server. Pastikan server backend berjalan.");
         }
-        throw error;
+        throw error; // Lemparkan kembali error agar bisa ditangani oleh fungsi pemanggil.
     }
 }
 

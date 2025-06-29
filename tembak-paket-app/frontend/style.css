@@ -1686,4 +1686,40 @@ select#package-dropdown {
     -webkit-filter: blur(3px);
 }
 
+.maintenance-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+    background-color: #f8f9fa;
+    color: #333;
+    padding: 2rem;
+}
 
+.maintenance-container h2 {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.maintenance-container p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    max-width: 500px;
+}
+
+.maintenance-icon {
+    width: 80px;
+    height: 80px;
+    stroke: var(--primary-color);
+    opacity: 0.8;
+}
+
+.by-line {
+    margin-top: 2rem;
+    font-size: 0.9rem;
+    color: #888;
+}

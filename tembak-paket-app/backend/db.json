@@ -5,7 +5,7 @@
       "name": "admin",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$qDjzr6cBjZYzEBRRrZ3Y5eQN5F5pnuwyLQQmOyj/ja2pRDS5QGO2y",
-      "balance": 12600,
+      "balance": 11100,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
       "verifiedPhone": "6287767287284",
@@ -4468,6 +4468,48 @@
       "paymentMethod": "balance",
       "createdAt": "2025-06-29T08:35:11.938Z",
       "paymentDetails": null
+    },
+    {
+      "id": "trx_1751202443418",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOVIU_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T13:07:23.418Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751202465241",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOTIKTOK_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo TikTok untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T13:07:45.241Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751202488487",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBONETFLIXXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Netflix untuk Xtra Combo",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-29T13:08:08.487Z",
+      "paymentDetails": null
     }
   ],
   "topups": [
@@ -4561,7 +4603,7 @@
   "maintenanceMode": false,
   "fullScreenAnnouncement": null,
   "settings": {
-    "maintenanceMode": false,
+    "maintenanceMode": true,
     "maintenance": {
       "manual_on": false,
       "start_time": null,
