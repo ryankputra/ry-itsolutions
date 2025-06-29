@@ -803,6 +803,25 @@ function renderRegisterPage() {
 
 function renderDashboard(activePage = 'packages') {
     const isAdmin = currentUser.role === 'admin';
+
+    // --- PERBAIKAN UTAMA: PENGECEKAN DIPINDANKAN KE SINI ---
+    // Cek status maintenance di level tertinggi dasbor.
+    if (isMaintenanceMode && !isAdmin) {
+       app.innerHTML = `
+        <div class="maintenance-container">
+            <svg class="maintenance-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.4l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1 0-2.4l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            
+            <h2>MODE MAINTENANCE AKTIF</h2>
+            <p>Maaf, layanan sedang dalam perbaikan untuk meningkatkan kualitas.<br>Silakan coba lagi beberapa saat nanti.</p>
+            <p class="by-line">By RyyStore</p>
+        </div>
+    `;
+    return; // PENTING: Hentikan eksekusi sisa fungsi agar dasbor tidak dirender.
+}
+    
+
     app.innerHTML = `
         <header class="main-header" id="main-header">
             <div class="header-inner" style="display: flex; align-items: center; height: 100%;">
@@ -841,10 +860,9 @@ function renderDashboard(activePage = 'packages') {
         <div id="modal-container"></div>
     `;
     
-
-    // --- Logika untuk mengisi konten utama ---
+    // --- Sisa kode di dalam fungsi ini tetap sama ---
     const mainContent = document.getElementById('page-content-area');
-    mainContent.innerHTML = ''; // Kosongkan dulu untuk menghapus spinner
+    mainContent.innerHTML = ''; 
 
     let announcementHTML = '';
     if (latestAnnouncement && latestAnnouncement.message) {
@@ -855,14 +873,11 @@ function renderDashboard(activePage = 'packages') {
             </div>
         `;
     }
-    // Tambahkan pengumuman ke konten utama
     mainContent.innerHTML = announcementHTML;
 
-    // Panggil fungsi render spesifik untuk halaman yang aktif
     if (activePage === 'packages') {
-        // Gabungkan panel verifikasi dan halaman paket untuk #dashboard
-        mainContent.innerHTML += renderPhoneVerificationPanel(); // append
-        renderPackagesPage(mainContent); // append
+        mainContent.innerHTML += renderPhoneVerificationPanel(); 
+        renderPackagesPage(mainContent); 
         setupPhoneVerificationListeners();
     } else if (activePage === 'history') {
         renderHistoryPage(mainContent);
@@ -872,8 +887,8 @@ function renderDashboard(activePage = 'packages') {
         renderTutorialPage(mainContent);
     } else if (activePage === 'kontak-admin') {
         renderKontakAdminPage(mainContent);
-     } else if (activePage === 'paket-akrab') {
-        renderNonOtpPage(mainContent); // Ini akan mengisi konten profil
+    } else if (activePage === 'paket-akrab') {
+        renderNonOtpPage(mainContent);
     } else if (activePage === 'admin') {
         if (isAdmin) {
             renderAdminDashboard(mainContent);
@@ -881,13 +896,12 @@ function renderDashboard(activePage = 'packages') {
             window.location.hash = '#dashboard';
         }
     } else {
-        // Fallback ke halaman paket
         mainContent.innerHTML += renderPhoneVerificationPanel();
         renderPackagesPage(mainContent);
         setupPhoneVerificationListeners();
     }
     
-    // Pasang listener setelah semua konten dirender
+    // --- Sisa event listener di fungsi ini juga tetap sama ---
     document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
     document.getElementById('topup-btn')?.addEventListener('click', renderTopUpModal);
     document.getElementById('announcement-close-btn')?.addEventListener('click', () => {
@@ -941,6 +955,7 @@ function renderDashboard(activePage = 'packages') {
  * Ini adalah bagian dari `renderDashboard`.
  * @param {HTMLElement} container - Elemen DOM tempat konten admin akan dirender (misal: page-content-area).
  */
+
 function renderAdminDashboard(container) {
     if (!container) {
         console.error("Container untuk panel admin tidak ditemukan.");
@@ -1006,30 +1021,54 @@ function renderAdminDashboard(container) {
                 </form>
             </div>
 
-            <div class="admin-section">
-                <h2>Informasi & Manajemen Saldo</h2>
-                <div id="balance-feedback"></div>
-                <div class="balance-info-display">
-                    <p>Saldo KMSP Anda Saat Ini:</p>
-                    <strong id="kmsp-balance-display">${typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...'}</strong>
-                </div>
-                <button id="check-kmsp-balance-btn" style="width:100%; margin-bottom: 2rem;">Cek Saldo KMSP</button>
-                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0;">
-                <h3>Tambah/Kurangi Saldo Pengguna</h3>
-                 <form id="update-balance-form" class="balance-controls">
-                    <label for="user-select">Pilih Pengguna:</label>
-                    <select id="user-select" required style="flex-grow: 1;"></select>
-                    <label for="amount-input">Jumlah (Gunakan '-' untuk mengurangi):</label>
-                    <input type="number" id="amount-input" placeholder="e.g., 50000 atau -10000" required>
-                    <button type="submit">Update Saldo</button>
-                </form>
-                <h3>Hapus Akun Pengguna</h3>
-                <form id="delete-user-form" class="balance-controls">
-                    <label for="user-select-delete">Pilih Pengguna:</label>
-                    <select id="user-select-delete" required style="flex-grow: 1;"></select>
-                    <button type="submit" style="background: var(--danger-color); color: #fff;">Hapus Akun</button>
-                </form>
+           <div class="admin-section">
+            <h2>Persetujuan Pengguna Baru</h2>
             </div>
+
+        <div class="admin-section">
+            <h2>Lihat Log Transaksi Pengguna</h2>
+            <div id="user-log-feedback"></div>
+            <div class="form-group">
+                <label for="user-log-select">Pilih Pengguna:</label>
+                <div style="display: flex; gap: 1rem;">
+                    <select id="user-log-select" required style="flex-grow: 1;">
+                        <option value="">-- Muat pengguna... --</option>
+                    </select>
+                    <button id="view-user-log-btn" class="secondary" disabled>Lihat Log</button>
+                </div>
+            </div>
+        </div>
+        <div class="admin-section">
+            <h2>Informasi & Manajemen Saldo</h2>
+            <div id="balance-feedback"></div>
+            <hr>
+            <h3>Tambah/Kurangi Saldo Pengguna</h3>
+            <form id="update-balance-form" class="balance-controls">
+                <label for="user-select">Pilih Pengguna:</label>
+                <select id="user-select" required style="flex-grow: 1;"></select>
+                <label for="amount-input">Jumlah (Gunakan '-' untuk mengurangi):</label>
+                <input type="number" id="amount-input" placeholder="e.g., 50000 atau -10000" required>
+                <button type="submit">Update Saldo</button>
+            </form>
+
+            <h3>Hapus Akun Pengguna</h3>
+            <form id="delete-user-form" class="balance-controls">
+                <label for="user-select-delete">Pilih Pengguna:</label>
+                <select id="user-select-delete" required style="flex-grow: 1;"></select>
+                <button type="submit" style="background: var(--danger-color); color: #fff;">Hapus Akun</button>
+            </form>
+        </div>
+
+
+        <div class="admin-section">
+             <h2>Informasi Saldo KMSP</h2>
+             <div id="balance-feedback"></div>
+             <div class="balance-info-display">
+                 <p>Saldo KMSP Anda Saat Ini:</p>
+                 <strong id="kmsp-balance-display">${typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...'}</strong>
+             </div>
+             <button id="check-kmsp-balance-btn" style="width:100%;">Cek Saldo KMSP</button>
+        </div>
 
             <div class="admin-section">
                 <h2>Manajemen Paket</h2>
@@ -1062,7 +1101,7 @@ function renderAdminDashboard(container) {
 
 
      // --- TEMPAT ANDA MELETAKKAN KODE YANG DIBERIKAN ---
-
+    document.getElementById('view-user-log-btn')?.addEventListener('click', handleViewUserLog);
     // Event listener untuk tombol 'Toggle Maintenance Mode'
     document.getElementById('toggle-maintenance-btn')?.addEventListener('click', async () => {
         const button = document.getElementById('toggle-maintenance-btn');
@@ -1129,41 +1168,58 @@ function renderAdminDashboard(container) {
     /**
      * Memuat daftar pengguna dari backend dan mengisi dropdown pemilihan pengguna.
      */
-   async function loadUsers() {
+  async function loadUsers() {
     try {
         const { data, status } = await apiFetch('/admin/users');
         if (status !== 200 || !data.status || !Array.isArray(data.data)) {
             throw new Error(data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`);
         }
-
         const users = data.data;
+        // Tambahan: Urutkan pengguna berdasarkan nama agar lebih rapi di dropdown
+        const allUsersSorted = users.sort((a, b) => a.name.localeCompare(b.name));
 
-        // --- MENGISI DROPDOWN (seperti sebelumnya) ---
-        const userSelects = [
-            document.getElementById('user-select'),
-            document.getElementById('user-select-delete')
+        // --- PENAMBAHAN: Ambil referensi ke SEMUA dropdown yang perlu diisi ---
+        const dropdownsToPopulate = [
+            document.getElementById('user-select'),         // Dropdown untuk form Update Saldo
+            document.getElementById('user-select-delete'),  // Dropdown untuk form Hapus Akun
+            document.getElementById('user-log-select')      // Dropdown untuk fitur Lihat Log
         ];
-        
-        userSelects.forEach(sel => {
-            if (sel) {
-                sel.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
-                // Hanya tampilkan pengguna yang sudah disetujui atau admin di dropdown
-                users.filter(u => u.status === 'approved' || u.role === 'admin').forEach(user => {
-                    if (currentUser.id !== user.id) { // Jangan tampilkan admin yang sedang login
+
+        // --- PENAMBAHAN: Gunakan loop untuk mengisi semua dropdown secara efisien ---
+        dropdownsToPopulate.forEach(dropdown => {
+            if (dropdown) { // Hanya proses jika dropdown ditemukan
+                const selectedValue = dropdown.value; // Simpan nilai yang sedang dipilih (jika ada)
+                dropdown.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+                
+                allUsersSorted.forEach(user => {
+                    // Jangan tampilkan admin yang sedang login di list
+                    if (currentUser.id !== user.id) {
                        const option = document.createElement('option');
                        option.value = user.id;
                        option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
-                       sel.appendChild(option);
+                       dropdown.appendChild(option);
                     }
                 });
+                 // Kembalikan nilai yang tadi dipilih agar tidak ter-reset
+                if (selectedValue) {
+                    dropdown.value = selectedValue;
+                }
             }
         });
 
-        // --- MENGISI DAFTAR PERSETUJUAN (BAGIAN BARU) ---
+        // --- PENAMBAHAN: Event listener khusus untuk tombol "Lihat Log" ---
+        const logSelect = document.getElementById('user-log-select');
+        const logButton = document.getElementById('view-user-log-btn');
+        if (logSelect && logButton) {
+            logSelect.addEventListener('change', () => {
+                logButton.disabled = !logSelect.value;
+            });
+        }
+        
+        // Kode asli untuk mengisi daftar persetujuan pengguna (TIDAK BERUBAH)
         const pendingList = document.getElementById('pending-users-list');
         if (pendingList) {
             const pendingUsers = users.filter(u => u.status === 'pending');
-            
             if (pendingUsers.length > 0) {
                 pendingList.innerHTML = pendingUsers.map(user => `
                     <li class="user-item-admin" data-user-id="${user.id}">
@@ -1177,8 +1233,6 @@ function renderAdminDashboard(container) {
             } else {
                 pendingList.innerHTML = '<li>Tidak ada pengguna yang menunggu persetujuan.</li>';
             }
-
-            // Tambahkan event listener ke tombol 'Setujui'
             document.querySelectorAll('.approve-user-btn').forEach(button => {
                 button.addEventListener('click', handleApproveUser);
             });
@@ -1186,7 +1240,7 @@ function renderAdminDashboard(container) {
 
     } catch (error) {
         console.error('Gagal memuat pengguna:', error);
-        displayFeedback('approval-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
+        // Ganti 'user-management-feedback' ke 'user-log-feedback' atau 'balance-feedback' yang relevan
         displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
     }
 }
@@ -1260,69 +1314,59 @@ function renderAdminDashboard(container) {
         button.textContent = 'Setujui';
     }
 }
-    /**
-     * Event handler untuk form 'Tambah Saldo Pengguna'.
-     * Memanggil API untuk memperbarui saldo pengguna tertentu.
-     */
-    document.getElementById('add-balance-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const button = e.submitter;
-        const originalText = button.textContent;
-        button.disabled = true; button.textContent = '...';
-        displayFeedback('balance-feedback', '', false);
-        try {
-            const userId = document.getElementById('user-select')?.value;
-            const amount = parseFloat(document.getElementById('amount-input')?.value);
-            if (!userId || isNaN(amount) || amount <= 0) {
-                throw new Error('Pilih pengguna dan masukkan jumlah yang valid.');
-            }
-            const { data, status } = await apiFetch('/admin/update-balance', { method: 'POST', body: { userId, amount } });
-            if (status === 200 && data.status) {
-                displayFeedback('balance-feedback', data.message, false);
-                const amountInput = document.getElementById('amount-input');
-                if (amountInput) amountInput.value = ''; // Bersihkan input
-                loadUsers(); // Muat ulang daftar pengguna untuk update saldo
-            } else {
-                throw new Error(data.message || 'Gagal memperbarui saldo: Respons tidak valid.');
-            }
-        } catch (error) {
-            displayFeedback('balance-feedback', error.message, true);
-        } finally {
-            button.disabled = false; button.textContent = originalText;
-        }
-    });
+   
+/**
+ * Event handler untuk form 'Tambah/Kurangi Saldo Pengguna'.
+ * Memanggil API untuk memperbarui saldo pengguna tertentu.
+ */
+document.getElementById('update-balance-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
+    if (!button) return;
 
-    /**
-     * Event handler untuk form 'Kurangi Saldo Pengguna'.
-     * Memanggil API untuk mengurangi saldo pengguna tertentu.
-     */
-    document.getElementById('remove-balance-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const button = e.submitter;
-        const originalText = button.textContent;
-        button.disabled = true; button.textContent = '...';
-        displayFeedback('balance-feedback', '', false);
-        try {
-            const userId = document.getElementById('user-select-remove')?.value;
-            const amount = parseFloat(document.getElementById('amount-remove-input')?.value);
-            if (!userId || isNaN(amount) || amount <= 0) {
-                throw new Error('Pilih pengguna dan masukkan jumlah yang valid.');
-            }
-            const { data, status } = await apiFetch('/admin/update-balance', { method: 'POST', body: { userId, amount: -amount } });
-            if (status === 200 && data.status) {
-                displayFeedback('balance-feedback', data.message, false);
-                const amountInput = document.getElementById('amount-remove-input');
-                if (amountInput) amountInput.value = '';
-                loadUsers();
-            } else {
-                throw new Error(data.message || 'Gagal mengurangi saldo: Respons tidak valid.');
-            }
-        } catch (error) {
-            displayFeedback('balance-feedback', error.message, true);
-        } finally {
-            button.disabled = false; button.textContent = originalText;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Memproses...';
+    displayFeedback('balance-feedback', '', false);
+
+    try {
+        const userId = form.querySelector('#user-select')?.value;
+        const amountInput = form.querySelector('#amount-input')?.value;
+        
+        // Mengubah input menjadi angka, bisa positif atau negatif
+        const amount = parseFloat(amountInput);
+
+        if (!userId) {
+            throw new Error('Silakan pilih pengguna terlebih dahulu.');
         }
-    });
+        if (isNaN(amount) || amount === 0) {
+            throw new Error("Masukkan jumlah yang valid (bukan nol). Gunakan angka negatif untuk mengurangi, contoh: -10000.");
+        }
+
+        const { data, status } = await apiFetch('/admin/update-balance', {
+            method: 'POST',
+            body: { userId, amount }
+        });
+
+        if (status === 200 && data.status) {
+            showToast(data.message);
+            // Bersihkan input setelah berhasil
+            form.querySelector('#amount-input').value = ''; 
+            // Muat ulang daftar pengguna untuk memperbarui tampilan saldo di dropdown
+            loadUsers(); 
+        } else {
+            throw new Error(data.message || 'Gagal memperbarui saldo: Respons tidak valid.');
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        displayFeedback('balance-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+});
+   
 
     /**
      * Event handler untuk form 'Hapus Akun Pengguna'.
@@ -2055,17 +2099,6 @@ function renderPhoneVerificationPanel() {
  * @param {HTMLElement} container - Elemen DOM utama yang akan diisi (mainContent).
  */
 async function renderPackagesPage(container) {
-    // Cek mode maintenance dulu
-    if (isMaintenanceMode && currentUser.role !== 'admin') {
-        container.innerHTML += `
-            <div class="maintenance-container" style="text-align: center; padding: 3rem;">
-                <h2 style="color: var(--danger-color);">MODE MAINTENANCE AKTIF</h2>
-                <p>Maaf, layanan pembelian paket sedang dalam maintenance.</p>
-            </div>
-        `;
-        return;
-    }
-
     // 1. Buat elemen baru untuk bagian paket, JANGAN timpa container.
     const packageSection = document.createElement('div');
     packageSection.className = 'page-content';
@@ -3375,6 +3408,98 @@ function togglePasswordVisibility(icon) {
         ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
         : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 }
+
+/**
+ * Merender modal yang menampilkan log transaksi untuk pengguna tertentu.
+ * @param {Object} logData - Data log yang diterima dari API, berisi info user dan array logs.
+ */
+function renderUserLogModal(logData) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    const { user, logs } = logData;
+
+    const logsHTML = logs.length > 0
+        ? `<table class="history-table">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Nama Paket</th>
+                  <th>Fee</th>
+                  <th>Status</th>
+                  <th>Pesan API</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${logs.map(log => `
+                  <tr>
+                    <td data-label="Tanggal">${new Date(log.createdAt).toLocaleString('id-ID')}</td>
+                    <td data-label="Nama Paket">${log.packageName}</td>
+                    <td data-label="Fee">Rp ${(log.platformFee || 0).toLocaleString('id-ID')}</td>
+                    <td data-label="Status"><span class="status-badge status-${log.status}">${log.status}</span></td>
+                    <td data-label="Pesan API">${log.api_response}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+           </table>`
+        : '<p>Pengguna ini belum memiliki riwayat transaksi pembelian paket.</p>';
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2>Log Transaksi: ${user.name}</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    ${logsHTML}
+                </div>
+            </div>
+        </div>
+    `;
+
+    const closeModal = () => modalContainer.innerHTML = '';
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeModal(); });
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+}
+
+/**
+ * Handler untuk mengambil dan menampilkan log transaksi pengguna.
+ */
+async function handleViewUserLog(e) {
+    const button = e.currentTarget;
+    // --- PERBAIKAN DI SINI ---
+    // Mengambil nilai dari ID dropdown yang benar: 'user-log-select'
+    const userId = document.getElementById('user-log-select')?.value; 
+
+    if (!userId) {
+        showToast("Silakan pilih pengguna terlebih dahulu.", true);
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<span class="button-spinner"></span>';
+    // Ganti feedback container ke yang relevan
+    displayFeedback('user-log-feedback', '', false);
+
+    try {
+        const { data, status } = await apiFetch(`/admin/user-logs/${userId}`);
+        if (status === 200 && data.status) {
+            // Panggil modal untuk menampilkan data log
+            renderUserLogModal(data.data);
+        } else {
+            throw new Error(data.message || "Gagal mengambil data log.");
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        displayFeedback('user-log-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        // Kembalikan teks asli tombol
+        button.innerHTML = 'Lihat Log'; 
+    }
+}
+
 
 // Jalankan fungsi main saat DOM selesai dimuat
 document.addEventListener('DOMContentLoaded', main);

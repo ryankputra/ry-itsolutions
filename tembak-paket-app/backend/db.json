@@ -5,23 +5,12 @@
       "name": "admin",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$qDjzr6cBjZYzEBRRrZ3Y5eQN5F5pnuwyLQQmOyj/ja2pRDS5QGO2y",
-      "balance": 16600,
+      "balance": 16100,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
       "verifiedPhone": "6287831861485",
       "resetPasswordToken": "c7bd0035-6cce-4821-a61c-0683072bdf89",
       "resetPasswordExpires": 1751055944348
-    },
-    {
-      "id": "user_1750926529288",
-      "name": "bhre",
-      "email": "bresudiwo@gmail.com",
-      "password": "$2b$10$.lvpNymugKvQJvQrBJ6XMupDxGJOc5NF6LT4vFYpYH0oS37cg731m",
-      "balance": 5000,
-      "role": "user",
-      "verifiedPhone": null,
-      "createdAt": "2025-06-26T08:28:49.288Z",
-      "status": "approved"
     }
   ],
   "packages": [
@@ -4141,6 +4130,20 @@
       "paymentMethod": "DANA",
       "createdAt": "2025-06-27T19:24:05.823Z",
       "paymentDetails": null
+    },
+    {
+      "id": "trx_1751127150068",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOSUPERXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Super bayar ke XL Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 500,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: 422 -> Failed call ipaas purchase, with status code:422 : null,  )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-06-28T16:12:30.068Z",
+      "paymentDetails": null
     }
   ],
   "topups": [
@@ -4188,15 +4191,6 @@
       "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADoElEQVR4nO2aUY7rMAhFLWUBWVK3niV1AZH8WsMFMpNK82P3fZz70UkcOJkPggC7NYQQQgghhP43ddfZ+rH33tp+vlZ1Ndb85208roYOGDBWMuzmbd+fbtUez01ObXNGf635G9INBoxVDIvmU/ZtUyCn52ttcP1d48OAAeOrjOZR78H9Dv2Xk8c/DBhfZrysxso7rlUhGNeu4l0wYHyBMf5Y7TDyr69l1Hs6ll11gwFjEcM1+q4//ORHAAPGOsZFUcWWXkwB/1fBgDGB4fVsP41R27BQRHjLyuKAAWMhw+tZ9V1yitZsT/scHMCAsZjhqXePqYBFc3RbUfyOwYG/5mwXwYAxnRF1gs0MwrQi7YF2vB4/SwkYMKYzSo/1dFDuECgn+4BLQ6/4EmDAWMQYz4Yymps8tYml0B8q214wYCxiHLKyAsIGB2q5xlWvhwfa/X4DDBhTGSUJP0pIy8rqhNzOet6OumDAmM3wJHxWkAd8xLUq23H7u8aFAWM2w9JxD4NSO+xxjKVfBgdlKxYGjFWMMRrY3VT2TSVvUcT/h7kDDBjzGDYzsFJ2KxsBPUatmYntu/jQi8GAMZGR8l6sNY2wMln/Ye4AA8ZEhoGOVutZmaZ7PG31CgaMVQyP3D1arnCPZN1swBVvuPsXYMCYzNCyQN6B+Vq8ocT6pxoXBoxpjB86bPlSJ9R03MstDBirGDZ+NYPstjSXzXmrOdn5ll/nC2HAmMzoPSZaYSV3XYXdp9oBBozZjCNOAbyl3QDdNp0MyA2DMluAAWMRw8N8z3MrmXVVNvjn0LuXt7/yOgwYsxkhD+7mXZlfxVOfKJwwYHyD8ciaoHhuPnmNzS5/w5gePCscBoxVDLVcm21dldMCfnI1q13P01fBgDGZoRKhR53QdZo1+rM07lq7zgxgwJjMMPsRw7Z/dZlo+VWE+aFhAgwYaxlvaScrAl6HAspr3PPH8VUYMNYwhuehQM6iNqsITQo84L2UgAFjIUPuGhf0Hi1X6FCe9tt2W3/AgDGPUWilgI0D18elbJD7Xe0AA8ZEhuL51G7A0NPdNcfSgOuIjwAGjKUMu9k1x4peLGNdwb31/BJagwFjKWPkX4vryLUZ0sEdibl8CTBgfIXhfZc883zLkIzvZlswYCxkmDLhXo8CPAY8xrQNBoylDLP3nOz2zywWNot6H3XdDmJhwJjOcHkpa8cDWqZelQ22u2U//fIRwIAxn4EQQgghhND/oX+O62ysWIt91wAAAABJRU5ErkJggg=="
     },
     {
-      "id": "a873b26f-1cc5-46f3-8876-8a8e8db17126",
-      "userId": "user_1750926529288",
-      "baseAmount": 10000,
-      "uniqueAmount": 10269,
-      "status": "canceled",
-      "createdAt": "2025-06-26T08:29:43.232Z",
-      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADk0lEQVR4nO2aQY7jMAwEBfgBeVK+7iflAQG0scgm6djYnYs0e6g+ZGxZKs+hLbQotYYQQgghhND/pu56t/HT2uOtR5+rvj8+zfZzdB5XQzsMGCsZe/Tvr61/rnpvz8+VD2qbM/zp+zQMBoxVDHPz2/p/WjYZOUceD55i2IcBA8YvMszh/dVO1j8ma/M/DBi/zPj0Gi2Hr5UQjGtX8S4YMH6BMf7Ys96zLV3v07H61WEwYCxiuMa66wc/+RHAgLGOUXXkBHN9WYvJ8D8UDBgzGJ5n+/vUGpY2X+u2ZbLYYcBYyBDI04EGxdLskf2zcAADxmKGukZVwNwcqy1N0VY48I/g/GHAgDGfkautwejqWpGjS/dkodoCDBgLGWbzYWGj5RSdc7IXuNLrX3MyDBiTGUO7sqtXrzSyFL38SxASBoyVDPXKOLCVJde4suXa/lCF9uJ1GDBmM+o+q1ZbpZflhNzOet2VumDAmM2wkU0d0uH+Bm0ieKjodxkXBozpjKfsm2FB5o5jLP1UOChbsTBgrGFUN3cfdHJ9Kvx/nddhwJjMyN2A80ZAj9ybM3Efuq7nYMCYzUgNww89s1Ej/113gAFjHsNAe6uzs7rm8Hja6hUMGKsYI7tqZOwaBG1XqevU9v0vwIAxmxHNpdT6DF/b/Ks3ZD8YMJYymhu510zghldbnY57uYUBYxWjDj/Fhq9zK2o7nl7OBsKAMZ1hdSzZ1wsH73rl7/pb/oABYy5jF2i4XLsBuvVTgnpNBGIYMJYy3OaPPLeyxayr2FAWaWOK/p6TYcCYzgi5uZuvz/wqno628SXAgLGc4XFAP2pT5XUP/9sbRgx+VTgMGAsYGRbaOAUwkm2GBadl2vV5+iwYMGYzvAwgw/vEvJVCbKpnlWuHAWMlw9ZdsU1glo7Vln0EYfNdxQQYMNYyDinAdptwVUIIUNdZFt+KvRMMGDMZY2TuFUSo9RQhZBq+3ZzXhgFjLkPDVS6w7KAUYfKZ2J9eswMMGLMZhVYC7CO6nmKDht9lBxgwJjLk58wOdbjqWLmJ8C6GhwFjGcNu9EzHA1orIDf3FvB+yQ4wYExmRG2rZy0gLZ11BCu/HrrZb4ABYxHja2Seb/GPoClKXGpbMGCsZAzlhHs+CvAc8FbPC8KAsY5h/X1O9v6vDAubuV6bsneFWBgwpjNcHmV1qiqmXsUGPzdghwdOHwEMGPMZCCGEEEII/R/6AydUc5dPT8o2AAAAAElFTkSuQmCC"
-    },
-    {
       "id": "9d7e1802-7568-4dec-a80c-f71bef7ff555",
       "userId": "user_1750832245659",
       "baseAmount": 10000,
@@ -4234,6 +4228,11 @@
   "maintenanceMode": false,
   "fullScreenAnnouncement": null,
   "settings": {
-    "maintenanceMode": false
+    "maintenanceMode": true,
+    "maintenance": {
+      "manual_on": false,
+      "start_time": null,
+      "end_time": null
+    }
   }
 }

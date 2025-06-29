@@ -809,6 +809,35 @@ app.post('/api/admin/update-balance', isAuthenticated, isAdmin, async (req, res)
     } catch (error) { console.error("Error updating balance:", error); res.status(500).json({ status: false, message: "Gagal memperbarui saldo." }); }
 });
 
+app.get('/api/admin/user-logs/:userId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = db.data.users.find(u => u.id === userId);
+
+        if (!user) {
+            return res.status(404).json({ status: false, message: 'Pengguna tidak ditemukan.' });
+        }
+
+        // Ambil semua transaksi yang cocok dengan userId
+        const userTransactions = db.data.transactions
+            .filter(t => t.userId === userId)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Urutkan dari yang terbaru
+
+        // Jangan kirim password ke frontend
+        const { password, ...userWithoutPassword } = user; 
+
+        res.status(200).json({
+            status: true,
+            data: {
+                user: userWithoutPassword,
+                logs: userTransactions
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching user logs:", error);
+        res.status(500).json({ status: false, message: 'Gagal mengambil log pengguna.' });
+    }
+});
 // --- RUTE TOP UP SALDO ---
 const qrisPollingTimeouts = new Map();
 async function generateDynamicQris(amount) {
