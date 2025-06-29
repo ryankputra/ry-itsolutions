@@ -64,7 +64,7 @@ async function sendTelegramNotification(message) {
     }
 }
 
-// --- Inisialisasi Database dan Middleware ---
+// --- Inisiaalisasi Database dan Middleware ---
 const file = path.join(__dirname, 'db.json');
 const adapter = new JSONFile(file);
 const defaultData = {

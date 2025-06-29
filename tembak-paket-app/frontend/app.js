@@ -3163,7 +3163,7 @@ async function handleLogin(e) {
     }
 }
 
-/**
+/**a
  * Event handler untuk logout.
  * Menghapus sesi pengguna dan mengarahkan ke halaman login.
  */
