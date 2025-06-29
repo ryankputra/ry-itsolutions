@@ -2,20 +2,26 @@
 
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors =require('cors');
 const path = require('path');
 const fetch = require('node-fetch');
 const { Low } = require('lowdb');
 const { JSONFile } = require('lowdb/node');
 const bcrypt = require('bcrypt');
-const session = require('express-session');
+const session = require('express-session'); // Ini sudah ada
+const FileStore = require('session-file-store')(session);
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+const fileStoreOptions = {
+    // --- PERUBAHAN DI BARIS INI ---
+    path: path.join(__dirname, 'sessions'), 
+    ttl: 86400,
+    retries: 0
+};
 // --- KONFIGURASI KUNCI API ---
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const QRIS_STATIS_STRING = process.env.QRIS_STATIS_STRING;
@@ -92,10 +98,15 @@ initializeDatabase();
 app.use(express.json());
 app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
 app.use(session({
+    store: new FileStore(fileStoreOptions), // <-- BARIS BARU: Memberitahu session untuk menggunakan FileStore
     secret: process.env.SESSION_SECRET || 'ganti-dengan-string-acak-yang-super-aman-dan-panjang',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production', 
+        httpOnly: true, 
+        maxAge: 24 * 60 * 60 * 1000 // 24 jam
+    }
 }));
 
 app.use((req, res, next) => {
@@ -933,6 +944,13 @@ app.get('/api/admin/user-logs/:userId', isAuthenticated, isAdmin, async (req, re
         console.error("Error fetching user logs:", error);
         res.status(500).json({ status: false, message: 'Gagal mengambil log pengguna.' });
     }
+});
+
+app.get('/api/status', (req, res) => {
+    res.status(200).json({
+        status: true,
+        maintenanceMode: db.data.settings.maintenanceMode
+    });
 });
 // --- RUTE TOP UP SALDO ---
 const qrisPollingTimeouts = new Map();

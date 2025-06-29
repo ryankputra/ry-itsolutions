@@ -1723,3 +1723,74 @@ select#package-dropdown {
     font-size: 0.9rem;
     color: #888;
 }
+
+/* Wadah utama untuk menata semuanya di tengah */
+.packages-locked-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 1.5rem;
+    margin: 2rem auto;
+    max-width: 600px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+}
+
+/* Mengatur ukuran ikon gembok SVG agar tidak terlalu besar */
+.locked-icon-svg {
+    width: 80px; /* Atur lebar gembok */
+    height: 80px; /* Atur tinggi gembok */
+    margin-bottom: 1.5rem;
+    /* Menambahkan animasi yang sudah kita definisikan di bawah */
+    animation: floatAnimation 4s ease-in-out infinite;
+}
+
+/* Styling untuk judul */
+.packages-locked-container h3 {
+    font-size: 1.5rem;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+/* Styling untuk paragraf deskripsi */
+.packages-locked-container p {
+    color: #666;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+/* Styling untuk tombol agar lebih menonjol */
+.topup-cta-btn {
+    width: auto;
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    font-weight: bold;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.topup-cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Definisi untuk animasi "mengambang" */
+@keyframes floatAnimation {
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px); /* Bergerak ke atas 10px */
+    }
+    100% {
+        transform: translateY(0);
+    }
+}

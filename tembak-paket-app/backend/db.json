@@ -4603,7 +4603,7 @@
   "maintenanceMode": false,
   "fullScreenAnnouncement": null,
   "settings": {
-    "maintenanceMode": true,
+    "maintenanceMode": false,
     "maintenance": {
       "manual_on": false,
       "start_time": null,

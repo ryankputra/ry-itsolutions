@@ -14,6 +14,7 @@ let phoneAuth = {
 let kmspBalance = null; // Diatur ke null untuk menandakan belum dimuat atau error
 let latestAnnouncement = null;
 let isMaintenanceMode = false; 
+let statusIntervalId = null;
 
 
 // ===============================================
@@ -43,12 +44,59 @@ async function main() {
             loggedInPromises.push(fetchKMSPBalance());
         }
         await Promise.all(loggedInPromises);
+        startStatusPolling(); //
     }
     
     renderApp(isAdminLoginAttempt); 
     
     window.removeEventListener('hashchange', renderApp);
     window.addEventListener('hashchange', () => renderApp(false));
+}
+
+/**
+ * FUNGSI BARU: Memulai polling status ke server secara berkala.
+ */
+function startStatusPolling() {
+    // Hentikan polling lama jika ada, untuk mencegah duplikasi
+    if (statusIntervalId) {
+        clearInterval(statusIntervalId);
+    }
+
+    statusIntervalId = setInterval(async () => {
+        // Jangan jalankan jika pengguna tidak login atau adalah admin
+        if (!currentUser || currentUser.role === 'admin') {
+            stopStatusPolling(); // Hentikan jika kondisi tidak terpenuhi lagi
+            return;
+        }
+        
+        try {
+            // Panggil endpoint status baru secara diam-diam
+            const response = await fetch(`${API_BASE_URL}/status`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.maintenanceMode === true) {
+                    // Maintenance terdeteksi!
+                    console.log("Maintenance mode detected from polling. Rendering maintenance page.");
+                    isMaintenanceMode = true;
+                    renderGlobalMaintenancePage();
+                    stopStatusPolling(); // Hentikan polling setelah maintenance terdeteksi
+                }
+            }
+        } catch (error) {
+            console.error("Status polling failed:", error.message);
+        }
+    }, 30000); // Bertanya setiap 30 detik (30000 milidetik)
+}
+
+/**
+ * FUNGSI BARU: Menghentikan polling status.
+ */
+function stopStatusPolling() {
+    if (statusIntervalId) {
+        clearInterval(statusIntervalId);
+        statusIntervalId = null;
+        console.log("Status polling stopped.");
+    }
 }
 
 /**
@@ -3120,6 +3168,7 @@ async function handleLogin(e) {
  * Menghapus sesi pengguna dan mengarahkan ke halaman login.
  */
 async function handleLogout() {
+     stopStatusPolling(); 
     try {
         // apiFetch akan otomatis menangani 401/403 dan redirect ke login jika perlu
         await apiFetch('/auth/logout', { method: 'POST' }); 
