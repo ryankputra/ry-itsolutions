@@ -157,6 +157,7 @@ Bagian ini mengasumsikan Anda sudah memiliki VPS dengan Ubuntu Server, Node.js, 
     ```bash
     sudo certbot --nginx -d tembak.cloudrystore.xyz -d www.tembak.cloudrystore.xyz
     sudo systemctl reload nginx
+    npm install session-file-store
     ```
 
 9.  **Uji Aplikasi:** Bersihkan cache browser Anda dan akses `https://tembak.cloudrystore.xyz`.
