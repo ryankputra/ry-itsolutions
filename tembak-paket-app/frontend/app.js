@@ -882,19 +882,22 @@ function renderExternalPaymentModal(paymentData) {
  * Merender halaman login ke elemen 'app'.
  * Mengatur event listener untuk form login.
  */
+/**
+ * Merender halaman login ke elemen 'app'.
+ * VERSI BARU: Dengan tombol aktivasi yang lebih cerdas.
+ */
 function renderLoginPage() {
-    const adminWhatsapp = "6287767287284"; // Nomor WA Admin
-    const prefilledMessage = "acc min"; // Pesan pre-fill
-    const whatsappLink = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(prefilledMessage)}`;
+    // Nomor WA Admin tetap di sini untuk digunakan oleh handler nanti
+    const adminWhatsapp = "6287767287284"; 
 
     app.innerHTML = `
         <div class="auth-container">
-        <div class="auth-banner">
+            <div class="auth-banner">
                 <img src="assets/images/logo.png" alt="RYYSTORE Logo" style="width: 100px; height: auto;">
             </div>
             <h1>RYYSTORE PANEL</h1>
             <p>Dapatkan Semua Kebutuhan Digitalmu.</p>
-             <hr>
+            <hr>
             <form id="login-form">
                 <div class="form-group">
                     <label for="email">Email</label>
@@ -913,15 +916,52 @@ function renderLoginPage() {
             </form>
             <div id="feedback-container"></div>
             
-            <a href="${whatsappLink}" target="_blank" class="button secondary" style="text-decoration: none; margin-top: 1rem; text-align: center;">
+            <button type="button" id="request-activation-btn" class="button secondary" style="margin-top: 1rem; width: 100%;">
                 Hubungi Admin untuk Aktivasi
-            </a>
+            </button>
+
             <p class="auth-link">Belum punya akun? <a href="#register">Daftar di sini</a></p>
         </div>
     `;
+
+    // Pasang event listener untuk form login dan tombol aktivasi baru
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+    document.getElementById('request-activation-btn')?.addEventListener('click', handleRequestActivation);
 }
 
+/**
+ * Handler untuk tombol minta aktivasi via WhatsApp.
+ * Mengambil email dari form dan membuat link dinamis.
+ */
+function handleRequestActivation() {
+    const adminWhatsapp = "6287767287284"; // Pastikan nomor ini sama
+    const emailInput = document.getElementById('email');
+    const email = emailInput ? emailInput.value : ''; // Ambil email dari input field
+
+    let prefilledMessage;
+
+    if (email) {
+        // Jika pengguna sudah mengetik email
+        prefilledMessage = `Halo Admin RyyStore,
+Saya ingin meminta aktivasi untuk akun saya.
+
+Email terdaftar: ${email}
+
+Terima kasih.`;
+    } else {
+        // Jika email masih kosong
+        prefilledMessage = `Halo Admin RyyStore,
+Saya ingin meminta aktivasi untuk akun baru saya.
+
+Terima kasih.`;
+    }
+
+    // Buat link WhatsApp yang sudah di-encode
+    const whatsappLink = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(prefilledMessage)}`;
+    
+    // Buka link di tab baru
+    window.open(whatsappLink, '_blank');
+}
 /**
  * Merender halaman registrasi ke elemen 'app'.
  * Mengatur event listener untuk form registrasi.
