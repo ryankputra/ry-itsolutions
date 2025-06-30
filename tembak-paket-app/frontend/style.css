@@ -1794,3 +1794,78 @@ select#package-dropdown {
         transform: translateY(0);
     }
 }
+
+/* style.css */
+
+.user-item-admin {
+    /* Style ini mungkin sudah ada, pastikan isinya seperti ini */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+}
+
+.user-actions {
+    display: flex;
+    gap: 0.5rem; /* Memberi jarak antar tombol */
+}
+
+/* Tombol 'danger' untuk aksi berbahaya seperti menolak/menghapus */
+button.danger {
+    background-color: var(--danger-color, #e53935); /* Merah */
+    color: white;
+    border: none;
+}
+
+button.danger:hover {
+    background-color: #c62828; /* Merah lebih gelap saat di-hover */
+}
+
+/* ======================================= */
+/* === STYLE UNTUK HALAMAN LAPORAN ADMIN === */
+/* ======================================= */
+
+/* Mengatur container filter menjadi grid yang rapi */
+.filter-controls {
+    display: grid;
+    /* Membuat kolom otomatis menyesuaikan lebar layar, minimal 200px */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 1rem; /* Memberi jarak antar item */
+    align-items: end; /* Membuat tombol sejajar dengan bagian bawah input tanggal */
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+/* Styling umum untuk setiap grup di dalam filter */
+.filter-controls .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-controls label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9em;
+    text-align: left;
+}
+
+/* Pastikan input dan tombol mengisi ruang grid mereka masing-masing */
+.filter-controls input,
+.filter-controls button {
+    width: 100%;
+    box-sizing: border-box; /* Penting agar padding tidak merusak layout */
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-size: 1rem;
+}
+
+.filter-controls button {
+    cursor: pointer;
+    font-weight: bold;
+    border: none;
+}

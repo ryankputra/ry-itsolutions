@@ -15,6 +15,7 @@ let kmspBalance = null; // Diatur ke null untuk menandakan belum dimuat atau err
 let latestAnnouncement = null;
 let isMaintenanceMode = false; 
 let statusIntervalId = null;
+let allAdminUsers = [];
 
 
 // ===============================================
@@ -221,6 +222,10 @@ function renderApp(isAdminLoginAttempt = false) {
                 if (currentUser.role === 'admin') renderDashboard('admin');
                 else window.location.hash = '#dashboard';
                 break;
+            case '#laporan':
+                if (currentUser.role === 'admin') renderDashboard('laporan');
+                else window.location.hash = '#dashboard';
+                break;
             case '#dashboard':
             default:
                 renderDashboard('packages');
@@ -379,6 +384,120 @@ function renderKontakAdminPage(container) {
             </div>
         </div>
     `;
+}
+
+/**
+ * Handler untuk tombol 'Setujui' pada daftar pengguna baru.
+ * VERSI BARU: Tidak memuat ulang seluruh daftar, tapi menghapus item dari DOM secara langsung.
+ */
+async function handleApproveUser(e) {
+    const button = e.currentTarget;
+    const userItem = button.closest('.user-item-admin'); // Dapatkan elemen <li>
+    const userId = userItem?.dataset.userId;
+
+    if (!userId || !button) return;
+
+    if (!confirm(`Apakah Anda yakin ingin menyetujui pengguna ini?`)) {
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner small"></span>`;
+    displayFeedback('approval-feedback', '', false);
+
+    try {
+        const { data, status } = await apiFetch('/admin/approve-user', {
+            method: 'POST',
+            body: { userId }
+        });
+
+        if (status === 200 && data.status) {
+            showToast(data.message, false);
+            
+            // --- PERBAIKAN UTAMA: HAPUS DARI TAMPILAN, JANGAN LOAD ULANG ---
+            // Alih-alih memanggil loadUsers(), kita hapus elemennya langsung dari DOM
+            // dengan animasi fade-out yang halus.
+            userItem.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            userItem.style.opacity = '0';
+            userItem.style.transform = 'translateX(-20px)';
+            
+            setTimeout(() => {
+                userItem.remove();
+                // Opsional: Cek jika daftar menjadi kosong
+                const pendingList = document.getElementById('pending-users-list');
+                if (pendingList && pendingList.children.length === 0) {
+                    pendingList.innerHTML = '<li>Tidak ada pengguna yang menunggu persetujuan.</li>';
+                }
+            }, 400); // Hapus elemen setelah animasi selesai
+
+        } else {
+            throw new Error(data.message || "Gagal menyetujui pengguna.");
+        }
+
+    } catch (error) {
+        showToast(error.message, true);
+        displayFeedback('approval-feedback', error.message, true);
+        // Kembalikan tombol ke keadaan semula jika gagal
+        button.disabled = false;
+        button.textContent = 'Setujui';
+    }
+}
+
+/**
+ * Handler untuk tombol 'Tolak' pada daftar pengguna baru.
+ */
+async function handleRejectUser(e) {
+    const button = e.currentTarget;
+    const userItem = button.closest('.user-item-admin');
+    const userId = userItem?.dataset.userId;
+
+    if (!userId || !button) return;
+
+    // Minta konfirmasi yang jelas karena ini aksi menghapus
+    if (!confirm(`YAKIN ingin MENOLAK dan MENGHAPUS pengguna ini? Aksi ini tidak dapat dibatalkan.`)) {
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner small"></span>`;
+    // Nonaktifkan juga tombol setujui agar tidak bisa diklik ganda
+    userItem.querySelector('.approve-user-btn')?.setAttribute('disabled', 'true');
+
+    displayFeedback('approval-feedback', '', false);
+
+    try {
+        const { data, status } = await apiFetch('/admin/reject-user', {
+            method: 'POST',
+            body: { userId }
+        });
+
+        if (status === 200 && data.status) {
+            showToast(data.message, false);
+
+            // Hapus item dari tampilan dengan animasi
+            userItem.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            userItem.style.opacity = '0';
+            userItem.style.transform = 'translateX(-20px)';
+
+            setTimeout(() => {
+                userItem.remove();
+                const pendingList = document.getElementById('pending-users-list');
+                if (pendingList && pendingList.children.length === 0) {
+                    pendingList.innerHTML = '<li>Tidak ada pengguna yang menunggu persetujuan.</li>';
+                }
+            }, 400);
+
+        } else {
+            throw new Error(data.message || "Gagal menolak pengguna.");
+        }
+
+    } catch (error) {
+        showToast(error.message, true);
+        displayFeedback('approval-feedback', error.message, true);
+        button.disabled = false;
+        button.textContent = 'Tolak';
+        userItem.querySelector('.approve-user-btn')?.removeAttribute('disabled');
+    }
 }
 
 /**
@@ -895,7 +1014,10 @@ function renderDashboard(activePage = 'packages') {
                         <li><a href="#profile" class="${activePage === 'profile' ? 'active' : ''}">Profil Saya</a></li>
                         <li><a href="#tutorial" class="${activePage === 'tutorial' ? 'active' : ''}">Cara Pembelian</a></li>
                         <li><a href="#kontak-admin" class="${activePage === 'kontak-admin' ? 'active' : ''}">Kontak Admin</a></li>
-                        ${isAdmin ? `<li><a href="#admin" class="${activePage === 'admin' ? 'active' : ''}">Panel Admin</a></li>` : ''}
+                        ${isAdmin ? `
+                        <li><a href="#admin" class="${activePage === 'admin' ? 'active' : ''}">Panel Admin</a></li>
+                        <li><a href="#laporan" class="${activePage === 'laporan' ? 'active' : ''}">Laporan Keuangan</a></li> ` : ''}
+
                     </ul>
                 </nav>
                 <button id="logout-btn" class="secondary">Logout</button>
@@ -941,11 +1063,17 @@ function renderDashboard(activePage = 'packages') {
         } else {
             window.location.hash = '#dashboard';
         }
-    } else {
-        mainContent.innerHTML += renderPhoneVerificationPanel();
-        renderPackagesPage(mainContent);
-        setupPhoneVerificationListeners();
-    }
+    } 
+    // --- PENAMBAHAN BARU DI SINI ---
+    else if (activePage === 'laporan') {
+        if (isAdmin) {
+            // Panggil fungsi render baru untuk halaman laporan
+            renderLaporanPage(mainContent); 
+        } else {
+            // Jika bukan admin mencoba akses, lempar ke dashboard
+            window.location.hash = '#dashboard';
+        }
+    } 
     
     // --- Sisa event listener di fungsi ini juga tetap sama ---
     document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
@@ -1075,6 +1203,9 @@ function renderAdminDashboard(container) {
             <h2>Lihat Log Transaksi Pengguna</h2>
             <div id="user-log-feedback"></div>
             <div class="form-group">
+        <input type="text" id="log-user-search" placeholder="🔍 Ketik nama/email untuk filter..." autocomplete="off">
+    </div>
+            <div class="form-group">
                 <label for="user-log-select">Pilih Pengguna:</label>
                 <div style="display: flex; gap: 1rem;">
                     <select id="user-log-select" required style="flex-grow: 1;">
@@ -1088,6 +1219,9 @@ function renderAdminDashboard(container) {
             <h2>Informasi & Manajemen Saldo</h2>
             <div id="balance-feedback"></div>
             <hr>
+             <div class="form-group">
+        <input type="text" id="saldo-user-search" placeholder="🔍 Ketik nama/email untuk filter..." autocomplete="off">
+    </div>
             <h3>Tambah/Kurangi Saldo Pengguna</h3>
             <form id="update-balance-form" class="balance-controls">
                 <label for="user-select">Pilih Pengguna:</label>
@@ -1213,153 +1347,147 @@ function renderAdminDashboard(container) {
     `).join('');
 }
 
-    /**
-     * Memuat daftar pengguna dari backend dan mengisi dropdown pemilihan pengguna.
-     */
-  async function loadUsers() {
-    try {
-        const { data, status } = await apiFetch('/admin/users');
-        if (status !== 200 || !data.status || !Array.isArray(data.data)) {
-            throw new Error(data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`);
-        }
-        const users = data.data;
-        // Tambahan: Urutkan pengguna berdasarkan nama agar lebih rapi di dropdown
-        const allUsersSorted = users.sort((a, b) => a.name.localeCompare(b.name));
+/**
+ * FUNGSI BARU: Mengisi semua dropdown pengguna dengan data yang sudah difilter.
+ */
+function populateUserDropdowns(searchTerm = '') {
+    const lowercasedTerm = searchTerm.toLowerCase();
 
-        // --- PENAMBAHAN: Ambil referensi ke SEMUA dropdown yang perlu diisi ---
-        const dropdownsToPopulate = [
-            document.getElementById('user-select'),         // Dropdown untuk form Update Saldo
-            document.getElementById('user-select-delete'),  // Dropdown untuk form Hapus Akun
-            document.getElementById('user-log-select')      // Dropdown untuk fitur Lihat Log
-        ];
+    // Filter daftar master pengguna berdasarkan nama atau email
+    const filteredUsers = allAdminUsers.filter(user => 
+        user.name.toLowerCase().includes(lowercasedTerm) || 
+        user.email.toLowerCase().includes(lowercasedTerm)
+    );
 
-        // --- PENAMBAHAN: Gunakan loop untuk mengisi semua dropdown secara efisien ---
-        dropdownsToPopulate.forEach(dropdown => {
-            if (dropdown) { // Hanya proses jika dropdown ditemukan
-                const selectedValue = dropdown.value; // Simpan nilai yang sedang dipilih (jika ada)
-                dropdown.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
-                
-                allUsersSorted.forEach(user => {
-                    // Jangan tampilkan admin yang sedang login di list
-                    if (currentUser.id !== user.id) {
-                       const option = document.createElement('option');
-                       option.value = user.id;
-                       option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
-                       dropdown.appendChild(option);
-                    }
-                });
-                 // Kembalikan nilai yang tadi dipilih agar tidak ter-reset
-                if (selectedValue) {
-                    dropdown.value = selectedValue;
-                }
+    const dropdownsToPopulate = [
+        document.getElementById('user-select'),
+        document.getElementById('user-select-delete'),
+        document.getElementById('user-log-select')
+    ];
+
+    dropdownsToPopulate.forEach(dropdown => {
+        if (dropdown) {
+            const selectedValue = dropdown.value; // Simpan nilai terpilih jika ada
+            dropdown.innerHTML = ''; // Kosongkan daftar
+
+            if (filteredUsers.length === 0) {
+                dropdown.innerHTML = '<option value="">Pengguna tidak ditemukan</option>';
+                return;
             }
-        });
 
-        // --- PENAMBAHAN: Event listener khusus untuk tombol "Lihat Log" ---
-        const logSelect = document.getElementById('user-log-select');
-        const logButton = document.getElementById('view-user-log-btn');
-        if (logSelect && logButton) {
-            logSelect.addEventListener('change', () => {
-                logButton.disabled = !logSelect.value;
+            dropdown.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+            filteredUsers.forEach(user => {
+                if (dropdown.id === 'user-select-delete' && currentUser.id === user.id) {
+                    return; // Jangan tampilkan admin di daftar hapus akun
+                }
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
+                dropdown.appendChild(option);
             });
+
+            // Coba pulihkan nilai yang tadi dipilih
+            if (filteredUsers.some(u => u.id === selectedValue)) {
+                dropdown.value = selectedValue;
+            }
+        }
+    });
+}
+// --- KODE LENGKAP UNTUK FITUR FILTER PENGGUNA ---
+
+/**
+ * FUNGSI BARU: Mengisi semua dropdown pengguna dengan data yang sudah difilter.
+ */
+function populateUserDropdowns(searchTerm = '') {
+    const lowercasedTerm = searchTerm.toLowerCase();
+    
+    // Filter daftar master pengguna berdasarkan nama atau email
+    const filteredUsers = allAdminUsers.filter(user => 
+        user.name.toLowerCase().includes(lowercasedTerm) || 
+        user.email.toLowerCase().includes(lowercasedTerm)
+    );
+
+    const dropdownsToPopulate = [
+        document.getElementById('user-select'),
+        document.getElementById('user-select-delete'),
+        document.getElementById('user-log-select')
+    ];
+
+    dropdownsToPopulate.forEach(dropdown => {
+        if (dropdown) {
+            const selectedValue = dropdown.value; // Simpan nilai terpilih jika ada
+            dropdown.innerHTML = ''; // Kosongkan daftar
+
+            if (filteredUsers.length === 0) {
+                dropdown.innerHTML = '<option value="">Pengguna tidak ditemukan</option>';
+            } else {
+                dropdown.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+                filteredUsers.forEach(user => {
+                    // Jangan tampilkan admin yang sedang login di dropdown Hapus Akun
+                    if (dropdown.id === 'user-select-delete' && currentUser.id === user.id) {
+                        return;
+                    }
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
+                    dropdown.appendChild(option);
+                });
+            }
+
+            // Coba pulihkan nilai yang tadi dipilih jika masih ada di daftar hasil filter
+            if (filteredUsers.some(u => u.id === selectedValue)) {
+                dropdown.value = selectedValue;
+            }
+        }
+    });
+
+    // Perbarui status tombol 'Lihat Log' setelah memfilter
+    const logButton = document.getElementById('view-user-log-btn');
+    const logSelect = document.getElementById('user-log-select');
+    if(logButton && logSelect) {
+        logButton.disabled = !logSelect.value;
+    }
+}
+
+/**
+ * FUNGSI LAMA (DIGANTI): Sekarang hanya bertugas mengambil data awal.
+ */
+async function loadUsers() {
+    try {
+        const { data } = await apiFetch('/admin/users');
+        if (!data.status || !Array.isArray(data.data)) {
+            throw new Error(data.message || `Gagal memuat daftar pengguna.`);
         }
         
-        // Kode asli untuk mengisi daftar persetujuan pengguna (TIDAK BERUBAH)
+        // Simpan data master ke variabel global
+        allAdminUsers = data.data.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Panggil fungsi untuk mengisi dropdown pertama kali (tanpa filter)
+        populateUserDropdowns('');
+
+        // Logika untuk daftar persetujuan pengguna (tidak berubah)
         const pendingList = document.getElementById('pending-users-list');
         if (pendingList) {
-            const pendingUsers = users.filter(u => u.status === 'pending');
-            if (pendingUsers.length > 0) {
-                pendingList.innerHTML = pendingUsers.map(user => `
-                    <li class="user-item-admin" data-user-id="${user.id}">
-                        <div class="user-info-admin">
-                            <strong>${user.name}</strong>
-                            <span>${user.email}</span>
-                        </div>
-                        <button class="approve-user-btn">Setujui</button>
-                    </li>
-                `).join('');
-            } else {
-                pendingList.innerHTML = '<li>Tidak ada pengguna yang menunggu persetujuan.</li>';
-            }
-            document.querySelectorAll('.approve-user-btn').forEach(button => {
-                button.addEventListener('click', handleApproveUser);
-            });
+            const pendingUsers = allAdminUsers.filter(u => u.status === 'pending');
+            pendingList.innerHTML = pendingUsers.length > 0 ? pendingUsers.map(user => `
+    <li class="user-item-admin" data-user-id="${user.id}">
+        <div class="user-info-admin">
+            <strong>${user.name}</strong>
+            <span>${user.email}</span>
+        </div>
+
+        <div class="user-actions">
+            <button class="approve-user-btn">Setujui</button>
+            <button class="reject-user-btn danger">Tolak</button> 
+        </div>
+    </li>`).join('') : '<li>Tidak ada pengguna yang menunggu persetujuan.</li>';
+            document.querySelectorAll('.approve-user-btn').forEach(button => button.addEventListener('click', handleApproveUser));
+            document.querySelectorAll('.reject-user-btn').forEach(button => button.addEventListener('click', handleRejectUser));
         }
 
     } catch (error) {
         console.error('Gagal memuat pengguna:', error);
-        // Ganti 'user-management-feedback' ke 'user-log-feedback' atau 'balance-feedback' yang relevan
         displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
-    }
-}
-    
-    // Perbarui tampilan saldo KMSP saat admin panel dimuat
-    const kmspBalanceDisplay = document.getElementById('kmsp-balance-display');
-    if (kmspBalanceDisplay) {
-        kmspBalanceDisplay.textContent = typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Memuat...';
-    }
-
-    /**
-     * Event handler untuk tombol 'Cek Saldo KMSP'.
-     * Memanggil API untuk mendapatkan saldo KMSP terbaru.
-     */
-    document.getElementById('check-kmsp-balance-btn')?.addEventListener('click', async (e) => {
-        const button = e.target;
-        button.disabled = true; button.textContent = 'Mengecek...';
-        displayFeedback('balance-feedback', '', false); // Bersihkan feedback sebelumnya
-        try {
-            const { data, status } = await apiFetch('/admin/kmsp-balance');
-            if (status === 200 && data.status && typeof data.data?.balance !== 'undefined') {
-                kmspBalance = data.data.balance; // Update variabel global
-                const balanceDisplay = document.getElementById('kmsp-balance-display');
-                if (balanceDisplay) {
-                    balanceDisplay.textContent = `Rp ${kmspBalance.toLocaleString('id-ID')}`;
-                }
-                displayFeedback('balance-feedback', 'Saldo KMSP berhasil diperbarui.', false);
-            } else {
-                throw new Error(data.message || 'Respons saldo tidak valid dari server.');
-            }
-        } catch (error) {
-            displayFeedback('balance-feedback', `Gagal cek saldo KMSP: ${error.message}`, true);
-        } finally {
-            button.disabled = false; button.textContent = 'Cek Saldo KMSP';
-        }
-    });
-    
-    async function handleApproveUser(e) {
-    const button = e.currentTarget;
-    const userItem = button.closest('.user-item-admin');
-    const userId = userItem?.dataset.userId;
-
-    if (!userId || !button) return;
-
-    if (!confirm(`Apakah Anda yakin ingin menyetujui pengguna ini?`)) {
-        return;
-    }
-
-    button.disabled = true;
-    button.innerHTML = `<span class="button-spinner"></span>`;
-    displayFeedback('approval-feedback', '', false);
-
-    try {
-        const { data, status } = await apiFetch('/admin/approve-user', {
-            method: 'POST',
-            body: { userId }
-        });
-
-        if (status === 200 && data.status) {
-            showToast(data.message);
-            // Muat ulang daftar pengguna untuk menghapus pengguna dari daftar pending
-            // dan menambahkannya ke dropdown.
-            loadUsers(); 
-        } else {
-            throw new Error(data.message || "Gagal menyetujui pengguna.");
-        }
-
-    } catch (error) {
-        showToast(error.message, true);
-        button.disabled = false;
-        button.textContent = 'Setujui';
     }
 }
    
@@ -1687,7 +1815,19 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         loadAdminStats();
         loadUsers(); // Muat pengguna
         await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
+          document.getElementById('view-user-log-btn')?.addEventListener('click', handleViewUserLog);
+        // ...
 
+
+        // --- TAMBAHKAN DUA BLOK EVENT LISTENER BARU DI SINI ---
+
+        document.getElementById('log-user-search')?.addEventListener('input', (e) => {
+            populateUserDropdowns(e.target.value);
+        });
+
+        document.getElementById('saldo-user-search')?.addEventListener('input', (e) => {
+            populateUserDropdowns(e.target.value);
+        });  
         // Ambil status maintenance saat load admin panel (ini akan memperbarui UI status awal)
         try {
             const { data: maintenanceData } = await apiFetch('/admin/maintenance');
@@ -2026,7 +2166,110 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         }
     }, 0);
 
+/**
+ * Merender halaman Laporan & Statistik.
+ */
+function renderLaporanPage(container) {
+    // Set tanggal default: 7 hari terakhir
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const defaultStartDate = sevenDaysAgo.toISOString().split('T')[0];
+    const defaultEndDate = today.toISOString().split('T')[0];
 
+    container.innerHTML = `
+        <div class="page-content">
+            <div class="page-header"><h1>Laporan Keuangan & Statistik</h1></div>
+
+            <div class="admin-section filter-controls">
+                <div class="form-group">
+                    <label for="start-date">Dari Tanggal</label>
+                    <input type="date" id="start-date" value="${defaultStartDate}">
+                </div>
+                <div class="form-group">
+                    <label for="end-date">Sampai Tanggal</label>
+                    <input type="date" id="end-date" value="${defaultEndDate}">
+                </div>
+                <div class="form-group">
+                    <button id="view-report-btn">Tampilkan Laporan</button>
+                </div>
+                <div class="form-group">
+                     <button id="download-report-btn" class="secondary">Unduh Excel</button>
+                </div>
+            </div>
+
+            <div id="stats-summary-container" class="admin-section">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    `;
+
+    const viewBtn = document.getElementById('view-report-btn');
+    const downloadBtn = document.getElementById('download-report-btn');
+    const statsContainer = document.getElementById('stats-summary-container');
+
+    async function fetchAndDisplayStats() {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+
+        if (!startDate || !endDate) {
+            alert('Silakan pilih rentang tanggal.');
+            return;
+        }
+
+        statsContainer.innerHTML = '<div class="loading-spinner"></div>';
+        viewBtn.disabled = true; downloadBtn.disabled = true;
+
+        try {
+            const { data } = await apiFetch(`/admin/detailed-stats?startDate=${startDate}&endDate=${endDate}`);
+            if (data.status) {
+                const stats = data.data;
+                statsContainer.innerHTML = `
+                    <h2>Rangkuman untuk ${startDate} s/d ${endDate}</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>Total Transaksi Sukses</h4>
+                            <p>${stats.totalSuccessfulTransactions.toLocaleString('id-ID')}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Pendapatan Kotor (Pokok)</h4>
+                            <p>Rp ${stats.totalGrossRevenue.toLocaleString('id-ID')}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Pendapatan Bersih (Laba)</h4>
+                            <p>Rp ${stats.totalNetRevenue.toLocaleString('id-ID')}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Total Pemasukan</h4>
+                            <p>Rp ${stats.totalRevenue.toLocaleString('id-ID')}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            statsContainer.innerHTML = `<p class="error-message">Gagal memuat statistik: ${error.message}</p>`;
+        } finally {
+            viewBtn.disabled = false; downloadBtn.disabled = false;
+        }
+    }
+
+    viewBtn.addEventListener('click', fetchAndDisplayStats);
+    downloadBtn.addEventListener('click', () => {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+         if (!startDate || !endDate) {
+            alert('Silakan pilih rentang tanggal untuk diunduh.');
+            return;
+        }
+        // Memicu unduhan file dari browser
+        window.location.href = `${API_BASE_URL}/admin/download-report?startDate=${startDate}&endDate=${endDate}`;
+    });
+
+    // Otomatis muat data saat halaman pertama kali dibuka
+    fetchAndDisplayStats();
+}
 
 
 /**
@@ -2390,13 +2633,10 @@ function displaySelectedPackageDetails(packageCode) {
     });
 }
 
-
 /**
  * Merender halaman riwayat transaksi ke dalam container.
- * Menggabungkan riwayat pembelian dan top up.
- * @param {HTMLElement} container - Elemen DOM tempat halaman riwayat akan dirender.
+ * VERSI FINAL LENGKAP: Menangani klik untuk semua jenis tombol aksi.
  */
-
 async function renderHistoryPage(container) {
     container.innerHTML = `
         <div class="page-content">
@@ -2407,121 +2647,132 @@ async function renderHistoryPage(container) {
     const historyContent = document.getElementById('history-content');
     if (!historyContent) return;
 
-    try {
-        const { data, status } = await apiFetch('/user/transactions');
+    // --- FUNGSI HELPER UNTUK MENANGANI SEMUA AKSI DI HALAMAN RIWAYAT ---
+    async function handleHistoryActions(e) {
+        // Dapatkan elemen button terdekat, ini lebih aman jika di dalam tombol ada elemen lain
+        const button = e.target.closest('button'); 
+        if (!button) return;
 
-        if (status === 200 && data.status && Array.isArray(data.data) && data.data.length > 0) {
+        // Aksi untuk tombol "Cek Status" pada pembelian internal
+        if (button.matches('.check-status-btn')) {
+            const kmspTrxId = button.dataset.kmspTrxId;
+            const rowId = button.dataset.rowId;
+            if (!kmspTrxId || !rowId) return;
+
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="button-spinner small"></span>';
+
+            try {
+                const { data } = await apiFetch(`/purchase/status/${kmspTrxId}`);
+                if (data.status && data.data) {
+                    const newStatus = data.data.status;
+                    const newMessage = data.data.message || newStatus;
+                    const statusCell = document.querySelector(`#${rowId} .status-cell`);
+                    const actionCell = document.querySelector(`#${rowId} .action-cell`);
+                    if (statusCell) {
+                        statusCell.innerHTML = `<span class="status-badge status-${newStatus}">${newMessage}</span>`;
+                    }
+                    if (actionCell && (newStatus === 'success' || newStatus === 'failed')) {
+                        actionCell.innerHTML = 'Selesai';
+                    } else {
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                    }
+                } else { throw new Error(data.message || "Gagal memperbarui status."); }
+            } catch (error) {
+                showToast(`Gagal cek status: ${error.message}`, true);
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        // Aksi untuk tombol pembayaran eksternal (DANA/QRIS Provider)
+        if (button.matches('.open-external-payment-btn')) {
+            const paymentDetailsString = button.dataset.paymentDetails;
+            if (!paymentDetailsString) return showToast('Data pembayaran tidak ditemukan.', true);
+            try {
+                const paymentData = JSON.parse(paymentDetailsString);
+                renderExternalPaymentModal(paymentData);
+            } catch (error) {
+                showToast('Gagal menampilkan detail pembayaran.', true);
+            }
+        }
+        
+        // --- INI BAGIAN YANG DIPERBAIKI: Aksi untuk tombol "Tampilkan QRIS" pada Top Up ---
+        if (button.matches('.open-qris-btn')) {
+            const topUpId = button.dataset.topupId;
+            const base64Image = button.dataset.base64Image;
+            const uniqueAmount = parseFloat(button.dataset.uniqueAmount);
+            const createdAt = button.dataset.createdAt;
+
+            if (topUpId && base64Image && !isNaN(uniqueAmount) && createdAt) {
+                // Panggil kembali fungsi render modal QRIS yang sudah ada
+                renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt);
+            } else {
+                showToast('Data QRIS pada tombol ini tidak lengkap.', true);
+            }
+        }
+    }
+
+    try {
+        const { data } = await apiFetch('/user/transactions');
+        if (data.status && Array.isArray(data.data) && data.data.length > 0) {
             historyContent.innerHTML = `
                 <table class="history-table">
                     <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Tipe</th>
-                            <th>Nama/ID</th>
-                            <th>Jumlah/Fee</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
+                        <tr><th>Tanggal</th><th>Tipe</th><th>Nama/ID</th><th>Jumlah/Fee</th><th>Status</th><th>Aksi</th></tr>
                     </thead>
                     <tbody>
                         ${data.data.map(trx => {
-                            let type = 'Pembelian';
-                            let nameOrId = trx.packageName || 'N/A';
-                            let amountOrFee = `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
-                            let actionButton = '';
-                            let statusClass = (trx.status || 'failed').toLowerCase();
+                            const transactionId = `trx_row_${trx.id.replace(/\W/g, '')}`;
+                            const type = trx.type === 'topup' ? 'Top Up' : 'Pembelian';
+                            const nameOrId = trx.packageName || trx.id;
+                            const amountOrFee = trx.type === 'topup' 
+                                ? `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`
+                                : `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
+                            const statusClass = (trx.status || 'failed').toLowerCase();
+                            
+                            let actionButton = '---';
+                            const isFinalState = ['success', 'failed', 'completed', 'expired', 'canceled'].includes(trx.status);
 
-                            // >>>>> START PERUBAHAN PENTING DI SINI <<<<<<<
-                            // Logika untuk transaksi pembelian eksternal (QRIS/Deeplink)
-                            // Tampilkan tombol jika ada paymentDetails, TERLEPAS DARI STATUS
                             if (trx.type === 'purchase' && trx.paymentDetails) {
-                                // Cek apakah ada data QRIS
-                                if (trx.paymentDetails.is_qris && trx.paymentDetails.qris_data && trx.paymentDetails.qris_data.qr_code) {
-                                    actionButton = `<button class="open-external-payment-btn"
-                                                            data-type="qris"
-                                                            data-trx-id="${trx.id}"
-                                                            data-payment-data='${JSON.stringify(trx.paymentDetails)}'
-                                                            style="white-space: nowrap;">Lihat QRIS</button>`;
-                                // Cek apakah ada data Deeplink
-                                } else if (trx.paymentDetails.have_deeplink && trx.paymentDetails.deeplink_data && trx.paymentDetails.deeplink_data.deeplink_url) {
-                                    actionButton = `<button class="open-external-payment-btn"
-                                                            data-type="deeplink"
-                                                            data-trx-id="${trx.id}"
-                                                            data-payment-data='${JSON.stringify(trx.paymentDetails)}'
-                                                            style="white-space: nowrap;">Lihat DANA/App</button>`;
+                                const paymentDataString = JSON.stringify(trx.paymentDetails);
+                                if (trx.paymentDetails.is_qris) {
+                                    actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>Tampilkan QRIS</button>`;
+                                } else if (trx.paymentDetails.have_deeplink) {
+                                    actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>Bayar via DANA</button>`;
                                 }
-                            }
-                            // >>>>> END PERUBAHAN PENTING DI SINI <<<<<<<
-
-                            // Logika untuk transaksi topup (sama, tidak berubah)
-                            else if (trx.type === 'topup') {
-                                type = 'Top Up';
-                                nameOrId = trx.id;
-                                amountOrFee = `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`;
-                                if (trx.status === 'pending' && trx.qrisData?.base64Image && typeof trx.qrisData?.uniqueAmount === 'number' && trx.createdAt) {
-                                    actionButton = `<button class="open-qris-btn"
-                                                             data-topup-id="${trx.id}"
-                                                             data-base64-image="${trx.qrisData.base64Image}"
-                                                             data-unique-amount="${trx.qrisData.uniqueAmount}"
-                                                             data-created-at="${trx.createdAt}"
-                                                             style="white-space: nowrap;">Lihat QRIS</button>`;
-                                }
+                            } else if (trx.type === 'purchase' && trx.kmspTrxId && !isFinalState) {
+                                actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
+                            } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData?.base64Image) {
+                                // Logika ini sudah benar dalam membuat tombol, masalahnya ada di event handler
+                                actionButton = `<button class="open-qris-btn"
+                                    data-topup-id="${trx.id}"
+                                    data-base64-image="${trx.qrisData.base64Image}"
+                                    data-unique-amount="${trx.qrisData.uniqueAmount}"
+                                    data-created-at="${trx.createdAt}">Tampilkan QRIS</button>`;
                             }
 
-                            return `
-                                <tr>
-                                    <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
-                                    <td data-label="Tipe">${type}</td>
-                                    <td data-label="Nama/ID">${nameOrId}</td>
-                                    <td data-label="Jumlah/Fee">${amountOrFee}</td>
-                                    <td data-label="Status"><span class="status-badge status-${statusClass}">${trx.api_response || trx.status}</span></td>
-                                    <td data-label="Aksi">${actionButton}</td>
-                                </tr>
-                            `;
+                            return `<tr id="${transactionId}">
+                                <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                                <td data-label="Tipe">${type}</td>
+                                <td data-label="Nama/ID">${nameOrId}</td>
+                                <td data-label="Jumlah/Fee">${amountOrFee}</td>
+                                <td data-label="Status" class="status-cell"><span class="status-badge status-${statusClass}">${trx.api_response || trx.status}</span></td>
+                                <td data-label="Aksi" class="action-cell">${actionButton}</td>
+                            </tr>`;
                         }).join('')}
                     </tbody>
-                </table>
-            `;
-            // Event listeners tetap sama
-            document.querySelectorAll('.open-qris-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const topUpId = e.target.dataset.topupId;
-                    const base64Image = e.target.dataset.base64Image;
-                    const uniqueAmount = parseFloat(e.target.dataset.uniqueAmount);
-                    const createdAt = e.target.dataset.createdAt;
-
-                    if (topUpId && base64Image && !isNaN(uniqueAmount) && createdAt) {
-                        renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt);
-                    } else {
-                        alert('Data QRIS top-up tidak lengkap atau tidak valid.');
-                    }
-                });
-            });
-
-            document.querySelectorAll('.open-external-payment-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const paymentDataString = e.target.dataset.paymentData;
-                    try {
-                        const paymentData = JSON.parse(paymentDataString);
-                        paymentData.trx_id = e.target.dataset.trxId; // Pastikan trx_id juga di-pass
-                        renderExternalPaymentModal(paymentData);
-                    } catch (error) {
-                        console.error('Error parsing payment data for purchase:', error);
-                        alert('Gagal memuat detail pembayaran pembelian. Data tidak valid.');
-                    }
-                });
-            });
-
+                </table>`;
+            historyContent.querySelector('.history-table tbody')?.addEventListener('click', handleHistoryActions);
         } else {
             historyContent.innerHTML = `<p>Anda belum memiliki riwayat transaksi.</p>`;
-            console.warn("Gagal memuat riwayat transaksi pengguna:", data.message || "Data transaksi tidak valid.");
         }
     } catch (error) {
         historyContent.innerHTML = `<p class="error-message">Gagal memuat riwayat: ${error.message}</p>`;
-        console.error("Kesalahan saat mengambil riwayat transaksi:", error);
     }
 }
-
 
 /**
  * Merender modal untuk permintaan top up saldo.

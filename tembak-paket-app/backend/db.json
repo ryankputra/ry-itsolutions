@@ -5,7 +5,7 @@
       "name": "admin",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$qDjzr6cBjZYzEBRRrZ3Y5eQN5F5pnuwyLQQmOyj/ja2pRDS5QGO2y",
-      "balance": 11100,
+      "balance": 10900,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
       "verifiedPhone": "6287767287284",
@@ -21,6 +21,50 @@
       "role": "user",
       "verifiedPhone": null,
       "createdAt": "2025-06-29T09:10:48.045Z",
+      "status": "approved"
+    },
+    {
+      "id": "user_1751283573834",
+      "name": "aaclan",
+      "email": "aaclan@gmail.com",
+      "password": "$2b$10$C7V0ezDeyuP7c2FFVPYTC.p.yGhBK0UsPaLgWD4p3jCTFh4dTfVPK",
+      "balance": 0,
+      "role": "user",
+      "verifiedPhone": null,
+      "createdAt": "2025-06-30T11:39:33.834Z",
+      "status": "approved"
+    },
+    {
+      "id": "user_1751286284307",
+      "name": "aaaaaaaa",
+      "email": "aaaaaaaaa@gmail.com",
+      "password": "$2b$10$U3VZ8hJisJeVROFU4UVwL.fDT/jjwAQKBSNFBiNNrooPMK7zrstKi",
+      "balance": 0,
+      "role": "user",
+      "verifiedPhone": null,
+      "createdAt": "2025-06-30T12:24:44.307Z",
+      "status": "approved"
+    },
+    {
+      "id": "user_1751286536818",
+      "name": "awawawa",
+      "email": "awawaw@gmail.com",
+      "password": "$2b$10$L3rbcRcUCerHpl4Ez3vrfeKfy9xe2UrlA.13NIxwD60jx1KezuoSi",
+      "balance": 0,
+      "role": "user",
+      "verifiedPhone": null,
+      "createdAt": "2025-06-30T12:28:56.818Z",
+      "status": "approved"
+    },
+    {
+      "id": "user_1751286770113",
+      "name": "awawaw",
+      "email": "awawawaw@gmail.com",
+      "password": "$2b$10$4vdru6iF5nBkzxh90Pc/O.dykVRcMVzPKpnWjNs7SZIMIbuXKZFba",
+      "balance": 0,
+      "role": "user",
+      "verifiedPhone": null,
+      "createdAt": "2025-06-30T12:32:50.113Z",
       "status": "approved"
     }
   ],
@@ -48,8 +92,8 @@
     },
     {
       "package_code": "XL_XC1PLUS1DISC_EWALLET",
-      "name": "[Method E-Wallet] Xtra Combo 1+1GB Disc (Gandengan XUT Super 30000)",
-      "description": "- Ini bukan Xtra Combo Special ya.. Beda lagi...\r\n- XL Xtra Combo 1+1GB / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Xtra Unlimited Turbo Super (XUT SUPER) 30000\r\n- Kartu usahakan jangan posisi masa tenggang saat ditembak.\r\n- Sediakan saldo E-wallet Rp12.500 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
+      "name": "[Method E-Wallet] Xtra Combo 1+1GB Disc (Gandengan XUT Super 30000 saja)",
+      "description": "- Ini bukan Xtra Combo Special ya.. Beda lagi...\r\n- XL Xtra Combo 1+1GB / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Xtra Unlimited Turbo Super (XUT SUPER) 30000 (hanya yang XUT SUPER 30000 saja bukan yang 8500)\r\n- Kartu usahakan jangan posisi masa tenggang saat ditembak.\r\n- Sediakan saldo E-wallet Rp12.500 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
       "original_price": 2500,
       "custom_price": 0.2,
       "isVisible": false,
@@ -690,7 +734,7 @@
     },
     {
       "package_code": "AKRAB_L75_PENGELOLA_PULSA",
-      "name": "[Metode Pulsa] Pengelola Akrab L Kuber 75GB dan Bonus Paket Akrab untuk 3 Anggota 30 Hari",
+      "name": "[Metode Pulsa] Pengelola Akrab L Kuber 75GB dan Bonus Paket Akrab untuk 3 Anggota 28 Hari",
       "description": "Buat yang tau-tau saja hehe..\r\n\r\nSediakan Pulsa Rp140.000 (memotong Rp140.000)\r\n\r\nBisa dijadwalkeun tembak dengan fitur Multi Trx, set tembak jam 02-05 WIB biar dapat myrewards pengelola dan anggotanya nanti yang diinvite.",
       "original_price": 2000,
       "custom_price": 0.2,
@@ -711,7 +755,7 @@
     },
     {
       "package_code": "AKRAB_L75_PENGELOLA_DANA",
-      "name": "[Metode E-Wallet] Pengelola Akrab L Kuber 75GB dan Bonus Paket Akrab untuk 3 Anggota 30 Hari",
+      "name": "[Metode E-Wallet] Pengelola Akrab L Kuber 75GB dan Bonus Paket Akrab untuk 3 Anggota 28 Hari",
       "description": "Buat yang tau-tau saja hehe..\r\n\r\nSediakan Saldo E-Wallet DANA Rp140.000 (memotong Rp140.000)",
       "original_price": 2000,
       "custom_price": 0.2,
@@ -2787,6 +2831,114 @@
       "platform_fee": 0,
       "category": "reguler",
       "isMultiPurchase": false
+    },
+    {
+      "package_code": "XLUNLITURBOBUNDLEPROMO40K",
+      "name": "[PROSES OTOMATIS] Bundle Xtra Unlimited Turbo WhatsApp, Line, Gojek, Facebook, Instagram, YouTube & Bonus Unlimited Turbo Netflix, Viu, Tiktok, Joox (Bonusnya Tidak Kami Jamin Masuk Semua)",
+      "description": "Bundle Xtra Unlimited Turbo WhatsApp, Line, Gojek, Facebook, Instagram, YouTube & Bonus Unlimited Turbo Netflix, Viu, Tiktok, Joox (Bonusnya Tidak Kami Jamin Masuk Semua)\r\n\r\n- WAJIB PULSA DI BAWAH RP10.000\r\n- PASTIKAN TIDAK ADA XTRA COMBO APAPUN, WAJIB CEK VIAL DIAL *808# > INFO > INFO Kartu XL-Ku > Stop Langganan. Unreg sampai bersih dari berbau Xtra Combo.\r\n- Selama status transaksi masih Pending, <b>mohon jangan belikan paket apapun dulu baik dari myxl atau aplikasi server pulsa</b>. Diamkan dulu kartunya..\r\n- Harus sabar menunggu maksimal 2 jam (memang harus begini dari sistemnya XL), jika status sukses maka akan diubah oleh sistem ke Transaksi sukses.\r\n- PASANG KARTU XL KALIAN KE MODEM/HP YANG AKAN DIPAKAI UNTUK INJECT VPN.\r\n- ABAIKAN NOTIF SMS YANG MASUK.\r\n- TANPA GARANSI. PAKET MASUK = DONE.. hehe",
+      "original_price": 40000,
+      "platform_fee": 0,
+      "isVisible": false,
+      "category": "reguler",
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ],
+      "isMultiPurchase": false
+    },
+    {
+      "package_code": "XLXCS8GB_PREV",
+      "name": "XL Xtra Combo Special 8GB Disc (1GB-8GB) 30 Hari",
+      "description": "- XL Xtra Combo Special Up to (hingga) 8 GB tergantung Area / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area. Karena beda dengan paket akrab, maka kami tidak bisa memastikan dapat berapa GB, bisa dari 1GB hingga 8GB. Jangan kaget apabila nanti ada yang dapat kuota 1GB/2GB/3GB/4GB/5GB/6GB/7GB/8GB. Membeli = SETUJU ya.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Unlimited Turbo di aplikasi MyXL untuk kebutuhan inject/trik internet murah menggunakan SSH/VPN.\r\n- Kartu jangan posisi masa tenggang saat ditembak.\r\n- Tidak perlu pulsa.\r\n- Terdapat fee/biaya Admin (tertera).",
+      "original_price": 33000,
+      "platform_fee": 0,
+      "isVisible": true,
+      "category": "reguler",
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ],
+      "isMultiPurchase": false
+    },
+    {
+      "package_code": "XLCIRCLE25GB",
+      "name": "[PROSES OTOMATIS] [BERGARANSI] XL Kuota Circle 25GB Full Kuota Utama (BACA DESKRIPSI)",
+      "description": "XL Kuota Circle 25GB Full Kuota Utama\r\n\r\n- Hanya bisa di kartu XL Prabayar.\r\n- Masa aktif 30 hari atau hingga kuota circlenya habis. Jika kuota circle habis sebelum 30 hari maka kamu akan otomatis kami tendang dan masuk ke kondisi FREEZE/BEKU. Order ulang bisa dilakukan di bulan depan pada tanggal 1.\r\n- Tidak menambah masa aktif kartu XL.\r\n- Tidak dapat digunakan jika masa aktif kartu XL dalam masa tenggang.\r\n- Untuk reload masa aktif kartu sebulan, silakan tembak paket masa aktif 30 hari di panel kami terlebih dahulu.\r\n- Jika ada kuota utama selain circle, mereka akan dikonsumsi terlebih dahulu baru kuota circle.\r\n- Cek kuota circle kamu lewat aplikasi MyXL terbaru > Klik menu XL CIRCLE.\r\n- Tidak menggunakan OTP.\r\n- Dilarang unreg atau keluar dari keanggotaan XL CIRCLE. Keluar = garansi hangus tanpa refund. Tidak bisa diinvite ulang.",
+      "original_price": 25000,
+      "platform_fee": 0,
+      "isVisible": false,
+      "category": "reguler",
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ],
+      "isMultiPurchase": false
+    },
+    {
+      "package_code": "XLCIRCLE20GB",
+      "name": "[PROSES OTOMATIS] [BERGARANSI] XL Kuota Circle 20GB Full Kuota Utama (BACA DESKRIPSI)",
+      "description": "XL Kuota Circle 20GB Full Kuota Utama\r\n\r\n- Hanya bisa di kartu XL Prabayar.\r\n- Masa aktif 30 hari atau hingga kuota circlenya habis. Jika kuota circle habis sebelum 30 hari maka kamu akan otomatis kami tendang dan masuk ke kondisi FREEZE/BEKU. Order ulang bisa dilakukan di bulan depan pada tanggal 1.\r\n- Tidak menambah masa aktif kartu XL.\r\n- Tidak dapat digunakan jika masa aktif kartu XL dalam masa tenggang.\r\n- Untuk reload masa aktif kartu sebulan, silakan tembak paket masa aktif 30 hari di panel kami terlebih dahulu.\r\n- Jika ada kuota utama selain circle, mereka akan dikonsumsi terlebih dahulu baru kuota circle.\r\n- Cek kuota circle kamu lewat aplikasi MyXL terbaru > Klik menu XL CIRCLE.\r\n- Tidak menggunakan OTP.\r\n- Dilarang unreg atau keluar dari keanggotaan XL CIRCLE. Keluar = garansi hangus tanpa refund. Tidak bisa diinvite ulang.",
+      "original_price": 20000,
+      "platform_fee": 0,
+      "isVisible": false,
+      "category": "reguler",
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ],
+      "isMultiPurchase": false
+    },
+    {
+      "package_code": "XLCIRCLE15GB",
+      "name": "[PROSES OTOMATIS] [BERGARANSI] XL Kuota Circle 15GB Full Kuota Utama (BACA DESKRIPSI)",
+      "description": "XL Kuota Circle 15GB Full Kuota Utama\r\n\r\n- Hanya bisa di kartu XL Prabayar.\r\n- Masa aktif 30 hari atau hingga kuota circlenya habis. Jika kuota circle habis sebelum 30 hari maka kamu akan otomatis kami tendang dan masuk ke kondisi FREEZE/BEKU. Order ulang bisa dilakukan di bulan depan pada tanggal 1.\r\n- Tidak menambah masa aktif kartu XL.\r\n- Tidak dapat digunakan jika masa aktif kartu XL dalam masa tenggang.\r\n- Untuk reload masa aktif kartu sebulan, silakan tembak paket masa aktif 30 hari di panel kami terlebih dahulu.\r\n- Jika ada kuota utama selain circle, mereka akan dikonsumsi terlebih dahulu baru kuota circle.\r\n- Cek kuota circle kamu lewat aplikasi MyXL terbaru > Klik menu XL CIRCLE.\r\n- Tidak menggunakan OTP.\r\n- Dilarang unreg atau keluar dari keanggotaan XL CIRCLE. Keluar = garansi hangus tanpa refund. Tidak bisa diinvite ulang.",
+      "original_price": 18000,
+      "platform_fee": 0,
+      "isVisible": false,
+      "category": "reguler",
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ],
+      "isMultiPurchase": false
+    },
+    {
+      "package_code": "XLCIRCLE10GB",
+      "name": "[PROSES OTOMATIS] [BERGARANSI] XL Kuota Circle 10GB Full Kuota Utama (BACA DESKRIPSI)",
+      "description": "XL Kuota Circle 10GB Full Kuota Utama\r\n\r\n- Hanya bisa di kartu XL Prabayar.\r\n- Masa aktif 30 hari atau hingga kuota circlenya habis. Jika kuota circle habis sebelum 30 hari maka kamu akan otomatis kami tendang dan masuk ke kondisi FREEZE/BEKU. Order ulang bisa dilakukan di bulan depan pada tanggal 1.\r\n- Tidak menambah masa aktif kartu XL.\r\n- Tidak dapat digunakan jika masa aktif kartu XL dalam masa tenggang.\r\n- Untuk reload masa aktif kartu sebulan, silakan tembak paket masa aktif 30 hari di panel kami terlebih dahulu.\r\n- Jika ada kuota utama selain circle, mereka akan dikonsumsi terlebih dahulu baru kuota circle.\r\n- Cek kuota circle kamu lewat aplikasi MyXL terbaru > Klik menu XL CIRCLE.\r\n- Tidak menggunakan OTP.\r\n- Dilarang unreg atau keluar dari keanggotaan XL CIRCLE. Keluar = garansi hangus tanpa refund. Tidak bisa diinvite ulang.",
+      "original_price": 15000,
+      "platform_fee": 0,
+      "isVisible": false,
+      "category": "reguler",
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ],
+      "isMultiPurchase": false
     }
   ],
   "transactions": [
@@ -4510,6 +4662,33 @@
       "paymentMethod": "balance",
       "createdAt": "2025-06-29T13:08:08.487Z",
       "paymentDetails": null
+    },
+    {
+      "id": "trx_1751270305983",
+      "userId": "user_1750832245659",
+      "userName": "admin",
+      "packageId": "XLUNLITURBOSTANDARDXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Standard bayar ke XL Rp20.000 (untuk Xtra Combo)",
+      "platformFee": 200,
+      "kmspTrxId": "1280295a-82ed-464b-acfa-f1dda1bae90c",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-06-30T07:58:25.983Z",
+      "paymentDetails": {
+        "msisdn": "6287767287284",
+        "package_code": "XLUNLITURBOSTANDARDXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Standard bayar ke XL Rp20.000 (untuk Xtra Combo)",
+        "package_processing_fee": 0,
+        "trx_id": "1280295a-82ed-464b-acfa-f1dda1bae90c",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250630111212800110166320757707009&timestamp=1751270305331&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=i6AdFHqXZASMSDZ7mrw9zUWhASD4YClalb0E8x3HfNW3NTEaixBBOZ%2Bc3h9oBpo6bDd7NtqxXSSOk7%2FEthX%2Fw6Mej1fWdrGgqoyitXmkQBlII8k34tPN29kF0Y0FVMFKc6aaez7JVNlcPgL2AR6Xwur7HrrGYFfXj%2BmXvQgihfbAR%2BeGrOQE9bMWpqpvHyS8zjjs7IE2HzjFh5hmSwKprRbXorGZdqsqzX8BM1B3smMo8dg277Z9KY03YfhPnDmGGATo7AriBcLfJu0dSTUTq1oWrJPP5RMECeBdPqnJFDm7RpCdwdsoVOjFAHe9qXM%2BB6wjx1Nw93yT8XC%2F90u56Q%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
     }
   ],
   "topups": [
@@ -4591,6 +4770,33 @@
       "status": "canceled",
       "createdAt": "2025-06-29T09:12:04.439Z",
       "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADg0lEQVR4nO2aQZLrIAxEqZoD5Ei5OkfyAVKlHyO1hDPJ7CB/8XrhMUE8z0JWNcKtIYQQQggh9L/JQo9m/RaX1nR5Dp9zfjmDx91QhwFjJ8MHZ7wd486s3Y+a/QmGHT8W8FoGA8YuhmfzQ/G6DFqsPId3MeLFgAHjq4zmWa/kPlP/uWgwPA4GjC8yVInPvJZDcK7f5bNgwPgCY/zxOTP/LaPcT3g5Vty8DAaMTYzQvBf761IvAQwY+xgXpYs95CLGxY5PC2DA2MMIP2ujmRU12f1sKTO8lbPoMGDsZZzxag2EjpHmamtFfDUOYMDYzYjQ2IuN4cjmmFeJ9saB97vs0S6CAWM5I/I6s950puXNLM/w50/OnXoLMGBsZHiam+buR5naqslRrGUqfvfHYMBYy3Bds3lU4l5bs1qu/IcBYy+j56LMcJ1kmXzvKNvaqX16X2DAWMloLV1spXRMhE+o46ypYsOAsY+hKHVeTRnuT8hDhDAV6TFgwNjKyHI8dQ/S3ob5tUvjwBtcMGBsZMgYZKjJRYR3KGX+/6rrMGCsZkzdq6OaBKq/Le/uMrrv9mIwYCxmlKIcN0/z0BEhamvBgPENhoN6m/2sQmt5zrb5DgaMXYxytuUYyk94xfYGVz7h3b8AA8ZaxpTDcgfhIl6ecImDAWMrQyCpjx9uNcw0n+I+JDwMGKsYlo51ispzruq3+qLrdg0GjG2M0Vutz1K9wXp7zHce95d3gAFjMaMLNFRfX/nQvxZw8/uIuOotwICxieFz8aHKCVLVbbUD8x7sgI4S/VqTYcBYzkhFcrfYkMXWLGfz2AsGjG8wbvIE2Qu4MJT//gTFwYCxnxFbLrW1pi9YstUltxt1+kUwYKxlKIeV3GOYoJeUtupydRgwdjLmcpwpnbuteAmU5l3NBBgwtjIEslS6gwIp/y2OYt8JBoyVjDMgyuxwuzK1U2G2S8KHlYABYyPD4isAtQtOxZYr1WWDY9h+eQcYMNYyJtpkYG825X9L26Dl77wDDBgLGcrnh04DhuQdXhtcPV8CGDC2Mnzg8ZePAjLXldw/Vm9CazBgbGWM+ivGjBwpfbNr+zXfBBgwvsKIfde1MKcU/KE/BgPGLoZrKriX0PtJ6m0u2zBg7GP4yvQOI179Vtnb+O1DIxYGjOWMUFhZfVWVpVe2wU+3/OJZDwPGPgZCCCGEEEL/h/4BLz7Yufo5ezIAAAAASUVORK5CYII="
+    },
+    {
+      "id": "547e3a47-ea2d-4010-9712-467850628877",
+      "userId": "user_1751188248045",
+      "baseAmount": 10000,
+      "uniqueAmount": 10080,
+      "status": "expired",
+      "createdAt": "2025-06-30T07:52:17.255Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADlklEQVR4nO2aS7LqMAxEXcUCWBJbz5JYQKp8E0kt28D7TCLu4PQAjCOfTISqLbs1hBBCCCGEfpt6aD9Gz3Pivp8fx8x2jI4PG50fZ7CNTBsMGJUM/3E3xs3j28NG/jTm7Gm8YSyDAaOKMfLaZ3L5WHnMGTfe1XcYML7I0PKzOiu5z9Q/FkX+w4DxZcYRZTNnXsshONdH+S4YML7AsC/5WXEjyn2vl2PFzctgwChihHat/MfH+BPAgFHHmDS72J57MSX8/wkGjEsY4WfNxfaoye5nhzLD23AWGwwYhQxztqM1EIuapbnaWhE/GgcwYBQzFBp7Mfs5Zb2X6OctGgfNs35vi2DAuJzhAVaEp9BsZnmGN1VsvQsGjFrG2GhFf2CY2lGTo1ir6fXeH4MB41qGP5Op1R2BPapzbs10ViAkDBjFjH0uuGZlc8vlCW/bNevQPrRxgwGjlPGyF5OLaBHlPmEcZ00VGwaMQobdAmg6CFDW63QrDxFGmr97XBgwLmekqXVGeIfehbSKvTQOvMEFA0YhQ8vDQHhy+66s9zX01scKGDBqGeldl92W6m/L0cP9xO3TXgwGjKsZQ9s9FinrTz0jZLQVYMCoZzhoa7OfVehYnk/bPIIBo5Bxi4aATT8yw7fRiPWzgr1NcQ0GjELGnMO5IYtj1zQLnv9zHAwYpQwVXMvw9AT3mHHGXI779BMGjCqGNl86IfCVOoAd/dapYud2DQaMMsapaLpa1DNuBkyjiPubd4AB41rG1uZE1mnADI/Olw4Mpt4CDBhFDH/mx1lemKMR28YOzHuwBrUS/VqTYcC4nJGK5G7yE741y6dx7LXDgPEFRv/gCRaG8t/fYN2DBQ4DRhVD7iDaWtMNlmx1ye1GnV4EA8bVjHCxPZoEntIJeinffXS5NhgwKhm+XHdUdDdQ2ey9rUzzTc0EGDBqGadkYLsX3HH2qteMc67XK7AwYJQwbOVmQze6YWqnwtyXhA8rAQNGIaPHLQC1C8w7pItwRSWOp+/eAQaMqxkTbTKw9wxdbIOWf/IOMGBcyFA+m7PN7JZ3eG1wbfkngAGjlOE/ZBvGNmzkupL71sc/oTUYMEoZVn+nUCE9pe99bb/mPwEGjK8wXp1tT1N7SsGfelswYFQyTFPBXUIfJ2kt2zBg1DF8pflZ9ayy3yp7G3N/aMTCgHE5IySPm6ewES/bENcIdJdgrckwYFzMQAghhBBC6HfoB4Lur1tvti7RAAAAAElFTkSuQmCC"
+    },
+    {
+      "id": "0d103731-655b-4fb4-90e0-f74f2e137ff1",
+      "userId": "user_1750832245659",
+      "baseAmount": 10000,
+      "uniqueAmount": 10705,
+      "status": "expired",
+      "createdAt": "2025-06-30T08:01:25.647Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADkElEQVR4nO2aQW7rMAxEBfgAPlKu7iP5AAH0a5FDSkkK/I2ZLt4s3ESinrtgiBGl1hBCCCGEEPpr6q5n68fee2v7U1O7j/njCh6fhg4YMCoZR8T3c7P49jhz1sfGbL4BBoxihmXzU/F6/MTHyuvrQwz/YcCA8VXGVafP1pTcV+r/LBoMi4MB44sMVeIrr+UQjGuf4l0wYHyBMf7Y3OVxNZZZ7+VYcfMyGDCKGK6x7/qPR/4IYMCoYywKF3vKRYxHP39bAANGDcP9bLrYa/DRF0WGt3QWBwwYlYy1ceXB50hztbU8PhsHMGB8hfFhL+bzKtHWOLB+V3+2RTBg3M4Y9ta3XNfDQrNEb10TOvGKkwQYMMoYudEKkExt1mRvcBn3U38MBox7GT3qb2bzqMRHbs1i+XzsBQNGHcMPrK6wYSCscTAZiCu5T/cYeutLrsOAcT/DirA2WlZ1T29ruU/I46ypYsOAUcfwHN6f6reO+tvXvJaz7d4DgwGjmhHpa4wjt2F71zWWvjQOpqNYGDCqGJnNU3yT5Z209XwrDBi1DEvp01tYahKo/sZrfPbzfg4GjLsZKd+LNd+amc7wE+emOBgwqhkGOtpcnRWay2O2zZ9gwKhieOZqL+ZpbtU5GrEtTgj2X/4FGDBuZZipPVoskpXwsXjDlOvv/TEYMO5myB2MroAn8u4jxpjLcZ++woBRxnBQNATGyt0PYLPfOsHn+4IwYJQw1FvVsNHUiPUrA21xwG//AgwYtzPMGAik0wBtw9rue7E8MJh6CzBgFDHc4+55b0XHWbkDsx7sgI4S/VbXYcC4mxHy5G7NkHkeqzEde8GAUc94pCcInzAzlP/2BivgMxwGjAJG7zILzW6u5pWVKNaz2/U6vQgGjNsZFiWLYCkdoJfy3bPLdcCAUciwHZjRWqR07LbsRxBpfqiZAANGLcOW757mnvA6e51e4yu3/roYBowCxhWQaZ6mdirMfUn4PFiAAaOK0f0WgApz77HlCnkl9tlP/gMGjHsZE20ysHuELrZByz95BxgwbmQon586DRiSd3htcKXHgAGjlGFfLH65FBC5ruTeev4SWoMBo5Rh16icMSNHSu99bb/GLwEGjK8wJheboSEFf+ptwYBRyDBNBXcJfVykqU0LA0Ypw1aGdxjx6rfK3vrYL41YGDBuZ7jcyupWVZRe2QY73bKHZT0MGHUMhBBCCCGE/ob+AY5ijQUVuY58AAAAAElFTkSuQmCC"
+    },
+    {
+      "id": "216087fe-16c5-46ea-b3a0-2a15aa752b46",
+      "userId": "user_1750832245659",
+      "baseAmount": 10000,
+      "uniqueAmount": 10334,
+      "status": "expired",
+      "createdAt": "2025-06-30T09:58:43.508Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADiElEQVR4nO2aS47dIBBFkbwAluSte0lvAZZIQ3396SgTeBmcO+g8cHGcQVG6FC4FIYQQQgih/01NdZZ2lK2VvQ+O/uCofa72YY05iz9gwFjJkEGPbx9b2T6bLSqbMvrciMvLYMBYxZBsPq/Tg+srxyYwhm0MGDC+xLAMH1mvyd16nf7J8H3kPwwYX2b8RI0ZMxBqETb75e+CAeMLjPGPPNO8VhdRNOu1HFtcXgYDxiKG6ix2+Pr7n9gEMGCsYySNlN4/fgIrl4T/N8GAMYWhfra72GKJHL80r+PBpf0FA8YqRmoN7NbbEni0tTQ+GgcwYCxmaOm1s5gW4ThtDfM73pC2w3n5T8CAMZ8RM6NnsFsR1mZW0U0wHshZbL9bCRgwpjOOqu0qDY32a6rJ2uCKXL/VZBgwJjNE12wutjI3vT4XJAwYSxlHRI2Et3hFjjQX89uavfWX/QIDxjRGiyJcveqa21WfMDJc3G55aXXBgDGbYWcsO3KJbnntJ7XwGDBgrGSMldaINYlFqFGnL42DdBULA8YyRrFsNkRuEiRtLVbAgLGW4ZcDUnXjrsCbXs0rse6E17MYDBgzGaFEi0lbKT0DGDC+wxDQUbKftdBY7k9L/gUDxkLGlhoCMgyaNGLvc0/BgDGZYdMS5UcumTviDZHrj74DDBjTGcUNhPsEvWJt6hNyOW5pCAPGKkbzuyrtWdUz9WWj3yqL8gUsDBgLGSnD0z3rmZES97t3gAFjOiN/VXW+VmdryaqzSL0FGDAWMdTP1sj1qLrB9ZuEUaLvNRkGjOkMlyZ3Kan0RqjWaTEVMGCsZuxXT7BbcquL8PyXN9R4AAPGQkY6ctWnWZAPWpLb1Tp9EwwYcxnhDtQ2FKMJ4yW4z916BjBgzGXIp1W7dQqk9sZpSzeBpbk3E2DAWMvoSgY2kFF6dW6T89l9MQwYCxj7SO6iXS6dGxewfgvbLglfHt9aw4Axm9H0KwBrF3Tpkct1mA3WYbn7DxgwJjMSLRnY6qEX22DL37wDDBgTGZbPp1dnj099rLhEOFPCw4CxjCGDGn2sYm0ty3VL7u3hMWDAWMYY9dcLblf2CbVd269d97sCGDDWMUaUxlcLdVnwW28LBozFjMh6AUXoPlI/XgMDxlKGxL/4WXcMo7fl/a72aMTCgDGdoVIrKxcGJUqvF2sxv+KAL5sABoz5DIQQQgghhP4P/QHN/0BgLRX3FQAAAABJRU5ErkJggg=="
     }
   ],
   "announcements": [

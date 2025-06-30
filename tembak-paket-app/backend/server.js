@@ -13,6 +13,7 @@ const FileStore = require('session-file-store')(session);
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const multer = require('multer');
+const excel = require('exceljs'); 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -204,6 +205,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+
 app.post('/api/admin/approve-user', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { userId } = req.body;
@@ -217,12 +219,56 @@ app.post('/api/admin/approve-user', isAuthenticated, isAdmin, async (req, res) =
         }
 
         userToApprove.status = 'approved';
+
+        // --- BLOK NOTIFIKASI BARU DIMULAI DI SINI ---
+        // Dapatkan info admin yang sedang login untuk dicatat di log
+        const adminUser = db.data.users.find(u => u.id === req.session.userId);
+        const adminName = adminUser ? adminUser.name : 'Sistem';
+
+        // Buat pesan notifikasi untuk grup log
+        const logMessage = `<b>✅ Persetujuan Pengguna Berhasil</b>\n` +
+                           `──────────────────────\n` +
+                           `👤 <b>Pengguna:</b> ${userToApprove.name} (${userToApprove.email})\n` +
+                           `👨‍💼 <b>Disetujui oleh:</b> Admin ${adminName}\n` +
+                           `⏰ <b>Waktu:</b> ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`;
+        
+        // Panggil fungsi notifikasi (ini tidak akan menunda respons ke frontend)
+        sendTelegramNotification(logMessage)
+            .catch(err => console.error("[APPROVE_USER_NOTIF] Gagal mengirim notifikasi:", err));
+        // --- AKHIR BLOK NOTIFIKASI ---
+
         await db.write();
 
         res.status(200).json({ status: true, message: `Pengguna ${userToApprove.name} berhasil disetujui.` });
     } catch (error) {
         console.error("Error approving user:", error);
         res.status(500).json({ status: false, message: "Gagal menyetujui pengguna." });
+    }
+});
+
+app.post('/api/admin/reject-user', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ status: false, message: "User ID diperlukan." });
+        }
+
+        const userIndex = db.data.users.findIndex(u => u.id === userId);
+
+        if (userIndex === -1) {
+            return res.status(404).json({ status: false, message: "Pengguna tidak ditemukan." });
+        }
+
+        // Hapus pengguna dari array users
+        const rejectedUser = db.data.users.splice(userIndex, 1);
+        
+        await db.write();
+
+        res.status(200).json({ status: true, message: `Pengguna ${rejectedUser[0].name} berhasil ditolak dan dihapus.` });
+
+    } catch (error) {
+        console.error("Error rejecting user:", error);
+        res.status(500).json({ status: false, message: "Gagal menolak pengguna." });
     }
 });
 
@@ -382,11 +428,13 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         const newTransaction = {
             id: `trx_${Date.now()}`, userId, userName: user.name,
             packageId, packageName: pkg.name, platformFee,
+            originalPrice: pkg.original_price,
             kmspTrxId: purchaseData.data?.trx_id || null,
             status: transactionSucceeded ? 'success' : 'failed',
             api_response: purchaseData.message || (transactionSucceeded ? 'Success' : 'Failed'),
             paymentMethod, createdAt: new Date().toISOString(),
             paymentDetails: (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) ? purchaseData.data : null
+            
         };
         db.data.transactions.push(newTransaction);
         await db.write();
@@ -473,6 +521,7 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
 
         const newTransaction = { 
             id: `trx_${Date.now()}`, userId, userName: user.name, packageId, packageName: pkg.name, platformFee,
+            originalPrice: pkg.original_price,
             status: transactionSucceeded ? 'success' : 'failed',
             api_response: purchaseData.message || (transactionSucceeded ? 'Success' : 'Failed'),
             paymentMethod: 'balance', createdAt: new Date().toISOString()
@@ -566,6 +615,7 @@ app.post('/api/purchase/multi-pulsa', isAuthenticated, async (req, res) => {
 
             const newTransaction = {
                 id: `trx_${Date.now()}_${index}`, userId, userName: user.name, packageId, packageName: pkg.name, platformFee,
+                originalPrice: pkg.original_price,
                 status: transactionSucceeded ? 'success' : 'failed',
                 api_response: purchaseData.message || (transactionSucceeded ? 'Success' : 'Gagal'),
                 paymentMethod: 'balance', createdAt: new Date().toISOString()
@@ -605,25 +655,44 @@ app.post('/api/purchase/multi-pulsa', isAuthenticated, async (req, res) => {
     });
 });
 
-
 app.get('/api/purchase/status/:kmspTrxId', isAuthenticated, async (req, res) => {
     const { kmspTrxId } = req.params;
     const userId = req.session.userId;
-    const transaction = db.data.transactions.find(t => t.kmspTrxId === kmspTrxId && t.userId === userId);
-    if (!transaction) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
-    if (transaction.status === 'success') return res.json({ status: true, data: { status: 'success', message: 'Pembayaran sudah dikonfirmasi.' } });
+    
     try {
+        const transaction = db.data.transactions.find(t => t.kmspTrxId === kmspTrxId && t.userId === userId);
+        if (!transaction) {
+            return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
+        }
+
+        // Jika status lokal sudah sukses, tidak perlu cek ke KMSP lagi
+        if (transaction.status === 'success') {
+            return res.json({ 
+                status: true, 
+                data: { status: 'success', message: 'Transaksi ini sudah dikonfirmasi berhasil.' } 
+            });
+        }
+
+        // Lakukan pengecekan ke KMSP
         const kmspUrl = `https://golang-openapi-checktransaction-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}&trx_id=${kmspTrxId}`;
         const response = await fetch(kmspUrl);
         const data = await response.json();
-        if (!response.ok || !data.status) {
-            throw new Error(data.message || 'Gagal cek status ke KMSP.');
+
+        if (!response.ok) {
+            // Jika KMSP sendiri mengembalikan error (misal: 500), teruskan pesannya
+            throw new Error(data.message || 'Gagal menghubungi provider untuk cek status.');
         }
+
+        // Jika status dari KMSP adalah sukses DAN status lokal kita masih pending/failed, update database kita
         if (data.status && data.data?.status === 'success' && transaction.status !== 'success') {
             transaction.status = 'success';
+            transaction.api_response = data.data.message || 'Success (dikofirmasi manual)';
             await db.write();
         }
+
+        // Kirim kembali respons apa adanya dari KMSP ke frontend
         res.json(data);
+
     } catch (error) {
         console.error("Error checking purchase status:", error);
         res.status(500).json({ status: false, message: error.message || 'Terjadi kesalahan saat memeriksa status pembelian.' });
@@ -738,6 +807,111 @@ app.get('/api/user/active-packages', isAuthenticated, async (req, res) => {
 });
 
 // --- RUTE ADMIN ---
+app.get('/api/admin/detailed-stats', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ status: false, message: 'Parameter startDate dan endDate diperlukan.' });
+        }
+
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        // Filter transaksi berdasarkan rentang tanggal dan yang statusnya berhasil
+        const successfulTransactions = db.data.transactions.filter(t => {
+            const trxDate = new Date(t.createdAt);
+            return t.status === 'success' && trxDate >= start && trxDate <= end;
+        });
+
+        const totalNetRevenue = successfulTransactions.reduce((sum, t) => sum + (t.platformFee || 0), 0);
+        const totalGrossRevenue = successfulTransactions.reduce((sum, t) => sum + (t.originalPrice || 0), 0);
+        const totalRevenue = totalGrossRevenue + totalNetRevenue;
+
+        const stats = {
+            totalSuccessfulTransactions: successfulTransactions.length,
+            totalNetRevenue,      // Pendapatan Bersih (Laba dari Fee)
+            totalGrossRevenue,    // Pendapatan Kotor (Harga Pokok)
+            totalRevenue,         // Total Uang yang dibayar Pengguna
+            avgNetRevenuePerTrx: successfulTransactions.length > 0 ? totalNetRevenue / successfulTransactions.length : 0,
+        };
+
+        res.json({ status: true, data: stats });
+
+    } catch (error) {
+        console.error("Error fetching detailed stats:", error);
+        res.status(500).json({ status: false, message: "Gagal mengambil statistik." });
+    }
+});
+
+
+// RUTE BARU UNTUK MENGUNDUH LAPORAN EXCEL
+app.get('/api/admin/download-report', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        if (!startDate || !endDate) {
+            return res.status(400).send('Tanggal tidak lengkap');
+        }
+
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        const transactionsToExport = db.data.transactions.filter(t => {
+            const trxDate = new Date(t.createdAt);
+            return t.status === 'success' && trxDate >= start && trxDate <= end;
+        });
+
+        const workbook = new excel.Workbook();
+        const worksheet = workbook.addWorksheet(`Laporan ${startDate} - ${endDate}`);
+
+        worksheet.columns = [
+            { header: 'Tanggal', key: 'createdAt', width: 20 },
+            { header: 'Nama Pengguna', key: 'userName', width: 30 },
+            { header: 'Nama Paket', key: 'packageName', width: 40 },
+            { header: 'Harga Pokok (Rp)', key: 'originalPrice', width: 20, style: { numFmt: '#,##0' } },
+            { header: 'Laba/Fee (Rp)', key: 'platformFee', width: 20, style: { numFmt: '#,##0' } },
+            { header: 'Total (Rp)', key: 'total', width: 20, style: { numFmt: '#,##0' } },
+        ];
+
+        let totalPokok = 0;
+        let totalLaba = 0;
+
+        transactionsToExport.forEach(trx => {
+            const hargaPokok = trx.originalPrice || 0;
+            const laba = trx.platformFee || 0;
+            totalPokok += hargaPokok;
+            totalLaba += laba;
+            worksheet.addRow({
+                createdAt: new Date(trx.createdAt).toLocaleString('id-ID'),
+                userName: trx.userName,
+                packageName: trx.packageName,
+                originalPrice: hargaPokok,
+                platformFee: laba,
+                total: hargaPokok + laba,
+            });
+        });
+
+        // Tambahkan baris total
+        worksheet.addRow({}); // Baris kosong
+        const totalRow = worksheet.addRow(['TOTAL', '', '', totalPokok, totalLaba, totalPokok + totalLaba]);
+        totalRow.font = { bold: true };
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Laporan-RyyStore-${startDate}-sd-${endDate}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (error) {
+        console.error("Error generating report:", error);
+        res.status(500).send("Gagal membuat laporan");
+    }
+});
 
 app.get('/api/admin/statistics', isAuthenticated, isAdmin, async (req, res) => {
     try {
