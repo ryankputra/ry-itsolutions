@@ -669,10 +669,81 @@ select#package-dropdown {
     overflow-y: auto; /* Agar konten utama bisa di-scroll */
 }
 
+.announcement-overlay {
+    position: fixed; /* Kunci untuk membuatnya mengambang */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Latar belakang gelap transparan */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Pastikan ia berada di atas semua elemen lain */
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.announcement-overlay.fade-out {
+    opacity: 0;
+}
+
+.announcement-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    text-align: center;
+    transform: scale(1);
+    transition: transform 0.3s ease-in-out;
+}
+
+.announcement-overlay.fade-out .announcement-content {
+    transform: scale(0.9);
+}
+
+
+.announcement-header h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.announcement-body {
+    text-align: left;
+    line-height: 1.6;
+    color: #333;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 0 0.5rem;
+    margin-bottom: 1.5rem;
+
+    /* --- INI KUNCI UNTUK MEMBACA ENTER --- */
+    white-space: pre-wrap;
+}
+
+.announcement-close-btn {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.announcement-close-btn:hover {
+    background-color: #5a2c9d;
+}
 /* Announcement Banner */
 .announcement-banner {
-    background-color: red;
-    color: white;
+    background-color: rgb(118, 255, 5);
+    color: rgb(0, 0, 0);
     padding: 0.75rem 1rem;
     border-radius: var(--border-radius);
     margin-bottom: 1.5rem;
@@ -689,6 +760,8 @@ select#package-dropdown {
     margin: 0;
     flex-grow: 1;
     padding-right: 1rem;
+    white-space: pre-wrap; /* Ini adalah baris kuncinya! */
+    word-wrap: break-word; 
 }
 .announcement-close {
     background: none;
@@ -1868,4 +1941,23 @@ button.danger:hover {
     cursor: pointer;
     font-weight: bold;
     border: none;
+}
+
+/* Style untuk status 'Menunggu Provider' */
+.status-badge.status-pending-provider {
+  background-color: #f59e0b; /* Warna kuning/oranye */
+  color: #fff;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
 }

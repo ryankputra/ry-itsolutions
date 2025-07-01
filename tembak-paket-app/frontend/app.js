@@ -16,6 +16,8 @@ let latestAnnouncement = null;
 let isMaintenanceMode = false; 
 let statusIntervalId = null;
 let allAdminUsers = [];
+// --- PERUBAHAN BARU: Variabel untuk interval polling di halaman riwayat ---
+let historyPollingInterval = null;
 
 
 // ===============================================
@@ -37,15 +39,21 @@ async function main() {
     }
 
     if (currentUser) {
-        const loggedInPromises = [
-            initKMSPsession(),
-            fetchAnnouncement()
-        ];
+    const loggedInPromises = [
+        initKMSPsession(),
+        fetchAnnouncement() // Tetap fetch seperti biasa
+    ];
         if (currentUser.role === 'admin') {
             loggedInPromises.push(fetchKMSPBalance());
         }
         await Promise.all(loggedInPromises);
-        startStatusPolling(); //
+
+        if (latestAnnouncement && !sessionStorage.getItem('announcement_shown_' + latestAnnouncement.id)) {
+        renderAnnouncementModal(latestAnnouncement); // Panggil fungsi modal baru kita
+        // Tandai bahwa pengumuman ini sudah ditampilkan
+        sessionStorage.setItem('announcement_shown_' + latestAnnouncement.id, 'true');
+    }
+        startStatusPolling(); 
     }
     
     renderApp(isAdminLoginAttempt); 
@@ -1177,6 +1185,7 @@ function renderAdminDashboard(container) {
         return;
     }
 
+    // Saya menambahkan section 'Manajemen Transaksi' di bawah 'Persetujuan Pengguna Baru'
     container.innerHTML = `
         <div class="admin-container">
             <div class="admin-section">
@@ -1189,6 +1198,12 @@ function renderAdminDashboard(container) {
                 <p>Pengguna di bawah ini sedang menunggu persetujuan Anda untuk bisa login.</p>
                 <div id="approval-feedback"></div>
                 <ul id="pending-users-list" class="user-list-admin"><div class="loading-spinner"></div></ul>
+            </div>
+
+            <div class="admin-section">
+                <h2>Manajemen Transaksi</h2>
+                <p>Lihat semua histori transaksi dan kelola permintaan yang tertunda karena saldo provider kurang.</p>
+                <div id="admin-transactions-container"><div class="loading-spinner"></div></div>
             </div>
             <div class="admin-section">
                 <h2>Statistik Ringkas</h2>
@@ -1236,7 +1251,6 @@ function renderAdminDashboard(container) {
             </div>
 
            <div class="admin-section">
-            <h2>Persetujuan Pengguna Baru</h2>
             </div>
 
         <div class="admin-section">
@@ -1348,6 +1362,92 @@ function renderAdminDashboard(container) {
             button.disabled = false;
         }
     });
+    const initializeTransactionManagement = () => {
+        const transactionsContainer = document.getElementById('admin-transactions-container');
+        if (!transactionsContainer) return;
+
+        const loadAndRenderAdminTransactions = async () => {
+            transactionsContainer.innerHTML = '<div class="loading-spinner"></div>';
+            try {
+                const { data, status } = await apiFetch('/admin/transactions');
+                if (!status || !data.status) {
+                    throw new Error(data.message || 'Gagal memuat data.');
+                }
+
+                const transactions = data.data;
+                if (transactions.length === 0) {
+                    transactionsContainer.innerHTML = '<p>Belum ada transaksi.</p>';
+                    return;
+                }
+
+                transactionsContainer.innerHTML = `
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Pengguna</th>
+                                    <th>Paket</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${transactions.map(trx => {
+                                    let actionButtons = '---';
+                                    if (trx.status === 'menunggu_saldo_provider') {
+                                        actionButtons = `<button class="button-admin-cancel" data-trx-id="${trx.id}">Tolak</button>`;
+                                    }
+                                    
+                                    let statusClass = (trx.status || 'failed').toLowerCase().replace(/\s/g, '-');
+                                    if (statusClass === 'menunggu_saldo_provider') statusClass = 'pending-provider';
+
+                                    return `
+                                        <tr>
+                                            <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', {dateStyle: 'short', timeStyle: 'short'})}</td>
+                                            <td data-label="Pengguna">${trx.userName || 'N/A'}</td>
+                                            <td data-label="Paket">${trx.packageName}</td>
+                                            <td data-label="Status"><span class="status-badge status-${statusClass}">${trx.api_response}</span></td>
+                                            <td data-label="Aksi">${actionButtons}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (error) {
+                transactionsContainer.innerHTML = `<p class="error-message">Gagal memuat transaksi: ${error.message}</p>`;
+            }
+        };
+
+        transactionsContainer.addEventListener('click', async (e) => {
+            const button = e.target;
+            if (button.matches('.button-admin-cancel')) {
+                const trxId = button.dataset.trxId;
+                if (!trxId) return;
+
+                if (!confirm(`Apakah Anda yakin ingin menolak transaksi ini? Biaya layanan akan dikembalikan ke saldo pengguna.`)) {
+                    return;
+                }
+
+                button.disabled = true;
+                button.textContent = '...';
+
+                try {
+                    const { data } = await apiFetch(`/admin/transactions/${trxId}/cancel`, { method: 'POST' });
+                    showToast(data.message, false);
+                    loadAndRenderAdminTransactions();
+                } catch (error) {
+                    showToast(error.message, true);
+                    button.disabled = false;
+                    button.textContent = 'Tolak';
+                }
+            }
+        });
+
+        loadAndRenderAdminTransactions();
+    };
 
 
     // JavaScript untuk Admin Panel (di dalam fungsi renderAdminDashboard)
@@ -1882,7 +1982,7 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
             }
         } catch (error) {
             console.error("Gagal memuat status maintenance di admin:", error);
-        }
+        }initializeTransactionManagement(); 
     }, 0);
 }
 
@@ -2124,6 +2224,64 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         }
     });
 
+    /**
+ * FUNGSI BARU: Merender modal pengumuman yang mengambang.
+ * @param {object} announcement - Objek pengumuman dari database.
+ */
+function renderAnnouncementModal(announcement) {
+    // Dapatkan container utama untuk modal (mungkin sudah ada)
+    let modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) {
+        // Jika tidak ada, buat dan tambahkan ke body
+        modalContainer = document.createElement('div');
+        modalContainer.id = 'modal-container';
+        document.body.appendChild(modalContainer);
+    }
+
+    // Buat elemen-elemen modal
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'announcement-overlay';
+
+    const modalContent = document.createElement('div');
+    modalContent.className = 'announcement-content';
+
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'announcement-header';
+    modalHeader.innerHTML = `<h2>📢 Pengumuman Penting</h2>`;
+
+    const modalBody = document.createElement('p');
+    modalBody.className = 'announcement-body';
+    // Menggunakan textContent untuk keamanan, lalu CSS akan menangani formatnya
+    modalBody.textContent = announcement.message; 
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'announcement-close-btn';
+    closeButton.textContent = 'Saya Mengerti';
+
+    // Gabungkan semua elemen
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalContent.appendChild(closeButton);
+    modalOverlay.appendChild(modalContent);
+    modalContainer.appendChild(modalOverlay);
+
+    // Fungsi untuk menutup modal
+    const closeModal = () => {
+        modalOverlay.classList.add('fade-out'); // Tambahkan class untuk animasi fade-out
+        setTimeout(() => {
+            modalContainer.innerHTML = ''; // Hapus modal dari DOM setelah animasi
+        }, 300); // Sesuaikan dengan durasi transisi di CSS
+    };
+
+    // Tambahkan event listener
+    closeButton.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+        // Hanya tutup jika yang diklik adalah area overlay gelap, bukan konten modalnya
+        if (e.target === modalOverlay) {
+            closeModal();
+        }
+    });
+}
     /**
      * Event handler untuk tombol 'Unduh Backup Database'.
      * Memulai proses unduh file database dari backend.
@@ -2678,6 +2836,12 @@ function displaySelectedPackageDetails(packageCode) {
  * VERSI FINAL LENGKAP: Menangani klik untuk semua jenis tombol aksi.
  */
 async function renderHistoryPage(container) {
+    // Hentikan polling lama jika ada saat masuk ke halaman ini
+    if (historyPollingInterval) {
+        clearInterval(historyPollingInterval);
+        historyPollingInterval = null;
+    }
+
     container.innerHTML = `
         <div class="page-content">
             <div class="page-header"><h1>Riwayat Transaksi</h1></div>
@@ -2689,20 +2853,17 @@ async function renderHistoryPage(container) {
 
     // --- FUNGSI HELPER UNTUK MENANGANI SEMUA AKSI DI HALAMAN RIWAYAT ---
     async function handleHistoryActions(e) {
-        // Dapatkan elemen button terdekat, ini lebih aman jika di dalam tombol ada elemen lain
-        const button = e.target.closest('button'); 
+        const button = e.target.closest('button');
         if (!button) return;
 
-        // Aksi untuk tombol "Cek Status" pada pembelian internal
+        // Aksi untuk tombol "Cek Status" pada pembelian internal (non-OTP)
         if (button.matches('.check-status-btn')) {
             const kmspTrxId = button.dataset.kmspTrxId;
             const rowId = button.dataset.rowId;
             if (!kmspTrxId || !rowId) return;
 
-            const originalText = button.innerHTML;
             button.disabled = true;
             button.innerHTML = '<span class="button-spinner small"></span>';
-
             try {
                 const { data } = await apiFetch(`/purchase/status/${kmspTrxId}`);
                 if (data.status && data.data) {
@@ -2717,17 +2878,17 @@ async function renderHistoryPage(container) {
                         actionCell.innerHTML = 'Selesai';
                     } else {
                         button.disabled = false;
-                        button.innerHTML = originalText;
+                        button.innerHTML = 'Cek Status';
                     }
                 } else { throw new Error(data.message || "Gagal memperbarui status."); }
             } catch (error) {
                 showToast(`Gagal cek status: ${error.message}`, true);
                 button.disabled = false;
-                button.innerHTML = originalText;
+                button.innerHTML = 'Cek Status';
             }
         }
 
-        // Aksi untuk tombol pembayaran eksternal (DANA/QRIS Provider)
+        // Aksi untuk tombol pembayaran eksternal (DANA/QRIS dari Provider)
         if (button.matches('.open-external-payment-btn')) {
             const paymentDetailsString = button.dataset.paymentDetails;
             if (!paymentDetailsString) return showToast('Data pembayaran tidak ditemukan.', true);
@@ -2738,8 +2899,8 @@ async function renderHistoryPage(container) {
                 showToast('Gagal menampilkan detail pembayaran.', true);
             }
         }
-        
-        // --- INI BAGIAN YANG DIPERBAIKI: Aksi untuk tombol "Tampilkan QRIS" pada Top Up ---
+
+        // Aksi untuk tombol "Tampilkan QRIS" pada Top Up
         if (button.matches('.open-qris-btn')) {
             const topUpId = button.dataset.topupId;
             const base64Image = button.dataset.base64Image;
@@ -2747,7 +2908,6 @@ async function renderHistoryPage(container) {
             const createdAt = button.dataset.createdAt;
 
             if (topUpId && base64Image && !isNaN(uniqueAmount) && createdAt) {
-                // Panggil kembali fungsi render modal QRIS yang sudah ada
                 renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt);
             } else {
                 showToast('Data QRIS pada tombol ini tidak lengkap.', true);
@@ -2755,63 +2915,116 @@ async function renderHistoryPage(container) {
         }
     }
 
-    try {
-        const { data } = await apiFetch('/user/transactions');
-        if (data.status && Array.isArray(data.data) && data.data.length > 0) {
-            historyContent.innerHTML = `
-                <table class="history-table">
-                    <thead>
-                        <tr><th>Tanggal</th><th>Tipe</th><th>Nama/ID</th><th>Jumlah/Fee</th><th>Status</th><th>Aksi</th></tr>
-                    </thead>
-                    <tbody>
-                        ${data.data.map(trx => {
-                            const transactionId = `trx_row_${trx.id.replace(/\W/g, '')}`;
-                            const type = trx.type === 'topup' ? 'Top Up' : 'Pembelian';
-                            const nameOrId = trx.packageName || trx.id;
-                            const amountOrFee = trx.type === 'topup' 
-                                ? `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`
-                                : `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
-                            const statusClass = (trx.status || 'failed').toLowerCase();
-                            
-                            let actionButton = '---';
-                            const isFinalState = ['success', 'failed', 'completed', 'expired', 'canceled'].includes(trx.status);
 
-                            if (trx.type === 'purchase' && trx.paymentDetails) {
-                                const paymentDataString = JSON.stringify(trx.paymentDetails);
-                                if (trx.paymentDetails.is_qris) {
-                                    actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>Tampilkan QRIS</button>`;
-                                } else if (trx.paymentDetails.have_deeplink) {
-                                    actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>Bayar via DANA</button>`;
-                                }
-                            } else if (trx.type === 'purchase' && trx.kmspTrxId && !isFinalState) {
-                                actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
-                            } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData?.base64Image) {
-                                // Logika ini sudah benar dalam membuat tombol, masalahnya ada di event handler
-                                actionButton = `<button class="open-qris-btn"
-                                    data-topup-id="${trx.id}"
-                                    data-base64-image="${trx.qrisData.base64Image}"
-                                    data-unique-amount="${trx.qrisData.uniqueAmount}"
-                                    data-created-at="${trx.createdAt}">Tampilkan QRIS</button>`;
-                            }
-
-                            return `<tr id="${transactionId}">
-                                <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
-                                <td data-label="Tipe">${type}</td>
-                                <td data-label="Nama/ID">${nameOrId}</td>
-                                <td data-label="Jumlah/Fee">${amountOrFee}</td>
-                                <td data-label="Status" class="status-cell"><span class="status-badge status-${statusClass}">${trx.api_response || trx.status}</span></td>
-                                <td data-label="Aksi" class="action-cell">${actionButton}</td>
-                            </tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>`;
-            historyContent.querySelector('.history-table tbody')?.addEventListener('click', handleHistoryActions);
-        } else {
+    // Fungsi untuk merender tabel riwayat
+    const drawHistoryTable = (transactions) => {
+        if (!transactions || transactions.length === 0) {
             historyContent.innerHTML = `<p>Anda belum memiliki riwayat transaksi.</p>`;
+            return;
         }
-    } catch (error) {
-        historyContent.innerHTML = `<p class="error-message">Gagal memuat riwayat: ${error.message}</p>`;
-    }
+
+        historyContent.innerHTML = `
+            <table class="history-table">
+                <thead>
+                    <tr><th>Tanggal</th><th>Tipe</th><th>Nama/ID</th><th>Jumlah/Fee</th><th>Status</th><th>Aksi</th></tr>
+                </thead>
+                <tbody>
+                    ${transactions.map(trx => {
+                        const transactionId = `trx_row_${trx.id.replace(/\W/g, '')}`;
+                        const type = trx.type === 'topup' ? 'Top Up' : 'Pembelian';
+                        const nameOrId = trx.packageName || trx.id;
+                        const amountOrFee = trx.type === 'topup'
+                            ? `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`
+                            : `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
+
+                        let statusClass = (trx.status || 'failed').toLowerCase();
+                        let statusText = trx.api_response || trx.status;
+
+                        if (trx.status === 'menunggu_saldo_provider') {
+                            statusClass = 'pending-provider';
+                            statusText = 'Menunggu Provider';
+                        } else if (trx.status === 'pending' && trx.type === 'topup') {
+                            statusText = 'Menunggu Pembayaran';
+                        }
+                        
+                        let actionButton = '---';
+                        const isFinalState = ['success', 'failed', 'completed', 'expired', 'canceled'].includes(trx.status);
+
+                        if (trx.type === 'purchase' && trx.paymentDetails && !isFinalState) {
+                            const paymentDataString = JSON.stringify(trx.paymentDetails);
+                            let buttonText = 'Lanjutkan Pembayaran';
+                            if(trx.paymentDetails.is_qris) buttonText = 'Tampilkan QRIS';
+                            if(trx.paymentDetails.have_deeplink) buttonText = 'Bayar via DANA';
+                            actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
+                        } else if (trx.type === 'purchase' && trx.kmspTrxId && !isFinalState) {
+                            actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
+                        } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData?.base64Image) {
+                            actionButton = `<button class="open-qris-btn"
+                                data-topup-id="${trx.id}"
+                                data-base64-image="${trx.qrisData.base64Image}"
+                                data-unique-amount="${trx.qrisData.uniqueAmount}"
+                                data-created-at="${trx.createdAt}">Tampilkan QRIS</button>`;
+                        }
+
+                        return `<tr id="${transactionId}" data-transaction-id="${trx.id}" data-status="${trx.status}">
+                            <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                            <td data-label="Tipe">${type}</td>
+                            <td data-label="Nama/ID">${nameOrId}</td>
+                            <td data-label="Jumlah/Fee">${amountOrFee}</td>
+                            <td data-label="Status" class="status-cell">
+                                <span class="status-badge status-${statusClass}">${statusText}</span>
+                            </td>
+                            <td data-label="Aksi" class="action-cell">${actionButton}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+
+        historyContent.querySelector('.history-table tbody')?.addEventListener('click', handleHistoryActions);
+    };
+    
+    // Fungsi utama yang dipanggil saat halaman dimuat dan saat polling
+    const fetchAndUpdateHistory = async (isInitialLoad = false) => {
+        try {
+            const { data } = await apiFetch('/user/transactions');
+            if (!data.status || !Array.isArray(data.data)) return;
+
+            if (isInitialLoad) {
+                drawHistoryTable(data.data);
+            } else {
+                // Lakukan update dinamis untuk baris yang statusnya berubah
+                data.data.forEach(trx => {
+                    const row = document.querySelector(`tr[data-transaction-id="${trx.id}"]`);
+                    if (row && row.dataset.status !== trx.status) {
+                        // Jika status berubah, gambar ulang seluruh tabel agar event listener dan tombol aksi ikut ter-update
+                        // Ini lebih sederhana dan andal daripada memanipulasi DOM per baris untuk kasus ini
+                        drawHistoryTable(data.data);
+                    }
+                });
+            }
+
+            const hasPending = data.data.some(t => t.status === 'menunggu_saldo_provider' || (t.type === 'topup' && t.status === 'pending'));
+            if (!hasPending && historyPollingInterval) {
+                clearInterval(historyPollingInterval);
+                historyPollingInterval = null;
+            } else if (hasPending && !historyPollingInterval) {
+                historyPollingInterval = setInterval(() => fetchAndUpdateHistory(false), 30000);
+            }
+
+        } catch (error) {
+            console.error("Gagal memuat/polling riwayat:", error.message);
+            if (historyPollingInterval) {
+                clearInterval(historyPollingInterval);
+                historyPollingInterval = null;
+            }
+            if (!document.querySelector('.history-table')) {
+                historyContent.innerHTML = `<p class="error-message">Gagal memuat riwayat: ${error.message}</p>`;
+            }
+        }
+    };
+
+    // Panggil pertama kali untuk memuat data
+    await fetchAndUpdateHistory(true);
 }
 
 /**
@@ -3536,59 +3749,77 @@ async function renderNonOtpPage(container) {
             <div id="non-otp-feedback" style="margin-top: 1rem;"></div>
         </div>
     `;
-       document.getElementById('check-all-stock-btn')?.addEventListener('click', async (e) => {
-        const button = e.currentTarget;
-        const resultsContainer = document.getElementById('all-stock-results-container');
-        if (!button || !resultsContainer) return;
+      document.getElementById('check-all-stock-btn')?.addEventListener('click', async (e) => {
+    const button = e.currentTarget;
+    const resultsContainer = document.getElementById('all-stock-results-container');
+    if (!button || !resultsContainer) return;
 
-        button.disabled = true;
-        button.innerHTML = '<span class="button-spinner"></span> Mengecek semua...';
-        resultsContainer.innerHTML = '<div class="loading-spinner"></div>';
-        
-        // Buat array "promise" untuk setiap pengecekan stok
-        const stockCheckPromises = nonOtpPackages
-            // Filter hanya paket yang tidak termasuk kata kunci "stockless"
-            .filter(pkg => {
-                const stocklessKeywords = ['MASA AKTIF', 'SLOT AKRAB', 'REINVITE'];
-                return !stocklessKeywords.some(keyword => pkg.name.toUpperCase().includes(keyword));
-            })
-            .map(pkg => 
-                apiFetch(`/packages/stock/${pkg.package_code}`)
-                    .then(response => ({
-                        name: pkg.name,
-                        stock: response.data.data.stock,
-                        success: response.data.status,
-                    }))
-                    .catch(() => ({
-                        name: pkg.name,
-                        stock: 'Error',
-                        success: false,
-                    }))
-            );
+    button.disabled = true;
+    button.innerHTML = '<span class="button-spinner"></span> Mengecek...';
+    
+    resultsContainer.innerHTML = `
+        <div class="page-content" style="padding: 1rem; background: #f9f9f9;">
+            <h3>Hasil Pengecekan Stok (Real-time)</h3>
+            <ul id="realtime-stock-list" style="list-style: none; padding: 0;"></ul>
+            <p id="stock-check-status" style="text-align: center; margin-top: 1rem;"></p>
+        </div>
+    `;
+    const stockListUl = document.getElementById('realtime-stock-list');
+    const statusP = document.getElementById('stock-check-status');
 
-        // Tunggu semua promise selesai
-        const results = await Promise.all(stockCheckPromises);
+    // --- PERBAIKAN DI BARIS INI ---
+    const packagesToCheck = visiblePackages.filter(p => 
+        p.category === 'non-otp' && 
+        p.isVisible && 
+        p.name.toLowerCase().includes('akrab') // Hanya sertakan paket yang namanya mengandung "akrab"
+    );
 
-        // Render hasilnya menjadi daftar HTML
-        const resultsHTML = results.map(result => `
-            <li style="display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #eee;">
-                <span>${result.name}</span>
-                <strong style="color: ${result.stock > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">
-                    ${result.success ? (result.stock > 0 ? `Stok: ${result.stock}` : '0') : 'Gagal Cek'}
-                </strong>
-            </li>
-        `).join('');
-
-        resultsContainer.innerHTML = `
-            <div class="page-content" style="padding: 1rem; background: #f9f9f9;">
-                <h3>Hasil Pengecekan Stok</h3>
-                <ul style="list-style: none; padding: 0;">${resultsHTML}</ul>
-            </div>
-        `;
-
+    if (packagesToCheck.length === 0) {
+        statusP.textContent = "Tidak ada paket Akrab yang aktif untuk diperiksa.";
         button.disabled = false;
         button.textContent = 'Cek Stok Semua Paket Akrab';
-    });
+        return;
+    }
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    for (const [index, pkg] of packagesToCheck.entries()) {
+        statusP.textContent = `Mengecek ${index + 1}/${packagesToCheck.length}: ${pkg.name}`;
+        
+        let stockResult = { success: false, stock: 'Gagal Cek' };
+        try {
+            const { data } = await apiFetch(`/packages/stock/${pkg.package_code}`);
+            if (data.status && data.data) {
+                stockResult = { success: true, stock: data.data.stock };
+            } else {
+                stockResult = { success: false, stock: data.message || 'Gagal' };
+            }
+        } catch (error) {
+            stockResult = { success: false, stock: 'Error' };
+        }
+
+        const resultLi = document.createElement('li');
+        resultLi.style.cssText = 'display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #eee;';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = pkg.name;
+
+        const stockStrong = document.createElement('strong');
+        stockStrong.style.color = stockResult.success && stockResult.stock > 0 ? 'var(--success-color)' : 'var(--danger-color)';
+        stockStrong.textContent = stockResult.success ? (stockResult.stock > 0 ? `Stok: ${stockResult.stock}` : 'Stok: 0') : stockResult.stock;
+        
+        resultLi.appendChild(nameSpan);
+        resultLi.appendChild(stockStrong);
+        stockListUl.appendChild(resultLi);
+
+        await delay(200);
+    }
+
+    statusP.textContent = `✅ Selesai! ${packagesToCheck.length} paket Akrab telah diperiksa.`;
+    button.disabled = false;
+    button.textContent = 'Cek Ulang Stok Semua Paket Akrab';
+});
+
     document.getElementById('non-otp-search-input')?.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const dropdown = document.getElementById('non-otp-package');
@@ -3650,42 +3881,41 @@ async function renderNonOtpPage(container) {
     if(initialPurchaseBtn) initialPurchaseBtn.disabled = true;
 
     document.getElementById('non-otp-purchase-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const button = e.target.querySelector('button[type="submit"]');
-        button.disabled = true;
-        button.innerHTML = '<span class="button-spinner"></span> Memproses...';
-        displayFeedback('non-otp-feedback', '', false);
+    e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.innerHTML = '<span class="button-spinner"></span> Memproses...';
+    displayFeedback('non-otp-feedback', '', false);
 
-        const phone = document.getElementById('non-otp-phone').value;
-        const packageId = document.getElementById('non-otp-package').value;
-        
-        try {
-            const { data, status } = await apiFetch('/purchase/non-otp', {
-                method: 'POST',
-                body: { phone, packageId, paymentMethod: 'balance' }
-            });
+    const phone = document.getElementById('non-otp-phone').value;
+    const packageId = document.getElementById('non-otp-package').value;
 
-            if (status === 200 && data.status) {
-                if (typeof data.newBalance === 'number') {
-                    currentUser.balance = data.newBalance;
-                    const userBalanceElement = document.getElementById('user-balance');
-                    if(userBalanceElement) {
-                        userBalanceElement.textContent = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
-                    }
-                }
-                showToast(data.message); 
-                e.target.reset();
-                document.getElementById('non-otp-details-area').innerHTML = '';
-            } else {
-                throw new Error(data.message || "Pembelian gagal.");
-            }
-        } catch (error) {
-            showToast(error.message, true);
-        } finally {
-            button.disabled = false;
-            button.textContent = 'Beli Sekarang';
+    try {
+        const { data, status } = await apiFetch('/purchase/non-otp', {
+            method: 'POST',
+            body: { phone, packageId } // Hanya phone dan packageId
+        });
+
+        if (currentUser && typeof data.newBalance === 'number') {
+            currentUser.balance = data.newBalance;
+            document.getElementById('user-balance').textContent = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
         }
-    });
+
+        showToast(data.message, false); 
+
+        if (status === 200 || status === 202) {
+             e.target.reset();
+             document.getElementById('non-otp-details-area').innerHTML = '';
+        } else {
+             throw new Error(data.message || "Pembelian gagal.");
+        }
+    } catch (error) {
+        showToast(error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Beli Sekarang';
+    }
+});
 }
 
 /**
@@ -3736,7 +3966,7 @@ async function checkPackageStock(packageId, targetElement) {
         targetElement.innerHTML = `<p style="color: var(--danger-color);">Gagal memuat stok.</p>`;
         // Jika gagal cek stok, nonaktifkan juga tombolnya
         if (purchaseBtn) {
-            purchaseBtn.disabled = true;
+            purchaseBtn.disabled = false;
             purchaseBtn.textContent = 'Gagal Cek Stok';
         }
     }

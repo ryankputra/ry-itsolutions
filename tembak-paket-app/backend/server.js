@@ -14,6 +14,7 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const multer = require('multer');
 const excel = require('exceljs'); 
+const cron = require('node-cron'); 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,38 +31,45 @@ const OKE_API_KEY = process.env.OKE_API_KEY;
 const OKE_API_BASE = process.env.OKE_API_BASE;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID; 
+
 
 if (!KMSP_API_KEY) {
     console.error("FATAL ERROR: KMSP_API_KEY tidak diset di file .env.");
     process.exit(1);
 }
 
+
+
 // --- FUNGSI HELPER NOTIFIKASI TELEGRAM ---
-async function sendTelegramNotification(message) {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-        console.log("Notifikasi Telegram dinonaktifkan (token atau chat ID tidak diset).");
+async function sendTelegramNotification(message, target = 'group') {
+    let targetChatId;
+    if (target === 'admin') {
+        targetChatId = TELEGRAM_ADMIN_CHAT_ID;
+    } else {
+        targetChatId = TELEGRAM_CHAT_ID;
+    }
+
+    if (!TELEGRAM_BOT_TOKEN || !targetChatId) {
+        console.log(`Notifikasi Telegram untuk target '${target}' dinonaktifkan (token atau chat ID tidak diset).`);
         return;
     }
+
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     const payload = {
-        chat_id: TELEGRAM_CHAT_ID,
+        chat_id: targetChatId,
         text: message,
         parse_mode: 'HTML'
     };
     try {
-        const response = await fetch(url, {
+        await fetch(url, {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: { 'Content-Type': 'application/json' }
         });
-        if (response.ok) {
-            console.log("Notifikasi Telegram terkirim.");
-        } else {
-            const responseJson = await response.json();
-            console.error("Gagal mengirim notifikasi Telegram:", responseJson);
-        }
+        console.log(`Notifikasi Telegram terkirim ke target '${target}' (ID: ${targetChatId})`);
     } catch (error) {
-        console.error("Error saat mengirim notifikasi Telegram:", error.message);
+        console.error(`Error saat mengirim notifikasi Telegram ke '${target}':`, error.message);
     }
 }
 
@@ -477,15 +485,67 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
     }
 });
 
+// --- FUNGSI HELPER UNTUK KMSP ---
+/**
+ * Mengambil saldo KMSP admin saat ini.
+ * @returns {Promise<number>} Saldo KMSP.
+ * @throws {Error} Jika gagal mengambil saldo.
+ */
+async function getKmspAdminBalance() {
+    const kmspUrl = `https://golang-openapi-panelaccountbalance-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}`;
+    try {
+        const response = await fetch(kmspUrl);
+        const data = await response.json();
+        if (data.status && data.data?.balance) {
+            return parseFloat(data.data.balance);
+        } else {
+            console.warn("Gagal mengambil saldo KMSP, mengasumsikan saldo 0. Pesan:", data.message);
+            return 0;
+        }
+    } catch (error) {
+        console.error("Error fetching KMSP balance:", error);
+        return 0; // Anggap 0 jika terjadi error jaringan.
+    }
+}
 
-// RUTE BARU UNTUK PEMBELIAN NON-OTP (PAKET AKRAB)
+/**
+ * Mengeksekusi pembelian paket Non-OTP.
+ * @param {object} trx - Objek transaksi yang akan diproses.
+ * @returns {Promise<void>}
+ */
+async function executeNonOtpPurchase(trx) {
+     const purchaseParams = new URLSearchParams({
+        api_key: KMSP_API_KEY,
+        package_code: trx.packageId,
+        phone: trx.targetPhone, // Gunakan targetPhone yang disimpan di transaksi
+        payment_method: 'balance'
+    });
+    const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
+
+    try {
+        const purchaseResponse = await fetch(purchaseUrl);
+        const purchaseData = await purchaseResponse.json();
+        const transactionSucceeded = purchaseResponse.ok && purchaseData.status;
+
+        // Update transaksi yang sudah ada di DB
+        trx.status = transactionSucceeded ? 'success' : 'failed';
+        trx.api_response = purchaseData.message || (transactionSucceeded ? 'Success (Processed by Scheduler)' : 'Failed (Processed by Scheduler)');
+        await db.write();
+
+    } catch (error) {
+        console.error(`Error processing scheduled transaction ${trx.id}:`, error);
+        trx.status = 'failed';
+        trx.api_response = `Scheduler Error: ${error.message}`;
+        await db.write();
+    }
+}
+
 app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
-    // Hanya butuh packageId dan phone dari frontend
-    const { packageId, phone } = req.body; 
+    const { packageId, phone: targetPhone } = req.body;
     const userId = req.session.userId;
-    const user = db.data.users.find(u => u.id === userId);
 
-    if (!packageId || !phone) {
+    const user = db.data.users.find(u => u.id === userId);
+    if (!packageId || !targetPhone) {
         return res.status(400).json({ status: false, message: "Parameter paket dan nomor telepon tidak lengkap." });
     }
 
@@ -494,71 +554,91 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
         return res.status(404).json({ status: false, message: "Paket tidak ditemukan." });
     }
 
-    if (pkg.category !== 'non-otp') {
-        return res.status(403).json({ status: false, message: "Paket ini bukan kategori Non-OTP. Silakan beli melalui halaman Beli Paket biasa." });
-    }
-
     const platformFee = pkg.platform_fee || 0;
     if (user.balance < platformFee) {
         return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk biaya layanan.` });
     }
 
-    user.balance -= platformFee;
+    try {
+        const adminBalance = await getKmspAdminBalance();
+        const packagePrice = pkg.original_price || 0;
+
+        // Potong fee pengguna sekarang karena permintaan sudah diterima
+        user.balance -= platformFee;
+        await db.write();
+
+        // Buat objek transaksi dasar
+        const baseTransaction = {
+            id: `trx_${Date.now()}`,
+            userId,
+            userName: user.name,
+            packageId,
+            packageName: pkg.name,
+            platformFee,
+            originalPrice: packagePrice,
+            targetPhone, // Simpan nomor tujuan
+            paymentMethod: 'balance',
+            createdAt: new Date().toISOString()
+        };
+
+        if (adminBalance >= packagePrice) {
+            // --- ALUR INSTAN: Saldo admin cukup ---
+            console.log(`Saldo KMSP cukup (${adminBalance}), memproses transaksi ${baseTransaction.id} secara instan.`);
+
+            const finalTransaction = { ...baseTransaction };
+            db.data.transactions.push(finalTransaction); // Masukkan ke DB dulu
+            await executeNonOtpPurchase(finalTransaction); // Kirim ke fungsi eksekusi untuk diupdate statusnya
+
+            // Periksa hasil eksekusi
+            if (finalTransaction.status !== 'success') {
+                // Jika gagal, kembalikan fee ke pengguna
+                user.balance += platformFee;
+                await db.write();
+                return res.status(500).json({ status: false, message: finalTransaction.api_response, newBalance: user.balance });
+            }
+
+            return res.status(200).json({ status: true, message: finalTransaction.api_response || "Pembelian berhasil!", newBalance: user.balance });
+
+        } else {
+    // --- ALUR TERTUNDA: Saldo admin tidak cukup ---
+    console.log(`Saldo KMSP tidak cukup (${adminBalance}), menunda transaksi ${baseTransaction.id}.`);
+
+    const pendingTransaction = {
+        ...baseTransaction,
+        status: 'menunggu_saldo_provider',
+        api_response: 'Menunggu Saldo Provider'
+    };
+    db.data.transactions.push(pendingTransaction);
     await db.write();
 
-    try {
-        const purchaseParams = new URLSearchParams({
-            api_key: KMSP_API_KEY,
-            package_code: pkg.package_code,
-            phone: phone,
-            payment_method: 'balance'
-        });
-        const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
-        
-        const purchaseResponse = await fetch(purchaseUrl);
-        const purchaseData = await purchaseResponse.json();
-        const transactionSucceeded = purchaseResponse.ok && purchaseData.status;
+    // Kirim notifikasi ke admin PRIBADI
+    sendTelegramNotification(
+`<b>⚠️ Saldo KMSP Kurang! ⚠️</b>
+──────────────────────
+<b>Pengguna:</b> ${user.name}
+<b>Meminta Paket:</b> ${pkg.name}
+<b>Untuk Nomor:</b> ${targetPhone}
+<b>Harga Provider:</b> Rp ${packagePrice.toLocaleString('id-ID')}
+<b>Saldo KMSP Saat Ini:</b> Rp ${adminBalance.toLocaleString('id-ID')}
+──────────────────────
+Transaksi ditunda. Mohon segera top up saldo KMSP Anda. Sistem akan memprosesnya secara otomatis setelah saldo cukup.
+<b>Notif:tembak.cloudrystore.xyz</b>`,
+        'admin' // Mengirim notifikasi ke admin pribadi
+    );
 
-        const newTransaction = { 
-            id: `trx_${Date.now()}`, userId, userName: user.name, packageId, packageName: pkg.name, platformFee,
-            originalPrice: pkg.original_price,
-            status: transactionSucceeded ? 'success' : 'failed',
-            api_response: purchaseData.message || (transactionSucceeded ? 'Success' : 'Failed'),
-            paymentMethod: 'balance', createdAt: new Date().toISOString()
-        };
-        db.data.transactions.push(newTransaction);
-        await db.write();
-        
-        // --- BLOK NOTIFIKASI TELEGRAM YANG DITAMBAHKAN ---
-        const maskedPhone = phone.length > 7 ? phone.slice(0, 4) + '****' + phone.slice(-3) : '*******';
-        let notifMessage = `<b>──────────────────────</b>
-<b>✅ Transaksi Baru! (Non-OTP)</b>
-<b>──────────────────────</b>
-<b>Nama Pengguna:</b> ${user.name}
-<b>Nama Paket:</b> ${pkg.name}
-<b>Nomor Tujuan:</b> ${maskedPhone}`;
-        if (platformFee > 0) {
-            notifMessage += `\n<b>Biaya Layanan:</b> Rp ${platformFee.toLocaleString('id-ID')}`;
-        }
-        notifMessage += `
-<b>Status:</b> ${transactionSucceeded ? 'Sukses' : 'Gagal'}
-<b>Pesan API:</b> ${purchaseData.message || 'N/A'}
-<b>──────────────────────</b>
-<b>Notif:tembak.cloudrystore.xyz</b>`;
-        sendTelegramNotification(notifMessage);
-        // --- AKHIR BLOK NOTIFIKASI ---
+    // Beri respons ke pengguna bahwa permintaan sedang diproses
+    return res.status(202).json({
+        status: true,
+        message: "Permintaan Anda telah diterima dan akan diproses secara otomatis oleh sistem. Cek riwayat transaksi untuk status terbaru.",
+        newBalance: user.balance
+    });
+}
 
-        if (transactionSucceeded) {
-            return res.status(200).json({ status: true, message: purchaseData.message || "Pembelian berhasil!", newBalance: user.balance });
-        } else {
-            user.balance += platformFee;
-            await db.write();
-            return res.status(500).json({ status: false, message: purchaseData.message || 'Pembelian ke provider gagal.' });
-        }
     } catch (error) {
+        // Jika terjadi error tak terduga, kembalikan fee
         user.balance += platformFee;
         await db.write();
-        console.error("Error pembelian non-otp:", error);
+        console.error("Error di alur pembelian non-otp:", error);
         return res.status(500).json({ status: false, message: 'Terjadi kesalahan internal.' });
     }
 });
@@ -807,6 +887,53 @@ app.get('/api/user/active-packages', isAuthenticated, async (req, res) => {
 });
 
 // --- RUTE ADMIN ---
+app.post('/api/admin/transactions/:id/cancel', isAuthenticated, isAdmin, async (req, res) => {
+    const { id: transactionId } = req.params;
+
+    await db.read();
+    const transaction = db.data.transactions.find(t => t.id === transactionId);
+
+    if (!transaction) {
+        return res.status(404).json({ status: false, message: 'Transaksi tidak ditemukan.' });
+    }
+
+    // Pastikan hanya transaksi yang sedang menunggu yang bisa dibatalkan
+    if (transaction.status !== 'menunggu_saldo_provider') {
+        return res.status(400).json({ status: false, message: 'Hanya transaksi yang berstatus "Menunggu Provider" yang bisa dibatalkan.' });
+    }
+
+    // Temukan pengguna untuk mengembalikan fee
+    const user = db.data.users.find(u => u.id === transaction.userId);
+    if (user && transaction.platformFee > 0) {
+        user.balance += transaction.platformFee;
+        console.log(`[Admin Action] Mengembalikan fee Rp ${transaction.platformFee} ke pengguna ${user.name} untuk transaksi ${transactionId} yang dibatalkan.`);
+    }
+
+    // Ubah status transaksi
+    transaction.status = 'canceled';
+    transaction.api_response = 'Dibatalkan oleh Admin';
+    await db.write();
+
+    // (Opsional) Anda bisa menambahkan notifikasi ke pengguna di sini jika mau
+
+    res.status(200).json({ status: true, message: 'Transaksi berhasil dibatalkan dan biaya layanan telah dikembalikan ke pengguna.' });
+});
+
+app.get('/api/admin/transactions', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await db.read();
+        // Urutkan transaksi dari yang paling baru
+        const allTransactions = db.data.transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Mengirim respons dalam format JSON yang benar
+        res.status(200).json({ status: true, data: allTransactions });
+
+    } catch (error) {
+        console.error("Error fetching all transactions for admin:", error);
+        res.status(500).json({ status: false, message: 'Gagal mengambil data transaksi.' });
+    }
+});
+
 app.get('/api/admin/detailed-stats', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
@@ -1328,6 +1455,54 @@ app.post('/api/admin/delete-user', isAuthenticated, isAdmin, async (req, res) =>
     await db.write();
     res.json({ status: true, message: "Akun pengguna dan seluruh data terkait berhasil dihapus." });
 });
+
+// --- SCHEDULER OTOMATIS DIMULAI DI SINI ---
+cron.schedule('*/5 * * * *', async () => {
+    console.log(`[Scheduler] Menjalankan pengecekan transaksi tertunda pada ${new Date().toLocaleString()}`);
+
+    await db.read(); // Baca data terbaru dari db.json
+    const pendingTransactions = db.data.transactions.filter(
+        t => t.status === 'menunggu_saldo_provider'
+    );
+
+    if (pendingTransactions.length === 0) {
+        console.log('[Scheduler] Tidak ada transaksi yang perlu diproses.');
+        return;
+    }
+
+    console.log(`[Scheduler] Ditemukan ${pendingTransactions.length} transaksi tertunda.`);
+
+    try {
+        const adminBalance = await getKmspAdminBalance();
+        console.log(`[Scheduler] Saldo KMSP saat ini: Rp ${adminBalance.toLocaleString()}`);
+
+        for (const trx of pendingTransactions) {
+            if (adminBalance >= trx.originalPrice) {
+                console.log(`[Scheduler] Saldo cukup untuk transaksi ${trx.id}. Memproses...`);
+                await executeNonOtpPurchase(trx); // Fungsi ini akan mengupdate trx by reference
+                console.log(`[Scheduler] Transaksi ${trx.id} selesai diproses dengan status: ${trx.status}`);
+
+                // Kirim notifikasi hasil ke admin
+                sendTelegramNotification(
+`<b>✅ Transaksi Tertunda Diproses</b>
+──────────────────────
+<b>Pengguna:</b> ${trx.userName}
+<b>Paket:</b> ${trx.packageName}
+<b>Status Akhir:</b> <b>${trx.status.toUpperCase()}</b>
+<b>Pesan API:</b> ${trx.api_response}
+──────────────────────
+<b>Notif:tembak.cloudrystore.xyz</b>`
+                );
+
+            } else {
+                console.log(`[Scheduler] Saldo masih belum cukup untuk transaksi ${trx.id}. Dilewati.`);
+            }
+        }
+    } catch (error) {
+        console.error('[Scheduler] Terjadi error saat menjalankan tugas:', error);
+    }
+});
+// --- AKHIR DARI SCHEDULER ---
 
 // --- SAJIKAN FRONTEND & CATCH-ALL ---
 const frontendPath = path.join(__dirname, '..', 'frontend');
