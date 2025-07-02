@@ -758,7 +758,7 @@ app.post('/api/purchase/multi-pulsa', isAuthenticated, async (req, res) => {
 
     const successResults = [];
     const failedResults = [];
-    const KMSP_API_DELAY_MS = 12000; // Jeda 12 detik untuk keamanan
+    const KMSP_API_DELAY_MS = 16000; // Jeda 15 detik untuk keamanan
 
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 

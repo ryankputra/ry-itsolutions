@@ -5,7 +5,7 @@
       "name": "RyyStoreAdmin",
       "email": "ayusiawanryan@gmail.com",
       "password": "$2b$10$5A93ZUF9LvuRD8COsb2PAuCg/OvHVyKwpUCRudkky5ddOJjnLbLpm",
-      "balance": 997600,
+      "balance": 997000,
       "role": "admin",
       "createdAt": "2025-06-25T06:17:25.659Z",
       "verifiedPhone": "6287767287284"
@@ -795,6 +795,48 @@
       "platform_fee": 15000,
       "category": "reguler",
       "isMultiPurchase": false
+    },
+    {
+      "package_code": "XL_XC1PLUS1DISC_EWALLET",
+      "name": "[Method E-Wallet] Xtra Combo 1+1GB Disc (Gandengan XUT Super 30000 saja)",
+      "description": "- Ini bukan Xtra Combo Special ya.. Beda lagi...\r\n- XL Xtra Combo 1+1GB / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Xtra Unlimited Turbo Super (XUT SUPER) 30000 (hanya yang XUT SUPER 30000 saja bukan yang 8500)\r\n- Kartu usahakan jangan posisi masa tenggang saat ditembak.\r\n- Sediakan saldo E-wallet Rp12.500 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
+      "original_price": 2500,
+      "platform_fee": 0,
+      "isVisible": false,
+      "category": "reguler",
+      "isMultiPurchase": false,
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "DANA",
+          "payment_method_display_name": "Metode DANA",
+          "desc": "Bisa dibayar dengan menggunakan E-Wallet DANA"
+        },
+        {
+          "order": 2,
+          "payment_method": "QRIS",
+          "payment_method_display_name": "Metode QRIS",
+          "desc": "Bisa dibayar di semua e-wallet / mbanking yang telah mendukung fitur pembayaran QRIS"
+        }
+      ]
+    },
+    {
+      "package_code": "XL_XC1PLUS1DISC_PULSA",
+      "name": "[Method Pulsa] Xtra Combo 1+1GB Disc (Gandengan XUT Super 30000)",
+      "description": "- Ini bukan Xtra Combo Special ya.. Beda lagi...\r\n- XL Xtra Combo 1+1GB / 30 Hari harga murah/diskon. Kuota yang didapat akan bervariasi tergantung TKP/Area.\r\n- Dapat digunakan untuk syarat aktivasi Paket XL Xtra Unlimited Turbo Super (XUT SUPER) 30000\r\n- Kartu usahakan jangan posisi masa tenggang saat ditembak.\r\n- Sediakan Pulsa Rp12.500 (Akan terpotong segini).\r\n- Terdapat fee/biaya Admin (tertera) untuk mendukung sewa server kami.",
+      "original_price": 2500,
+      "platform_fee": 0,
+      "isVisible": false,
+      "category": "reguler",
+      "isMultiPurchase": false,
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ]
     },
     {
       "package_code": "XLMINISUPERV2",
@@ -2263,7 +2305,7 @@
       "description": "- Xtra Unlimited Turbo Viu untuk akses Viu secara Unlimited.\r\n- Masa Aktif mengikuti paket Xtra Combo Special 8GB/14GB yang dapat ditembak di panel tembak XL Reborn ini.\r\n- Dapat dipakai untuk Inject SSH/VPN (bagi yang tau-tau saja).\r\n- FUP paket random/acak tergantung kartu XL dan lokasi kamu. Jika terkena FUP, saat diinject untuk VPN akan terasa lemot/tidak bisa konek. Solusinya adalah bisa tembak ulang paket Xtra Unlimited Turbo ini maka FUP akan reset.\r\n- Sediakan saldo E-wallet Dana Rp25.000 (Akan terpotong segini). Klik tombol Bayar ketika sudah Beli Paket.",
       "original_price": 0,
       "custom_price": 200,
-      "isVisible": false,
+      "isVisible": true,
       "requires_otp": true,
       "payment_methods": [
         {
@@ -2897,9 +2939,195 @@
       "platform_fee": 0,
       "category": "reguler",
       "isMultiPurchase": false
+    },
+    {
+      "package_code": "XLUNLITURBOSUPERXC_PULSA",
+      "name": "[Method Pulsa] Unlimited Turbo Super Variant Rp30.000 (untuk Xtra Combo)",
+      "description": "- Xtra Unlimited Turbo Super untuk akses LINE, Gojek, Facebook, dan Instagram secara Unlimited dengan Kuota WhatsApp Harian 50MB/hari.\r\n- Masa Aktif mengikuti paket Xtra Combo Special 8GB/14GB yang dapat ditembak di panel tembak XL Reborn ini.\r\n- Dapat dipakai untuk Inject SSH/VPN (bagi yang tau-tau saja).\r\n- FUP paket random/acak tergantung kartu XL dan lokasi kamu. Jika terkena FUP, saat diinject untuk VPN akan terasa lemot/tidak bisa konek. Solusinya adalah bisa tembak ulang paket Xtra Unlimited Turbo ini maka FUP akan reset.\r\n- Jika untuk trik XUT Addon, sebaiknya gunakan pulsa di bawah 10K.",
+      "original_price": 0,
+      "platform_fee": 0,
+      "isVisible": true,
+      "category": "reguler",
+      "isMultiPurchase": true,
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ]
+    },
+    {
+      "package_code": "XLUNLITURBOPREMIUMXC_PULSA",
+      "name": "[Method Pulsa] Unlimited Turbo Premium Variant Rp50.000 (untuk Xtra Combo)",
+      "description": "- Xtra Unlimited Turbo Premium untuk akses LINE, Gojek, Facebook, Instagram, dan YouTube secara Unlimited dengan Kuota WhatsApp Harian 50MB/hari.\r\n- Masa Aktif mengikuti paket Xtra Combo Special 8GB/14GB yang dapat ditembak di panel tembak XL Reborn ini.\r\n- Dapat dipakai untuk Inject SSH/VPN (bagi yang tau-tau saja).\r\n- FUP paket random/acak tergantung kartu XL dan lokasi kamu. Jika terkena FUP, saat diinject untuk VPN akan terasa lemot/tidak bisa konek. Solusinya adalah bisa tembak ulang paket Xtra Unlimited Turbo ini maka FUP akan reset.\r\n- Jika untuk trik XUT Addon, sebaiknya gunakan pulsa di bawah 10K.",
+      "original_price": 0,
+      "platform_fee": 0,
+      "isVisible": true,
+      "category": "reguler",
+      "isMultiPurchase": true,
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ]
+    },
+    {
+      "package_code": "XLUNLITURBOSTANDARDXC_PULSA",
+      "name": "[Method Pulsa] Unlimited Turbo Standard Variant Rp20.000 (untuk Xtra Combo)",
+      "description": "- Xtra Unlimited Turbo Standard untuk akses LINE, Gojek, dan Facebook secara Unlimited dengan Kuota WhatsApp Harian 50MB/hari.\r\n- Masa Aktif mengikuti paket Xtra Combo Special 8GB/14GB yang dapat ditembak di panel tembak XL Reborn ini.\r\n- Dapat dipakai untuk Inject SSH/VPN (bagi yang tau-tau saja).\r\n- FUP paket random/acak tergantung kartu XL dan lokasi kamu. Jika terkena FUP, saat diinject untuk VPN akan terasa lemot/tidak bisa konek. Solusinya adalah bisa tembak ulang paket Xtra Unlimited Turbo ini maka FUP akan reset.\r\n- Jika untuk trik XUT Addon, sebaiknya gunakan pulsa di bawah 10K.",
+      "original_price": 0,
+      "platform_fee": 0,
+      "isVisible": true,
+      "category": "reguler",
+      "isMultiPurchase": true,
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ]
+    },
+    {
+      "package_code": "XLUNLITURBOBASICXC_PULSA",
+      "name": "[Method Pulsa] Unlimited Turbo Basic Variant Rp10.000 (untuk Xtra Combo)",
+      "description": "- Xtra Unlimited Turbo Basic untuk akses LINE dan Gojek secara Unlimited dengan Kuota WhatsApp Harian 50MB/hari.\r\n- Masa Aktif mengikuti paket Xtra Combo Special 8GB/14GB yang dapat ditembak di panel tembak XL Reborn ini.\r\n- Dapat dipakai untuk Inject SSH/VPN (bagi yang tau-tau saja).\r\n- FUP paket random/acak tergantung kartu XL dan lokasi kamu. Jika terkena FUP, saat diinject untuk VPN akan terasa lemot/tidak bisa konek. Solusinya adalah bisa tembak ulang paket Xtra Unlimited Turbo ini maka FUP akan reset.\r\n- Jika untuk trik XUT Addon, sebaiknya gunakan pulsa di bawah 10K.",
+      "original_price": 0,
+      "platform_fee": 0,
+      "isVisible": true,
+      "category": "reguler",
+      "isMultiPurchase": true,
+      "payment_methods": [
+        {
+          "order": 1,
+          "payment_method": "BALANCE",
+          "payment_method_display_name": "Metode Pulsa (BALANCE)",
+          "desc": "Langsung memotong pulsa kamu jika paket membutuhkan Pulsa (baca dan pahami deskripsi paketnya)"
+        }
+      ]
     }
   ],
   "transactions": [
+    {
+      "id": "trx_1751470808583",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "originalPrice": 0,
+      "kmspTrxId": "b4a649f3-420a-4792-a543-85c1dace8e41",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-07-02T15:40:08.583Z",
+      "paymentDetails": {
+        "msisdn": "6287767287284",
+        "package_code": "XLUNLITURBOVIUXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+        "package_processing_fee": 0,
+        "trx_id": "b4a649f3-420a-4792-a543-85c1dace8e41",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250702111212800110166543157844044&timestamp=1751470807912&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=RhtnnNMk8WPt%2BciYQmtu1A4Xz22nS8j%2BXyCFTINFTq4jo51skQU449E3jhfP45%2FNDg%2BxwhCQ19NKWXLAQpKH1jzjtyNyWlKJNfltQ%2FtdNSB%2BGAKRVmvgy%2FKdRKLTFX9%2Boo1ltfsY7yn4xgLHIJyRGJ3sp13yM9BMho%2Bq6sR2Em%2Fb4F%2BHLkE8AHsyJnXbV6xeh7a4vJrhxbmEF0cpkGPUZL1MxqGNwVEfEdyQj7lAGQ8jZdHCRNgNwh%2F7WJOEH3a18CHL17qdy0NrznslLHcUmYw3cUMhB3suPhpDYflbzkqbjRds1nvC7ATKwCJUlhzbmArmWBMATgnr883Ale7M1w%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
+    },
+    {
+      "id": "trx_1751470792052",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "originalPrice": 0,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Internal server error",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-07-02T15:39:52.052Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751470449500",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "originalPrice": 0,
+      "kmspTrxId": "c02808ce-7968-4c48-b30f-864adefb2afe",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-07-02T15:34:09.500Z",
+      "paymentDetails": {
+        "msisdn": "6287767287284",
+        "package_code": "XLUNLITURBOVIUXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+        "package_processing_fee": 0,
+        "trx_id": "c02808ce-7968-4c48-b30f-864adefb2afe",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250702111212800110166004458119043&timestamp=1751470448857&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=D7HXH5LvRfZ1ZuISHjmyAkaBsF0xQEQA5QFrzKAmZAK%2FQKhTnaDdIXTq5YHySO9ReNevRpyvdBfLDiE5J0NLSMz54H27adzREJOR4D8yVnLv3IR8LIULpWz0BgkfRr6sLR41rGJzwBsxIpyDNevuiHFdt3t6I3yS1KtaJgM06S6%2FcbdZD42y89WouBRNmeJm8U5ptHnmLX9dkxCJTvFLvmvW5r9Xk%2FPvgLItuuVMOWemEfDGLhgufwyB%2BMf3ODN0lJntHyC4eTlCRJBq2jYY7%2FtJncBPBWUxgPB2H0QDzz9l8sTnT4JLS15eWCYee344xouaZljPNIPtlgcP6aTmqA%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
+    },
+    {
+      "id": "trx_1751470106977",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "originalPrice": 0,
+      "kmspTrxId": "913dd11c-c8f8-4e28-bf83-743f1551b532",
+      "status": "success",
+      "api_response": "Pastikan kamu punya aplikasi DANA dan segera bayar dengan klik tombol BAYAR di bawah ini melalui DANA.",
+      "paymentMethod": "DANA",
+      "createdAt": "2025-07-02T15:28:26.977Z",
+      "paymentDetails": {
+        "msisdn": "6287767287284",
+        "package_code": "XLUNLITURBOVIUXC",
+        "package_name": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+        "package_processing_fee": 0,
+        "trx_id": "913dd11c-c8f8-4e28-bf83-743f1551b532",
+        "have_deeplink": true,
+        "deeplink_data": {
+          "payment_method": "DANA",
+          "deeplink_url": "https://m.dana.id/n/cashier/new/checkout?bizNo=20250702111212800110166758957769920&timestamp=1751470106320&originSourcePlatform=IPG&mid=216620000035833566172&did=216650000204712460170&sid=216660000204589345173&sign=AQIoGyVgl80dj1Q9jhvft4UgjznAAMB1z%2F1TSUvYcIYznt8NFxVu7W2Ord81R6M%2FkA68MLoM7NbWmmawfGPInAtxWO%2FVTXpCy5FJEwEImZ6eNpZzzMbvfGoz1YNbp9zQXRQuULVOtlDEqJniY1zXcBIQc3Vft33et6MUgzw1OOjchRYd5qyTRDVh%2B4YBFquzdtOybBLGchvogvs8%2Bmev16BTuc1D78HqSONrcw9%2B2KdXkQ4xPCQags8AMebQnYuTuB797QFLbIBtQY783ja7xTYFmHndfA8%2FHPg8swx%2F6ZVpwaFMGsKXN5iUy9UCEnRpGsycl0S%2Fz%2F%2FmNMqXLLjTNQ%3D%3D&forceToH5=false&newRegistrationPage=true"
+        },
+        "is_qris": false,
+        "qris_data": []
+      }
+    },
+    {
+      "id": "trx_1751470038550",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOVIUXC",
+      "packageName": "[Method E-Wallet] Unlimited Turbo Viu untuk Xtra Combo",
+      "platformFee": 200,
+      "originalPrice": 0,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Invalid Payment Method!",
+      "paymentMethod": "balance",
+      "createdAt": "2025-07-02T15:27:18.550Z",
+      "paymentDetails": null
+    },
     {
       "id": "trx_1751459126053",
       "userId": "user_1750832245659",
@@ -5444,6 +5672,96 @@
       "kmspTrxId": "c13a1afb-4572-40e2-a4b0-33e15bb0b70f",
       "status": "pending",
       "createdAt": "2025-06-25T08:14:38.362Z"
+    },
+    {
+      "id": "trx_1751471647096",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOSUPERXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Super Variant Rp30.000 (untuk Xtra Combo)",
+      "platformFee": 0,
+      "originalPrice": 0,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat menampilkan data subscriber info!",
+      "paymentMethod": "balance",
+      "createdAt": "2025-07-02T15:54:07.096Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751471665844",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOPREMIUMXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Premium Variant Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 0,
+      "originalPrice": 0,
+      "kmspTrxId": "d033a166-f454-4f83-8c18-d689485db6ca",
+      "status": "success",
+      "api_response": "Paket berhasil dibeli. Silakan cek kuotanya via aplikasi MyXL (disarankan) dan/atau via SMS kamu",
+      "paymentMethod": "balance",
+      "createdAt": "2025-07-02T15:54:25.844Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751471678051",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOSTANDARDXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Standard Variant Rp20.000 (untuk Xtra Combo)",
+      "platformFee": 0,
+      "originalPrice": 0,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Mohon berikan jeda selama 8 detik lagi sebelum membeli paket yang baru!",
+      "paymentMethod": "balance",
+      "createdAt": "2025-07-02T15:54:38.051Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751471698942",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOBASICXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Basic Variant Rp10.000 (untuk Xtra Combo)",
+      "platformFee": 0,
+      "originalPrice": 0,
+      "kmspTrxId": "3559582f-15a3-407b-9197-d1498eb2ed94",
+      "status": "success",
+      "api_response": "Paket berhasil dibeli. Silakan cek kuotanya via aplikasi MyXL (disarankan) dan/atau via SMS kamu",
+      "paymentMethod": "balance",
+      "createdAt": "2025-07-02T15:54:58.942Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751471850266",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOPREMIUMXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Premium Variant Rp50.000 (untuk Xtra Combo)",
+      "platformFee": 0,
+      "originalPrice": 0,
+      "kmspTrxId": null,
+      "status": "failed",
+      "api_response": "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! ( Error Message: Bizz-err.ProductNotFound )",
+      "paymentMethod": "balance",
+      "createdAt": "2025-07-02T15:57:30.266Z",
+      "paymentDetails": null
+    },
+    {
+      "id": "trx_1751471865730",
+      "userId": "user_1750832245659",
+      "userName": "RyyStoreAdmin",
+      "packageId": "XLUNLITURBOBASICXC_PULSA",
+      "packageName": "[Method Pulsa] Unlimited Turbo Basic Variant Rp10.000 (untuk Xtra Combo)",
+      "platformFee": 0,
+      "originalPrice": 0,
+      "kmspTrxId": "6d16b41e-4c04-4929-abf1-649d0da2a3fe",
+      "status": "success",
+      "api_response": "Paket berhasil dibeli. Silakan cek kuotanya via aplikasi MyXL (disarankan) dan/atau via SMS kamu",
+      "paymentMethod": "balance",
+      "createdAt": "2025-07-02T15:57:45.730Z",
+      "paymentDetails": null
     }
   ],
   "topups": [
@@ -5732,6 +6050,15 @@
       "status": "canceled",
       "createdAt": "2025-07-01T17:42:29.581Z",
       "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADjklEQVR4nO2aS46sMAxFLbEAlsTWWRILQMor4i9VlPQmSfXg3AFNBefQA8e6cRBBCCGEEELor6mZTml7H1jP6/Ia2ddrTO+uyxXc77p2GDBmMmJma4dFyXbYg9dlMUY7lmZvyGkwYMxiZF7nJOXGzNfYi2uMujBgwPgBw6Zr1ltyX6n/mtQZGgcDxg8ZvRKL5rU7BOXqXbwLBowfMPof97M5lllv5djj6jQYMCYxTJ3xH5dcBDBgzGMUFRd7uIvol3Y8T4ABYxbD/Gw7b6OR0prX/lPSWewwYMxk7J7cPcAnxdZszfhsHMCA8ROG7cUW3Xz1JkExv/0NvXFgi+C+MGDAGM9o3imo1bl3tBLZN2S9Jq/ZW4ABYyJD07yd0R+QWqKtJluxtnc99MdgwBjLsGdSs1l8ph9ieeo3z38YMOYyLNf96Kpb2dhySRbr7NB+XS8wYIxi2HCesx63qqs+IY+zjq+tLhgwRjIsypsEzTPc4H6IYKaiPXlcGDBGM6zBeoSLSO+wep02B+yNg3IUCwPGJIYZAwutu7LW7qGR/499BxgwRjKie2UbLT8I0PorcVdCPvdiMGAMZqR6wndtORjF2sxvgwHjBwwF7VL9rIfm9Hgq9Q4GjImMpdUD2Ji++/5MygnB+vQvwIAxnLFlDqvb9eRWULyh3eJgwJjNuGm/j+2Z5pJG4z3hYcAYzHjbXhWQeOdV4xJevxeEAWMWI32CeIN1Peudxn33DjBgDGfsUhPZTwMs6/08VqI5u9TeAgwYkxjmcdf8biUbsW4btAfbob1Ev9dkGDCGM0KW3GIl2u7iqXUU4mQWBoyJjFY6r+lnS+PA81/f4HEwYMxn+JZr0aOr8rXA7t8Lutu1On0TDBijGepixb+v8sJsoLfy3bLLtcOAMZ9RaN0deDbrIog0372ZAAPGZIaIeweVu4MsvVuzwtzsKPZJMGCMZFwBLY9Yw9Smi/BOgSW8WQkYMCYyfLq3Cy7ZlitkldiefnoHGDBGMwqtGNg1Qm+2wac/eQcYMAYyPJ9PPw3wn9nvyjpdPAYMGFMZ+sOfqUXYStafkdxLy5UgAgPGVEavv285nD+zj6Dt10sfZwUwYExjvM30xoHJg596WzBgzGR03VqyJXTrcKnfC8KAMY+h8d3Pes8q+q1ub23sSyMWBozhDJNZWf+qKkqv2wY93dJLuy0CGDDGMxBCCCGEEPob+geGepc3hU+FOAAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "b077e772-c130-49dc-a007-a895f5c5652a",
+      "userId": "user_1750832245659",
+      "baseAmount": 10000,
+      "uniqueAmount": 10109,
+      "status": "expired",
+      "createdAt": "2025-07-02T15:29:21.631Z",
+      "qrisBase64Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhIAAAISAQMAAACj87T8AAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADmUlEQVR4nO2aS3KkMBBEK4ID9JF0dY7EAYjQmPoK3DPjjdRevFy0+UgPL4qKVCIRhBBCCCGEfpu665S+y9b7/jpF2rF1kdd17dW7/1yD9Ui1w4CxkmEn1/h+6FHvyvBJxr1mBXecBgPGKoZV8ynjJHGaz/y6NtS/vxgwYHyIERV+VX0U91X63fu0jYMB44OMr1F65arrcAjGtaN8FgwYH2DoH/MO2n+VGy1a/USLGz/xHzBgzGC4zpj5n596CWDAWMcYdfkEubsI/bFF2s8EA8YMhvvZ7t5hXIalssKlnMUOA8ZSRg/b0I5o0XsV/KvGV3AAA8ZqxviFIIfWaivNrwYH/hKcchMMGNMZlWMpI4fGB4O64c4ingUDxkKGlrl/FxA3EPmFIHqyB1wReuWbAAPGIobeG44SqWVuPbln6ScSBoyljMysImANK9u6L76sbeeQv7wvMGBMZAxNuMWPT4q7Xvrmdt1t3AUDxmyGDK03+q9dk0gUcqXWMwODAWMto/Wo4V3C8l7t2JqwLs1axV/G8CfAgLGKofeGmT2Q4R1KWf9vcgcYMOYyfGXljqE+BPSMWqsT20PerMVgwJjMKFnKdanVxZjp5hcGjI8wDLTL6GdjaE3PuzIewYCxiuGVG4GAl7laXg29JL4a1BPe/QswYExmxOUhjW21NKsnVK1/97gwYMxmSBiI2l/18AljO+7DKQwYqxgWDbTYyxI0/QA75q0+6XV7FgwYixiVrVaZx/Q4snH/8A4wYMxm7FnSVvW3HEuLO+6eMgS2MGCsZHiZv2rfypZdN2yDZbAKvcW0MGAsY6S8uEWk3EEN9XeinzBgfILRyhOkT8ioyws+lma+5+UY4TBgrGDUkiv3Bg5mwaOucrvepx+CAWMuw69kDXtjvq3P7oMfzRoGjCWMYxscg5d0rrYs28oy3yNMgAFjKWOY3swgVNUnqMdeFv8U+04wYMxk6MxdD9Xohql1FxHIKni3EjBgLGR03wUQcYF5B7USqT1ssJ/K0zvAgDGZMdAGA1vZ1s02xPR33gEGjImMqOcKBC4dPv0ZcO35EsCAsZRhJ3Gvoq6q9SjurdebIAIDxlKGbaM6xav5hhxzhMebAAPGRxiPmRXJ+ksgYSW+52MwYCxkqKrh3rcCNIXLuF8QBox1DBvvPdnHH2UWNqv6+jLbvwWxMGBMZ7jcysauqmy9YRtiG4HcUlsYMNYwEEIIIYQQ+h36A6anuiMSwRnfAAAAAElFTkSuQmCC"
     }
   ],
   "announcements": [

@@ -21,8 +21,19 @@ let allAdminUsers = [];
 let historyPollingInterval = null;
 let currentHistoryPage = 1;
 const transactionsPerPage = 5;
+let liveChatBubbleElement = null;
 
 
+function toggleLiveChatBubble(show) {
+    if (!liveChatBubbleElement) {
+        liveChatBubbleElement = document.querySelector('.we-are-here-bubble');
+        console.log("Live Chat Bubble Element:", liveChatBubbleElement); // LOG INI
+    }
+    if (liveChatBubbleElement) {
+        liveChatBubbleElement.style.display = show ? 'block' : 'none';
+        console.log("Live Chat Bubble visibility set to:", show); // LOG INI
+    }
+}
 
 
 // ===============================================
@@ -37,6 +48,16 @@ async function main() {
 
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
     const isAdminLoginAttempt = params.get('admin_login') === 'true';
+    const isAuthPage = ['#login', '#register'].includes(window.location.hash.split('?')[0]); // Perbaikan untuk isAuthPage
+
+    // LOGIKA BARU UNTUK LIVE CHAT BUBBLE (dari diskusi sebelumnya)
+    if (isAuthPage || (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin') && !isAdminLoginAttempt)) {
+        console.log("Toggling Live Chat Bubble OFF due to auth page or maintenance."); // LOG INI
+        toggleLiveChatBubble(false);
+    } else {
+        console.log("Toggling Live Chat Bubble ON."); // LOG INI
+        toggleLiveChatBubble(true);
+    }
 
     if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin') && !isAdminLoginAttempt) {
         renderGlobalMaintenancePage();
@@ -71,7 +92,20 @@ async function main() {
     
     
     window.removeEventListener('hashchange', renderApp);
-    window.addEventListener('hashchange', () => renderApp(false));
+     window.addEventListener('hashchange', () => {
+        console.log("Hash changed to:", window.location.hash); // LOG INI
+        const newHash = window.location.hash.split('?')[0];
+        const newIsAuthPage = ['#login', '#register'].includes(newHash);
+
+        if (newIsAuthPage || (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin') && !isAdminLoginAttempt)) {
+            console.log("Toggling Live Chat Bubble OFF on hash change."); // LOG INI
+            toggleLiveChatBubble(false);
+        } else {
+            console.log("Toggling Live Chat Bubble ON on hash change."); // LOG INI
+            toggleLiveChatBubble(true);
+        }
+        renderApp(false);
+    });
 }
 
 /**
@@ -172,6 +206,7 @@ async function initKMSPsession() {
  * Mengambil saldo KMSP dari backend. Hasilnya disimpan di variabel kmspBalance global.
  * Digunakan terutama untuk panel admin atau kondisi pembelian paket.
  */
+
 async function fetchKMSPBalance() {
     try {
         const { data, status } = await apiFetch('/admin/kmsp-balance');
@@ -826,7 +861,7 @@ function renderExternalPaymentModal(paymentData) {
         paymentContent = `
             <h3>Scan QR Code di Bawah</h3>
             <div id="qris-image-container" style="padding: 1rem; background: white; display: inline-block; border-radius: 8px; margin: 0 auto;"></div>
-            <p>Total Bayar ke Provider: <strong>Rp ${(paymentData.amount || 0).toLocaleString('id-ID')}</strong></p>
+            
         `;
         hasValidPaymentMethod = true;
     }
@@ -1324,7 +1359,7 @@ function renderAdminDashboard(container) {
                     <button id="select-all-btn">Tampilkan Semua</button>
                     <button id="deselect-all-btn">Sembunyikan Semua</button>
                 </div>
-                <ul id="package-list" class="package-list"><div class="loading-spinner"></div></ul>
+                <ul id="package-list" class="package-list"><div class=""></div></ul>
                 
             </div>
             </div>
@@ -2019,39 +2054,77 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
 
     // Inisialisasi data saat admin panel dimuat
     // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
-        setTimeout(async () => {
-        document.getElementById('load-packages-btn')?.click(); // Muat paket
+          setTimeout(async () => {
+        console.log("Inside renderAdminDashboard setTimeout block."); // LOG INI
+        document.getElementById('load-packages-btn')?.addEventListener('click', () => {
+            console.log("Load packages button clicked."); // LOG INI
+            currentAdminPackagePage = 1;
+            loadAdminPackagesAndRender(true);
+        });
         loadAdminStats();
-        loadUsers(); // Muat pengguna
-        await fetchKMSPBalance(); // Panggil fetchKMSPBalance untuk menginisialisasi display saldo
-          document.getElementById('view-user-log-btn')?.addEventListener('click', handleViewUserLog);
-        // ...
+        loadUsers();
+        await fetchKMSPBalance();
+        console.log("After fetchKMSPBalance in renderAdminDashboard init."); // LOG INI
 
+        // Event listener untuk tombol 'Cek Saldo KMSP'
+        const checkKmspBalanceBtn = document.getElementById('check-kmsp-balance-btn');
+        if (checkKmspBalanceBtn) {
+            console.log("check-kmsp-balance-btn element found."); // LOG INI
+            checkKmspBalanceBtn.addEventListener('click', async (e) => {
+                console.log("Cek Saldo KMSP button clicked!"); // LOG INI
+                const button = e.target;
+                button.disabled = true;
+                button.textContent = 'Mengecek...';
+                displayFeedback('balance-feedback', '', false);
+                try {
+                    const { data, status } = await apiFetch('/admin/kmsp-balance');
+                    if (status === 200 && data.status && typeof data.data?.balance !== 'undefined') {
+                        kmspBalance = data.data.balance;
+                        const balanceDisplay = document.getElementById('kmsp-balance-display');
+                        if (balanceDisplay) {
+                            balanceDisplay.textContent = `Rp ${kmspBalance.toLocaleString('id-ID')}`;
+                        }
+                        displayFeedback('balance-feedback', 'Saldo KMSP berhasil diperbarui.', false);
+                        console.log("KMSP balance updated successfully:", kmspBalance); // LOG INI
+                    } else {
+                        throw new Error(data.message || 'Respons saldo tidak valid dari server.');
+                    }
+                } catch (error) {
+                    console.error("Error fetching KMSP balance on click:", error); // LOG INI
+                    displayFeedback('balance-feedback', `Gagal cek saldo KMSP: ${error.message}`, true);
+                } finally {
+                    button.disabled = false;
+                    button.textContent = 'Cek Saldo KMSP';
+                    console.log("KMSP balance check finished."); // LOG INI
+                }
+            });
+        } else {
+            console.warn("check-kmsp-balance-btn not found in DOM!"); // LOG INI
+        }
 
-        // --- TAMBAHKAN DUA BLOK EVENT LISTENER BARU DI SINI ---
-
+        document.getElementById('view-user-log-btn')?.addEventListener('click', handleViewUserLog);
         document.getElementById('log-user-search')?.addEventListener('input', (e) => {
             populateUserDropdowns(e.target.value);
         });
-
         document.getElementById('saldo-user-search')?.addEventListener('input', (e) => {
             populateUserDropdowns(e.target.value);
-        });  
-        // Ambil status maintenance saat load admin panel (ini akan memperbarui UI status awal)
+        });
         try {
             const { data: maintenanceData } = await apiFetch('/admin/maintenance');
             if (maintenanceData.status) {
                 isMaintenanceMode = maintenanceData.data.enabled;
                 document.getElementById('maintenance-status').textContent = isMaintenanceMode ? 'AKTIF' : 'NONAKTIF';
                 const toggleBtn = document.getElementById('toggle-maintenance-btn');
-                if(toggleBtn) {
+                if (toggleBtn) {
                     toggleBtn.style.background = isMaintenanceMode ? 'var(--danger-color)' : 'var(--success-color)';
                     toggleBtn.textContent = isMaintenanceMode ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan';
                 }
             }
         } catch (error) {
             console.error("Gagal memuat status maintenance di admin:", error);
-        }initializeTransactionManagement(); 
+        }
+        initializeTransactionManagement();
+        console.log("renderAdminDashboard setTimeout block finished."); // LOG INI
     }, 0);
 }
 
@@ -2836,7 +2909,7 @@ async function handleMultiPulsaPurchase(e) {
         if (i < packagesToProcess.length - 1) {
             const delayMessageDiv = document.createElement('div');
             delayMessageDiv.className = 'log-message';
-            delayMessageDiv.innerHTML = `<div class="delay-message">Menunggu jeda ${12000 / 1000} detik...</div>`;
+            delayMessageDiv.innerHTML = `<div class="delay-message">Menunggu jeda ${16000 / 1000} detik...</div>`;
             logItem.appendChild(delayMessageDiv);
             await delay(11000);
         }
@@ -3046,30 +3119,65 @@ async function renderHistoryPage(container) {
                 }
 
                 let actionButton = '---';
+                // Definisi status final yang tidak membutuhkan aksi lagi
                 const isFinalState = ['success', 'failed', 'completed', 'expired', 'canceled'].includes(trx.status);
 
-                if (trx.type === 'purchase' && trx.paymentDetails && !isFinalState) {
-                    const paymentDataString = JSON.stringify(trx.paymentDetails);
-                    let buttonText = 'Lanjutkan Pembayaran';
-                    if(trx.paymentDetails.is_qris) buttonText = 'Tampilkan QRIS';
-                    if(trx.paymentDetails.have_deeplink) buttonText = 'Bayar via DANA';
-                    actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
-                } else if (trx.type === 'purchase' && trx.kmspTrxId && !isFinalState) {
-                    actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
+                // --- PERBAIKAN LOGIKA TOMBOL AKSI DI SINI ---
+                if (trx.type === 'purchase') {
+                    if (trx.paymentDetails && !isFinalState) {
+                        // Jika ada paymentDetails dan status belum final
+                        const paymentDataString = JSON.stringify(trx.paymentDetails);
+                        let buttonText = 'Lanjutkan Pembayaran';
+
+                        // Periksa apakah ini QRIS
+                        if (trx.paymentDetails.is_qris) {
+                            buttonText = 'Tampilkan QRIS';
+                            actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
+                        }
+                        // Periksa apakah ini Deeplink
+                        else if (trx.paymentDetails.have_deeplink && trx.paymentDetails.deeplink_data && trx.paymentDetails.deeplink_data.deeplink_url) {
+                            // Ini adalah kondisi untuk deeplink
+                            // Pastikan payment_method_display_name ada, jika tidak fallback ke payment_method atau 'Aplikasi'
+                            buttonText = `Bayar via ${trx.paymentDetails.deeplink_data.payment_method_display_name || trx.paymentDetails.deeplink_data.payment_method || 'Aplikasi'}`;
+                            actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
+                        }
+                        // Jika paymentDetails ada tapi bukan QRIS dan bukan Deeplink yang valid (url-nya kosong)
+                        else {
+                             // Ini bisa jadi kasus seperti di screenshot Anda (DANA tapi tidak ada tombol)
+                             // Artinya paymentDetails.have_deeplink mungkin true, tapi deeplink_data.deeplink_url falsey (null, undefined, '')
+                             actionButton = 'Detail Pembayaran Tidak Lengkap';
+                             // Anda bisa menambahkan tooltip atau pesan lebih lanjut di sini jika diinginkan
+                        }
+                    } else if (trx.kmspTrxId && !isFinalState && trx.status !== 'menunggu_saldo_provider') {
+                        // Untuk transaksi yang diproses via KMSP (non-OTP) tapi statusnya masih belum final dari KMSP
+                        // dan BUKAN "menunggu_saldo_provider" (karena itu ditangani admin)
+                        actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
+                    } else if (trx.status === 'menunggu_saldo_provider') {
+                         // Transaksi ini sedang menunggu admin mengisi saldo provider. Tidak ada aksi dari user.
+                         actionButton = 'Menunggu Admin';
+                    }
+                    // --- Tambahan: Jika tidak ada paymentDetails sama sekali tapi API response menyiratkan DANA
+                    // Ini adalah fallback terakhir jika backend tidak menyimpan paymentDetails dengan benar.
+                    // Idealnya backend akan selalu menyimpan paymentDetails jika itu diperlukan.
+                    else if (!trx.paymentDetails && statusText.includes('DANA')) {
+                         actionButton = 'Hubungi Admin (Info Pembayaran DANA Hilang)';
+                    }
                 } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData?.base64Image) {
+                    // Tombol untuk Top Up QRIS yang masih pending
                     actionButton = `<button class="open-qris-btn"
                         data-topup-id="${trx.id}"
                         data-base64-image="${trx.qrisData.base64Image}"
                         data-unique-amount="${trx.qrisData.uniqueAmount}"
                         data-created-at="${trx.createdAt}">Tampilkan QRIS</button>`;
                 }
+                // --- AKHIR PERBAIKAN LOGIKA TOMBOL AKSI ---
 
                 return `<tr id="${transactionId}" data-transaction-id="${trx.id}" data-status="${trx.status}">
                     <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
                     <td data-label="Tipe">${type}</td>
-                    <td data-label="Nama/ID"><br>${nameOrId}</td>
+                    <td data-label="Nama/ID">${nameOrId}</td>
                     <td data-label="Jumlah/Fee">${amountOrFee}</td>
-                    <td data-label="Status" class="status-cell"><br>
+                    <td data-label="Status" class="status-cell">
                         <span class="status-badge status-${statusClass}">${statusText}</span>
                     </td>
                     <td data-label="Aksi" class="action-cell">${actionButton}</td>
