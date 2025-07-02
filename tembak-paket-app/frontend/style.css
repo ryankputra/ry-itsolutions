@@ -227,34 +227,93 @@ textarea {
     font-size: 0.9rem;
     color: var(--text-light-color);
 }
-
-/* Loading Spinner */
+/* Loading Spinner (revisi untuk tampilan di modal) */
 .loading-spinner {
-    border: 4px solid var(--border-color);
-    border-top: 4px solid var(--primary-color);
+    border: 3px solid var(--border-color);
+    border-top: 5px solid var(--primary-color);
     border-radius: 50%;
     width: 30px;
     height: 30px;
     animation: spin 1s linear infinite;
-    margin: 2rem auto;
+
+    /* Posisi default untuk spinner global (di luar modal) */
+    position: fixed;
+    top: 45%;
+    left: 45%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
 }
 
-.button-spinner {
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top: 2px solid #fff;
-    border-radius: 50%;
-    width: 1em;
-    height: 1em;
-    animation: spin 1s linear infinite;
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 0.5em;
+/* Modifikasi agar spinner di dalam modal tetap di tengah relatif terhadap modal itu sendiri */
+/* Tambahkan atau modifikasi ini untuk spinner di dalam modal QRIS */
+.modal-content .loading-spinner {
+    position: static; /* Mengatur ulang posisi agar mengikuti alur dokumen modal */
+    margin: 1rem auto; /* Otomatis tengah horizontal dan memberi margin vertikal */
+    display: block; /* Pastikan mengambil ruangnya sendiri */
+    width: 30px; /* Kembalikan ukuran normal atau lebih kecil agar tidak terlalu besar di modal */
+    height: 30px;
+    border-width: 3px; /* Sedikit lebih tipis */
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+
+/* MODAL STYLES (perbaikan ukuran tombol silang) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Lebih gelap sedikit untuk fokus ke modal */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000; /* Pastikan modal di atas segalanya */
 }
+
+.modal-content {
+    background-color: var(--card-bg); /* Menggunakan variabel CSS untuk warna latar belakang kartu */
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 400px; /* Batasi lebar modal */
+    position: relative; /* Penting agar tombol close relatif terhadap modal ini */
+    box-sizing: border-box; /* Pastikan padding dihitung dalam width */
+    max-height: 90vh; /* Batasi tinggi modal agar bisa digulir jika konten panjang */
+    overflow-y: auto; /* Aktifkan scroll jika konten modal melebihi tinggi */
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color); /* Garis bawah header */
+    padding-bottom: 1rem;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem; /* Ukuran judul modal */
+    color: var(--primary-color);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.8rem; /* UKURAN IKON SILANG: Ubah dari 2.5rem ke 1.8rem agar tidak terlalu besar */
+    color: rgb(0, 0, 0); /* Warna ikon silang */
+    cursor: pointer;
+    padding: 0; /* Hapus padding default */
+    line-height: 1; /* Pastikan tingginya sesuai ukuran font */
+    transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+    color: var(--danger-color); /* Warna saat di-hover */
+}
+
 
 
 /* --- Tambahan/Perbaikan Responsive Sidebar & Main Content --- */
@@ -742,7 +801,7 @@ select#package-dropdown {
 }
 /* Announcement Banner */
 .announcement-banner {
-    background-color: rgb(118, 255, 5);
+    background-color: rgb(255, 209, 5);
     color: rgb(0, 0, 0);
     padding: 0.75rem 1rem;
     border-radius: var(--border-radius);
@@ -889,7 +948,7 @@ select#package-dropdown {
 
 .status-badge {
     padding: 0.25em 0.6em;
-    border-radius: 4px;
+    border-radius: 10px;
     font-size: 0.8em;
     font-weight: 600;
     text-transform: uppercase;
@@ -1879,9 +1938,76 @@ select#package-dropdown {
     border-bottom: 1px solid #eee;
 }
 
+.user-list-admin .user-item-admin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    
+    /* --- PENTING UNTUK RESPONSIVITAS KESELURUHAN ITEM --- */
+    flex-wrap: wrap; /* Izinkan elemen anak (info & tombol) pindah baris */
+    gap: 10px; /* Jarak antara info pengguna dan blok tombol jika mereka dalam satu baris, atau antar baris jika wrap */
+}
+
+/* Gaya untuk kontainer tombol (Setujui, Tolak) */
 .user-actions {
     display: flex;
-    gap: 0.5rem; /* Memberi jarak antar tombol */
+    gap: 0.5rem; /* Jarak antar tombol (sesuai yang Anda punya) */
+    
+    /* Tambahan kecil untuk desktop/lebar jika ada banyak tombol */
+    /* flex-wrap: wrap; */ /* Anda bisa tambahkan ini jika ada lebih dari 2 tombol */
+    /* flex-shrink: 0; */ /* Mencegah blok tombol menyusut terlalu banyak */
+}
+
+/* Gaya untuk tombol itu sendiri */
+.user-actions button {
+    padding: 8px 15px;
+    border-radius: var(--border-radius);
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    white-space: nowrap; /* Mencegah teks tombol terpotong */
+    
+    /* Memberi flexibilitas agar tombol bisa sedikit tumbuh atau menyusut */
+    flex-grow: 1; /* Biarkan tombol mengambil ruang yang sama */
+    flex-basis: auto; /* Biarkan ukuran dasar diatur oleh konten */
+    min-width: 80px; /* Batasan agar tombol tidak terlalu kecil */
+}
+
+
+/* --- MEDIA QUERIES UNTUK TAMPILAN MOBILE --- */
+@media screen and (max-width: 768px) {
+    /* Ketika layar kecil, ubah tata letak keseluruhan item pengguna menjadi kolom */
+    .user-item-admin {
+        flex-direction: column; /* Ini membuat .user-info-admin dan .user-actions bertumpuk */
+        align-items: stretch; /* Meregangkan anak-anak (info & tombol) agar selebar mungkin */
+        padding: 10px; /* Sedikit lebih sedikit padding di mobile */
+    }
+
+    /* Pastikan blok informasi pengguna mengambil seluruh lebar */
+    .user-item-admin .user-info-admin {
+        width: 100%;
+        margin-bottom: 10px; /* Memberi jarak antara info dan tombol */
+        text-align: left; /* Mungkin sudah diatur, tapi untuk memastikan */
+    }
+
+    /* Ketika layar kecil, ubah tata letak tombol menjadi kolom */
+    .user-item-admin .user-actions {
+        flex-direction: column; /* Ini membuat tombol "Setujui" dan "Tolak" bertumpuk */
+        width: 100%; /* Pastikan kontainer tombol mengambil seluruh lebar */
+        gap: 8px; /* Jarak antar tombol ketika bertumpuk */
+    }
+
+    /* Pastikan setiap tombol individu mengisi seluruh lebar kontainernya */
+    .user-actions button {
+        width: 100%; /* Mengisi lebar penuh */
+        flex-grow: unset; /* Hapus pertumbuhan fleksibel di mobile */
+        flex-basis: auto; /* Biarkan ukuran dasar diatur secara otomatis */
+    }
 }
 
 /* Tombol 'danger' untuk aksi berbahaya seperti menolak/menghapus */
@@ -1960,4 +2086,160 @@ button.danger:hover {
   100% {
     box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
   }
+}
+
+.pagination-controls {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: var(--light-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.pagination-controls button {
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--button-color);
+    color: rgb(24, 61, 224);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+    background-color: var(--primary-color-dark);
+}
+
+.pagination-controls button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.pagination-controls span {
+    font-size: 0.9em;
+    color: var(--text-color-light);
+}
+
+/* Optional: Untuk membuat tabel responsif di layar kecil */
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    overflow: hidden; /* Penting untuk border-radius pada tabel */
+    box-shadow: var(--shadow-sm);
+}
+
+.history-table th, .history-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.history-table th {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.85em;
+}
+
+.history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.history-table tbody tr:nth-child(even) {
+    background-color: var(--bg-color);
+}
+
+.history-table tbody tr:hover {
+    background-color: #f0f0f0;
+}
+
+/* Responsive table behavior */
+@media screen and (max-width: 768px) {
+    .history-table thead {
+        display: none; /* Sembunyikan header tabel di layar kecil */
+    }
+
+    .history-table, .history-table tbody, .history-table tr, .history-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .history-table tr {
+        margin-bottom: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        padding: 10px; /* Padding di sekitar setiap baris */
+    }
+
+    .history-table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+    }
+
+    .history-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: calc(50% - 30px);
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+    }
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.3em 0.6em;
+    border-radius: 0.25em;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: rgb(255, 255, 255);
+    text-transform: capitalize;
+    min-width: 50px;
+    text-align: center;
+}
+
+.status-badge.status-success, .status-badge.status-completed { background-color: var(--success-color); }
+.status-badge.status-failed, .status-badge.status-expired, .status-badge.status-canceled { background-color: var(--danger-color); }
+.status-badge.status-pending, .status-badge.status-menunggu_pembayaran { background-color: var(--warning-color); }
+.status-badge.status-pending-provider { background-color: var(--info-color); }
+/* Tambahan jika ada status lain: */
+.status-badge.status-processing { background-color: var(--info-color); }
+.status-badge.status-refunded { background-color: gray; }
+
+/* Spinner untuk tombol */
+.button-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid rgb(47, 11, 255);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+.button-spinner.small {
+    width: 0.8em;
+    height: 0.8em;
+    border-width: 1px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

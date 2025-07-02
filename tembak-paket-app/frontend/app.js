@@ -14,10 +14,15 @@ let phoneAuth = {
 let kmspBalance = null; // Diatur ke null untuk menandakan belum dimuat atau error
 let latestAnnouncement = null;
 let isMaintenanceMode = false; 
+let providerBalance = null; 
 let statusIntervalId = null;
 let allAdminUsers = [];
 // --- PERUBAHAN BARU: Variabel untuk interval polling di halaman riwayat ---
 let historyPollingInterval = null;
+let currentHistoryPage = 1;
+const transactionsPerPage = 5;
+
+
 
 
 // ===============================================
@@ -37,7 +42,13 @@ async function main() {
         renderGlobalMaintenancePage();
         return;
     }
-
+    if (isAdminLoginAttempt && (!currentUser || currentUser.role !== 'admin')) {
+        // Jika belum login sebagai admin, arahkan ke halaman login, tapi jaga param `admin_login=true`
+        if (window.location.hash.split('?')[0] !== '#login') {
+            window.location.hash = '#login?admin_login=true';
+            return; // Penting: hentikan dan biarkan hashchange yang akan memicu renderApp lagi
+        }
+    }
     if (currentUser) {
     const loggedInPromises = [
         initKMSPsession(),
@@ -57,6 +68,7 @@ async function main() {
     }
     
     renderApp(isAdminLoginAttempt); 
+    
     
     window.removeEventListener('hashchange', renderApp);
     window.addEventListener('hashchange', () => renderApp(false));
@@ -211,7 +223,11 @@ function renderApp(isAdminLoginAttempt = false) {
     const hash = window.location.hash || '#';
     const cleanHash = hash.split('?')[0] || '#'; 
 
-    app.innerHTML = '<div class="loading-spinner"></div>';
+     app.innerHTML = `
+        <div class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+    `;
 
     if (currentUser) {
         const targetHash = (cleanHash === '#' || cleanHash === '#login' || cleanHash === '#register') ? '#dashboard' : cleanHash;
@@ -709,10 +725,6 @@ function renderPaymentChoiceModal(packageId, originalButton) {
                 <div class="modal-header"><h2>Konfirmasi Pembelian</h2><button class="modal-close">&times;</button></div>
                 <h4>${pkg.name}</h4>
                 <div class="form-group">
-                    <label>Harga dari Provider:</label>
-                    <p><strong>Rp ${originalPrice.toLocaleString('id-ID')}</strong></p>
-                </div>
-                <div class="form-group">
                     <label>Biaya Layanan:</label>
                     <p><strong>Rp ${platformFee.toLocaleString('id-ID')}</strong> (dipotong dari saldo)</p>
                 </div>
@@ -1014,25 +1026,12 @@ function renderRegisterPage() {
 
 // frontend/app.js -> GANTI FUNGSI renderDashboard LAMA ANDA DENGAN INI
 
-function renderDashboard(activePage = 'packages') {
+async function renderDashboard(activePage = 'packages') {
+    await checkLoginStatus();
     const isAdmin = currentUser.role === 'admin';
+    
 
-    // --- PERBAIKAN UTAMA: PENGECEKAN DIPINDANKAN KE SINI ---
-    // Cek status maintenance di level tertinggi dasbor.
-    if (isMaintenanceMode && !isAdmin) {
-       app.innerHTML = `
-        <div class="maintenance-container">
-            <svg class="maintenance-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.4l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1 0-2.4l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>
-            </svg>
-            
-            <h2>MODE MAINTENANCE AKTIF</h2>
-            <p>Maaf, layanan sedang dalam perbaikan untuk meningkatkan kualitas.<br>Silakan coba lagi beberapa saat nanti.</p>
-            <p class="by-line">By RyyStore</p>
-        </div>
-    `;
-    return; // PENTING: Hentikan eksekusi sisa fungsi agar dasbor tidak dirender.
-}
+    
     
 
     app.innerHTML = `
@@ -1192,6 +1191,16 @@ function renderAdminDashboard(container) {
                 <h1>Panel Kontrol Admin</h1>
                 <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
             </div>
+            <div class="admin-section">
+                <h2>Kirim Pengumuman (Kecil)</h2>
+                <div id="announcement-feedback"></div>
+                <form id="announcement-form">
+                    <div class="form-group">
+                        <label for="announcement-message">Pesan Pengumuman:</label>
+                        <textarea id="announcement-message" rows="4" placeholder="Ketik pengumuman di sini..." required></textarea>
+                    </div>
+                    <button type="submit">Kirim Pengumuman</button>
+                </form>
 
             <div class="admin-section">
                 <h2>Persetujuan Pengguna Baru</h2>
@@ -1316,19 +1325,8 @@ function renderAdminDashboard(container) {
                     <button id="deselect-all-btn">Sembunyikan Semua</button>
                 </div>
                 <ul id="package-list" class="package-list"><div class="loading-spinner"></div></ul>
-                <button id="save-all-btn">Simpan Semua Perubahan</button>
+                
             </div>
-
-            <div class="admin-section">
-                <h2>Kirim Pengumuman (Kecil)</h2>
-                <div id="announcement-feedback"></div>
-                <form id="announcement-form">
-                    <div class="form-group">
-                        <label for="announcement-message">Pesan Pengumuman:</label>
-                        <textarea id="announcement-message" rows="4" placeholder="Ketik pengumuman di sini..." required></textarea>
-                    </div>
-                    <button type="submit">Kirim Pengumuman</button>
-                </form>
             </div>
         </div>
     `;
@@ -1485,6 +1483,77 @@ function renderAdminDashboard(container) {
             </div>
         </li>
     `).join('');
+    listElement.querySelectorAll('.package-item').forEach(item => {
+        const packageId = item.dataset.packageId;
+        const feeInput = item.querySelector('.fee-input');
+        const visibilityCheckbox = item.querySelector('.visibility-checkbox');
+        const categorySelect = item.querySelector('.category-select');
+        const multiPurchaseCheckbox = item.querySelector('.multi-purchase-checkbox');
+
+        // Gunakan 'input' event untuk input type 'number' agar setiap perubahan langsung terdeteksi
+        feeInput?.addEventListener('input', () => handlePackageChange(packageId, item));
+
+        // Gunakan 'change' event untuk checkbox dan select
+        visibilityCheckbox?.addEventListener('change', () => handlePackageChange(packageId, item));
+        categorySelect?.addEventListener('change', () => handlePackageChange(packageId, item));
+        multiPurchaseCheckbox?.addEventListener('change', () => handlePackageChange(packageId, item));
+    });
+}
+
+/**
+ * Mengirim perubahan pada satu paket ke backend.
+ * @param {string} packageId - ID paket yang diubah.
+ * @param {HTMLElement} packageItemElement - Elemen <li> dari paket yang diubah.
+ */
+async function handlePackageChange(packageId, packageItemElement) {
+    const feeInput = packageItemElement.querySelector('.fee-input');
+    const visibilityCheckbox = packageItemElement.querySelector('.visibility-checkbox');
+    const categorySelect = packageItemElement.querySelector('.category-select');
+    const multiPurchaseCheckbox = packageItemElement.querySelector('.multi-purchase-checkbox');
+
+    // Buat objek update untuk paket ini saja
+    const updatePayload = {
+        package_code: packageId,
+        platform_fee: parseFloat(feeInput?.value || '0'),
+        isVisible: visibilityCheckbox?.checked || false,
+        category: categorySelect ? categorySelect.value : 'reguler',
+        isMultiPurchase: multiPurchaseCheckbox?.checked || false
+    };
+
+    // Tambahkan spinner kecil di samping item yang sedang disimpan
+    let currentSpinner = packageItemElement.querySelector('.small-spinner');
+    if (!currentSpinner) {
+        currentSpinner = document.createElement('span');
+        currentSpinner.className = 'small-spinner';
+        currentSpinner.style.marginLeft = '10px';
+        packageItemElement.querySelector('.package-info')?.appendChild(currentSpinner);
+    }
+    currentSpinner.innerHTML = `<span class="button-spinner small"></span>`;
+
+
+    try {
+        const { data, status } = await apiFetch('/admin/packages/bulk-update', {
+            method: 'PUT',
+            body: { packages: [updatePayload] } // Kirim array berisi satu objek paket
+        });
+
+        if (status === 200 && data.status) {
+            // showToast('Perubahan paket berhasil disimpan!', false);
+            currentSpinner.innerHTML = '<span style="color: var(--success-color);">✔</span>'; // Tanda sukses
+        } else {
+            throw new Error(data.message || 'Gagal menyimpan perubahan.');
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        currentSpinner.innerHTML = '<span style="color: var(--danger-color);">✖</span>'; // Tanda error
+    } finally {
+        // Hilangkan spinner atau tanda setelah beberapa waktu
+        setTimeout(() => {
+            if (currentSpinner) {
+                currentSpinner.remove();
+            }
+        }, 1500); // Hilangkan setelah 1.5 detik
+    }
 }
 
 /**
@@ -2554,37 +2623,37 @@ function renderPhoneVerificationPanel() {
  */
 async function renderPackagesPage(container) {
 
-    // KODE BARU: Cek saldo pengguna terlebih dahulu
-    if (currentUser && currentUser.balance <= 0) {
+//     // KODE BARU: Cek saldo pengguna terlebih dahulu
+//     if (currentUser && currentUser.balance <= 0) {
         
-        // Jika saldo 0, tampilkan panel terkunci
-        const lockedHTML = `
-        <div class="packages-locked-container">
-            <svg class="locked-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="url(#icon-gradient)">
-                <defs>
-                    <linearGradient id="icon-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#a855f7;" />
-                        <stop offset="100%" style="stop-color:#6d28d9;" />
-                    </linearGradient>
-                </defs>
-                <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3A5.25 5.25 0 0012 1.5zM8.25 6.75a3.75 3.75 0 117.5 0v3h-7.5v-3zM12.75 12a.75.75 0 00-1.5 0v2.25a.75.75 0 001.5 0V12z" clip-rule="evenodd" />
-            </svg>
+//         // Jika saldo 0, tampilkan panel terkunci
+//         const lockedHTML = `
+//         <div class="packages-locked-container">
+//             <svg class="locked-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="url(#icon-gradient)">
+//                 <defs>
+//                     <linearGradient id="icon-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+//                         <stop offset="0%" style="stop-color:#a855f7;" />
+//                         <stop offset="100%" style="stop-color:#6d28d9;" />
+//                     </linearGradient>
+//                 </defs>
+//                 <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3A5.25 5.25 0 0012 1.5zM8.25 6.75a3.75 3.75 0 117.5 0v3h-7.5v-3zM12.75 12a.75.75 0 00-1.5 0v2.25a.75.75 0 001.5 0V12z" clip-rule="evenodd" />
+//             </svg>
             
-            <h3>Kepo isinya? Top up solusinya</h3>
-            <p>Saldo Anda saat ini tidak mencukupi untuk melihat dan membeli paket.</p>
-            <button id="locked-topup-btn" class="topup-cta-btn">Top Up Saldo Sekarang</button>
-        </div>
-    `;
+//             <h3>Kepo isinya? Top up solusinya</h3>
+//             <p>Saldo Anda saat ini tidak mencukupi untuk melihat dan membeli paket.</p>
+//             <button id="locked-topup-btn" class="topup-cta-btn">Top Up Saldo Sekarang</button>
+//         </div>
+//     `;
 
-    // Sisa kode di bawahnya tidak perlu diubah...
-    const packageSection = document.getElementById('package-selection-area');
-    if (packageSection) packageSection.remove();
-    container.innerHTML += lockedHTML;
+//     // Sisa kode di bawahnya tidak perlu diubah...
+//     const packageSection = document.getElementById('package-selection-area');
+//     if (packageSection) packageSection.remove();
+//     container.innerHTML += lockedHTML;
     
-    document.getElementById('locked-topup-btn')?.addEventListener('click', renderTopUpModal);
+//     document.getElementById('locked-topup-btn')?.addEventListener('click', renderTopUpModal);
 
-    return;
-}
+//     return;
+// }
     
     // --- KODE LAMA ANDA YANG AKAN DIJALANKAN JIKA SALDO LEBIH DARI 0 ---
     // (Kode di bawah ini tidak berubah, hanya dipindahkan ke dalam blok 'else')
@@ -2592,19 +2661,17 @@ async function renderPackagesPage(container) {
     const existingSection = document.getElementById('package-selection-area');
     if (existingSection) existingSection.remove();
 
-    if (visiblePackages.length === 0) {
-        try {
-            const { data, status } = await apiFetch('/user/packages');
-            if (status === 200 && data.status && Array.isArray(data.data)) {
-                visiblePackages = data.data;
-            } else {
-                throw new Error(data.message || "Gagal memuat paket");
-            }
-        } catch (error) {
-            container.innerHTML += `<div class="page-content"><p class="error-message">Gagal memuat daftar paket: ${error.message}</p></div>`;
-            return;
-        }
+    try {
+    const { data, status } = await apiFetch('/user/packages');
+    if (status === 200 && data.status && Array.isArray(data.data)) {
+        visiblePackages = data.data; // Selalu perbarui dengan data terbaru
+    } else {
+        throw new Error(data.message || "Gagal memuat paket");
     }
+} catch (error) {
+    container.innerHTML += `<div class="page-content"><p class="error-message">Gagal memuat daftar paket: ${error.message}</p></div>`;
+    return;
+}
 
     const packageSection = document.createElement('div');
     packageSection.id = 'package-selection-area';
@@ -2782,7 +2849,7 @@ async function handleMultiPulsaPurchase(e) {
 
 /**
  * Menampilkan detail paket di halaman Beli Paket (Reguler/OTP).
- * Versi ini TIDAK menampilkan atau memeriksa stok.
+ * Versi ini akan menonaktifkan tombol beli jika saldo provider admin tidak cukup.
  */
 function displaySelectedPackageDetails(packageCode) {
     const detailsArea = document.getElementById('package-details-area');
@@ -2802,15 +2869,23 @@ function displaySelectedPackageDetails(packageCode) {
     }
 
     const platformFee = pkg.platform_fee || 0;
-    const isFeeCovered = currentUser.balance >= platformFee;
-    const isProviderStocked = !(typeof kmspBalance === 'number' && kmspBalance <= 0 && (pkg.original_price || 0) > 0);
-    const canPurchase = phoneAuth.accessToken && isFeeCovered && isProviderStocked;
+    const providerPrice = pkg.original_price || 0;
 
+    // --- KONDISI PEMBELIAN YANG DIPERBARUI ---
+    const hasPhoneSession = !!phoneAuth.accessToken;
+    const userHasBalance = currentUser.balance >= platformFee;
+    const providerHasBalance = typeof providerBalance === 'number' && providerBalance >= providerPrice;
+
+    const canPurchase = hasPhoneSession && userHasBalance && providerHasBalance;
+    
+    // Tentukan teks tombol berdasarkan kondisi
     let buttonText = 'Beli Sekarang';
-    if (!canPurchase) {
-        if (!phoneAuth.accessToken) buttonText = "Verifikasi Nomor Dulu";
-        else if (!isProviderStocked) buttonText = "Stok (Perkiraan)";
-        else buttonText = 'Saldo Kurang';
+    if (!hasPhoneSession) {
+        buttonText = "Verifikasi Nomor Dulu";
+    } else if (!userHasBalance) {
+        buttonText = 'Saldo Anda Kurang';
+    } else if (!providerHasBalance) {
+        buttonText = 'Minta Admin Tambahkan stok'; // Pesan ini akan muncul jika saldo admin kurang
     }
 
     detailsArea.innerHTML = `
@@ -2833,7 +2908,7 @@ function displaySelectedPackageDetails(packageCode) {
 
 /**
  * Merender halaman riwayat transaksi ke dalam container.
- * VERSI FINAL LENGKAP: Menangani klik untuk semua jenis tombol aksi.
+ * VERSI FINAL LENGKAP: Dengan pagination.
  */
 async function renderHistoryPage(container) {
     // Hentikan polling lama jika ada saat masuk ke halaman ini
@@ -2851,7 +2926,7 @@ async function renderHistoryPage(container) {
     const historyContent = document.getElementById('history-content');
     if (!historyContent) return;
 
-    // --- FUNGSI HELPER UNTUK MENANGANI SEMUA AKSI DI HALAMAN RIWAYAT ---
+    // --- FUNGSI HELPER UNTUK MENANGANI SEMUA AKSI DI HALAMAN RIWAYAT (tidak berubah) ---
     async function handleHistoryActions(e) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -2915,100 +2990,157 @@ async function renderHistoryPage(container) {
         }
     }
 
-
-    // Fungsi untuk merender tabel riwayat
+    // Fungsi untuk merender tabel riwayat DENGAN PAGINATION
     const drawHistoryTable = (transactions) => {
         if (!transactions || transactions.length === 0) {
             historyContent.innerHTML = `<p>Anda belum memiliki riwayat transaksi.</p>`;
             return;
         }
 
-        historyContent.innerHTML = `
+        // --- LOGIKA PAGINATION UNTUK RIWAYAT TRANSAKSI ---
+        const totalPages = Math.ceil(transactions.length / transactionsPerPage);
+
+        // Pastikan halaman saat ini tidak melebihi total halaman setelah filter/update
+        if (currentHistoryPage > totalPages && totalPages > 0) {
+            currentHistoryPage = totalPages;
+        } else if (totalPages === 0) {
+             currentHistoryPage = 1;
+        }
+
+
+        const startIndex = (currentHistoryPage - 1) * transactionsPerPage;
+        const endIndex = startIndex + transactionsPerPage;
+
+        const transactionsToShow = transactions.slice(startIndex, endIndex);
+
+        let tableHtml = `
             <table class="history-table">
                 <thead>
-                    <tr><th>Tanggal</th><th>Tipe</th><th>Nama/ID</th><th>Jumlah/Fee</th><th>Status</th><th>Aksi</th></tr>
+                    <tr><th>Tanggal</th>
+                    <th>Tipe</th>
+                    <th>Nama</th>
+                    <th>Jumlah/Fee</th>
+                    <th>Status</th><th>Aksi</th></tr>
                 </thead>
-                <tbody>
-                    ${transactions.map(trx => {
-                        const transactionId = `trx_row_${trx.id.replace(/\W/g, '')}`;
-                        const type = trx.type === 'topup' ? 'Top Up' : 'Pembelian';
-                        const nameOrId = trx.packageName || trx.id;
-                        const amountOrFee = trx.type === 'topup'
-                            ? `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`
-                            : `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
+                <tbody>`;
 
-                        let statusClass = (trx.status || 'failed').toLowerCase();
-                        let statusText = trx.api_response || trx.status;
+        if (transactionsToShow.length === 0) {
+            tableHtml += `<tr><td colspan="6" style="text-align: center;">Tidak ada transaksi di halaman ini.</td></tr>`;
+        } else {
+            tableHtml += transactionsToShow.map(trx => {
+                const transactionId = `trx_row_${trx.id.replace(/\W/g, '')}`;
+                const type = trx.type === 'topup' ? 'Top Up' : 'Pembelian';
+                const nameOrId = trx.packageName || trx.id;
+                const amountOrFee = trx.type === 'topup'
+                    ? `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`
+                    : `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
 
-                        if (trx.status === 'menunggu_saldo_provider') {
-                            statusClass = 'pending-provider';
-                            statusText = 'Menunggu Provider';
-                        } else if (trx.status === 'pending' && trx.type === 'topup') {
-                            statusText = 'Menunggu Pembayaran';
-                        }
-                        
-                        let actionButton = '---';
-                        const isFinalState = ['success', 'failed', 'completed', 'expired', 'canceled'].includes(trx.status);
+                let statusClass = (trx.status || 'failed').toLowerCase();
+                let statusText = trx.api_response || trx.status;
 
-                        if (trx.type === 'purchase' && trx.paymentDetails && !isFinalState) {
-                            const paymentDataString = JSON.stringify(trx.paymentDetails);
-                            let buttonText = 'Lanjutkan Pembayaran';
-                            if(trx.paymentDetails.is_qris) buttonText = 'Tampilkan QRIS';
-                            if(trx.paymentDetails.have_deeplink) buttonText = 'Bayar via DANA';
-                            actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
-                        } else if (trx.type === 'purchase' && trx.kmspTrxId && !isFinalState) {
-                            actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
-                        } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData?.base64Image) {
-                            actionButton = `<button class="open-qris-btn"
-                                data-topup-id="${trx.id}"
-                                data-base64-image="${trx.qrisData.base64Image}"
-                                data-unique-amount="${trx.qrisData.uniqueAmount}"
-                                data-created-at="${trx.createdAt}">Tampilkan QRIS</button>`;
-                        }
+                if (trx.status === 'menunggu_saldo_provider') {
+                    statusClass = 'pending-provider';
+                    statusText = 'Menunggu Provider';
+                } else if (trx.status === 'pending' && trx.type === 'topup') {
+                    statusText = 'Menunggu Pembayaran';
+                }
 
-                        return `<tr id="${transactionId}" data-transaction-id="${trx.id}" data-status="${trx.status}">
-                            <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
-                            <td data-label="Tipe">${type}</td>
-                            <td data-label="Nama/ID">${nameOrId}</td>
-                            <td data-label="Jumlah/Fee">${amountOrFee}</td>
-                            <td data-label="Status" class="status-cell">
-                                <span class="status-badge status-${statusClass}">${statusText}</span>
-                            </td>
-                            <td data-label="Aksi" class="action-cell">${actionButton}</td>
-                        </tr>`;
-                    }).join('')}
+                let actionButton = '---';
+                const isFinalState = ['success', 'failed', 'completed', 'expired', 'canceled'].includes(trx.status);
+
+                if (trx.type === 'purchase' && trx.paymentDetails && !isFinalState) {
+                    const paymentDataString = JSON.stringify(trx.paymentDetails);
+                    let buttonText = 'Lanjutkan Pembayaran';
+                    if(trx.paymentDetails.is_qris) buttonText = 'Tampilkan QRIS';
+                    if(trx.paymentDetails.have_deeplink) buttonText = 'Bayar via DANA';
+                    actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
+                } else if (trx.type === 'purchase' && trx.kmspTrxId && !isFinalState) {
+                    actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
+                } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData?.base64Image) {
+                    actionButton = `<button class="open-qris-btn"
+                        data-topup-id="${trx.id}"
+                        data-base64-image="${trx.qrisData.base64Image}"
+                        data-unique-amount="${trx.qrisData.uniqueAmount}"
+                        data-created-at="${trx.createdAt}">Tampilkan QRIS</button>`;
+                }
+
+                return `<tr id="${transactionId}" data-transaction-id="${trx.id}" data-status="${trx.status}">
+                    <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                    <td data-label="Tipe">${type}</td>
+                    <td data-label="Nama/ID"><br>${nameOrId}</td>
+                    <td data-label="Jumlah/Fee">${amountOrFee}</td>
+                    <td data-label="Status" class="status-cell"><br>
+                        <span class="status-badge status-${statusClass}">${statusText}</span>
+                    </td>
+                    <td data-label="Aksi" class="action-cell">${actionButton}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        tableHtml += `
                 </tbody>
-            </table>`;
+            </table>
+            <div class="pagination-controls" style="margin-top: 1.5rem;">
+                <button id="history-prev-page-btn" ${currentHistoryPage === 1 ? 'disabled' : ''}>Sebelumnya</button>
+                <span>Halaman <strong id="current-history-page-display">${currentHistoryPage}</strong> dari ${totalPages}</span>
+                <button id="history-next-page-btn" ${currentHistoryPage === totalPages ? 'disabled' : ''}>Berikutnya</button>
+            </div>`;
+
+        historyContent.innerHTML = tableHtml;
 
         historyContent.querySelector('.history-table tbody')?.addEventListener('click', handleHistoryActions);
+
+        document.getElementById('history-prev-page-btn')?.addEventListener('click', () => {
+            if (currentHistoryPage > 1) {
+                currentHistoryPage--;
+                fetchAndUpdateHistory(false); // Render ulang halaman dengan data yang sama
+            }
+        });
+
+        document.getElementById('history-next-page-btn')?.addEventListener('click', () => {
+            if (currentHistoryPage < totalPages) {
+                currentHistoryPage++;
+                fetchAndUpdateHistory(false); // Render ulang halaman dengan data yang sama
+            }
+        });
     };
-    
+
     // Fungsi utama yang dipanggil saat halaman dimuat dan saat polling
     const fetchAndUpdateHistory = async (isInitialLoad = false) => {
         try {
             const { data } = await apiFetch('/user/transactions');
-            if (!data.status || !Array.isArray(data.data)) return;
-
-            if (isInitialLoad) {
-                drawHistoryTable(data.data);
-            } else {
-                // Lakukan update dinamis untuk baris yang statusnya berubah
-                data.data.forEach(trx => {
-                    const row = document.querySelector(`tr[data-transaction-id="${trx.id}"]`);
-                    if (row && row.dataset.status !== trx.status) {
-                        // Jika status berubah, gambar ulang seluruh tabel agar event listener dan tombol aksi ikut ter-update
-                        // Ini lebih sederhana dan andal daripada memanipulasi DOM per baris untuk kasus ini
-                        drawHistoryTable(data.data);
-                    }
-                });
+            if (!data.status || !Array.isArray(data.data)) {
+                // Jika data tidak valid, kosongkan tabel dan hentikan polling
+                historyContent.innerHTML = `<p class="error-message">Gagal memuat riwayat: Data tidak valid.</p>`;
+                if (historyPollingInterval) {
+                    clearInterval(historyPollingInterval);
+                    historyPollingInterval = null;
+                }
+                return;
             }
 
-            const hasPending = data.data.some(t => t.status === 'menunggu_saldo_provider' || (t.type === 'topup' && t.status === 'pending'));
+            // Simpan data transaksi lengkap yang baru diambil
+            // Kita tidak perlu variabel global `allHistoryTransactions` karena `drawHistoryTable` menerima langsung `data.data`
+            // Ini akan memastikan data yang digunakan untuk pagination adalah yang terbaru dari server.
+
+            // Saat pertama kali load atau jika ada perubahan status yang signifikan, gambar ulang tabel
+            // Jika ada transaksi pending, lanjutkan polling
+            const hasPending = data.data.some(t =>
+                t.status === 'menunggu_saldo_provider' ||
+                (t.type === 'topup' && t.status === 'pending' && new Date(t.createdAt).getTime() + 5 * 60 * 1000 > Date.now()) // Periksa waktu kadaluarsa untuk topup pending
+            );
+
+            // Selalu gambar ulang tabel dengan data terbaru, agar pagination juga terupdate
+            drawHistoryTable(data.data);
+
+
             if (!hasPending && historyPollingInterval) {
                 clearInterval(historyPollingInterval);
                 historyPollingInterval = null;
+                console.log("History polling stopped due to no pending transactions.");
             } else if (hasPending && !historyPollingInterval) {
-                historyPollingInterval = setInterval(() => fetchAndUpdateHistory(false), 30000);
+                historyPollingInterval = setInterval(() => fetchAndUpdateHistory(false), 30000); // Polling setiap 30 detik
+                console.log("History polling started/resumed.");
             }
 
         } catch (error) {
@@ -3026,6 +3158,7 @@ async function renderHistoryPage(container) {
     // Panggil pertama kali untuk memuat data
     await fetchAndUpdateHistory(true);
 }
+
 
 /**
  * Merender modal untuk permintaan top up saldo.
@@ -3651,12 +3784,24 @@ async function handleLogin(e) {
         const email = e.target.elements.email.value;
         const password = e.target.elements.password.value;
         const { data, status } = await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
-        
+
         // Periksa status HTTP dan data pengguna
         if (status === 200 && data.user) {
             currentUser = data.user; // Simpan data pengguna yang login
-            window.location.hash = '#dashboard'; // Arahkan ke dashboard
-            main(); // Panggil main untuk inisialisasi ulang dengan pengguna baru
+
+            // Cek apakah ada admin_login=true di URL saat ini
+            const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+            const isAdminLoginAttempt = urlParams.get('admin_login') === 'true';
+
+            // Jika login berhasil sebagai admin DAN ada param admin_login=true, redirect ke #admin
+            if (currentUser.role === 'admin' && isAdminLoginAttempt) {
+                window.location.hash = '#admin';
+            } else {
+                // Jika tidak, arahkan ke dashboard biasa
+                window.location.hash = '#dashboard';
+            }
+
+            main(); // Panggil main untuk inisialisasi ulang dengan pengguna baru dan routing yang benar
         } else {
             throw new Error(data.message || 'Login gagal: Respons tidak valid.');
         }
@@ -3699,15 +3844,13 @@ async function renderNonOtpPage(container) {
         return;
     }
     
-    if (visiblePackages.length === 0) {
-        try {
-            const { data } = await apiFetch('/user/packages');
-            visiblePackages = data.data || [];
-        } catch (error) {
-            pageContent.innerHTML = '<p class="error-message">Gagal memuat daftar paket.</p>';
-            return;
-        }
-    }
+    try {
+    const { data } = await apiFetch('/user/packages');
+    visiblePackages = data.data || []; // Selalu perbarui dengan data terbaru
+} catch (error) {
+    pageContent.innerHTML = '<p class="error-message">Gagal memuat daftar paket.</p>';
+    return;
+}
 
     const nonOtpPackages = visiblePackages.filter(p => p.category === 'non-otp' && p.isVisible);
 
@@ -3983,16 +4126,21 @@ async function checkLoginStatus() {
         const { data, status } = await apiFetch('/auth/me');
         if (status === 200 && data.status) {
             currentUser = data.user;
-            // Update status maintenance dari respons backend
-            isMaintenanceMode = data.maintenanceMode !== undefined ? data.maintenanceMode : false; // <-- UPDATE INI
+            isMaintenanceMode = data.maintenanceMode !== undefined ? data.maintenanceMode : false;
+            
+            // Simpan saldo provider dari respons API ke variabel global
+            providerBalance = data.providerBalance !== undefined ? data.providerBalance : null; // <--- BARIS BARU
+
         } else {
             currentUser = null;
-            isMaintenanceMode = false; // Reset jika tidak login atau error
+            isMaintenanceMode = false;
+            providerBalance = null; // <--- BARIS BARU: Reset jika gagal
         }
     } catch (error) {
         console.error("Gagal memeriksa status login:", error);
         currentUser = null;
-        isMaintenanceMode = false; // Reset jika ada error
+        isMaintenanceMode = false;
+        providerBalance = null; // <--- BARIS BARU: Reset jika error
     }
 }
 
@@ -4104,7 +4252,7 @@ function renderUserLogModal(logData) {
               <thead>
                 <tr>
                   <th>Tanggal</th>
-                  <th>Nama Paket</th>
+                  <th>Tipe Paket</th>
                   <th>Fee</th>
                   <th>Status</th>
                   <th>Pesan API</th>
@@ -4114,7 +4262,7 @@ function renderUserLogModal(logData) {
                 ${logs.map(log => `
                   <tr>
                     <td data-label="Tanggal">${new Date(log.createdAt).toLocaleString('id-ID')}</td>
-                    <td data-label="Nama Paket">${log.packageName}</td>
+                    <td data-label="Tipe Paket">${log.packageName}</td>
                     <td data-label="Fee">Rp ${(log.platformFee || 0).toLocaleString('id-ID')}</td>
                     <td data-label="Status"><span class="status-badge status-${log.status}">${log.status}</span></td>
                     <td data-label="Pesan API">${log.api_response}</td>

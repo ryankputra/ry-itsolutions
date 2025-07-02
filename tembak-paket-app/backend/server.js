@@ -15,6 +15,8 @@ const axios = require('axios');
 const multer = require('multer');
 const excel = require('exceljs'); 
 const cron = require('node-cron'); 
+const { Mutex } = require('async-mutex'); // <-- TAMBAHKAN INI
+const dbMutex = new Mutex(); 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -99,7 +101,12 @@ async function initializeDatabase() {
         ...user,
         verifiedPhone: user.verifiedPhone || null
     }));
-    await db.write();
+    const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
     console.log("Database initialized successfully.");
 }
 initializeDatabase();
@@ -167,7 +174,12 @@ app.post('/api/auth/register', async (req, res) => {
         // --- AKHIR PERUBAHAN ---
 
         db.data.users.push(newUser);
-        await db.write();
+        const release = await dbMutex.acquire();
+        try {
+            await db.write();
+        } finally {
+        release();
+        }
         
         // Mengirim notifikasi ke admin bahwa ada pengguna baru yang mendaftar
         sendTelegramNotification(
@@ -245,7 +257,12 @@ app.post('/api/admin/approve-user', isAuthenticated, isAdmin, async (req, res) =
             .catch(err => console.error("[APPROVE_USER_NOTIF] Gagal mengirim notifikasi:", err));
         // --- AKHIR BLOK NOTIFIKASI ---
 
-        await db.write();
+        const release = await dbMutex.acquire();
+        try {
+         await db.write();
+            }finally {
+         release();        
+        }
 
         res.status(200).json({ status: true, message: `Pengguna ${userToApprove.name} berhasil disetujui.` });
     } catch (error) {
@@ -269,8 +286,12 @@ app.post('/api/admin/reject-user', isAuthenticated, isAdmin, async (req, res) =>
 
         // Hapus pengguna dari array users
         const rejectedUser = db.data.users.splice(userIndex, 1);
-        
-        await db.write();
+const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
 
         res.status(200).json({ status: true, message: `Pengguna ${rejectedUser[0].name} berhasil ditolak dan dihapus.` });
 
@@ -308,7 +329,12 @@ app.post('/api/admin/restore-database', isAuthenticated, isAdmin, upload.single(
             ...user,
             verifiedPhone: user.verifiedPhone || null
         }));
-        await db.write();
+        const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
         res.json({ status: true, message: 'Database berhasil di-restore! Aplikasi mungkin perlu di-restart untuk menerapkan semua perubahan.' });
     } catch (error) {
         console.error("Error restoring database:", error);
@@ -316,15 +342,32 @@ app.post('/api/admin/restore-database', isAuthenticated, isAdmin, upload.single(
     }
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => { // <--- TAMBAHKAN ASYNC
     const user = db.data.users.find(u => u.id === req.session.userId);
+
+    // Ambil saldo provider admin di sini
+    const providerBalance = await getKmspAdminBalance(); // <--- BARIS BARU
+
     if (!user) {
         if (req.session) req.session.destroy();
         res.clearCookie('connect.sid');
-        return res.status(200).json({ status: true, user: null, maintenanceMode: db.data.settings.maintenanceMode });
+        // Kirim status maintenance bahkan untuk pengguna yang belum login
+        return res.status(200).json({ 
+            status: true, 
+            user: null, 
+            maintenanceMode: db.data.settings.maintenanceMode 
+        });
     }
+
     const { password: _, ...userWithoutPassword } = user;
-    res.status(200).json({ status: true, user: userWithoutPassword, maintenanceMode: db.data.settings.maintenanceMode });
+    
+    // Sisipkan saldo provider ke dalam respons
+    res.status(200).json({ 
+        status: true, 
+        user: userWithoutPassword, 
+        maintenanceMode: db.data.settings.maintenanceMode,
+        providerBalance: providerBalance // <--- BARIS BARU
+    });
 });
 
 app.post('/api/auth/extend-session', isAuthenticated, async (req, res) => {
@@ -399,7 +442,12 @@ app.post('/api/phone/verify-otp', isAuthenticated, async (req, res) => {
         if (!loginResponse.ok || !loginData.status) throw new Error(loginData.message || 'Verifikasi OTP Gagal.');
         if (!loginData.data?.access_token) throw new Error('Gagal mendapatkan access token dari provider.');
         user.verifiedPhone = phone;
-        await db.write();
+        const release = await dbMutex.acquire();
+            try {
+                await db.write();
+            } finally {
+                release();
+                }
         res.status(200).json({ status: true, message: "Nomor berhasil diverifikasi dan disimpan!", data: loginData.data });
     } catch (error) {
         res.status(500).json({ status: false, message: error.message });
@@ -423,12 +471,18 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk membayar biaya layanan sebesar Rp ${platformFee.toLocaleString()}.` });
     }
     user.balance -= platformFee;
+    const releaseFeeCut = await dbMutex.acquire();
+    try {
     await db.write();
+        } finally {
+        releaseFeeCut();
+    }
 
     try {
         const pkgNameLower = (pkg.name || '').toLowerCase();
         const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
         const purchaseParams = new URLSearchParams({ api_key: KMSP_API_KEY, package_code: pkg.package_code, phone, access_token: accessToken, payment_method: paymentMethod });
+        purchaseParams.append('price_or_fee', pkg.original_price);
         const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
         const purchaseResponse = await fetch(purchaseUrl);
         const purchaseData = await purchaseResponse.json();
@@ -445,7 +499,12 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
             
         };
         db.data.transactions.push(newTransaction);
+        const releaseTrx = await dbMutex.acquire();
+        try {
         await db.write();
+        } finally {
+        releaseTrx();
+        }
 
         const maskedPhone = phone.length > 7 ? phone.slice(0, 4) + '****' + phone.slice(-3) : '*******';
         let notifMessage = `<b>──────────────────────</b>
@@ -470,19 +529,29 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
             return res.status(200).json({ status: true, message: purchaseData.message || "Pembelian berhasil!", newBalance: user.balance });
         } else {
             if (!isPulsaMethod) {
-                user.balance += platformFee;
-                await db.write();
+               user.balance += platformFee;
+const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
                 return res.status(500).json({ status: false, message: purchaseData.message || 'Pembelian ke provider gagal.' });
             } else {
                 return res.status(200).json({ status: true, message: `Transaksi pulsa diproses. (API Response: ${purchaseData.message})`, newBalance: user.balance });
             }
         }
     } catch (error) {
-        user.balance += platformFee;
-        await db.write();
-        console.error("Error saat pembelian:", error);
-        return res.status(500).json({ status: false, message: error.message || 'Terjadi kesalahan internal saat pembelian.' });
+    user.balance += platformFee;
+    const release = await dbMutex.acquire();
+    try {
+      await db.write();
+    } finally {
+      release();
     }
+    console.error("Error saat pembelian:", error);
+    return res.status(500).json({ status: false, message: error.message || 'Terjadi kesalahan internal saat pembelian.' });
+}
 });
 
 // --- FUNGSI HELPER UNTUK KMSP ---
@@ -517,9 +586,10 @@ async function executeNonOtpPurchase(trx) {
      const purchaseParams = new URLSearchParams({
         api_key: KMSP_API_KEY,
         package_code: trx.packageId,
-        phone: trx.targetPhone, // Gunakan targetPhone yang disimpan di transaksi
+        phone: trx.targetPhone, 
         payment_method: 'balance'
     });
+     purchaseParams.append('price_or_fee', pkg.original_price); // Ambil dari objek trx
     const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
 
     try {
@@ -529,14 +599,24 @@ async function executeNonOtpPurchase(trx) {
 
         // Update transaksi yang sudah ada di DB
         trx.status = transactionSucceeded ? 'success' : 'failed';
-        trx.api_response = purchaseData.message || (transactionSucceeded ? 'Success (Processed by Scheduler)' : 'Failed (Processed by Scheduler)');
-        await db.write();
+trx.api_response = purchaseData.message || (transactionSucceeded ? 'Success (Processed by Scheduler)' : 'Failed (Processed by Scheduler)');
+const releaseTry = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseTry();
+}
 
     } catch (error) {
         console.error(`Error processing scheduled transaction ${trx.id}:`, error);
         trx.status = 'failed';
-        trx.api_response = `Scheduler Error: ${error.message}`;
-        await db.write();
+trx.api_response = `Scheduler Error: ${error.message}`;
+const releaseCatch = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseCatch();
+}
     }
 }
 
@@ -565,7 +645,12 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
 
         // Potong fee pengguna sekarang karena permintaan sudah diterima
         user.balance -= platformFee;
-        await db.write();
+const releaseFeeCut = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseFeeCut();
+}
 
         // Buat objek transaksi dasar
         const baseTransaction = {
@@ -593,7 +678,12 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
             if (finalTransaction.status !== 'success') {
                 // Jika gagal, kembalikan fee ke pengguna
                 user.balance += platformFee;
-                await db.write();
+const releaseRefund = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseRefund();
+}
                 return res.status(500).json({ status: false, message: finalTransaction.api_response, newBalance: user.balance });
             }
 
@@ -609,7 +699,12 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
         api_response: 'Menunggu Saldo Provider'
     };
     db.data.transactions.push(pendingTransaction);
-    await db.write();
+const releasePending = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releasePending();
+}
 
     // Kirim notifikasi ke admin PRIBADI
     sendTelegramNotification(
@@ -635,12 +730,17 @@ Transaksi ditunda. Mohon segera top up saldo KMSP Anda. Sistem akan memprosesnya
 }
 
     } catch (error) {
-        // Jika terjadi error tak terduga, kembalikan fee
-        user.balance += platformFee;
-        await db.write();
-        console.error("Error di alur pembelian non-otp:", error);
-        return res.status(500).json({ status: false, message: 'Terjadi kesalahan internal.' });
+    // Jika terjadi error tak terduga, kembalikan fee
+    user.balance += platformFee;
+    const release = await dbMutex.acquire();
+    try {
+      await db.write();
+    } finally {
+      release();
     }
+    console.error("Error di alur pembelian non-otp:", error);
+    return res.status(500).json({ status: false, message: 'Terjadi kesalahan internal.' });
+}
 });
 
 // RUTE BARU UNTUK PEMBELIAN MULTI PAKET PULSA
@@ -675,8 +775,13 @@ app.post('/api/purchase/multi-pulsa', isAuthenticated, async (req, res) => {
             continue;
         }
 
-        user.balance -= platformFee;
-        await db.write();
+       user.balance -= platformFee;
+const releaseFee = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseFee();
+}
 
         try {
             const purchaseParams = new URLSearchParams({
@@ -686,6 +791,8 @@ app.post('/api/purchase/multi-pulsa', isAuthenticated, async (req, res) => {
                 access_token: accessToken,
                 payment_method: 'balance'
             });
+            
+            purchaseParams.append('price_or_fee', pkg.original_price);
             const purchaseUrl = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`;
 
             const purchaseResponse = await fetch(purchaseUrl);
@@ -701,19 +808,34 @@ app.post('/api/purchase/multi-pulsa', isAuthenticated, async (req, res) => {
                 paymentMethod: 'balance', createdAt: new Date().toISOString()
             };
             db.data.transactions.push(newTransaction);
-            await db.write();
+const releaseTrx = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseTrx();
+}
 
             if (transactionSucceeded) {
                 successResults.push({ name: pkg.name, message: purchaseData.message || "Sukses" });
             } else {
-                user.balance += platformFee;
-                await db.write();
+               user.balance += platformFee;
+const releaseRefund = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseRefund();
+}
                 failedResults.push({ name: pkg.name, reason: purchaseData.message || 'Gagal dari provider.' });
             }
 
         } catch (error) {
             user.balance += platformFee;
-            await db.write();
+const releaseRefund = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  releaseRefund();
+}
             failedResults.push({ name: pkg.name, reason: `Error server: ${error.message}` });
         }
 
@@ -767,7 +889,12 @@ app.get('/api/purchase/status/:kmspTrxId', isAuthenticated, async (req, res) => 
         if (data.status && data.data?.status === 'success' && transaction.status !== 'success') {
             transaction.status = 'success';
             transaction.api_response = data.data.message || 'Success (dikofirmasi manual)';
-            await db.write();
+            const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
         }
 
         // Kirim kembali respons apa adanya dari KMSP ke frontend
@@ -842,7 +969,12 @@ app.post('/api/user/change-password', isAuthenticated, async (req, res) => {
         const isPasswordMatch = await bcrypt.compare(currentPassword, user.password);
         if (!isPasswordMatch) return res.status(401).json({ status: false, message: 'Password saat ini yang Anda masukkan salah.' });
         user.password = await bcrypt.hash(newPassword, 10);
-        await db.write();
+const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
         res.status(200).json({ status: true, message: 'Password berhasil diubah. Silakan login kembali.' });
     } catch (error) { console.error("Change password error:", error); res.status(500).json({ status: false, message: 'Terjadi kesalahan pada server.' }); }
 });
@@ -854,7 +986,12 @@ app.post('/api/user/update-profile', isAuthenticated, async (req, res) => {
         const user = db.data.users.find(u => u.id === req.session.userId);
         if (!user) return res.status(404).json({ status: false, message: 'Pengguna tidak ditemukan.' });
         user.name = name.trim();
-        await db.write();
+const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
         const { password: _, ...userWithoutPassword } = user;
         res.status(200).json({ status: true, message: 'Nama berhasil diperbarui.', user: userWithoutPassword });
     } catch (error) { console.error("Update profile error:", error); res.status(500).json({ status: false, message: 'Terjadi kesalahan pada server.' }); }
@@ -911,8 +1048,13 @@ app.post('/api/admin/transactions/:id/cancel', isAuthenticated, isAdmin, async (
 
     // Ubah status transaksi
     transaction.status = 'canceled';
-    transaction.api_response = 'Dibatalkan oleh Admin';
-    await db.write();
+transaction.api_response = 'Dibatalkan oleh Admin';
+const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
 
     // (Opsional) Anda bisa menambahkan notifikasi ke pengguna di sini jika mau
 
@@ -1098,7 +1240,12 @@ app.post('/api/admin/maintenance', isAuthenticated, isAdmin, async (req, res) =>
     }
     try {
         db.data.settings.maintenanceMode = enable;
-        await db.write();
+const release = await dbMutex.acquire();
+try {
+  await db.write();
+} finally {
+  release();
+}
         res.status(200).json({ status: true, message: `Mode pemeliharaan diatur ke: ${enable ? 'AKTIF' : 'NONAKTIF'}` });
     } catch (error) { console.error("Error updating maintenance mode:", error); res.status(500).json({ status: false, message: 'Gagal memperbarui status.' }); }
 });
@@ -1108,40 +1255,76 @@ app.post('/api/admin/sync-packages', isAuthenticated, isAdmin, async (req, res) 
         const kmspUrl = `https://golang-openapi-packagelist-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}`;
         const response = await fetch(kmspUrl);
         const kmspData = await response.json();
-        if (!kmspData.status || !Array.isArray(kmspData.data)) throw new Error(kmspData.message || "Gagal mengambil data dari KMSP.");
+
+        if (!kmspData.status || !Array.isArray(kmspData.data)) {
+            throw new Error(kmspData.message || "Gagal mengambil data dari KMSP.");
+        }
+
         let addedCount = 0;
         let updatedCount = 0;
+        let removedCount = 0; // Tambahkan ini
+
+        const newPackagesData = []; // Array sementara untuk menyimpan paket yang aktif dari KMSP
+
         for (const pkg of kmspData.data) {
             const existingPackage = db.data.packages.find(p => p.package_code === pkg.package_code);
             const packagePrice = (parseInt(String(pkg.package_harga).replace(/\D/g, '')) || 0) / 100;
-            
+
             if (existingPackage) {
-                // GANTI BAGIAN Object.assign INI
-                Object.assign(existingPackage, { 
-                    name: pkg.package_name, 
-                    description: pkg.package_description || '', // Tambahkan '|| ""'
+                // Update properti yang relevan
+                Object.assign(existingPackage, {
+                    name: pkg.package_name,
+                    description: pkg.package_description || '',
                     original_price: packagePrice,
                     payment_methods: pkg.available_payment_methods || []
                 });
+                newPackagesData.push(existingPackage); // Tambahkan ke daftar baru
                 updatedCount++;
             } else {
-                // GANTI BAGIAN db.data.packages.push INI
-                db.data.packages.push({
+                // Tambahkan sebagai paket baru jika tidak ada
+                const newPkg = {
                     package_code: pkg.package_code,
                     name: pkg.package_name,
-                    description: pkg.package_description || '', // Tambahkan '|| ""'
+                    description: pkg.package_description || '',
                     original_price: packagePrice,
                     platform_fee: 0,
-                    isVisible: false,
+                    isVisible: false, // Default: tidak terlihat sampai admin aktifkan
                     category: 'reguler',
+                    isMultiPurchase: false, // Default: bukan multi purchase
                     payment_methods: pkg.available_payment_methods || []
-                });
+                };
+                newPackagesData.push(newPkg); // Tambahkan ke daftar baru
                 addedCount++;
             }
         }
-        await db.write();
-        res.status(200).json({ status: true, message: `Sinkronisasi berhasil! ${addedCount} paket baru ditambahkan, ${updatedCount} paket diperbarui.` });
-    } catch (error) { console.error("Sync packages error:", error); res.status(500).json({ status: false, message: error.message || "Gagal sinkronisasi paket." }); }
+
+        // --- Perubahan Kritis di Sini ---
+        // Identifikasi paket yang dihapus/tidak ada lagi di KMSP
+        const oldPackageCodes = new Set(db.data.packages.map(p => p.package_code));
+        const newPackageCodes = new Set(kmspData.data.map(p => p.package_code));
+
+        const trulyRemovedCodes = Array.from(oldPackageCodes).filter(code => !newPackageCodes.has(code));
+        removedCount = trulyRemovedCodes.length;
+
+        // Ganti seluruh daftar paket dengan data yang baru dan diperbarui
+        db.data.packages = newPackagesData;
+        // --- Akhir Perubahan Kritis ---
+
+        const release = await dbMutex.acquire();
+        try {
+            await db.write();
+        } finally {
+            release();
+        }
+
+        res.status(200).json({
+            status: true,
+            message: `Sinkronisasi berhasil! ${addedCount} paket baru ditambahkan, ${updatedCount} paket diperbarui, ${removedCount} paket dihapus.`
+        });
+    } catch (error) {
+        console.error("Sync packages error:", error);
+        res.status(500).json({ status: false, message: error.message || "Gagal sinkronisasi paket." });
+    }
 });
 
 app.get('/api/admin/packages', isAuthenticated, isAdmin, (req, res) => {
@@ -1279,9 +1462,14 @@ async function checkPaymentStatus(topUpId, uniqueAmount) {
         console.error("[PAYMENT_CHECK] OKE_API_KEY atau OKE_API_BASE tidak dikonfigurasi.");
         const topUp = db.data.topups.find(t => t.id === topUpId);
         if (topUp && topUp.status === 'pending') {
-            topUp.status = 'failed_config';
-            await db.write();
-        }
+    topUp.status = 'failed_config';
+    const release = await dbMutex.acquire();
+    try {
+      await db.write();
+    } finally {
+      release();
+    }
+}
         return;
     }
     const url = `https://gateway.okeconnect.com/api/mutasi/qris/${OKE_API_BASE}/${OKE_API_KEY}`;
@@ -1296,11 +1484,16 @@ async function checkPaymentStatus(topUpId, uniqueAmount) {
             }
             const timeElapsed = Date.now() - new Date(topUp.createdAt).getTime();
             if (timeElapsed >= maxDurationMs) {
-                topUp.status = 'expired';
-                await db.write();
-                qrisPollingTimeouts.delete(topUpId);
-                return;
-            }
+    topUp.status = 'expired';
+    const release = await dbMutex.acquire();
+    try {
+      await db.write();
+    } finally {
+      release();
+    }
+    qrisPollingTimeouts.delete(topUpId);
+    return;
+}
             const response = await axios.get(url, { timeout: 8000 });
             if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
                 const transaction = response.data.data.find(item => item.type === 'CR' && parseFloat(item.amount) === parseFloat(uniqueAmount));
@@ -1308,7 +1501,13 @@ async function checkPaymentStatus(topUpId, uniqueAmount) {
                     topUp.status = 'completed';
                     const user = db.data.users.find(u => u.id === topUp.userId);
                     if (user) user.balance += topUp.baseAmount;
+
+                    const release = await dbMutex.acquire();
+                    try {
                     await db.write();
+                    } finally {
+                         release();
+                    }
                     qrisPollingTimeouts.delete(topUpId);
                     
                     await sendTelegramNotification(
@@ -1354,9 +1553,14 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
             const maxDurationMs = 5 * 60 * 1000;
             const timeElapsed = Date.now() - new Date(existingPendingTopup.createdAt).getTime();
             if (timeElapsed >= maxDurationMs) {
-                existingPendingTopup.status = 'expired';
-                await db.write();
-            } else {
+    existingPendingTopup.status = 'expired';
+    const release = await dbMutex.acquire();
+    try {
+      await db.write();
+    } finally {
+      release();
+    }
+} else {
                 return res.status(200).json({ status: false, message: 'Anda memiliki transaksi top-up yang masih tertunda.', topUpId: existingPendingTopup.id, base64Image: existingPendingTopup.qrisBase64Image, uniqueAmount: existingPendingTopup.uniqueAmount, createdAt: existingPendingTopup.createdAt });
             }
         }
@@ -1365,7 +1569,12 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
         const base64Image = await generateDynamicQris(uniqueAmount);
         const newTopUp = { id: topUpId, userId, baseAmount: amount, uniqueAmount, status: 'pending', createdAt: new Date().toISOString(), qrisBase64Image: base64Image };
         db.data.topups.push(newTopUp);
-        await db.write();
+        const release = await dbMutex.acquire();
+        try {
+         await db.write();
+        } finally {
+          release();
+        }
         
         sendTelegramNotification(
 `<b>──────────────────────</b>     
@@ -1399,7 +1608,12 @@ app.post('/api/topup/cancel/:topUpId', isAuthenticated, async (req, res) => {
     }
     try {
         topUp.status = 'canceled';
+        const release = await dbMutex.acquire();
+        try {
         await db.write();
+        } finally {
+        release();
+        }
         if (qrisPollingTimeouts.has(topUpId)) {
             clearTimeout(qrisPollingTimeouts.get(topUpId));
             qrisPollingTimeouts.delete(topUpId);
