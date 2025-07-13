@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANEL-RYYSTORE</title>
 
+    <!-- Favicon Links -->
     <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-96x96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
@@ -12,20 +13,40 @@
     <meta name="msapplication-TileColor" content="#4f46e5">
     <meta name="theme-color" content="#ffffff">
 
-    <link rel="stylesheet" href="style.css?v=202507022015"> 
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="style.css?v=marisaasaskp"> 
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- PUSTAKA UNTUK TUR INTERAKTIF (PENTING!) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
+
 </head>
 <body>
+    <!-- Elemen utama aplikasi -->
     <div id="app">
         <div class="loading-spinner"></div> 
     </div>
     
+    <!-- ================================================== -->
+    <!-- === SEMUA SCRIPT DITEMPATKAN DI AKHIR BODY UNTUK PERFORMA TERBAIK === -->
+    <!-- ================================================== -->
+
+    <!-- Library Eksternal dari CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.0.0/qrcode.min.js"></script>
+    
+    <!-- PUSTAKA UNTUK TUR INTERAKTIF (PENTING!) -->
+    <script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
 
-    <script src="app.js?v=rrra1a2"></script>
+    <!-- PERBAIKAN FINAL: Menggunakan URL CDN yang BENAR untuk qrcode.js -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
+    <!-- Script Aplikasi Utama (dijalankan terakhir) -->
+    <script src="app.js?v=saasdasa"></script>
+
+    <!-- Script untuk Tawk.to Live Chat -->
     <script type="text/javascript">
     var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
     (function(){

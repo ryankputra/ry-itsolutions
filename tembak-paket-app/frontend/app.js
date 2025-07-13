@@ -11,6 +11,7 @@ let phoneAuth = {
     accessToken: null,
     authId: null
 };
+
 let kmspBalance = null; // Diatur ke null untuk menandakan belum dimuat atau error
 let latestAnnouncement = null;
 let isMaintenanceMode = false; 
@@ -22,7 +23,126 @@ let historyPollingInterval = null;
 let currentHistoryPage = 1;
 const transactionsPerPage = 5;
 let liveChatBubbleElement = null;
+let availableTutorials = [];
 
+/**
+ * FUNGSI UTAMA DASHBOARD: Merender halaman dashboard utama (hub).
+ * VERSI BARU: Menambahkan menu Laporan khusus untuk admin.
+ * @param {HTMLElement} container - Elemen DOM (mainContent) yang akan diisi.
+ */
+function renderMainDashboardPage(container) {
+    if (!currentUser) return;
+
+    // Ikon-ikon yang akan kita gunakan
+    const beliPaketIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
+    const paketAkrabIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+    const riwayatIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"></path><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>`;
+    const profilIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+    const tutorialIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+    const kontakIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+    const tentangIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
+    const privasiIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+    const syaratIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
+    // IKON BARU: Tambahkan ikon untuk Laporan/Statistik
+    const laporanIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>`;
+
+    const dashboardContentHTML = `
+        <div class="page-content">
+            <div class="page-header">
+                <h1>Selamat Datang, ${currentUser.name}!</h1>
+            </div>
+            <div class="main-balance-card">
+                <div>
+                    <span class="balance-label">Saldo Anda Saat Ini</span>
+                    <div class="balance-amount-wrapper">
+                        <span class="currency">Rp</span>
+                        <span class="amount">${currentUser.balance.toLocaleString('id-ID')}</span>
+                    </div>
+                </div>
+                <button id="dashboard-topup-btn" class="topup-cta-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Top Up Saldo
+                </button>
+            </div>
+            <div class="quick-access-menu">
+                <h2 class="quick-access-title">Menu Cepat</h2>
+                <div class="app-menu-grid">
+                    <a href="#beli-paket" class="app-menu-item"><div class="app-menu-icon">${beliPaketIcon}</div><span class="app-menu-label">Beli Paket</span></a>
+                    <a href="#paket-akrab" class="app-menu-item"><div class="app-menu-icon">${paketAkrabIcon}</div><span class="app-menu-label">Paket Akrab</span></a>
+                    <a href="#history" class="app-menu-item"><div class="app-menu-icon">${riwayatIcon}</div><span class="app-menu-label">Riwayat</span></a>
+                    <a href="#tutorial" class="app-menu-item"><div class="app-menu-icon">${tutorialIcon}</div><span class="app-menu-label">Cara Beli</span></a>
+                    <a href="#kontak-admin" class="app-menu-item"><div class="app-menu-icon">${kontakIcon}</div><span class="app-menu-label">Kontak</span></a>
+                    <a href="#tentang-kami" class="app-menu-item"><div class="app-menu-icon">${tentangIcon}</div><span class="app-menu-label">Tentang</span></a>
+                    <a href="#kebijakan-privasi" class="app-menu-item"><div class="app-menu-icon">${privasiIcon}</div><span class="app-menu-label">Privasi</span></a>
+                    <a href="#syarat-ketentuan" class="app-menu-item"><div class="app-menu-icon">${syaratIcon}</div><span class="app-menu-label">S & K</span></a>
+                    <a href="#profile" class="app-menu-item"><div class="app-menu-icon">${profilIcon}</div><span class="app-menu-label">Profil</span></a>
+
+                    ${currentUser.role === 'admin' ? `
+                        <a href="#laporan" class="app-menu-item">
+                            <div class="app-menu-icon">${laporanIcon}</div>
+                            <span class="app-menu-label">Laporan</span>
+                        </a>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', dashboardContentHTML);
+
+    document.getElementById('dashboard-topup-btn')?.addEventListener('click', renderTopUpModal);
+}
+/**
+ * FUNGSI BARU & TERISOLASI
+ * Fungsi ini hanya punya satu tugas: memeriksa apakah URL saat ini adalah untuk
+ * reset password. Jika ya, ia akan merender halaman dan menghentikan alur lain.
+ * @returns {boolean} - Mengembalikan `true` jika rute ditangani, `false` jika tidak.
+ */
+function handleResetPasswordRoute() {
+    // Cek hash SEBELUM aplikasi utama dimuat
+    if (window.location.hash.startsWith('#reset-password')) {
+        console.log('Rute #reset-password terdeteksi, menjalankan fungsi render terisolasi.');
+        
+        const app = document.getElementById('app');
+        
+        // Hentikan semua listener yang mungkin berjalan (misalnya dari sesi sebelumnya)
+        // dan bersihkan konten sepenuhnya untuk memastikan tidak ada yang tumpang tindih.
+        app.innerHTML = ''; 
+        
+        // Panggil fungsi render spesifik untuk halaman ini
+        renderResetPasswordPage(); 
+        
+        // Kembalikan true untuk memberitahu bahwa rute ini sudah ditangani
+        return true;
+    }
+    
+    // Jika bukan rute reset password, kembalikan false
+    return false;
+}
+
+/**
+ * FUNGSI BARU: Menampilkan popup pengumuman jika ada dan belum pernah dilihat.
+ * Menggunakan localStorage untuk melacak pengumuman yang sudah dilihat.
+ */
+function showAnnouncementPopupIfNeeded() {
+    // Jangan tampilkan popup jika tidak ada pengumuman atau pengguna tidak login
+    if (!latestAnnouncement || !currentUser) {
+        return;
+    }
+
+    const announcementId = latestAnnouncement.id;
+    // Kunci unik untuk localStorage berdasarkan ID pengumuman
+    const storageKey = `seen_announcement_${announcementId}`;
+    const hasSeenAnnouncement = localStorage.getItem(storageKey);
+
+    // Jika ID pengumuman belum ada di localStorage, tampilkan modalnya.
+    if (!hasSeenAnnouncement) {
+        console.log(`Menampilkan pengumuman baru dengan ID: ${announcementId}`);
+        renderAnnouncementModal(latestAnnouncement);
+    } else {
+        console.log(`Pengumuman dengan ID: ${announcementId} sudah pernah dilihat.`);
+    }
+}
 
 function toggleLiveChatBubble(show) {
     if (!liveChatBubbleElement) {
@@ -43,104 +163,156 @@ function toggleLiveChatBubble(show) {
 /**
  * Fungsi utama yang dipanggil saat aplikasi dimuat.
  */
+
+
 async function main() {
+    // 1. Lakukan semua setup awal di sini
     await checkLoginStatus();
+    await initKMSPsession(); // Jika ada fungsi inisialisasi lain
 
-    const params = new URLSearchParams(window.location.hash.split('?')[1]);
-    const isAdminLoginAttempt = params.get('admin_login') === 'true';
-    const isAuthPage = ['#login', '#register'].includes(window.location.hash.split('?')[0]); // Perbaikan untuk isAuthPage
+    // 2. Panggil renderApp untuk pertama kali
+    renderApp();
+    
+    // 3. Pasang listener untuk setiap perpindahan halaman
+    window.addEventListener('hashchange', renderApp);
 
-    // LOGIKA BARU UNTUK LIVE CHAT BUBBLE (dari diskusi sebelumnya)
-    if (isAuthPage || (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin') && !isAdminLoginAttempt)) {
-        console.log("Toggling Live Chat Bubble OFF due to auth page or maintenance."); // LOG INI
-        toggleLiveChatBubble(false);
-    } else {
-        console.log("Toggling Live Chat Bubble ON."); // LOG INI
-        toggleLiveChatBubble(true);
-    }
-
-    if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin') && !isAdminLoginAttempt) {
-        renderGlobalMaintenancePage();
-        return;
-    }
-    if (isAdminLoginAttempt && (!currentUser || currentUser.role !== 'admin')) {
-        // Jika belum login sebagai admin, arahkan ke halaman login, tapi jaga param `admin_login=true`
-        if (window.location.hash.split('?')[0] !== '#login') {
-            window.location.hash = '#login?admin_login=true';
-            return; // Penting: hentikan dan biarkan hashchange yang akan memicu renderApp lagi
-        }
-    }
+    // 4. Jalankan proses yang hanya perlu sekali setelah login
     if (currentUser) {
-    const loggedInPromises = [
-        initKMSPsession(),
-        fetchAnnouncement() // Tetap fetch seperti biasa
-    ];
-        if (currentUser.role === 'admin') {
-            loggedInPromises.push(fetchKMSPBalance());
-        }
-        await Promise.all(loggedInPromises);
-
-        if (latestAnnouncement && !sessionStorage.getItem('announcement_shown_' + latestAnnouncement.id)) {
-        renderAnnouncementModal(latestAnnouncement); // Panggil fungsi modal baru kita
-        // Tandai bahwa pengumuman ini sudah ditampilkan
-        sessionStorage.setItem('announcement_shown_' + latestAnnouncement.id, 'true');
+        await fetchAnnouncement();
+        showAnnouncementPopupIfNeeded();
+        startStatusPolling();
     }
-        startStatusPolling(); 
-    }
-    
-    renderApp(isAdminLoginAttempt); 
-    
-    
-    window.removeEventListener('hashchange', renderApp);
-     window.addEventListener('hashchange', () => {
-        console.log("Hash changed to:", window.location.hash); // LOG INI
-        const newHash = window.location.hash.split('?')[0];
-        const newIsAuthPage = ['#login', '#register'].includes(newHash);
+}
 
-        if (newIsAuthPage || (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin') && !isAdminLoginAttempt)) {
-            console.log("Toggling Live Chat Bubble OFF on hash change."); // LOG INI
-            toggleLiveChatBubble(false);
-        } else {
-            console.log("Toggling Live Chat Bubble ON on hash change."); // LOG INI
-            toggleLiveChatBubble(true);
-        }
-        renderApp(false);
-    });
+// --- FUNGSI RENDER HALAMAN STATIS ---
+function renderTentangKamiPage(container) {
+    container.innerHTML += `
+        <div class="page-content">
+            <div class="page-header"><h1>Tentang RyyStore</h1></div>
+            <p><strong>Selamat datang di RyyStore, platform terpercaya Anda untuk semua kebutuhan produk digital.</strong></p>
+            <p>Kami menyediakan layanan pembelian paket data dan produk telekomunikasi lainnya dengan proses yang mudah, cepat, dan aman.</p>
+            <p>Misi kami adalah memberikan kemudahan akses produk digital bagi seluruh masyarakat Indonesia. Dengan sistem top-up saldo yang praktis, Anda dapat melakukan transaksi kapan saja dan di mana saja.</p>
+        </div>
+    `;
+}
+function renderKebijakanPrivasiPage(container) {
+    container.innerHTML += `
+        <div class="page-content">
+            <div class="page-header"><h1>Kebijakan Privasi</h1></div>
+            <p>Kami di RyyStore menghargai privasi Anda. Dokumen ini menjelaskan bagaimana kami mengumpulkan dan menggunakan data pribadi Anda.</p>
+            <ol style="padding-left: 20px; line-height: 1.8;">
+                <li><strong>Data yang Kami Kumpulkan:</strong> Kami mengumpulkan data yang Anda berikan saat registrasi, seperti nama, alamat email, dan nomor telepon untuk keperluan verifikasi dan transaksi.</li>
+                <li><strong>Penggunaan Data:</strong> Data Anda digunakan untuk memproses transaksi, mengelola akun, dan memberikan notifikasi terkait layanan kami.</li>
+                <li><strong>Keamanan Data:</strong> Kami berkomitmen untuk menjaga keamanan data Anda dan tidak akan membagikan informasi pribadi Anda kepada pihak ketiga tanpa persetujuan Anda, kecuali diwajibkan oleh hukum.</li>
+            </ol>
+        </div>
+    `;
+}
+function renderSyaratKetentuanPage(container) {
+    container.innerHTML += `
+        <div class="page-content">
+            <div class="page-header"><h1>Syarat & Ketentuan</h1></div>
+            <p>Dengan mendaftar dan menggunakan layanan RyyStore, Anda setuju dengan syarat dan ketentuan berikut:</p>
+            <ol style="padding-left: 20px; line-height: 1.8;">
+                <li><strong>Layanan:</strong> RyyStore menyediakan platform untuk pembelian produk digital. Pengguna wajib memiliki saldo yang cukup untuk melakukan transaksi.</li>
+                <li><strong>Akun Pengguna:</strong> Anda bertanggung jawab penuh atas keamanan akun dan password Anda.</li>
+                <li><strong>Transaksi:</strong> Semua transaksi yang berhasil bersifat final dan tidak dapat dibatalkan. Jika terjadi kegagalan sistem dari pihak kami, saldo akan dikembalikan.</li>
+                <li><strong>Larangan:</strong> Dilarang menggunakan layanan kami untuk aktivitas ilegal atau penipuan. Pelanggaran akan mengakibatkan penangguhan akun.</li>
+            </ol>
+        </div>
+    `;
 }
 
 /**
- * FUNGSI BARU: Memulai polling status ke server secara berkala.
+ * FUNGSI BARU: Membuat dan menampilkan watermark dinamis di seluruh layar.
+ * Watermark ini tidak akan muncul untuk admin.
  */
-function startStatusPolling() {
-    // Hentikan polling lama jika ada, untuk mencegah duplikasi
-    if (statusIntervalId) {
-        clearInterval(statusIntervalId);
+function renderUserWatermark() {
+    // Hapus watermark lama jika ada, untuk mencegah duplikasi
+    const existingWatermark = document.getElementById('dynamic-watermark');
+    if (existingWatermark) {
+        existingWatermark.remove();
     }
 
+    // Kondisi: Jangan tampilkan watermark jika tidak ada user atau jika rolenya admin
+    if (!currentUser || currentUser.role === 'admin') {
+        return;
+    }
+
+    const watermarkContainer = document.createElement('div');
+    watermarkContainer.id = 'dynamic-watermark';
+    watermarkContainer.className = 'watermark-container';
+
+    const watermarkText = currentUser.email || currentUser.name; // Gunakan email atau nama
+
+    // Buat banyak elemen teks dan sebarkan secara acak
+    for (let i = 0; i < 50; i++) { // Jumlah watermark yang ditampilkan
+        const textElement = document.createElement('span');
+        textElement.className = 'watermark-text';
+        textElement.textContent = watermarkText;
+        textElement.style.top = `${Math.random() * 100}%`;
+        textElement.style.left = `${Math.random() * 100}%`;
+        watermarkContainer.appendChild(textElement);
+    }
+
+    document.body.appendChild(watermarkContainer);
+}
+
+/**
+ * FUNGSI BARU: Memperbarui semua elemen UI yang menampilkan saldo.
+ * @param {number} newBalance - Saldo terbaru pengguna.
+ */
+function updateBalanceUI(newBalance) {
+    const formattedBalance = newBalance.toLocaleString('id-ID');
+
+    // Update saldo di kartu dashboard utama
+    const amountEl = document.querySelector('.main-balance-card .amount');
+    if (amountEl) {
+        amountEl.textContent = formattedBalance;
+    }
+
+    // Update saldo di sidebar
+    const sidebarEl = document.getElementById('user-balance-sidebar');
+    if (sidebarEl) {
+        sidebarEl.textContent = `Saldo: Rp ${formattedBalance}`;
+    }
+}
+
+function startStatusPolling() {
+    if (statusIntervalId) clearInterval(statusIntervalId);
+
     statusIntervalId = setInterval(async () => {
-        // Jangan jalankan jika pengguna tidak login atau adalah admin
         if (!currentUser || currentUser.role === 'admin') {
-            stopStatusPolling(); // Hentikan jika kondisi tidak terpenuhi lagi
+            stopStatusPolling();
             return;
         }
         
         try {
-            // Panggil endpoint status baru secara diam-diam
-            const response = await fetch(`${API_BASE_URL}/status`);
-            if (response.ok) {
-                const data = await response.json();
+            const { data, status } = await apiFetch('/status');
+            if (status === 200 && data.status) {
+                // LOG UNTUK DEBUGGING
+                console.log(`Polling... Saldo saat ini (client): ${currentUser.balance}, Saldo dari server: ${data.currentBalance}`);
+
                 if (data.maintenanceMode === true) {
-                    // Maintenance terdeteksi!
-                    console.log("Maintenance mode detected from polling. Rendering maintenance page.");
                     isMaintenanceMode = true;
                     renderGlobalMaintenancePage();
-                    stopStatusPolling(); // Hentikan polling setelah maintenance terdeteksi
+                    stopStatusPolling();
+                }
+
+                if (data.currentBalance !== null && data.currentBalance !== currentUser.balance) {
+                    // LOG SAAT TERJADI PERUBAHAN
+                    console.log('%cTERDETEKSI PERUBAHAN SALDO! Memperbarui tampilan...', 'color: green; font-weight: bold;');
+                    
+                    currentUser.balance = data.currentBalance;
+                    updateBalanceUI(currentUser.balance);
+                    showToast('Saldo Anda telah berhasil diperbarui!', false);
                 }
             }
         } catch (error) {
             console.error("Status polling failed:", error.message);
+            stopStatusPolling();
         }
-    }, 30000); // Bertanya setiap 30 detik (30000 milidetik)
+    }, 15000); // Kita percepat jadi 15 detik untuk tes
 }
 
 /**
@@ -254,29 +426,90 @@ async function fetchAnnouncement() {
 /**
  * Merender tampilan utama aplikasi berdasarkan hash URL.
  */
-function renderApp(isAdminLoginAttempt = false) {
-    const hash = window.location.hash || '#';
-    const cleanHash = hash.split('?')[0] || '#'; 
+function renderApp() {
+    // Ambil parameter dari URL untuk mendeteksi upaya login admin
+    const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+    const isAdminLoginAttempt = urlParams.get('admin_login') === 'true';
 
-     app.innerHTML = `
+    // ===================================================================
+    // === GERBANG UTAMA: PENGECEKAN MAINTENANCE SELALU DI SINI =========
+    // ===================================================================
+    // Pengecekan ini sekarang menjadi hal pertama yang dijalankan.
+    if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin')) {
+        const hashForLogin = window.location.hash.split('?')[0];
+        
+        // Izinkan akses HANYA ke halaman #login atau #register agar admin bisa masuk.
+        // Juga izinkan akses ke #reset-password.
+        if (hashForLogin !== '#login' && hashForLogin !== '#register' && hashForLogin !== '#reset-password') {
+            renderGlobalMaintenancePage(); // Tampilkan halaman maintenance
+            return; // HENTIKAN SEMUA PROSES RENDER LAINNYA
+        }
+    }
+
+    const hash = window.location.hash || '#';
+    const cleanHash = hash.split('?')[0] || '#';
+
+    // Pengecekan khusus untuk halaman reset password (prioritas tinggi)
+    if (cleanHash === '#reset-password') {
+        renderResetPasswordPage();
+        return; 
+    }
+
+    // KONDISI BARU: Tentukan apakah akan menampilkan halaman otentikasi (login/register)
+    // Ini true jika:
+    // 1. Tidak ada pengguna yang login, ATAU
+    // 2. Ada upaya login admin (`admin_login=true`) dan pengguna berada di halaman #login.
+    // Ini adalah kunci untuk "membobol" sesi pengguna biasa dan menampilkan form login untuk admin.
+    const showAuthPages = !currentUser || (isAdminLoginAttempt && cleanHash === '#login');
+
+    // Tampilkan loading spinner untuk transisi halaman
+    app.innerHTML = `
         <div class="loading-overlay">
             <div class="loading-spinner"></div>
         </div>
     `;
-
-    if (currentUser) {
+    
+    // Gunakan kondisi `showAuthPages` yang baru
+    if (!showAuthPages) {
+        // Logika untuk pengguna yang sudah login
         const targetHash = (cleanHash === '#' || cleanHash === '#login' || cleanHash === '#register') ? '#dashboard' : cleanHash;
         if (window.location.hash.split('?')[0] !== targetHash) {
             window.location.hash = targetHash;
-            return; 
+            return;
         }
 
+        // Routing untuk pengguna yang sudah login
         switch (targetHash) {
-            case '#history': renderDashboard('history'); break;
-            case '#profile': renderDashboard('profile'); break;
-            case '#paket-akrab': renderDashboard('paket-akrab'); break;
-            case '#tutorial': renderDashboard('tutorial'); break;
-            case '#kontak-admin': renderDashboard('kontak-admin'); break;
+            case '#dashboard':
+                renderDashboard('dashboard');
+                break;
+            case '#beli-paket':
+                renderDashboard('packages');
+                break;
+            case '#history': 
+                renderDashboard('history'); 
+                break;
+            case '#profile': 
+                renderDashboard('profile'); 
+                break;
+            case '#paket-akrab': 
+                renderDashboard('paket-akrab'); 
+                break;
+            case '#tutorial': 
+                renderDashboard('tutorial'); 
+                break;
+            case '#kontak-admin': 
+                renderDashboard('kontak-admin'); 
+                break;
+            case '#tentang-kami':
+                renderDashboard('tentang-kami'); 
+                break;
+            case '#kebijakan-privasi': 
+                renderDashboard('kebijakan-privasi'); 
+                break;
+            case '#syarat-ketentuan': 
+                renderDashboard('syarat-ketentuan'); 
+                break;
             case '#admin':
                 if (currentUser.role === 'admin') renderDashboard('admin');
                 else window.location.hash = '#dashboard';
@@ -285,75 +518,69 @@ function renderApp(isAdminLoginAttempt = false) {
                 if (currentUser.role === 'admin') renderDashboard('laporan');
                 else window.location.hash = '#dashboard';
                 break;
-            case '#dashboard':
             default:
-                renderDashboard('packages');
+                window.location.hash = '#dashboard';
                 break;
         }
+        renderUserWatermark();
     } else {
+        // Logika untuk pengguna yang belum login ATAU admin yang memaksa ke halaman login
         switch (cleanHash) {
             case '#register':
                 renderRegisterPage();
                 break;
             case '#login':
-            default: 
+            default:
                 renderLoginPage();
                 break;
         }
     }
-
+    
+    // Hapus parameter `admin_login=true` dari URL setelah halaman login dirender
+    // agar tidak mengganggu navigasi selanjutnya.
     if (isAdminLoginAttempt) {
-        // Ganti URL menjadi #login bersih setelah semuanya selesai dirender
         window.history.replaceState(null, null, window.location.pathname + '#login');
     }
 }
 
-/**
- * Merender halaman profil pengguna secara lengkap.
- * @param {HTMLElement} container - Elemen DOM (main-content) yang akan diisi.
- */
 function renderProfilePage(container) {
     if (!currentUser) {
         container.innerHTML = '<div class="page-content"><p class="error-message">Gagal memuat data pengguna.</p></div>';
         return;
     }
 
-    let announcementHTML = '';
-    if (latestAnnouncement && latestAnnouncement.message) {
-        announcementHTML = `
-            <div class="announcement-banner">
-                <p><strong>Informasi:</strong> ${latestAnnouncement.message}</p>
-            </div>
-        `;
-    }
-    
+    // Daftar menu sekunder
+    const secondaryMenus = `
+        <div class="profile-menu-list">
+            <a href="#kontak-admin" class="profile-menu-item"><span>Kontak Admin</span><span>&rarr;</span></a>
+            <a href="#tentang-kami" class="profile-menu-item"><span>Tentang Kami</span><span>&rarr;</span></a>
+            <a href="#kebijakan-privasi" class="profile-menu-item"><span>Kebijakan Privasi</span><span>&rarr;</span></a>
+            <a href="#syarat-ketentuan" class="profile-menu-item"><span>Syarat & Ketentuan</span><span>&rarr;</span></a>
+        </div>
+    `;
+
     container.innerHTML = `
-        ${announcementHTML}
-        <div class="page-content">
-            <div class="page-header"><h1>Profil Saya</h1></div>
+        <div class="page-content profile-page">
+            <div class="profile-header">
+                <h3>${currentUser.name}</h3>
+                <p>${currentUser.email}</p>
+            </div>
+
+            <div class="profile-info-card">
+                <div class="balance-section">
+                    <span>Saldo Saat Ini</span>
+                    <strong>Rp ${currentUser.balance.toLocaleString('id-ID')}</strong>
+                </div>
+                <button id="profile-topup-btn" class="button">Top Up</button>
+            </div>
+
+            <div class="profile-info-card">
+                <h4>Menu Lainnya</h4>
+                ${secondaryMenus}
+            </div>
             
             <div class="profile-info-card">
-                <h3>Informasi Akun</h3>
-                
-                <form id="change-name-form" style="margin-bottom: 2rem;">
-                    <div class="form-group">
-                        <label for="userName">Nama</label>
-                        <input type="text" id="userName" value="${currentUser.name}" required>
-                    </div>
-                    <button type="submit">Simpan Nama</button>
-                </form>
-                <div id="name-feedback" style="margin-top: 1rem;"></div>
-                
-                <hr>
-
-                <div class="info-grid">
-                    <p><strong>Email:</strong></p><p>${currentUser.email}</p>
-                    <p><strong>No. HP Terverifikasi:</strong></p><p>${currentUser.verifiedPhone ? currentUser.verifiedPhone : '<em>Belum ada</em>'}</p>
-                </div>
-            </div>
-
-            <div class="profile-info-card">
-                <h3>Ubah Password</h3>
+                <h4>Ubah Password</h4>
                 <form id="change-password-form">
                     <div class="form-group">
                         <label for="currentPassword">Password Saat Ini</label>
@@ -374,48 +601,191 @@ function renderProfilePage(container) {
         </div>
     `;
 
-    document.getElementById('change-name-form')?.addEventListener('submit', handleChangeName);
+    // Pasang listener untuk tombol Top Up & form
+    document.getElementById('profile-topup-btn')?.addEventListener('click', renderTopUpModal);
     document.getElementById('change-password-form')?.addEventListener('submit', handleChangePassword);
 }
-
-// frontend/app.js -> Pastikan Anda memiliki DUA fungsi ini
-
 /**
- * Merender halaman tutorial cara melakukan pembelian.
- * @param {HTMLElement} container - Elemen DOM yang akan diisi (mainContent).
+ * FUNGSI HALAMAN TUTORIAL (PENDEKATAN BARU)
+ * Menampilkan daftar panduan dan menangani klik untuk melihat detail.
+ * @param {HTMLElement} container - Elemen DOM (mainContent) yang akan diisi.
  */
-function renderTutorialPage(container) {
-    // Tanda '+=' menambahkan konten ini setelah banner pengumuman (jika ada)
-    container.innerHTML += `
-        <div class="page-content">
-            <div class="page-header"><h1>Cara Pembelian</h1></div>
-
-            <div class="tutorial-card">
-                <h2>A. Beli Paket (Verifikasi OTP Terpusat)</h2>
-                <ol class="tutorial-steps">
-                    <li>Pergi ke halaman <strong>Beli Paket</strong>.</li>
-                    <li>Di bagian atas, verifikasi nomor HP Anda <strong>satu kali saja</strong> dengan memasukkan nomor dan kode OTP yang dikirim.</li>
-                    <li>Setelah nomor terverifikasi, nomor Anda akan tersimpan selama sesi login.</li>
-                    <li>Pilih paket yang Anda inginkan dari dropdown. Anda bisa menggunakan kolom pencarian untuk memfilter daftar.</li>
-                    <li>Detail paket akan muncul. Klik <strong>"Beli Sekarang"</strong>.</li>
-                    <li>Pilih metode pembayaran (jika ada pilihan) dan selesaikan transaksi.</li>
-                </ol>
+async function renderTutorialPage(container) {
+    // 1. Siapkan kerangka HTML dengan satu area konten saja
+    container.innerHTML = `
+        <div class="page-content" id="tutorial-area">
+            <div class="page-header">
+                <h1>Pilih Panduan Pembelian</h1>
             </div>
-
-            <div class="tutorial-card">
-                <h2>B. Paket Akrab & Lainnya (Tanpa OTP per Transaksi)</h2>
-                <ol class="tutorial-steps">
-                    <li>Pergi ke halaman <strong>Paket Akrab & Lainnya</strong>.</li>
-                    <li>Langsung masukkan <strong>Nomor HP Tujuan</strong> yang berbeda-beda setiap kali transaksi.</li>
-                    <li>Pilih paket dari dropdown. Gunakan pencarian jika perlu.</li>
-                    <li>Cek deskripsi dan stok (jika ada) yang muncul.</li>
-                    <li>Klik <strong>"Beli Sekarang"</strong> untuk memproses. Biaya layanan akan langsung dipotong dari saldo Anda.</li>
-                </ol>
+            <div id="tutorial-content-wrapper">
+                <div class="loading-spinner"></div>
             </div>
         </div>
     `;
+
+    const contentWrapper = document.getElementById('tutorial-content-wrapper');
+
+    try {
+        await loadTutorialList(); // Pastikan data `availableTutorials` ada
+
+        if (availableTutorials.length === 0) {
+            contentWrapper.innerHTML = '<p>Belum ada panduan yang tersedia.</p>';
+            return;
+        }
+
+        // 2. Render daftar kartu panduan ke dalam area konten
+        contentWrapper.innerHTML = `
+            <div class="tutorial-list-grid">
+                ${availableTutorials.map(t => `
+                    <button class="tutorial-card" data-tutorial-id="${t.id}">
+                        <h3>${t.title}</h3>
+                        <p>${t.description || 'Klik untuk melihat panduan lengkap.'}</p>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+
+        // 3. Pasang event listener
+        contentWrapper.addEventListener('click', (e) => {
+            const card = e.target.closest('.tutorial-card');
+            if (card) {
+                const tutorialId = card.dataset.tutorialId;
+                // Panggil fungsi untuk menampilkan detail, menggantikan isi wrapper
+                renderTutorialDetailView(tutorialId, contentWrapper);
+            }
+        });
+
+    } catch (error) {
+        console.error("Gagal memuat daftar panduan:", error);
+        contentWrapper.innerHTML = `<p class="error-message">Gagal memuat daftar panduan: ${error.message}</p>`;
+    }
 }
 
+/**
+ * FUNGSI HALAMAN TUTORIAL (PENDEKATAN BARU)
+ * Menampilkan daftar panduan dan menangani klik untuk melihat detail.
+ * @param {HTMLElement} container - Elemen DOM (mainContent) yang akan diisi.
+ */
+async function renderTutorialPage(container) {
+    // 1. Siapkan kerangka HTML dengan satu area konten saja
+    container.innerHTML = `
+        <div class="page-content" id="tutorial-area">
+            <div class="page-header">
+                <h1>Pilih Panduan Pembelian</h1>
+            </div>
+            <div id="tutorial-content-wrapper">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    `;
+
+    const contentWrapper = document.getElementById('tutorial-content-wrapper');
+
+    try {
+        await loadTutorialList(); // Pastikan data `availableTutorials` ada
+
+        if (availableTutorials.length === 0) {
+            contentWrapper.innerHTML = '<p>Belum ada panduan yang tersedia.</p>';
+            return;
+        }
+
+        // 2. Render daftar kartu panduan ke dalam area konten
+        contentWrapper.innerHTML = `
+            <div class="tutorial-list-grid">
+                ${availableTutorials.map(t => `
+                    <button class="tutorial-card" data-tutorial-id="${t.id}">
+                        <h3>${t.title}</h3>
+                        <p>${t.description || 'Klik untuk melihat panduan lengkap.'}</p>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+
+        // 3. Pasang event listener
+        contentWrapper.addEventListener('click', (e) => {
+            const card = e.target.closest('.tutorial-card');
+            if (card) {
+                const tutorialId = card.dataset.tutorialId;
+                // Panggil fungsi untuk menampilkan detail, menggantikan isi wrapper
+                renderTutorialDetailView(tutorialId, contentWrapper);
+            }
+        });
+
+    } catch (error) {
+        console.error("Gagal memuat daftar panduan:", error);
+        contentWrapper.innerHTML = `<p class="error-message">Gagal memuat daftar panduan: ${error.message}</p>`;
+    }
+}
+/**
+ * FUNGSI DETAIL TUTORIAL (PENDEKATAN BARU)
+ * Mengganti konten dengan detail panduan yang dipilih.
+ * @param {string} tutorialId - ID panduan yang akan ditampilkan.
+ * @param {HTMLElement} wrapper - Elemen pembungkus yang isinya akan diganti.
+ */
+async function renderTutorialDetailView(tutorialId, wrapper) {
+    wrapper.innerHTML = `<div class="loading-spinner"></div>`;
+
+    try {
+        const { data: responseData, status } = await apiFetch(`/tutorial-content/${tutorialId}`);
+        if (status !== 200 || !responseData.status || !responseData.data) {
+            throw new Error(responseData.message || "Data tutorial tidak ditemukan.");
+        }
+        
+        const tutorial = responseData.data;
+
+        // Ganti total isi wrapper dengan detail artikel
+        wrapper.innerHTML = `
+            <div class="tutorial-article-content">
+                <div class="article-header">
+                    <button id="back-to-tutorial-list" class="button secondary">&larr; Kembali ke Daftar</button>
+                    <h1>${tutorial.title}</h1>
+                </div>
+                <div class="article-body">
+                    ${tutorial.content.map(block => {
+                        switch (block.type) {
+                            case 'text':
+                                return `<div class="tutorial-text-block">${marked.parse(block.content)}</div>`;
+                            case 'image':
+                                return `<div class="tutorial-media-block"><img src="${block.content}" alt="Panduan Gambar"></div>`;
+                            case 'video':
+                                return `<div class="tutorial-media-block"><video src="${block.content}" controls></video></div>`;
+                            default:
+                                return '';
+                        }
+                    }).join('')}
+                </div>
+            </div>
+        `;
+
+        // Pasang listener untuk tombol "Kembali"
+        document.getElementById('back-to-tutorial-list').addEventListener('click', () => {
+            // Panggil kembali fungsi utama untuk merender ulang daftar panduan
+            const mainContainer = document.getElementById('page-content-area');
+            renderTutorialPage(mainContainer);
+        });
+
+    } catch (error) {
+        console.error("Gagal memuat detail tutorial:", error);
+        wrapper.innerHTML = `<p class="error-message">Gagal memuat panduan ini: ${error.message}</p>`;
+    }
+}
+
+/**
+ * FUNGSI BARU: Mengambil daftar tutorial dari backend.
+ */
+async function loadTutorialList() {
+    try {
+        const { data: responseData, status } = await apiFetch('/tutorial-content');
+        if (status === 200 && responseData.status && Array.isArray(responseData.data)) {
+            availableTutorials = responseData.data;
+        } else {
+            throw new Error(responseData.message || "Gagal memuat daftar tutorial.");
+        }
+    } catch (error) {
+        console.error("Error loading tutorial list:", error);
+        throw error; // Re-throw untuk ditangani oleh pemanggil
+    }
+}
 /**
  * Merender halaman statis untuk menampilkan informasi kontak admin.
  * @param {HTMLElement} container - Elemen DOM yang akan diisi (mainContent).
@@ -616,19 +986,35 @@ async function handleCheckActivePackages(e) {
     resultContainer.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
-        const { data, status } = await apiFetch(`/user/active-packages?accessToken=${phoneAuth.accessToken}`);
+        // Panggil backend hanya dengan access_token, karena backend sudah tahu API Key.
+        const { data, status } = await apiFetch(`/user/active-packages?access_token=${phoneAuth.accessToken}`);
 
         if (status === 200 && data.status) {
-            if (Array.isArray(data.data) && data.data.length > 0) {
-                // Buat daftar paket aktif
-                const packageListHTML = data.data.map(pkg => `
-                    <li style="margin-bottom: 0.75rem; border-bottom: 1px solid #eee; padding-bottom: 0.75rem;">
-                        <strong>${pkg.name}</strong><br>
-                        <small>Sisa Kuota: ${pkg.total_quota}</small><br>
-                        <small>Berlaku Hingga: ${new Date(pkg.expired).toLocaleString('id-ID')}</small>
-                    </li>
-                `).join('');
-                resultContainer.innerHTML = `<ul style="list-style: none; padding: 0;">${packageListHTML}</ul>`;
+            // --- PERBAIKAN LOGIKA TAMPILAN ---
+            // Sesuaikan dengan struktur respons KMSP yang benar.
+            const quotas = data.data?.quotas;
+            if (quotas && Array.isArray(quotas) && quotas.length > 0) {
+                let packageListHTML = '';
+
+                // Tambahkan teks pengantar dari API jika ada
+                if (data.data.text) {
+                    packageListHTML += `<p style="font-size: 0.9em; color: #555; margin-bottom: 1rem;">${data.data.text}</p>`;
+                }
+
+                packageListHTML += quotas.map(pkg => {
+                    const benefitsHTML = pkg.benefits && Array.isArray(pkg.benefits)
+                        ? `<ul>${pkg.benefits.map(benefit => `<li>${benefit.name}: <strong>${benefit.remaining_quota}</strong></li>`).join('')}</ul>`
+                        : '<p>Tidak ada detail benefit.</p>';
+
+                    return `
+                        <li class="active-package-item">
+                            <strong>${pkg.name}</strong>
+                            <small>Berlaku Hingga: ${pkg.expired_at}</small>
+                            ${benefitsHTML}
+                        </li>
+                    `;
+                }).join('');
+                resultContainer.innerHTML = `<ul class="active-package-list">${packageListHTML}</ul>`;
             } else {
                 resultContainer.innerHTML = '<p>Tidak ada paket aktif yang ditemukan untuk nomor ini.</p>';
             }
@@ -716,18 +1102,22 @@ function renderPaymentChoiceModal(packageId, originalButton) {
     const pkg = visiblePackages.find(p => p.package_code === packageId);
     if (!pkg) { 
         alert('Error: Paket tidak ditemukan.');
-        if (originalButton) { // Pastikan tombol ada sebelum mengaktifkan
+        if (originalButton) {
             originalButton.disabled = false;
             originalButton.textContent = 'Beli Sekarang';
         }
         return;
     }
 
+    // --- PERBAIKAN PENTING DI SINI ---
+    // Mengubah data teks metode pembayaran menjadi array yang bisa digunakan
+    const paymentMethods = typeof pkg.payment_methods === 'string' 
+        ? JSON.parse(pkg.payment_methods) 
+        : (pkg.payment_methods || []);
+
     const platformFee = pkg.platform_fee || 0;
-    const originalPrice = pkg.original_price || 0;
     const pkgNameLower = (pkg.name || '').toLowerCase();
     const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
-    const paymentMethods = pkg.payment_methods || [];
     
     let paymentSelectionUI = '';
 
@@ -752,7 +1142,7 @@ function renderPaymentChoiceModal(packageId, originalButton) {
     }
 
     const modalContainer = document.getElementById('modal-container');
-    if (!modalContainer) return; // Tambahkan pengecekan
+    if (!modalContainer) return;
 
     modalContainer.innerHTML = `
         <div class="modal-overlay">
@@ -775,7 +1165,7 @@ function renderPaymentChoiceModal(packageId, originalButton) {
 
     const closeModal = () => {
         modalContainer.innerHTML = '';
-        if (originalButton) { // Pastikan tombol ada sebelum mengaktifkan
+        if (originalButton) {
             originalButton.disabled = false;
             originalButton.textContent = 'Beli Sekarang';
         }
@@ -812,7 +1202,7 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
     try {
         const { data, status } = await apiFetch('/purchase', {
             method: 'POST',
-            body: { packageId, phone: phoneAuth.phone, accessToken: phoneAuth.accessToken, paymentMethod }
+            body: { packageId, phone: phoneAuth.phone, access_token: phoneAuth.accessToken, paymentMethod }
         });
         
         // Perbarui saldo pengguna di UI setelah pembelian
@@ -824,8 +1214,13 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
             }
         }
 
-        if (status === 202) { // Kode status 202 menunjukkan pembayaran eksternal diperlukan
+        // --- PERBAIKAN: Tangani dua jenis status 202 ---
+        if (status === 202) { 
+            if (data.payment_data) { // Jika ada payment_data, ini pembayaran eksternal
             renderExternalPaymentModal(data.payment_data);
+            } else { // Jika tidak, ini adalah transaksi yang diantrekan
+                renderFinalStatusModal("Permintaan Diterima", data.message);
+            }
         } else if (status === 200 && data.status) { // Pembelian berhasil langsung
             renderFinalStatusModal("Status Transaksi", data.message || 'Sukses');
         } else { // Pembelian gagal dengan respons non-202/non-200
@@ -834,7 +1229,7 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
     } catch (error) {
         let friendlyErrorMessage = "Terjadi kesalahan. Silakan coba lagi.";
         if (error.message.toLowerCase().includes('maximum pending transaction')) {
-            friendlyErrorMessage = " Semoga Berhasil! Masuk Tunggu 1 Jam Untuk Menerima Paket. jika tidak masuk, belum hoki. Silakan coba lagi nanti.";
+            friendlyErrorMessage = " Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)";
         } else if (error.message) {
             friendlyErrorMessage = error.message; 
         }
@@ -849,28 +1244,44 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
  * Merender modal untuk menyelesaikan pembayaran eksternal (QRIS/DeepLink).
  * @param {Object} paymentData - Data pembayaran dari backend.
  */
-function renderExternalPaymentModal(paymentData) {
+function renderExternalPaymentModal(paymentData, createdAt = null) {
     const modalContainer = document.getElementById('modal-container');
     if (!modalContainer) return;
 
     let paymentContent = '';
     let hasValidPaymentMethod = false;
 
+    // --- PERBAIKAN TIMER DIMULAI DI SINI ---
     // Cek jika pembayaran QRIS
-    if (paymentData.is_qris && paymentData.qris_data && paymentData.qris_data.qr_code) {
+    if (paymentData.is_qris && paymentData.qris_data && paymentData.qris_data.qr_code_base64) {
+        // Dapatkan durasi asli dari provider (misal 300 detik), atau default ke 5 menit
+        const QRIS_EXPIRATION_DURATION_MS = (paymentData.qris_data.remaining_time || 300) * 1000;
+        let timeLeftInSeconds;
+
+        if (createdAt) {
+            // Hitung sisa waktu yang sebenarnya berdasarkan waktu pembuatan transaksi
+            const timeCreated = new Date(createdAt).getTime();
+            const timeRemainingMs = Math.max(0, timeCreated + QRIS_EXPIRATION_DURATION_MS - Date.now());
+            timeLeftInSeconds = Math.floor(timeRemainingMs / 1000);
+        } else {
+            // Fallback jika createdAt tidak tersedia, gunakan nilai dari provider (mungkin tidak akurat)
+            timeLeftInSeconds = paymentData.qris_data.remaining_time || 300;
+        }
+
         paymentContent = `
             <h3>Scan QR Code di Bawah</h3>
+            <p style="font-size: 0.9em; margin-top: 1rem;">Batas Waktu: <strong id="external-qris-timer">${formatTime(timeLeftInSeconds)}</strong></p>
             <div id="qris-image-container" style="padding: 1rem; background: white; display: inline-block; border-radius: 8px; margin: 0 auto;"></div>
-            
+            <img src="${paymentData.qris_data.qr_code_base64}" alt="QR Code Pembayaran" width="220" height="220">
         `;
         hasValidPaymentMethod = true;
     }
+    // --- AKHIR PERBAIKAN TIMER ---
     // Cek jika pembayaran menggunakan Deeplink (aplikasi lain)
     else if (paymentData.have_deeplink && paymentData.deeplink_data && paymentData.deeplink_data.deeplink_url) {
         paymentContent = `
             <h3>Klik untuk Membayar</h3>
             <a href="${decodeURIComponent(paymentData.deeplink_data.deeplink_url)}" target="_blank" class="button" style="text-decoration: none;">Buka Aplikasi ${paymentData.deeplink_data.payment_method || 'Pembayaran'}</a>
-            <p>Total Bayar ke Provider: <strong>Rp ${(paymentData.amount || 0).toLocaleString('id-ID')}</strong></p>
            `;
         hasValidPaymentMethod = true;
     }
@@ -894,34 +1305,49 @@ function renderExternalPaymentModal(paymentData) {
         </div>
     `;
 
-    // Inisialisasi QR Code jika ada data QRIS
-    if (hasValidPaymentMethod && paymentData.is_qris && paymentData.qris_data && paymentData.qris_data.qr_code) {
-        const qrContainer = document.getElementById('qris-image-container');
-        if (qrContainer && typeof QRCode !== 'undefined') {
-            new QRCode(qrContainer, {
-                text: paymentData.qris_data.qr_code,
-                width: 220,
-                height: 220,
-            });
-        }
-    }
-
-    // >>>>>>> Hapus Seluruh Bagian Polling Interval Ini <<<<<<<
-    // let pollingInterval = setInterval(async () => {
-    //    // ... kode polling yang sekarang tidak perlu ...
-    // }, 5000);
-    // >>>>>>> Akhir Bagian Polling Interval <<<<<<<
-
     // Pastikan untuk membersihkan interval polling dan countdown sebelumnya (jika ada dari TopUp QRIS)
     if (window.activeQrisPollingInterval) clearInterval(window.activeQrisPollingInterval);
     if (window.activeQrisCountdownInterval) clearInterval(window.activeQrisCountdownInterval);
+    if (window.activeExternalQrisInterval) clearInterval(window.activeExternalQrisInterval);
 
     // Fungsi closeModal tetap sama
     const closeModal = () => {
-        // Tidak perlu clearInterval(pollingInterval); di sini lagi
+        if (window.activeExternalQrisInterval) clearInterval(window.activeExternalQrisInterval);
         modalContainer.innerHTML = '';
-        renderApp(); // Render app untuk update riwayat, saldo dll.
+        // PERBAIKAN: Render ulang halaman history saja
+        renderDashboard('history'); 
     };
+
+    // --- LOGIKA BARU: Countdown Timer untuk QRIS Eksternal ---
+    if (paymentData.is_qris && paymentData.qris_data) {
+        const QRIS_EXPIRATION_DURATION_MS = (paymentData.qris_data.remaining_time || 300) * 1000;
+        let timeLeftInSeconds;
+
+        if (createdAt) {
+            const timeCreated = new Date(createdAt).getTime();
+            const timeRemainingMs = Math.max(0, timeCreated + QRIS_EXPIRATION_DURATION_MS - Date.now());
+            timeLeftInSeconds = Math.floor(timeRemainingMs / 1000);
+        } else {
+            timeLeftInSeconds = paymentData.qris_data.remaining_time || 300;
+        }
+
+        const timerElement = document.getElementById('external-qris-timer');
+
+        if (timerElement && timeLeftInSeconds > 0) {
+            // Set interval ke variabel global agar bisa di-clear saat modal ditutup
+            window.activeExternalQrisInterval = setInterval(() => {
+                if (timeLeftInSeconds <= 0) {
+                    clearInterval(window.activeExternalQrisInterval);
+                    timerElement.textContent = "Waktu Habis";
+                } else {
+                    timerElement.textContent = formatTime(timeLeftInSeconds);
+                    timeLeftInSeconds--;
+                }
+            }, 1000);
+        }
+    }
+    // --- AKHIR LOGIKA BARU ---
+
     document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
     document.querySelector('.modal-close')?.addEventListener('click', closeModal);
     // Tombol tutup manual akan selalu terlihat
@@ -970,17 +1396,19 @@ function renderLoginPage() {
                 <button type="submit">Login</button>
             </form>
             <div id="feedback-container"></div>
+            <div id="modal-container"></div>
             
             <button type="button" id="request-activation-btn" class="button secondary" style="margin-top: 1rem; width: 100%;">
                 Hubungi Admin untuk Aktivasi
             </button>
 
-            <p class="auth-link">Belum punya akun? <a href="#register">Daftar di sini</a></p>
+            <p class="auth-link">Belum punya akun? <a href="#register">Daftar</a> | <a href="#" id="forgot-password-link">Lupa Password?</a></p>
         </div>
     `;
 
     // Pasang event listener untuk form login dan tombol aktivasi baru
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+    document.getElementById('forgot-password-link')?.addEventListener('click', renderForgotPasswordModal);
     document.getElementById('request-activation-btn')?.addEventListener('click', handleRequestActivation);
 }
 
@@ -1046,6 +1474,7 @@ function renderRegisterPage() {
                 <button type="submit">Daftar</button>
             </form>
             <div id="feedback-container"></div>
+            <div id="modal-container"></div>
             <p class="auth-link">Sudah punya akun? <a href="#login">Login di sini</a></p>
         </div>
     `;
@@ -1053,156 +1482,847 @@ function renderRegisterPage() {
 }
 
 /**
- * Merender struktur dashboard utama (header, sidebar, dan area konten).
- * Header berisi judul "RYYSTORE" dan tombol toggle menu.
- * Jika toggle di klik, sidebar akan muncul dan header ikut bergeser (smooth).
- * @param {string} activePage - Halaman yang aktif: 'packages', 'history', atau 'admin'.
+ * FUNGSI BARU: Merender modal untuk meminta link reset password.
  */
+function renderForgotPasswordModal(e) {
+    e.preventDefault();
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
 
-// frontend/app.js -> GANTI FUNGSI renderDashboard LAMA ANDA DENGAN INI
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header"><h2>Lupa Password</h2><button class="modal-close">&times;</button></div>
+                <p>Masukkan alamat email Anda. Jika terdaftar, kami akan mengirimkan link untuk mereset password Anda.</p>
+                <form id="forgot-password-form">
+                    <div class="form-group">
+                        <label for="forgot-email">Email</label>
+                        <input type="email" id="forgot-email" required autocomplete="email">
+                    </div>
+                    <button type="submit">Kirim Link Reset</button>
+                </form>
+                <div id="forgot-feedback-container" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+    `;
 
-async function renderDashboard(activePage = 'packages') {
-    await checkLoginStatus();
-    const isAdmin = currentUser.role === 'admin';
-    
+    const closeModal = () => modalContainer.innerHTML = '';
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+    document.getElementById('forgot-password-form')?.addEventListener('submit', handleForgotPasswordRequest);
+}
 
-    
-    
+/**
+ * FUNGSI BARU: Handler untuk mengirim permintaan reset password.
+ */
+async function handleForgotPasswordRequest(e) {
+    e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    const emailInput = document.getElementById('forgot-email');
+    if (!button || !emailInput) return;
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Mengirim...`;
+    displayFeedback('forgot-feedback-container', '', false);
+
+    try {
+        const { data } = await apiFetch('/auth/forgot-password', {
+            method: 'POST',
+            body: { email: emailInput.value }
+        });
+        // Tampilkan pesan sukses generik untuk keamanan
+        displayFeedback('forgot-feedback-container', data.message, false);
+        button.textContent = 'Terkirim!';
+    } catch (error) {
+        // Tampilkan pesan error jika server gagal (misal: email service down)
+        displayFeedback('forgot-feedback-container', error.message, true);
+        button.disabled = false;
+        button.textContent = 'Kirim Link Reset';
+    }
+}
+
+/**
+ * FUNGSI BARU: Merender halaman untuk mereset password.
+ */
+function renderResetPasswordPage() {
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const token = params.get('token');
+
+    if (!token) {
+        app.innerHTML = `<div class="auth-container"><p class="error-message">Token reset tidak valid atau tidak ditemukan. Silakan minta link baru.</p><a href="#login">Kembali ke Login</a></div>`;
+        return;
+    }
 
     app.innerHTML = `
-        <header class="main-header" id="main-header">
-            <div class="header-inner" style="display: flex; align-items: center; height: 100%;">
-                <button class="menu-toggle" id="menu-toggle-btn" aria-label="Buka Menu" style="margin-right: 12px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                </button>
-                <h1 class="header-title" style="margin: 0; font-size: 1.4rem; letter-spacing: 2px;">RYYSTORE</h1>
-            </div>
-        </header>
-        <div class="dashboard-container">
-            <aside class="sidebar" id="sidebar">
-                <h2>Ryystore V2</h2>
-                <div class="user-info">
-                    <p>Selamat datang,</p>
-                    <strong id="user-name">${currentUser.name}</strong>
-                    <p>Saldo Anda:</p>
-                    <p id="user-balance">Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
+        <div class="auth-container">
+            <h1>Reset Password Anda</h1>
+            <form id="reset-password-form" data-token="${token}">
+                <div class="form-group">
+                    <label for="new-password">Password Baru (min. 6 karakter)</label>
+                    <input type="password" id="new-password" required minlength="6" autocomplete="new-password">
                 </div>
-                <button id="topup-btn">Top Up Saldo</button>
-                  <nav>
-                    <ul>
-                        <li><a href="#dashboard" class="${activePage === 'packages' ? 'active' : ''}">Beli Paket</a></li>
-                        <li><a href="#paket-akrab" class="${activePage === 'paket-akrab' ? 'active' : ''}">Paket Akrab & Lainnya</a></li>
-                        <li><a href="#history" class="${activePage === 'history' ? 'active' : ''}">Riwayat Transaksi</a></li>
-                        <li><a href="#profile" class="${activePage === 'profile' ? 'active' : ''}">Profil Saya</a></li>
-                        <li><a href="#tutorial" class="${activePage === 'tutorial' ? 'active' : ''}">Cara Pembelian</a></li>
-                        <li><a href="#kontak-admin" class="${activePage === 'kontak-admin' ? 'active' : ''}">Kontak Admin</a></li>
-                        ${isAdmin ? `
-                        <li><a href="#admin" class="${activePage === 'admin' ? 'active' : ''}">Panel Admin</a></li>
-                        <li><a href="#laporan" class="${activePage === 'laporan' ? 'active' : ''}">Laporan Keuangan</a></li> ` : ''}
+                <div class="form-group">
+                    <label for="confirm-password">Konfirmasi Password Baru</label>
+                    <input type="password" id="confirm-password" required minlength="6" autocomplete="new-password">
+                </div>
+                <button type="submit">Reset Password</button>
+            </form>
+            <div id="feedback-container"></div>
+        </div>
+    `;
+    document.getElementById('reset-password-form')?.addEventListener('submit', handleResetPassword);
+}
 
+/**
+ * FUNGSI BARU: Handler untuk mengirim password baru ke server.
+ */
+async function handleResetPassword(e) {
+    e.preventDefault();
+    const form = e.target;
+    const button = form.querySelector('button[type="submit"]');
+    const token = form.dataset.token;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    if (newPassword !== confirmPassword) {
+        displayFeedback('feedback-container', 'Password baru dan konfirmasi tidak cocok.', true);
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
+    displayFeedback('feedback-container', '', false);
+
+    try {
+        const { data } = await apiFetch('/auth/reset-password', {
+            method: 'POST',
+            body: { token, password: newPassword }
+        });
+        displayFeedback('feedback-container', data.message, false);
+        showToast(data.message, false);
+        setTimeout(() => { window.location.hash = '#login'; }, 2000);
+    } catch (error) {
+        displayFeedback('feedback-container', error.message, true);
+        button.disabled = false;
+        button.textContent = 'Reset Password';
+    }
+}
+
+// frontend/app.js -> GANTI FUNGSI INI SECARA KESELURUHAN
+async function renderDashboard(activePage = 'dashboard') {
+    const isAdmin = currentUser.role === 'admin';
+
+    // Logika untuk menandai item aktif di navigasi
+    const mainPages = ['dashboard', 'packages', 'paket-akrab', 'history', 'profile', 'admin', 'laporan', 'tutorial'];
+    let navActivePage = mainPages.includes(activePage) ? activePage : 'dashboard';
+    
+    // Alias untuk beberapa halaman agar menu tetap aktif
+    if (navActivePage === 'laporan') navActivePage = 'admin';
+    if (activePage === 'beli-paket') activePage = 'packages';
+
+    // Kumpulan ikon untuk navigasi
+    const dashboardIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>`;
+    const beliPaketIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
+    const paketAkrabIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+    const tutorialIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+    const riwayatIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"></path><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>`;
+    const profilIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+    const adminIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>`;
+    const laporanIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>`;
+    const menuIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`;
+    const logoutIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`;
+
+    app.innerHTML = `
+        <div class="responsive-container">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>RYYSTORE</h2>
+                </div>
+                <div class="user-info">
+                    <p>Selamat datang, <strong>${currentUser.name}</strong></p>
+                    <p id="user-balance-sidebar">Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
+                </div>
+                <nav class="sidebar-nav">
+                    <ul>
+                        <li><a href="#dashboard" class="${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a></li>
+                        <li><a href="#beli-paket" class="${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Beli Paket (OTP)</span></a></li>
+                        <li><a href="#paket-akrab" class="${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket Akrab</span></a></li>
+                        <li><a href="#tutorial" class="${navActivePage === 'tutorial' ? 'active' : ''}">${tutorialIcon}<span>Cara Pembelian</span></a></li>
+                        <li><a href="#history" class="${navActivePage === 'history' ? 'active' : ''}">${riwayatIcon}<span>Riwayat</span></a></li>
+                        <li><a href="#profile" class="${navActivePage === 'profile' ? 'active' : ''}">${profilIcon}<span>Profil & Menu Lain</span></a></li>
+                        ${isAdmin ? `
+                        <li class="admin-menu-divider"></li>
+                        <li><a href="#admin" class="${navActivePage === 'admin' ? 'active' : ''}">${adminIcon}<span>Panel Admin</span></a></li>
+                        <li><a href="#laporan" class="${navActivePage === 'laporan' ? 'active' : ''}">${laporanIcon}<span>Laporan</span></a></li>` : ''}
                     </ul>
                 </nav>
-                <button id="logout-btn" class="secondary">Logout</button>
+                <div class="sidebar-footer">
+                    <button id="logout-btn-sidebar" class="button secondary">Logout</button>
+                </div>
             </aside>
-            <main class="main-content" id="page-content-area">
-                </main>
-        </div>
-        <div id="modal-container"></div>
-    `;
-    
-    // --- Sisa kode di dalam fungsi ini tetap sama ---
-    const mainContent = document.getElementById('page-content-area');
-    mainContent.innerHTML = ''; 
 
-    let announcementHTML = '';
+            <div class="main-wrapper">
+                <header class="app-header">
+                    <button class="menu-toggle" id="menu-toggle-btn">${menuIcon}</button>
+                    <h1 class="app-title">RYYSTORE</h1>
+                    <button id="logout-btn-header" class="header-action-btn">${logoutIcon}</button>
+                </header>
+                
+                <main class="main-content" id="page-content-area"></main>
+            </div>
+
+            <nav class="bottom-nav">
+                <a href="#dashboard" class="nav-item ${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a>
+                <a href="#beli-paket" class="nav-item ${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Beli Paket</span></a>
+                <a href="#paket-akrab" class="nav-item ${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket Akrab</span></a>
+                <a href="#history" class="nav-item ${navActivePage === 'history' ? 'active' : ''}">${riwayatIcon}<span>Riwayat</span></a>
+                <a href="#profile" class="nav-item ${navActivePage === 'profile' ? 'active' : ''}">${profilIcon}<span>Profil</span></a>
+                ${isAdmin ? `<a href="#admin" class="nav-item ${navActivePage === 'admin' ? 'active' : ''}">${adminIcon}<span>Admin</span></a>` : ''}
+            </nav>
+
+            <div id="modal-container"></div>
+            <div class="sidebar-overlay"></div>
+        </div>
+    `;
+
+    const mainContent = document.getElementById('page-content-area');
+
     if (latestAnnouncement && latestAnnouncement.message) {
-        announcementHTML = `
+        const announcementHTML = `
             <div class="announcement-banner" id="announcement-banner">
                 <p><strong>Informasi:</strong> ${latestAnnouncement.message}</p>
                 <button class="announcement-close" id="announcement-close-btn">&times;</button>
             </div>
         `;
+        // Gunakan `insertAdjacentHTML` agar tidak menghapus event listener yang mungkin sudah ada
+        mainContent.insertAdjacentHTML('beforeend', announcementHTML);
     }
-    mainContent.innerHTML = announcementHTML;
+    // Logika render konten (tidak berubah)
+    const pageRenderers = {
+        'dashboard': renderMainDashboardPage,
+        'packages': () => { mainContent.innerHTML = renderPhoneVerificationPanel(); renderPackagesPage(mainContent); setupPhoneVerificationListeners(); },
+        'history': renderHistoryPage,
+        'profile': renderProfilePage,
+        'paket-akrab': renderNonOtpPage,
+        'tutorial': renderTutorialPage,
+        'kontak-admin': renderKontakAdminPage,
+        'tentang-kami': renderTentangKamiPage,
+        'kebijakan-privasi': renderKebijakanPrivasiPage,
+        'syarat-ketentuan': renderSyaratKetentuanPage,
+        'admin': isAdmin ? renderAdminDashboard : () => { window.location.hash = '#dashboard'; },
+        'laporan': isAdmin ? renderLaporanPage : () => { window.location.hash = '#dashboard'; }
+    };
+    const renderFunction = pageRenderers[activePage] || pageRenderers['dashboard'];
+    renderFunction(mainContent);
 
-    if (activePage === 'packages') {
-        mainContent.innerHTML += renderPhoneVerificationPanel(); 
-        renderPackagesPage(mainContent); 
-        setupPhoneVerificationListeners();
-    } else if (activePage === 'history') {
-        renderHistoryPage(mainContent);
-    } else if (activePage === 'profile') {
-        renderProfilePage(mainContent);
-    } else if (activePage === 'tutorial') {
-        renderTutorialPage(mainContent);
-    } else if (activePage === 'kontak-admin') {
-        renderKontakAdminPage(mainContent);
-    } else if (activePage === 'paket-akrab') {
-        renderNonOtpPage(mainContent);
-    } else if (activePage === 'admin') {
-        if (isAdmin) {
-            renderAdminDashboard(mainContent);
-        } else {
-            window.location.hash = '#dashboard';
-        }
-    } 
-    // --- PENAMBAHAN BARU DI SINI ---
-    else if (activePage === 'laporan') {
-        if (isAdmin) {
-            // Panggil fungsi render baru untuk halaman laporan
-            renderLaporanPage(mainContent); 
-        } else {
-            // Jika bukan admin mencoba akses, lempar ke dashboard
-            window.location.hash = '#dashboard';
-        }
-    } 
-    
-    // --- Sisa event listener di fungsi ini juga tetap sama ---
-    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-    document.getElementById('topup-btn')?.addEventListener('click', renderTopUpModal);
+    // Event Listeners
+    document.getElementById('logout-btn-sidebar')?.addEventListener('click', handleLogout);
+    document.getElementById('logout-btn-header')?.addEventListener('click', handleLogout);
+
     document.getElementById('announcement-close-btn')?.addEventListener('click', () => {
         document.getElementById('announcement-banner').style.display = 'none';
     });
+    
+    // Logika untuk toggle sidebar di mobile
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
-    const sidebar = document.getElementById('sidebar');
-    const mainHeader = document.getElementById('main-header');
-    const dashboardContainer = document.querySelector('.dashboard-container');
-
-    // Cek elemen sebelum menambahkan listener untuk menghindari error
-    if (menuToggleBtn && sidebar && mainHeader && dashboardContainer) {
-        
-        const openSidebar = () => {
-            sidebar.classList.add('open');
-            // Buat overlay untuk menggelapkan konten utama
-            const overlay = document.createElement('div');
-            overlay.className = 'sidebar-overlay';
-            overlay.onclick = () => closeSidebar();
-            dashboardContainer.appendChild(overlay);
-        };
-
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    if(menuToggleBtn && sidebar && overlay) {
         const closeSidebar = () => {
             sidebar.classList.remove('open');
-            const overlay = document.querySelector('.sidebar-overlay');
-            if (overlay) {
-                overlay.remove();
-            }
+            overlay.classList.remove('active');
         };
+        menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.add('open'); overlay.classList.add('active'); });
+        overlay.addEventListener('click', closeSidebar);
+        sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', closeSidebar));
+    }
+}
 
-        menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Hentikan event agar tidak langsung menutup sidebar lagi
-            if (sidebar.classList.contains('open')) {
-                closeSidebar();
+
+// frontend/app.js -> GANTI FUNGSI INI SEPENUHNYA
+/**
+ * FUNGSI BARU: Merender daftar tutorial di panel admin untuk dikelola.
+ */
+async function renderAdminTutorialList() {
+    const listContainer = document.getElementById('tutorial-list-admin-container');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div class="loading-spinner"></div>';
+
+    try {
+        await loadTutorialList(); // Muat ulang daftar tutorial dari backend
+
+        if (availableTutorials.length === 0) {
+            listContainer.innerHTML = '<p class="empty-state">Belum ada tutorial. Klik "Tambah Tutorial Baru" di bawah.</p>';
+            return;
+        }
+
+        const tutorialListHtml = `
+            <ul id="admin-tutorial-sortable-list" class="sortable-list">
+                ${availableTutorials.map(t => `
+                    <li class="tutorial-item-admin" data-tutorial-id="${t.id}">
+                        <span class="drag-handle">☰</span>
+                        <div class="tutorial-info">
+                            <strong>${t.title}</strong>
+                            <small>${t.description || 'Tidak ada deskripsi.'}</small>
+                        </div>
+                        <div class="tutorial-actions">
+                            <button class="edit-tutorial-btn">Edit</button>
+                            <button class="delete-tutorial-btn danger">Hapus</button>
+                        </div>
+                    </li>
+                `).join('')}
+            </ul>
+            <button id="save-tutorial-order-btn" style="width:100%; margin-top: 1rem; background: var(--success-color);">Simpan Urutan</button>
+        `;
+        listContainer.innerHTML = tutorialListHtml;
+
+        // Inisialisasi Sortable JS untuk drag-and-drop
+        new Sortable(document.getElementById('admin-tutorial-sortable-list'), {
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            onEnd: async function (evt) {
+                // Saat urutan berubah, aktifkan tombol simpan
+                document.getElementById('save-tutorial-order-btn').disabled = false;
+            }
+        });
+
+        // Event listener untuk tombol Edit dan Hapus
+        listContainer.querySelectorAll('.edit-tutorial-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tutorialId = e.currentTarget.closest('.tutorial-item-admin').dataset.tutorialId;
+                renderSpecificTutorialEditor(tutorialId);
+            });
+        });
+        listContainer.querySelectorAll('.delete-tutorial-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tutorialId = e.currentTarget.closest('.tutorial-item-admin').dataset.tutorialId;
+                handleDeleteTutorial(tutorialId);
+            });
+        });
+        document.getElementById('save-tutorial-order-btn')?.addEventListener('click', handleSaveTutorialOrder);
+
+    } catch (error) {
+        listContainer.innerHTML = `<p class="error-message">Gagal memuat daftar tutorial: ${error.message}</p>`;
+    }
+}
+
+/**
+ * FUNGSI BARU: Menampilkan modal editor untuk tutorial spesifik (Tambah/Edit).
+ * @param {string} [tutorialId] - ID tutorial jika dalam mode edit, kosong jika tambah baru.
+ */
+async function renderSpecificTutorialEditor(tutorialId = null) {
+    const modalContainer = document.getElementById('specific-tutorial-modal-container');
+    if (!modalContainer) return;
+
+    let tutorialData = { id: '', title: '', description: '', content: [] };
+    let isEditing = false;
+
+    if (tutorialId) {
+        isEditing = true;
+        try {
+            const { data: responseData, status } = await apiFetch(`/tutorial-content/${tutorialId}`);
+            if (status === 200 && responseData.status && responseData.data) {
+                tutorialData = responseData.data;
             } else {
-                openSidebar();
+                throw new Error(responseData.message || "Gagal memuat data tutorial untuk diedit.");
             }
+        } catch (error) {
+            showToast(`Error: ${error.message}`, true);
+            modalContainer.innerHTML = '';
+            return;
+        }
+    }
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <h2>${isEditing ? 'Edit Tutorial' : 'Tambah Tutorial Baru'}</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="tutorial-editor-form">
+                    <input type="hidden" id="tutorial-id" value="${tutorialData.id || ''}">
+                    <div class="form-group">
+                        <label for="tutorial-title">Judul Tutorial</label>
+                        <input type="text" id="tutorial-title" value="${tutorialData.title}" placeholder="Contoh: Cara Beli Paket Akrab" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tutorial-description">Deskripsi Singkat</label>
+                        <input type="text" id="tutorial-description" value="${tutorialData.description}" placeholder="Deskripsi singkat tutorial ini">
+                    </div>
+                    <hr>
+                    <h3>Isi Tutorial (Blok Konten)</h3>
+                    <div id="tutorial-content-blocks" class="tutorial-editor-blocks">
+                        ${tutorialData.content.length > 0 ? tutorialData.content.map(createBlockElement).join('') : '<p class="empty-state">Belum ada konten. Tambahkan blok di bawah.</p>'}
+                    </div>
+                    <div class="admin-toolbar" style="margin-top: 1rem; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="add-text-block-btn">Tambah Teks</button>
+                        <button type="button" id="add-image-block-btn">Tambah Gambar</button>
+                        <button type="button" id="add-video-block-btn">Tambah Video</button>
+                    </div>
+                    <div id="editor-feedback" style="margin-top: 1rem;"></div>
+                    <button type="submit" style="margin-top: 1.5rem; width: 100%;">Simpan Tutorial</button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    const form = document.getElementById('tutorial-editor-form');
+    const contentBlocksContainer = document.getElementById('tutorial-content-blocks');
+
+    // Inisialisasi Sortable JS untuk drag-and-drop
+    new Sortable(contentBlocksContainer, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost'
+    });
+
+    // Pasang event listener untuk tombol tambah blok
+    document.getElementById('add-text-block-btn')?.addEventListener('click', () => addBlockToEditor(contentBlocksContainer, 'text'));
+    document.getElementById('add-image-block-btn')?.addEventListener('click', () => addBlockToEditor(contentBlocksContainer, 'image'));
+    document.getElementById('add-video-block-btn')?.addEventListener('click', () => addBlockToEditor(contentBlocksContainer, 'video'));
+
+    // Pastikan tombol hapus sudah ada event listenernya
+    contentBlocksContainer.querySelectorAll('.delete-block-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => e.currentTarget.closest('.tutorial-block').remove());
+    });
+
+    // Pasang event listener untuk file input yang ada
+    contentBlocksContainer.querySelectorAll('.tutorial-file-input').forEach(input => {
+        setupFileInputPreview(input);
+    });
+
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = `<span class="button-spinner"></span> Menyimpan...`;
+        displayFeedback('editor-feedback', '', false);
+
+        const tutorialIdValue = document.getElementById('tutorial-id').value;
+        const title = document.getElementById('tutorial-title').value;
+        const description = document.getElementById('tutorial-description').value;
+
+        const tutorialBlocks = [];
+        const blockElements = contentBlocksContainer.querySelectorAll('.tutorial-block');
+        const formData = new FormData();
+
+        for (const el of blockElements) {
+            const type = el.dataset.type;
+            let content;
+
+            if (type === 'text') {
+                content = el.querySelector('.tutorial-text-input').value;
+            } else { // Untuk tipe 'image' atau 'video'
+                const fileInput = el.querySelector('.tutorial-file-input');
+                if (fileInput && fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    formData.append('files', file); // Tambahkan file ke FormData
+                    content = file.name; // Gunakan nama file sebagai placeholder untuk dicocokkan di backend
+                } else if (el.dataset.existingUrl) {
+                    content = el.dataset.existingUrl; // Gunakan URL lama jika tidak ada file baru yang dipilih
+                }
+            }
+
+            if (!content) {
+                displayFeedback('editor-feedback', `Konten untuk blok ${type} tidak boleh kosong.`, true);
+                submitButton.disabled = false;
+                submitButton.textContent = 'Simpan Tutorial';
+                return;
+            }
+            tutorialBlocks.push({ type, content });
+        }
+
+        formData.append('tutorialId', tutorialIdValue);
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('content', JSON.stringify(tutorialBlocks));
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/tutorial-content`, {
+                method: 'PUT',
+                body: formData,
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.status) {
+                throw new Error(data.message || 'Gagal menyimpan tutorial.');
+            }
+
+            displayFeedback('editor-feedback', data.message, false);
+            showToast(data.message, false);
+            closeModal(); // Tutup modal setelah sukses
+            renderAdminTutorialList(); // Muat ulang daftar tutorial di admin panel
+
+        } catch (error) {
+            displayFeedback('editor-feedback', error.message, true);
+            showToast(error.message, true);
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Simpan Tutorial';
+        }
+    });
+
+    const closeModal = () => modalContainer.innerHTML = '';
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+}
+
+/**
+ * Helper untuk membuat elemen HTML untuk satu blok konten di editor modal.
+ * Mirip dengan createBlockElement tapi disesuaikan untuk editor modal.
+ */
+function createBlockElement(block, index) {
+    let contentInput = '';
+    const existingUrlAttr = (block.type !== 'text' && block.content) ? `data-existing-url="${block.content}"` : '';
+    const fileInputValue = (block.type !== 'text' && block.content && !block.content.startsWith('file-')) ? block.content : ''; // Hanya tampilkan URL jika sudah ada, bukan placeholder file
+
+    switch (block.type) {
+        case 'text':
+            contentInput = `
+                <textarea class="tutorial-text-input" placeholder="Masukkan teks di sini..." required>${block.content}</textarea>
+                <small>Anda bisa menggunakan <a href="https://www.markdownguide.org/basic-syntax/" target="_blank">format Markdown</a>.</small>
+            `;
+            break;
+        case 'image':
+            contentInput = `
+                <div class="file-preview">
+                    ${fileInputValue ? `<img src="${fileInputValue}" alt="Preview" style="max-width: 150px; display: block;"/>` : ''}
+                </div>
+                <input type="file" class="tutorial-file-input" accept="image/*" ${fileInputValue ? '' : 'required'} />
+                ${fileInputValue ? `<small>URL Saat Ini: ${fileInputValue}</small>` : ''}
+            `;
+            break;
+        case 'video':
+            contentInput = `
+                <div class="file-preview">
+                    ${fileInputValue ? `<video src="${fileInputValue}" controls style="max-width: 250px; display: block;"></video>` : ''}
+                </div>
+                <input type="file" class="tutorial-file-input" accept="video/*" ${fileInputValue ? '' : 'required'} />
+                ${fileInputValue ? `<small>URL Saat Ini: ${fileInputValue}</small>` : ''}
+            `;
+            break;
+    }
+
+    return `
+        <div class="tutorial-block" data-type="${block.type}" ${existingUrlAttr}>
+            <span class="drag-handle">☰</span>
+            <div class="block-content">
+                <strong>Blok ${block.type.charAt(0).toUpperCase() + block.type.slice(1)}</strong>
+                ${contentInput}
+            </div>
+            <button type="button" class="delete-block-btn">&times;</button>
+        </div>
+    `;
+}
+
+/**
+ * FUNGSI BARU: Menambahkan blok baru ke editor tutorial (di dalam modal).
+ * @param {HTMLElement} container - Kontainer tempat blok akan ditambahkan.
+ * @param {string} type - 'text', 'image', atau 'video'.
+ */
+function addBlockToEditor(container, type) {
+    // Hapus pesan 'belum ada konten' jika ada
+    const emptyState = container.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+
+    const newBlockEl = document.createElement('div');
+    newBlockEl.className = 'tutorial-block';
+    newBlockEl.dataset.type = type;
+
+    let contentInput = '';
+    if (type === 'text') {
+        contentInput = `<textarea class="tutorial-text-input" placeholder="Masukkan teks di sini..." required></textarea>`;
+    } else {
+        contentInput = `
+            <div class="file-preview"></div>
+            <input type="file" class="tutorial-file-input" accept="${type}/*" required />
+        `;
+    }
+
+    newBlockEl.innerHTML = `
+        <span class="drag-handle">☰</span>
+        <div class="block-content">
+            <strong>Blok ${type.charAt(0).toUpperCase() + type.slice(1)} (Baru)</strong>
+            ${contentInput}
+        </div>
+        <button type="button" class="delete-block-btn">&times;</button>
+    `;
+
+    newBlockEl.querySelector('.delete-block-btn').addEventListener('click', (e) => e.currentTarget.closest('.tutorial-block').remove());
+
+    if (type !== 'text') {
+        setupFileInputPreview(newBlockEl.querySelector('.tutorial-file-input'));
+    }
+    container.appendChild(newBlockEl);
+}
+
+/**
+ * Helper untuk mengatur preview gambar/video saat file dipilih.
+ */
+function setupFileInputPreview(fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const previewContainer = e.target.previousElementSibling; // div.file-preview
+        if (previewContainer) {
+            previewContainer.innerHTML = ''; // Clear preview lama
+            const url = URL.createObjectURL(file);
+            if (file.type.startsWith('image/')) {
+                previewContainer.innerHTML = `<img src="${url}" alt="Preview" style="max-width: 150px; display: block;"/>`;
+            } else if (file.type.startsWith('video/')) {
+                previewContainer.innerHTML = `<video src="${url}" controls style="max-width: 250px; display: block;"></video>`;
+            }
+        }
+        // Hapus atribut 'required' setelah file dipilih
+        fileInput.removeAttribute('required');
+    });
+}
+
+/**
+ * FUNGSI BARU: Menghapus tutorial dari database.
+ * @param {string} tutorialId - ID tutorial yang akan dihapus.
+ */
+async function handleDeleteTutorial(tutorialId) {
+    if (!confirm('Apakah Anda yakin ingin menghapus tutorial ini? Aksi ini tidak dapat dibatalkan.')) {
+        return;
+    }
+
+    const tutorialItem = document.querySelector(`.tutorial-item-admin[data-tutorial-id="${tutorialId}"]`);
+    if (tutorialItem) {
+        tutorialItem.style.opacity = '0.5';
+        tutorialItem.style.pointerEvents = 'none';
+    }
+
+    try {
+        const { data, status } = await apiFetch(`/admin/tutorial-content/${tutorialId}`, {
+            method: 'DELETE'
         });
 
-        // Tambahkan listener untuk menutup saat menekan tombol Escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === "Escape" && sidebar.classList.contains('open')) {
-                closeSidebar();
-            }
+        if (status === 200 && data.status) {
+            showToast(data.message, false);
+            renderAdminTutorialList(); // Muat ulang daftar setelah dihapus
+        } else {
+            throw new Error(data.message || "Gagal menghapus tutorial.");
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        if (tutorialItem) {
+            tutorialItem.style.opacity = '1';
+            tutorialItem.style.pointerEvents = 'auto';
+        }
+    }
+}
+
+/**
+ * FUNGSI BARU: Menyimpan urutan tutorial setelah drag-and-drop.
+ */
+async function handleSaveTutorialOrder() {
+    const button = document.getElementById('save-tutorial-order-btn');
+    if (!button) return;
+
+    button.disabled = true;
+    button.innerHTML = '<span class="button-spinner"></span> Menyimpan Urutan...';
+    displayFeedback('tutorial-editor-feedback', '', false);
+
+    const orderedTutorialIds = Array.from(document.querySelectorAll('#admin-tutorial-sortable-list .tutorial-item-admin'))
+        .map(item => item.dataset.tutorialId);
+
+    try {
+        const { data, status } = await apiFetch('/admin/tutorial-content/reorder', {
+            method: 'PUT',
+            body: { order: orderedTutorialIds }
         });
+
+        if (status === 200 && data.status) {
+            showToast(data.message, false);
+            displayFeedback('tutorial-editor-feedback', data.message, false);
+        } else {
+            throw new Error(data.message || 'Gagal menyimpan urutan tutorial.');
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        displayFeedback('tutorial-editor-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Simpan Urutan';
+    }
+}
+
+
+/**
+ * Helper untuk membuat elemen HTML untuk satu blok konten di editor.
+ * @param {object} block - Objek blok konten {type, content}.
+ * @param {number} index - Index blok.
+ * @returns {string} - String HTML untuk blok tersebut.
+ */
+function createBlockElement(block, index) {
+    const blockId = `block-${Date.now()}-${index}`;
+    let contentInput = '';
+
+    switch (block.type) {
+       case 'text':
+        contentInput = `
+            <textarea class="tutorial-text-input" placeholder="Masukkan teks di sini...">${block.content}</textarea>
+            <small>Anda bisa menggunakan <a href="https://www.markdownguide.org/basic-syntax/" target="_blank">format Markdown</a> untuk judul, tebal, miring, dan list.</small>
+        `;
+        break;
+        case 'image':
+            contentInput = `
+                <div class="file-preview"><img src="${block.content}" alt="Preview" style="max-width: 150px; display: block;"/></div>
+                <input type="file" class="tutorial-file-input" accept="image/*" style="display:none;" />
+                <small>URL: ${block.content}</small>
+            `;
+            break;
+        case 'video':
+            contentInput = `
+                <div class="file-preview"><video src="${block.content}" controls style="max-width: 250px; display: block;"></video></div>
+                <input type="file" class="tutorial-file-input" accept="video/*" style="display:none;" />
+                <small>URL: ${block.content}</small>
+            `;
+            break;
+    }
+
+    return `
+        <div class="tutorial-block" data-type="${block.type}" data-existing-url="${block.type !== 'text' ? block.content : ''}">
+            <span class="drag-handle">☰</span>
+            <div class="block-content">
+                <strong>Blok ${block.type.charAt(0).toUpperCase() + block.type.slice(1)}</strong>
+                ${contentInput}
+            </div>
+            <button class="delete-block-btn">&times;</button>
+        </div>
+    `;
+}
+
+/**
+ * Menambahkan blok baru ke editor UI.
+ * @param {string} type - 'text', 'image', atau 'video'.
+ */
+function addBlock(type) {
+    const container = document.getElementById('tutorial-content-blocks');
+    if (!container) return;
+    
+    // Hapus pesan 'belum ada konten' jika ada
+    const emptyState = container.querySelector('.empty-state');
+    if(emptyState) emptyState.remove();
+
+    const newBlockEl = document.createElement('div');
+    newBlockEl.className = 'tutorial-block';
+    newBlockEl.dataset.type = type;
+
+    let contentInput = '';
+    if (type === 'text') {
+        contentInput = `<textarea class="tutorial-text-input" placeholder="Masukkan teks di sini..."></textarea>`;
+    } else {
+        contentInput = `
+            <input type="file" class="tutorial-file-input" accept="${type}/*" required />
+            <div class="file-preview"></div>
+        `;
+        // Listener untuk preview file
+        setTimeout(() => {
+            newBlockEl.querySelector('.tutorial-file-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const previewContainer = e.target.nextElementSibling;
+                previewContainer.innerHTML = ''; // Clear preview lama
+                const url = URL.createObjectURL(file);
+                if (type === 'image') {
+                    previewContainer.innerHTML = `<img src="${url}" alt="Preview" style="max-width: 150px; display: block;"/>`;
+                } else {
+                    previewContainer.innerHTML = `<video src="${url}" controls style="max-width: 250px; display: block;"></video>`;
+                }
+            });
+        }, 0);
+    }
+    
+    newBlockEl.innerHTML = `
+        <span class="drag-handle">☰</span>
+        <div class="block-content">
+            <strong>Blok ${type.charAt(0).toUpperCase() + type.slice(1)} (Baru)</strong>
+            ${contentInput}
+        </div>
+        <button class="delete-block-btn">&times;</button>
+    `;
+
+    newBlockEl.querySelector('.delete-block-btn').addEventListener('click', (e) => e.currentTarget.closest('.tutorial-block').remove());
+    container.appendChild(newBlockEl);
+}
+
+/**
+ * Mengumpulkan data dari editor dan mengirimkannya ke backend.
+ */
+async function handleSaveTutorialContent(e) {
+    const button = e.currentTarget;
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Menyimpan...`;
+    displayFeedback('tutorial-editor-feedback', '', false);
+
+    const formData = new FormData();
+    const contentBlocks = [];
+    const blockElements = document.querySelectorAll('#tutorial-content-blocks .tutorial-block');
+
+    for (const el of blockElements) {
+        const type = el.dataset.type;
+        let content;
+
+        if (type === 'text') {
+            content = el.querySelector('.tutorial-text-input').value;
+        } else {
+            const fileInput = el.querySelector('.tutorial-file-input');
+            if (fileInput && fileInput.files.length > 0) {
+                // Ini adalah file baru yang diupload
+                const file = fileInput.files[0];
+                formData.append('files', file); // Tambahkan file ke FormData
+                content = file.name; // Gunakan nama file sebagai placeholder
+            } else {
+                // Ini adalah file lama yang sudah ada di server
+                content = el.dataset.existingUrl;
+            }
+        }
+        
+        if (!content) {
+            displayFeedback('tutorial-editor-feedback', `Blok ${type} ada yang kosong. Harap isi atau hapus.`, true);
+            button.disabled = false;
+            button.innerHTML = 'Simpan Semua Perubahan';
+            return;
+        }
+
+        contentBlocks.push({ type, content });
+    }
+
+    formData.append('contentData', JSON.stringify(contentBlocks));
+
+    try {
+        // Gunakan fetch standar karena kita mengirim FormData
+        const response = await fetch(`${API_BASE_URL}/admin/tutorial-content`, {
+            method: 'PUT',
+            body: formData,
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.status) {
+            throw new Error(data.message || 'Gagal menyimpan data.');
+        }
+
+        displayFeedback('tutorial-editor-feedback', data.message, false);
+        // Muat ulang editor untuk menampilkan URL yang benar
+        renderTutorialEditor();
+
+    } catch (error) {
+        displayFeedback('tutorial-editor-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = 'Simpan Semua Perubahan';
     }
 }
 
@@ -1225,6 +2345,19 @@ function renderAdminDashboard(container) {
             <div class="admin-section">
                 <h1>Panel Kontrol Admin</h1>
                 <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
+            </div>
+
+            <div class="admin-section">
+                <h2>Manajemen Konten "Cara Pembelian"</h2>
+                <p>Atur daftar tutorial yang tampil di halaman "Cara Pembelian". Anda bisa menambah, mengedit, menghapus, dan mengatur ulang urutan.</p>
+                <div id="tutorial-list-admin-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                <button id="add-new-tutorial-btn" class="button">Tambah Tutorial Baru</button>
+                <div id="tutorial-editor-feedback" style="margin-top: 1rem;"></div>
+            </div>
+
+                        <div id="specific-tutorial-modal-container"></div>
             </div>
             <div class="admin-section">
                 <h2>Kirim Pengumuman (Kecil)</h2>
@@ -1292,6 +2425,21 @@ function renderAdminDashboard(container) {
                     <input type="file" id="db-file-input" name="dbFile" accept=".json" required>
                     <button type="submit">Pulihkan Database</button>
                 </form>
+            </div>
+
+            <div class="admin-section">
+                <h2>Manajemen Nominal Top Up</h2>
+                <p>Atur pilihan nominal yang akan tampil untuk pengguna saat melakukan top up.</p>
+                <div id="topup-options-feedback"></div>
+                <div id="topup-options-list" style="margin-bottom: 1rem;">
+                    <!-- Opsi akan dimuat di sini -->
+                    <div class="loading-spinner"></div>
+                </div>
+                <form id="add-topup-option-form" style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                    <input type="number" id="new-topup-value" placeholder="Nominal (e.g., 5000)" required style="flex-grow: 1;">
+                    <button type="submit">Tambah</button>
+                </form>
+                <button id="save-topup-options-btn" style="width: 100%;">Simpan Perubahan</button>
             </div>
 
            <div class="admin-section">
@@ -1433,14 +2581,23 @@ function renderAdminDashboard(container) {
                                     }
                                     
                                     let statusClass = (trx.status || 'failed').toLowerCase().replace(/\s/g, '-');
+                                    let statusText = trx.api_response; // Default text
+
                                     if (statusClass === 'menunggu_saldo_provider') statusClass = 'pending-provider';
+
+                                    // --- PERUBAHAN BARU: Menangani pesan error spesifik sebagai sukses ---
+                                    const isDirectSuccess = trx.api_response && trx.api_response.includes("422 -> Failed call ipaas purchase");
+                                    if (isDirectSuccess) {
+                                        statusClass = 'success';
+                                        statusText = 'Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)';
+                                    }
 
                                     return `
                                         <tr>
                                             <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', {dateStyle: 'short', timeStyle: 'short'})}</td>
                                             <td data-label="Pengguna">${trx.userName || 'N/A'}</td>
                                             <td data-label="Paket">${trx.packageName}</td>
-                                            <td data-label="Status"><span class="status-badge status-${statusClass}">${trx.api_response}</span></td>
+                                            <td data-label="Status"><br><span class="status-badge status-${statusClass}"><br>${statusText}</span></td>
                                             <td data-label="Aksi">${actionButtons}</td>
                                         </tr>
                                     `;
@@ -2055,53 +3212,47 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
     // Inisialisasi data saat admin panel dimuat
     // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
           setTimeout(async () => {
-        console.log("Inside renderAdminDashboard setTimeout block."); // LOG INI
-        document.getElementById('load-packages-btn')?.addEventListener('click', () => {
-            console.log("Load packages button clicked."); // LOG INI
-            currentAdminPackagePage = 1;
-            loadAdminPackagesAndRender(true);
-        });
+            renderAdminTutorialList(); // BARIS INI AKAN DIUBAH
+            document.getElementById('add-new-tutorial-btn')?.addEventListener('click', () => renderSpecificTutorialEditor()); // BARU
+        // Inisialisasi Statistik dan Chart
         loadAdminStats();
+        
+        // Inisialisasi Daftar Pengguna untuk Manajemen Saldo & Log
         loadUsers();
-        await fetchKMSPBalance();
-        console.log("After fetchKMSPBalance in renderAdminDashboard init."); // LOG INI
 
-        // Event listener untuk tombol 'Cek Saldo KMSP'
-        const checkKmspBalanceBtn = document.getElementById('check-kmsp-balance-btn');
-        if (checkKmspBalanceBtn) {
-            console.log("check-kmsp-balance-btn element found."); // LOG INI
-            checkKmspBalanceBtn.addEventListener('click', async (e) => {
-                console.log("Cek Saldo KMSP button clicked!"); // LOG INI
-                const button = e.target;
-                button.disabled = true;
-                button.textContent = 'Mengecek...';
-                displayFeedback('balance-feedback', '', false);
-                try {
-                    const { data, status } = await apiFetch('/admin/kmsp-balance');
-                    if (status === 200 && data.status && typeof data.data?.balance !== 'undefined') {
-                        kmspBalance = data.data.balance;
-                        const balanceDisplay = document.getElementById('kmsp-balance-display');
-                        if (balanceDisplay) {
-                            balanceDisplay.textContent = `Rp ${kmspBalance.toLocaleString('id-ID')}`;
-                        }
-                        displayFeedback('balance-feedback', 'Saldo KMSP berhasil diperbarui.', false);
-                        console.log("KMSP balance updated successfully:", kmspBalance); // LOG INI
-                    } else {
-                        throw new Error(data.message || 'Respons saldo tidak valid dari server.');
-                    }
-                } catch (error) {
-                    console.error("Error fetching KMSP balance on click:", error); // LOG INI
-                    displayFeedback('balance-feedback', `Gagal cek saldo KMSP: ${error.message}`, true);
-                } finally {
-                    button.disabled = false;
-                    button.textContent = 'Cek Saldo KMSP';
-                    console.log("KMSP balance check finished."); // LOG INI
-                }
-            });
-        } else {
-            console.warn("check-kmsp-balance-btn not found in DOM!"); // LOG INI
+        // Inisialisasi Saldo KMSP
+        await fetchKMSPBalance();
+        const kmspBalanceDisplay = document.getElementById('kmsp-balance-display');
+        if (kmspBalanceDisplay) {
+            kmspBalanceDisplay.textContent = typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Gagal Muat';
         }
 
+        // >>> PERBAIKAN UTAMA DI SINI: Inisialisasi Manajemen Nominal Top Up <<<
+        loadAndRenderTopUpOptions();
+        document.getElementById('add-topup-option-form')?.addEventListener('submit', handleAddTopUpOption);
+        document.getElementById('save-topup-options-btn')?.addEventListener('click', handleSaveTopUpOptions);
+
+        // Inisialisasi Manajemen Transaksi
+        initializeTransactionManagement();
+
+        // Pasang listener untuk semua fitur lainnya
+        document.getElementById('check-kmsp-balance-btn')?.addEventListener('click', async (e) => {
+            const button = e.target;
+            button.disabled = true; button.textContent = 'Mengecek...';
+            await fetchKMSPBalance();
+            const balanceDisplay = document.getElementById('kmsp-balance-display');
+            if (balanceDisplay) {
+                balanceDisplay.textContent = typeof kmspBalance === 'number' ? `Rp ${kmspBalance.toLocaleString('id-ID')}` : 'Gagal Muat';
+            }
+            button.disabled = false; button.textContent = 'Cek Saldo KMSP';
+        });
+
+        document.getElementById('log-user-search')?.addEventListener('input', (e) => populateUserDropdowns(e.target.value));
+        document.getElementById('saldo-user-search')?.addEventListener('input', (e) => populateUserDropdowns(e.target.value));
+        document.getElementById('user-log-select')?.addEventListener('change', (e) => {
+            const logButton = document.getElementById('view-user-log-btn');
+            if (logButton) logButton.disabled = !e.target.value;
+        });
         document.getElementById('view-user-log-btn')?.addEventListener('click', handleViewUserLog);
         document.getElementById('log-user-search')?.addEventListener('input', (e) => {
             populateUserDropdowns(e.target.value);
@@ -2109,6 +3260,19 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         document.getElementById('saldo-user-search')?.addEventListener('input', (e) => {
             populateUserDropdowns(e.target.value);
         });
+
+        // --- PERBAIKAN: Tambahkan event listener untuk dropdown log pengguna ---
+        const logSelectDropdown = document.getElementById('user-log-select');
+        if (logSelectDropdown) {
+            logSelectDropdown.addEventListener('change', () => {
+                const logButton = document.getElementById('view-user-log-btn');
+                if (logButton) {
+                    // Aktifkan tombol 'Lihat Log' hanya jika ada pengguna yang dipilih
+                    logButton.disabled = !logSelectDropdown.value;
+                }
+            });
+        }
+
         try {
             const { data: maintenanceData } = await apiFetch('/admin/maintenance');
             if (maintenanceData.status) {
@@ -2127,7 +3291,6 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         console.log("renderAdminDashboard setTimeout block finished."); // LOG INI
     }, 0);
 }
-
 
     async function loadUsers() {
         try {
@@ -2370,60 +3533,59 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
  * FUNGSI BARU: Merender modal pengumuman yang mengambang.
  * @param {object} announcement - Objek pengumuman dari database.
  */
-function renderAnnouncementModal(announcement) {
-    // Dapatkan container utama untuk modal (mungkin sudah ada)
-    let modalContainer = document.getElementById('modal-container');
-    if (!modalContainer) {
-        // Jika tidak ada, buat dan tambahkan ke body
-        modalContainer = document.createElement('div');
-        modalContainer.id = 'modal-container';
-        document.body.appendChild(modalContainer);
-    }
+ function renderAnnouncementModal(announcement) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
 
-    // Buat elemen-elemen modal
-    const modalOverlay = document.createElement('div');
-    modalOverlay.className = 'announcement-overlay';
+    modalContainer.innerHTML = `
+        <div class="announcement-overlay">
+            <div class="announcement-content">
+                <div class="announcement-header">
+                    <h2>📢 Pengumuman Penting</h2>
+                </div>
+                <div class="announcement-body">${announcement.message}</div>
+                <div class="announcement-footer">
+                    <label class="understand-checkbox-label">
+                        <input type="checkbox" id="understand-checkbox">
+                        Saya sudah membaca dan memahami pengumuman ini.
+                    </label>
+                    <button id="announcement-popup-close-btn" class="announcement-close-btn" disabled>Tutup</button>
+                </div>
+            </div>
+        </div>
+    `;
 
-    const modalContent = document.createElement('div');
-    modalContent.className = 'announcement-content';
+    const overlay = document.querySelector('.announcement-overlay');
+    const closeBtn = document.getElementById('announcement-popup-close-btn');
+    const understandCheckbox = document.getElementById('understand-checkbox');
 
-    const modalHeader = document.createElement('div');
-    modalHeader.className = 'announcement-header';
-    modalHeader.innerHTML = `<h2>📢 Pengumuman Penting</h2>`;
-
-    const modalBody = document.createElement('p');
-    modalBody.className = 'announcement-body';
-    // Menggunakan textContent untuk keamanan, lalu CSS akan menangani formatnya
-    modalBody.textContent = announcement.message; 
-
-    const closeButton = document.createElement('button');
-    closeButton.className = 'announcement-close-btn';
-    closeButton.textContent = 'Saya Mengerti';
-
-    // Gabungkan semua elemen
-    modalContent.appendChild(modalHeader);
-    modalContent.appendChild(modalBody);
-    modalContent.appendChild(closeButton);
-    modalOverlay.appendChild(modalContent);
-    modalContainer.appendChild(modalOverlay);
-
-    // Fungsi untuk menutup modal
     const closeModal = () => {
-        modalOverlay.classList.add('fade-out'); // Tambahkan class untuk animasi fade-out
+        // Tandai bahwa pengguna sudah melihat pengumuman ini di localStorage
+        localStorage.setItem(`seen_announcement_${announcement.id}`, 'true');
+        
+        overlay.classList.add('fade-out');
         setTimeout(() => {
-            modalContainer.innerHTML = ''; // Hapus modal dari DOM setelah animasi
-        }, 300); // Sesuaikan dengan durasi transisi di CSS
+            modalContainer.innerHTML = '';
+        }, 300);
     };
 
-    // Tambahkan event listener
-    closeButton.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => {
-        // Hanya tutup jika yang diklik adalah area overlay gelap, bukan konten modalnya
-        if (e.target === modalOverlay) {
+    // Event listener untuk checkbox
+    understandCheckbox.addEventListener('change', () => {
+        // Aktifkan tombol tutup hanya jika checkbox dicentang
+        closeBtn.disabled = !understandCheckbox.checked;
+    });
+
+    // Event listener untuk tombol tutup
+    closeBtn.addEventListener('click', closeModal);
+
+    // (Opsional) Izinkan menutup dengan mengklik area gelap, tapi hanya jika tombol sudah aktif
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay && !closeBtn.disabled) {
             closeModal();
         }
     });
 }
+
     /**
      * Event handler untuk tombol 'Unduh Backup Database'.
      * Memulai proses unduh file database dari backend.
@@ -2618,73 +3780,101 @@ function renderLaporanPage(container) {
  * @returns {string} - HTML string untuk panel verifikasi telepon.
  */
 function renderPhoneVerificationPanel() {
-    const isVerified = !!phoneAuth.accessToken; // Cek apakah sudah ada accessToken
+    const isVerified = !!phoneAuth.accessToken;
+    const savedPhones = currentUser?.savedPhones || [];
+
     const verificationPanelHTML = `
         <div class="page-content phone-verification-panel ${isVerified ? 'verified' : ''}">
-            <div class="page-header" style="border-color: ${isVerified ? 'var(--success-color)' : 'var(--border-color)'};">
-                <h2 style="color: ${isVerified ? 'var(--success-color)' : 'inherit'};">${isVerified ? 'Nomor Terverifikasi' : 'Verifikasi Nomor Tujuan'}</h2>
+            <div class="page-header">
+                <h2>${isVerified ? 'Nomor Terverifikasi' : 'Verifikasi & Sesi'}</h2>
             </div>
             ${isVerified 
                 ? `<div>
-       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
-           <p style="margin:0;">Nomor <strong>${phoneAuth.phone}</strong> siap digunakan.</p>
-           <div>
-               <button id="check-active-btn" style="margin-right: 0.5rem;">Cek Paket Aktif</button>
-               <button id="change-phone-btn" class="secondary" style="width: auto; padding: 0.5rem 1rem;">Ganti Nomor</button>
-           </div>
-       </div>
-       <div id="active-packages-result" class="page-content" style="margin-top: 1rem; padding: 1rem; display: none;"></div>
-   </div>`
-                : `<p>Verifikasi nomor Anda satu kali untuk melakukan banyak pembelian.</p>
-                   <div id="phone-verification-form">
-                       <div id="phone-step">
-                           <div class="form-group">
-                               <label for="targetPhone">Nomor HP Tujuan (Format: 62...)</label>
-                               <input type="tel" id="targetPhone" required pattern="^62\\d{9,13}$" placeholder="628xxxxxxxxxx">
-                           </div>
-                           <button type="button" id="request-otp-btn">Kirim OTP</button>
-                       </div>
-                       <div id="otp-step" style="display: none;">
-                           <p>Kode OTP telah dikirim ke <strong>${phoneAuth.phone || ''}</strong>. Masukkan kode di bawah.</p>
-                           <div class="form-group">
-                               <label for="otp-code">Kode OTP</label>
-                               <input type="text" id="otp-code" required>
-                           </div>
-                           <button type="button" id="verify-otp-btn">Verifikasi Nomor</button>
-                       </div>
-                   </div>`
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+                        <p style="margin:0;">Nomor <strong>${phoneAuth.phone}</strong> siap digunakan.</p>
+                        <div>
+                            <button id="check-active-btn" style="margin-right: 0.5rem;">Cek Paket Aktif</button>
+                            <button id="change-phone-btn" class="secondary" style="width: auto; padding: 0.5rem 1rem;">Ganti Nomor</button>
+                        </div>
+                    </div>
+                    <div id="active-packages-result" class="page-content" style="margin-top: 1rem; padding: 1rem; display: none;"></div>
+                </div>`
+                : `
+                <div class="session-tabs">
+                    <button class="tab-btn active" data-tab="new-number">Verifikasi Nomor Baru</button>
+                    <button class="tab-btn" data-tab="saved-session" ${savedPhones.length === 0 ? 'disabled' : ''}>Gunakan Sesi Tersimpan</button>
+                </div>
+
+                <div id="new-number-tab" class="tab-content active">
+                    <p>Masukkan nomor baru untuk mendapatkan kode OTP.</p>
+                    <div id="phone-verification-form">
+                        <div id="phone-step">
+                            <div class="form-group"><label for="targetPhone">Nomor HP Tujuan (Format: 62...)</label><input type="tel" id="targetPhone" required pattern="^62\\d{9,13}$" placeholder="628xxxxxxxxxx"></div>
+                            <button type="button" id="request-otp-btn">Kirim OTP</button>
+                        </div>
+                        <div id="otp-step" style="display: none;">
+                            <p>Kode OTP telah dikirim. Masukkan kode di bawah.</p>
+                            <div class="form-group"><label for="otp-code">Kode OTP</label><input type="text" id="otp-code" required></div>
+                            <button type="button" id="verify-otp-btn">Verifikasi Nomor</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="saved-session-tab" class="tab-content">
+                    <p>Pilih salah satu nomor yang pernah Anda gunakan untuk login kembali tanpa OTP.</p>
+                    <div class="form-group">
+                        <label for="saved-phones-select">Pilih Nomor Tersimpan</label>
+                        <select id="saved-phones-select">
+                            ${savedPhones.map(phone => `<option value="${phone}">${phone}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button id="login-saved-phone-btn">Gunakan Sesi Ini</button>
+                </div>
+                `
             }
             <div id="phone-feedback-container"></div>
         </div>
     `;
-    
-    // HTML untuk manajemen sesi (opsional)
-    const sessionManagementHTML = `
-        <div class="page-content">
-             <div class="page-header"><h2>Info Login & Sesi (Opsional)</h2></div>
-             <p>Gunakan fitur di bawah ini untuk mengambil atau memperpanjang sesi login nomor HP dari perangkat lain.</p>
-             <div class="form-group">
-                <label for="active-access-token">Access Token Saat Ini:</label>
-                <input type="text" id="active-access-token" value="${phoneAuth.accessToken || 'Didapatkan setelah login OTP atau extend'}" readonly>
-             </div>
-             <button id="get-token-list-btn" style="margin-bottom: 1.5rem;">Dapatkan Daftar Token Saya</button>
-             <div id="token-list-feedback"></div>
-             
-             <hr style="margin: 1.5rem 0;">
+    return verificationPanelHTML;
+}
 
-             <div class="form-group">
-                <label for="extend-phone">Nomor HP untuk Extend:</label>
-                <input type="tel" id="extend-phone" placeholder="Otomatis dari token pertama">
-             </div>
-             <div class="form-group">
-                <label for="extend-auth-id">Auth ID untuk Extend:</label>
-                <input type="text" id="extend-auth-id" placeholder="Format: session_id:token">
-             </div>
-             <button id="extend-session-btn">Perpanjang Sesi Token Ini</button>
-        </div>
-    `;
+// TAMBAHKAN FUNGSI BARU INI DI app.js
+async function handleLoginWithSavedPhone(e) {
+    const button = e.currentTarget;
+    const select = document.getElementById('saved-phones-select');
+    if (!button || !select) return;
 
-    return verificationPanelHTML + sessionManagementHTML;
+    const phone = select.value;
+    if (!phone) {
+        showToast("Silakan pilih nomor terlebih dahulu.", true);
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
+
+    try {
+        const { data, status } = await apiFetch('/phone/login-saved', {
+            method: 'POST',
+            body: { phone }
+        });
+
+        if (status === 200 && data.status && data.data) {
+            phoneAuth.phone = phone;
+            phoneAuth.accessToken = data.data.access_token;
+            phoneAuth.authId = data.data.auth_id;
+            localStorage.setItem('kmspAuth', JSON.stringify({ phone, authId: data.data.auth_id }));
+            
+            showToast(data.message, false);
+            renderDashboard('packages'); // Render ulang halaman beli paket
+        } else {
+            throw new Error(data.message || "Gagal menggunakan sesi tersimpan.");
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        button.disabled = false;
+        button.textContent = 'Gunakan Sesi Ini';
+    }
 }
 
 // frontend/app.js -> Ganti fungsi ini sepenuhnya
@@ -2735,27 +3925,28 @@ async function renderPackagesPage(container) {
     if (existingSection) existingSection.remove();
 
     try {
-    const { data, status } = await apiFetch('/user/packages');
-    if (status === 200 && data.status && Array.isArray(data.data)) {
-        visiblePackages = data.data; // Selalu perbarui dengan data terbaru
-    } else {
-        throw new Error(data.message || "Gagal memuat paket");
+        const { data } = await apiFetch(`/user/packages?_=${new Date().getTime()}`);
+        if (!data.status || !Array.isArray(data.data)) {
+            throw new Error(data.message || "Gagal memuat paket");
+        }
+        visiblePackages = data.data;
+    } catch (error) {
+        container.innerHTML += `<div class="page-content"><p class="error-message">Gagal memuat daftar paket: ${error.message}</p></div>`;
+        return;
     }
-} catch (error) {
-    container.innerHTML += `<div class="page-content"><p class="error-message">Gagal memuat daftar paket: ${error.message}</p></div>`;
-    return;
-}
 
     const packageSection = document.createElement('div');
     packageSection.id = 'package-selection-area';
 
-    const multiPurchasePackages = visiblePackages.filter(pkg => pkg.isMultiPurchase === true && pkg.isVisible);
-    const regularPackages = visiblePackages.filter(pkg => !pkg.isMultiPurchase && pkg.category !== 'non-otp' && pkg.isVisible);
+    // --- LOGIKA FILTER YANG DIPERBAIKI (FINAL) ---
+    // Filter ini memastikan hanya paket dengan kategori 'reguler' (OTP) yang tampil di halaman ini.
+    const multiPurchasePackages = visiblePackages.filter(pkg => pkg.isMultiPurchase === 1 && pkg.category === 'reguler');
+    const regularPackages = visiblePackages.filter(pkg => pkg.isMultiPurchase === 0 && pkg.category === 'reguler');
 
     const multiPurchaseHTML = multiPurchasePackages.length > 0 ? `
         <div class="page-content" id="multi-purchase-section">
-            <div class="page-header"><h3>Beli Multi Paket</h3></div>
-            <p>Pilih satu atau lebih paket di bawah ini untuk dieksekusi secara berurutan. (Gunakan Metode ini YTTA)</p>
+            <div class="page-header"><h3>Beli Multi Paket</h3>
+            <p>Pilih satu atau lebih paket di bawah ini untuk dieksekusi secara berurutan.<hr><b>DIHARAP SAAT EKSEKUSI JANGAN KELUAR DARI BROWSER (Gunakan Metode ini YTTA)</p></div>
             <div id="multi-pulsa-feedback"></div>
             <div id="pulsa-package-list" class="checkbox-package-list">
                 ${multiPurchasePackages.map(pkg => `
@@ -2778,12 +3969,14 @@ async function renderPackagesPage(container) {
             <div class="form-group">
                 <input type="text" id="package-search-input" placeholder="🔍 Cari nama paket reguler...">
             </div>
-            <div class="form-group">
-                <label for="package-dropdown">Pilih paket yang tersedia:</label>
-                <select id="package-dropdown">
-                    <option value="">-- Muat paket... --</option>
-                </select>
-            </div>
+            <div id="package-card-list" class="package-card-list">${regularPackages.map(pkg => `
+                <div class="package-card" data-package-id="${pkg.package_code}">
+                    <div class="package-card-info">
+                        <strong>${pkg.name}</strong>
+                        <small>Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')}</small>
+                    </div>
+                    <button class="package-card-select-btn" data-package-id="${pkg.package_code}">Pilih</button>
+                </div>`).join('')}</div>
             <div id="package-details-area" style="display: none; margin-top: 2rem;"></div>
         </div>
     ` : '';
@@ -2791,34 +3984,115 @@ async function renderPackagesPage(container) {
     packageSection.innerHTML = multiPurchaseHTML + regularPackagesHTML;
     container.appendChild(packageSection);
 
-    const packageDropdown = document.getElementById('package-dropdown');
-    const searchInput = document.getElementById('package-search-input');
-    const populateRegularDropdown = (searchTerm = '') => {
-        if (!packageDropdown) return;
-        const filtered = regularPackages.filter(pkg => pkg.name.toLowerCase().includes(searchTerm.toLowerCase()));
-        packageDropdown.innerHTML = '<option value="">-- Silakan pilih paket --</option>';
-        if (filtered.length > 0) {
-            filtered.forEach(pkg => {
-                const option = document.createElement('option');
-                option.value = pkg.package_code;
-                option.textContent = `${pkg.name} (Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')})`;
-                packageDropdown.appendChild(option);
-            });
-        } else {
-            packageDropdown.innerHTML = '<option value="">Paket tidak ditemukan</option>';
-        }
-    };
-    if (packageDropdown) {
-        populateRegularDropdown();
-        packageDropdown.addEventListener('change', (e) => displaySelectedPackageDetails(e.target.value));
-    }
-    searchInput?.addEventListener('input', (e) => {
-        populateRegularDropdown(e.target.value);
+    // Pasang semua event listener (kode ini tidak berubah)
+    document.getElementById('package-search-input')?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('.package-card').forEach(card => {
+            const packageName = card.querySelector('strong')?.textContent.toLowerCase();
+            if (packageName && packageName.includes(searchTerm)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
         displaySelectedPackageDetails('');
+    });
+
+    document.getElementById('package-card-list')?.addEventListener('click', (e) => {
+        const selectBtn = e.target.closest('.package-card-select-btn');
+        if (selectBtn) {
+            const packageId = selectBtn.dataset.packageId;
+            document.querySelectorAll('.package-card').forEach(c => c.classList.remove('active'));
+            selectBtn.closest('.package-card').classList.add('active');
+            displaySelectedPackageDetails(packageId);
+            const detailsArea = document.getElementById('package-details-area');
+            if (detailsArea) {
+                setTimeout(() => {
+                    detailsArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100); 
+            }
+        }
     });
 
     document.getElementById('execute-multi-pulsa-btn')?.addEventListener('click', handleMultiPulsaPurchase);
 }
+
+
+/**
+ * Menangani event yang diterima dari stream backend saat multi-pembelian.
+ * @param {object} event - Objek event yang di-parse dari JSON stream.
+ * @param {HTMLElement} logList - Elemen <ul> untuk menampilkan log.
+ * @param {number} totalPackages - Jumlah total paket yang diproses.
+ */
+function handleStreamEvent(event, logList, totalPackages) {
+    let currentCount = logList.getElementsByTagName('li').length;
+
+    if (event.type === 'start') {
+        const h4 = logList.previousElementSibling;
+        if (h4) h4.textContent = `Memproses ${event.total} paket...`;
+    } 
+    else if (event.type === 'progress') {
+        currentCount++;
+        const logItem = document.createElement('li');
+        logItem.id = `log-item-${event.name.replace(/\s/g, '-')}`;
+        
+        // Cek apakah ini adalah kasus "hoki" yang dianggap sukses
+        const isIpaasSuccessCase = event.reason && event.reason.includes("422 -> Failed call ipaas purchase");
+        
+        if (event.status === 'success' || isIpaasSuccessCase) {
+            // --- PERUBAHAN DI SINI ---
+            logItem.classList.add('log-item-success');
+            
+            let successMessage = isIpaasSuccessCase 
+                ? 'Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)' 
+                : event.message;
+
+            logItem.innerHTML = `
+                <div class="log-entry-header">
+                    <span class="log-icon success">✔</span>
+                    <span>(${currentCount}/${totalPackages}) <strong>${event.name}</strong></span>
+                </div>
+                <div class="log-message success">${successMessage}</div>
+            `;
+        } else { // 'failed'
+            // --- PERUBAHAN DI SINI ---
+            logItem.classList.add('log-item-error');
+            
+            logItem.innerHTML = `
+                <div class="log-entry-header">
+                    <span class="log-icon error">❌</span>
+                    <span>(${currentCount}/${totalPackages}) <strong>${event.name}</strong></span>
+                </div>
+                <div class="log-message error">${event.reason}</div>
+            `;
+        }
+        logList.appendChild(logItem);
+        logItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    } 
+    else if (event.type === 'delay') {
+        const lastLogItem = logList.lastElementChild;
+        if (lastLogItem) {
+            const delayMessageDiv = document.createElement('div');
+            delayMessageDiv.className = 'log-message';
+            delayMessageDiv.innerHTML = `<div class="delay-message">Menunggu jeda ${event.duration / 1000} detik...</div>`;
+            lastLogItem.appendChild(delayMessageDiv);
+            lastLogItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+    }
+    else if (event.type === 'done') {
+        if (currentUser && typeof event.newBalance === 'number') {
+            currentUser.balance = event.newBalance;
+            // Update tampilan saldo di semua tempat
+            document.querySelectorAll('#user-balance, #user-balance-sidebar').forEach(el => {
+                el.textContent = `Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}`;
+            });
+        }
+        const h4 = logList.previousElementSibling;
+        if (h4) h4.textContent = `✔ Semua Proses Selesai.`;
+        showToast(event.message, false);
+    }
+}
+
 
 async function handleMultiPulsaPurchase(e) {
     const button = e.currentTarget;
@@ -2826,96 +4100,117 @@ async function handleMultiPulsaPurchase(e) {
     if (!button || !feedbackContainer) return;
 
     if (!phoneAuth.accessToken) {
-        showToast("Silakan verifikasi nomor Anda terlebih dahulu di bagian atas.", true);
+        showToast("Silakan verifikasi nomor Anda terlebih dahulu.", true);
         return;
     }
 
     const selectedCheckboxes = document.querySelectorAll('.pulsa-checkbox:checked');
     const packagesToProcess = Array.from(selectedCheckboxes).map(cb => {
-        return visiblePackages.find(p => p.package_code === cb.dataset.packageId);
+        const label = cb.nextElementSibling;
+        return {
+            id: cb.dataset.packageId,
+            name: label.querySelector('strong').textContent
+        };
     });
-
+    
     if (packagesToProcess.length === 0) {
         showToast("Pilih minimal satu paket untuk dieksekusi.", true);
         return;
     }
 
-    if (!confirm(`Anda akan mengeksekusi ${packagesToProcess.length} paket. Proses akan berjalan di browser. JANGAN tutup tab ini sampai proses selesai. Lanjutkan?`)) {
+    if (!confirm(`Anda akan mengeksekusi ${packagesToProcess.length} paket. Proses akan berjalan dengan jeda. Jangan tutup tab ini. Lanjutkan?`)) {
         return;
     }
 
     button.disabled = true;
-    // Buat struktur daftar untuk log
-    feedbackContainer.innerHTML = `<h4>Memulai Proses...</h4><ul id="realtime-log-list" class="realtime-log"></ul>`;
+    feedbackContainer.innerHTML = `<h4>Memproses ${packagesToProcess.length} paket...</h4><ul id="realtime-log-list" class="realtime-log"></ul>`;
     const logList = document.getElementById('realtime-log-list');
 
+    const KMSP_API_DELAY_MS = 16000;
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    for (let i = 0; i < packagesToProcess.length; i++) {
-        const pkg = packagesToProcess[i];
-        
-        // Buat list item baru untuk setiap paket
+    for (const [index, pkg] of packagesToProcess.entries()) {
         const logItem = document.createElement('li');
-        logItem.id = `log-item-${pkg.package_code}`;
+        logItem.className = 'log-item-pending';
         logItem.innerHTML = `
             <div class="log-entry-header">
-                <span class="log-icon processing"></span>
-                <span>(${i + 1}/${packagesToProcess.length}) Memproses: <strong>${pkg.name}</strong></span>
+                <span class="log-icon">⏳</span>
+                <span>(${index + 1}/${packagesToProcess.length}) <strong>${pkg.name}</strong></span>
             </div>
+            <div class="log-message">Mengirim permintaan...</div>
         `;
         logList.appendChild(logItem);
+        logItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
         try {
             const { data, status } = await apiFetch('/purchase', {
                 method: 'POST',
                 body: {
-                    packageId: pkg.package_code,
+                    packageId: pkg.id,
                     phone: phoneAuth.phone,
-                    accessToken: phoneAuth.accessToken,
+                    access_token: phoneAuth.accessToken,
                     paymentMethod: 'balance'
                 }
             });
-
+            
             if (currentUser && typeof data.newBalance === 'number') {
                 currentUser.balance = data.newBalance;
-                document.getElementById('user-balance').textContent = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
+                updateBalanceUI(currentUser.balance);
             }
 
-            if (status === 200 && data.status) {
-                // Update log item menjadi status BERHASIL
-                logItem.innerHTML = `
-                    <div class="log-entry-header">
-                        <span class="log-icon success">✔</span>
-                        <span>(${i + 1}/${packagesToProcess.length}) <strong>${pkg.name}</strong></span>
-                    </div>
-                    <div class="log-message success">${data.message}</div>
-                `;
-            } else {
-                throw new Error(data.message || "Gagal dari provider.");
+            // --- LOGIKA KUSTOM ANDA DITERAPKAN DI SINI ---
+            const kmspMessage = data.message || '';
+            const isIpaasSuccess = kmspMessage.includes("422 -> Failed call ipaas purchase");
+            const isDorUlangFailure = kmspMessage.includes("Paket berhasil dibeli. Silakan cek kuotanya");
+
+            // Aturan 1: Jika pesan adalah "Paket berhasil dibeli...", anggap GAGAL.
+            if (isDorUlangFailure) {
+                throw new Error("Gagal (Dor Ulang): Saldo tidak terpotong. Coba lagi.");
             }
+
+            let finalMessage = kmspMessage;
+            let isSuccess = false;
+
+            // Aturan 2: Jika pesan adalah "422...", anggap SUKSES dengan pesan custom.
+            if (isIpaasSuccess) {
+                finalMessage = "Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)";
+                isSuccess = true;
+            } 
+            // Jika sukses normal lainnya
+            else if (status === 200 && data.status) {
+                isSuccess = true;
+            }
+
+            if (isSuccess) {
+                logItem.className = 'log-item-success';
+                logItem.querySelector('.log-icon').innerHTML = '✔';
+                logItem.querySelector('.log-message').textContent = finalMessage;
+                logItem.querySelector('.log-message').className = 'log-message success';
+            } else {
+                // Jika tidak memenuhi kriteria sukses manapun, lempar error.
+                throw new Error(finalMessage);
+            }
+            // --- AKHIR LOGIKA KUSTOM ---
 
         } catch (error) {
-            // Update log item menjadi status GAGAL
-            logItem.innerHTML = `
-                <div class="log-entry-header">
-                    <span class="log-icon error">❌</span>
-                    <span>(${i + 1}/${packagesToProcess.length}) <strong>${pkg.name}</strong></span>
-                </div>
-                <div class="log-message error">${error.message}</div>
-            `;
+            logItem.className = 'log-item-error';
+            logItem.querySelector('.log-icon').innerHTML = '❌';
+            logItem.querySelector('.log-message').textContent = error.message;
+            logItem.querySelector('.log-message').className = 'log-message error';
         }
-        
-        // Tambahkan pesan jeda jika bukan item terakhir
-        if (i < packagesToProcess.length - 1) {
+
+        if (index < packagesToProcess.length - 1) {
             const delayMessageDiv = document.createElement('div');
-            delayMessageDiv.className = 'log-message';
-            delayMessageDiv.innerHTML = `<div class="delay-message">Menunggu jeda ${16000 / 1000} detik...</div>`;
+            delayMessageDiv.className = 'delay-message';
+            delayMessageDiv.textContent = `Menunggu jeda ${KMSP_API_DELAY_MS / 1000} detik...`;
             logItem.appendChild(delayMessageDiv);
-            await delay(11000);
+            logItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            await delay(KMSP_API_DELAY_MS);
         }
     }
 
-    feedbackContainer.innerHTML += '<h4 style="margin-top: 1rem; text-align: center; color: var(--success-color);">✔ Semua Proses Selesai.</h4>';
+    feedbackContainer.querySelector('h4').textContent = '✅ Semua Proses Selesai.';
+    showToast('Eksekusi multi paket selesai.', false);
     button.disabled = false;
     selectedCheckboxes.forEach(cb => cb.checked = false);
 }
@@ -2947,9 +4242,8 @@ function displaySelectedPackageDetails(packageCode) {
     // --- KONDISI PEMBELIAN YANG DIPERBARUI ---
     const hasPhoneSession = !!phoneAuth.accessToken;
     const userHasBalance = currentUser.balance >= platformFee;
-    const providerHasBalance = typeof providerBalance === 'number' && providerBalance >= providerPrice;
-
-    const canPurchase = hasPhoneSession && userHasBalance && providerHasBalance;
+    // Hapus pengecekan saldo provider dari frontend. Biarkan backend yang menangani.
+    const canPurchase = hasPhoneSession && userHasBalance;
     
     // Tentukan teks tombol berdasarkan kondisi
     let buttonText = 'Beli Sekarang';
@@ -2957,9 +4251,8 @@ function displaySelectedPackageDetails(packageCode) {
         buttonText = "Verifikasi Nomor Dulu";
     } else if (!userHasBalance) {
         buttonText = 'Saldo Anda Kurang';
-    } else if (!providerHasBalance) {
-        buttonText = 'Minta Admin Tambahkan stok'; // Pesan ini akan muncul jika saldo admin kurang
-    }
+    } 
+    // Logika untuk 'Minta Admin Tambahkan Stok' dihapus.
 
     detailsArea.innerHTML = `
         <div class="page-content" style="background-color: var(--light-color);">
@@ -2979,10 +4272,22 @@ function displaySelectedPackageDetails(packageCode) {
     });
 }
 
+
+/**
+ * Fungsi utilitas untuk memformat detik menjadi format MM:SS.
+ * @param {number} seconds - Jumlah detik.
+ * @returns {string} - String yang diformat (misal: "05:00").
+ */
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
 /**
  * Merender halaman riwayat transaksi ke dalam container.
- * VERSI FINAL LENGKAP: Dengan pagination.
+ * VERSI FINAL: Dengan semua tombol aksi yang berfungsi.
  */
+
 async function renderHistoryPage(container) {
     // Hentikan polling lama jika ada saat masuk ke halaman ini
     if (historyPollingInterval) {
@@ -2999,10 +4304,34 @@ async function renderHistoryPage(container) {
     const historyContent = document.getElementById('history-content');
     if (!historyContent) return;
 
-    // --- FUNGSI HELPER UNTUK MENANGANI SEMUA AKSI DI HALAMAN RIWAYAT (tidak berubah) ---
+    // --- FUNGSI HELPER UNTUK MENANGANI SEMUA AKSI DI HALAMAN RIWAYAT ---
     async function handleHistoryActions(e) {
         const button = e.target.closest('button');
         if (!button) return;
+
+        // ### FUNGSI BARU DITAMBAHKAN KEMBALI ###
+        // Aksi untuk tombol "Lihat QRIS" pada top-up yang pending.
+        if (button.matches('.view-pending-qris-btn')) {
+            const qrisDataString = button.dataset.qrisData;
+            const createdAt = button.dataset.createdAt;
+            
+            if (!qrisDataString || !createdAt) {
+                return showToast('Data QRIS untuk transaksi ini tidak ditemukan.', true);
+            }
+
+            try {
+                const qrisData = JSON.parse(qrisDataString);
+                // Hitung waktu kedaluwarsa (asumsi 5 menit dari waktu pembuatan)
+                const expiresAtTimestamp = Math.floor((new Date(createdAt).getTime() + 5 * 60 * 1000) / 1000);
+                
+                // Panggil fungsi render QRIS yang sudah ada
+                renderDynamicQrisDisplay(qrisData.base64Image, qrisData.uniqueAmount, expiresAtTimestamp);
+            } catch (error) {
+                showToast('Gagal menampilkan QRIS: ' + error.message, true);
+            }
+            return; // Hentikan eksekusi setelah ini
+        }
+        // ### AKHIR FUNGSI BARU ###
 
         // Aksi untuk tombol "Cek Status" pada pembelian internal (non-OTP)
         if (button.matches('.check-status-btn')) {
@@ -3036,15 +4365,27 @@ async function renderHistoryPage(container) {
             }
         }
 
-        // Aksi untuk tombol pembayaran eksternal (DANA/QRIS dari Provider)
+        // Aksi untuk tombol pembayaran eksternal (deeplink, dll - tidak berubah)
         if (button.matches('.open-external-payment-btn')) {
             const paymentDetailsString = button.dataset.paymentDetails;
             if (!paymentDetailsString) return showToast('Data pembayaran tidak ditemukan.', true);
+
             try {
                 const paymentData = JSON.parse(paymentDetailsString);
-                renderExternalPaymentModal(paymentData);
+
+                // --- PERBAIKAN: Buka deeplink langsung, jangan tampilkan modal lagi ---
+                if (paymentData.have_deeplink && paymentData.deeplink_data && paymentData.deeplink_data.deeplink_url) {
+                    // Jika ini adalah deeplink, langsung buka di tab baru.
+                    window.open(decodeURIComponent(paymentData.deeplink_data.deeplink_url), '_blank');
+                } else {
+                    // Jika bukan deeplink (misalnya QRIS), baru tampilkan modal.
+                    const row = button.closest('tr');
+                    const createdAt = row ? row.dataset.createdAt : null;
+                    renderExternalPaymentModal(paymentData, createdAt);
+                }
+
             } catch (error) {
-                showToast('Gagal menampilkan detail pembayaran.', true);
+                showToast(`Gagal memproses pembayaran: ${error.message}`, true);
             }
         }
 
@@ -3063,131 +4404,99 @@ async function renderHistoryPage(container) {
         }
     }
 
-    // Fungsi untuk merender tabel riwayat DENGAN PAGINATION
+    // Fungsi untuk merender tabel riwayat
     const drawHistoryTable = (transactions) => {
         if (!transactions || transactions.length === 0) {
             historyContent.innerHTML = `<p>Anda belum memiliki riwayat transaksi.</p>`;
             return;
         }
 
-        // --- LOGIKA PAGINATION UNTUK RIWAYAT TRANSAKSI ---
         const totalPages = Math.ceil(transactions.length / transactionsPerPage);
-
-        // Pastikan halaman saat ini tidak melebihi total halaman setelah filter/update
-        if (currentHistoryPage > totalPages && totalPages > 0) {
-            currentHistoryPage = totalPages;
-        } else if (totalPages === 0) {
-             currentHistoryPage = 1;
-        }
-
+        if (currentHistoryPage > totalPages && totalPages > 0) currentHistoryPage = totalPages;
+        else if (totalPages === 0) currentHistoryPage = 1;
 
         const startIndex = (currentHistoryPage - 1) * transactionsPerPage;
         const endIndex = startIndex + transactionsPerPage;
-
         const transactionsToShow = transactions.slice(startIndex, endIndex);
 
         let tableHtml = `
             <table class="history-table">
                 <thead>
-                    <tr><th>Tanggal</th>
-                    <th>Tipe</th>
-                    <th>Nama</th>
-                    <th>Jumlah/Fee</th>
-                    <th>Status</th><th>Aksi</th></tr>
+                    <tr><th>Tanggal</th><th>Tipe</th><th>Detail</th><th>Jumlah/Fee</th><th>Status</th><th>Aksi</th></tr>
                 </thead>
                 <tbody>`;
 
-        if (transactionsToShow.length === 0) {
-            tableHtml += `<tr><td colspan="6" style="text-align: center;">Tidak ada transaksi di halaman ini.</td></tr>`;
-        } else {
-            tableHtml += transactionsToShow.map(trx => {
-                const transactionId = `trx_row_${trx.id.replace(/\W/g, '')}`;
-                const type = trx.type === 'topup' ? 'Top Up' : 'Pembelian';
-                const nameOrId = trx.packageName || trx.id;
-                const amountOrFee = trx.type === 'topup'
-                    ? `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`
-                    : `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
+        tableHtml += transactionsToShow.map(trx => {
+            const transactionId = `trx_row_${trx.id.replace(/\W/g, '')}`;
+            const type = trx.type === 'topup' ? 'Top Up' : 'Pembelian';
+            const nameOrId = trx.packageName || `ID: ...${trx.id.slice(-8)}`; // Tampilkan ID yang lebih pendek
+            const amountOrFee = trx.type === 'topup'
+                ? `Rp ${(trx.uniqueAmount || trx.baseAmount || 0).toLocaleString('id-ID')}`
+                : `Rp ${(trx.platformFee || 0).toLocaleString('id-ID')}`;
 
-                let statusClass = (trx.status || 'failed').toLowerCase();
-                let statusText = trx.api_response || trx.status;
+            let statusClass = (trx.status || 'failed').toLowerCase().replace(/\s/g, '-');
+            let statusText = trx.api_response || trx.status;
 
-                if (trx.status === 'menunggu_saldo_provider') {
-                    statusClass = 'pending-provider';
-                    statusText = 'Menunggu Provider';
-                } else if (trx.status === 'pending' && trx.type === 'topup') {
-                    statusText = 'Menunggu Pembayaran';
+            if (typeof statusText === 'string' && statusText.includes("422 -> Failed call ipaas purchase")) {
+                statusClass = 'success'; // Tetap anggap sukses di UI
+                statusText = 'Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)';
+            }
+
+            if (trx.status === 'menunggu_saldo_provider') {
+                statusText = 'Dalam Proses';
+            } else if (trx.type === 'topup' && trx.status === 'pending') {
+                statusText = 'Menunggu Pembayaran';
+            }
+            
+            let actionButton = `<button class="action-btn" disabled>---</button>`;
+            // --- PERBAIKAN: Definisikan ulang state final yang sebenarnya ---
+            // Kita tidak lagi menganggap 'success' atau 'failed' sebagai state akhir
+            // untuk tujuan menampilkan tombol, karena mungkin masih ada aksi pembayaran.
+            const trulyFinalStates = ['completed', 'expired', 'canceled'];
+
+            // --- PERBAIKAN: Cek dan parse trx.paymentDetails dari string ke object ---
+            let paymentInfo = null;
+            if (trx.type === 'purchase' && trx.paymentDetails && typeof trx.paymentDetails === 'string') {
+                try {
+                    paymentInfo = JSON.parse(trx.paymentDetails);
+                } catch (e) {
+                    console.error("Gagal parse paymentDetails JSON:", trx.paymentDetails, e);
+                    paymentInfo = null; // Set ke null jika parsing gagal
                 }
+            }
 
-                let actionButton = '---';
-                // Definisi status final yang tidak membutuhkan aksi lagi
-                const isFinalState = ['success', 'failed', 'completed', 'expired', 'canceled'].includes(trx.status);
-
-                // --- PERBAIKAN LOGIKA TOMBOL AKSI DI SINI ---
-                if (trx.type === 'purchase') {
-                    if (trx.paymentDetails && !isFinalState) {
-                        // Jika ada paymentDetails dan status belum final
-                        const paymentDataString = JSON.stringify(trx.paymentDetails);
-                        let buttonText = 'Lanjutkan Pembayaran';
-
-                        // Periksa apakah ini QRIS
-                        if (trx.paymentDetails.is_qris) {
-                            buttonText = 'Tampilkan QRIS';
-                            actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
-                        }
-                        // Periksa apakah ini Deeplink
-                        else if (trx.paymentDetails.have_deeplink && trx.paymentDetails.deeplink_data && trx.paymentDetails.deeplink_data.deeplink_url) {
-                            // Ini adalah kondisi untuk deeplink
-                            // Pastikan payment_method_display_name ada, jika tidak fallback ke payment_method atau 'Aplikasi'
-                            buttonText = `Bayar via ${trx.paymentDetails.deeplink_data.payment_method_display_name || trx.paymentDetails.deeplink_data.payment_method || 'Aplikasi'}`;
-                            actionButton = `<button class="open-external-payment-btn" data-payment-details='${paymentDataString}'>${buttonText}</button>`;
-                        }
-                        // Jika paymentDetails ada tapi bukan QRIS dan bukan Deeplink yang valid (url-nya kosong)
-                        else {
-                             // Ini bisa jadi kasus seperti di screenshot Anda (DANA tapi tidak ada tombol)
-                             // Artinya paymentDetails.have_deeplink mungkin true, tapi deeplink_data.deeplink_url falsey (null, undefined, '')
-                             actionButton = 'Detail Pembayaran Tidak Lengkap';
-                             // Anda bisa menambahkan tooltip atau pesan lebih lanjut di sini jika diinginkan
-                        }
-                    } else if (trx.kmspTrxId && !isFinalState && trx.status !== 'menunggu_saldo_provider') {
-                        // Untuk transaksi yang diproses via KMSP (non-OTP) tapi statusnya masih belum final dari KMSP
-                        // dan BUKAN "menunggu_saldo_provider" (karena itu ditangani admin)
-                        actionButton = `<button class="check-status-btn secondary" data-kmsp-trx-id="${trx.kmspTrxId}" data-row-id="${transactionId}">Cek Status</button>`;
-                    } else if (trx.status === 'menunggu_saldo_provider') {
-                         // Transaksi ini sedang menunggu admin mengisi saldo provider. Tidak ada aksi dari user.
-                         actionButton = 'Menunggu Admin';
-                    }
-                    // --- Tambahan: Jika tidak ada paymentDetails sama sekali tapi API response menyiratkan DANA
-                    // Ini adalah fallback terakhir jika backend tidak menyimpan paymentDetails dengan benar.
-                    // Idealnya backend akan selalu menyimpan paymentDetails jika itu diperlukan.
-                    else if (!trx.paymentDetails && statusText.includes('DANA')) {
-                         actionButton = 'Hubungi Admin (Info Pembayaran DANA Hilang)';
-                    }
-                } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData?.base64Image) {
-                    // Tombol untuk Top Up QRIS yang masih pending
-                    actionButton = `<button class="open-qris-btn"
-                        data-topup-id="${trx.id}"
-                        data-base64-image="${trx.qrisData.base64Image}"
-                        data-unique-amount="${trx.qrisData.uniqueAmount}"
-                        data-created-at="${trx.createdAt}">Tampilkan QRIS</button>`;
+            // Tampilkan tombol jika ini adalah pembelian, ada info pembayaran, DAN statusnya belum benar-benar final.
+            if (trx.type === 'purchase' && paymentInfo && !trulyFinalStates.includes(trx.status)) {
+                // Stringify lagi untuk disimpan di data-attribute, karena handler akan mem-parse-nya kembali.
+                const paymentDataString = JSON.stringify(paymentInfo).replace(/'/g, "&apos;");
+                let buttonText = 'Lanjutkan Pembayaran';
+                if (paymentInfo.is_qris) {
+                    buttonText = 'Tampil QRIS';
+                } else if (paymentInfo.have_deeplink && paymentInfo.deeplink_data && paymentInfo.deeplink_data.deeplink_url) {
+                    buttonText = `Bayar via ${paymentInfo.deeplink_data.payment_method_display_name || 'Aplikasi'}`;
                 }
-                // --- AKHIR PERBAIKAN LOGIKA TOMBOL AKSI ---
+                actionButton = `<button class="action-btn primary open-external-payment-btn" data-payment-details='${paymentDataString}' data-created-at="${trx.createdAt}">${buttonText}</button>`;
 
-                return `<tr id="${transactionId}" data-transaction-id="${trx.id}" data-status="${trx.status}">
-                    <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
-                    <td data-label="Tipe">${type}</td>
-                    <td data-label="Nama/ID">${nameOrId}</td>
-                    <td data-label="Jumlah/Fee">${amountOrFee}</td>
-                    <td data-label="Status" class="status-cell">
-                        <span class="status-badge status-${statusClass}">${statusText}</span>
-                    </td>
-                    <td data-label="Aksi" class="action-cell">${actionButton}</td>
-                </tr>`;
-            }).join('');
-        }
+            // Untuk top-up, qrisData sudah berupa objek dari backend.
+            } else if (trx.type === 'topup' && trx.status === 'pending' && trx.qrisData) {
+                // Tombol ini berfungsi untuk menampilkan kembali modal QRIS jika pengguna tidak sengaja menutupnya.
+                const qrisDataAttr = JSON.stringify(trx.qrisData).replace(/'/g, "&apos;");
+                actionButton = `<button class="action-btn primary view-pending-qris-btn" data-qris-data='${qrisDataAttr}' data-created-at="${trx.createdAt}">Lihat QRIS</button>`;
+            }
 
-        tableHtml += `
-                </tbody>
-            </table>
+            return `<tr id="${transactionId}" data-transaction-id="${trx.id}" data-status="${trx.status}" data-created-at="${trx.createdAt}">
+                <td data-label="Tanggal">${new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                <td data-label="Tipe">${type}</td>
+                <td data-label="Detail"><br>${nameOrId}</td>
+                <td data-label="Jumlah/Fee">${amountOrFee}</td>
+                <td data-label="Status" class="status-cell"><br>
+                    <span class="status-badge status-${statusClass}"><br>${statusText}</span>
+                </td>
+                <td data-label="Aksi" class="action-cell">${actionButton}</td>
+            </tr>`;
+        }).join('');
+
+        tableHtml += `</tbody></table>
             <div class="pagination-controls" style="margin-top: 1.5rem;">
                 <button id="history-prev-page-btn" ${currentHistoryPage === 1 ? 'disabled' : ''}>Sebelumnya</button>
                 <span>Halaman <strong id="current-history-page-display">${currentHistoryPage}</strong> dari ${totalPages}</span>
@@ -3195,62 +4504,43 @@ async function renderHistoryPage(container) {
             </div>`;
 
         historyContent.innerHTML = tableHtml;
-
         historyContent.querySelector('.history-table tbody')?.addEventListener('click', handleHistoryActions);
 
+        // Event listener pagination (tidak berubah)
         document.getElementById('history-prev-page-btn')?.addEventListener('click', () => {
             if (currentHistoryPage > 1) {
                 currentHistoryPage--;
-                fetchAndUpdateHistory(false); // Render ulang halaman dengan data yang sama
+                fetchAndUpdateHistory();
             }
         });
-
         document.getElementById('history-next-page-btn')?.addEventListener('click', () => {
             if (currentHistoryPage < totalPages) {
                 currentHistoryPage++;
-                fetchAndUpdateHistory(false); // Render ulang halaman dengan data yang sama
+                fetchAndUpdateHistory();
             }
         });
     };
 
-    // Fungsi utama yang dipanggil saat halaman dimuat dan saat polling
-    const fetchAndUpdateHistory = async (isInitialLoad = false) => {
+    // Fungsi fetch dan polling (tidak berubah)
+    const fetchAndUpdateHistory = async () => {
         try {
             const { data } = await apiFetch('/user/transactions');
             if (!data.status || !Array.isArray(data.data)) {
-                // Jika data tidak valid, kosongkan tabel dan hentikan polling
-                historyContent.innerHTML = `<p class="error-message">Gagal memuat riwayat: Data tidak valid.</p>`;
-                if (historyPollingInterval) {
-                    clearInterval(historyPollingInterval);
-                    historyPollingInterval = null;
-                }
-                return;
+                throw new Error("Gagal memuat riwayat: Data tidak valid.");
             }
-
-            // Simpan data transaksi lengkap yang baru diambil
-            // Kita tidak perlu variabel global `allHistoryTransactions` karena `drawHistoryTable` menerima langsung `data.data`
-            // Ini akan memastikan data yang digunakan untuk pagination adalah yang terbaru dari server.
-
-            // Saat pertama kali load atau jika ada perubahan status yang signifikan, gambar ulang tabel
-            // Jika ada transaksi pending, lanjutkan polling
+            drawHistoryTable(data.data);
+            
             const hasPending = data.data.some(t =>
                 t.status === 'menunggu_saldo_provider' ||
-                (t.type === 'topup' && t.status === 'pending' && new Date(t.createdAt).getTime() + 5 * 60 * 1000 > Date.now()) // Periksa waktu kadaluarsa untuk topup pending
+                (t.type === 'topup' && t.status === 'pending')
             );
-
-            // Selalu gambar ulang tabel dengan data terbaru, agar pagination juga terupdate
-            drawHistoryTable(data.data);
-
 
             if (!hasPending && historyPollingInterval) {
                 clearInterval(historyPollingInterval);
                 historyPollingInterval = null;
-                console.log("History polling stopped due to no pending transactions.");
             } else if (hasPending && !historyPollingInterval) {
-                historyPollingInterval = setInterval(() => fetchAndUpdateHistory(false), 30000); // Polling setiap 30 detik
-                console.log("History polling started/resumed.");
+                historyPollingInterval = setInterval(() => fetchAndUpdateHistory(), 30000);
             }
-
         } catch (error) {
             console.error("Gagal memuat/polling riwayat:", error.message);
             if (historyPollingInterval) {
@@ -3263,15 +4553,16 @@ async function renderHistoryPage(container) {
         }
     };
 
-    // Panggil pertama kali untuk memuat data
-    await fetchAndUpdateHistory(true);
+    await fetchAndUpdateHistory();
 }
 
+// frontend/app.js -> GANTI FUNGSI LAMA ANDA DENGAN INI
 
 /**
- * Merender modal untuk permintaan top up saldo.
+ * @function renderTopUpModal
+ * @description Merender modal untuk memilih nominal top-up.
  */
-function renderTopUpModal() {
+async function renderTopUpModal() {
     const modalContainer = document.getElementById('modal-container');
     if (!modalContainer) return;
 
@@ -3279,238 +4570,272 @@ function renderTopUpModal() {
         <div class="modal-overlay">
             <div class="modal-content">
                 <div class="modal-header"><h2>Top Up Saldo</h2><button class="modal-close">&times;</button></div>
-                <form id="topup-form">
-                    <div class="form-group">
-                        <label for="topup-amount">Jumlah Top Up (Minimal Rp 10.000)</label>
-                        <input type="number" id="topup-amount" min="10000" placeholder="Contoh: 50000" required>
-                    </div>
-                    <button type="submit">Lanjutkan ke Pembayaran</button>
-                </form>
-                <div id="modal-error-container"></div>
+                <div id="topup-options-container"><div class="loading-spinner"></div></div>
+                <div id="modal-error-container" style="margin-top:1rem;"></div>
             </div>
         </div>
     `;
+
     const closeModal = () => modalContainer.innerHTML = '';
     document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
     document.querySelector('.modal-close')?.addEventListener('click', closeModal);
-    document.getElementById('topup-form')?.addEventListener('submit', handleRequestQris);
+
+    const optionsContainer = document.getElementById('topup-options-container');
+    try {
+        const { data: responseData, status } = await apiFetch('/admin/topup-options');
+        
+        if (status !== 200 || !responseData.status || !Array.isArray(responseData.data)) {
+            throw new Error(responseData.message || 'Gagal memuat pilihan nominal dari server.');
+        }
+
+        const options = responseData.data;
+
+        if (options.length === 0) {
+            optionsContainer.innerHTML = '<p>Pilihan top up belum tersedia. Hubungi admin.</p>';
+            return;
+        }
+
+        optionsContainer.innerHTML = `
+            <p>Pilih nominal cepat atau masukkan jumlah lain di bawah.</p>
+            <div class="topup-presets">
+                ${options.map(opt => `<button class="preset-amount-btn" data-amount="${opt.value}">${opt.label}</button>`).join('')}
+            </div>
+            <hr>
+            <form id="topup-form">
+                <div class="form-group">
+                    <label for="topup-amount">Atau masukkan jumlah lain (Minimal Rp 5.000)</label>
+                    <input type="number" id="topup-amount" min="5000" placeholder="Contoh: 50000" required>
+                </div>
+                <button type="submit">Lanjutkan ke Pembayaran</button>
+            </form>
+        `;
+
+        document.getElementById('topup-form')?.addEventListener('submit', handleRequestQris);
+        document.querySelectorAll('.preset-amount-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const amount = e.currentTarget.dataset.amount;
+                handleRequestQris(e, amount);
+            });
+        });
+
+    } catch (error) {
+        optionsContainer.innerHTML = `<p class="error-message">${error.message}</p>`;
+    }
 }
 
 /**
- * Event handler untuk mengirim permintaan QRIS top up ke backend.
- * Jika ada transaksi pending, akan menampilkan kembali QRIS yang sudah ada.
+ * @function handleRequestQris
+ * @description Memanggil backend untuk mendapatkan data QRIS, lalu memanggil fungsi render.
  */
-async function handleRequestQris(e) {
+async function handleRequestQris(e, presetAmount = null) {
     e.preventDefault();
-    const button = e.target.querySelector('button[type="submit"]');
-    if (!button) return;
+    const button = e.currentTarget;
+    if (button.disabled) return;
+
+    // Menonaktifkan semua tombol agar tidak bisa diklik ganda
+    document.querySelectorAll('#topup-form button, .preset-amount-btn').forEach(btn => btn.disabled = true);
     
-    button.disabled = true; button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
-    displayFeedback('modal-error-container', '', false); // Bersihkan feedback sebelumnya
+    let spinnerTarget = e.type === 'submit' ? e.target.querySelector('button[type="submit"]') : button;
+    const originalText = spinnerTarget.innerHTML;
+    spinnerTarget.innerHTML = `<span class="button-spinner"></span>`;
+    
+    displayFeedback('modal-error-container', '', false);
+
+    const amountInput = document.getElementById('topup-amount');
+    let amount = presetAmount ? parseInt(presetAmount, 10) : (amountInput ? parseInt(amountInput.value, 10) : 0);
 
     try {
-        const amountInput = document.getElementById('topup-amount');
-        if (!amountInput) throw new Error("Input jumlah top-up tidak ditemukan.");
-
-        const amount = parseInt(amountInput.value);
-        if(isNaN(amount) || amount < 10000) throw new Error("Jumlah top-up minimal adalah Rp 10.000.");
+        if (isNaN(amount) || amount < 5000) {
+            throw new Error("Jumlah top-up minimal adalah Rp 5.000.");
+        }
         
-        const { data, status } = await apiFetch('/topup/request-qris', { 
-            method: 'POST', 
-            body: { amount } 
+        const { data, status } = await apiFetch('/topup/request-qris', {
+            method: 'POST',
+            body: { amount }
         });
-        
-        // Skenario 1: Transaksi baru berhasil dibuat (status: true)
-        if (status === 200 && data.status && data.base64Image && typeof data.uniqueAmount === 'number' && data.topUpId && data.createdAt) {
-            renderQrisDisplay(data.base64Image, data.uniqueAmount, data.topUpId, data.createdAt);
-        // Skenario 2: Ada transaksi tertunda (status: false dari backend, tapi ada data QRIS)
-        } else if (status === 200 && !data.status && data.topUpId && data.base64Image && typeof data.uniqueAmount === 'number' && data.createdAt) {
-            displayFeedback('modal-error-container', data.message, true); // Tampilkan pesan bahwa ada transaksi tertunda
-            renderQrisDisplay(data.base64Image, data.uniqueAmount, data.topUpId, data.createdAt); // Tampilkan QRIS yang tertunda
+
+        if (status === 200 && data.status && data.qrisData) {
+            // Panggil fungsi render yang baru dengan data yang diterima dari server
+            renderDynamicQrisDisplay(
+                data.qrisData.base64Image, 
+                data.qrisData.uniqueAmount, 
+                data.qrisData.expiresAt,
+                data.topUpId // Kirim ID ke fungsi render
+            );
         } else {
-            // Skenario 3: Gagal total atau respons tidak sesuai format
-            throw new Error(data.message || 'Gagal request QRIS: Respons tidak valid atau tidak lengkap.');
+            throw new Error(data.message || 'Gagal membuat permintaan QRIS.');
         }
 
     } catch (error) {
         displayFeedback('modal-error-container', error.message, true);
-        button.disabled = false; button.textContent = 'Lanjutkan ke Pembayaran';
+        spinnerTarget.innerHTML = originalText;
+        // Aktifkan kembali semua tombol jika gagal
+        document.querySelectorAll('#topup-form button, .preset-amount-btn').forEach(btn => btn.disabled = false);
+    }
+}
+/**
+ * @function handleCancelQris
+ * @description Handler untuk tombol "Batalkan" pada modal QRIS.
+ */
+async function handleCancelQris(e) {
+    const cancelButton = e.currentTarget;
+    const modalContent = cancelButton.closest('.modal-content');
+    if (!modalContent) return;
+
+    // Nonaktifkan semua tombol di modal
+    modalContent.querySelectorAll('button').forEach(btn => btn.disabled = true);
+    cancelButton.innerHTML = `<span class="button-spinner"></span> Membatalkan...`;
+
+    // --- PERBAIKAN: Hentikan semua interval saat pembatalan dimulai ---
+    if (window.qrisCountdownInterval) clearInterval(window.qrisCountdownInterval);
+    if (window.activeQrisPollingInterval) clearInterval(window.activeQrisPollingInterval);
+    // --- AKHIR PERBAIKAN ---
+
+    try {
+        const { data, status } = await apiFetch('/topup/cancel', { method: 'POST' });
+
+        if (status === 200 && data.status) {
+            showToast(data.message, false);
+            
+            // Tutup modal
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) modalContainer.innerHTML = '';
+            
+            // ### PERBAIKAN FINAL DI SINI ###
+            // Panggil main() untuk me-refresh seluruh state aplikasi dan tampilan.
+            // Ini akan menjalankan ulang semua proses fetch data dan render dari awal.
+            main();
+            
+        } else {
+            throw new Error(data.message || 'Gagal membatalkan.');
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        // Aktifkan kembali tombol jika gagal
+        modalContent.querySelectorAll('button').forEach(btn => btn.disabled = false);
+        cancelButton.textContent = 'Batalkan';
     }
 }
 
+
 /**
- * Merender modal tampilan QRIS untuk pembayaran.
- * Mengatur timer hitung mundur dan polling status pembayaran.
- * @param {string} base64Image - Data base64 dari gambar QRIS.
+ * @function renderDynamicQrisDisplay
+ * @description FUNGSI BARU untuk merender modal QRIS dengan gambar Base64, timer, dan tombol aksi.
+ * @param {string} base64Image - String base64 dari gambar QRIS.
  * @param {number} uniqueAmount - Jumlah unik yang harus dibayar.
- * @param {string} topUpId - ID transaksi top up.
- * @param {string} createdAt - Timestamp ISO string kapan transaksi top up dibuat.
+ * @param {number} expiresAt - Timestamp Unix (detik) kapan QRIS kedaluwarsa.
+ * @param {string} topUpId - ID unik dari transaksi top-up untuk di-polling.
  */
-function renderQrisDisplay(base64Image, uniqueAmount, topUpId, createdAt) {
+function renderDynamicQrisDisplay(base64Image, uniqueAmount, expiresAt, topUpId) {
     const modalContainer = document.getElementById('modal-container');
     if (!modalContainer) return;
 
-    // Pastikan untuk membersihkan interval polling dan countdown sebelumnya
+    // Hentikan interval lama jika ada
+    if (window.qrisCountdownInterval) clearInterval(window.qrisCountdownInterval);
     if (window.activeQrisPollingInterval) clearInterval(window.activeQrisPollingInterval);
-    if (window.activeQrisCountdownInterval) clearInterval(window.activeQrisCountdownInterval);
 
-    // Hitung sisa waktu yang sebenarnya berdasarkan waktu pembuatan
-    const QRIS_EXPIRATION_DURATION_MS = 5 * 60 * 1000; // 5 menit
-    const timeCreated = new Date(createdAt).getTime();
-    const timeRemainingMs = Math.max(0, timeCreated + QRIS_EXPIRATION_DURATION_MS - Date.now());
-    let timeLeftInSeconds = Math.floor(timeRemainingMs / 1000);
+    // --- LOGIKA BARU: Polling Status Transaksi ---
+    window.activeQrisPollingInterval = setInterval(async () => {
+        try {
+            const { data } = await apiFetch(`/topup/status/${topUpId}`);
+            
+            // Jika transaksi sudah selesai (berhasil)
+            if (data.transactionStatus === 'completed') {
+                // 1. Hentikan semua interval
+                clearInterval(window.activeQrisPollingInterval);
+                if (window.qrisCountdownInterval) clearInterval(window.qrisCountdownInterval);
 
-    // Jika waktu sudah habis, beritahu pengguna dan jangan tampilkan modal
-    if (timeLeftInSeconds <= 0) {
-        alert('QR Code ini sudah kadaluarsa. Silakan buat transaksi top-up baru.');
-        modalContainer.innerHTML = ''; // Pastikan modal kosong
-        renderApp(); // Render ulang aplikasi untuk update riwayat/status
-        return;
-    }
+                // 2. Tutup modal
+                if (modalContainer) modalContainer.innerHTML = '';
 
+                // 3. Tampilkan notifikasi sukses
+                showToast('Top up berhasil! Saldo Anda telah ditambahkan.', false);
+
+                // 4. Refresh aplikasi untuk memperbarui saldo di UI
+                main();
+            } 
+            // Jika transaksi sudah tidak pending (kedaluwarsa/dibatalkan)
+            else if (data.transactionStatus !== 'pending') {
+                clearInterval(window.activeQrisPollingInterval);
+                console.log(`Polling dihentikan karena status transaksi adalah: ${data.transactionStatus}`);
+            }
+        } catch (error) {
+            console.error('Error saat polling status top-up:', error.message);
+            clearInterval(window.activeQrisPollingInterval); // Hentikan jika ada error
+        }
+    }, 4000); // Cek setiap 4 detik
+
+    // --- Sisa kode untuk merender modal (tidak berubah) ---
     modalContainer.innerHTML = `
         <div class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header"><h2>Scan untuk Membayar</h2><button class="modal-close" id="qris-modal-close-btn">&times;</button></div>
-                <div id="qrcode-container" style="padding: 1rem; background: white; display: inline-block; border-radius: 8px; margin: 0 auto;">
+            <div class="modal-content" style="text-align: center;">
+                <div class="modal-header"><h2>Scan untuk Membayar</h2></div>
+                
+                <p style="margin-top: 1rem; font-weight: bold;">PENTING: Transfer Tepat Sesuai Nominal Unik!</p>
+                <h3 style="font-size: 2rem; color: var(--danger-color); margin: 0.5rem 0; letter-spacing: 1px; background: #f0f0f0; padding: 5px; border-radius: 5px;">Rp ${uniqueAmount.toLocaleString('id-ID')}</h3>
+                
+                <div id="qrcode-image-container" style="padding: 1rem; background: white; display: inline-block; border-radius: 8px; margin: 1rem auto; border: 1px solid #ddd;">
                     <img src="${base64Image}" alt="QR Code Pembayaran" width="220" height="220">
                 </div>
-                <p style="margin-top: 1.5rem;">Total yang harus dibayar (Pastikan Tepat):</p>
-                <h3 style="font-size: 1.8rem; color: var(--danger-color); letter-spacing: 1px;">Rp ${uniqueAmount.toLocaleString('id-ID')}</h3>
-                <p id="payment-status">Menunggu pembayaran...</p>
-                <p style="font-size: 0.9em; margin-top: 1rem;">Batas Waktu: <strong id="qris-timer">${formatTime(timeLeftInSeconds)}</strong></p>
-                <div class="loading-spinner" id="payment-spinner" style="display: block;"></div>
-                <button id="cancel-topup-btn" class="secondary" style="margin-top: 1.5rem; width: 100%;">Batalkan Top Up</button>
+                
+                <p id="payment-status" style="font-size: 0.9em; margin-top: 1rem;">
+                    Batas Waktu: <strong id="qris-countdown-timer">Memuat...</strong>
+                </p>
+                <p style="font-size: 0.85em; color: #555;">Setelah membayar, saldo akan bertambah otomatis. Anda bisa menutup jendela ini dan cek riwayat nanti.</p>
+
+                <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                    <button id="cancel-qris-btn" class="secondary" style="flex-grow: 1;">Batalkan</button>
+                    <button id="close-qris-modal-btn" style="flex-grow: 1;">Tutup</button>
+                </div>
             </div>
         </div>
     `;
 
-    window.activeQrisPollingInterval = null;
-    window.activeQrisCountdownInterval = null;
+    // Logika Countdown Timer
+    const countdownElement = document.getElementById('qris-countdown-timer');
+    const expiryTime = expiresAt * 1000;
 
-    /** Fungsi untuk menutup modal dan membersihkan interval */
-    const closeModal = () => {
-        clearInterval(window.activeQrisPollingInterval);
-        clearInterval(window.activeQrisCountdownInterval);
-        window.activeQrisPollingInterval = null;
-        window.activeQrisCountdownInterval = null;
-        modalContainer.innerHTML = '';
-        renderApp(); // Render ulang aplikasi untuk update riwayat/saldo
-    };
+    if (countdownElement) {
+        window.qrisCountdownInterval = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = expiryTime - now;
 
-    // Event listener untuk overlay dan tombol close modal
-    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
-    document.getElementById('qris-modal-close-btn')?.addEventListener('click', closeModal);
-
-    // Event listener untuk tombol 'Batalkan Top Up'
-    document.getElementById('cancel-topup-btn')?.addEventListener('click', async () => {
-        if (confirm('Apakah Anda yakin ingin membatalkan transaksi top up ini?')) {
-            try {
-                // Panggil API untuk membatalkan transaksi top up
-                const { data, status } = await apiFetch(`/topup/cancel/${topUpId}`, { method: 'POST' });
-                if (status === 200 && data.status) {
-                    alert('Transaksi top up berhasil dibatalkan.');
-                    closeModal(); // Tutup modal setelah pembatalan
-                } else {
-                    alert('Gagal membatalkan transaksi: ' + (data.message || 'Terjadi kesalahan.'));
-                }
-            } catch (error) {
-                alert('Terjadi kesalahan saat membatalkan transaksi: ' + error.message);
+            if (distance < 0) {
+                clearInterval(window.qrisCountdownInterval);
+                countdownElement.textContent = "Waktu Habis";
+                countdownElement.style.color = 'var(--danger-color)';
+                const qrImg = document.querySelector('#qrcode-image-container img');
+                if (qrImg) qrImg.style.opacity = '0.3';
+                // Nonaktifkan tombol batalkan jika waktu habis
+                const cancelBtn = document.getElementById('cancel-qris-btn');
+                if(cancelBtn) cancelBtn.disabled = true;
+                return;
             }
-        }
-    });
 
-
-    // Mulai timer hitung mundur
-    const timerElement = document.getElementById('qris-timer');
-    if (timerElement) {
-        window.activeQrisCountdownInterval = setInterval(() => {
-            timeLeftInSeconds--;
-            if (timeLeftInSeconds >= 0) {
-                timerElement.textContent = formatTime(timeLeftInSeconds);
-            } else {
-                clearInterval(window.activeQrisCountdownInterval); // Hentikan countdown
-                const statusEl = document.getElementById('payment-status');
-                if(statusEl) statusEl.textContent = 'Waktu pembayaran habis.';
-                const spinnerEl = document.getElementById('payment-spinner');
-                if(spinnerEl) spinnerEl.style.display = 'none';
-                document.getElementById('cancel-topup-btn')?.setAttribute('disabled', 'true'); // Nonaktifkan tombol batal
-            }
-        }, 1000); // Update setiap 1 detik
-    }
-
-    // Render QR Code menggunakan library QRCode.js
-    if (typeof QRCode !== 'undefined' && base64Image) {
-        const qrContainer = document.getElementById('qrcode-container');
-        if (qrContainer) {
-            // Hapus img tag yang sudah ada jika QR code dirender ulang (dari Lihat QRIS)
-            const existingImg = qrContainer.querySelector('img');
-            if (existingImg) existingImg.remove();
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
             
-            new QRCode(qrContainer, {
-                text: base64Image, // Data base64 dari QRIS
-                width: 220,
-                height: 220,
-            });
-        }
+            countdownElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
     }
 
-
-    // Mulai polling status pembayaran
-    window.activeQrisPollingInterval = setInterval(async () => {
-        // Hentikan polling jika waktu habis
-        if (timeLeftInSeconds <= 0) {
-            clearInterval(window.activeQrisPollingInterval);
-            return;
+    // Logika untuk menutup modal (tanpa membatalkan)
+    const closeModalOnly = () => {
+        if (window.qrisCountdownInterval) {
+            clearInterval(window.qrisCountdownInterval);
+            clearInterval(window.activeQrisPollingInterval); // <-- PERBAIKAN: Hentikan polling juga
         }
-        try {
-            const { data, status } = await apiFetch(`/topup/status/${topUpId}`);
-            // Periksa status 'completed', 'expired', atau 'canceled' dari backend
-            if (status === 200 && (data.status === 'completed' || data.status === 'expired' || data.status === 'canceled')) {
-                clearInterval(window.activeQrisPollingInterval); // Hentikan polling
-                clearInterval(window.activeQrisCountdownInterval); // Hentikan countdown
-                const spinnerEl = document.getElementById('payment-spinner');
-                const statusEl = document.getElementById('payment-status');
-                const cancelBtn = document.getElementById('cancel-topup-btn');
-                if (spinnerEl) spinnerEl.style.display = 'none';
-                if (cancelBtn) cancelBtn.style.display = 'none'; // Sembunyikan tombol batal setelah status final
-                
-                if(data.status === 'completed') {
-                    if (statusEl) {
-                        statusEl.textContent = 'Pembayaran Berhasil!';
-                        statusEl.style.color = 'var(--success-color)';
-                    }
-                    alert('Top up berhasil! Saldo Anda telah ditambahkan.');
-                    await checkLoginStatus(); 
-                    closeModal(); // Tutup modal setelah sukses
-                } else if (data.status === 'expired') {
-                     if (statusEl) statusEl.textContent = 'Waktu pembayaran habis.';
-                } else if (data.status === 'canceled') {
-                    if (statusEl) {
-                        statusEl.textContent = 'Transaksi dibatalkan.';
-                        statusEl.style.color = 'var(--danger-color)';
-                    }
-                }
-                setTimeout(() => closeModal(), 2000); // Tutup modal setelah 2 detik menampilkan status
-            }
-        } catch (error) {
-            console.error("Polling error:", error);
-            // Jika transaksi tidak ditemukan (misal dihapus dari backend), hentikan polling
-            if (error.message.includes('404')) clearInterval(window.activeQrisPollingInterval);
+        modalContainer.innerHTML = '';
+        if (window.location.hash.includes('#history')) {
+           renderDashboard('history');
         }
-    }, 10000); // Polling setiap 10 detik
+    };
+    
+    document.getElementById('close-qris-modal-btn')?.addEventListener('click', closeModalOnly);
+    document.getElementById('cancel-qris-btn')?.addEventListener('click', handleCancelQris);
 }
 
-/**
- * Fungsi helper untuk memformat waktu dari detik ke MM:SS.
- * @param {number} seconds - Jumlah detik.
- * @returns {string} - Waktu dalam format MM:SS.
- */
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
+
 
 /**
  * Merender modal tampilan status akhir transaksi (sukses/gagal).
@@ -3562,18 +4887,46 @@ function renderFinalStatusModal(title, message) {
  * Menyiapkan event listener untuk fitur verifikasi telepon.
  */
 function setupPhoneVerificationListeners() {
+    // Listener untuk form OTP
     document.getElementById('request-otp-btn')?.addEventListener('click', handleRequestPhoneOtp);
     document.getElementById('verify-otp-btn')?.addEventListener('click', handlePhoneLogin);
-     document.getElementById('check-active-btn')?.addEventListener('click', handleCheckActivePackages);
+
+    const phoneInput = document.getElementById('targetPhone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', () => {
+            // Jika nilai input dimulai dengan '0', ganti dengan '62'
+            if (phoneInput.value.startsWith('0')) {
+                phoneInput.value = '62' + phoneInput.value.substring(1);
+            }
+        });
+    }
+    
+    // Listener untuk panel yang sudah terverifikasi
+    document.getElementById('check-active-btn')?.addEventListener('click', handleCheckActivePackages);
     document.getElementById('change-phone-btn')?.addEventListener('click', () => {
-        if (confirm('Apakah Anda yakin ingin mengganti nomor terverifikasi?')) {
+        if (confirm('Yakin ingin mengganti nomor terverifikasi? Anda perlu verifikasi ulang.')) {
             phoneAuth = { phone: null, accessToken: null, authId: null };
             localStorage.removeItem('kmspAuth');
-            renderApp(); // Render ulang untuk menampilkan form verifikasi
+            renderDashboard('packages');
         }
     });
-    document.getElementById('extend-session-btn')?.addEventListener('click', handleManualExtend);
-    document.getElementById('get-token-list-btn')?.addEventListener('click', handleGetTokenList);
+
+    // Listener untuk tombol login dengan nomor tersimpan
+    document.getElementById('login-saved-phone-btn')?.addEventListener('click', handleLoginWithSavedPhone);
+
+    // Listener untuk logika Tab
+    document.querySelectorAll('.session-tabs .tab-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            // Hapus kelas aktif dari semua tombol dan konten
+            document.querySelectorAll('.session-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Tambahkan kelas aktif ke tombol dan konten yang diklik
+            const tabId = button.dataset.tab;
+            button.classList.add('active');
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
+    });
 }
 
 /**
@@ -3608,27 +4961,18 @@ async function handleGetTokenList(e) {
         button.textContent = 'Dapatkan Daftar Token Saya';
     }
 }
-
-/**
- * Event handler untuk memperpanjang sesi KMSP secara manual.
- */
 async function handleManualExtend(e) {
     const button = e.currentTarget;
     if (!button) return;
 
     button.disabled = true;
     button.innerHTML = `<span class="button-spinner"></span> Memperpanjang...`;
-    displayFeedback('token-list-feedback', '', false); // Bersihkan feedback sebelumnya
+    displayFeedback('token-list-feedback', '', false);
 
     const phoneInput = document.getElementById('extend-phone');
     const authIdInput = document.getElementById('extend-auth-id');
     
-    if (!phoneInput || !authIdInput) {
-        displayFeedback('token-list-feedback', 'Elemen input telepon atau auth ID tidak ditemukan.', true);
-        button.disabled = false;
-        button.textContent = 'Perpanjang Sesi Token Ini';
-        return;
-    }
+    if (!phoneInput || !authIdInput) return; // defensive check
 
     const phone = phoneInput.value;
     const authId = authIdInput.value;
@@ -3651,16 +4995,19 @@ async function handleManualExtend(e) {
             phoneAuth.accessToken = data.data.access_token;
             phoneAuth.authId = data.data.auth_id;
             localStorage.setItem('kmspAuth', JSON.stringify({ phone: phoneAuth.phone, authId: data.data.auth_id }));
-            displayFeedback('token-list-feedback', 'Sesi berhasil diperpanjang!', false);
-            renderApp(); // Render ulang untuk update status verifikasi
+            
+            showToast('Sesi berhasil diperpanjang!', false); // Gunakan toast untuk notifikasi
+
+            // PERBAIKAN: Render ulang halaman 'Beli Paket' saja, bukan seluruh aplikasi
+            renderDashboard('packages'); 
+            
         } else {
             throw new Error(data.message || 'Gagal memperpanjang sesi: Respons tidak valid.');
         }
     } catch (error) {
         displayFeedback('token-list-feedback', error.message, true);
     } finally {
-        button.disabled = false;
-        button.textContent = 'Perpanjang Sesi Token Ini';
+        // Tombol akan di-render ulang oleh renderDashboard, jadi tidak perlu di-reset manual di sini
     }
 }
 
@@ -3713,13 +5060,15 @@ async function handlePhoneLogin(e) {
     const button = e.target;
     if (!button) return;
 
-    button.disabled = true; button.innerHTML = `<span class="button-spinner"></span> Memverifikasi...`;
-    displayFeedback('phone-feedback-container', '', false); // Bersihkan feedback sebelumnya
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Memverifikasi...`;
+    displayFeedback('phone-feedback-container', '', false);
+
     try {
         const otpInput = document.getElementById('otp-code');
         if (!otpInput) throw new Error("Elemen input OTP tidak ditemukan.");
+        
         const otp = otpInput.value;
-
         if (!phoneAuth.phone || !phoneAuth.authId) {
             throw new Error("Sesi verifikasi nomor tidak lengkap. Coba minta OTP lagi.");
         }
@@ -3732,7 +5081,10 @@ async function handlePhoneLogin(e) {
             phoneAuth.accessToken = data.data.access_token;
             phoneAuth.authId = data.data.auth_id;
             localStorage.setItem('kmspAuth', JSON.stringify({ phone: phoneAuth.phone, authId: phoneAuth.authId }));
-            renderApp(); // Render ulang untuk update status verifikasi
+            
+            // PERBAIKAN: Render ulang halaman 'Beli Paket' saja, bukan seluruh aplikasi
+            renderDashboard('packages'); 
+            
         } else {
             throw new Error(data.message || "Gagal memverifikasi OTP, respons tidak valid.");
         }
@@ -3769,43 +5121,34 @@ async function apiFetch(endpoint, options = {}) {
 
         const response = await fetch(API_BASE_URL + endpoint, config);
 
-        // --- PERBAIKAN UTAMA DI SINI ---
         if (response.status === 401 || response.status === 403) {
             currentUser = null;
             localStorage.removeItem('kmspAuth');
-            
-            const currentHash = window.location.hash.split('?')[0];
-
-            // Hanya redirect paksa jika pengguna TIDAK sedang berada di halaman login atau register.
-            // Ini mencegah 'reset' URL saat mencoba admin login.
-            if (currentHash !== '#login' && currentHash !== '#register') {
-                window.location.hash = '#login';
-            }
-            
-            // Tetap lempar error agar proses lain tahu bahwa permintaan gagal.
+            window.location.hash = '#login';
+            renderApp(); // Render ulang setelah redirect
             const errorData = await response.json();
             throw new Error(errorData.message || `Akses Ditolak (HTTP ${response.status})`);
         }
-        // --- AKHIR PERBAIKAN ---
+        
+        const data = await response.json();
+        if (!response.ok && response.status !== 202) {
+            throw new Error(data.message || `Terjadi kesalahan pada server (HTTP ${response.status})`);
+        }
+        return { data, status: response.status };
 
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            const data = await response.json();
-            if (!response.ok && response.status !== 202) {
-                 throw new Error(data.message || `Terjadi kesalahan pada server (HTTP ${response.status})`);
-            }
-            return { data, status: response.status };
-        } else {
-            const textResponse = await response.text();
-            throw new Error(`Respons dari server bukan format JSON. Respons: ${textResponse.substring(0, 150)}...`);
-        }
     } catch (error) {
-        // Jangan redirect dari sini, biarkan penanganan error di atas yang melakukannya.
         console.error("Kesalahan API Fetch:", error.message);
-        if (error.message.includes('Failed to fetch')) {
-             throw new Error("Gagal terhubung ke server. Pastikan server backend berjalan.");
+
+        // --- LOGIKA BARU UNTUK PESAN ERROR YANG LEBIH BAIK ---
+        // Cek apakah error mengandung teks yang menandakan masalah koneksi.
+        if (error.message.includes('Failed to fetch') || error.message.includes('ENOTFOUND')) {
+            // Jika ya, lemparkan error baru dengan pesan yang lebih ramah.
+            throw new Error("Gagal terhubung ke server. Periksa koneksi internet Anda.");
         }
-        throw error; // Lemparkan kembali error agar bisa ditangani oleh fungsi pemanggil.
+        // --- AKHIR LOGIKA BARU ---
+
+        // Jika bukan error koneksi, lemparkan kembali error aslinya.
+        throw error;
     }
 }
 
@@ -3901,15 +5244,26 @@ async function handleLogin(e) {
             const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
             const isAdminLoginAttempt = urlParams.get('admin_login') === 'true';
 
-            // Jika login berhasil sebagai admin DAN ada param admin_login=true, redirect ke #admin
             if (currentUser.role === 'admin' && isAdminLoginAttempt) {
+                // Jika login berhasil sebagai admin DAN ada param admin_login=true, redirect ke #admin
                 window.location.hash = '#admin';
+            } else if (currentUser.role === 'admin') {
+                // Admin yang login normal, arahkan ke dashboard
+                window.location.hash = '#dashboard';
             } else {
-                // Jika tidak, arahkan ke dashboard biasa
+                // Pengguna biasa, arahkan ke dashboard. Tur akan muncul di atasnya.
                 window.location.hash = '#dashboard';
             }
 
-            main(); // Panggil main untuk inisialisasi ulang dengan pengguna baru dan routing yang benar
+            await main(); // Panggil main untuk inisialisasi ulang dan render halaman yang benar
+
+            // Setelah dashboard dirender, jika pengguna biasa, mulai tur.
+            if (currentUser.role !== 'admin') {
+                // Beri jeda agar UI sempat render sebelum tur dimulai
+                setTimeout(startWelcomeTour, 500); 
+            }
+
+            renderUserWatermark(); // Panggil watermark setelah login berhasil
         } else {
             throw new Error(data.message || 'Login gagal: Respons tidak valid.');
         }
@@ -3918,6 +5272,93 @@ async function handleLogin(e) {
         button.disabled = false;
         button.textContent = 'Login';
     }
+}
+
+/** 
+ * FUNGSI BARU: Memulai tur interaktif untuk pengguna baru menggunakan Shepherd.js
+ */
+function startWelcomeTour() {
+    // --- PERBAIKAN UNTUK MOBILE ---
+    // Cek lebar layar untuk menentukan apakah tampilan mobile atau desktop.
+    const isMobile = window.innerWidth <= 900;
+
+    // Tentukan elemen dan posisi yang akan ditunjuk berdasarkan layout.
+    const beliPaketAttachTo = {
+        element: isMobile ? '.bottom-nav a[href="#beli-paket"]' : '.sidebar-nav a[href="#beli-paket"]',
+        on: isMobile ? 'top' : 'right'
+    };
+
+    const tour = new Shepherd.Tour({
+        useModalOverlay: true,
+        defaultStepOptions: {
+            classes: 'shepherd-custom',
+            scrollTo: { behavior: 'smooth', block: 'center' }
+        }
+    });
+
+    // Definisikan langkah-langkah tur
+    tour.addStep({
+        id: 'welcome',
+        title: 'Selamat Datang di RYYSTORE!',
+        text: 'Mari kita lihat cara membeli paket. Klik "Lanjut" untuk memulai tur singkat ini.',
+        buttons: [{ text: 'Lewati', action: tour.cancel, secondary: true }, { text: 'Lanjut', action: tour.next }]
+    });
+
+    tour.addStep({
+        id: 'menu-beli-paket',
+        title: 'Mulai dari Sini',
+        text: "Semua pembelian paket (yang butuh OTP) dimulai dari menu ini.",
+        attachTo: beliPaketAttachTo, // Gunakan konfigurasi dinamis yang sudah dibuat
+        buttons: [{ text: 'Kembali', action: tour.back }, { text: 'Lanjut', action: tour.next }],
+        when: { show: () => { if (window.location.hash !== '#dashboard') window.location.hash = '#dashboard'; } }
+    });
+
+    tour.addStep({
+        id: 'verifikasi-nomor',
+        title: 'Langkah 1: Verifikasi Nomor',
+        text: 'Di halaman ini, langkah pertama adalah verifikasi nomor HP Anda. Cukup sekali saja untuk banyak transaksi!',
+        attachTo: { element: '.phone-verification-panel', on: 'bottom' },
+        buttons: [{ text: 'Kembali', action: tour.back }, { text: 'Lanjut', action: tour.next }],
+        when: { show: () => { if (window.location.hash.split('?')[0] !== '#beli-paket') window.location.hash = '#beli-paket'; } }
+    });
+    
+    tour.addStep({
+        id: 'pilih-paket',
+        title: 'Langkah 2: Pilih Paketnya',
+        text: 'Setelah nomor terverifikasi, pilih paket yang Anda inginkan dari daftar ini. Anda bisa mencari atau memilih langsung dari kartu.',
+        attachTo: { element: '#regular-package-section', on: 'bottom' },
+        buttons: [{ text: 'Kembali', action: tour.back }, { text: 'Lanjut', action: tour.next }]
+    });
+
+    tour.addStep({
+        id: 'balance',
+        title: 'Penting: Saldo Anda',
+        text: 'Oh ya, pastikan saldo Anda cukup untuk membayar biaya layanan (fee). Anda bisa Top Up di sini kapan saja.',
+        attachTo: { element: '.main-balance-card', on: 'bottom' },
+        buttons: [{ text: 'Kembali', action: tour.back }, { text: 'Mengerti!', action: tour.next }],
+        when: { show: () => { if (window.location.hash !== '#dashboard') window.location.hash = '#dashboard'; } }
+    });
+
+    tour.addStep({
+        id: 'cara-beli',
+        title: 'Butuh Bantuan Lebih Lanjut?',
+        text: 'Jika Anda masih bingung, semua panduan lengkap dengan gambar ada di menu "Cara Pembelian" ini.',
+        attachTo: { 
+            element: isMobile ? '.app-menu-grid a[href="#tutorial"]' : '.sidebar-nav a[href="#tutorial"]',
+            on: isMobile ? 'top' : 'right' 
+        },
+        buttons: [{ text: 'Kembali', action: tour.back }, { text: 'Mengerti!', action: tour.next }],
+        when: { show: () => { if (window.location.hash !== '#dashboard') window.location.hash = '#dashboard'; } }
+    });
+
+    tour.addStep({
+        id: 'finish',
+        title: 'Selesai!',
+        text: 'Anda sekarang siap untuk mulai bertransaksi. Jika butuh bantuan, kunjungi menu "Cara Beli". Selamat mencoba!',
+        buttons: [{ text: 'Selesai', action: tour.complete }]
+    });
+
+    tour.start();
 }
 
 /**a
@@ -3936,6 +5377,12 @@ async function handleLogout() {
         currentUser = null;
         phoneAuth = { phone: null, accessToken: null, authId: null };
         localStorage.removeItem('kmspAuth');
+
+        // --- PERUBAHAN BARU: Hapus watermark saat logout ---
+        const existingWatermark = document.getElementById('dynamic-watermark');
+        if (existingWatermark) {
+            existingWatermark.remove();
+        }
         window.location.hash = 'login'; // Arahkan ke halaman login
         renderApp(); // Render ulang aplikasi
     }
@@ -4436,6 +5883,126 @@ async function handleViewUserLog(e) {
     }
 }
 
+async function loadAndRenderTopUpOptions() {
+    const listContainer = document.getElementById('topup-options-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div class="loading-spinner"></div>';
+    try {
+        // === PERBAIKAN DI BARIS INI ===
+        const { data: responseData, status } = await apiFetch('/admin/topup-options');
+
+        if (status !== 200 || !responseData.status || !Array.isArray(responseData.data)) {
+            throw new Error(responseData.message || 'Gagal memuat data nominal.');
+        }
+
+        const data = responseData.data;
+
+        if (data.length === 0) {
+            listContainer.innerHTML = '<p>Belum ada nominal yang diatur.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = data.map(opt => `
+            <div class="topup-option-item" data-value="${opt.value}">
+                <span>${opt.label}</span>
+                <button class="delete-topup-option-btn">&times;</button>
+            </div>
+        `).join('');
+
+        listContainer.querySelectorAll('.delete-topup-option-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.currentTarget.closest('.topup-option-item').remove();
+            });
+        });
+
+    } catch (error) {
+        listContainer.innerHTML = `<p class="error-message">${error.message}</p>`;
+    }
+}
+
+/**
+ * FUNGSI BARU: Handler untuk form tambah nominal baru di panel admin.
+ */
+function handleAddTopUpOption(e) {
+    e.preventDefault();
+    const input = document.getElementById('new-topup-value');
+    if (!input) return;
+
+    const value = parseInt(input.value, 10);
+    if (isNaN(value) || value <= 0) {
+        showToast('Masukkan nominal yang valid.', true);
+        return;
+    }
+
+    const listContainer = document.getElementById('topup-options-list');
+    
+    // Cek duplikasi
+    if (listContainer.querySelector(`[data-value="${value}"]`)) {
+        showToast('Nominal tersebut sudah ada.', true);
+        return;
+    }
+
+    const newItem = document.createElement('div');
+    newItem.className = 'topup-option-item';
+    newItem.dataset.value = value;
+    newItem.innerHTML = `
+        <span>Rp ${value.toLocaleString('id-ID')}</span>
+        <button class="delete-topup-option-btn">&times;</button>
+    `;
+
+    newItem.querySelector('.delete-topup-option-btn').addEventListener('click', (e) => {
+        e.currentTarget.closest('.topup-option-item').remove();
+    });
+
+    listContainer.appendChild(newItem);
+    input.value = ''; // Kosongkan input
+}
+
+/**
+ * FUNGSI BARU: Handler untuk tombol "Simpan Perubahan" nominal top-up.
+ */async function handleSaveTopUpOptions(e) {
+    const button = e.currentTarget;
+    button.disabled = true;
+    button.innerHTML = '<span class="button-spinner"></span> Menyimpan...';
+    displayFeedback('topup-options-feedback', '', false);
+
+    try {
+        const items = document.querySelectorAll('#topup-options-list .topup-option-item');
+        const optionsToSave = Array.from(items).map(item => ({
+            value: parseInt(item.dataset.value, 10)
+        }));
+
+        // === PERBAIKAN DI BARIS INI ===
+        const { data, status } = await apiFetch('/admin/topup-options', {
+            method: 'PUT',
+            body: { options: optionsToSave }
+        });
+
+        if (status !== 200 || !data.status) throw new Error(data.message || "Gagal menyimpan.");
+
+        showToast(data.message, false);
+        displayFeedback('topup-options-feedback', data.message, false);
+
+    } catch (error) {
+        showToast(error.message, true);
+        displayFeedback('topup-options-feedback', error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Simpan Perubahan';
+    }
+}
+
 
 // Jalankan fungsi main saat DOM selesai dimuat
-document.addEventListener('DOMContentLoaded', main);
+document.addEventListener('DOMContentLoaded', () => {
+    // Langkah 1: Jalankan "penjaga gerbang" rute prioritas.
+    const isResetRouteHandled = handleResetPasswordRoute();
+
+    // Langkah 2: Jika URL BUKAN untuk reset password, barulah
+    // jalankan aplikasi utama Anda seperti biasa.
+    if (!isResetRouteHandled) {
+        console.log('Bukan rute #reset-password, menjalankan aplikasi utama (main).');
+        main(); // Panggil fungsi main() Anda yang sudah ada
+    }
+});
