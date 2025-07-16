@@ -25,6 +25,13 @@ const transactionsPerPage = 5;
 let liveChatBubbleElement = null;
 let availableTutorials = [];
 
+class AuthError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'AuthError';
+    }
+}
+
 /**
  * FUNGSI UTAMA DASHBOARD: Merender halaman dashboard utama (hub).
  * VERSI BARU: Menambahkan menu Laporan khusus untuk admin.
@@ -45,7 +52,7 @@ function renderMainDashboardPage(container) {
     const syaratIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
     // IKON BARU: Tambahkan ikon untuk Laporan/Statistik
     const laporanIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>`;
-
+    const rekeningIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
     const dashboardContentHTML = `
         <div class="page-content">
             <div class="page-header">
@@ -70,6 +77,7 @@ function renderMainDashboardPage(container) {
                     <a href="#beli-paket" class="app-menu-item"><div class="app-menu-icon">${beliPaketIcon}</div><span class="app-menu-label">Beli Paket</span></a>
                     <a href="#paket-akrab" class="app-menu-item"><div class="app-menu-icon">${paketAkrabIcon}</div><span class="app-menu-label">Paket Akrab</span></a>
                     <a href="#history" class="app-menu-item"><div class="app-menu-icon">${riwayatIcon}</div><span class="app-menu-label">Riwayat</span></a>
+                    <a href="#rekening-koran" class="app-menu-item"><div class="app-menu-icon">${rekeningIcon}</div><span class="app-menu-label">Lap. Keuangan</span></a>
                     <a href="#tutorial" class="app-menu-item"><div class="app-menu-icon">${tutorialIcon}</div><span class="app-menu-label">Cara Beli</span></a>
                     <a href="#kontak-admin" class="app-menu-item"><div class="app-menu-icon">${kontakIcon}</div><span class="app-menu-label">Kontak</span></a>
                     <a href="#tentang-kami" class="app-menu-item"><div class="app-menu-icon">${tentangIcon}</div><span class="app-menu-label">Tentang</span></a>
@@ -163,27 +171,51 @@ function toggleLiveChatBubble(show) {
 /**
  * Fungsi utama yang dipanggil saat aplikasi dimuat.
  */
+/**
+ * FUNGSI UTAMA BARU: Bertindak sebagai router tunggal untuk seluruh aplikasi.
+ * Mengatur semua alur navigasi secara linear untuk menghindari konflik.
+ */
+async function appRouter() {
+    const hash = window.location.hash || '#';
+    const cleanHash = hash.split('?')[0];
 
+    // TAHAP 1: Prioritas untuk Reset Password
+    if (cleanHash === '#reset-password') {
+        app.innerHTML = '';
+        renderResetPasswordPage();
+        return;
+    }
 
-async function main() {
-    // 1. Lakukan semua setup awal di sini
+    // TAHAP 2: Cek Login
     await checkLoginStatus();
-    await initKMSPsession(); // Jika ada fungsi inisialisasi lain
 
-    // 2. Panggil renderApp untuk pertama kali
-    renderApp();
-    
-    // 3. Pasang listener untuk setiap perpindahan halaman
-    window.addEventListener('hashchange', renderApp);
-
-    // 4. Jalankan proses yang hanya perlu sekali setelah login
+    // TAHAP 3: Keputusan berdasarkan Login
     if (currentUser) {
+        // PENGGUNA SUDAH LOGIN
+        await initKMSPsession();
         await fetchAnnouncement();
+        const authPages = ['#', '#login', '#register'];
+        if (authPages.includes(cleanHash)) {
+            window.location.hash = '#dashboard';
+            return;
+        }
+        renderDashboard(cleanHash.substring(1));
+        renderUserWatermark();
         showAnnouncementPopupIfNeeded();
         startStatusPolling();
+    } else {
+        // PENGGUNA BELUM LOGIN
+        app.innerHTML = '';
+        switch (cleanHash) {
+            case '#register':
+                renderRegisterPage();
+                break;
+            default:
+                renderLoginPage();
+                break;
+        }
     }
 }
-
 // --- FUNGSI RENDER HALAMAN STATIS ---
 function renderTentangKamiPage(container) {
     container.innerHTML += `
@@ -426,122 +458,7 @@ async function fetchAnnouncement() {
 /**
  * Merender tampilan utama aplikasi berdasarkan hash URL.
  */
-function renderApp() {
-    // Ambil parameter dari URL untuk mendeteksi upaya login admin
-    const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
-    const isAdminLoginAttempt = urlParams.get('admin_login') === 'true';
 
-    // ===================================================================
-    // === GERBANG UTAMA: PENGECEKAN MAINTENANCE SELALU DI SINI =========
-    // ===================================================================
-    // Pengecekan ini sekarang menjadi hal pertama yang dijalankan.
-    if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin')) {
-        const hashForLogin = window.location.hash.split('?')[0];
-        
-        // Izinkan akses HANYA ke halaman #login atau #register agar admin bisa masuk.
-        // Juga izinkan akses ke #reset-password.
-        if (hashForLogin !== '#login' && hashForLogin !== '#register' && hashForLogin !== '#reset-password') {
-            renderGlobalMaintenancePage(); // Tampilkan halaman maintenance
-            return; // HENTIKAN SEMUA PROSES RENDER LAINNYA
-        }
-    }
-
-    const hash = window.location.hash || '#';
-    const cleanHash = hash.split('?')[0] || '#';
-
-    // Pengecekan khusus untuk halaman reset password (prioritas tinggi)
-    if (cleanHash === '#reset-password') {
-        renderResetPasswordPage();
-        return; 
-    }
-
-    // KONDISI BARU: Tentukan apakah akan menampilkan halaman otentikasi (login/register)
-    // Ini true jika:
-    // 1. Tidak ada pengguna yang login, ATAU
-    // 2. Ada upaya login admin (`admin_login=true`) dan pengguna berada di halaman #login.
-    // Ini adalah kunci untuk "membobol" sesi pengguna biasa dan menampilkan form login untuk admin.
-    const showAuthPages = !currentUser || (isAdminLoginAttempt && cleanHash === '#login');
-
-    // Tampilkan loading spinner untuk transisi halaman
-    app.innerHTML = `
-        <div class="loading-overlay">
-            <div class="loading-spinner"></div>
-        </div>
-    `;
-    
-    // Gunakan kondisi `showAuthPages` yang baru
-    if (!showAuthPages) {
-        // Logika untuk pengguna yang sudah login
-        const targetHash = (cleanHash === '#' || cleanHash === '#login' || cleanHash === '#register') ? '#dashboard' : cleanHash;
-        if (window.location.hash.split('?')[0] !== targetHash) {
-            window.location.hash = targetHash;
-            return;
-        }
-
-        // Routing untuk pengguna yang sudah login
-        switch (targetHash) {
-            case '#dashboard':
-                renderDashboard('dashboard');
-                break;
-            case '#beli-paket':
-                renderDashboard('packages');
-                break;
-            case '#history': 
-                renderDashboard('history'); 
-                break;
-            case '#profile': 
-                renderDashboard('profile'); 
-                break;
-            case '#paket-akrab': 
-                renderDashboard('paket-akrab'); 
-                break;
-            case '#tutorial': 
-                renderDashboard('tutorial'); 
-                break;
-            case '#kontak-admin': 
-                renderDashboard('kontak-admin'); 
-                break;
-            case '#tentang-kami':
-                renderDashboard('tentang-kami'); 
-                break;
-            case '#kebijakan-privasi': 
-                renderDashboard('kebijakan-privasi'); 
-                break;
-            case '#syarat-ketentuan': 
-                renderDashboard('syarat-ketentuan'); 
-                break;
-            case '#admin':
-                if (currentUser.role === 'admin') renderDashboard('admin');
-                else window.location.hash = '#dashboard';
-                break;
-            case '#laporan':
-                if (currentUser.role === 'admin') renderDashboard('laporan');
-                else window.location.hash = '#dashboard';
-                break;
-            default:
-                window.location.hash = '#dashboard';
-                break;
-        }
-        renderUserWatermark();
-    } else {
-        // Logika untuk pengguna yang belum login ATAU admin yang memaksa ke halaman login
-        switch (cleanHash) {
-            case '#register':
-                renderRegisterPage();
-                break;
-            case '#login':
-            default:
-                renderLoginPage();
-                break;
-        }
-    }
-    
-    // Hapus parameter `admin_login=true` dari URL setelah halaman login dirender
-    // agar tidak mengganggu navigasi selanjutnya.
-    if (isAdminLoginAttempt) {
-        window.history.replaceState(null, null, window.location.pathname + '#login');
-    }
-}
 
 function renderProfilePage(container) {
     if (!currentUser) {
@@ -1202,10 +1119,15 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
     try {
         const { data, status } = await apiFetch('/purchase', {
             method: 'POST',
-            body: { packageId, phone: phoneAuth.phone, access_token: phoneAuth.accessToken, paymentMethod }
+            body: {
+                packageId,
+                phone: phoneAuth.phone,
+                access_token: phoneAuth.accessToken,
+                paymentMethod,
+                purchaseContext: 'paket-satuan' // Konteks untuk paket satuan
+            }
         });
         
-        // Perbarui saldo pengguna di UI setelah pembelian
         if (currentUser && typeof data.newBalance === 'number') {
             currentUser.balance = data.newBalance;
             const userBalanceElement = document.getElementById('user-balance');
@@ -1214,16 +1136,15 @@ async function executePurchase(button, packageId, paymentMethod, fee) {
             }
         }
 
-        // --- PERBAIKAN: Tangani dua jenis status 202 ---
         if (status === 202) { 
-            if (data.payment_data) { // Jika ada payment_data, ini pembayaran eksternal
-            renderExternalPaymentModal(data.payment_data);
-            } else { // Jika tidak, ini adalah transaksi yang diantrekan
+            if (data.payment_data) {
+                renderExternalPaymentModal(data.payment_data);
+            } else {
                 renderFinalStatusModal("Permintaan Diterima", data.message);
             }
-        } else if (status === 200 && data.status) { // Pembelian berhasil langsung
+        } else if (status === 200 && data.status) {
             renderFinalStatusModal("Status Transaksi", data.message || 'Sukses');
-        } else { // Pembelian gagal dengan respons non-202/non-200
+        } else {
             throw new Error(data.message || 'Pembelian gagal dengan respons yang tidak diharapkan.');
         }
     } catch (error) {
@@ -1611,21 +1532,19 @@ async function handleResetPassword(e) {
 // frontend/app.js -> GANTI FUNGSI INI SECARA KESELURUHAN
 async function renderDashboard(activePage = 'dashboard') {
     const isAdmin = currentUser.role === 'admin';
+    let navActivePage = activePage;
 
-    // Logika untuk menandai item aktif di navigasi
-    const mainPages = ['dashboard', 'packages', 'paket-akrab', 'history', 'profile', 'admin', 'laporan', 'tutorial'];
-    let navActivePage = mainPages.includes(activePage) ? activePage : 'dashboard';
-    
-    // Alias untuk beberapa halaman agar menu tetap aktif
+    // Alias untuk konsistensi penandaan menu aktif
+    if (navActivePage === 'beli-paket') navActivePage = 'packages';
     if (navActivePage === 'laporan') navActivePage = 'admin';
-    if (activePage === 'beli-paket') activePage = 'packages';
 
-    // Kumpulan ikon untuk navigasi
+    // Definisikan semua ikon yang akan digunakan di dalam fungsi ini
     const dashboardIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>`;
     const beliPaketIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
     const paketAkrabIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
     const tutorialIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
     const riwayatIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"></path><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>`;
+    const rekeningIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
     const profilIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
     const adminIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>`;
     const laporanIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>`;
@@ -1635,20 +1554,19 @@ async function renderDashboard(activePage = 'dashboard') {
     app.innerHTML = `
         <div class="responsive-container">
             <aside class="sidebar">
-                <div class="sidebar-header">
-                    <h2>RYYSTORE</h2>
-                </div>
+                <div class="sidebar-header"><h2>RYYSTORE</h2></div>
                 <div class="user-info">
                     <p>Selamat datang, <strong>${currentUser.name}</strong></p>
                     <p id="user-balance-sidebar">Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
                 </div>
                 <nav class="sidebar-nav">
-                    <ul>
+                     <ul>
                         <li><a href="#dashboard" class="${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a></li>
                         <li><a href="#beli-paket" class="${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Beli Paket (OTP)</span></a></li>
                         <li><a href="#paket-akrab" class="${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket Akrab</span></a></li>
                         <li><a href="#tutorial" class="${navActivePage === 'tutorial' ? 'active' : ''}">${tutorialIcon}<span>Cara Pembelian</span></a></li>
                         <li><a href="#history" class="${navActivePage === 'history' ? 'active' : ''}">${riwayatIcon}<span>Riwayat</span></a></li>
+                        <li><a href="#rekening-koran" class="${navActivePage === 'rekening-koran' ? 'active' : ''}">${rekeningIcon}<span>Lap. Keuangan</span></a></li>
                         <li><a href="#profile" class="${navActivePage === 'profile' ? 'active' : ''}">${profilIcon}<span>Profil & Menu Lain</span></a></li>
                         ${isAdmin ? `
                         <li class="admin-menu-divider"></li>
@@ -1660,48 +1578,45 @@ async function renderDashboard(activePage = 'dashboard') {
                     <button id="logout-btn-sidebar" class="button secondary">Logout</button>
                 </div>
             </aside>
-
             <div class="main-wrapper">
                 <header class="app-header">
                     <button class="menu-toggle" id="menu-toggle-btn">${menuIcon}</button>
                     <h1 class="app-title">RYYSTORE</h1>
                     <button id="logout-btn-header" class="header-action-btn">${logoutIcon}</button>
                 </header>
-                
                 <main class="main-content" id="page-content-area"></main>
             </div>
-
             <nav class="bottom-nav">
                 <a href="#dashboard" class="nav-item ${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a>
                 <a href="#beli-paket" class="nav-item ${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Beli Paket</span></a>
                 <a href="#paket-akrab" class="nav-item ${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket Akrab</span></a>
                 <a href="#history" class="nav-item ${navActivePage === 'history' ? 'active' : ''}">${riwayatIcon}<span>Riwayat</span></a>
+                <a href="#rekening-koran" class="nav-item ${navActivePage === 'rekening-koran' ? 'active' : ''}">${rekeningIcon}<span>Laporan</span></a>
                 <a href="#profile" class="nav-item ${navActivePage === 'profile' ? 'active' : ''}">${profilIcon}<span>Profil</span></a>
                 ${isAdmin ? `<a href="#admin" class="nav-item ${navActivePage === 'admin' ? 'active' : ''}">${adminIcon}<span>Admin</span></a>` : ''}
             </nav>
-
             <div id="modal-container"></div>
             <div class="sidebar-overlay"></div>
         </div>
     `;
 
     const mainContent = document.getElementById('page-content-area');
+    if (!mainContent) return;
 
     if (latestAnnouncement && latestAnnouncement.message) {
-        const announcementHTML = `
+        mainContent.insertAdjacentHTML('afterbegin', `
             <div class="announcement-banner" id="announcement-banner">
                 <p><strong>Informasi:</strong> ${latestAnnouncement.message}</p>
                 <button class="announcement-close" id="announcement-close-btn">&times;</button>
             </div>
-        `;
-        // Gunakan `insertAdjacentHTML` agar tidak menghapus event listener yang mungkin sudah ada
-        mainContent.insertAdjacentHTML('beforeend', announcementHTML);
+        `);
     }
-    // Logika render konten (tidak berubah)
+
     const pageRenderers = {
         'dashboard': renderMainDashboardPage,
-        'packages': () => { mainContent.innerHTML = renderPhoneVerificationPanel(); renderPackagesPage(mainContent); setupPhoneVerificationListeners(); },
+        'packages': () => { mainContent.innerHTML += renderPhoneVerificationPanel(); renderPackagesPage(mainContent); setupPhoneVerificationListeners(); },
         'history': renderHistoryPage,
+        'rekening-koran': renderRekeningKoranPage,
         'profile': renderProfilePage,
         'paket-akrab': renderNonOtpPage,
         'tutorial': renderTutorialPage,
@@ -1712,23 +1627,25 @@ async function renderDashboard(activePage = 'dashboard') {
         'admin': isAdmin ? renderAdminDashboard : () => { window.location.hash = '#dashboard'; },
         'laporan': isAdmin ? renderLaporanPage : () => { window.location.hash = '#dashboard'; }
     };
-    const renderFunction = pageRenderers[activePage] || pageRenderers['dashboard'];
-    renderFunction(mainContent);
+    
+    const rendererKey = activePage === 'beli-paket' ? 'packages' : activePage;
+    const renderFunction = pageRenderers[rendererKey] || pageRenderers['dashboard'];
+    
+    if (typeof renderFunction === 'function') {
+        renderFunction(mainContent);
+    } else {
+        console.error(`Tidak ada fungsi renderer untuk halaman: ${rendererKey}`);
+        pageRenderers['dashboard'](mainContent);
+    }
 
-    // Event Listeners
     document.getElementById('logout-btn-sidebar')?.addEventListener('click', handleLogout);
     document.getElementById('logout-btn-header')?.addEventListener('click', handleLogout);
+    document.getElementById('announcement-close-btn')?.addEventListener('click', (e) => e.target.parentElement.remove());
 
-    document.getElementById('announcement-close-btn')?.addEventListener('click', () => {
-        document.getElementById('announcement-banner').style.display = 'none';
-    });
-    
-    // Logika untuk toggle sidebar di mobile
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
-    
-    if(menuToggleBtn && sidebar && overlay) {
+    if (menuToggleBtn && sidebar && overlay) {
         const closeSidebar = () => {
             sidebar.classList.remove('open');
             overlay.classList.remove('active');
@@ -1740,6 +1657,122 @@ async function renderDashboard(activePage = 'dashboard') {
 }
 
 
+async function renderRekeningKoranPage(container) {
+    // Set tanggal default: 30 hari terakhir
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const defaultStartDate = thirtyDaysAgo.toISOString().split('T')[0];
+    const defaultEndDate = today.toISOString().split('T')[0];
+
+    container.innerHTML = `
+        <div class="page-content">
+            <div class="page-header">
+                <h1>Laporan Keuangan Anda</h1>
+                <p>Lihat ringkasan dan rincian semua aktivitas keuangan di akun Anda.</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4>Total Saldo Masuk (Top Up)</h4>
+                    <p id="summary-total-topup" class="amount-credit">Memuat...</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Total Saldo Keluar (Fee)</h4>
+                    <p id="summary-total-spending" class="amount-debit">Memuat...</p>
+                </div>
+            </div>
+
+            <div class="page-content" style="margin-top: 2rem;">
+                <h3>Rincian Aktivitas</h3>
+                <div class="filter-controls" style="margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label for="start-date">Dari Tanggal</label>
+                        <input type="date" id="start-date" value="${defaultStartDate}">
+                    </div>
+                    <div class="form-group">
+                        <label for="end-date">Sampai Tanggal</label>
+                        <input type="date" id="end-date" value="${defaultEndDate}">
+                    </div>
+                    <button id="filter-report-btn">Tampilkan</button>
+                </div>
+                <div id="detailed-report-container">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const fetchAndDisplayReport = async () => {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const reportContainer = document.getElementById('detailed-report-container');
+        const topupSummaryEl = document.getElementById('summary-total-topup');
+        const spendingSummaryEl = document.getElementById('summary-total-spending');
+        
+        reportContainer.innerHTML = '<div class="loading-spinner"></div>';
+        topupSummaryEl.textContent = 'Memuat...';
+        spendingSummaryEl.textContent = 'Memuat...';
+
+        try {
+            const { data } = await apiFetch(`/user/financial-summary?startDate=${startDate}&endDate=${endDate}`);
+            if (!data.status) throw new Error(data.message);
+
+            const summary = data.data.summary;
+            const details = data.data.details;
+
+            // Isi kartu ringkasan
+            topupSummaryEl.textContent = `Rp ${summary.totalTopup.toLocaleString('id-ID')}`;
+            spendingSummaryEl.textContent = `Rp ${summary.totalSpending.toLocaleString('id-ID')}`;
+
+            // Buat tabel rincian
+            if (details.length === 0) {
+                reportContainer.innerHTML = '<p>Tidak ada aktivitas pada rentang tanggal yang dipilih.</p>';
+                return;
+            }
+
+            const tableRows = details.map(item => {
+                const isCredit = item.amount > 0;
+                const amountClass = isCredit ? 'amount-credit' : 'amount-debit';
+                const amountSign = isCredit ? '+' : '';
+                
+                return `
+                    <tr>
+                        <td data-label="Tanggal">${new Date(item.createdAt).toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</td>
+                        <td data-label="Tipe">${item.type}</td>
+                        <td data-label="Deskripsi">${item.description}</td>
+                        <td data-label="Jumlah" class="${amountClass}">
+                            <strong>${amountSign} Rp ${Math.abs(item.amount).toLocaleString('id-ID')}</strong>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            reportContainer.innerHTML = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Tipe</th>
+                            <th>Deskripsi</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            `;
+
+        } catch (error) {
+            reportContainer.innerHTML = `<p class="error-message">Gagal memuat laporan: ${error.message}</p>`;
+            topupSummaryEl.textContent = 'Error';
+            spendingSummaryEl.textContent = 'Error';
+        }
+    };
+
+    // Pasang event listener dan panggil pertama kali
+    document.getElementById('filter-report-btn').addEventListener('click', fetchAndDisplayReport);
+    fetchAndDisplayReport();
+}
 // frontend/app.js -> GANTI FUNGSI INI SEPENUHNYA
 /**
  * FUNGSI BARU: Merender daftar tutorial di panel admin untuk dikelola.
@@ -4093,7 +4126,6 @@ function handleStreamEvent(event, logList, totalPackages) {
     }
 }
 
-
 async function handleMultiPulsaPurchase(e) {
     const button = e.currentTarget;
     const feedbackContainer = document.getElementById('multi-pulsa-feedback');
@@ -4149,7 +4181,8 @@ async function handleMultiPulsaPurchase(e) {
                     packageId: pkg.id,
                     phone: phoneAuth.phone,
                     access_token: phoneAuth.accessToken,
-                    paymentMethod: 'balance'
+                    paymentMethod: 'balance',
+                    purchaseContext: 'multi-paket' // Konteks untuk multi-paket
                 }
             });
             
@@ -4158,45 +4191,21 @@ async function handleMultiPulsaPurchase(e) {
                 updateBalanceUI(currentUser.balance);
             }
 
-            // --- LOGIKA KUSTOM ANDA DITERAPKAN DI SINI ---
-            const kmspMessage = data.message || '';
-            const isIpaasSuccess = kmspMessage.includes("422 -> Failed call ipaas purchase");
-            const isDorUlangFailure = kmspMessage.includes("Paket berhasil dibeli. Silakan cek kuotanya");
-
-            // Aturan 1: Jika pesan adalah "Paket berhasil dibeli...", anggap GAGAL.
-            if (isDorUlangFailure) {
-                throw new Error("Gagal (Dor Ulang): Saldo tidak terpotong. Coba lagi.");
-            }
-
-            let finalMessage = kmspMessage;
-            let isSuccess = false;
-
-            // Aturan 2: Jika pesan adalah "422...", anggap SUKSES dengan pesan custom.
-            if (isIpaasSuccess) {
-                finalMessage = "Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)";
-                isSuccess = true;
-            } 
-            // Jika sukses normal lainnya
-            else if (status === 200 && data.status) {
-                isSuccess = true;
-            }
-
-            if (isSuccess) {
-                logItem.className = 'log-item-success';
-                logItem.querySelector('.log-icon').innerHTML = '✔';
-                logItem.querySelector('.log-message').textContent = finalMessage;
-                logItem.querySelector('.log-message').className = 'log-message success';
-            } else {
-                // Jika tidak memenuhi kriteria sukses manapun, lempar error.
-                throw new Error(finalMessage);
-            }
-            // --- AKHIR LOGIKA KUSTOM ---
+            logItem.className = 'log-item-success';
+            logItem.querySelector('.log-icon').innerHTML = '✔';
+            logItem.querySelector('.log-message').textContent = data.message;
+            logItem.querySelector('.log-message').className = 'log-message success';
 
         } catch (error) {
             logItem.className = 'log-item-error';
             logItem.querySelector('.log-icon').innerHTML = '❌';
             logItem.querySelector('.log-message').textContent = error.message;
             logItem.querySelector('.log-message').className = 'log-message error';
+
+            if (currentUser && typeof error.newBalance === 'number') {
+                 currentUser.balance = error.newBalance;
+                 updateBalanceUI(currentUser.balance);
+            }
         }
 
         if (index < packagesToProcess.length - 1) {
@@ -5104,6 +5113,7 @@ async function handlePhoneLogin(e) {
  * @returns {Promise<Object>} - Promise yang me-resolve dengan { data, status } dari respons.
  * @throws {Error} - Jika terjadi error jaringan atau respons API tidak valid.
  */
+
 async function apiFetch(endpoint, options = {}) {
     try {
         const config = {
@@ -5121,33 +5131,34 @@ async function apiFetch(endpoint, options = {}) {
 
         const response = await fetch(API_BASE_URL + endpoint, config);
 
+        // --- PERUBAHAN INTI DI SINI ---
         if (response.status === 401 || response.status === 403) {
-            currentUser = null;
-            localStorage.removeItem('kmspAuth');
-            window.location.hash = '#login';
-            renderApp(); // Render ulang setelah redirect
+            // JANGAN REDIRECT DI SINI.
+            // Lempar error khusus yang akan ditangkap oleh fungsi pemanggil.
             const errorData = await response.json();
-            throw new Error(errorData.message || `Akses Ditolak (HTTP ${response.status})`);
+            throw new AuthError(errorData.message || `Akses Ditolak (HTTP ${response.status})`);
         }
         
         const data = await response.json();
+        // Cek jika respons TIDAK OK, tapi bukan karena error otentikasi
         if (!response.ok && response.status !== 202) {
             throw new Error(data.message || `Terjadi kesalahan pada server (HTTP ${response.status})`);
         }
+        
         return { data, status: response.status };
 
     } catch (error) {
-        console.error("Kesalahan API Fetch:", error.message);
+        // Salurkan AuthError ke atas agar bisa ditangani secara spesifik
+        if (error instanceof AuthError) {
+            throw error;
+        }
 
-        // --- LOGIKA BARU UNTUK PESAN ERROR YANG LEBIH BAIK ---
-        // Cek apakah error mengandung teks yang menandakan masalah koneksi.
+        // Tangani error koneksi seperti sebelumnya
         if (error.message.includes('Failed to fetch') || error.message.includes('ENOTFOUND')) {
-            // Jika ya, lemparkan error baru dengan pesan yang lebih ramah.
             throw new Error("Gagal terhubung ke server. Periksa koneksi internet Anda.");
         }
-        // --- AKHIR LOGIKA BARU ---
-
-        // Jika bukan error koneksi, lemparkan kembali error aslinya.
+        
+        // Untuk error lainnya
         throw error;
     }
 }
@@ -5229,46 +5240,32 @@ async function handleLogin(e) {
 
     button.disabled = true;
     button.innerHTML = `<span class="button-spinner"></span> Memproses...`;
-    displayFeedback('feedback-container', '', false); // Bersihkan feedback sebelumnya
+    displayFeedback('feedback-container', '', false);
 
     try {
         const email = e.target.elements.email.value;
         const password = e.target.elements.password.value;
         const { data, status } = await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
 
-        // Periksa status HTTP dan data pengguna
         if (status === 200 && data.user) {
-            currentUser = data.user; // Simpan data pengguna yang login
+            currentUser = data.user; // Simpan data pengguna yang baru login
 
-            // Cek apakah ada admin_login=true di URL saat ini
-            const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
-            const isAdminLoginAttempt = urlParams.get('admin_login') === 'true';
-
-            if (currentUser.role === 'admin' && isAdminLoginAttempt) {
-                // Jika login berhasil sebagai admin DAN ada param admin_login=true, redirect ke #admin
-                window.location.hash = '#admin';
-            } else if (currentUser.role === 'admin') {
-                // Admin yang login normal, arahkan ke dashboard
-                window.location.hash = '#dashboard';
-            } else {
-                // Pengguna biasa, arahkan ke dashboard. Tur akan muncul di atasnya.
-                window.location.hash = '#dashboard';
-            }
-
-            await main(); // Panggil main untuk inisialisasi ulang dan render halaman yang benar
-
-            // Setelah dashboard dirender, jika pengguna biasa, mulai tur.
+            // Cek apakah tur perlu dijalankan untuk pengguna baru
             if (currentUser.role !== 'admin') {
-                // Beri jeda agar UI sempat render sebelum tur dimulai
-                setTimeout(startWelcomeTour, 500); 
+                // Anda bisa menambahkan logika pengecekan jika ini login pertama kali
+                // setTimeout(startWelcomeTour, 500); 
             }
 
-            renderUserWatermark(); // Panggil watermark setelah login berhasil
+            // --- PERBAIKAN DI SINI ---
+            // Panggil appRouter() untuk merender ulang aplikasi dalam keadaan login,
+            // bukan memanggil main() yang sudah tidak ada.
+            await appRouter();
+
         } else {
             throw new Error(data.message || 'Login gagal: Respons tidak valid.');
         }
     } catch (error) {
-        displayFeedback('feedback-container', error.message, true); // Tampilkan pesan error
+        displayFeedback('feedback-container', error.message, true);
         button.disabled = false;
         button.textContent = 'Login';
     }
@@ -5675,27 +5672,31 @@ async function checkPackageStock(packageId, targetElement) {
  * Memeriksa status login pengguna saat ini dari backend.
  * Memperbarui variabel currentUser global.
  */
-
 async function checkLoginStatus() {
     try {
         const { data, status } = await apiFetch('/auth/me');
         if (status === 200 && data.status) {
             currentUser = data.user;
             isMaintenanceMode = data.maintenanceMode !== undefined ? data.maintenanceMode : false;
-            
-            // Simpan saldo provider dari respons API ke variabel global
-            providerBalance = data.providerBalance !== undefined ? data.providerBalance : null; // <--- BARIS BARU
-
+            providerBalance = data.providerBalance !== undefined ? data.providerBalance : null;
         } else {
             currentUser = null;
-            isMaintenanceMode = false;
-            providerBalance = null; // <--- BARIS BARU: Reset jika gagal
         }
     } catch (error) {
-        console.error("Gagal memeriksa status login:", error);
-        currentUser = null;
+        // --- PERUBAHAN LOGIKA PENANGANAN ERROR ---
+        if (error instanceof AuthError) {
+            // Jika ini error otentikasi (401/403), kita tahu sesi tidak valid.
+            // Cukup set currentUser ke null. JANGAN REDIRECT.
+            console.log("checkLoginStatus: Sesi tidak valid atau kedaluwarsa.");
+            currentUser = null;
+        } else {
+            // Untuk error lain (misal, jaringan), tampilkan di console.
+            console.error("Gagal memeriksa status login:", error);
+            currentUser = null;
+        }
+        // Pastikan state lain juga di-reset jika terjadi error
         isMaintenanceMode = false;
-        providerBalance = null; // <--- BARIS BARU: Reset jika error
+        providerBalance = null;
     }
 }
 
@@ -5994,15 +5995,5 @@ function handleAddTopUpOption(e) {
 }
 
 
-// Jalankan fungsi main saat DOM selesai dimuat
-document.addEventListener('DOMContentLoaded', () => {
-    // Langkah 1: Jalankan "penjaga gerbang" rute prioritas.
-    const isResetRouteHandled = handleResetPasswordRoute();
-
-    // Langkah 2: Jika URL BUKAN untuk reset password, barulah
-    // jalankan aplikasi utama Anda seperti biasa.
-    if (!isResetRouteHandled) {
-        console.log('Bukan rute #reset-password, menjalankan aplikasi utama (main).');
-        main(); // Panggil fungsi main() Anda yang sudah ada
-    }
-});
+window.addEventListener('hashchange', appRouter);
+document.addEventListener('DOMContentLoaded', appRouter);

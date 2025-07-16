@@ -19,6 +19,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const SibApiV3Sdk = require('sib-api-v3-sdk');
 const FormData = require('form-data');
+const https = require('https');
+https.globalAgent.options.rejectUnauthorized = false;
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -323,28 +325,35 @@ app.post('/api/phone/verify-otp', isAuthenticated, async (req, res) => {
         res.status(200).json({ status: true, message: "Nomor berhasil diverifikasi!", data: loginData.data });
     } catch (error) { res.status(500).json({ status: false, message: error.message }); }
 });
+// GANTI FUNGSI INI SEPENUHNYA di backend/server.js
+
 app.post('/api/purchase', isAuthenticated, async (req, res) => {
-    const { packageId, phone, access_token, paymentMethod } = req.body;
-    if (!packageId || !phone || !access_token || !paymentMethod) return res.status(400).json({ status: false, message: "Parameter tidak lengkap." });
+    // Ambil purchaseContext dari body, default ke 'paket-satuan' jika tidak ada
+    const { packageId, phone, access_token, paymentMethod, purchaseContext = 'paket-satuan' } = req.body;
     
+    if (!packageId || !phone || !access_token || !paymentMethod) return res.status(400).json({ status: false, message: "Parameter tidak lengkap." });
+
+    let user;
+    let pkg;
+    let platformFee = 0;
+    const trxId = `trx_${Date.now()}_${uuidv4().slice(0, 4)}`; 
+
     try {
-        const user = await dbGet('SELECT * FROM users WHERE id = ?', [req.session.userId]);
-        const pkg = await dbGet('SELECT * FROM packages WHERE package_code = ?', [packageId]);
-        
+        user = await dbGet('SELECT * FROM users WHERE id = ?', [req.session.userId]);
+        pkg = await dbGet('SELECT * FROM packages WHERE package_code = ?', [packageId]);
+
         if (!user || user.verifiedPhone !== phone) return res.status(403).json({ status: false, message: "Nomor telepon ini tidak terverifikasi untuk akun Anda." });
         if (!pkg) return res.status(404).json({ status: false, message: "Paket tidak ditemukan." });
 
-        const platformFee = pkg.platform_fee || 0;
+        platformFee = pkg.platform_fee || 0;
         if (user.balance < platformFee) return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup.` });
 
-        const adminBalance = await getKmspAdminBalance();
         const packagePrice = pkg.original_price || 0;
-        
-        const baseTransaction = { id: `trx_${Date.now()}_${uuidv4().slice(0,4)}`, userId: user.id, userName: user.name, packageId, packageName: pkg.name, platformFee, originalPrice: packagePrice, targetPhone: phone, accessToken: access_token, paymentMethod, createdAt: new Date().toISOString() };
+        await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [platformFee, user.id]);
 
+        const adminBalance = await getKmspAdminBalance();
         if (adminBalance < packagePrice) {
-            await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [platformFee, user.id]);
-            await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [baseTransaction.id, user.id, user.name, baseTransaction.packageId, baseTransaction.packageName, baseTransaction.platformFee, baseTransaction.originalPrice, baseTransaction.targetPhone, baseTransaction.accessToken, baseTransaction.paymentMethod, baseTransaction.createdAt, 'menunggu_saldo_provider', 'Menunggu Saldo Provider']);
+            await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, platformFee, packagePrice, phone, access_token, paymentMethod, new Date().toISOString(), 'menunggu_saldo_provider', 'Menunggu Saldo Provider']);
             
             sendTelegramNotification(
 `<b>⚠️ Saldo KMSP Kurang! (Paket OTP) ⚠️</b>
@@ -361,91 +370,75 @@ Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.
             const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
             return res.status(202).json({ status: true, message: "Permintaan masuk antrean, akan diproses otomatis.", newBalance: updatedUser.balance });
         }
-
-        await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [platformFee, user.id]);
         
-        try {
-            const purchaseParams = new URLSearchParams({ api_key: KMSP_API_KEY, package_code: pkg.package_code, phone, access_token, payment_method: paymentMethod, price_or_fee: pkg.original_price });
-            const purchaseResponse = await fetch(`https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`);
-            const purchaseData = await purchaseResponse.json();
+        await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, platformFee, packagePrice, phone, access_token, paymentMethod, new Date().toISOString(), 'processing', 'Menghubungi provider...']);
 
-            const kmspMessage = purchaseData.message || '';
-            const isIpaasSuccessCase = kmspMessage.includes("422 -> Failed call ipaas purchase");
-            const isDorUlangFailure = kmspMessage.includes("Paket berhasil dibeli. Silakan cek kuotanya");
+        const purchaseParams = new URLSearchParams({ api_key: KMSP_API_KEY, package_code: pkg.package_code, phone, access_token, payment_method: paymentMethod, price_or_fee: pkg.original_price });
+        const purchaseResponse = await fetch(`https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`);
+        const purchaseData = await purchaseResponse.json();
 
-            const isProviderSuccess = ((purchaseResponse.ok && purchaseData.status) || isIpaasSuccessCase) && !isDorUlangFailure;
-            const requiresExternalPayment = purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink);
+        // --- Logika Kondisional Berdasarkan Konteks ---
+        let isDorUlangFailure = false;
+        // 1. Cek pesan "Dor Ulang" HANYA jika permintaan berasal dari 'multi-paket'
+        if (purchaseContext === 'multi-paket') {
+            isDorUlangFailure = (purchaseData.message || '').includes("Paket berhasil dibeli. Silakan cek kuotanya");
+        }
 
-            if (!isProviderSuccess && !requiresExternalPayment) {
-                await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [platformFee, user.id]);
-                
-                await dbRun(
-                    'INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                    [
-                        baseTransaction.id, user.id, user.name, pkg.package_code, pkg.name, platformFee, packagePrice, phone, access_token, paymentMethod, baseTransaction.createdAt,
-                        'failed', purchaseData.message || 'Gagal dari provider'
-                    ]
-                );
-                
-                sendTelegramNotification(
-`<b>──────────────────────</b>
-<b>❌ Transaksi Gagal (Fee Dikembalikan)</b>
-<b>──────────────────────</b>
+        const isIpaasSuccessCase = (purchaseData.message || '').includes("422 -> Failed call ipaas purchase");
+        const isProviderSuccess = ((purchaseResponse.ok && purchaseData.status) || isIpaasSuccessCase) && !isDorUlangFailure;
+        // --- Akhir Logika Kondisional ---
+
+        const requiresExternalPayment = purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink);
+
+        if (isProviderSuccess) {
+            let paymentDetails = null;
+            if (requiresExternalPayment) {
+                 if (purchaseData.data.is_qris && purchaseData.data.qris_data?.qr_code) {
+                     purchaseData.data.qris_data.qr_code_base64 = await qrcode.toDataURL(purchaseData.data.qris_data.qr_code);
+                 }
+                 paymentDetails = JSON.stringify(purchaseData.data);
+            }
+            
+            await dbRun("UPDATE transactions SET status = ?, api_response = ?, kmspTrxId = ?, paymentDetails = ? WHERE id = ?", ['success', purchaseData.message || 'Sukses', purchaseData.data?.trx_id || null, paymentDetails, trxId]);
+
+            const maskedPhone = phone.slice(0, 4) + '****' + phone.slice(-3);
+            sendTelegramNotification(`<b>✅ Transaksi Paket Baru!</b>\n──────────────────────\n<b>Nama Pengguna:</b> ${user.name}\n<b>Nama Paket:</b> ${pkg.name}\n<b>Nomor Tujuan:</b> ${maskedPhone}\n<b>Status: Sukses</b>`);
+            
+            const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
+            const successMessage = isIpaasSuccessCase ? "Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)" : (purchaseData.message || "Pembelian berhasil!");
+
+            if (requiresExternalPayment) {
+                return res.status(202).json({ status: true, message: "Pembayaran eksternal diperlukan.", payment_data: purchaseData.data, newBalance: finalUser.balance });
+            }
+            return res.status(200).json({ status: true, message: successMessage, newBalance: finalUser.balance });
+
+        } else {
+            await dbRun("UPDATE transactions SET status = 'failed', api_response = ? WHERE id = ?", [purchaseData.message || 'Gagal dari provider', trxId]);
+            await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [platformFee, user.id]); // Kembalikan saldo
+
+            sendTelegramNotification(
+`<b>❌ Transaksi Gagal (Fee Dikembalikan)</b>
+──────────────────────
 <b>Pengguna:</b> ${user.name}
 <b>Paket:</b> ${pkg.name}
 <b>Nomor:</b> ${phone}
 <b>Pesan Error:</b> <pre>${purchaseData.message || 'Unknown Error'}</pre>
-<b>──────────────────────</b>
-<b>Saldo fee sebesar Rp ${platformFee.toLocaleString('id-ID')} telah dikembalikan.</b>
-<b>Notif:tembak.cloudrystore.xyz</b>`);
-
-                const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
-                return res.status(500).json({ status: false, message: purchaseData.message || 'Pembelian gagal.', newBalance: updatedUser.balance });
-            }
-
-            let paymentDetails = requiresExternalPayment ? JSON.stringify(purchaseData.data) : null;
-            if (requiresExternalPayment && purchaseData.data.is_qris && purchaseData.data.qris_data?.qr_code) {
-                purchaseData.data.qris_data.qr_code_base64 = await qrcode.toDataURL(purchaseData.data.qris_data.qr_code);
-                paymentDetails = JSON.stringify(purchaseData.data);
-            }
-
-            // --- INI BARIS YANG DIPERBAIKI (URUTANNYA SUDAH BENAR) ---
-            await dbRun(
-                'INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, kmspTrxId, status, api_response, createdAt, paymentDetails) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', 
-                [
-                    baseTransaction.id, user.id, user.name, pkg.package_code, pkg.name,
-                    platformFee, packagePrice, phone, access_token, paymentMethod,
-                    purchaseData.data?.trx_id || null,
-                    'success', // status
-                    purchaseData.message || 'Sukses', // api_response
-                    baseTransaction.createdAt, // createdAt
-                    paymentDetails // paymentDetails
-                ]
-            );
-            
-            const maskedPhone = phone.slice(0, 4) + '****' + phone.slice(-3);
-            const notifMessage = `<b>✅ Transaksi Paket Baru!</b>
 ──────────────────────
-<b>Nama Pengguna:</b> ${user.name}
-<b>Nama Paket:</b> ${pkg.name}
-<b>Nomor Tujuan:</b> ${maskedPhone}
-<b>Status: Sukses</b>`;
-            sendTelegramNotification(notifMessage);
+Saldo fee sebesar Rp ${platformFee.toLocaleString('id-ID')} telah dikembalikan.
+<b>Notif:tembak.cloudrystore.com</b>`);
 
             const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
-            if (requiresExternalPayment) return res.status(202).json({ status: true, message: "Pembayaran eksternal diperlukan.", payment_data: purchaseData.data, newBalance: finalUser.balance });
-            
-            const successMessage = isIpaasSuccessCase ? "Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)" : (purchaseData.message || "Pembelian berhasil!");
-            return res.status(200).json({ status: true, message: successMessage, newBalance: finalUser.balance });
-        
-        } catch (purchaseError) {
-            await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [platformFee, user.id]);
-            throw purchaseError;
+            const errorMessage = isDorUlangFailure ? "Gagal (Dor Ulang): Coba lagi setelah 10 menit." : (purchaseData.message || 'Pembelian gagal.');
+            return res.status(500).json({ status: false, message: errorMessage, newBalance: finalUser.balance });
         }
-    } catch (error) { 
-        console.error("Purchase route error:", error); 
+
+    } catch (error) {
+        console.error("Purchase route error:", error);
+        if (user && pkg && platformFee > 0) {
+            await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [platformFee, user.id]);
+        }
         const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [req.session.userId]);
-        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan internal.", newBalance: finalUser?.balance }); 
+        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan internal.", newBalance: finalUser?.balance });
     }
 });
 
@@ -627,6 +620,75 @@ app.get('/api/auth/token-list', isAuthenticated, async (req, res) => {
 });
 
 // Tambahkan ini di bagian RUTE PENGGUNA
+app.get('/api/user/financial-summary', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const { startDate, endDate } = req.query;
+
+        // Siapkan filter tanggal dan parameter terlebih dahulu
+        let dateFilter = "";
+        const params = [userId]; // Parameter untuk query, diawali dengan userId
+        
+        // Hanya tambahkan filter tanggal jika kedua tanggal tersedia
+        if (startDate && endDate) {
+            const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+            const end = new Date(endDate); end.setHours(23, 59, 59, 999);
+            
+            // String filter untuk ditambahkan ke query SQL
+            dateFilter = "AND createdAt >= ? AND createdAt <= ?";
+            
+            // Tambahkan tanggal ke array parameter
+            params.push(start.toISOString(), end.toISOString());
+        }
+
+        // --- BAGIAN YANG DIPERBAIKI ---
+        // Sekarang, semua query (baik summary maupun detail) menggunakan filter tanggal yang sama.
+
+        // 1. Hitung ringkasan HANYA untuk rentang tanggal yang dipilih
+        const summaryTopup = await dbGet(`SELECT SUM(baseAmount) as total FROM topups WHERE userId = ? AND status = 'completed' ${dateFilter}`, params);
+        const summarySpending = await dbGet(`SELECT SUM(platformFee) as total FROM transactions WHERE userId = ? AND status = 'success' ${dateFilter}`, params);
+        
+        // 2. Ambil detail aktivitas HANYA untuk rentang tanggal yang dipilih
+        const topupsDetails = await dbAll(`SELECT id, createdAt, baseAmount, status FROM topups WHERE userId = ? AND status = 'completed' ${dateFilter}`, params);
+        const purchasesDetails = await dbAll(`SELECT id, createdAt, packageName, platformFee, status FROM transactions WHERE userId = ? AND status = 'success' ${dateFilter}`, params);
+        // --- AKHIR BAGIAN PERBAIKAN ---
+
+        let combinedDetails = [];
+        topupsDetails.forEach(t => {
+            combinedDetails.push({
+                createdAt: t.createdAt,
+                type: 'Top Up',
+                description: t.id.startsWith('TU-ADMIN-') ? 'Top Up Saldo oleh Admin' : 'Top Up Saldo via QRIS',
+                amount: t.baseAmount
+            });
+        });
+        purchasesDetails.forEach(p => {
+            combinedDetails.push({
+                createdAt: p.createdAt,
+                type: 'Pembelian',
+                description: p.packageName,
+                amount: -Math.abs(p.platformFee)
+            });
+        });
+
+        combinedDetails.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        res.json({
+            status: true,
+            data: {
+                summary: {
+                    totalTopup: summaryTopup.total || 0,
+                    totalSpending: summarySpending.total || 0,
+                },
+                details: combinedDetails
+            }
+        });
+
+    } catch (error) {
+        console.error("Error fetching financial summary:", error);
+        res.status(500).json({ status: false, message: 'Gagal mengambil data laporan.' });
+    }
+});
 app.get('/api/user/active-packages', isAuthenticated, async (req, res) => {
     const { access_token } = req.query;
     if (!access_token) return res.status(400).json({ status: false, message: "Parameter access_token diperlukan." });
@@ -661,26 +723,43 @@ app.get('/api/user/packages', isAuthenticated, async (req, res) => {
         res.status(200).json({ status: true, data: packages });
     } catch(e) { res.status(500).json({status: false, message: "Gagal memuat paket."})}
 });
-
 app.get('/api/user/transactions', isAuthenticated, async (req, res) => {
     try {
         const purchases = await dbAll('SELECT *, "purchase" as type FROM transactions WHERE userId = ?', [req.session.userId]);
         const topups = await dbAll('SELECT *, "topup" as type FROM topups WHERE userId = ?', [req.session.userId]);
         
         const allActivities = [...purchases, ...topups].map(item => {
+            // Logika untuk Top Up
             if (item.type === 'topup') {
+                // Beri deskripsi yang lebih baik untuk top up dari admin
+                let topupDescription = 'Top Up via QRIS'; // Default
+                if (item.id.startsWith('TU-ADMIN-')) {
+                    topupDescription = 'Top Up Saldo oleh Admin';
+                }
+
                 return {
-                    id: item.id, userId: item.userId, type: 'topup', status: item.status, createdAt: item.createdAt,
-                    baseAmount: item.baseAmount, uniqueAmount: item.uniqueAmount,
+                    id: item.id,
+                    userId: item.userId,
+                    type: 'topup',
+                    status: item.status,
+                    createdAt: item.createdAt,
+                    baseAmount: item.baseAmount,
+                    uniqueAmount: item.uniqueAmount,
+                    // Kita "pinjam" field packageName untuk deskripsi agar mudah di frontend
+                    packageName: topupDescription, 
                     qrisData: item.qrisBase64Image ? { base64Image: item.qrisBase64Image, uniqueAmount: item.uniqueAmount } : undefined,
                     api_response: `Top up ${item.status}`
                 };
             }
+            // Untuk tipe 'purchase', kembalikan apa adanya
             return item;
         }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
         res.status(200).json({ status: true, data: allActivities });
-    } catch (error) { console.error("Error fetching user transactions:", error); res.status(500).json({ status: false, message: 'Gagal mengambil riwayat aktivitas.' }); }
+    } catch (error) {
+        console.error("Error fetching user transactions:", error);
+        res.status(500).json({ status: false, message: 'Gagal mengambil riwayat aktivitas.' });
+    }
 });
 
 app.get('/api/packages/stock/:packageId', isAuthenticated, async (req, res) => {
@@ -763,32 +842,55 @@ async function generateDynamicQris(amount) {
         throw new Error(response.data?.message || 'Gagal menghasilkan QRIS dari API external.');
     } catch (error) { console.error(`[QRIS_GEN_ERROR]`, error.message); throw new Error(error.response?.data?.message || 'Gagal menghubungi layanan pembuat QRIS.'); }
 }
+// Ganti seluruh fungsi checkOrkutPaymentStatus dengan versi final ini:
+
 async function checkOrkutPaymentStatus(topUpId, uniqueAmount) {
-    if (!ORKUT_MERCHANT_ID || !ORKUT_USERNAME || !ORKUT_TOKEN) return console.error("[ORKUT_POLL_CONFIG_ERROR] Konfigurasi ORKUT tidak lengkap.");
-    const url = `https://api.xlsmart.biz.id/payment/qris/${ORKUT_MERCHANT_ID}`;
-    const maxDurationMs = 15 * 60 * 1000, interval = 15000;
+    if (!ORKUT_MERCHANT_ID || !ORKUT_USERNAME || !ORKUT_TOKEN) {
+        return console.error("[ORKUT_POLL_CONFIG_ERROR] Konfigurasi ORKUT tidak lengkap.");
+    }
+    
+    const url = `https://qris.payment.web.id/payment/qris/${ORKUT_MERCHANT_ID}`;
+    const maxDurationMs = 15 * 60 * 1000;
+    const interval = 15000;
 
     const pollingLoop = async () => {
         try {
             const topUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUpId]);
-            if (!topUp || topUp.status !== 'pending') return qrisPollingTimeouts.delete(topUpId);
+            if (!topUp || topUp.status !== 'pending') {
+                qrisPollingTimeouts.delete(topUpId);
+                return;
+            }
 
-            if (Date.now() - new Date(topUp.createdAt).getTime() >= maxDurationMs) {
+            const timeElapsed = Date.now() - new Date(topUp.createdAt).getTime();
+            if (timeElapsed >= maxDurationMs) {
                 await dbRun("UPDATE topups SET status = 'expired' WHERE id = ?", [topUpId]);
                 qrisPollingTimeouts.delete(topUpId);
-                return console.log(`[ORKUT_POLL] Top-up ${topUpId} expired.`);
+                console.log(`[ORKUT_POLL] Top-up ${topUpId} telah kedaluwarsa.`);
+                return;
             }
-            const response = await axios.post(url, { username: ORKUT_USERNAME, token: ORKUT_TOKEN }, { headers: { 'Content-Type': 'application/json' }, timeout: 10000 });
-            if (response.data?.data) {
-                const paymentFound = response.data.data.find(item => (item.type === 'CR' || item.tipe === 'CR') && parseFloat(item.nominal || item.amount) === parseFloat(uniqueAmount));
+
+            console.log(`[ORKUT_POLL] Mengecek mutasi untuk jumlah: ${uniqueAmount}`);
+            
+            const response = await axios.post(url, {
+                username: ORKUT_USERNAME,
+                token: ORKUT_TOKEN
+            }, { headers: { 'Content-Type': 'application/json' }, timeout: 20000 });
+            
+            if (response.data && Array.isArray(response.data.data)) {
+                const paymentFound = response.data.data.find(item => 
+                    (item.type === 'CR' || item.tipe === 'CR') && parseFloat(item.nominal || item.amount) === parseFloat(uniqueAmount)
+                );
+
                 if (paymentFound) {
-                    qrisPollingTimeouts.delete(topUpId);
+                    await dbRun("BEGIN TRANSACTION");
                     const result = await dbRun("UPDATE topups SET status = 'completed' WHERE id = ? AND status = 'pending'", [topUpId]);
+                    
                     if (result.changes > 0) {
                         await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, topUp.userId]);
+                        await dbRun("COMMIT");
+
+                        // --- BARIS YANG HILANG, SEKARANG DITAMBAHKAN KEMBALI ---
                         const user = await dbGet("SELECT name FROM users WHERE id = ?", [topUp.userId]);
-                        
-                        // --- FORMAT PESAN ASLI ANDA ---
                         await sendTelegramNotification(
 `<b>──────────────────────</b>
 <b>💰 Top Up Berhasil (ORKUT)!</b>
@@ -799,19 +901,27 @@ async function checkOrkutPaymentStatus(topUpId, uniqueAmount) {
 <b>──────────────────────</b>
 <b>Notif:tembak.cloudrystore.com</b>`
                         );
+                        console.log(`[ORKUT_POLL] Saldo dan notifikasi untuk ${user.name} berhasil diproses.`);
+                        // --- AKHIR BARIS YANG DITAMBAHKAN ---
+
+                    } else {
+                        await dbRun("ROLLBACK");
                     }
+                    qrisPollingTimeouts.delete(topUpId);
                     return;
                 }
             }
         } catch (error) {
-            // Log yang lebih detail untuk error dari Axios
-            const errorMessage = error.response?.data?.message || error.message;
-            const errorStatus = error.response?.status || 'N/A';
-            console.error(`[ORKUT_POLL_ERROR] ID ${topUpId}: Status ${errorStatus} - ${errorMessage}`);
+            console.error(`[ORKUT_POLL_ERROR] Gagal saat polling untuk ${topUpId}:`, error.message);
         }
-        qrisPollingTimeouts.set(topUpId, setTimeout(pollingLoop, interval));
+        
+        const timeoutId = setTimeout(pollingLoop, interval);
+        qrisPollingTimeouts.set(topUpId, timeoutId);
     };
-    if (!qrisPollingTimeouts.has(topUpId)) qrisPollingTimeouts.set(topUpId, setTimeout(pollingLoop, 5000));
+
+    if (!qrisPollingTimeouts.has(topUpId)) {
+        qrisPollingTimeouts.set(topUpId, setTimeout(pollingLoop, 5000));
+    }
 }
 
 app.get('/api/topup/status/:topUpId', isAuthenticated, async (req, res) => {
@@ -823,25 +933,50 @@ app.get('/api/topup/status/:topUpId', isAuthenticated, async (req, res) => {
     } catch (error) { console.error("[TOPUP_STATUS_ERROR]", error); res.status(500).json({ status: false, message: "Gagal memeriksa status." }); }
 });
 
+// Ganti seluruh rute /api/topup/request-qris dengan versi final ini
+
 app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
     const { amount } = req.body;
+    const userId = req.session.userId;
     const baseAmount = parseInt(amount, 10);
-    if (!baseAmount || baseAmount < 5000) return res.status(400).json({ status: false, message: 'Jumlah top-up minimal adalah Rp 5.000.' });
+
+    if (!baseAmount || baseAmount < 5000) {
+        return res.status(400).json({ status: false, message: 'Jumlah top-up minimal adalah Rp 5.000.' });
+    }
 
     try {
-        const user = await dbGet("SELECT name FROM users WHERE id = ?", [req.session.userId]);
-        if (!user) return res.status(404).json({ status: false, message: 'Pengguna tidak ditemukan.' });
-        if (await dbGet("SELECT id FROM topups WHERE userId = ? AND status = 'pending'", [req.session.userId])) return res.status(409).json({ status: false, message: 'Anda masih memiliki permintaan top-up yang aktif.' });
+        const user = await dbGet("SELECT name FROM users WHERE id = ?", [userId]);
+        if (!user) {
+            return res.status(404).json({ status: false, message: 'Pengguna tidak ditemukan.' });
+        }
 
+        // --- LOGIKA BARU YANG DIPERBAIKI ---
+        // 1. Secara otomatis batalkan permintaan top-up lama yang masih 'pending'.
+        await dbRun("UPDATE topups SET status = 'canceled' WHERE userId = ? AND status = 'pending'", [userId]);
+        console.log(`[TopUp] Membatalkan top-up lama yang pending untuk user: ${userId}`);
+
+        // 2. Lanjutkan untuk membuat permintaan top-up yang baru.
         const uniqueCode = Math.floor(Math.random() * 900) + 100;
         const uniqueAmount = baseAmount + uniqueCode;
         const qrisBase64Image = await generateDynamicQris(uniqueAmount);
         const topUpId = `TU-${Date.now()}`;
         
         await dbRun("INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [topUpId, req.session.userId, user.name, baseAmount, uniqueAmount, 'pending', new Date().toISOString(), qrisBase64Image]);
+        
+        // Mulai polling untuk transaksi baru ini
         checkOrkutPaymentStatus(topUpId, uniqueAmount);
-        res.status(200).json({ status: true, message: 'Silakan scan QRIS dan transfer sesuai jumlah unik.', topUpId, qrisData: { base64Image: qrisBase64Image, uniqueAmount, expiresAt: Math.floor((Date.now() + 15 * 60 * 1000) / 1000) } });
-    } catch (error) { console.error("[REQUEST_QRIS_ERROR]", error); res.status(500).json({ status: false, message: error.message || 'Gagal membuat permintaan top-up.' }); }
+
+        res.status(200).json({
+            status: true,
+            message: 'Silakan scan QRIS dan transfer sesuai jumlah unik.',
+            topUpId,
+            qrisData: { base64Image: qrisBase64Image, uniqueAmount, expiresAt: Math.floor((Date.now() + 15 * 60 * 1000) / 1000) }
+        });
+
+    } catch (error) {
+        console.error("[REQUEST_QRIS_ERROR]", error);
+        res.status(500).json({ status: false, message: error.message || 'Gagal membuat permintaan top-up.' });
+    }
 });
 
 app.post('/api/topup/cancel', isAuthenticated, async (req, res) => {
@@ -869,13 +1004,57 @@ app.post('/api/admin/update-balance', isAuthenticated, isAdmin, async (req, res)
     try {
         const { userId, amount } = req.body;
         const parsedAmount = parseFloat(amount);
-        if (!userId || isNaN(parsedAmount)) return res.status(400).json({ status: false, message: "Input tidak valid." });
+        if (!userId || isNaN(parsedAmount) || parsedAmount === 0) {
+            return res.status(400).json({ status: false, message: "Input tidak valid atau jumlah adalah nol." });
+        }
+
+        // Dapatkan data user target dan admin yang melakukan aksi SEBELUM update
+        const targetUser = await dbGet('SELECT name, balance FROM users WHERE id = ?', [userId]);
+        if (!targetUser) {
+            return res.status(404).json({ status: false, message: "Pengguna target tidak ditemukan." });
+        }
+        const adminUser = await dbGet('SELECT name FROM users WHERE id = ?', [req.session.userId]);
+
+        // Lakukan update saldo
         const result = await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [parsedAmount, userId]);
-        if (result.changes === 0) return res.status(404).json({ status: false, message: "Pengguna tidak ditemukan." });
-        const user = await dbGet('SELECT name, balance FROM users WHERE id = ?', [userId]);
-        res.status(200).json({ status: true, message: `Saldo ${user.name} diubah. Saldo baru: Rp ${user.balance.toLocaleString('id-ID')}` });
-    } catch (error) { res.status(500).json({ status: false, message: "Gagal memperbarui saldo." }) }
+        if (result.changes === 0) {
+            return res.status(404).json({ status: false, message: "Gagal update, pengguna tidak ditemukan." });
+        }
+
+        // Dapatkan saldo TERBARU setelah update
+        const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [userId]);
+
+        // === LOGIKA BARU: HANYA JIKA SALDO DITAMBAH (TOP UP) ===
+        if (parsedAmount > 0) {
+            const topUpId = `TU-ADMIN-${Date.now()}`;
+            // Buat catatan di tabel topups
+            await dbRun(
+                "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [topUpId, userId, targetUser.name, parsedAmount, parsedAmount, 'completed', new Date().toISOString()]
+            );
+
+            // Kirim notifikasi ke grup Telegram
+            const notifMessage = `<b>✅ Top Up Manual Berhasil</b>
+──────────────────────
+👨‍💼 <b>Oleh Admin:</b> ${adminUser.name}
+👤 <b>Untuk Pengguna:</b> ${targetUser.name}
+💰 <b>Jumlah:</b> Rp ${parsedAmount.toLocaleString('id-ID')}
+📈 <b>Saldo Baru:</b> Rp ${updatedUser.balance.toLocaleString('id-ID')}
+──────────────────────
+<b>Notif:tembak.cloudrystore.com</b>`;
+            
+            sendTelegramNotification(notifMessage, 'group'); // 'group' untuk channel umum, 'admin' untuk channel admin
+        }
+        // === AKHIR LOGIKA BARU ===
+
+        res.status(200).json({ status: true, message: `Saldo ${targetUser.name} berhasil diubah. Saldo baru: Rp ${updatedUser.balance.toLocaleString('id-ID')}` });
+
+    } catch (error) {
+        console.error("Error updating balance by admin:", error);
+        res.status(500).json({ status: false, message: "Gagal memperbarui saldo." });
+    }
 });
+
 app.post('/api/admin/approve-user', isAuthenticated, isAdmin, async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ status: false, message: "User ID diperlukan." });
@@ -1060,6 +1239,124 @@ app.get('/api/admin/statistics', isAuthenticated, isAdmin, async (req, res) => {
         });
     } catch (error) { console.error("Error fetching statistics:", error); res.status(500).json({ status: false, message: "Gagal mengambil data statistik." }); }
 });
+
+async function renderRekeningKoranPage(container) {
+    // Set tanggal default: 30 hari terakhir
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const defaultStartDate = thirtyDaysAgo.toISOString().split('T')[0];
+    const defaultEndDate = today.toISOString().split('T')[0];
+
+    container.innerHTML = `
+        <div class="page-content">
+            <div class="page-header">
+                <h1>Laporan Keuangan Anda</h1>
+                <p>Lihat ringkasan dan rincian semua aktivitas keuangan di akun Anda.</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4>Total Saldo Masuk (Top Up)</h4>
+                    <p id="summary-total-topup" class="amount-credit">Memuat...</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Total Saldo Keluar (Fee)</h4>
+                    <p id="summary-total-spending" class="amount-debit">Memuat...</p>
+                </div>
+            </div>
+
+            <div class="page-content" style="margin-top: 2rem;">
+                <h3>Rincian Aktivitas</h3>
+                <div class="filter-controls" style="margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label for="start-date">Dari Tanggal</label>
+                        <input type="date" id="start-date" value="${defaultStartDate}">
+                    </div>
+                    <div class="form-group">
+                        <label for="end-date">Sampai Tanggal</label>
+                        <input type="date" id="end-date" value="${defaultEndDate}">
+                    </div>
+                    <button id="filter-report-btn">Tampilkan</button>
+                </div>
+                <div id="detailed-report-container">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const fetchAndDisplayReport = async () => {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const reportContainer = document.getElementById('detailed-report-container');
+        const topupSummaryEl = document.getElementById('summary-total-topup');
+        const spendingSummaryEl = document.getElementById('summary-total-spending');
+        
+        // Tampilkan loading spinner
+        reportContainer.innerHTML = '<div class="loading-spinner"></div>';
+        topupSummaryEl.textContent = 'Memuat...';
+        spendingSummaryEl.textContent = 'Memuat...';
+
+        try {
+            const { data } = await apiFetch(`/user/financial-summary?startDate=${startDate}&endDate=${endDate}`);
+            if (!data.status) throw new Error(data.message);
+
+            const summary = data.data.summary;
+            const details = data.data.details;
+
+            // Isi kartu ringkasan
+            topupSummaryEl.textContent = `Rp ${summary.totalTopup.toLocaleString('id-ID')}`;
+            spendingSummaryEl.textContent = `Rp ${summary.totalSpending.toLocaleString('id-ID')}`;
+
+            // Buat tabel rincian
+            if (details.length === 0) {
+                reportContainer.innerHTML = '<p>Tidak ada aktivitas pada rentang tanggal yang dipilih.</p>';
+                return;
+            }
+
+            const tableRows = details.map(item => {
+                const isCredit = item.amount > 0;
+                const amountClass = isCredit ? 'amount-credit' : 'amount-debit';
+                const amountSign = isCredit ? '+' : '-';
+                
+                return `
+                    <tr>
+                        <td data-label="Tanggal">${new Date(item.createdAt).toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</td>
+                        <td data-label="Tipe">${item.type}</td>
+                        <td data-label="Deskripsi">${item.description}</td>
+                        <td data-label="Jumlah" class="${amountClass}">
+                            <strong>${amountSign} Rp ${Math.abs(item.amount).toLocaleString('id-ID')}</strong>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            reportContainer.innerHTML = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Tipe</th>
+                            <th>Deskripsi</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            `;
+
+        } catch (error) {
+            reportContainer.innerHTML = `<p class="error-message">Gagal memuat laporan: ${error.message}</p>`;
+            topupSummaryEl.textContent = 'Error';
+            spendingSummaryEl.textContent = 'Error';
+        }
+    };
+
+    // Pasang event listener dan panggil pertama kali
+    document.getElementById('filter-report-btn').addEventListener('click', fetchAndDisplayReport);
+    fetchAndDisplayReport();
+}
 
 app.get('/api/admin/maintenance', isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -1253,6 +1550,8 @@ app.put('/api/admin/tutorial-content/reorder', isAuthenticated, isAdmin, async (
 async function executePurchase(trx, isOtp) {
     const params = { api_key: KMSP_API_KEY, package_code: trx.packageId, phone: trx.targetPhone, payment_method: isOtp ? trx.paymentMethod : 'balance', price_or_fee: trx.originalPrice };
     if (isOtp) params.access_token = trx.accessToken;
+
+    const platformFee = trx.platformFee || 0;
     const url = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${new URLSearchParams(params).toString()}`;
     try {
         const response = await fetch(url);
@@ -1266,19 +1565,36 @@ async function executePurchase(trx, isOtp) {
 const executeOtpPurchase = (trx) => executePurchase(trx, true);
 const executeNonOtpPurchase = (trx) => executePurchase(trx, false);
 
+// --- SCHEDULER UNTUK CEK SALDO DAN PROSES TRANSAKSI (Setiap 5 Menit) ---
 cron.schedule('*/5 * * * *', async () => {
-    console.log(`[Scheduler] Menjalankan tugas pada ${new Date().toLocaleString()}`);
+    console.log(`[Scheduler] Menjalankan tugas pengecekan pada ${new Date().toLocaleString()}`);
     try {
         const currentBalance = await getKmspAdminBalance();
+        
+        // --- LOGIKA BARU UNTUK DETEKSI TOP UP ADMIN ---
         const lastBalanceRow = await dbGet("SELECT value FROM settings WHERE key = 'lastKmspBalance'");
         const lastBalance = lastBalanceRow ? parseFloat(lastBalanceRow.value) : 0;
 
-        // --- PERBAIKAN: Hapus notifikasi top up KMSP, cukup update saldo di DB ---
+        // HANYA kirim notifikasi jika saldo saat ini LEBIH BESAR dari saldo terakhir
+        if (currentBalance > lastBalance) {
+            const topUpAmount = currentBalance - lastBalance;
+            const message = 
+`<b>✅ Top Up Saldo KMSP Berhasil!</b>
+──────────────────────
+<b>Jumlah Top Up:</b> Rp ${topUpAmount.toLocaleString('id-ID')}
+<b>Saldo KMSP Sekarang:</b> Rp ${currentBalance.toLocaleString('id-ID')}
+──────────────────────
+<b>Notif:tembak.cloudrystore.com</b>`;
+            
+            await sendTelegramNotification(message, 'admin');
+        }
+        
+        // Selalu update saldo terakhir di database jika nilainya berbeda
         if (currentBalance !== lastBalance) {
             await dbRun("UPDATE settings SET value = ? WHERE key = 'lastKmspBalance'", [currentBalance]);
         }
 
-        // Logika peringatan saldo rendah (tetap sama)
+        // --- LOGIKA PERINGATAN SALDO RENDAH YANG DIPERBAIKI ---
         const lowBalanceNotifiedRow = await dbGet("SELECT value FROM settings WHERE key = 'lowBalanceNotified'");
         const lowBalanceNotified = lowBalanceNotifiedRow ? JSON.parse(lowBalanceNotifiedRow.value) : false;
 
@@ -1294,15 +1610,13 @@ Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}<
             await dbRun("UPDATE settings SET value = 'false' WHERE key = 'lowBalanceNotified'");
         }
 
-        // --- PERUBAHAN UTAMA PADA LOGIKA TRANSAKSI TERTUNDA ---
+        // --- LOGIKA TRANSAKSI TERTUNDA YANG DIPERBAIKI ---
         const pendingTransactions = await dbAll("SELECT * FROM transactions WHERE status = 'menunggu_saldo_provider'");
         if (pendingTransactions.length > 0) {
             console.log(`[Scheduler] Ditemukan ${pendingTransactions.length} transaksi tertunda untuk diproses.`);
             for (const trx of pendingTransactions) {
                 if (currentBalance >= (trx.originalPrice || 0)) {
                     
-                    // 1. NOTIFIKASI BARU KE GRUP PENGGUNA (TARGET: 'group')
-                    console.log(`[Scheduler] Mengirim notifikasi proses ke grup untuk trx ${trx.id}...`);
                     const userMessage = 
 `<b>⏳ Transaksi Anda Sedang Diproses</b>
 ──────────────────────
@@ -1311,15 +1625,11 @@ Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}<
 ──────────────────────
 Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
 <b>Notif:tembak.cloudrystore.com</b>`;
-                    sendTelegramNotification(userMessage, 'group'); // Target 'group' adalah default
+                    sendTelegramNotification(userMessage, 'group');
 
-                    // 2. EKSEKUSI PEMBELIAN
-                    console.log(`[Scheduler] Memproses pembelian untuk trx ${trx.id}...`);
                     await (trx.accessToken ? executeOtpPurchase(trx) : executeNonOtpPurchase(trx));
                     
-                    // 3. NOTIFIKASI HASIL KE ADMIN (TARGET: 'admin')
                     const updatedTrx = await dbGet("SELECT status, api_response FROM transactions WHERE id = ?", [trx.id]);
-                    console.log(`[Scheduler] Mengirim notifikasi hasil ke admin untuk trx ${trx.id}...`);
                     const adminReportMessage =
 `<b>📊 Hasil Proses Transaksi Tertunda</b>
 ──────────────────────
@@ -1329,19 +1639,21 @@ Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
 <b>Pesan API:</b> ${updatedTrx.api_response}
 ──────────────────────
 <b>Notif:tembak.cloudrystore.com</b>`;
-                    sendTelegramNotification(adminReportMessage, 'admin'); // Target 'admin'
+                    sendTelegramNotification(adminReportMessage, 'admin');
                 }
             }
         }
-
     } catch (error) { 
         console.error('[Scheduler] Terjadi error:', error); 
     }
+}, {
+    scheduled: true,
+    timezone: "Asia/Jakarta"
 });
 
-// Ganti seluruh blok cron.schedule untuk backup dengan ini:
 
-cron.schedule('0 6,9,12,15,18,21,0,3 * * *', async () => { // Berjalan pada jam 6, 9, 12, 15, 18, 21, 0, 3
+// --- SCHEDULER UNTUK BACKUP OTOMATIS HARIAN ---
+cron.schedule('0 6,9,12,15,18,21,0,3 * * *', async () => { // Berjalan pada jam yang Anda tentukan
     console.log(`[Backup] Scheduler backup dipicu pada ${new Date().toLocaleString()}`);
     
     const backupDir = path.join(__dirname, 'backups');
@@ -1349,20 +1661,17 @@ cron.schedule('0 6,9,12,15,18,21,0,3 * * *', async () => { // Berjalan pada jam 
         fs.mkdirSync(backupDir);
     }
 
-    // 1. Buat nama file baru sesuai permintaan
     const date = new Date();
     const timestamp = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}_${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}`;
-    const backupFileName = `WebRyStoreBackup-${timestamp}.sqlite`; // Nama file baru
+    const backupFileName = `webRyyStoreBackup-${timestamp}.sqlite`;
     const backupFilePath = path.join(backupDir, backupFileName);
 
     console.log(`[Backup] Memulai proses backup ke: ${backupFileName}`);
 
     try {
-        // 2. Salin file database
         fs.copyFileSync(dbPath, backupFilePath);
         console.log(`[Backup] Database berhasil di-backup secara lokal.`);
 
-        // 3. Kirim file ke Telegram
         if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) {
             console.log('[Backup] Melewatkan pengiriman ke Telegram: Token atau Chat ID Admin tidak diset.');
         } else {
@@ -1381,7 +1690,7 @@ cron.schedule('0 6,9,12,15,18,21,0,3 * * *', async () => { // Berjalan pada jam 
             console.log(`[Backup] File backup berhasil dikirim ke Telegram Admin.`);
         }
 
-        // 4. Hapus backup yang lebih tua dari 3 hari (karena backup lebih sering)
+        // Hapus backup yang lebih tua dari 3 hari
         const files = fs.readdirSync(backupDir);
         files.forEach(file => {
             const filePath = path.join(backupDir, file);
