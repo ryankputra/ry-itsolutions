@@ -201,7 +201,9 @@ async function appRouter() {
         }
         renderDashboard(cleanHash.substring(1));
         renderUserWatermark();
-        showAnnouncementPopupIfNeeded();
+        if (cleanHash === '#beli-paket') {
+    showAnnouncementPopupIfNeeded();
+}
         startStatusPolling();
     } else {
         // PENGGUNA BELUM LOGIN
@@ -1604,13 +1606,16 @@ async function renderDashboard(activePage = 'dashboard') {
     if (!mainContent) return;
 
     if (latestAnnouncement && latestAnnouncement.message) {
-        mainContent.insertAdjacentHTML('afterbegin', `
-            <div class="announcement-banner" id="announcement-banner">
-                <p><strong>Informasi:</strong> ${latestAnnouncement.message}</p>
-                <button class="announcement-close" id="announcement-close-btn">&times;</button>
-            </div>
-        `);
-    }
+    // Ambil hanya bagian pertama dari teks (sebelum pemisah)
+    const bannerMessage = latestAnnouncement.message.split('|||')[0];
+
+    mainContent.insertAdjacentHTML('afterbegin', `
+        <div class="announcement-banner" id="announcement-banner">
+            <p><strong>Informasi:</strong> ${marked.parse(bannerMessage, { inline: true })}</p>
+            <button class="announcement-close" id="announcement-close-btn">&times;</button>
+        </div>
+    `);
+}
 
     const pageRenderers = {
         'dashboard': renderMainDashboardPage,
@@ -3568,6 +3573,7 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
  */
  function renderAnnouncementModal(announcement) {
     const modalContainer = document.getElementById('modal-container');
+    const fullMessage = announcement.message.replace('|||', '\n\n');
     if (!modalContainer) return;
 
     modalContainer.innerHTML = `
@@ -3576,7 +3582,7 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
                 <div class="announcement-header">
                     <h2>📢 Pengumuman Penting</h2>
                 </div>
-                <div class="announcement-body">${announcement.message}</div>
+                <div class="announcement-body">${marked.parse(fullMessage)}</div>
                 <div class="announcement-footer">
                     <label class="understand-checkbox-label">
                         <input type="checkbox" id="understand-checkbox">
@@ -4126,6 +4132,7 @@ function handleStreamEvent(event, logList, totalPackages) {
     }
 }
 
+
 async function handleMultiPulsaPurchase(e) {
     const button = e.currentTarget;
     const feedbackContainer = document.getElementById('multi-pulsa-feedback');
@@ -4136,43 +4143,53 @@ async function handleMultiPulsaPurchase(e) {
         return;
     }
 
-    const selectedCheckboxes = document.querySelectorAll('.pulsa-checkbox:checked');
-    const packagesToProcess = Array.from(selectedCheckboxes).map(cb => {
-        const label = cb.nextElementSibling;
-        return {
-            id: cb.dataset.packageId,
-            name: label.querySelector('strong').textContent
-        };
-    });
-    
-    if (packagesToProcess.length === 0) {
+    const selectedItems = Array.from(document.querySelectorAll('.pulsa-checkbox:checked'))
+        .map(cb => cb.closest('.checkbox-item'));
+
+    if (selectedItems.length === 0) {
         showToast("Pilih minimal satu paket untuk dieksekusi.", true);
         return;
     }
 
-    if (!confirm(`Anda akan mengeksekusi ${packagesToProcess.length} paket. Proses akan berjalan dengan jeda. Jangan tutup tab ini. Lanjutkan?`)) {
+    if (!confirm(`Anda akan mengeksekusi ${selectedItems.length} paket. Proses akan berjalan dengan jeda. Jangan tutup tab ini. Lanjutkan?`)) {
         return;
     }
 
     button.disabled = true;
-    feedbackContainer.innerHTML = `<h4>Memproses ${packagesToProcess.length} paket...</h4><ul id="realtime-log-list" class="realtime-log"></ul>`;
+    feedbackContainer.innerHTML = `<h4>Memproses ${selectedItems.length} paket...</h4><ul id="realtime-log-list" class="realtime-log"></ul>`;
     const logList = document.getElementById('realtime-log-list');
+
+    document.querySelectorAll('.checkbox-item').forEach(item => {
+        item.classList.remove('processing', 'completed-success', 'completed-fail');
+    });
 
     const KMSP_API_DELAY_MS = 16000;
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    for (const [index, pkg] of packagesToProcess.entries()) {
+    for (const [index, itemElement] of selectedItems.entries()) {
+        const checkbox = itemElement.querySelector('.pulsa-checkbox');
+        const label = itemElement.querySelector('label');
+        const strongTag = label.querySelector('strong'); // Dapatkan elemen nama paket
+        const pkg = {
+            id: checkbox.dataset.packageId,
+            name: strongTag.textContent
+        };
+
         const logItem = document.createElement('li');
         logItem.className = 'log-item-pending';
-        logItem.innerHTML = `
-            <div class="log-entry-header">
-                <span class="log-icon">⏳</span>
-                <span>(${index + 1}/${packagesToProcess.length}) <strong>${pkg.name}</strong></span>
-            </div>
-            <div class="log-message">Mengirim permintaan...</div>
-        `;
+        logItem.innerHTML = `<div class="log-entry-header"><span class="log-icon">⏳</span><span>(${index + 1}/${selectedItems.length}) <strong>${pkg.name}</strong></span></div><div class="log-message">Mengirim permintaan...</div>`;
         logList.appendChild(logItem);
         logItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+        // ======================================================
+        // ### KODE BARU: BUAT DAN TAMPILKAN IKON GERIGI ###
+        const gearIcon = document.createElement('span');
+        gearIcon.className = 'processing-gear-icon';
+        gearIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5zm7.43-3.5c0 .41-.02.81-.07 1.2l1.46 1.14c.12.09.17.26.09.4l-1.4 2.42c-.08.14-.26.2-.4.12l-1.78-.72c-.49.37-.98.67-1.54.9l-.26 1.89c-.02.15-.17.27-.33.27h-2.8c-.16 0-.31-.12-.33-.27l-.26-1.89c-.56-.23-1.05-.53-1.54-.9l-1.78.72c-.14.08-.32.02-.4-.12l-1.4-2.42c-.08-.14-.03-.31.09-.4l1.46-1.14c-.05-.39-.07-.79-.07-1.2s.02-.81.07-1.2l-1.46-1.14c-.12-.09-.17-.26-.09-.4l1.4-2.42c.08-.14.26-.2.4-.12l1.78.72c.49-.37.98-.67 1.54-.9l.26-1.89c.02-.15.17-.27.33-.27h2.8c.16 0 .31.12.33.27l.26 1.89c.56.23 1.05.53 1.54.9l1.78-.72c.14-.08.32-.02.4.12l1.4 2.42c.08.14.03.31-.09.4l-1.46 1.14c.05.39.07.79.07 1.2z"></path></svg>`;
+        strongTag.appendChild(gearIcon);
+        // ======================================================
+        
+        itemElement.classList.add('processing');
 
         try {
             const { data, status } = await apiFetch('/purchase', {
@@ -4182,7 +4199,7 @@ async function handleMultiPulsaPurchase(e) {
                     phone: phoneAuth.phone,
                     access_token: phoneAuth.accessToken,
                     paymentMethod: 'balance',
-                    purchaseContext: 'multi-paket' // Konteks untuk multi-paket
+                    purchaseContext: 'multi-paket'
                 }
             });
             
@@ -4195,20 +4212,28 @@ async function handleMultiPulsaPurchase(e) {
             logItem.querySelector('.log-icon').innerHTML = '✔';
             logItem.querySelector('.log-message').textContent = data.message;
             logItem.querySelector('.log-message').className = 'log-message success';
+            itemElement.classList.add('completed-success');
 
         } catch (error) {
             logItem.className = 'log-item-error';
             logItem.querySelector('.log-icon').innerHTML = '❌';
             logItem.querySelector('.log-message').textContent = error.message;
             logItem.querySelector('.log-message').className = 'log-message error';
+            itemElement.classList.add('completed-fail');
 
             if (currentUser && typeof error.newBalance === 'number') {
-                 currentUser.balance = error.newBalance;
-                 updateBalanceUI(currentUser.balance);
+                currentUser.balance = error.newBalance;
+                updateBalanceUI(currentUser.balance);
             }
+        } finally {
+            // ===============================================
+            // ### KODE BARU: HAPUS IKON GERIGI ###
+            gearIcon.remove();
+            // ===============================================
+            itemElement.classList.remove('processing');
         }
 
-        if (index < packagesToProcess.length - 1) {
+        if (index < selectedItems.length - 1) {
             const delayMessageDiv = document.createElement('div');
             delayMessageDiv.className = 'delay-message';
             delayMessageDiv.textContent = `Menunggu jeda ${KMSP_API_DELAY_MS / 1000} detik...`;
@@ -4221,9 +4246,11 @@ async function handleMultiPulsaPurchase(e) {
     feedbackContainer.querySelector('h4').textContent = '✅ Semua Proses Selesai.';
     showToast('Eksekusi multi paket selesai.', false);
     button.disabled = false;
-    selectedCheckboxes.forEach(cb => cb.checked = false);
+    
+    selectedItems.forEach(item => {
+        item.querySelector('.pulsa-checkbox').checked = false;
+    });
 }
-
 /**
  * Menampilkan detail paket di halaman Beli Paket (Reguler/OTP).
  * Versi ini akan menonaktifkan tombol beli jika saldo provider admin tidak cukup.

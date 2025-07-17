@@ -667,24 +667,28 @@ input:focus, textarea:focus, select:focus {
 /* --- Banner Pengumuman (Di Atas Halaman) --- */
 
 .announcement-banner {
-    background-color: rgba(198, 212, 0, 0.791);
-    color: white;
-    padding: 0.75rem 1.25rem;
+    /* PERUBAHAN WARNA: Kombinasi biru tua dan teks putih agar lebih kontras */
+    background-color: #1e3a8a; /* Biru sangat gelap */
+    color: #e0f2fe; /* Teks putih kebiruan */
+
+    padding: 1rem 1.25rem; /* Padding sedikit lebih besar */
     border-radius: var(--border-radius);
-    margin-bottom: 1.5rem; /* Memberi jarak ke konten di bawahnya */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
     box-shadow: var(--box-shadow);
+
+    /* PERBAIKAN TAMPILAN: Mengatur agar ikon dan teks sejajar dengan rapi */
+    display: grid;
+    grid-template-columns: 1fr auto; /* Kolom teks fleksibel, kolom tombol menyesuaikan */
+    align-items: start; /* Konten mulai dari atas */
+    gap: 1rem; /* Jarak antara teks dan tombol silang */
 }
 
 .announcement-banner p {
     margin: 0;
     flex-grow: 1;
     padding-right: 1rem;
-    /* Menjaga format spasi dan enter dari database */
-    white-space: pre-wrap; 
+    /* Mengizinkan teks untuk wrap secara normal */
+    white-space: normal; /* <-- DIUBAH DI SINI */
     word-wrap: break-word; 
 }
 
@@ -1929,4 +1933,70 @@ button.tutorial-card:hover {
 .active-package-item ul li strong {
     font-size: 1em; /* Reset ukuran font untuk kuota */
     color: #212529; /* Warna teks kuota */
+}
+
+@keyframes pulse-bg {
+  0% { background-color: rgba(239, 246, 255, 0.7) !important; }
+  50% { background-color: rgba(219, 234, 254, 1) !important; }
+  100% { background-color: rgba(239, 246, 255, 0.7) !important; }
+}
+
+/* Style untuk spinner kecil yang akan kita tambahkan via JS */
+.inline-spinner {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Style untuk item saat sedang dalam proses */
+.checkbox-item.processing {
+    animation: pulse-bg 1.5s infinite !important; /* <- Paksa animasi berjalan */
+    border-radius: 8px !important;
+    outline: 1px solid var(--primary-color) !important;
+}
+
+/* Style untuk item yang berhasil diproses */
+.checkbox-item.completed-success {
+    background-color: #f0fdf4 !important;
+    border-left: 4px solid var(--success-color) !important;
+    transition: background-color 0.3s ease;
+}
+
+/* Style untuk item yang gagal diproses */
+.checkbox-item.completed-fail {
+    background-color: #fef2f2 !important;
+    border-left: 4px solid var(--danger-color) !important;
+    transition: background-color 0.3s ease;
+}
+
+/* Memastikan background label tidak menutupi animasi di parent div */
+.checkbox-item label {
+    background-color: transparent !important;
+}
+
+/* style.css */
+
+/* ================================================= */
+/* === GAYA TAMBAHAN UNTUK IKON GERIGI PROSES ===== */
+/* ================================================= */
+
+.processing-gear-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 8px; /* Jarak dari teks nama paket */
+    vertical-align: middle; /* Agar sejajar dengan teks */
+    animation: spin 1.5s linear infinite; /* Gunakan animasi spin yang sudah ada */
+}
+
+.processing-gear-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--primary-color); /* Warna ikon mengikuti warna primer */
 }
