@@ -3979,7 +3979,7 @@ async function renderPackagesPage(container) {
     const multiPurchaseHTML = multiPurchasePackages.length > 0 ? `
         <div class="page-content" id="multi-purchase-section">
             <div class="page-header"><h3>Beli Multi Paket</h3>
-            <p>Pilih satu atau lebih paket di bawah ini untuk dieksekusi secara berurutan.<hr><b>DIHARAP SAAT EKSEKUSI JANGAN KELUAR DARI BROWSER (Gunakan Metode ini YTTA)</p></div>
+            <p>Pilih satu atau lebih paket di bawah ini untuk dieksekusi secara berurutan.<hr><b>DIHARAP SAAT EKSEKUSI JANGAN KELUAR DARI BROWSER (Gunakan Metode ini sesudah baca "CARA BELI")</p></div>
             <div id="multi-pulsa-feedback"></div>
             <div id="pulsa-package-list" class="checkbox-package-list">
                 ${multiPurchasePackages.map(pkg => `
