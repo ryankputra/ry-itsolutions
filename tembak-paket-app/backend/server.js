@@ -1548,17 +1548,45 @@ app.put('/api/admin/tutorial-content/reorder', isAuthenticated, isAdmin, async (
 // SCHEDULER OTOMATIS
 // =======================================================
 async function executePurchase(trx, isOtp) {
+    // Persiapan parameter untuk dikirim ke API KMSP
     const params = { api_key: KMSP_API_KEY, package_code: trx.packageId, phone: trx.targetPhone, payment_method: isOtp ? trx.paymentMethod : 'balance', price_or_fee: trx.originalPrice };
     if (isOtp) params.access_token = trx.accessToken;
 
-    const platformFee = trx.platformFee || 0;
     const url = `https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${new URLSearchParams(params).toString()}`;
+    
     try {
         const response = await fetch(url);
         const data = await response.json();
+        
         const success = response.ok && data.status;
-        await dbRun("UPDATE transactions SET status = ?, api_response = ? WHERE id = ?", [success ? 'success' : 'failed', data.message || (success ? 'Success' : 'Failed'), trx.id]);
+        let paymentDetails = null;
+
+        // =========================================================================
+        // ### BAGIAN PENTING YANG MEMPERBAIKI MASALAH ###
+        // Logika ini ditambahkan untuk menangkap dan menyimpan detail pembayaran (deeplink/QRIS)
+        // yang diterima setelah transaksi dari antrean berhasil diproses.
+        // =========================================================================
+        if (success && data.data && (data.data.is_qris || data.data.have_deeplink)) {
+            // Jika pembayaran berupa QRIS, generate gambar Base64-nya
+            if (data.data.is_qris && data.data.qris_data?.qr_code) {
+                data.data.qris_data.qr_code_base64 = await qrcode.toDataURL(data.data.qris_data.qr_code);
+            }
+            // Ubah objek detail pembayaran menjadi string JSON untuk disimpan di database
+            paymentDetails = JSON.stringify(data.data);
+        }
+
+        const finalStatus = success ? 'success' : 'failed';
+        const finalMessage = data.message || (success ? 'Sukses diproses dari antrean' : 'Gagal');
+        const kmspTrxId = data.data?.trx_id || trx.kmspTrxId; // Ambil ID transaksi dari KMSP
+
+        // Perbarui database dengan SEMUA data yang relevan, termasuk `paymentDetails`
+        await dbRun(
+            "UPDATE transactions SET status = ?, api_response = ?, kmspTrxId = ?, paymentDetails = ? WHERE id = ?",
+            [finalStatus, finalMessage, kmspTrxId, paymentDetails, trx.id]
+        );
+
     } catch (error) {
+        // Tangani jika terjadi error saat menghubungi API KMSP
         await dbRun("UPDATE transactions SET status = ?, api_response = ? WHERE id = ?", ['failed', `Scheduler Error: ${error.message}`, trx.id]);
     }
 }
@@ -1566,51 +1594,49 @@ const executeOtpPurchase = (trx) => executePurchase(trx, true);
 const executeNonOtpPurchase = (trx) => executePurchase(trx, false);
 
 // --- SCHEDULER UNTUK CEK SALDO DAN PROSES TRANSAKSI (Setiap 5 Menit) ---
-cron.schedule('*/5 * * * *', async () => {
+cron.schedule('*/1 * * * *', async () => {
     console.log(`[Scheduler] Menjalankan tugas pengecekan pada ${new Date().toLocaleString()}`);
     try {
+        // =============================================================
+        // ### BAGIAN 1: LOGIKA NOTIFIKASI SALDO
+        // =============================================================
         const currentBalance = await getKmspAdminBalance();
         
-        // --- LOGIKA BARU UNTUK DETEKSI TOP UP ADMIN ---
-        const lastBalanceRow = await dbGet("SELECT value FROM settings WHERE key = 'lastKmspBalance'");
-        const lastBalance = lastBalanceRow ? parseFloat(lastBalanceRow.value) : 0;
-
-        // HANYA kirim notifikasi jika saldo saat ini LEBIH BESAR dari saldo terakhir
-        if (currentBalance > lastBalance) {
-            const topUpAmount = currentBalance - lastBalance;
-            const message = 
-`<b>✅ Top Up Saldo KMSP Berhasil!</b>
-──────────────────────
-<b>Jumlah Top Up:</b> Rp ${topUpAmount.toLocaleString('id-ID')}
-<b>Saldo KMSP Sekarang:</b> Rp ${currentBalance.toLocaleString('id-ID')}
-──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`;
-            
-            await sendTelegramNotification(message, 'admin');
-        }
-        
-        // Selalu update saldo terakhir di database jika nilainya berbeda
-        if (currentBalance !== lastBalance) {
-            await dbRun("UPDATE settings SET value = ? WHERE key = 'lastKmspBalance'", [currentBalance]);
-        }
-
-        // --- LOGIKA PERINGATAN SALDO RENDAH YANG DIPERBAIKI ---
+        // Dapatkan status notifikasi terakhir dari DB
         const lowBalanceNotifiedRow = await dbGet("SELECT value FROM settings WHERE key = 'lowBalanceNotified'");
         const lowBalanceNotified = lowBalanceNotifiedRow ? JSON.parse(lowBalanceNotifiedRow.value) : false;
 
+        // Kondisi 1: Saldo RENDAH dan admin BELUM dinotifikasi.
         if (currentBalance < 1500 && !lowBalanceNotified) {
+            // KIRIM NOTIFIKASI PERINGATAN
             await sendTelegramNotification(
 `<b>🚨 PERINGATAN SALDO RENDAH 🚨</b>
 ──────────────────────
-Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}</b>.
+Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}</b>. Mohon segera isi ulang untuk menghindari antrean transaksi.
 ──────────────────────
 <b>Notif:tembak.cloudrystore.com</b>`, 'admin');
+            
+            // Set flag agar tidak mengirim notifikasi berulang kali
             await dbRun("UPDATE settings SET value = 'true' WHERE key = 'lowBalanceNotified'");
+
+        // Kondisi 2: Saldo SUDAH NORMAL (setelah sebelumnya rendah)
         } else if (currentBalance >= 1500 && lowBalanceNotified) {
+            // KIRIM NOTIFIKASI PEMULIHAN SALDO
+            await sendTelegramNotification(
+`<b>✅ Saldo KMSP Pulih</b>
+──────────────────────
+<b>Saldo saat ini: Rp ${currentBalance.toLocaleString('id-ID')}</b>
+Sistem akan kembali memproses antrean transaksi (jika ada).
+──────────────────────
+<b>Notif:tembak.cloudrystore.com</b>`, 'admin');
+
+            // Reset flag ke kondisi normal
             await dbRun("UPDATE settings SET value = 'false' WHERE key = 'lowBalanceNotified'");
         }
 
-        // --- LOGIKA TRANSAKSI TERTUNDA YANG DIPERBAIKI ---
+        // =============================================================
+        // ### BAGIAN 2: PROSES ANTRIAN TRANSAKSI
+        // =============================================================
         const pendingTransactions = await dbAll("SELECT * FROM transactions WHERE status = 'menunggu_saldo_provider'");
         if (pendingTransactions.length > 0) {
             console.log(`[Scheduler] Ditemukan ${pendingTransactions.length} transaksi tertunda untuk diproses.`);

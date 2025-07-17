@@ -4337,7 +4337,7 @@ async function renderHistoryPage(container) {
                 renderDynamicQrisDisplay(qrisData.base64Image, qrisData.uniqueAmount, expiresAtTimestamp);
             } catch (error) {
                 showToast('Gagal menampilkan QRIS: ' + error.message, true);
-            }
+            } 
             return; // Hentikan eksekusi setelah ini
         }
         // ### AKHIR FUNGSI BARU ###
@@ -4500,8 +4500,11 @@ async function renderHistoryPage(container) {
                 <td data-label="Jumlah/Fee">${amountOrFee}</td>
                 <td data-label="Status" class="status-cell"><br>
                     <span class="status-badge status-${statusClass}"><br>${statusText}</span>
+
                 </td>
                 <td data-label="Aksi" class="action-cell">${actionButton}</td>
+
+
             </tr>`;
         }).join('');
 
@@ -4562,7 +4565,7 @@ async function renderHistoryPage(container) {
         }
     };
 
-    await fetchAndUpdateHistory();
+        await fetchAndUpdateHistory();
 }
 
 // frontend/app.js -> GANTI FUNGSI LAMA ANDA DENGAN INI
