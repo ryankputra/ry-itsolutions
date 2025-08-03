@@ -189,6 +189,13 @@ async function appRouter() {
     // TAHAP 2: Cek Login
     await checkLoginStatus();
 
+    // TAHAP 3: Handle Maintenance Mode
+    // Jika maintenance aktif DAN (pengguna tidak login ATAU pengguna bukan admin)
+    if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin')) {
+        renderGlobalMaintenancePage();
+        return; // Hentikan routing lebih lanjut
+    }
+
     // TAHAP 3: Keputusan berdasarkan Login
     if (currentUser) {
         // PENGGUNA SUDAH LOGIN
@@ -316,7 +323,8 @@ function startStatusPolling() {
     if (statusIntervalId) clearInterval(statusIntervalId);
 
     statusIntervalId = setInterval(async () => {
-        if (!currentUser || currentUser.role === 'admin') {
+        // Hentikan polling jika pengguna sudah logout
+        if (!currentUser) {
             stopStatusPolling();
             return;
         }
@@ -324,16 +332,16 @@ function startStatusPolling() {
         try {
             const { data, status } = await apiFetch('/status');
             if (status === 200 && data.status) {
-                // LOG UNTUK DEBUGGING
-                console.log(`Polling... Saldo saat ini (client): ${currentUser.balance}, Saldo dari server: ${data.currentBalance}`);
-
-                if (data.maintenanceMode === true) {
+                // Jika mode maintenance aktif dan pengguna bukan admin, tampilkan halaman maintenance
+                if (data.maintenanceMode === true && currentUser.role !== 'admin') {
                     isMaintenanceMode = true;
                     renderGlobalMaintenancePage();
                     stopStatusPolling();
+                    return; // Hentikan eksekusi lebih lanjut di interval ini
                 }
 
-                if (data.currentBalance !== null && data.currentBalance !== currentUser.balance) {
+                // Hanya perbarui saldo jika pengguna bukan admin (admin melihat saldo di panelnya)
+                if (currentUser.role !== 'admin' && data.currentBalance !== null && data.currentBalance !== currentUser.balance) {
                     // LOG SAAT TERJADI PERUBAHAN
                     console.log('%cTERDETEKSI PERUBAHAN SALDO! Memperbarui tampilan...', 'color: green; font-weight: bold;');
                     
@@ -343,8 +351,10 @@ function startStatusPolling() {
                 }
             }
         } catch (error) {
-            console.error("Status polling failed:", error.message);
-            stopStatusPolling();
+            console.error("Gagal melakukan polling status:", error.message);
+            if (error instanceof AuthError) {
+                stopStatusPolling(); // Hentikan jika sesi tidak valid lagi
+            }
         }
     }, 15000); // Kita percepat jadi 15 detik untuk tes
 }
@@ -455,6 +465,56 @@ async function fetchAnnouncement() {
         console.warn("Tidak dapat mengambil pengumuman:", error.message);
         latestAnnouncement = null;
     }
+}
+
+/**
+ * FUNGSI BARU: Menginisialisasi panel jadwal maintenance.
+ * Mengambil data jadwal saat ini dan memasang event listener untuk form.
+ */
+async function initializeMaintenanceSchedule() {
+    const form = document.getElementById('maintenance-schedule-form');
+    if (!form) return;
+
+    const enabledCheckbox = document.getElementById('schedule-enabled-checkbox');
+    const startTimeInput = document.getElementById('schedule-start-time');
+    const endTimeInput = document.getElementById('schedule-end-time');
+    const feedbackContainer = document.getElementById('maintenance-schedule-feedback');
+
+    try {
+        // 1. Ambil data jadwal yang ada
+        const { data } = await apiFetch('/admin/maintenance-schedule');
+        if (data.status && data.data) {
+            enabledCheckbox.checked = data.data.enabled;
+            startTimeInput.value = data.data.startTime;
+            endTimeInput.value = data.data.endTime;
+        } else {
+            throw new Error(data.message || 'Gagal memuat jadwal.');
+        }
+    } catch (error) {
+        displayFeedback('maintenance-schedule-feedback', `Error: ${error.message}`, true);
+    }
+
+    // 2. Pasang event listener untuk form submit
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        button.innerHTML = '<span class="button-spinner"></span> Menyimpan...';
+        displayFeedback('maintenance-schedule-feedback', '', false);
+
+        try {
+            const payload = { enabled: enabledCheckbox.checked, startTime: startTimeInput.value, endTime: endTimeInput.value };
+            const { data } = await apiFetch('/admin/maintenance-schedule', { method: 'PUT', body: payload });
+            if (!data.status) throw new Error(data.message);
+            showToast(data.message, false);
+        } catch (error) {
+            showToast(error.message, true);
+            displayFeedback('maintenance-schedule-feedback', error.message, true);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Simpan Jadwal';
+        }
+    });
 }
 
 /**
@@ -2412,7 +2472,9 @@ function renderAdminDashboard(container) {
                 <h2>Persetujuan Pengguna Baru</h2>
                 <p>Pengguna di bawah ini sedang menunggu persetujuan Anda untuk bisa login.</p>
                 <div id="approval-feedback"></div>
-                <ul id="pending-users-list" class="user-list-admin"><div class="loading-spinner"></div></ul>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <ul id="pending-users-list" class="user-list-admin"><div class="loading-spinner"></div></ul>
+                </div>
             </div>
 
             <div class="admin-section">
@@ -2450,6 +2512,29 @@ function renderAdminDashboard(container) {
                 <button id="toggle-maintenance-btn" style="width:100%; background: ${isMaintenanceMode ? 'var(--danger-color)' : 'var(--success-color)'};">
                     ${isMaintenanceMode ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan'}
                 </button>
+            </div>
+
+            <div class="admin-section">
+                <h2>Mode Pemeliharaan Terjadwal</h2>
+                <p>Aktifkan untuk menonaktifkan situs secara otomatis pada jam yang ditentukan (WIB). Fitur ini akan diabaikan jika mode pemeliharaan manual di atas aktif.</p>
+                <form id="maintenance-schedule-form">
+                    <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="schedule-enabled-checkbox" style="width: auto; margin-bottom: 0;">
+                        <label for="schedule-enabled-checkbox" style="margin-bottom: 0; font-weight: 600;">Aktifkan Jadwal Maintenance</label>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
+                            <label for="schedule-start-time">Waktu Mulai</label>
+                            <input type="time" id="schedule-start-time" required>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
+                            <label for="schedule-end-time">Waktu Selesai</label>
+                            <input type="time" id="schedule-end-time" required>
+                        </div>
+                    </div>
+                    <button type="submit" style="margin-top: 1rem;">Simpan Jadwal</button>
+                </form>
+                <div id="maintenance-schedule-feedback" style="margin-top: 1rem;"></div>
             </div>
 
             <div class="admin-section">
@@ -3258,6 +3343,9 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         // Inisialisasi Daftar Pengguna untuk Manajemen Saldo & Log
         loadUsers();
 
+        // Polling untuk daftar pengguna baru setiap 30 detik
+        setInterval(loadUsers, 30000);
+
         // Inisialisasi Saldo KMSP
         await fetchKMSPBalance();
         const kmspBalanceDisplay = document.getElementById('kmsp-balance-display');
@@ -3272,6 +3360,9 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
 
         // Inisialisasi Manajemen Transaksi
         initializeTransactionManagement();
+
+        // Inisialisasi Jadwal Maintenance
+        initializeMaintenanceSchedule();
 
         // Pasang listener untuk semua fitur lainnya
         document.getElementById('check-kmsp-balance-btn')?.addEventListener('click', async (e) => {

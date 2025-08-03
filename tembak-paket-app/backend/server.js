@@ -59,23 +59,35 @@ const dbAll = (query, params = []) => new Promise((resolve, reject) => { db.all(
 
 // --- INISIALISASI STRUKTUR TABEL DATABASE ---
 async function initializeDatabase() {
-    db.serialize(async () => {
-        try {
-            await dbRun("PRAGMA foreign_keys = ON;");
-            await dbRun(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, balance REAL DEFAULT 0, role TEXT DEFAULT 'user', verifiedPhone TEXT, savedPhones TEXT, status TEXT DEFAULT 'pending', createdAt TEXT NOT NULL, resetPasswordToken TEXT, resetPasswordExpires INTEGER)`);
-            await dbRun(`CREATE TABLE IF NOT EXISTS packages (package_code TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, original_price REAL DEFAULT 0, platform_fee REAL DEFAULT 0, isVisible INTEGER DEFAULT 0, category TEXT DEFAULT 'reguler', isMultiPurchase INTEGER DEFAULT 0, payment_methods TEXT)`);
-            await dbRun(`CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, packageId TEXT, packageName TEXT, platformFee REAL, originalPrice REAL, targetPhone TEXT, accessToken TEXT, paymentMethod TEXT, kmspTrxId TEXT, status TEXT NOT NULL, api_response TEXT, createdAt TEXT NOT NULL, paymentDetails TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
-            await dbRun(`CREATE TABLE IF NOT EXISTS topups (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, baseAmount REAL NOT NULL, uniqueAmount REAL NOT NULL, status TEXT NOT NULL, createdAt TEXT NOT NULL, qrisBase64Image TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
-            await dbRun(`CREATE TABLE IF NOT EXISTS announcements (id TEXT PRIMARY KEY, message TEXT NOT NULL, createdAt TEXT NOT NULL)`);
-            await dbRun(`CREATE TABLE IF NOT EXISTS tutorialContent (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, content TEXT, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL, position INTEGER DEFAULT 0)`);
-            await dbRun(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
-            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceMode', 'false'), ('lowBalanceNotified', 'false'), ('topupOptions', '[]'), ('lastKmspBalance', '0')`);
-            console.log("✅ Database schema initialized successfully.");
-        } catch (error) {
-            console.error("Database initialization failed:", error);
-            process.exit(1);
-        }
-    });
+     db.serialize(async () => {
+         try {
+             await dbRun("PRAGMA foreign_keys = ON;");
+             await dbRun(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, balance REAL DEFAULT 0, role TEXT DEFAULT 'user', verifiedPhone TEXT, savedPhones TEXT, status TEXT DEFAULT 'pending', createdAt TEXT NOT NULL, resetPasswordToken TEXT, resetPasswordExpires INTEGER)`);
+             await dbRun(`CREATE TABLE IF NOT EXISTS packages (package_code TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, original_price REAL DEFAULT 0, platform_fee REAL DEFAULT 0, isVisible INTEGER DEFAULT 0, category TEXT DEFAULT 'reguler', isMultiPurchase INTEGER DEFAULT 0, payment_methods TEXT)`);
+             await dbRun(`CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, packageId TEXT, packageName TEXT, platformFee REAL, originalPrice REAL, targetPhone TEXT, accessToken TEXT, paymentMethod TEXT, kmspTrxId TEXT, status TEXT NOT NULL, api_response TEXT, createdAt TEXT NOT NULL, paymentDetails TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
+             await dbRun(`CREATE TABLE IF NOT EXISTS topups (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, baseAmount REAL NOT NULL, uniqueAmount REAL NOT NULL, status TEXT NOT NULL, createdAt TEXT NOT NULL, qrisBase64Image TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
+             await dbRun(`CREATE TABLE IF NOT EXISTS announcements (id TEXT PRIMARY KEY, message TEXT NOT NULL, createdAt TEXT NOT NULL)`);
+             await dbRun(`CREATE TABLE IF NOT EXISTS tutorialContent (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, content TEXT, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL, position INTEGER DEFAULT 0)`);
+             await dbRun(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
+             
+             // --- BAGIAN YANG DIPERBAIKI ---
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceMode', 'false')`);
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('lowBalanceNotified', 'false')`);
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('topupOptions', '[]')`);
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('lastKmspBalance', '0')`);
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceScheduleEnabled', 'false')`);
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceStartTime', '01:00')`);
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceEndTime', '04:00')`);
+            // TAMBAHAN BARU: Melacak status notifikasi maintenance
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceNotificationSent', 'none')`);
+             // --- AKHIR PERBAIKAN ---
+
+             console.log("✅ Database schema initialized successfully.");
+         } catch (error) {
+             console.error("Database initialization failed:", error);
+             process.exit(1);
+         }
+     });
 }
 initializeDatabase();
 
@@ -122,6 +134,56 @@ const isAdmin = async (req, res, next) => {
     } catch (error) { console.error("isAdmin middleware error:", error); res.status(500).json({ status: false, message: 'Server error saat memeriksa peran admin.' }); }
 };
 
+
+async function getEffectiveMaintenanceStatus() {
+    try {
+        const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('maintenanceMode', 'maintenanceScheduleEnabled', 'maintenanceStartTime', 'maintenanceEndTime', 'lastKmspBalance')");
+        const settings = settingsRows.reduce((acc, row) => {
+            acc[row.key] = row.value;
+            return acc;
+        }, {});
+
+        // 1. Prioritas utama: Maintenance Manual dari Admin
+        if (settings.maintenanceMode === 'true') {
+            return true;
+        }
+
+        // 2. Prioritas kedua: Saldo KMSP Rendah
+        const lastBalance = parseFloat(settings.lastKmspBalance) || 0;
+        if (lastBalance < 1500) {
+            return true;
+        }
+
+        // 3. Prioritas ketiga: Maintenance Terjadwal
+        if (settings.maintenanceScheduleEnabled === 'true') {
+            const now = new Date();
+            const timeZone = 'Asia/Jakarta';
+            const currentTime = now.toLocaleTimeString('en-GB', { timeZone, hour: '2-digit', minute: '2-digit' }); // Format HH:MM
+            
+            const startTime = settings.maintenanceStartTime || '00:00';
+            const endTime = settings.maintenanceEndTime || '00:00';
+
+            // Kasus jadwal melewati tengah malam (e.g., 23:00 - 02:00)
+            if (startTime > endTime) {
+                if (currentTime >= startTime || currentTime < endTime) {
+                    return true;
+                }
+            } 
+            // Kasus jadwal di hari yang sama (e.g., 01:00 - 04:00)
+            else {
+                if (currentTime >= startTime && currentTime < endTime) {
+                    return true;
+                }
+            }
+        }
+        
+        // Jika tidak ada kondisi di atas, maka tidak maintenance
+        return false;
+    } catch (error) {
+        console.error("Error getting effective maintenance status:", error);
+        return false; // Anggap tidak maintenance jika ada error sistem
+    }
+}
 // --- FUNGSI HELPER ---
 async function sendTelegramNotification(message, target = 'group') {
     let targetChatId = target === 'admin' ? TELEGRAM_ADMIN_CHAT_ID : TELEGRAM_CHAT_ID;
@@ -226,21 +288,20 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 app.get('/api/auth/me', async (req, res) => {
-    try {
-        const maintenanceRow = await dbGet("SELECT value FROM settings WHERE key = 'maintenanceMode'");
-        const maintenanceMode = maintenanceRow ? JSON.parse(maintenanceRow.value) : false;
-        if (!req.session.userId) return res.status(200).json({ status: true, user: null, maintenanceMode });
-        
-        const user = await dbGet('SELECT * FROM users WHERE id = ?', [req.session.userId]);
-        if (!user) {
-            req.session.destroy(); res.clearCookie('connect.sid');
-            return res.status(200).json({ status: true, user: null, maintenanceMode });
-        }
-        const providerBalance = await getKmspAdminBalance();
-        const { password, ...userWithoutPassword } = user;
-        if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
-        res.status(200).json({ status: true, user: userWithoutPassword, maintenanceMode, providerBalance });
-    } catch (error) { console.error("Error in /api/auth/me:", error); res.status(500).json({ status: false, message: "Gagal mengambil data sesi." }); }
+     try {
+         const maintenanceMode = await getEffectiveMaintenanceStatus();
+         if (!req.session.userId) return res.status(200).json({ status: true, user: null, maintenanceMode });
+         
+         const user = await dbGet('SELECT * FROM users WHERE id = ?', [req.session.userId]);
+         if (!user) {
+             req.session.destroy(); res.clearCookie('connect.sid');
+             return res.status(200).json({ status: true, user: null, maintenanceMode });
+         }
+         const providerBalance = await getKmspAdminBalance();
+         const { password, ...userWithoutPassword } = user;
+         if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
+         res.status(200).json({ status: true, user: userWithoutPassword, maintenanceMode, providerBalance });
+     } catch (error) { console.error("Error in /api/auth/me:", error); res.status(500).json({ status: false, message: "Gagal mengambil data sesi." }); }
 });
 
 app.post('/api/phone/login-saved', isAuthenticated, async (req, res) => {
@@ -326,17 +387,19 @@ app.post('/api/phone/verify-otp', isAuthenticated, async (req, res) => {
     } catch (error) { res.status(500).json({ status: false, message: error.message }); }
 });
 // GANTI FUNGSI INI SEPENUHNYA di backend/server.js
+// backend/server.js -> Ganti rute ini
 
 app.post('/api/purchase', isAuthenticated, async (req, res) => {
-    // Ambil purchaseContext dari body, default ke 'paket-satuan' jika tidak ada
     const { packageId, phone, access_token, paymentMethod, purchaseContext = 'paket-satuan' } = req.body;
     
-    if (!packageId || !phone || !access_token || !paymentMethod) return res.status(400).json({ status: false, message: "Parameter tidak lengkap." });
+    if (!packageId || !phone || !access_token || !paymentMethod) {
+        return res.status(400).json({ status: false, message: "Parameter tidak lengkap." });
+    }
 
     let user;
     let pkg;
     let platformFee = 0;
-    const trxId = `trx_${Date.now()}_${uuidv4().slice(0, 4)}`; 
+    const trxId = `trx_${Date.now()}_${uuidv4().slice(0, 4)}`;
 
     try {
         user = await dbGet('SELECT * FROM users WHERE id = ?', [req.session.userId]);
@@ -348,10 +411,11 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         platformFee = pkg.platform_fee || 0;
         if (user.balance < platformFee) return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup.` });
 
-        const packagePrice = pkg.original_price || 0;
         await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [platformFee, user.id]);
-
+        
         const adminBalance = await getKmspAdminBalance();
+        const packagePrice = pkg.original_price || 0;
+
         if (adminBalance < packagePrice) {
             await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, platformFee, packagePrice, phone, access_token, paymentMethod, new Date().toISOString(), 'menunggu_saldo_provider', 'Menunggu Saldo Provider']);
             
@@ -360,12 +424,10 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
 ──────────────────────
 <b>Pengguna:</b> ${user.name}
 <b>Meminta Paket:</b> ${pkg.name}
-<b>Untuk Nomor:</b> ${phone}
 <b>Harga Provider:</b> Rp ${packagePrice.toLocaleString('id-ID')}
 <b>Saldo KMSP Saat Ini:</b> Rp ${adminBalance.toLocaleString('id-ID')}
 ──────────────────────
-Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.
-<b>Notif:tembak.cloudrystore.com</b>`, 'admin');
+Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.`, 'admin');
 
             const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
             return res.status(202).json({ status: true, message: "Permintaan masuk antrean, akan diproses otomatis.", newBalance: updatedUser.balance });
@@ -377,37 +439,37 @@ Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.
         const purchaseResponse = await fetch(`https://golang-openapi-packagepurchase-xltembakservice.kmsp-store.com/v1?${purchaseParams.toString()}`);
         const purchaseData = await purchaseResponse.json();
 
-        // --- Logika Kondisional Berdasarkan Konteks ---
-        let isDorUlangFailure = false;
-        // 1. Cek pesan "Dor Ulang" HANYA jika permintaan berasal dari 'multi-paket'
-        if (purchaseContext === 'multi-paket') {
-            isDorUlangFailure = (purchaseData.message || '').includes("Paket berhasil dibeli. Silakan cek kuotanya");
-        }
+        // --- PERBAIKAN LOGIKA DI SINI ---
+        // Kondisi "hoki-hokian" (ipaas) sekarang HANYA dianggap sukses jika konteksnya adalah 'multi-paket'.
+        const isIpaasSuccessCase = 
+            (purchaseData.message || '').includes("422 -> Failed call ipaas purchase") && 
+            purchaseContext === 'multi-paket';
+            
+        const isDorUlangFailure = 
+            purchaseContext === 'multi-paket' && 
+            (purchaseData.message || '').includes("Paket berhasil dibeli. Silakan cek kuotanya");
 
-        const isIpaasSuccessCase = (purchaseData.message || '').includes("422 -> Failed call ipaas purchase");
         const isProviderSuccess = ((purchaseResponse.ok && purchaseData.status) || isIpaasSuccessCase) && !isDorUlangFailure;
-        // --- Akhir Logika Kondisional ---
-
-        const requiresExternalPayment = purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink);
+        // --- AKHIR PERBAIKAN LOGIKA ---
 
         if (isProviderSuccess) {
             let paymentDetails = null;
-            if (requiresExternalPayment) {
-                 if (purchaseData.data.is_qris && purchaseData.data.qris_data?.qr_code) {
-                     purchaseData.data.qris_data.qr_code_base64 = await qrcode.toDataURL(purchaseData.data.qris_data.qr_code);
-                 }
-                 paymentDetails = JSON.stringify(purchaseData.data);
+            if (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) {
+                if (purchaseData.data.is_qris && purchaseData.data.qris_data?.qr_code) {
+                    purchaseData.data.qris_data.qr_code_base64 = await qrcode.toDataURL(purchaseData.data.qris_data.qr_code);
+                }
+                paymentDetails = JSON.stringify(purchaseData.data);
             }
             
             await dbRun("UPDATE transactions SET status = ?, api_response = ?, kmspTrxId = ?, paymentDetails = ? WHERE id = ?", ['success', purchaseData.message || 'Sukses', purchaseData.data?.trx_id || null, paymentDetails, trxId]);
 
             const maskedPhone = phone.slice(0, 4) + '****' + phone.slice(-3);
-            sendTelegramNotification(`<b>✅ Transaksi Paket Baru!</b>\n──────────────────────\n<b>Nama Pengguna:</b> ${user.name}\n<b>Nama Paket:</b> ${pkg.name}\n<b>Nomor Tujuan:</b> ${maskedPhone}\n<b>Status: Sukses</b>`);
+            sendTelegramNotification(`<b>✅ Transaksi Paket Baru!</b>\n──────────────────────\n<b>Pengguna:</b> ${user.name}\n<b>Paket:</b> ${pkg.name}\n<b>Nomor:</b> ${maskedPhone}\n<b>Status: Sukses</b>`);
             
             const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
             const successMessage = isIpaasSuccessCase ? "Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)" : (purchaseData.message || "Pembelian berhasil!");
 
-            if (requiresExternalPayment) {
+            if (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) {
                 return res.status(202).json({ status: true, message: "Pembayaran eksternal diperlukan.", payment_data: purchaseData.data, newBalance: finalUser.balance });
             }
             return res.status(200).json({ status: true, message: successMessage, newBalance: finalUser.balance });
@@ -421,26 +483,25 @@ Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.
 ──────────────────────
 <b>Pengguna:</b> ${user.name}
 <b>Paket:</b> ${pkg.name}
-<b>Nomor:</b> ${phone}
-<b>Pesan Error:</b> <pre>${purchaseData.message || 'Unknown Error'}</pre>
+<b>Error:</b> <pre>${purchaseData.message || 'Unknown Error'}</pre>
 ──────────────────────
-Saldo fee sebesar Rp ${platformFee.toLocaleString('id-ID')} telah dikembalikan.
-<b>Notif:tembak.cloudrystore.com</b>`);
+Saldo fee Rp ${platformFee.toLocaleString('id-ID')} telah dikembalikan.`);
 
             const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
             const errorMessage = isDorUlangFailure ? "Gagal (Dor Ulang): Coba lagi setelah 10 menit." : (purchaseData.message || 'Pembelian gagal.');
             return res.status(500).json({ status: false, message: errorMessage, newBalance: finalUser.balance });
         }
-
     } catch (error) {
         console.error("Purchase route error:", error);
         if (user && pkg && platformFee > 0) {
+            // Safety refund jika terjadi error tak terduga
             await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [platformFee, user.id]);
         }
         const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [req.session.userId]);
         res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan internal.", newBalance: finalUser?.balance });
     }
 });
+
 
 app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
     const { packageId, phone: targetPhone } = req.body;
@@ -707,14 +768,55 @@ app.get('/api/user/active-packages', isAuthenticated, async (req, res) => {
 
 // Tambahkan ini di bagian mana saja (bisa sebelum atau sesudah rute admin)
 app.get('/api/status', isAuthenticated, async (req, res) => {
+     try {
+         const maintenanceMode = await getEffectiveMaintenanceStatus();
+         const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+         res.status(200).json({ status: true, maintenanceMode, currentBalance: user ? user.balance : null });
+     } catch (error) {
+         console.error("Error fetching status:", error);
+         res.status(500).json({ status: false, message: "Gagal mengambil status." });
+     }
+});
+
+app.get('/api/admin/maintenance-schedule', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const maintenanceRow = await dbGet("SELECT value FROM settings WHERE key = 'maintenanceMode'");
-        const maintenanceMode = maintenanceRow ? JSON.parse(maintenanceRow.value) : false;
-        const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
-        res.status(200).json({ status: true, maintenanceMode, currentBalance: user ? user.balance : null });
+        const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('maintenanceScheduleEnabled', 'maintenanceStartTime', 'maintenanceEndTime')");
+        const schedule = settingsRows.reduce((acc, row) => {
+            acc[row.key] = row.value;
+            return acc;
+        }, {});
+        res.json({
+            status: true,
+            data: {
+                enabled: schedule.maintenanceScheduleEnabled === 'true',
+                startTime: schedule.maintenanceStartTime,
+                endTime: schedule.maintenanceEndTime,
+            }
+        });
     } catch (error) {
-        console.error("Error fetching status:", error);
-        res.status(500).json({ status: false, message: "Gagal mengambil status." });
+        res.status(500).json({ status: false, message: 'Gagal mengambil jadwal maintenance.' });
+    }
+});
+
+app.put('/api/admin/maintenance-schedule', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { enabled, startTime, endTime } = req.body;
+
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+            return res.status(400).json({ status: false, message: 'Format waktu tidak valid. Gunakan HH:MM.' });
+        }
+
+        await dbRun("BEGIN TRANSACTION");
+        await dbRun("UPDATE settings SET value = ? WHERE key = 'maintenanceScheduleEnabled'", [enabled ? 'true' : 'false']);
+        await dbRun("UPDATE settings SET value = ? WHERE key = 'maintenanceStartTime'", [startTime]);
+        await dbRun("UPDATE settings SET value = ? WHERE key = 'maintenanceEndTime'", [endTime]);
+        await dbRun("COMMIT");
+
+        res.json({ status: true, message: 'Jadwal maintenance berhasil disimpan.' });
+    } catch (error) {
+        await dbRun("ROLLBACK");
+        res.status(500).json({ status: false, message: 'Gagal menyimpan jadwal maintenance.' });
     }
 });
 
@@ -1371,8 +1473,36 @@ app.post('/api/admin/maintenance', isAuthenticated, isAdmin, async (req, res) =>
     if (typeof enable !== 'boolean') return res.status(400).json({ status: false, message: 'Input harus boolean.' });
     try {
         await dbRun("UPDATE settings SET value = ? WHERE key = ?", [JSON.stringify(enable), 'maintenanceMode']);
+        
+        // --- LOGIKA NOTIFIKASI BARU ---
+        if (enable) {
+            await sendTelegramNotification(
+`<b>🔧 MAINTENANCE MANUAL DIAKTIFKAN</b>
+──────────────────────
+Admin telah mengaktifkan mode pemeliharaan. 
+Layanan tidak akan dapat diakses untuk sementara waktu.
+──────────────────────
+<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+            await dbRun("UPDATE settings SET value = 'manual_on' WHERE key = 'maintenanceNotificationSent'");
+        } else {
+            // Cek dulu apakah ada maintenance lain yang masih aktif
+            const otherMaintenanceActive = await getEffectiveMaintenanceStatus();
+            if (!otherMaintenanceActive) {
+                 await sendTelegramNotification(
+`<b>✅ MAINTENANCE SELESAI</b>
+──────────────────────
+Layanan kini telah kembali normal dan dapat diakses.
+──────────────────────
+<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+                await dbRun("UPDATE settings SET value = 'none' WHERE key = 'maintenanceNotificationSent'");
+            }
+        }
+        // --- AKHIR LOGIKA NOTIFIKASI ---
+
         res.status(200).json({ status: true, message: `Mode pemeliharaan diatur ke: ${enable ? 'AKTIF' : 'NONAKTIF'}` });
-    } catch (e) { res.status(500).json({ status: false, message: 'Gagal memperbarui status.' }) }
+    } catch (e) { 
+        res.status(500).json({ status: false, message: 'Gagal memperbarui status.' });
+    }
 });
 
 app.post('/api/admin/sync-packages', isAuthenticated, isAdmin, async (req, res) => {
@@ -1595,55 +1725,70 @@ const executeOtpPurchase = (trx) => executePurchase(trx, true);
 const executeNonOtpPurchase = (trx) => executePurchase(trx, false);
 
 // --- SCHEDULER UNTUK CEK SALDO DAN PROSES TRANSAKSI (Setiap 5 Menit) ---
+// GANTI SELURUH BLOK CRON JOB LAMA ANDA DENGAN INI
 cron.schedule('*/1 * * * *', async () => {
     console.log(`[Scheduler] Menjalankan tugas pengecekan pada ${new Date().toLocaleString()}`);
     try {
-        // =============================================================
-        // ### BAGIAN 1: LOGIKA NOTIFIKASI SALDO
-        // =============================================================
+        // --- LOGIKA NOTIFIKASI MAINTENANCE BARU (STATE-BASED) ---
         const currentBalance = await getKmspAdminBalance();
+        await dbRun("UPDATE settings SET value = ? WHERE key = 'lastKmspBalance'", [currentBalance.toString()]);
         
-        // Dapatkan status notifikasi terakhir dari DB
-        const lowBalanceNotifiedRow = await dbGet("SELECT value FROM settings WHERE key = 'lowBalanceNotified'");
-        const lowBalanceNotified = lowBalanceNotifiedRow ? JSON.parse(lowBalanceNotifiedRow.value) : false;
+        const isCurrentlyMaintenance = await getEffectiveMaintenanceStatus();
+        const settingsRows = await dbAll("SELECT key, value FROM settings");
+        const settings = settingsRows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
+        const lastNotifSent = settings.maintenanceNotificationSent;
 
-        // Kondisi 1: Saldo RENDAH dan admin BELUM dinotifikasi.
-        if (currentBalance < 1500 && !lowBalanceNotified) {
-            // KIRIM NOTIFIKASI PERINGATAN
-            await sendTelegramNotification(
-`<b>🚨 PERINGATAN SALDO RENDAH 🚨</b>
+        // Kondisi 1: Maintenance BARU SAJA AKTIF (sebelumnya tidak, sekarang iya)
+        if (isCurrentlyMaintenance && lastNotifSent === 'none') {
+            // Cek penyebab maintenance
+            if (currentBalance < 1500) {
+                // Notif karena saldo rendah
+                await sendTelegramNotification(
+`<b>🚨 MAINTENANCE OTOMATIS AKTIF (SALDO RENDAH) 🚨</b>
 ──────────────────────
-Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}</b>. Mohon segera isi ulang untuk menghindari antrean transaksi.
+Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}</b>. 
+Sistem mengaktifkan mode pemeliharaan. Mohon segera isi ulang.
 ──────────────────────
 <b>Notif:tembak.cloudrystore.com</b>`, 'admin');
-            
-            // Set flag agar tidak mengirim notifikasi berulang kali
-            await dbRun("UPDATE settings SET value = 'true' WHERE key = 'lowBalanceNotified'");
-
-        // Kondisi 2: Saldo SUDAH NORMAL (setelah sebelumnya rendah)
-        } else if (currentBalance >= 1500 && lowBalanceNotified) {
-            // KIRIM NOTIFIKASI PEMULIHAN SALDO
-            await sendTelegramNotification(
-`<b>✅ Saldo KMSP Pulih</b>
+                await sendTelegramNotification(
+`<b>🔧 MAINTENANCE INTERNAL</b>
 ──────────────────────
-<b>Saldo saat ini: Rp ${currentBalance.toLocaleString('id-ID')}</b>
-Sistem akan kembali memproses antrean transaksi (jika ada).
+Layanan sedang mengalami pemeliharaan internal singkat.
+Mohon coba kembali dalam beberapa saat.
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`, 'admin');
+<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+                await dbRun("UPDATE settings SET value = 'low_balance' WHERE key = 'maintenanceNotificationSent'");
 
-            // Reset flag ke kondisi normal
-            await dbRun("UPDATE settings SET value = 'false' WHERE key = 'lowBalanceNotified'");
+            } else if (settings.maintenanceScheduleEnabled === 'true') {
+                // Notif karena jadwal
+                await sendTelegramNotification(
+`<b>🔧 MAINTENANCE TERJADWAL AKTIF</b>
+──────────────────────
+Sistem sedang dalam mode pemeliharaan terjadwal dari pukul <b>${settings.maintenanceStartTime}</b> hingga <b>${settings.maintenanceEndTime}</b> WIB.
+Layanan akan kembali normal setelahnya.
+──────────────────────
+<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+                await dbRun("UPDATE settings SET value = 'scheduled' WHERE key = 'maintenanceNotificationSent'");
+            }
+        } 
+        // Kondisi 2: Maintenance BARU SAJA SELESAI (sebelumnya aktif, sekarang tidak)
+        else if (!isCurrentlyMaintenance && lastNotifSent !== 'none' && lastNotifSent !== 'manual_on') {
+             await sendTelegramNotification(
+`<b>✅ MAINTENANCE SELESAI</b>
+──────────────────────
+Layanan kini telah kembali normal dan dapat diakses.
+──────────────────────
+<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+            await dbRun("UPDATE settings SET value = 'none' WHERE key = 'maintenanceNotificationSent'");
         }
 
-        // =============================================================
-        // ### BAGIAN 2: PROSES ANTRIAN TRANSAKSI
-        // =============================================================
+        // --- PROSES ANTRIAN TRANSAKSI ---
+        // Hanya proses antrean jika TIDAK sedang maintenance
         const pendingTransactions = await dbAll("SELECT * FROM transactions WHERE status = 'menunggu_saldo_provider'");
-        if (pendingTransactions.length > 0) {
+        if (pendingTransactions.length > 0 && !isCurrentlyMaintenance) {
             console.log(`[Scheduler] Ditemukan ${pendingTransactions.length} transaksi tertunda untuk diproses.`);
             for (const trx of pendingTransactions) {
                 if (currentBalance >= (trx.originalPrice || 0)) {
-                    
                     const userMessage = 
 `<b>⏳ Transaksi Anda Sedang Diproses</b>
 ──────────────────────
@@ -1677,7 +1822,6 @@ Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
     scheduled: true,
     timezone: "Asia/Jakarta"
 });
-
 
 // --- SCHEDULER UNTUK BACKUP OTOMATIS HARIAN ---
 cron.schedule('0 6,9,12,15,18,21,0,3 * * *', async () => { // Berjalan pada jam yang Anda tentukan
