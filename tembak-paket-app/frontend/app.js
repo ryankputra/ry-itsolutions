@@ -931,7 +931,7 @@ async function handleChangeName(e) {
         if (status === 200 && data.status && data.user) {
             currentUser = data.user; 
             showToast(data.message);
-            renderApp();
+            appRouter();
         } else {
             throw new Error(data.message || 'Gagal memperbarui nama.');
         }
@@ -2656,7 +2656,7 @@ function renderAdminDashboard(container) {
                 button.style.background = newStatus ? 'var(--danger-color)' : 'var(--success-color)';
                 button.textContent = newStatus ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan';
                 displayFeedback('maintenance-feedback', data.message, false);
-                renderApp(); // Render ulang untuk melihat efek maintenance di halaman paket
+                appRouter(); // Render ulang untuk melihat efek maintenance di halaman paket
             } else {
                 throw new Error(data.message || 'Gagal mengubah status maintenance.');
             }
@@ -4834,7 +4834,7 @@ async function handleCancelQris(e) {
             // ### PERBAIKAN FINAL DI SINI ###
             // Panggil main() untuk me-refresh seluruh state aplikasi dan tampilan.
             // Ini akan menjalankan ulang semua proses fetch data dan render dari awal.
-            main();
+            appRouter();
             
         } else {
             throw new Error(data.message || 'Gagal membatalkan.');
@@ -4882,7 +4882,7 @@ function renderDynamicQrisDisplay(base64Image, uniqueAmount, expiresAt, topUpId)
                 showToast('Top up berhasil! Saldo Anda telah ditambahkan.', false);
 
                 // 4. Refresh aplikasi untuk memperbarui saldo di UI
-                main();
+                appRouter();
             } 
             // Jika transaksi sudah tidak pending (kedaluwarsa/dibatalkan)
             else if (data.transactionStatus !== 'pending') {
@@ -4989,7 +4989,7 @@ function renderFinalStatusModal(title, message) {
     `;
     const closeModal = () => {
         modalContainer.innerHTML = '';
-        renderApp(); // Render ulang aplikasi setelah modal ditutup
+        appRouter(); // Render ulang aplikasi setelah modal ditutup
     };
     document.getElementById('close-final-modal')?.addEventListener('click', closeModal);
     document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeModal(); });
@@ -5502,7 +5502,7 @@ async function handleLogout() {
             existingWatermark.remove();
         }
         window.location.hash = 'login'; // Arahkan ke halaman login
-        renderApp(); // Render ulang aplikasi
+        appRouter(); // Render ulang aplikasi
     }
 }
 /**
