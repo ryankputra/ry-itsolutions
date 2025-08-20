@@ -42,6 +42,41 @@ if (!KMSP_API_KEY || !ORKUT_MERCHANT_ID || !ORKUT_USERNAME || !ORKUT_TOKEN || !Q
     process.exit(1);
 }
 
+// === SSE UTILS ===
+const sseClients = new Map(); // userId -> Set<res>
+
+function sseAddClient(userId, res) {
+  if (!sseClients.has(userId)) sseClients.set(userId, new Set());
+  sseClients.get(userId).add(res);
+}
+
+function sseRemoveClient(userId, res) {
+  const set = sseClients.get(userId);
+  if (!set) return;
+  set.delete(res);
+  if (set.size === 0) sseClients.delete(userId);
+}
+
+function sseSend(userId, event, payload) {
+  const set = sseClients.get(userId);
+  if (!set) return;
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  for (const res of set) {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${data}\n\n`);
+  }
+}
+
+function sseBroadcast(event, payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  for (const [, set] of sseClients) {
+    for (const res of set) {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${data}\n\n`);
+    }
+  }
+}
+
 // --- INISIALISASI DATABASE SQLITE ---
 const dbPath = path.join(__dirname, 'database.sqlite');
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -222,7 +257,7 @@ app.post('/api/auth/register', async (req, res) => {
 <b>Email:</b> ${email}
 <b>──────────────────────</b>
 <b>Harap setujui akun ini di Panel Admin.</b>
-<b>Notif:tembak.cloudrystore.com</b>`
+<b>Notif:panel.cloudrystore.com</b>`
         );
         
         res.status(201).json({ status: true, message: "Registrasi berhasil! Akun Anda sedang menunggu persetujuan dari Admin." });
@@ -257,7 +292,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const oneHour = Date.now() + 3600000;
         await dbRun('UPDATE users SET resetPasswordToken = ?, resetPasswordExpires = ? WHERE id = ?', [token, oneHour, user.id]);
 
-        const resetUrl = `https://tembak.cloudrystore.com/#reset-password?token=${token}`;
+        const resetUrl = `https://panel.cloudrystore.com/#reset-password?token=${token}`;
         const htmlContent = `<div style="font-family: Arial, sans-serif; line-height: 1.6;"><h2>Permintaan Reset Password</h2><p>Klik link di bawah ini untuk mereset password Anda:</p><p style="margin: 20px 0;"><a href="${resetUrl}" style="background-color: #7c3aed; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px;">Reset Password Saya</a></p><p>Link ini kedaluwarsa dalam 1 jam. Jika Anda tidak meminta ini, abaikan email ini.</p></div>`;
         const tranEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
         await tranEmailApi.sendTransacEmail({ sender: { email: 'no-reply@tembak.cloudrystore.com', name: 'RYYSTOREV2' }, to: [{ email: user.email }], subject: 'Reset Password Akun RYYSTORE Anda', htmlContent });
@@ -1002,7 +1037,7 @@ async function checkOrkutPaymentStatus(topUpId, uniqueAmount) {
 <b>Jumlah Masuk:</b> Rp ${topUp.baseAmount.toLocaleString('id-ID')}
 <b>ID Transaksi:</b> <code>${topUpId}</code>
 <b>──────────────────────</b>
-<b>Notif:tembak.cloudrystore.com</b>`
+<b>Notif:panel.cloudrystore.com</b>`
                         );
                         console.log(`[ORKUT_POLL] Saldo dan notifikasi untuk ${user.name} berhasil diproses.`);
                         // --- AKHIR BARIS YANG DITAMBAHKAN ---
@@ -1111,32 +1146,27 @@ app.post('/api/admin/update-balance', isAuthenticated, isAdmin, async (req, res)
             return res.status(400).json({ status: false, message: "Input tidak valid atau jumlah adalah nol." });
         }
 
-        // Dapatkan data user target dan admin yang melakukan aksi SEBELUM update
         const targetUser = await dbGet('SELECT name, balance FROM users WHERE id = ?', [userId]);
         if (!targetUser) {
             return res.status(404).json({ status: false, message: "Pengguna target tidak ditemukan." });
         }
         const adminUser = await dbGet('SELECT name FROM users WHERE id = ?', [req.session.userId]);
 
-        // Lakukan update saldo
         const result = await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [parsedAmount, userId]);
         if (result.changes === 0) {
             return res.status(404).json({ status: false, message: "Gagal update, pengguna tidak ditemukan." });
         }
 
-        // Dapatkan saldo TERBARU setelah update
         const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [userId]);
 
         // === LOGIKA BARU: HANYA JIKA SALDO DITAMBAH (TOP UP) ===
         if (parsedAmount > 0) {
             const topUpId = `TU-ADMIN-${Date.now()}`;
-            // Buat catatan di tabel topups
             await dbRun(
                 "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 [topUpId, userId, targetUser.name, parsedAmount, parsedAmount, 'completed', new Date().toISOString()]
             );
 
-            // Kirim notifikasi ke grup Telegram
             const notifMessage = `<b>✅ Top Up Manual Berhasil</b>
 ──────────────────────
 👨‍💼 <b>Oleh Admin:</b> ${adminUser.name}
@@ -1144,9 +1174,12 @@ app.post('/api/admin/update-balance', isAuthenticated, isAdmin, async (req, res)
 💰 <b>Jumlah:</b> Rp ${parsedAmount.toLocaleString('id-ID')}
 📈 <b>Saldo Baru:</b> Rp ${updatedUser.balance.toLocaleString('id-ID')}
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`;
-            
-            sendTelegramNotification(notifMessage, 'group'); // 'group' untuk channel umum, 'admin' untuk channel admin
+<b>Notif:panel.cloudrystore.com</b>`;
+            sendTelegramNotification(notifMessage, 'group');
+
+            // ⬇️ Tambahkan 2 baris SSE ini
+            sseSend(userId, 'balance_update', { balance: updatedUser.balance, source: 'admin' });
+            sseSend(userId, 'transaction_status', { id: topUpId, type: 'topup', status: 'completed', message: 'Top up manual berhasil' });
         }
         // === AKHIR LOGIKA BARU ===
 
@@ -1157,6 +1190,7 @@ app.post('/api/admin/update-balance', isAuthenticated, isAdmin, async (req, res)
         res.status(500).json({ status: false, message: "Gagal memperbarui saldo." });
     }
 });
+
 
 app.post('/api/admin/approve-user', isAuthenticated, isAdmin, async (req, res) => {
     const { userId } = req.body;
@@ -1204,6 +1238,30 @@ app.post('/api/admin/delete-user', isAuthenticated, isAdmin, async (req, res) =>
         if (result.changes === 0) return res.status(404).json({ status: false, message: "Pengguna tidak ditemukan." });
         res.json({ status: true, message: "Akun pengguna dan seluruh data terkait berhasil dihapus." });
     } catch(e) { res.status(500).json({ status: false, message: "Gagal menghapus pengguna." }); }
+});
+
+// === SSE ENDPOINT ===
+app.get('/api/stream', isAuthenticated, (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+  // kirim header sekarang
+  res.flushHeaders?.();
+
+  const userId = req.session.userId;
+  sseAddClient(userId, res);
+
+  // salam + heartbeat
+  res.write(`event: hello\ndata: {"ok":true}\n\n`);
+  const hb = setInterval(() => res.write(`event: ping\ndata: {}\n\n`), 25000);
+
+  req.on('close', () => {
+    clearInterval(hb);
+    sseRemoveClient(userId, res);
+    try { res.end(); } catch {}
+  });
 });
 
 app.get('/api/admin/backup-database', isAuthenticated, isAdmin, (req, res) => {
@@ -1482,7 +1540,7 @@ app.post('/api/admin/maintenance', isAuthenticated, isAdmin, async (req, res) =>
 Admin telah mengaktifkan mode pemeliharaan. 
 Layanan tidak akan dapat diakses untuk sementara waktu.
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+<b>Notif:panel.cloudrystore.com</b>`, 'group');
             await dbRun("UPDATE settings SET value = 'manual_on' WHERE key = 'maintenanceNotificationSent'");
         } else {
             // Cek dulu apakah ada maintenance lain yang masih aktif
@@ -1493,7 +1551,7 @@ Layanan tidak akan dapat diakses untuk sementara waktu.
 ──────────────────────
 Layanan kini telah kembali normal dan dapat diakses.
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+<b>Notif:panel.cloudrystore.com</b>`, 'group');
                 await dbRun("UPDATE settings SET value = 'none' WHERE key = 'maintenanceNotificationSent'");
             }
         }
@@ -1749,14 +1807,14 @@ cron.schedule('*/1 * * * *', async () => {
 Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}</b>. 
 Sistem mengaktifkan mode pemeliharaan. Mohon segera isi ulang.
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`, 'admin');
+<b>Notif:panel.cloudrystore.com</b>`, 'admin');
                 await sendTelegramNotification(
 `<b>🔧 MAINTENANCE INTERNAL</b>
 ──────────────────────
 Layanan sedang mengalami pemeliharaan internal singkat.
 Mohon coba kembali dalam beberapa saat.
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+<b>Notif:panel.cloudrystore.com</b>`, 'group');
                 await dbRun("UPDATE settings SET value = 'low_balance' WHERE key = 'maintenanceNotificationSent'");
 
             } else if (settings.maintenanceScheduleEnabled === 'true') {
@@ -1767,7 +1825,7 @@ Mohon coba kembali dalam beberapa saat.
 Sistem sedang dalam mode pemeliharaan terjadwal dari pukul <b>${settings.maintenanceStartTime}</b> hingga <b>${settings.maintenanceEndTime}</b> WIB.
 Layanan akan kembali normal setelahnya.
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+<b>Notif:panel.cloudrystore.com</b>`, 'group');
                 await dbRun("UPDATE settings SET value = 'scheduled' WHERE key = 'maintenanceNotificationSent'");
             }
         } 
@@ -1778,7 +1836,7 @@ Layanan akan kembali normal setelahnya.
 ──────────────────────
 Layanan kini telah kembali normal dan dapat diakses.
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`, 'group');
+<b>Notif:panel.cloudrystore.com</b>`, 'group');
             await dbRun("UPDATE settings SET value = 'none' WHERE key = 'maintenanceNotificationSent'");
         }
 
@@ -1796,7 +1854,7 @@ Layanan kini telah kembali normal dan dapat diakses.
 <b>Paket:</b> ${trx.packageName}
 ──────────────────────
 Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
-<b>Notif:tembak.cloudrystore.com</b>`;
+<b>Notif:panel.cloudrystore.com</b>`;
                     sendTelegramNotification(userMessage, 'group');
 
                     await (trx.accessToken ? executeOtpPurchase(trx) : executeNonOtpPurchase(trx));
@@ -1810,7 +1868,7 @@ Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
 <b>Status Akhir:</b> <b>${updatedTrx.status.toUpperCase()}</b>
 <b>Pesan API:</b> ${updatedTrx.api_response}
 ──────────────────────
-<b>Notif:tembak.cloudrystore.com</b>`;
+<b>Notif:panel.cloudrystore.com</b>`;
                     sendTelegramNotification(adminReportMessage, 'admin');
                 }
             }
