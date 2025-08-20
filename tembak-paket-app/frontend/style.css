@@ -2000,3 +2000,564 @@ button.tutorial-card:hover {
     height: 100%;
     fill: var(--primary-color); /* Warna ikon mengikuti warna primer */
 }
+
+/* =============================
+   DARK MODE OVERRIDES
+   Tempel di BAWAH style.css kamu
+   ============================= */
+:root[data-theme="dark"] {
+  /* Palet dasar */
+  --background-color: #0b0b0c;      /* Latar app */
+  --card-background: #141418;       /* Kartu/panel */
+  --text-color: #e5e7eb;            /* Teks utama */
+  --text-light-color: #9ca3af;      /* Teks sekunder */
+  --heading-color: #e5e7eb;         /* Judul */
+  --border-color: #24262b;          /* Border */
+  /* Warna primer dibiarkan sama agar brand konsisten */
+  /* Sedikit gelapkan varian light supaya kontras di dark */
+  --primary-light-color: #312e81;   /* Indigo 900-ish */
+}
+
+/* Tombol kecil untuk toggle tema (dipakai di header dashboard) */
+.icon-btn {
+  background: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  line-height: 1;
+}
+.icon-btn:hover { background-color: rgba(0,0,0,0.03); }
+:root[data-theme="dark"] .icon-btn:hover { background-color: rgba(255,255,255,0.03); }
+
+
+/* =============================
+   PAGE ROUTE LOADER OVERLAY
+   Muncul saat pindah menu (hash change)
+   ============================= */
+#page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 12000; /* Di atas konten & header, di bawah modal jika perlu */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+#page-loader.show {
+  pointer-events: all;
+  opacity: 1;
+}
+.page-loader-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.18);
+  backdrop-filter: blur(1px);
+}
+.page-loader-spinner {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  animation: spin .8s linear infinite; /* gunakan @keyframes spin yang sudah ada di file kamu */
+}
+
+/* Opsional: sentuhan kecil agar beberapa elemen lebih kontras di dark mode */
+:root[data-theme="dark"] .app-menu-item:hover { background-color: rgba(255,255,255,0.03); }
+:root[data-theme="dark"] .history-table th { background-color: #111216; }
+:root[data-theme="dark"] .checkbox-package-list { background-color: #0f1013; }
+:root[data-theme="dark"] .package-card.active { box-shadow: 0 0 0 3px rgba(79,70,229,0.3); }
+
+/* === SKELETON SHIMMER === */
+:root{
+  --sk-bg: rgba(0,0,0,.06);
+  --sk-shine: rgba(255,255,255,.45);
+}
+:root[data-theme="dark"]{
+  --sk-bg: rgba(255,255,255,.08);
+  --sk-shine: rgba(255,255,255,.15);
+}
+#route-skeleton{
+  position: fixed; inset: 0; z-index: 12000;
+  background: var(--background-color, #f6f8fb);
+  /* redupkan konten di belakang sedikit */
+  background: linear-gradient(0deg, rgba(0,0,0,.02), rgba(0,0,0,.02)), var(--background-color, #f6f8fb);
+  display: none;
+}
+#route-skeleton.show{ display: block; }
+
+.skel-wrap{
+  max-width: 980px; margin: 16px auto; padding: 0 12px;
+}
+
+/* blok dasar */
+.skel{
+  position: relative; overflow: hidden;
+  background: var(--sk-bg);
+  border-radius: 10px;
+}
+.skel::after{
+  content:""; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--sk-shine), transparent);
+  animation: sk-shimmer 1.2s infinite;
+}
+@keyframes sk-shimmer{ 100% { transform: translateX(100%); } }
+
+/* layout contoh sesuai dashboard-mu */
+.skel-header{ height: 64px; margin: 12px 0; }
+.skel-menu-row{ display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin: 14px 0; }
+.skel-menu-item{ height: 64px; }
+@media (max-width: 520px){
+  .skel-menu-row{ grid-template-columns: repeat(3,1fr); }
+}
+.skel-balance{ height: 120px; margin: 14px 0; }
+.skel-banner{ height: 160px; margin: 14px 0; }
+.skel-line{ height: 14px; margin: 10px 0; border-radius: 6px; }
+
+/* === AUTO SKELETON overlay (tanpa ubah layout) === */
+:root{ --sk-bg: rgba(0,0,0,.06); --sk-shine: rgba(255,255,255,.45) }
+:root[data-theme="dark"]{ --sk-bg: rgba(255,255,255,.08); --sk-shine: rgba(255,255,255,.15) }
+
+#route-skel-overlay{
+  position: fixed; inset: 0; z-index: 12000;
+  pointer-events: none; opacity: 0; transition: opacity .15s ease;
+}
+#route-skel-overlay.show{ opacity: 1; }
+
+.skel-block{
+  position: fixed; /* mengikuti viewport (rect dari getBoundingClientRect) */
+  background: var(--sk-bg);
+  overflow: hidden;
+}
+.skel-block::after{
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--sk-shine), transparent);
+  animation: sk-shimmer 1.2s infinite;
+}
+@keyframes sk-shimmer { 100% { transform: translateX(100%); } }
+
+/* ===============================
+   NEUTRAL TOAST (paksa override)
+   =============================== */
+
+/* Custom / generic */
+.toast.success,
+.toast--success,
+.notification.success,
+.alert.success,
+div[class*="toast"][class*="success"] {
+  background: var(--card-background, #fff) !important;
+  color: var(--text-color, #0b0b0c) !important;
+  border: 1px solid var(--border-color, #e6e8eb) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15) !important;
+  background-image: none !important; /* matikan gradient hijau */
+}
+
+/* Toastify (react-toastify / toastify-js) */
+.Toastify__toast--success,
+.toastify {
+  background: var(--card-background, #fff) !important;
+  color: var(--text-color, #0b0b0c) !important;
+  border: 1px solid var(--border-color, #e6e8eb) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15) !important;
+  background-image: none !important;
+}
+
+/* Notyf */
+.notyf__toast--success {
+  background: var(--card-background, #fff) !important;
+  color: var(--text-color, #0b0b0c) !important;
+  border: 1px solid var(--border-color, #e6e8eb) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15) !important;
+}
+.notyf__toast--success .notyf__icon,
+.Toastify__toast--success .Toastify__toast-icon,
+.toast.success .icon {
+  color: var(--primary-color, #4f46e5) !important; /* aksen kecil */
+}
+.notyf__ripple { display: none !important; } /* biar clean */
+
+/* Error/info tetap netral + aksen garis kiri */
+.toast.error, .toast--error, .notification.error, .alert.error,
+.Toastify__toast--error, .notyf__toast--error {
+  background: var(--card-background, #fff) !important;
+  color: var(--text-color, #0b0b0c) !important;
+  border: 1px solid var(--border-color, #e6e8eb) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15) !important;
+  background-image: none !important;
+}
+.toast.success, .toast--success,
+.Toastify__toast--success, .notyf__toast--success {
+  border-left: 4px solid var(--primary-color, #4f46e5) !important;
+}
+.toast.error, .toast--error,
+.Toastify__toast--error, .notyf__toast--error {
+  border-left: 4px solid #ef4444 !important;
+}
+
+/* Dark mode */
+:root[data-theme="dark"] .toast,
+:root[data-theme="dark"] .notification,
+:root[data-theme="dark"] .alert,
+:root[data-theme="dark"] .Toastify__toast,
+:root[data-theme="dark"] .notyf__toast {
+  background: var(--card-background, #141418) !important;
+  color: var(--text-color, #e9ecef) !important;
+  border-color: var(--border-color, #24262b) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45) !important;
+}
+
+/* ===============================
+   HEADER ICON (ellipsis/kebab)
+   =============================== */
+.app-header, .topbar, .navbar, .header {
+  color: var(--text-color, #0b0b0c); /* currentColor untuk anak-anaknya */
+}
+.app-header svg, .topbar svg, .navbar svg, .header svg {
+  stroke: currentColor !important;
+  fill: none !important;
+}
+/* kalau ikon pakai font/iconfont */
+.app-header .icon, .topbar .icon, .navbar .icon, .header .icon {
+  color: var(--text-color, #0b0b0c) !important;
+}
+
+/* Di mode terang, kasih latar halus biar klik target jelas */
+:root:not([data-theme="dark"]) .app-header .icon-btn,
+:root:not([data-theme="dark"]) .topbar .icon-btn {
+  background: rgba(0,0,0,0.04) !important;
+  border: 1px solid var(--border-color, #e6e8eb) !important;
+  border-radius: 10px !important;
+}
+
+/* ===== MENU TOGGLE (titik tiga) – selalu kontras ===== */
+:root:not([data-theme="dark"]) #menu-toggle-btn{
+  color:#111 !important;                    /* ikon jadi hitam */
+  background:rgba(0,0,0,0.04);              /* biar area klik terlihat */
+  border:1px solid var(--border-color,#e6e8eb);
+  border-radius:10px;
+}
+:root[data-theme="dark"] #menu-toggle-btn{
+  color:var(--text-color,#e9ecef) !important;
+  background:rgba(255,255,255,0.06);
+  border:1px solid var(--border-color,#24262b);
+}
+
+/* Paksa SVG di dalam tombol mengikuti warna di atas */
+#menu-toggle-btn svg,
+#menu-toggle-btn svg *{
+  stroke: currentColor !important;
+  fill: none !important; /* aman untuk ikon garis seperti ellipsis */
+}
+
+/* Jika icon berupa <img> */
+:root:not([data-theme="dark"]) #menu-toggle-btn img{ filter: brightness(0) saturate(100%) !important; }
+:root[data-theme="dark"] #menu-toggle-btn img{ filter: brightness(200%) !important; }
+
+:root{
+  --sk-base: #e2e8f0;                /* warna block skeleton (light) */
+  --sk-shimmer: rgba(241,245,249,.8);/* garis mengilap */
+  --sk-page: #f1f5f9;                /* latar keseluruhan skeleton */
+  --sk-card: #ffffff;                /* kartu/header/sidebar light */
+  --sk-border: #e2e8f0;
+}
+:root[data-theme="dark"]{
+  --sk-base: rgba(255,255,255,.10);
+  --sk-shimmer: rgba(255,255,255,.18);
+  --sk-page: #0b0b0c;
+  --sk-card: #141418;
+  --sk-border: #24262b;
+}
+
+/* === Paksa panel stok selalu kontras/opaque === */
+:root[data-theme="dark"] [data-force-opaque],
+:root[data-theme="dark"] [data-force-opaque] * {
+  opacity: 1 !important;
+  filter: none !important;
+  color: var(--text-color, #e9ecef) !important;
+}
+
+:root[data-theme="dark"] [data-force-opaque] {
+  background: var(--card-background, #141418) !important;
+  border-color: var(--border-color, #24262b) !important;
+}
+
+/* baris & judul di dalam panel */
+:root[data-theme="dark"] [data-force-opaque] .akrab-row { 
+  border-color: var(--border-color, #24262b) !important; 
+}
+:root[data-theme="dark"] [data-force-opaque] .akrab-title,
+:root[data-theme="dark"] [data-force-opaque] h1,
+:root[data-theme="dark"] [data-force-opaque] h2,
+:root[data-theme="dark"] [data-force-opaque] h3 {
+  color: var(--text-color, #e9ecef) !important;
+}
+
+/* warna stok */
+:root[data-theme="dark"] [data-force-opaque] .stock-ok { color:#22c55e !important; }
+:root[data-theme="dark"] [data-force-opaque] .stock-bad { color:#ef4444 !important; }
+
+/* === Sidebar contrast per-tema === */
+/* LIGHT MODE: teks & ikon gelap */
+:root:not([data-theme="dark"]) .sidebar,
+:root:not([data-theme="dark"]) .sidebar a,
+:root:not([data-theme="dark"]) .sidebar .menu-item {
+  color: #0f172a !important; /* slate-900 */
+}
+:root:not([data-theme="dark"]) .sidebar svg,
+:root:not([data-theme="dark"]) .sidebar svg * {
+  color: #0f172a !important;
+  stroke: currentColor !important;
+  fill: none !important;
+}
+
+/* DARK MODE: teks & ikon putih */
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .sidebar a,
+:root[data-theme="dark"] .sidebar .menu-item {
+  color: #ffffff !important;
+}
+:root[data-theme="dark"] .sidebar svg,
+:root[data-theme="dark"] .sidebar svg * {
+  color: #ffffff !important;
+  stroke: currentColor !important;
+  fill: none !important;
+}
+
+/* (opsional) item aktif di LIGHT biar kontras */
+:root:not([data-theme="dark"]) .sidebar .active {
+  color: #111827 !important;                     /* gray-900 */
+  background: rgba(79, 70, 229, .08) !important; /* ungu tipis */
+}
+
+/* === Quick Access icon: stroke putih, latar ungu === */
+.app-menu-item .app-menu-icon{
+  background: #4f46e5 !important;   /* ungu */
+  color: #fff !important;            /* jadi currentColor untuk SVG */
+  border-radius: 9999px;
+}
+
+.app-menu-item .app-menu-icon svg,
+.app-menu-item .app-menu-icon svg *{
+  stroke: currentColor !important;   /* putih */
+  fill: none !important;             /* garis saja */
+}
+
+/* efek hover ringan */
+.app-menu-item:hover .app-menu-icon{
+  filter: brightness(1.06);
+}
+/* =======================
+   TEKS PUTIH PEKAT (DARK)
+   ======================= */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] .page-content,
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .box,
+:root[data-theme="dark"] .table,
+:root[data-theme="dark"] .list,
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] #admin,
+:root[data-theme="dark"] .admin-page,
+:root[data-theme="dark"] .admin-panel {
+  color: #fff !important;
+}
+
+/* judul & teks umum */
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] h4,
+:root[data-theme="dark"] h5,
+:root[data-theme="dark"] h6,
+:root[data-theme="dark"] p,
+:root[data-theme="dark"] li,
+:root[data-theme="dark"] label,
+:root[data-theme="dark"] span,
+:root[data-theme="dark"] small,
+:root[data-theme="dark"] th,
+:root[data-theme="dark"] td {
+  color: #fff !important;
+}
+
+/* kalau ada kelas “muted/subtitle/help” yang terlalu pucat → tetap putih */
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] .muted,
+:root[data-theme="dark"] .subtitle,
+:root[data-theme="dark"] .help {
+  color: #fff !important;
+  opacity: 1 !important;
+}
+
+/* link juga putih biar kontras */
+:root[data-theme="dark"] a { color: #fff !important; }
+:root[data-theme="dark"] a:hover { opacity: .85; }
+
+/* =======================
+   PLACEHOLDER HITAM PEKAT
+   (semua halaman, termasuk admin)
+   ======================= */
+input::placeholder,
+textarea::placeholder,
+select::placeholder {           /* (select jarang support placeholder, aman) */
+  color: #0b0b0c !important;    /* hitam pekat */
+  opacity: 1 !important;
+}
+
+/* prefix untuk kompatibilitas Safari/Edge lawas */
+::-webkit-input-placeholder { color: #0b0b0c !important; opacity:1 !important; }
+:-ms-input-placeholder       { color: #0b0b0c !important; }
+::-ms-input-placeholder      { color: #0b0b0c !important; }
+
+/* pastikan juga berlaku di area admin */
+#admin input::placeholder,
+#admin textarea::placeholder,
+#admin select::placeholder {
+  color: #0b0b0c !important;
+  opacity: 1 !important;
+}
+:root[data-theme="dark"] .dark-field::placeholder { color: #cbd5e1 !important; }
+
+/* ===== Admin: jam mulai/selesai — teks hitam di dark mode ===== */
+:root[data-theme="dark"] #schedule-start-time,
+:root[data-theme="dark"] #schedule-end-time{
+  background: #ffffff !important;
+  color: #0b0b0c !important;               /* angka utama */
+  -webkit-text-fill-color: #0b0b0c !important; /* Chrome/Safari */
+  caret-color: #0b0b0c !important;
+  border-color: var(--border-color, #24262b) !important;
+}
+
+/* Sub-bidang angka pada kontrol time (WebKit) */
+:root[data-theme="dark"] #schedule-start-time::-webkit-datetime-edit,
+:root[data-theme="dark"] #schedule-start-time::-webkit-datetime-edit-text,
+:root[data-theme="dark"] #schedule-start-time::-webkit-datetime-edit-hour-field,
+:root[data-theme="dark"] #schedule-start-time::-webkit-datetime-edit-minute-field,
+:root[data-theme="dark"] #schedule-end-time::-webkit-datetime-edit,
+:root[data-theme="dark"] #schedule-end-time::-webkit-datetime-edit-text,
+:root[data-theme="dark"] #schedule-end-time::-webkit-datetime-edit-hour-field,
+:root[data-theme="dark"] #schedule-end-time::-webkit-datetime-edit-minute-field{
+  color: #0b0b0c !important;
+}
+
+/* Ikon picker jam — biarkan terlihat */
+:root[data-theme="dark"] #schedule-start-time::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] #schedule-end-time::-webkit-calendar-picker-indicator{
+  filter: none !important; opacity: .8;
+}
+
+/* Placeholder global tetap hitam pekat */
+input::placeholder, textarea::placeholder { color:#0b0b0c !important; opacity:1 !important; }
+
+:root[data-theme="dark"] .light-field{
+  background:#fff !important;
+  color:#0b0b0c !important;
+  -webkit-text-fill-color:#0b0b0c !important;
+}
+
+/* === ADMIN FORMS: dark mode tapi field putih → teks hitam pekat === */
+:root[data-theme="dark"] #admin input,
+:root[data-theme="dark"] #admin textarea,
+:root[data-theme="dark"] #admin select {
+  background: #ffffff !important;
+  color: #0b0b0c !important;
+  -webkit-text-fill-color: #0b0b0c !important; /* Chrome/Safari */
+  caret-color: #0b0b0c !important;
+  border-color: var(--border-color, #24262b) !important;
+}
+
+/* Placeholder tetap hitam pekat di admin */
+:root[data-theme="dark"] #admin input::placeholder,
+:root[data-theme="dark"] #admin textarea::placeholder,
+:root[data-theme="dark"] #admin select::placeholder {
+  color: #0b0b0c !important;
+  opacity: 1 !important;
+}
+
+/* Autofill (Chrome/Safari) biar tidak nge-tint abu/hijau */
+:root[data-theme="dark"] #admin input:-webkit-autofill,
+:root[data-theme="dark"] #admin textarea:-webkit-autofill,
+:root[data-theme="dark"] #admin select:-webkit-autofill {
+  -webkit-text-fill-color: #0b0b0c !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  caret-color: #0b0b0c !important;
+}
+
+/* Time picker (angka & subbagian) */
+:root[data-theme="dark"] #admin input[type="time"],
+:root[data-theme="dark"] #admin input[type="date"],
+:root[data-theme="dark"] #admin input[type="datetime-local"]{
+  background: #ffffff !important;
+  color: #0b0b0c !important;
+  -webkit-text-fill-color: #0b0b0c !important;
+}
+:root[data-theme="dark"] #admin input[type="time"]::-webkit-datetime-edit,
+:root[data-theme="dark"] #admin input[type="time"]::-webkit-datetime-edit-text,
+:root[data-theme="dark"] #admin input[type="time"]::-webkit-datetime-edit-hour-field,
+:root[data-theme="dark"] #admin input[type="time"]::-webkit-datetime-edit-minute-field {
+  color: #0b0b0c !important;
+}
+
+:root[data-theme="dark"] .light-field{
+  background: #ffffff !important;
+  color: #0b0b0c !important;
+  -webkit-text-fill-color: #0b0b0c !important;
+  caret-color: #0b0b0c !important;
+}
+/* ================================
+   FORM FIELD GLOBAL (DARK MODE)
+   ================================ */
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .input,
+:root[data-theme="dark"] .select {
+  background: #ffffff !important;
+  color: #0b0b0c !important;                 /* teks yang diketik */
+  -webkit-text-fill-color: #0b0b0c !important; /* Chrome/Safari */
+  caret-color: #0b0b0c !important;
+  border-color: var(--border-color, #24262b) !important;
+}
+
+/* Placeholder hitam pekat */
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder,
+:root[data-theme="dark"] select::placeholder {
+  color: #0b0b0c !important;
+  opacity: 1 !important;
+}
+/* Prefix untuk kompatibilitas */
+:root[data-theme="dark"] ::-webkit-input-placeholder { color:#0b0b0c !important; opacity:1 !important; }
+:root[data-theme="dark"] :-ms-input-placeholder      { color:#0b0b0c !important; }
+:root[data-theme="dark"] ::-ms-input-placeholder     { color:#0b0b0c !important; }
+
+/* Autofill (Chrome/Safari) – hilangkan tint hijau & paksa teks hitam */
+:root[data-theme="dark"] input:-webkit-autofill,
+:root[data-theme="dark"] textarea:-webkit-autofill,
+:root[data-theme="dark"] select:-webkit-autofill {
+  -webkit-text-fill-color: #0b0b0c !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  caret-color: #0b0b0c !important;
+}
+
+/* Khusus tipe waktu/tanggal agar sub-bidang jam/menit juga hitam */
+:root[data-theme="dark"] input[type="time"],
+:root[data-theme="dark"] input[type="date"],
+:root[data-theme="dark"] input[type="datetime-local"]{
+  background:#ffffff !important;
+  color:#0b0b0c !important;
+  -webkit-text-fill-color:#0b0b0c !important;
+}
+:root[data-theme="dark"] input[type="time"]::-webkit-datetime-edit,
+:root[data-theme="dark"] input[type="time"]::-webkit-datetime-edit-text,
+:root[data-theme="dark"] input[type="time"]::-webkit-datetime-edit-hour-field,
+:root[data-theme="dark"] input[type="time"]::-webkit-datetime-edit-minute-field {
+  color:#0b0b0c !important;
+}

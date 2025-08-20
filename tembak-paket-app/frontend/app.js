@@ -97,6 +97,12 @@ function renderMainDashboardPage(container) {
     `;
 
     container.insertAdjacentHTML('beforeend', dashboardContentHTML);
+    const header = container.querySelector('.page-header');
+if (header && !header.querySelector('#theme-toggle-btn')) {
+  header.insertAdjacentHTML('beforeend', '<button id="theme-toggle-btn" class="icon-btn" title="Ganti tema" style="margin-left:auto;display:flex;align-items:center;gap:.5rem"><span>Theme</span></button>');
+  document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
+}
+
 
     document.getElementById('dashboard-topup-btn')?.addEventListener('click', renderTopUpModal);
 }
@@ -163,6 +169,253 @@ function toggleLiveChatBubble(show) {
     }
 }
 
+// === REALTIME (SSE) ===
+let sse;
+function initRealtime() {
+  try { sse && sse.close(); } catch (_) {}
+  if (!currentUser) return;
+
+  if (!window.EventSource) {
+    console.warn('[SSE] Not supported; fallback to polling.');
+    return;
+  }
+
+  sse = new EventSource(`${API_BASE_URL}/stream`, { withCredentials: true });
+
+  sse.addEventListener('balance_update', (ev) => {
+    const payload = JSON.parse(ev.data || '{}'); // {balance, source}
+    if (typeof payload.balance === 'number') {
+      currentUser.balance = payload.balance;
+      updateBalanceUI(payload.balance);
+      showToast('Saldo diperbarui (real-time) ✅', false);
+    }
+  });
+
+  sse.addEventListener('transaction_status', (ev) => {
+    const p = JSON.parse(ev.data || '{}'); // {id,type,status,message}
+    const isError = p.status && p.status.toLowerCase() !== 'success';
+    showToast(p.message || 'Status transaksi diperbarui.', isError);
+    if (location.hash === '#history') renderDashboard('history');
+  });
+
+  sse.addEventListener('announcement', (ev) => {
+    try { latestAnnouncement = JSON.parse(ev.data || '{}'); } catch {}
+    showAnnouncementPopupIfNeeded();
+  });
+
+  sse.addEventListener('maintenance_mode', (ev) => {
+    const p = JSON.parse(ev.data || '{}'); // {enabled:boolean}
+    isMaintenanceMode = !!p.enabled;
+    if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin')) {
+      renderGlobalMaintenancePage();
+    }
+  });
+}
+function stopRealtime() {
+  try { sse && sse.close(); } catch (_) {}
+  sse = null;
+}
+
+// === THEME (mini) ===
+function getSystemTheme(){return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t)}
+function loadTheme(){applyTheme(localStorage.getItem('theme')||getSystemTheme())}
+function toggleTheme(){const c=document.documentElement.getAttribute('data-theme')||getSystemTheme();const n=c==='dark'?'light':'dark';applyTheme(n);localStorage.setItem('theme',n);showToast(n==='dark'?'Mode gelap aktif 🌙':'Mode terang aktif ☀️')}
+
+// === PAGE LOADER (mini) ===
+let __rt;function ensurePageLoader(){if(document.getElementById('page-loader'))return;const d=document.createElement('div');d.id='page-loader';d.innerHTML='<div class="page-loader-backdrop"></div><div class="page-loader-spinner" aria-label="Loading"></div>';document.body.appendChild(d)}
+function showPageLoading(){ensurePageLoader();clearTimeout(__rt);document.getElementById('page-loader')?.classList.add('show');__rt=setTimeout(()=>{},300)}
+function hidePageLoading(force=false){const el=document.getElementById('page-loader');if(!el)return;const off=()=>el.classList.remove('show');if(force)return off();clearTimeout(__rt);__rt=setTimeout(off,300)}
+
+// === ROUTE PROGRESS BAR (tanpa spinner) ===
+let __routeProgEl, __routeProgTimer;
+
+function ensureRouteProgress() {
+  if (__routeProgEl) return;
+  __routeProgEl = document.createElement('div');
+  __routeProgEl.id = 'route-progress';
+  __routeProgEl.innerHTML = '<div class="bar"></div>';
+  document.body.appendChild(__routeProgEl);
+}
+
+function showRouteProgress() {
+  ensureRouteProgress();
+  // reset
+  clearTimeout(__routeProgTimer);
+  const bar = __routeProgEl.querySelector('.bar');
+  __routeProgEl.classList.add('show');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  // kickstart
+  requestAnimationFrame(() => {
+    // jalan cepat ke 60%, lalu nunggu hide untuk finish
+    bar.style.transition = 'width 400ms ease';
+    bar.style.width = '60%';
+  });
+}
+
+function hideRouteProgress() {
+  if (!__routeProgEl) return;
+  const bar = __routeProgEl.querySelector('.bar');
+  // isi ke 100% lalu fade out bar
+  bar.style.transition = 'width 250ms ease';
+  bar.style.width = '100%';
+  clearTimeout(__routeProgTimer);
+  __routeProgTimer = setTimeout(() => {
+    __routeProgEl.classList.remove('show');
+    // siap untuk next route
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+  }, 300);
+}
+// === AUTO SKELETON (clone dari DOM) ===
+let __skelOverlay, __skelFailTimer, __skelActive = false;
+let __skelOnScroll, __skelOnResize;
+
+const SKELETON_MAP = {
+  '#dashboard': [
+    '.page-header',
+    '.main-balance-card',
+    '.quick-access-title',
+    '.app-menu-grid .app-menu-item' // banyak item → kita batasi otomatis
+  ],
+  '#history': [
+    '.page-header',
+    '.history-list .history-item',
+    '.pagination',
+  ],
+  '#beli-paket': [
+    '.page-header',
+    '#package-search, .package-search, .search-bar',
+    '.packages-grid .package-card, .package-card'
+  ],
+  '#profile': [
+    '.profile-header',
+    '.profile-info-card'
+  ],
+  'default': [
+    '.page-header',
+    '.page-content .profile-info-card, .page-content .contact-card, .page-content .card'
+  ]
+};
+
+function ensureSkelOverlay() {
+  if (__skelOverlay) return;
+  const el = document.createElement('div');
+  el.id = 'route-skel-overlay';
+  document.body.appendChild(el);
+  __skelOverlay = el;
+}
+
+function _clearOverlay() {
+  if (!__skelOverlay) return;
+  __skelOverlay.innerHTML = '';
+}
+
+function _blocksForRoute(route) {
+  const selectors = [...(SKELETON_MAP[route] || []), ...SKELETON_MAP.default];
+  const picked = [];
+  // ambil elemen dari selector, batasi jumlah agar ringan
+  selectors.forEach(sel => {
+    const nodes = Array.from(document.querySelectorAll(sel));
+    nodes.slice(0, 12).forEach(n => picked.push(n));
+  });
+  return picked;
+}
+
+// buat 1 blok skeleton dari rect + radius elemen
+function _makeSkelBlockFromEl(el) {
+  const r = el.getBoundingClientRect();
+  if (r.width < 20 || r.height < 14) return null; // skip elemen terlalu kecil
+  const cs = getComputedStyle(el);
+  const b = document.createElement('div');
+  b.className = 'skel-block';
+  b.style.left   = `${Math.round(r.left)}px`;
+  b.style.top    = `${Math.round(r.top)}px`;
+  b.style.width  = `${Math.round(r.width)}px`;
+  b.style.height = `${Math.round(r.height)}px`;
+  b.style.borderRadius = cs.borderRadius || '10px';
+  return b;
+}
+
+function _renderAutoSkeleton(route) {
+  _clearOverlay();
+  const blocks = _blocksForRoute(route)
+    .map(_makeSkelBlockFromEl)
+    .filter(Boolean);
+  if (blocks.length === 0) return false;
+  const frag = document.createDocumentFragment();
+  blocks.forEach(b => frag.appendChild(b));
+  __skelOverlay.appendChild(frag);
+  return true;
+}
+
+function _reflowSkeleton(route) {
+  if (!__skelActive) return;
+  _renderAutoSkeleton(route);
+}
+
+function showRouteSkeleton(route) {
+  ensureSkelOverlay();
+  __skelActive = true;
+  __skelOverlay.classList.add('show');
+
+  // render awal; jika kosong, coba fallback 1x setelah next frame
+  let ok = _renderAutoSkeleton(route);
+  if (!ok) {
+    requestAnimationFrame(() => _renderAutoSkeleton(route));
+  }
+
+  // update jika user scroll/resize saat loading
+  __skelOnScroll = () => _reflowSkeleton(route);
+  __skelOnResize = () => _reflowSkeleton(route);
+  window.addEventListener('scroll', __skelOnScroll, { passive: true });
+  window.addEventListener('resize', __skelOnResize);
+
+  // failsafe: auto-hide kalau ada kejadian tak terduga
+  clearTimeout(__skelFailTimer);
+  __skelFailTimer = setTimeout(hideRouteSkeleton, 12000);
+}
+
+function hideRouteSkeleton() {
+  if (!__skelOverlay) return;
+  __skelActive = false;
+  clearTimeout(__skelFailTimer);
+  window.removeEventListener('scroll', __skelOnScroll);
+  window.removeEventListener('resize', __skelOnResize);
+  __skelOverlay.classList.remove('show');
+  _clearOverlay();
+}
+
+// Tandai panel "Hasil Pengecekan Stok" agar selalu opaque & kontras
+function forceReadableAkrabPanel() {
+  // cari heading "Hasil Pengecekan Stok"
+  const heading = Array.from(document.querySelectorAll('h1,h2,h3,h4'))
+    .find(h => /Hasil Pengecekan Stok/i.test(h.textContent || ''));
+  if (!heading) return;
+
+  // cari wrapper kartu/panel yang menaungi list stok
+  const panel =
+    heading.closest('.card, .panel, .box, .content-card, .akrab-stock-card, .akrab-stock-container') ||
+    heading.parentElement;
+
+  if (!panel) return;
+
+  // paksa lepas dimming (inline & class)
+  ['dim','muted','loading','disabled'].forEach(c => panel.classList.remove(c));
+  panel.style.opacity = '1';
+  panel.style.filter = 'none';
+
+  // untuk berjaga-jaga: naik 2 level, hilangkan opacity parent
+  let p = panel.parentElement, hop = 0;
+  while (p && hop < 2) { 
+    if (p.style && (p.style.opacity || p.style.filter)) { p.style.opacity = '1'; p.style.filter = 'none'; }
+    p = p.parentElement; hop++;
+  }
+
+  // beri flag untuk CSS override
+  panel.setAttribute('data-force-opaque', '');
+}
 
 // ===============================================
 // === INITIALISASI APLIKASI & LOGIKA ROUTING ====
@@ -176,55 +429,66 @@ function toggleLiveChatBubble(show) {
  * Mengatur semua alur navigasi secara linear untuk menghindari konflik.
  */
 async function appRouter() {
-    const hash = window.location.hash || '#';
-    const cleanHash = hash.split('?')[0];
+  const hash = window.location.hash || '#';
+  const cleanHash = hash.split('?')[0];
 
+  showRouteSkeleton(cleanHash); // ← tampilkan skeleton sesuai route
+
+  try {
     // TAHAP 1: Prioritas untuk Reset Password
     if (cleanHash === '#reset-password') {
-        app.innerHTML = '';
-        renderResetPasswordPage();
-        return;
+      app.innerHTML = '';
+      renderResetPasswordPage();
+      return; // finally tetap jalan → skeleton tertutup
     }
 
     // TAHAP 2: Cek Login
     await checkLoginStatus();
 
     // TAHAP 3: Handle Maintenance Mode
-    // Jika maintenance aktif DAN (pengguna tidak login ATAU pengguna bukan admin)
     if (isMaintenanceMode && (!currentUser || currentUser.role !== 'admin')) {
-        renderGlobalMaintenancePage();
-        return; // Hentikan routing lebih lanjut
+      renderGlobalMaintenancePage();
+      return;
     }
 
-    // TAHAP 3: Keputusan berdasarkan Login
+    // TAHAP 4: Keputusan berdasarkan Login
     if (currentUser) {
-        // PENGGUNA SUDAH LOGIN
-        await initKMSPsession();
-        await fetchAnnouncement();
-        const authPages = ['#', '#login', '#register'];
-        if (authPages.includes(cleanHash)) {
-            window.location.hash = '#dashboard';
-            return;
-        }
-        renderDashboard(cleanHash.substring(1));
-        renderUserWatermark();
-        if (cleanHash === '#beli-paket') {
-    showAnnouncementPopupIfNeeded();
+      await initKMSPsession();
+      await fetchAnnouncement();
+      initRealtime(); // SSE realtime
+
+      const authPages = ['#', '#login', '#register'];
+      if (authPages.includes(cleanHash)) {
+        window.location.hash = '#dashboard';
+        return;
+      }
+
+      
+      // di appRouter(), setelah renderDashboard(...)
+renderDashboard(cleanHash.substring(1));
+if (cleanHash === '#paket-akrab') {
+  requestAnimationFrame(forceReadableAkrabPanel);
 }
-        startStatusPolling();
+
+      renderUserWatermark();
+      if (cleanHash === '#beli-paket') showAnnouncementPopupIfNeeded();
+      startStatusPolling();
     } else {
-        // PENGGUNA BELUM LOGIN
-        app.innerHTML = '';
-        switch (cleanHash) {
-            case '#register':
-                renderRegisterPage();
-                break;
-            default:
-                renderLoginPage();
-                break;
-        }
+      app.innerHTML = '';
+      switch (cleanHash) {
+        case '#register': renderRegisterPage(); break;
+        default: renderLoginPage(); break;
+      }
     }
+  } catch (err) {
+    console.error('Router error:', err);
+    showToast('Terjadi kesalahan saat memuat halaman.', true);
+  } finally {
+    hideRouteSkeleton(); // ← PASTI tertutup walau ada return/error
+  }
 }
+
+
 // --- FUNGSI RENDER HALAMAN STATIS ---
 function renderTentangKamiPage(container) {
     container.innerHTML += `
@@ -1041,6 +1305,8 @@ async function handleChangePassword(e) {
             displayFeedback('profile-feedback', data.message, false);
             e.target.reset();
             showToast(data.message);
+            stopRealtime(); // tutup SSE
+
             handleLogout();
         } else {
             throw new Error(data.message || 'Gagal mengubah password.');
@@ -5580,6 +5846,7 @@ async function renderNonOtpPage(container) {
             <p id="stock-check-status" style="text-align: center; margin-top: 1rem;"></p>
         </div>
     `;
+    requestAnimationFrame(forceReadableAkrabPanel);
     const stockListUl = document.getElementById('realtime-stock-list');
     const statusP = document.getElementById('stock-check-status');
 
@@ -6115,6 +6382,7 @@ function handleAddTopUpOption(e) {
     }
 }
 
+  loadTheme(); // 🔹 aktifkan preferensi tema
 
 window.addEventListener('hashchange', appRouter);
 document.addEventListener('DOMContentLoaded', appRouter);
