@@ -1,129 +1,167 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PANEL-RYYSTORE</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PANEL-RYYSTORE</title>
 
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-96x96.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
-    <link rel="manifest" href="assets/favicon/site.webmanifest">
-    <meta name="msapplication-TileColor" content="#4f46e5">
-    <meta name="theme-color" content="#ffffff">
-
-    <link rel="stylesheet" href="style.css?v=marisasasnadfnskp"> 
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
-    <style>
-        /* Animasi Skeleton Loader untuk tampilan awal */
-        @keyframes shimmer {
-            100% {
-                transform: translateX(100%);
-            }
-        }
-
-        .skeleton-placeholder {
-            position: relative;
-            overflow: hidden;
-            background-color: #e2e8f0; /* Warna placeholder (slate-200) */
-        }
-
-        .skeleton-placeholder::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            transform: translateX(-100%);
-            background: linear-gradient(90deg, rgba(241, 245, 249, 0) 0, rgba(241, 245, 249, 0.8) 50%, rgba(241, 245, 249, 0) 100%);
-            animation: shimmer 1.5s infinite;
-        }
-
-        .skeleton-container {
-            display: flex;
-            background-color: #f1f5f9; /* Warna latar belakang utama */
-            height: 100vh;
-            width: 100%;
-        }
-
-        .skeleton-sidebar {
-            width: 260px;
-            height: 100vh;
-            background-color: #ffffff;
-            padding: 1.5rem;
-            border-right: 1px solid #e2e8f0;
-            flex-shrink: 0;
-        }
-
-        .skeleton-sidebar .line { height: 20px; margin-bottom: 1.5rem; border-radius: 8px; }
-        .skeleton-sidebar .line.short { width: 60%; }
-        .skeleton-sidebar .line.user { height: 40px; width: 80%; margin-top: 1rem; }
-
-        .skeleton-main-wrapper { flex-grow: 1; }
-        .skeleton-header { height: 60px; background-color: #ffffff; border-bottom: 1px solid #e2e8f0; }
-        .skeleton-content { padding: 1.5rem; }
-        .skeleton-balance-card { height: 120px; border-radius: 12px; margin-bottom: 2rem; }
-        .skeleton-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .skeleton-menu-item { height: 90px; border-radius: 12px; }
-        .skeleton-content-box { height: 200px; border-radius: 8px; }
-
-        @media (max-width: 900px) {
-            .skeleton-sidebar { display: none; }
-            .skeleton-content { padding: 1rem; }
-        }
-    </style>
-
-    </head>
-<body>
-    <div id="app">
-        <div class="skeleton-container">
-            <div class="skeleton-sidebar">
-                <div class="skeleton-placeholder line short"></div>
-                <div class="skeleton-placeholder line user"></div>
-                <div class="skeleton-placeholder line"></div>
-                <div class="skeleton-placeholder line"></div>
-                <div class="skeleton-placeholder line"></div>
-                <div class="skeleton-placeholder line"></div>
-            </div>
-            <div class="skeleton-main-wrapper">
-                <div class="skeleton-header"></div>
-                <div class="skeleton-content">
-                    <div class="skeleton-placeholder skeleton-balance-card"></div>
-                    <div class="skeleton-menu-grid">
-                        <div class="skeleton-placeholder skeleton-menu-item"></div>
-                        <div class="skeleton-placeholder skeleton-menu-item"></div>
-                        <div class="skeleton-placeholder skeleton-menu-item"></div>
-                        <div class="skeleton-placeholder skeleton-menu-item"></div>
-                        <div class="skeleton-placeholder skeleton-menu-item"></div>
-                        <div class="skeleton-placeholder skeleton-menu-item"></div>
-                    </div>
-                    <div class="skeleton-placeholder skeleton-content-box"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-
-    <script src="app.js?v=limpnasa"></script>
-
-    <script type="text/javascript">
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-    (function(){
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='https://embed.tawk.to/6862b8103111b119154e5395/1iv0pu0eb';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
+  <!-- Set tema SEBELUM CSS dimuat agar first paint ikut dark/light -->
+  <script>
+    (function () {
+      var t = localStorage.getItem('theme');
+      if (!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
     })();
-    </script>
+  </script>
+
+  <!-- Favicon / PWA -->
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-96x96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png" />
+  <link rel="manifest" href="assets/favicon/site.webmanifest" />
+  <meta name="msapplication-TileColor" content="#4f46e5" />
+  <!-- Theme color adaptif untuk mobile status bar -->
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)" />
+
+  <!-- Style utama -->
+  <link rel="stylesheet" href="style.css?v=marnhn" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css" />
+
+  <!-- Skeleton first-paint: disesuaikan dengan tema -->
+  <style>
+    /* =========================
+       Variabel warna skeleton
+       ========================= */
+    :root{
+      --sk-base: #e2e8f0;               
+      --sk-shimmer: rgba(241,245,249,.8);
+      --sk-page: #f1f5f9;               
+      --sk-card: #ffffff;               
+      --sk-border: #e2e8f0;
+    }
+    :root[data-theme="dark"]{
+      --sk-base: rgba(255,255,255,.10);
+      --sk-shimmer: rgba(255,255,255,.18);
+      --sk-page: #0b0b0c;
+      --sk-card: #141418;
+      --sk-border: #24262b;
+    }
+
+    /* Animasi Skeleton Loader untuk tampilan awal */
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+
+    .skeleton-placeholder {
+      position: relative;
+      overflow: hidden;
+      background-color: var(--sk-base);
+    }
+    .skeleton-placeholder::after {
+      content: '';
+      position: absolute; inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent 0, var(--sk-shimmer) 50%, transparent 100%);
+      animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-container {
+      display: flex;
+      background-color: var(--sk-page);
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    .skeleton-sidebar {
+      width: 260px;
+      min-height: 100vh;
+      background-color: var(--sk-card);
+      padding: 1.5rem;
+      border-right: 1px solid var(--sk-border);
+      flex-shrink: 0;
+    }
+
+    .skeleton-sidebar .line { height: 20px; margin-bottom: 1.5rem; border-radius: 8px; }
+    .skeleton-sidebar .line.short { width: 60%; }
+    .skeleton-sidebar .line.user { height: 40px; width: 80%; margin-top: 1rem; }
+
+    .skeleton-main-wrapper { flex-grow: 1; }
+    .skeleton-header {
+      height: 60px;
+      background-color: var(--sk-card);
+      border-bottom: 1px solid var(--sk-border);
+    }
+    .skeleton-content { padding: 1.5rem; }
+    .skeleton-balance-card { height: 120px; border-radius: 12px; margin-bottom: 2rem; }
+    .skeleton-menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .skeleton-menu-item { height: 90px; border-radius: 12px; }
+    .skeleton-content-box { height: 200px; border-radius: 8px; }
+
+    @media (max-width: 900px) {
+      .skeleton-sidebar { display: none; }
+      .skeleton-content { padding: 1rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <!-- First-paint skeleton (akan dihapus/ditimpa oleh app.js ketika siap) -->
+    <div class="skeleton-container" id="first-paint-skeleton">
+      <div class="skeleton-sidebar">
+        <div class="skeleton-placeholder line short"></div>
+        <div class="skeleton-placeholder line user"></div>
+        <div class="skeleton-placeholder line"></div>
+        <div class="skeleton-placeholder line"></div>
+        <div class="skeleton-placeholder line"></div>
+        <div class="skeleton-placeholder line"></div>
+      </div>
+      <div class="skeleton-main-wrapper">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-placeholder skeleton-balance-card"></div>
+          <div class="skeleton-menu-grid">
+            <div class="skeleton-placeholder skeleton-menu-item"></div>
+            <div class="skeleton-placeholder skeleton-menu-item"></div>
+            <div class="skeleton-placeholder skeleton-menu-item"></div>
+            <div class="skeleton-placeholder skeleton-menu-item"></div>
+            <div class="skeleton-placeholder skeleton-menu-item"></div>
+            <div class="skeleton-placeholder skeleton-menu-item"></div>
+          </div>
+          <div class="skeleton-placeholder skeleton-content-box"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vendor libs -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <!-- App -->
+  <script src="app.js?v=limaammngu"></script>
+
+  <!-- (Opsional) Hilangkan skeleton setelah app siap,
+       kalau di app.js kamu belum menghapusnya sendiri -->
+  <script>
+    window.addEventListener('load', function(){
+      var fp = document.getElementById('first-paint-skeleton');
+      // App kamu biasanya akan mengosongkan #app saat render pertama.
+      // Ini hanya jaga-jaga kalau belum dihapus.
+      setTimeout(function(){
+        if (fp && fp.parentNode) try { fp.parentNode.removeChild(fp); } catch(e){}
+      }, 1500);
+    });
+  </script>
+
 </body>
 </html>
