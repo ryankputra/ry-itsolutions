@@ -106,6 +106,35 @@ if (header && !header.querySelector('#theme-toggle-btn')) {
 
     document.getElementById('dashboard-topup-btn')?.addEventListener('click', renderTopUpModal);
 }
+
+// BARU: Fungsi untuk merender halaman informasi Reseller
+function renderResellerInfoPage(container) {
+    container.innerHTML += `
+        <div class="page-content">
+            <div class="page-header"><h1>Program Reseller</h1></div>
+            <p><strong>Tingkatkan keuntungan Anda dengan menjadi Reseller RyyStore!</strong></p>
+            
+            <div class="stat-card">
+                <h4>Keuntungan Menjadi Reseller</h4>
+                <ul style="padding-left: 20px; line-height: 1.8;">
+                    <li>🏷️ Dapatkan harga (fee) yang lebih murah untuk semua produk.</li>
+                    <li>💰 Potensi keuntungan lebih besar untuk setiap transaksi.</li>
+                    <li>👑 Status eksklusif yang membedakan Anda dari member biasa.</li>
+                </ul>
+            </div>
+
+            <div class="stat-card" style="margin-top: 1.5rem;">
+                <h4>Syarat & Ketentuan</h4>
+                <ol style="padding-left: 20px; line-height: 1.8;">
+                    <li><b>Cara Menjadi Reseller:</b> Lakukan top up pertama kali dengan nominal <strong>minimal Rp 50.000</strong>. Akun Anda akan otomatis di-upgrade.</li>
+                    <li><b>Mempertahankan Status:</b> Untuk tetap menjadi Reseller, Anda wajib melakukan minimal <strong>5 kali pembelian paket</strong> (jenis apa pun) dalam satu bulan kalender.</li>
+                    <li><b>Downgrade Otomatis:</b> Jika syarat pembelian bulanan tidak terpenuhi, status Anda akan otomatis kembali menjadi "User" pada awal bulan berikutnya.</li>
+                    <li><b>Upgrade Kembali:</b> Jika status Anda sudah turun, Anda bisa menjadi Reseller lagi dengan cara yang sama: melakukan top up minimal Rp 50.000.</li>
+                </ol>
+            </div>
+        </div>
+    `;
+}
 /**
  * FUNGSI BARU & TERISOLASI
  * Fungsi ini hanya punya satu tugas: memeriksa apakah URL saat ini adalah untuk
@@ -804,10 +833,13 @@ function renderProfilePage(container) {
 
     container.innerHTML = `
         <div class="page-content profile-page">
-            <div class="profile-header">
-                <h3>${currentUser.name}</h3>
-                <p>${currentUser.email}</p>
-            </div>
+<div class="profile-header">
+    <h3>
+        ${currentUser.name}
+        <span class="user-role-badge role-${currentUser.role}">${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}</span>
+    </h3>
+    <p>${currentUser.email}</p>
+</div>
 
             <div class="profile-info-card">
                 <div class="balance-section">
@@ -904,61 +936,6 @@ async function renderTutorialPage(container) {
     }
 }
 
-/**
- * FUNGSI HALAMAN TUTORIAL (PENDEKATAN BARU)
- * Menampilkan daftar panduan dan menangani klik untuk melihat detail.
- * @param {HTMLElement} container - Elemen DOM (mainContent) yang akan diisi.
- */
-async function renderTutorialPage(container) {
-    // 1. Siapkan kerangka HTML dengan satu area konten saja
-    container.innerHTML = `
-        <div class="page-content" id="tutorial-area">
-            <div class="page-header">
-                <h1>Pilih Panduan Pembelian</h1>
-            </div>
-            <div id="tutorial-content-wrapper">
-                <div class="loading-spinner"></div>
-            </div>
-        </div>
-    `;
-
-    const contentWrapper = document.getElementById('tutorial-content-wrapper');
-
-    try {
-        await loadTutorialList(); // Pastikan data `availableTutorials` ada
-
-        if (availableTutorials.length === 0) {
-            contentWrapper.innerHTML = '<p>Belum ada panduan yang tersedia.</p>';
-            return;
-        }
-
-        // 2. Render daftar kartu panduan ke dalam area konten
-        contentWrapper.innerHTML = `
-            <div class="tutorial-list-grid">
-                ${availableTutorials.map(t => `
-                    <button class="tutorial-card" data-tutorial-id="${t.id}">
-                        <h3>${t.title}</h3>
-                        <p>${t.description || 'Klik untuk melihat panduan lengkap.'}</p>
-                    </button>
-                `).join('')}
-            </div>
-        `;
-
-        // 3. Pasang event listener
-        contentWrapper.addEventListener('click', (e) => {
-            const card = e.target.closest('.tutorial-card');
-            if (card) {
-                const tutorialId = card.dataset.tutorialId;
-                // Panggil fungsi untuk menampilkan detail, menggantikan isi wrapper
-                renderTutorialDetailView(tutorialId, contentWrapper);
-            }
-        });
-
-    } catch (error) {
-        console.error("Gagal memuat daftar panduan:", error);
-        contentWrapper.innerHTML = `<p class="error-message">Gagal memuat daftar panduan: ${error.message}</p>`;
-    }
-}
 /**
  * FUNGSI DETAIL TUTORIAL (PENDEKATAN BARU)
  * Mengganti konten dengan detail panduan yang dipilih.
@@ -1360,7 +1337,8 @@ function renderPaymentChoiceModal(packageId, originalButton) {
         ? JSON.parse(pkg.payment_methods) 
         : (pkg.payment_methods || []);
 
-    const platformFee = pkg.platform_fee || 0;
+    const isReseller = currentUser.role === 'reseller';
+const platformFee = isReseller ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
     const pkgNameLower = (pkg.name || '').toLowerCase();
     const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
     
@@ -1883,10 +1861,14 @@ async function renderDashboard(activePage = 'dashboard') {
         <div class="responsive-container">
             <aside class="sidebar">
                 <div class="sidebar-header"><h2>RYYSTORE</h2></div>
-                <div class="user-info">
-                    <p>Selamat datang, <strong>${currentUser.name}</strong></p>
-                    <p id="user-balance-sidebar">Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
-                </div>
+
+<div class="user-info">
+    <p>
+        Selamat datang, <strong>${currentUser.name}</strong>
+        <span class="user-role-badge role-${currentUser.role}">${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}</span>
+    </p>
+    <p id="user-balance-sidebar">Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
+</div>
                 <nav class="sidebar-nav">
                      <ul>
                         <li><a href="#dashboard" class="${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a></li>
@@ -1896,6 +1878,7 @@ async function renderDashboard(activePage = 'dashboard') {
                         <li><a href="#history" class="${navActivePage === 'history' ? 'active' : ''}">${riwayatIcon}<span>Riwayat</span></a></li>
                         <li><a href="#rekening-koran" class="${navActivePage === 'rekening-koran' ? 'active' : ''}">${rekeningIcon}<span>Lap. Keuangan</span></a></li>
                         <li><a href="#profile" class="${navActivePage === 'profile' ? 'active' : ''}">${profilIcon}<span>Profil & Menu Lain</span></a></li>
+                        <li><a href="#reseller-info" class="${navActivePage === 'reseller-info' ? 'active' : ''}"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><span>Info Reseller</span></a></li>
                         ${isAdmin ? `
                         <li class="admin-menu-divider"></li>
                         <li><a href="#admin" class="${navActivePage === 'admin' ? 'active' : ''}">${adminIcon}<span>Panel Admin</span></a></li>
@@ -1955,6 +1938,7 @@ async function renderDashboard(activePage = 'dashboard') {
         'tentang-kami': renderTentangKamiPage,
         'kebijakan-privasi': renderKebijakanPrivasiPage,
         'syarat-ketentuan': renderSyaratKetentuanPage,
+        'reseller-info': renderResellerInfoPage,
         'admin': isAdmin ? renderAdminDashboard : () => { window.location.hash = '#dashboard'; },
         'laporan': isAdmin ? renderLaporanPage : () => { window.location.hash = '#dashboard'; }
     };
@@ -2693,8 +2677,65 @@ async function handleSaveTutorialContent(e) {
 /**
  * Merender tampilan panel admin dengan semua fitur manajemen.
  * Ini adalah bagian dari `renderDashboard`.
- * @param {HTMLElement} container - Elemen DOM tempat konten admin akan dirender (misal: page-content-area).
+ * @param {HTMLElement} container -Elemen DOM tempat konten admin akan dirender (misal: page-content-area).
  */
+
+// --- PERBAIKAN: Pindahkan fungsi ini ke scope global agar bisa diakses dari mana saja ---
+function renderChangeRoleModal(user) {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.innerHTML = `
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Ubah Peran: ${user.name}</h2><button class="modal-close">&times;</button></div>
+            <div class="form-group">
+                <label for="role-select">Peran Baru:</label>
+                <select id="role-select">
+                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
+                    <option value="reseller" ${user.role === 'reseller' ? 'selected' : ''}>Reseller</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+            </div>
+            <div id="role-change-feedback"></div>
+            <button id="save-role-btn">Simpan Perubahan</button>
+        </div>
+    </div>`;
+
+    const closeModal = () => modalContainer.innerHTML = '';
+    document.querySelector('.modal-close').addEventListener('click', closeModal);
+    document.querySelector('.modal-overlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.getElementById('save-role-btn').addEventListener('click', async (e) => {
+        const button = e.target;
+        button.disabled = true;
+        button.innerHTML = '<span class="button-spinner"></span>';
+        const newRole = document.getElementById('role-select').value;
+        try {
+            const { data } = await apiFetch('/admin/update-user-role', {
+                method: 'POST', body: { userId: user.id, newRole }
+            });
+            showToast(data.message, false);
+            closeModal();
+            // --- PERBAIKAN: Lakukan pembaruan UI secara real-time tanpa reload ---
+            // 1. Perbarui data pengguna di state lokal
+            const userToUpdate = allAdminUsers.find(u => u.id === user.id);
+            if (userToUpdate) {
+                userToUpdate.role = newRole;
+            }
+
+            // 2. Render ulang komponen yang bergantung pada data ini
+            renderApprovedUsersList(); // Daftar pengguna aktif
+            renderUserStats();       // Statistik jumlah pengguna
+            populateUserDropdowns(); // Dropdown di panel lain
+
+        } catch (error) {
+            displayFeedback('role-change-feedback', error.message, true);
+            button.disabled = false;
+            button.innerHTML = 'Simpan Perubahan';
+        }
+    });
+}
 
 function renderAdminDashboard(container) {
     if (!container) {
@@ -2710,6 +2751,17 @@ function renderAdminDashboard(container) {
                 <h1>Panel Kontrol Admin</h1>
                 <a href="/#dashboard" style="display: block; text-align: center; margin-bottom: 1rem; color: var(--primary-color);">Kembali ke Dashboard Pengguna</a>
             </div>
+
+<div class="admin-section">
+    <h2>Manajemen Pengguna Aktif</h2>
+    <!-- PERBAIKAN: Tambahkan kontainer untuk statistik -->
+    <div id="user-stats-summary" class="stats-grid" style="margin-bottom: 1.5rem;"></div>
+    <div class="form-group">
+        <input type="text" id="active-user-search" placeholder="🔍 Cari nama atau email pengguna...">
+    </div>    <div id="approved-users-list" style="max-height: 400px; overflow-y: auto;">
+         <ul class="user-list-admin"><div class="loading-spinner"></div></ul>
+    </div>
+</div>
 
             <div class="admin-section">
                 <h2>Manajemen Konten "Cara Pembelian"</h2>
@@ -3028,9 +3080,6 @@ function renderAdminDashboard(container) {
         loadAndRenderAdminTransactions();
     };
 
-
-    // JavaScript untuk Admin Panel (di dalam fungsi renderAdminDashboard)
-    
     /**
      * Merender daftar paket ke elemen list di panel admin.
      * @param {Array<Object>} packages - Array objek paket.
@@ -3050,31 +3099,38 @@ function renderAdminDashboard(container) {
                 <strong>${pkg.name || 'Nama Tidak Tersedia'}</strong>
                 <small>Harga Provider: Rp ${(pkg.original_price || 0).toLocaleString('id-ID')}</small>
             </div>
-            <div class="package-controls">
-                <label>Biaya: <input type="number" class="fee-input" value="${pkg.platform_fee || 0}"></label>
-                <label>Kategori: 
-                    <select class="category-select">
-                        <option value="reguler" ${(!pkg.category || pkg.category === 'reguler') ? 'selected' : ''}>Reguler (OTP)</option>
-                        <option value="non-otp" ${pkg.category === 'non-otp' ? 'selected' : ''}>Non-OTP (Akrab)</option>
-                    </select>
-                </label>
-                
-                <label>Multi Tembak: <input type="checkbox" class="multi-purchase-checkbox" ${pkg.isMultiPurchase ? 'checked' : ''}></label>
-                <label>Tampilkan: <input type="checkbox" class="visibility-checkbox" ${pkg.isVisible ? 'checked' : ''}></label>
-            </div>
+        
+<div class="package-controls">
+    <label>Fee User: <input type="number" class="fee-input" value="${pkg.platform_fee || 0}" title="Biaya untuk User biasa"></label>
+    <label>Fee Reseller: <input type="number" class="reseller-fee-input" value="${pkg.reseller_fee || 0}" title="Biaya untuk Reseller"></label>
+    <label>Kategori: 
+        <select class="category-select">
+            <option value="reguler" ${(!pkg.category || pkg.category === 'reguler') ? 'selected' : ''}>Reguler (OTP)</option>
+            <option value="non-otp" ${pkg.category === 'non-otp' ? 'selected' : ''}>Non-OTP (Akrab)</option>
+        </select>
+    </label>
+
+    <label>Multi Tembak: <input type="checkbox" class="multi-purchase-checkbox" ${pkg.isMultiPurchase ? 'checked' : ''}></label>
+    <label>Reseller Saja: <input type="checkbox" class="reseller-only-checkbox" ${pkg.isResellerOnly ? 'checked' : ''}></label>
+    <label>Tampilkan: <input type="checkbox" class="visibility-checkbox" ${pkg.isVisible ? 'checked' : ''}></label>
+</div>
         </li>
     `).join('');
     listElement.querySelectorAll('.package-item').forEach(item => {
         const packageId = item.dataset.packageId;
         const feeInput = item.querySelector('.fee-input');
+        const resellerFeeInput = item.querySelector('.reseller-fee-input');
         const visibilityCheckbox = item.querySelector('.visibility-checkbox');
         const categorySelect = item.querySelector('.category-select');
         const multiPurchaseCheckbox = item.querySelector('.multi-purchase-checkbox');
+        const resellerOnlyCheckbox = item.querySelector('.reseller-only-checkbox'); // <-- TAMBAHKAN INI
 
         // Gunakan 'input' event untuk input type 'number' agar setiap perubahan langsung terdeteksi
         feeInput?.addEventListener('input', () => handlePackageChange(packageId, item));
+        resellerFeeInput?.addEventListener('input', () => handlePackageChange(packageId, item));
 
         // Gunakan 'change' event untuk checkbox dan select
+        resellerOnlyCheckbox?.addEventListener('change', () => handlePackageChange(packageId, item)); // <-- TAMBAHKAN INI
         visibilityCheckbox?.addEventListener('change', () => handlePackageChange(packageId, item));
         categorySelect?.addEventListener('change', () => handlePackageChange(packageId, item));
         multiPurchaseCheckbox?.addEventListener('change', () => handlePackageChange(packageId, item));
@@ -3091,14 +3147,20 @@ async function handlePackageChange(packageId, packageItemElement) {
     const visibilityCheckbox = packageItemElement.querySelector('.visibility-checkbox');
     const categorySelect = packageItemElement.querySelector('.category-select');
     const multiPurchaseCheckbox = packageItemElement.querySelector('.multi-purchase-checkbox');
+    const resellerOnlyCheckbox = packageItemElement.querySelector('.reseller-only-checkbox'); // <-- TAMBAHKAN INI
+    const resellerFeeInput = packageItemElement.querySelector('.reseller-fee-input'); // <-- TAMBAHKAN INI
+
+    
 
     // Buat objek update untuk paket ini saja
     const updatePayload = {
         package_code: packageId,
         platform_fee: parseFloat(feeInput?.value || '0'),
+        reseller_fee: parseFloat(resellerFeeInput?.value || '0'),
         isVisible: visibilityCheckbox?.checked || false,
         category: categorySelect ? categorySelect.value : 'reguler',
-        isMultiPurchase: multiPurchaseCheckbox?.checked || false
+        isMultiPurchase: multiPurchaseCheckbox?.checked || false,
+        isResellerOnly: resellerOnlyCheckbox?.checked || false // <-- TAMBAHKAN INI
     };
 
     // Tambahkan spinner kecil di samping item yang sedang disimpan
@@ -3137,52 +3199,6 @@ async function handlePackageChange(packageId, packageItemElement) {
     }
 }
 
-/**
- * FUNGSI BARU: Mengisi semua dropdown pengguna dengan data yang sudah difilter.
- */
-function populateUserDropdowns(searchTerm = '') {
-    const lowercasedTerm = searchTerm.toLowerCase();
-
-    // Filter daftar master pengguna berdasarkan nama atau email
-    const filteredUsers = allAdminUsers.filter(user => 
-        user.name.toLowerCase().includes(lowercasedTerm) || 
-        user.email.toLowerCase().includes(lowercasedTerm)
-    );
-
-    const dropdownsToPopulate = [
-        document.getElementById('user-select'),
-        document.getElementById('user-select-delete'),
-        document.getElementById('user-log-select')
-    ];
-
-    dropdownsToPopulate.forEach(dropdown => {
-        if (dropdown) {
-            const selectedValue = dropdown.value; // Simpan nilai terpilih jika ada
-            dropdown.innerHTML = ''; // Kosongkan daftar
-
-            if (filteredUsers.length === 0) {
-                dropdown.innerHTML = '<option value="">Pengguna tidak ditemukan</option>';
-                return;
-            }
-
-            dropdown.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
-            filteredUsers.forEach(user => {
-                if (dropdown.id === 'user-select-delete' && currentUser.id === user.id) {
-                    return; // Jangan tampilkan admin di daftar hapus akun
-                }
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
-                dropdown.appendChild(option);
-            });
-
-            // Coba pulihkan nilai yang tadi dipilih
-            if (filteredUsers.some(u => u.id === selectedValue)) {
-                dropdown.value = selectedValue;
-            }
-        }
-    });
-}
 // --- KODE LENGKAP UNTUK FITUR FILTER PENGGUNA ---
 
 /**
@@ -3240,6 +3256,35 @@ function populateUserDropdowns(searchTerm = '') {
 }
 
 /**
+ * FUNGSI BARU: Merender statistik jumlah pengguna di panel admin.
+ */
+function renderUserStats() {
+    const statsContainer = document.getElementById('user-stats-summary');
+    if (!statsContainer) return;
+
+    // Filter pengguna yang sudah disetujui untuk statistik
+    const approvedUsers = allAdminUsers.filter(u => u.status === 'approved');
+    const totalUsers = approvedUsers.length;
+    const totalResellers = approvedUsers.filter(u => u.role === 'reseller').length;
+    const totalRegularUsers = approvedUsers.filter(u => u.role === 'user').length;
+
+    statsContainer.innerHTML = `
+        <div class="stat-card">
+            <h4>Total Pengguna</h4>
+            <p>${totalUsers}</p>
+        </div>
+        <div class="stat-card">
+            <h4>Total Reseller</h4>
+            <p>${totalResellers}</p>
+        </div>
+        <div class="stat-card">
+            <h4>Total Member</h4>
+            <p>${totalRegularUsers}</p>
+        </div>
+    `;
+}
+
+/**
  * FUNGSI LAMA (DIGANTI): Sekarang hanya bertugas mengambil data awal.
  */
 async function loadUsers() {
@@ -3254,6 +3299,9 @@ async function loadUsers() {
         
         // Panggil fungsi untuk mengisi dropdown pertama kali (tanpa filter)
         populateUserDropdowns('');
+
+        // --- PERBAIKAN: Panggil fungsi render statistik ---
+        renderUserStats();
 
         // Logika untuk daftar persetujuan pengguna (tidak berubah)
         const pendingList = document.getElementById('pending-users-list');
@@ -3275,12 +3323,14 @@ async function loadUsers() {
             document.querySelectorAll('.reject-user-btn').forEach(button => button.addEventListener('click', handleRejectUser));
         }
 
+        // --- PERBAIKAN: Panggil fungsi render terpisah ---
+        renderApprovedUsersList(); // Render daftar pengguna aktif tanpa filter awal
+
     } catch (error) {
         console.error('Gagal memuat pengguna:', error);
         displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
     }
 }
-   
 /**
  * Event handler untuk form 'Tambah/Kurangi Saldo Pengguna'.
  * Memanggil API untuk memperbarui saldo pengguna tertentu.
@@ -3641,7 +3691,6 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
             }
             button.disabled = false; button.textContent = 'Cek Saldo KMSP';
         });
-
         document.getElementById('log-user-search')?.addEventListener('input', (e) => populateUserDropdowns(e.target.value));
         document.getElementById('saldo-user-search')?.addEventListener('input', (e) => populateUserDropdowns(e.target.value));
         document.getElementById('user-log-select')?.addEventListener('change', (e) => {
@@ -3655,6 +3704,11 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         document.getElementById('saldo-user-search')?.addEventListener('input', (e) => {
             populateUserDropdowns(e.target.value);
         });
+        // --- PERBAIKAN: Tambahkan event listener untuk pencarian pengguna aktif ---
+        document.getElementById('active-user-search')?.addEventListener('input', (e) => {
+            renderApprovedUsersList(e.target.value);
+        });
+
 
         // --- PERBAIKAN: Tambahkan event listener untuk dropdown log pengguna ---
         const logSelectDropdown = document.getElementById('user-log-select');
@@ -3687,29 +3741,6 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
     }, 0);
 }
 
-    async function loadUsers() {
-        try {
-            const { data, status } = await apiFetch('/admin/users');
-            const userSelect = document.getElementById('user-select');
-            if (!userSelect) { console.error("Elemen user-select tidak ditemukan."); return; }
-            
-            userSelect.innerHTML = '<option value="">-- Pilih Pengguna --</option>'; // Opsi default
-            if (status === 200 && data.status && Array.isArray(data.data)) {
-                data.data.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = `${user.name} (${user.email}) - Saldo: ${user.balance.toLocaleString('id-ID')}`;
-                    userSelect.appendChild(option);
-                });
-            } else {
-                 displayFeedback('balance-feedback', data.message || `Gagal memuat daftar pengguna: Respons tidak valid.`, true);
-            }
-        } catch (error) { 
-            console.error('Gagal memuat pengguna:', error);
-            displayFeedback('balance-feedback', `Gagal memuat daftar pengguna: ${error.message}`, true);
-        }
-    }
-    
     // Perbarui tampilan saldo KMSP saat admin panel dimuat
     const kmspBalanceDisplay = document.getElementById('kmsp-balance-display');
     if (kmspBalanceDisplay) {
@@ -3790,7 +3821,8 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
             if (!userId) {
                 throw new Error('Pilih pengguna yang ingin dihapus.');
             }
-            if (!confirm('Apakah Anda yakin ingin menghapus akun pengguna ini? Tindakan ini tidak dapat dibatalkan.')) {
+            // --- PERBAIKAN: Pesan konfirmasi yang lebih aman dan jelas ---
+            if (!confirm('Apakah Anda yakin ingin MENONAKTIFKAN akun pengguna ini? Akun tidak akan bisa login, saldo akan di-nolkan, namun riwayat transaksi akan tetap tersimpan. Tindakan ini tidak dapat dibatalkan.')) {
                 button.disabled = false; button.textContent = originalText;
                 return;
             }
@@ -4039,6 +4071,51 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
             button.textContent = originalText;
         }
     });
+
+    /**
+ * FUNGSI BARU: Memfilter dan merender daftar pengguna yang sudah disetujui.
+ * @param {string} searchTerm - Teks untuk memfilter pengguna.
+ */
+function renderApprovedUsersList(searchTerm = '') {
+    const approvedListContainer = document.getElementById('approved-users-list');
+    if (!approvedListContainer) return;
+
+    const lowercasedTerm = searchTerm.toLowerCase();
+
+    // Filter dari daftar master 'allAdminUsers'
+    const approvedUsers = allAdminUsers.filter(u =>
+        u.status === 'approved' &&
+        (u.name.toLowerCase().includes(lowercasedTerm) || u.email.toLowerCase().includes(lowercasedTerm))
+    );
+
+    if (approvedUsers.length > 0) {
+        approvedListContainer.innerHTML = `
+            <ul class="user-list-admin">
+                ${approvedUsers.map(user => `
+                <li class="user-item-admin" data-user-id="${user.id}">
+                    <div class="user-info-admin">
+                        <strong>${user.name}</strong>
+                        <span>${user.email}</span>
+                        <span class="user-role-badge role-${user.role}">${user.role}</span>
+                    </div>
+                    <div class="user-actions">
+                        ${user.id !== currentUser.id ? `<button class="change-role-btn">Ubah Peran</button>` : '<span>(Anda)</span>'}
+                    </div>
+                </li>`).join('')}
+            </ul>`;
+        
+        // Pasang lagi event listener untuk tombol 'Ubah Peran' pada hasil filter
+        approvedListContainer.querySelectorAll('.change-role-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const userId = e.target.closest('.user-item-admin').dataset.userId;
+                const user = allAdminUsers.find(u => u.id === userId);
+                if (user) renderChangeRoleModal(user);
+            });
+        });
+    } else {
+        approvedListContainer.innerHTML = '<p style="text-align: center; padding: 1rem;">Pengguna tidak ditemukan.</p>';
+    }
+}
 
     // Inisialisasi data saat admin panel dimuat
     // Menggunakan setTimeout 0 untuk memastikan DOM sudah dirender sebelum event listener dipasang
@@ -4316,7 +4393,19 @@ async function renderPackagesPage(container) {
     
     // --- KODE LAMA ANDA YANG AKAN DIJALANKAN JIKA SALDO LEBIH DARI 0 ---
     // (Kode di bawah ini tidak berubah, hanya dipindahkan ke dalam blok 'else')
-
+if (currentUser && currentUser.role === 'user') {
+        const resellerInfoHTML = `
+            <div class="reseller-promo-banner">
+                <div class="promo-icon">✨</div>
+                <div class="promo-text">
+                    <h4>Ingin Harga Lebih Murah?</h4>
+                    <p>Upgrade akun Anda ke Reseller dan nikmati fee lebih rendah! Cukup lakukan top up pertama minimal Rp 50.000.</p>
+                </div>
+                <a href="#reseller-info" class="button secondary small-btn">Lihat Info</a>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', resellerInfoHTML);
+    }
     const existingSection = document.getElementById('package-selection-area');
     if (existingSection) existingSection.remove();
 
@@ -4365,14 +4454,38 @@ async function renderPackagesPage(container) {
             <div class="form-group">
                 <input type="text" id="package-search-input" placeholder="🔍 Cari nama paket reguler...">
             </div>
-            <div id="package-card-list" class="package-card-list">${regularPackages.map(pkg => `
-                <div class="package-card" data-package-id="${pkg.package_code}">
-                    <div class="package-card-info">
-                        <strong>${pkg.name}</strong>
-                        <small>Fee: Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')}</small>
-                    </div>
-                    <button class="package-card-select-btn" data-package-id="${pkg.package_code}">Pilih</button>
-                </div>`).join('')}</div>
+<div id="package-card-list" class="package-card-list">${regularPackages.map(pkg => {
+    const isReseller = currentUser.role === 'reseller';
+    const platformFee = pkg.platform_fee || 0;
+    const resellerFee = pkg.reseller_fee || 0;
+    const fee = isReseller ? resellerFee : platformFee;
+    const showDiscount = isReseller && resellerFee > 0 && resellerFee < platformFee;
+
+    let resellerPriceTeaser = '';
+    if (currentUser.role === 'user' && resellerFee > 0 && resellerFee < platformFee) { // --- PERBAIKAN ---
+        const savings = platformFee - resellerFee;
+        resellerPriceTeaser = `<small class="reseller-teaser">✨ Jadi Reseller! Harga cuma <strong>Rp ${resellerFee.toLocaleString('id-ID')}</strong> (Hemat Rp ${savings.toLocaleString('id-ID')})</small>`;
+    }
+
+    return `
+    <div class="package-card" data-package-id="${pkg.package_code}">
+        <div class="package-card-info">
+            <strong>${pkg.name}</strong>
+            ${currentUser.role === 'admin'
+    ? `<div class="price-info admin-price-view">
+            <small class="current-price user-price">User: Rp ${platformFee.toLocaleString('id-ID')}</small>
+            <small class="current-price reseller-price">Reseller: Rp ${resellerFee.toLocaleString('id-ID')}</small>
+       </div>`
+                : `<div class="price-info">
+                        ${showDiscount ? `<small class="original-price">Rp ${platformFee.toLocaleString('id-ID')}</small>` : ''}
+                        <small class="current-price">Fee: Rp ${fee.toLocaleString('id-ID')}</small>
+                        ${resellerPriceTeaser}
+                   </div>`
+            }
+        </div>
+        <button class="package-card-select-btn" data-package-id="${pkg.package_code}">Pilih</button>
+    </div>`;
+}).join('')}</div>
             <div id="package-details-area" style="display: none; margin-top: 2rem;"></div>
         </div>
     ` : '';
@@ -4629,8 +4742,14 @@ function displaySelectedPackageDetails(packageCode) {
         return;
     }
 
-    const platformFee = pkg.platform_fee || 0;
-    const providerPrice = pkg.original_price || 0;
+    const isReseller = currentUser.role === 'reseller';
+    const platformFee = isReseller ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+
+    // --- PERUBAHAN BARU: Tampilan harga untuk Admin ---
+    const feeDisplayHTML = currentUser.role === 'admin'
+        ? `<p><strong>Biaya Layanan (User):</strong> Rp ${(pkg.platform_fee || 0).toLocaleString('id-ID')}</p>
+           <p><strong>Biaya Layanan (Reseller):</strong> Rp ${(pkg.reseller_fee || 0).toLocaleString('id-ID')}</p>`
+        : `<p><strong>Biaya Layanan:</strong> Rp ${platformFee.toLocaleString('id-ID')}</p>`;
 
     // --- KONDISI PEMBELIAN YANG DIPERBARUI ---
     const hasPhoneSession = !!phoneAuth.accessToken;
@@ -4652,7 +4771,7 @@ function displaySelectedPackageDetails(packageCode) {
             <div class="page-header"><h2>Detail Paket Terpilih</h2></div>
             <h4>${pkg.name}</h4>
             <p><strong>Deskripsi:</strong> ${pkg.description || 'Tidak ada deskripsi.'}</p>
-            <p><strong>Biaya Layanan:</strong> Rp ${platformFee.toLocaleString('id-ID')}</p>
+            ${feeDisplayHTML}
             <button class="purchase-btn" data-package-id="${pkg.package_code}" ${!canPurchase ? 'disabled' : ''}>
                 ${buttonText}
             </button>
@@ -4962,6 +5081,16 @@ async function renderTopUpModal() {
     const modalContainer = document.getElementById('modal-container');
     if (!modalContainer) return;
 
+    let resellerUpgradeNote = '';
+    // Tampilkan pesan ini HANYA jika pengguna adalah 'user' dan belum pernah upgrade
+    // (Kita asumsikan jika upgradedToResellerAt kosong, berarti belum pernah jadi reseller)
+    if (currentUser && currentUser.role === 'user' && !currentUser.upgradedToResellerAt) {
+        resellerUpgradeNote = `
+            <div class="modal-notification">
+                <p><strong>✨ Info Spesial:</strong> Top up pertama kali minimal <strong>Rp 50.000</strong> akan otomatis meng-upgrade akun Anda menjadi <strong>Reseller</strong> dengan harga lebih murah!</p>
+            </div>
+        `;
+    }
     modalContainer.innerHTML = `
         <div class="modal-overlay">
             <div class="modal-content">
@@ -5167,8 +5296,8 @@ function renderDynamicQrisDisplay(base64Image, uniqueAmount, expiresAt, topUpId)
             <div class="modal-content" style="text-align: center;">
                 <div class="modal-header"><h2>Scan untuk Membayar</h2></div>
                 
-                <p style="margin-top: 1rem; font-weight: bold;">PENTING: Transfer Tepat Sesuai Nominal Unik!</p>
-                <h3 style="font-size: 2rem; color: var(--danger-color); margin: 0.5rem 0; letter-spacing: 1px; background: #f0f0f0; padding: 5px; border-radius: 5px;">Rp ${uniqueAmount.toLocaleString('id-ID')}</h3>
+                <p style="margin-top: 1rem; font-weight: bold; ">PENTING: Transfer Tepat Sesuai Nominal Unik!</p>
+                <h3 style="font-size: 2rem; color: white; margin: 0.5rem 0; letter-spacing: 1px; background:rgb(255, 0, 0); padding: 5px; border-radius: 5px;">Rp ${uniqueAmount.toLocaleString('id-ID')}</h3>
                 
                 <div id="qrcode-image-container" style="padding: 1rem; background: white; display: inline-block; border-radius: 8px; margin: 1rem auto; border: 1px solid #ddd;">
                     <img src="${base64Image}" alt="QR Code Pembayaran" width="220" height="220">
