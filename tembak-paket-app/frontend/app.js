@@ -1872,8 +1872,8 @@ async function renderDashboard(activePage = 'dashboard') {
                 <nav class="sidebar-nav">
                      <ul>
                         <li><a href="#dashboard" class="${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a></li>
-                        <li><a href="#beli-paket" class="${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Beli Paket (OTP)</span></a></li>
-                        <li><a href="#paket-akrab" class="${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket Akrab</span></a></li>
+                        <li><a href="#beli-paket" class="${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Paket (OTP)</span></a></li>
+                        <li><a href="#paket-akrab" class="${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket No OTP</span></a></li>
                         <li><a href="#tutorial" class="${navActivePage === 'tutorial' ? 'active' : ''}">${tutorialIcon}<span>Cara Pembelian</span></a></li>
                         <li><a href="#history" class="${navActivePage === 'history' ? 'active' : ''}">${riwayatIcon}<span>Riwayat</span></a></li>
                         <li><a href="#rekening-koran" class="${navActivePage === 'rekening-koran' ? 'active' : ''}">${rekeningIcon}<span>Lap. Keuangan</span></a></li>
@@ -1899,8 +1899,8 @@ async function renderDashboard(activePage = 'dashboard') {
             </div>
             <nav class="bottom-nav">
                 <a href="#dashboard" class="nav-item ${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a>
-                <a href="#beli-paket" class="nav-item ${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Beli Paket</span></a>
-                <a href="#paket-akrab" class="nav-item ${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket Akrab</span></a>
+                <a href="#beli-paket" class="nav-item ${navActivePage === 'packages' ? 'active' : ''}">${beliPaketIcon}<span>Paket OTP</span></a>
+                <a href="#paket-akrab" class="nav-item ${navActivePage === 'paket-akrab' ? 'active' : ''}">${paketAkrabIcon}<span>Paket No OTP</span></a>
                 <a href="#history" class="nav-item ${navActivePage === 'history' ? 'active' : ''}">${riwayatIcon}<span>Riwayat</span></a>
                 <a href="#rekening-koran" class="nav-item ${navActivePage === 'rekening-koran' ? 'active' : ''}">${rekeningIcon}<span>Laporan</span></a>
                 <a href="#profile" class="nav-item ${navActivePage === 'profile' ? 'active' : ''}">${profilIcon}<span>Profil</span></a>
