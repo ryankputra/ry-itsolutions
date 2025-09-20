@@ -186,7 +186,6 @@ function showAnnouncementPopupIfNeeded() {
         console.log(`Pengumuman dengan ID: ${announcementId} sudah pernah dilihat.`);
     }
 }
-
 function toggleLiveChatBubble(show) {
     if (!liveChatBubbleElement) {
         liveChatBubbleElement = document.querySelector('.we-are-here-bubble');
@@ -1316,154 +1315,191 @@ function handlePurchase(e, packageId) {
 }
 
 /**
- * Merender modal untuk memilih metode pembayaran provider.
- * @param {string} packageId - ID paket yang akan dibeli.
- * @param {HTMLElement} originalButton - Tombol "Beli Sekarang" asli untuk direset.
- */
+ * Merender modal untuk memilih metode pembayaran provider.
+ * @param {string} packageId - ID paket yang akan dibeli.
+ * @param {HTMLElement} originalButton - Tombol "Beli Sekarang" asli untuk direset.
+ */
 function renderPaymentChoiceModal(packageId, originalButton) {
-    const pkg = visiblePackages.find(p => p.package_code === packageId);
-    if (!pkg) { 
-        alert('Error: Paket tidak ditemukan.');
-        if (originalButton) {
-            originalButton.disabled = false;
-            originalButton.textContent = 'Beli Sekarang';
-        }
-        return;
-    }
+    const pkg = visiblePackages.find(p => p.package_code === packageId);
+    if (!pkg) { 
+        alert('Error: Paket tidak ditemukan.');
+        if (originalButton) {
+            originalButton.disabled = false;
+            originalButton.textContent = 'Beli Sekarang';
+        }
+        return;
+    }
 
-    // --- PERBAIKAN PENTING DI SINI ---
-    // Mengubah data teks metode pembayaran menjadi array yang bisa digunakan
-    const paymentMethods = typeof pkg.payment_methods === 'string' 
-        ? JSON.parse(pkg.payment_methods) 
-        : (pkg.payment_methods || []);
+    const paymentMethods = typeof pkg.payment_methods === 'string' 
+        ? JSON.parse(pkg.payment_methods) 
+        : (pkg.payment_methods || []);
 
-    const isReseller = currentUser.role === 'reseller';
-const platformFee = isReseller ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
-    const pkgNameLower = (pkg.name || '').toLowerCase();
-    const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
-    
-    let paymentSelectionUI = '';
+    const isReseller = currentUser.role === 'reseller';
+    const platformFee = isReseller ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+    const pkgNameLower = (pkg.name || '').toLowerCase();
+    const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
+    
+    let paymentSelectionUI = '';
 
-    if (isPulsaMethod) {
-        paymentSelectionUI = `
-            <div class="form-group">
-               <label>Metode Pembayaran:</label>
-               <p><strong>Pulsa (Memotong Saldo)</strong></p>
-               <input type="hidden" id="payment-method-select" value="balance">
+    if (isPulsaMethod) {
+        paymentSelectionUI = `
+            <div class="form-group">
+               <label>Metode Pembayaran:</label>
+               <p><strong>Pulsa (Memotong Saldo)</strong></p>
+               <input type="hidden" id="payment-method-select" value="balance">
+            </div>
+        `;
+    } else if (paymentMethods.length > 0) {
+        const paymentOptionsHTML = paymentMethods.map(method => `<option value="${method.payment_method}">${method.payment_method_display_name}</option>`).join('');
+        paymentSelectionUI = `
+            <div class="form-group">
+               <label for="payment-method-select">Pilih Metode Pembayaran Provider:</label>
+               <select id="payment-method-select">${paymentOptionsHTML}</select>
+            </div>
+            <div id="ovo-input-container" class="form-group" style="display: none;">
+                <label for="ewallet-number-input">Nomor OVO (Contoh: 08...)</label>
+                <input type="tel" id="ewallet-number-input" placeholder="08xxxxxxxxxx" pattern="^08\\d{8,12}$">
             </div>
-        `;
-    } else if (paymentMethods.length > 0) {
-        const paymentOptionsHTML = paymentMethods.map(method => `<option value="${method.payment_method}">${method.payment_method_display_name}</option>`).join('');
-        paymentSelectionUI = `
-            <div class="form-group">
-               <label for="payment-method-select">Pilih Metode Pembayaran Provider:</label>
-               <select id="payment-method-select">${paymentOptionsHTML}</select>
-            </div>
-        `;
-    } else {
-        paymentSelectionUI = `<p class="error-message">Tidak ada metode pembayaran yang tersedia untuk paket ini.</p>`;
-    }
+        `;
+    } else {
+        paymentSelectionUI = `<p class="error-message">Tidak ada metode pembayaran yang tersedia untuk paket ini.</p>`;
+    }
 
-    const modalContainer = document.getElementById('modal-container');
-    if (!modalContainer) return;
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
 
-    modalContainer.innerHTML = `
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header"><h2>Konfirmasi Pembelian</h2><button class="modal-close">&times;</button></div>
-                <h4>${pkg.name}</h4>
-                <div class="form-group">
-                    <label>Biaya Layanan:</label>
-                    <p><strong>Rp ${platformFee.toLocaleString('id-ID')}</strong> (dipotong dari saldo)</p>
-                </div>
-                ${paymentSelectionUI}
-                <div id="modal-error-container"></div>
-                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                     <button id="cancel-purchase-btn" class="secondary" style="flex: 1;">Batal</button>
-                     <button id="confirm-purchase-btn" style="flex: 1;" ${paymentMethods.length === 0 && !isPulsaMethod ? 'disabled' : ''}>Lanjutkan</button>
-                </div>
-            </div>
-        </div>
-    `;
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header"><h2>Konfirmasi Pembelian</h2><button class="modal-close">&times;</button></div>
+                <h4>${pkg.name}</h4>
+                <div class="form-group">
+                    <label>Biaya Layanan:</label>
+                    <p><strong>Rp ${platformFee.toLocaleString('id-ID')}</strong> (dipotong dari saldo)</p>
+                </div>
+                ${paymentSelectionUI}
+                <div id="modal-error-container"></div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                     <button id="cancel-purchase-btn" class="secondary" style="flex: 1;">Batal</button>
+                     <button id="confirm-purchase-btn" style="flex: 1;" ${paymentMethods.length === 0 && !isPulsaMethod ? 'disabled' : ''}>Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    `;
 
-    const closeModal = () => {
-        modalContainer.innerHTML = '';
-        if (originalButton) {
-            originalButton.disabled = false;
-            originalButton.textContent = 'Beli Sekarang';
+    // --- PERUBAHAN 2: Tambahkan event listener untuk menampilkan/menyembunyikan input OVO ---
+    const paymentSelect = document.getElementById('payment-method-select');
+    const ovoInputContainer = document.getElementById('ovo-input-container');
+
+    const handlePaymentMethodChange = () => {
+        if (paymentSelect && ovoInputContainer) {
+            const isOvoSelected = paymentSelect.value.toUpperCase() === 'OVO';
+            ovoInputContainer.style.display = isOvoSelected ? 'block' : 'none';
+            ovoInputContainer.querySelector('input').required = isOvoSelected;
         }
     };
-
-    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
-    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
-    document.getElementById('cancel-purchase-btn')?.addEventListener('click', closeModal);
-
-    const confirmBtn = document.getElementById('confirm-purchase-btn');
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', async (e) => {
-            const selectedMethodElement = document.getElementById('payment-method-select');
-            const selectedMethod = selectedMethodElement ? selectedMethodElement.value : '';
-            await executePurchase(e.currentTarget, packageId, selectedMethod, platformFee);
-        });
+    
+    if (paymentSelect) {
+        paymentSelect.addEventListener('change', handlePaymentMethodChange);
+        handlePaymentMethodChange(); // Panggil sekali untuk memeriksa kondisi awal
     }
+    // --- AKHIR PERUBAHAN 2 ---
+
+    const closeModal = () => {
+        modalContainer.innerHTML = '';
+        if (originalButton) {
+            originalButton.disabled = false;
+            originalButton.textContent = 'Beli Sekarang';
+        }
+    };
+
+    document.querySelector('.modal-overlay')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+    document.getElementById('cancel-purchase-btn')?.addEventListener('click', closeModal);
+
+    const confirmBtn = document.getElementById('confirm-purchase-btn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async (e) => {
+            const selectedMethodElement = document.getElementById('payment-method-select');
+            const selectedMethod = selectedMethodElement ? selectedMethodElement.value : '';
+            await executePurchase(e.currentTarget, packageId, selectedMethod, platformFee);
+        });
+    }
 }
 
-/**
- * Melakukan pembelian paket dengan memanggil API backend.
- * @param {HTMLElement} button - Tombol yang memicu pembelian.
- * @param {string} packageId - ID paket yang dibeli.
- * @param {string} paymentMethod - Metode pembayaran yang dipilih.
- * @param {number} fee - Biaya layanan paket.
- */
-async function executePurchase(button, packageId, paymentMethod, fee) {
-    if (!button) return;
-    
-    button.disabled = true;
-    button.innerHTML = `<span class="button-spinner"></span> Mengirim...`;
-    displayFeedback('modal-error-container', '', false);
-    
-    try {
-        const { data, status } = await apiFetch('/purchase', {
-            method: 'POST',
-            body: {
-                packageId,
-                phone: phoneAuth.phone,
-                access_token: phoneAuth.accessToken,
-                paymentMethod,
-                purchaseContext: 'paket-satuan' // Konteks untuk paket satuan
-            }
-        });
-        
-        if (currentUser && typeof data.newBalance === 'number') {
-            currentUser.balance = data.newBalance;
-            const userBalanceElement = document.getElementById('user-balance');
-            if (userBalanceElement) {
-                userBalanceElement.textContent = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
-            }
-        }
+// frontend/app.js -> Ganti fungsi ini sepenuhnya
 
-        if (status === 202) { 
-            if (data.payment_data) {
-                renderExternalPaymentModal(data.payment_data);
-            } else {
-                renderFinalStatusModal("Permintaan Diterima", data.message);
-            }
-        } else if (status === 200 && data.status) {
-            renderFinalStatusModal("Status Transaksi", data.message || 'Sukses');
-        } else {
-            throw new Error(data.message || 'Pembelian gagal dengan respons yang tidak diharapkan.');
+/**
+ * Melakukan pembelian paket dengan memanggil API backend.
+ * @param {HTMLElement} button - Tombol yang memicu pembelian.
+ * @param {string} packageId - ID paket yang dibeli.
+ * @param {string} paymentMethod - Metode pembayaran yang dipilih.
+ * @param {number} fee - Biaya layanan paket.
+ */
+async function executePurchase(button, packageId, paymentMethod, fee) {
+    if (!button) return;
+    
+    button.disabled = true;
+    button.innerHTML = `<span class="button-spinner"></span> Mengirim...`;
+    displayFeedback('modal-error-container', '', false);
+    
+    // --- PERUBAHAN DI SINI ---
+    // Siapkan body request
+    const purchaseBody = {
+        packageId,
+        phone: phoneAuth.phone,
+        access_token: phoneAuth.accessToken,
+        paymentMethod,
+        purchaseContext: 'paket-satuan'
+    };
+
+    // Jika metode pembayaran adalah OVO, ambil nomor e-wallet dan tambahkan ke body
+    if (paymentMethod.toUpperCase() === 'OVO') {
+        const ewalletInput = document.getElementById('ewallet-number-input');
+        // Validasi nomor OVO tidak boleh kosong
+        if (!ewalletInput || !ewalletInput.value.trim()) {
+            displayFeedback('modal-error-container', 'Nomor OVO wajib diisi.', true);
+            button.disabled = false;
+            button.textContent = 'Lanjutkan';
+            return; // Hentikan eksekusi
         }
-    } catch (error) {
-        let friendlyErrorMessage = "Terjadi kesalahan. Silakan coba lagi.";
-        if (error.message.toLowerCase().includes('maximum pending transaction')) {
-            friendlyErrorMessage = " Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)";
-        } else if (error.message) {
-            friendlyErrorMessage = error.message; 
-        }
-        displayFeedback('modal-error-container', friendlyErrorMessage, true);
-        button.disabled = false;
-        button.textContent = 'Lanjutkan';
+        purchaseBody.ewallet_number = ewalletInput.value;
     }
+    // --- AKHIR PERUBAHAN ---
+
+    try {
+        const { data, status } = await apiFetch('/purchase', {
+            method: 'POST',
+            body: purchaseBody // Gunakan body yang sudah disiapkan
+        });
+        
+        if (currentUser && typeof data.newBalance === 'number') {
+            currentUser.balance = data.newBalance;
+            updateBalanceUI(currentUser.balance); // Gunakan fungsi update UI global
+        }
+
+        if (status === 202) { 
+            if (data.payment_data) {
+                renderExternalPaymentModal(data.payment_data);
+            } else {
+                renderFinalStatusModal("Permintaan Diterima", data.message);
+            }
+        } else if (status === 200 && data.status) {
+            renderFinalStatusModal("Status Transaksi", data.message || 'Sukses');
+        } else {
+            throw new Error(data.message || 'Pembelian gagal dengan respons yang tidak diharapkan.');
+        }
+    } catch (error) {
+        let friendlyErrorMessage = "Terjadi kesalahan. Silakan coba lagi.";
+        if (error.message.toLowerCase().includes('maximum pending transaction')) {
+            friendlyErrorMessage = "Terjadi kesalahan saat memproses pembelian paket ini. Silakan coba lagi dan pastikan Anda telah membaca deskripsi serta memenuhi syarat dan ketentuan paket! (Error Message: Reach Maximum Pending Transaction)";
+        } else if (error.message) {
+            friendlyErrorMessage = error.message; 
+        }
+        displayFeedback('modal-error-container', friendlyErrorMessage, true);
+        button.disabled = false;
+        button.textContent = 'Lanjutkan';
+    }
 }
 
 
@@ -1861,14 +1897,13 @@ async function renderDashboard(activePage = 'dashboard') {
         <div class="responsive-container">
             <aside class="sidebar">
                 <div class="sidebar-header"><h2>RYYSTORE</h2></div>
-
-<div class="user-info">
-    <p>
-        Selamat datang, <strong>${currentUser.name}</strong>
-        <span class="user-role-badge role-${currentUser.role}">${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}</span>
-    </p>
-    <p id="user-balance-sidebar">Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
-</div>
+                <div class="user-info">
+                    <p>
+                        Selamat datang, <strong>${currentUser.name}</strong>
+                        <span class="user-role-badge role-${currentUser.role}">${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}</span>
+                    </p>
+                    <p id="user-balance-sidebar">Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
+                </div>
                 <nav class="sidebar-nav">
                      <ul>
                         <li><a href="#dashboard" class="${navActivePage === 'dashboard' ? 'active' : ''}">${dashboardIcon}<span>Dashboard</span></a></li>
@@ -1914,17 +1949,60 @@ async function renderDashboard(activePage = 'dashboard') {
     const mainContent = document.getElementById('page-content-area');
     if (!mainContent) return;
 
+    // Announcement banner tampil untuk semua role (admin dan non-admin)
     if (latestAnnouncement && latestAnnouncement.message) {
-    // Ambil hanya bagian pertama dari teks (sebelum pemisah)
-    const bannerMessage = latestAnnouncement.message.split('|||')[0];
-
-    mainContent.insertAdjacentHTML('afterbegin', `
-        <div class="announcement-banner" id="announcement-banner">
-            <p><strong>Informasi:</strong> ${marked.parse(bannerMessage, { inline: true })}</p>
-            <button class="announcement-close" id="announcement-close-btn">&times;</button>
-        </div>
-    `);
+        // Ambil bagian pertama dari teks (sebelum pemisah)
+        const bannerMessage = latestAnnouncement.message.split('|||')[0];
+        // Default warna background
+        let bannerBg = latestAnnouncement.bgColor || '#f6f6f6';
+        // Jika admin, tampilkan input untuk ganti warna
+        let adminColorPicker = '';
+        if (isAdmin) {
+            adminColorPicker = `
+                <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                    <label for="announcement-bg-color" style="font-size:0.9em;">Warna Background:</label>
+                    <input type="color" id="announcement-bg-color" value="${bannerBg}" style="width:32px;height:32px;border:none;">
+                </div>
+            `;
+        }
+        mainContent.insertAdjacentHTML('afterbegin', `
+            <div class="announcement-banner" id="announcement-banner" style="background:${bannerBg};padding:12px 18px;border-radius:8px;display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-weight:bold;font-size:1.1em;">Informasi:</span>
+                    <span style="font-size:1em;">${marked.parseInline(bannerMessage)}</span>
+                </div>
+                <button class="announcement-close" id="announcement-close-btn" style="margin-left:auto;">&times;</button>
+                ${adminColorPicker}
+            </div>
+        `);
+        // Admin bisa ganti warna background banner
+       if (isAdmin) {
+    const colorInput = document.getElementById('announcement-bg-color');
+    const bannerEl = document.getElementById('announcement-banner');
+    // Preview warna real-time
+    colorInput?.addEventListener('input', (e) => {
+        if (bannerEl) bannerEl.style.background = e.target.value;
+    });
+    // Simpan ke backend saat selesai memilih
+    colorInput?.addEventListener('change', async (e) => {
+        const newColor = e.target.value;
+        try {
+            await apiFetch('/admin/announcement', {
+                method: 'PUT',
+                body: { bgColor: newColor }
+            });
+            await fetchAnnouncement();
+            renderDashboard(activePage);
+            showToast('Warna banner berhasil diupdate!', false);
+        } catch (err) {
+            showToast('Gagal update warna banner: ' + err.message, true);
+        }
+    });
 }
+        document.getElementById('announcement-close-btn')?.addEventListener('click', (e) => {
+            e.target.parentElement.remove();
+        });
+    }
 
     const pageRenderers = {
         'dashboard': renderMainDashboardPage,
@@ -1955,7 +2033,6 @@ async function renderDashboard(activePage = 'dashboard') {
 
     document.getElementById('logout-btn-sidebar')?.addEventListener('click', handleLogout);
     document.getElementById('logout-btn-header')?.addEventListener('click', handleLogout);
-    document.getElementById('announcement-close-btn')?.addEventListener('click', (e) => e.target.parentElement.remove());
 
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
     const sidebar = document.querySelector('.sidebar');

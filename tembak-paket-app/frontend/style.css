@@ -1847,6 +1847,9 @@ button.tutorial-card:hover {
     background-color: #d4edda; /* Warna latar hijau muda */
     border-color: #c3e6cb; /* Warna border hijau */
 }
+:root[data-theme="dark"] .success-message {
+    color: #0b0b0c !important; /* Teks hitam pekat di dark mode */
+}
 
 .error-message {
     color: #721c24; /* Warna teks merah tua */
