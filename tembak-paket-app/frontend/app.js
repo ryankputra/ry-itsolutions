@@ -1334,12 +1334,12 @@ function renderPaymentChoiceModal(packageId, originalButton) {
         ? JSON.parse(pkg.payment_methods) 
         : (pkg.payment_methods || []);
 
-    const isReseller = currentUser.role === 'reseller';
+    const isReseller = currentUser.role === 'reseller';
     const platformFee = isReseller ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
-    const pkgNameLower = (pkg.name || '').toLowerCase();
-    const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
-    
-    let paymentSelectionUI = '';
+    const pkgNameLower = (pkg.name || '').toLowerCase();
+    const isPulsaMethod = pkgNameLower.includes('[method pulsa]');
+    
+    let paymentSelectionUI = '';
 
     if (isPulsaMethod) {
         paymentSelectionUI = `

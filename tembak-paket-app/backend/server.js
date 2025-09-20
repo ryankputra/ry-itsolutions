@@ -108,12 +108,8 @@ async function initializeDatabase() {
              await dbRun("PRAGMA foreign_keys = ON;");
              await dbRun(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, balance REAL DEFAULT 0, role TEXT DEFAULT 'user', upgradedToResellerAt TEXT, verifiedPhone TEXT, savedPhones TEXT, status TEXT DEFAULT 'pending', createdAt TEXT NOT NULL, resetPasswordToken TEXT, resetPasswordExpires INTEGER)`);
              await dbRun(`CREATE TABLE IF NOT EXISTS packages (package_code TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, original_price REAL DEFAULT 0, platform_fee REAL DEFAULT 0, reseller_fee REAL DEFAULT 0, isVisible INTEGER DEFAULT 0, category TEXT DEFAULT 'reguler', isMultiPurchase INTEGER DEFAULT 0, payment_methods TEXT)`);
-             
-            // --- PERUBAHAN DI SINI ---
-             // Kolom 'ewalletNumber TEXT' ditambahkan sebelum 'kmspTrxId' untuk menyimpan nomor OVO.
-             await dbRun(`CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, packageId TEXT, packageName TEXT, platformFee REAL, originalPrice REAL, targetPhone TEXT, accessToken TEXT, paymentMethod TEXT, ewalletNumber TEXT, kmspTrxId TEXT, status TEXT NOT NULL, api_response TEXT, createdAt TEXT NOT NULL, paymentDetails TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
-            // --- AKHIR PERUBAHAN ---
-
+             // Kolom 'ewalletNumber TEXT' ditambahkan sebelum 'kmspTrxId' untuk menyimpan nomor OVO.
+             await dbRun(`CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, packageId TEXT, packageName TEXT, platformFee REAL, originalPrice REAL, targetPhone TEXT, accessToken TEXT, paymentMethod TEXT, ewalletNumber TEXT, kmspTrxId TEXT, status TEXT NOT NULL, api_response TEXT, createdAt TEXT NOT NULL, paymentDetails TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
              await dbRun(`CREATE TABLE IF NOT EXISTS topups (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, baseAmount REAL NOT NULL, uniqueAmount REAL NOT NULL, status TEXT NOT NULL, createdAt TEXT NOT NULL, qrisBase64Image TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
              await dbRun(`CREATE TABLE IF NOT EXISTS announcements (id TEXT PRIMARY KEY, message TEXT NOT NULL, createdAt TEXT NOT NULL)`);
              await dbRun(`CREATE TABLE IF NOT EXISTS tutorialContent (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, content TEXT, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL, position INTEGER DEFAULT 0)`);
@@ -460,10 +456,10 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         return res.status(400).json({ status: false, message: "Parameter tidak lengkap." });
     }
 
-    let user;
-    let pkg;
-    let effectiveFee;
-    const trxId = `trx_${Date.now()}_${uuidv4().slice(0, 4)}`;
+    let user;
+    let pkg;
+    let effectiveFee; // Deklarasikan di luar blok try
+    const trxId = `trx_${Date.now()}_${uuidv4().slice(0, 4)}`;
 
     try {
         user = await dbGet('SELECT * FROM users WHERE id = ?', [req.session.userId]);
@@ -472,22 +468,23 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         if (!user || user.verifiedPhone !== phone) return res.status(403).json({ status: false, message: "Nomor telepon ini tidak terverifikasi untuk akun Anda." });
         if (!pkg) return res.status(404).json({ status: false, message: "Paket tidak ditemukan." });
 
-        effectiveFee = user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+        // MODIFIKASI: Tentukan biaya efektif berdasarkan peran pengguna
+        effectiveFee = user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
 
-        if (user.balance < effectiveFee) {
-            return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk membayar biaya Rp ${effectiveFee.toLocaleString()}.` });
-        }
+        if (user.balance < effectiveFee) {
+            return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk membayar biaya Rp ${effectiveFee.toLocaleString()}.` });
+        }
 
-        await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [effectiveFee, user.id]);
-        
-        const adminBalance = await getKmspAdminBalance();
-        const packagePrice = pkg.original_price || 0;
+        await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [effectiveFee, user.id]);
+        
+        const adminBalance = await getKmspAdminBalance();
+        const packagePrice = pkg.original_price || 0;
 
-        if (adminBalance < packagePrice) {
+        if (adminBalance < packagePrice) {
             // PERUBAHAN 2: Tambahkan 'ewalletNumber' saat menyimpan transaksi yang diantrekan
-            await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, effectiveFee, packagePrice, phone, access_token, paymentMethod, ewallet_number || null, new Date().toISOString(), 'menunggu_saldo_provider', 'Menunggu Saldo Provider']);
-            
-            sendTelegramNotification(
+            await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, effectiveFee, packagePrice, phone, access_token, paymentMethod, ewallet_number || null, new Date().toISOString(), 'menunggu_saldo_provider', 'Menunggu Saldo Provider']);
+            
+            sendTelegramNotification(
 `<b>⚠️ Saldo KMSP Kurang! (Paket OTP) ⚠️</b>
 ──────────────────────
 <b>Pengguna:</b> ${user.name}
@@ -497,12 +494,12 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
 ──────────────────────
 Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.`, 'admin');
 
-            const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
-            return res.status(202).json({ status: true, message: "Permintaan masuk antrean, akan diproses otomatis.", newBalance: updatedUser.balance });
-        }
-        
+            const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
+            return res.status(202).json({ status: true, message: "Permintaan masuk antrean, akan diproses otomatis.", newBalance: updatedUser.balance });
+        }
+        
         // PERUBAHAN 3: Tambahkan 'ewalletNumber' saat menyimpan transaksi normal
-        await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, effectiveFee, packagePrice, phone, access_token, paymentMethod, ewallet_number || null, new Date().toISOString(), 'processing', 'Menghubungi provider...']);
+        await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, effectiveFee, packagePrice, phone, access_token, paymentMethod, ewallet_number || null, new Date().toISOString(), 'processing', 'Menghubungi provider...']);
 
         // PERUBAHAN 4: Susun parameter API baru
         const purchaseParams = {
@@ -541,10 +538,10 @@ Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.`, 'admin');
             const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
             const successMessage = isIpaasSuccessCase ? "Berhasil.. tunggu 1 jam agar paket masuk (hoki-hokian ya)" : (purchaseData.message || "Pembelian berhasil!");
 
-            if (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) {
-                return res.status(202).json({ status: true, message: "Pembayaran eksternal diperlukan.", payment_data: purchaseData.data, newBalance: finalUser.balance });
-            }
-            return res.status(200).json({ status: true, message: successMessage, newBalance: finalUser.balance });
+            if (purchaseData.data && (purchaseData.data.is_qris || purchaseData.data.have_deeplink)) {
+                return res.status(202).json({ status: true, message: "Pembayaran eksternal diperlukan.", payment_data: purchaseData.data, newBalance: finalUser.balance });
+            }
+            return res.status(200).json({ status: true, message: successMessage, newBalance: finalUser.balance });
 
         } else {
             await dbRun("UPDATE transactions SET status = 'failed', api_response = ? WHERE id = ?", [purchaseData.message || 'Gagal dari provider', trxId]);
@@ -559,18 +556,19 @@ Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.`, 'admin');
 ──────────────────────
 Saldo fee Rp ${effectiveFee.toLocaleString('id-ID')} telah dikembalikan.`);
 
-            const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
-            const errorMessage = isDorUlangFailure ? "Gagal (Dor Ulang): Coba lagi setelah 10 menit." : (purchaseData.message || 'Pembelian gagal.');
-            return res.status(500).json({ status: false, message: errorMessage, newBalance: finalUser.balance });
-        }
-    } catch (error) {
-        console.error("Purchase route error:", error);
-        if (user && pkg && typeof effectiveFee === 'number' && effectiveFee > 0) {
-            await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [effectiveFee, user.id]);
-        }
-        const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [req.session.userId]);
-        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan internal.", newBalance: finalUser?.balance });
-    }
+            const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
+            const errorMessage = isDorUlangFailure ? "Gagal (Dor Ulang): Coba lagi setelah 10 menit." : (purchaseData.message || 'Pembelian gagal.');
+            return res.status(500).json({ status: false, message: errorMessage, newBalance: finalUser.balance });
+        }
+    } catch (error) {
+        console.error("Purchase route error:", error);
+        // --- PERBAIKAN UTAMA: Safety refund untuk error tak terduga ---
+        if (user && pkg && typeof effectiveFee === 'number' && effectiveFee > 0) {
+            await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [effectiveFee, user.id]);
+        }
+        const finalUser = await dbGet('SELECT balance FROM users WHERE id = ?', [req.session.userId]);
+        res.status(500).json({ status: false, message: error.message || "Terjadi kesalahan internal.", newBalance: finalUser?.balance });
+    }
 });
 
 
