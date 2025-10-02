@@ -103,23 +103,23 @@ Bagian ini mengasumsikan Anda sudah memiliki VPS dengan Ubuntu Server, Node.js, 
 7.  **Konfigurasi Nginx:**
     * Buat file konfigurasi Nginx baru:
         ```bash
-        sudo nano /etc/nginx/sites-available/tembak.cloudrystore.xyz
+        sudo nano /etc/nginx/sites-available/panel.cloudrystore.com
         ```
     * Tempel konfigurasi berikut (ganti `your_domain` dan `path_to_frontend`):
         ```nginx
         server {
             listen 80;
-            server_name tembak.cloudrystore.xyz www.tembak.cloudrystore.xyz; # Ganti dengan domain Anda
+            server_name panel.cloudrystore.com www.panel.cloudrystore.com; 
             return 301 https://$server_name$request_uri;
         }
 
         server {
             listen 443 ssl http2;
-            server_name tembak.cloudrystore.xyz www.tembak.cloudrystore.xyz; # Ganti dengan domain Anda
+            server_name tembak.cloudrystore.xyz www.panel.cloudrystore.com; 
 
             # **PASTIKAN PATH SERTIFIKAT INI BENAR SETELAH MENJALANKAN CERTBOT**
-            ssl_certificate /etc/letsencrypt/live/tembak.cloudrystore.xyz/fullchain.pem;
-            ssl_certificate_key /etc/letsencrypt/live/tembak.cloudrystore.xyz/privkey.pem;
+            ssl_certificate /etc/letsencrypt/live/panel.cloudrystore.com/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/panel.cloudrystore.com/privkey.pem;
             include /etc/letsencrypt/options-ssl-nginx.conf;
             ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -155,12 +155,12 @@ Bagian ini mengasumsikan Anda sudah memiliki VPS dengan Ubuntu Server, Node.js, 
 
 8.  **Instal dan Konfigurasi SSL dengan Certbot:**
     ```bash
-    sudo certbot --nginx -d tembak.cloudrystore.xyz -d www.tembak.cloudrystore.xyz
+    sudo certbot --nginx -d tembak.cloudrystore.xyz -d www.panel.cloudrystore.com
     sudo systemctl reload nginx
     npm install session-file-store
     ```
 
-9.  **Uji Aplikasi:** Bersihkan cache browser Anda dan akses `https://tembak.cloudrystore.xyz`.
+9.  **Uji Aplikasi:** Bersihkan cache browser Anda dan akses `https://panel.cloudrystore.com`.
 
 ---
 
