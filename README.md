@@ -37,7 +37,7 @@ Aplikasi panel manajemen layanan (tembak paket) dengan fitur otentikasi pengguna
 
 1.  **Kloning repositori:**
     ```bash
-    git clone [https://github.com/ryankputra/webtembak.git](https://github.com/ryankputra/webtembak.git) ryystore-app
+    git clone https://github.com/ryankputra/webtembak.git https://github.com/ryankputra/webtembak.git ryystore-app
     cd ryystore-app/tembak-paket-app/ # Masuk ke folder utama aplikasi Node.js
     ```
 2.  **Instal dependensi:**
@@ -71,8 +71,8 @@ Bagian ini mengasumsikan Anda sudah memiliki VPS dengan Ubuntu Server, Node.js, 
 2.  **Kloning repositori:**
     ```bash
     cd /var/www/ # Direktori umum untuk proyek web
-    sudo git clone [https://github.com/ryankputra/webtembak.git](https://github.com/ryankputra/webtembak.git) ryystore-app-production
-    cd ryystore-app-production/tembak-paket-app/ # Masuk ke folder utama aplikasi Node.js
+    sudo git clone https://github.com/ryankputra/webtembak.git https://github.com/ryankputra/webtembak.git ryystore-app-production
+    cd ryystore-app-production/tembak-paket-app/ 
     ```
 
 3.  **Konfigurasi Izin File:**
