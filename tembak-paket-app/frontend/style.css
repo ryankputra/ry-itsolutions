@@ -166,8 +166,12 @@ html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger
 
 #package-dropdown-custom .custom-dropdown-option,
 #non-otp-package-dropdown .custom-dropdown-option {
-    background-color: #ffffff !important;
-    
+    /* --- PERBAIKAN SPACING --- */
+    padding: 12px 15px; /* Tambah padding atas/bawah */
+    cursor: pointer;
+    border-bottom: 1px solid var(--light-border-color, #eee) !important;
+    transition: background-color 0.2s ease;
+    background-color: #ffffff !important; /* Paksa putih terang */
 }
 #package-dropdown-custom .custom-dropdown-option:last-child,
 #non-otp-package-dropdown .custom-dropdown-option:last-child {
@@ -175,11 +179,11 @@ html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger
 }
 #package-dropdown-custom .custom-dropdown-option:hover,
 #non-otp-package-dropdown .custom-dropdown-option:hover {
-    background-color: #f0f0f0 !important; /* Paksa hover terang */
+    background-color: var(--hover-bg-color, #f0f0f0) !important;
 }
 #package-dropdown-custom .custom-dropdown-option.selected,
 #non-otp-package-dropdown .custom-dropdown-option.selected {
-    background-color: #e0e0ff !important; /* Paksa selected terang */
+    background-color: var(--primary-color-light, #e0e0ff) !important;
     font-weight: 500;
 }
 
@@ -188,22 +192,30 @@ html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger
 #non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-name {
     display: block;
     font-weight: 500;
-    /* --- WARNA TEKS HITAM (!important) --- */
     color: #000000 !important;
-    margin-bottom: 3px;
+    /* --- PERBAIKAN SPACING --- */
+    margin-bottom: 5px; /* Tambah margin bawah */
+    line-height: 1.3; /* Sedikit renggangkan baris jika wrap */
     white-space: normal;
     background-color: transparent !important;
 }
-
 /* Teks Detail (Kode/Fee) di Opsi (MAXIMUM SPECIFICITY) */
 #package-dropdown-custom ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details,
 #non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details {
     display: block;
     font-size: 0.85em;
-    /* --- WARNA TEKS HITAM (!important) --- */
     color: #000000 !important;
     white-space: normal;
+    /* --- PERBAIKAN SPACING --- */
+    line-height: 1.4; /* Sedikit renggangkan baris */
     background-color: transparent !important;
+}
+
+@media (max-width: 768px) {
+    #package-dropdown-custom .custom-dropdown-list-wrapper,
+    #non-otp-package-dropdown .custom-dropdown-list-wrapper {
+        max-height: 200px; /* Kurangi tinggi maksimal di mobile */
+    }
 }
 
 /* --- Input Pencarian (Berlaku untuk Keduanya) --- */
