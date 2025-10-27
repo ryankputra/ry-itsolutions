@@ -1,4 +1,3 @@
-// backend/server.js - VERSI 100% FINAL, LENGKAP, DAN FUNGSIONAL (MIGRASI KE SQLITE3)
 
 require('dotenv').config();
 const express = require('express');

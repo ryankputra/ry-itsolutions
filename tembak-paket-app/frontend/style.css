@@ -1,7 +1,359 @@
 /* =================================================================== */
 /* === 1. RESET & ROOT VARIABLES ===================================== */
 /* =================================================================== */
+/* --- Styling Dropdown Kustom (Berlaku untuk Keduanya) --- */
 
+/* --- Styling Dropdown Kustom (Berlaku untuk Keduanya) --- */
+
+/* Container Utama */
+.custom-dropdown-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px; /* Sesuaikan */
+}
+
+/* Tombol Trigger (yang terlihat saat dropdown tertutup) */
+.custom-dropdown-trigger {
+    width: 100%;
+    padding: 10px 15px;
+    background-color: var(--input-bg-color, #fff); /* Latar trigger mengikuti tema */
+    color: var(--text-color, #333); /* Warna teks trigger UTAMA mengikuti tema */
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1em;
+    transition: border-color 0.2s ease;
+    min-height: calc(1.5em + 20px + 2px); /* Tinggi minimal */
+    height: auto; /* Izinkan tinggi bertambah */
+    line-height: 1.4; /* Jarak baris jika wrap */
+    overflow: visible;
+}
+
+/* Span di dalam Trigger (untuk wrap) */
+.custom-dropdown-trigger .trigger-text {
+    white-space: normal; /* Izinkan teks wrap */
+    overflow: visible;
+    text-overflow: clip; /* Jangan pakai ellipsis */
+    flex-grow: 1;
+    margin-right: 5px;
+}
+
+/* Panah Dropdown */
+.dropdown-arrow {
+    font-size: 0.8em;
+    margin-left: 10px;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+/* Hover & Active State Trigger */
+.custom-dropdown-trigger:hover,
+.custom-dropdown-trigger.active {
+    border-color: var(--primary-color, #007bff);
+}
+.custom-dropdown-trigger.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* --- WARNA PLACEHOLDER (Gunakan warna yang kontras untuk dark/light) --- */
+/* Target trigger jika mengandung placeholder (untuk KEDUA dropdown) */
+#package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder),
+#non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder) {
+    color: #999 !important; /* Abu-abu terang (baik untuk dark mode) */
+}
+/* Target span placeholder itu sendiri (untuk KEDUA dropdown) */
+#package-dropdown-custom .custom-dropdown-trigger .trigger-text.placeholder,
+#non-otp-package-dropdown .custom-dropdown-trigger .trigger-text.placeholder {
+     color: #999 !important; /* Abu-abu terang */
+}
+/* Aturan tambahan untuk light mode jika #999 kurang kontras */
+html:not([data-theme="dark"]) #package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder),
+html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder),
+html:not([data-theme="dark"]) #package-dropdown-custom .custom-dropdown-trigger .trigger-text.placeholder,
+html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger .trigger-text.placeholder {
+    color: #666 !important; /* Abu-abu gelap untuk light mode */
+}
+
+/* --- Wrapper List Dropdown --- */
+/* Targetkan kedua wrapper */
+#package-dropdown-custom .custom-dropdown-list-wrapper,
+#non-otp-package-dropdown .custom-dropdown-list-wrapper {
+    display: none;
+    position: absolute;
+    /* --- DEFAULT POSISI: DI BAWAH --- */
+    top: 100%;
+    bottom: auto; /* Pastikan bottom tidak di-set */
+    left: 0;
+    right: 0;
+    background-color: #ffffff !important; /* Paksa putih terang */
+    border: 1px solid #ccc !important;
+    border-top: none !important; /* Hapus border atas (menyatu dgn trigger) */
+    border-radius: 0 0 4px 4px !important; /* Sudut bawah melengkung */
+    z-index: 10;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Bayangan ke bawah */
+}
+
+/* --- ATURAN KHUSUS: Pindahkan List ke ATAS JIKA PLACEHOLDER AKTIF --- */
+/* Targetkan wrapper list HANYA JIKA trigger-nya punya class placeholder */
+#package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder) + .custom-dropdown-list-wrapper,
+#non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder) + .custom-dropdown-list-wrapper {
+    top: auto; /* Hapus top */
+    bottom: 100%; /* Pindahkan ke atas */
+    border-top: 1px solid #ccc !important; /* Tambah border atas */
+    border-bottom: none !important; /* Hapus border bawah */
+    border-radius: 4px 4px 0 0 !important; /* Sudut atas melengkung */
+    box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1); /* Bayangan ke atas */
+}
+
+/* Tampilkan list saat .show ditambahkan (tetap sama) */
+#package-dropdown-custom .custom-dropdown-list-wrapper.show,
+#non-otp-package-dropdown .custom-dropdown-list-wrapper.show {
+    display: block;
+}
+
+
+/* --- Penyesuaian Border Radius Trigger Saat Aktif --- */
+
+/* DEFAULT (List di Bawah): Sudut atas trigger melengkung saat aktif */
+#package-dropdown-custom .custom-dropdown-trigger.active,
+#non-otp-package-dropdown .custom-dropdown-trigger.active {
+    border-radius: 4px 4px 0 0; /* Hanya sudut atas */
+    border-bottom-color: transparent; /* Sembunyikan border bawah trigger agar menyatu */
+}
+
+/* KHUSUS (List di Atas): Sudut bawah trigger melengkung saat aktif */
+#package-dropdown-custom .custom-dropdown-trigger.active:has(+ .custom-dropdown-list-wrapper), /* Cek lagi jika trigger punya placeholder */
+#non-otp-package-dropdown .custom-dropdown-trigger.active:has(+ .custom-dropdown-list-wrapper),
+#package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder).active,
+#non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder).active {
+    border-radius: 0 0 4px 4px; /* Hanya sudut bawah */
+    border-top-color: transparent; /* Sembunyikan border atas trigger agar menyatu */
+    border-bottom-color: var(--primary-color, #007bff); /* Tampilkan lagi border bawah saat aktif & list di atas */
+}
+
+
+/* --- Warna Placeholder (Tetap Hitam) --- */
+#package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder),
+#non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder) {
+    color: #000 !important;
+    background-color: var(--input-bg-color, #fff) !important;
+    border-color: var(--border-color, #ccc) !important;
+}
+#package-dropdown-custom .custom-dropdown-trigger .trigger-text.placeholder,
+#non-otp-package-dropdown .custom-dropdown-trigger .trigger-text.placeholder {
+     color: #000 !important;
+}
+#package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder) .dropdown-arrow,
+#non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder) .dropdown-arrow {
+    color: var(--text-color, #333); /* Warna panah default saat placeholder */
+}
+
+/* --- Opsi Dropdown (Latar Terang, Teks Hitam - Tetap Sama) --- */
+/* (Salin rule .custom-dropdown-option, .option-name, .option-details dari respons sebelumnya) */
+/* Pastikan warna teks opsi tetap #000 !important */
+#package-dropdown-custom ul.custom-dropdown-list > li.custom-dropdown-option > span.option-name,
+#non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-name,
+#package-dropdown-custom ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details,
+#non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details {
+    color: #000000 !important;
+}
+
+#package-dropdown-custom .custom-dropdown-option,
+#non-otp-package-dropdown .custom-dropdown-option {
+    background-color: #ffffff !important;
+    
+}
+#package-dropdown-custom .custom-dropdown-option:last-child,
+#non-otp-package-dropdown .custom-dropdown-option:last-child {
+    border-bottom: none;
+}
+#package-dropdown-custom .custom-dropdown-option:hover,
+#non-otp-package-dropdown .custom-dropdown-option:hover {
+    background-color: #f0f0f0 !important; /* Paksa hover terang */
+}
+#package-dropdown-custom .custom-dropdown-option.selected,
+#non-otp-package-dropdown .custom-dropdown-option.selected {
+    background-color: #e0e0ff !important; /* Paksa selected terang */
+    font-weight: 500;
+}
+
+/* Teks Nama Paket di Opsi (MAXIMUM SPECIFICITY) */
+#package-dropdown-custom ul.custom-dropdown-list > li.custom-dropdown-option > span.option-name,
+#non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-name {
+    display: block;
+    font-weight: 500;
+    /* --- WARNA TEKS HITAM (!important) --- */
+    color: #000000 !important;
+    margin-bottom: 3px;
+    white-space: normal;
+    background-color: transparent !important;
+}
+
+/* Teks Detail (Kode/Fee) di Opsi (MAXIMUM SPECIFICITY) */
+#package-dropdown-custom ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details,
+#non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details {
+    display: block;
+    font-size: 0.85em;
+    /* --- WARNA TEKS HITAM (!important) --- */
+    color: #000000 !important;
+    white-space: normal;
+    background-color: transparent !important;
+}
+
+/* --- Input Pencarian (Berlaku untuk Keduanya) --- */
+#package-search-input-custom, /* ID lama (Paket OTP) */
+#package-search-input-dropdown, /* ID baru (Paket OTP) */
+#non-otp-search-input-custom { /* ID Paket Non-OTP */
+    margin-bottom: 5px;
+    width: 100%;
+    max-width: 600px;
+    box-sizing: border-box;
+    padding: 10px 15px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    background-color: var(--input-bg-color, #fff); /* Latar mengikuti tema */
+    color: var(--text-color, #333); /* Teks mengikuti tema */
+}
+
+
+/* --- Styling Area Detail Paket (setelah dipilih) --- */
+.selected-package-info {
+    padding: 15px;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+}
+.selected-package-info h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    color: var(--primary-color);
+}
+.selected-package-info p {
+    margin: 5px 0;
+    font-size: 0.95em;
+    color: var(--text-color-secondary);
+}
+.selected-package-info p strong {
+     color: var(--text-color);
+     margin-right: 5px;
+}
+
+/* Styling untuk deskripsi yang inline */
+.package-description-inline {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+.package-description-inline p strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+.package-description-inline .description-content {
+    font-size: 0.9em;
+    line-height: 1.6;
+    color: var(--text-color-secondary);
+}
+
+/* Box Tombol Beli */
+.purchase-action-box {
+     margin-top: 1.5rem;
+     padding: 0;
+     background-color: transparent;
+     border: none;
+}
+.purchase-btn { /* Style tombol beli */
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 1.1em;
+}
+
+/* Alert warning di atas dropdown */
+.alert {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  border-radius: .25rem;
+}
+.alert-warning {
+  color: #856404;
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+}
+.alert-warning p {
+  margin: 0;
+  font-weight: bold;
+  font-size: 0.95em;
+  color: #c82333; /* Warna teks merah tua */
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* --- Styling Trigger SAAT ITEM TERPILIH (Background Biru, Teks Putih) --- */
+
+/* Targetkan trigger jika TIDAK mengandung placeholder (untuk KEDUA dropdown) */
+#package-dropdown-custom .custom-dropdown-trigger:not(:has(> .trigger-text.placeholder)),
+#non-otp-package-dropdown .custom-dropdown-trigger:not(:has(> .trigger-text.placeholder)) {
+    background-color: #3b71ca !important; /* Warna biru (sesuaikan jika perlu) */
+    color: #ffffff !important;           /* Warna teks putih */
+    border-color: #3566b6 !important;     /* Warna border sedikit lebih gelap (opsional) */
+}
+
+/* Pastikan warna panah juga putih saat item terpilih */
+#package-dropdown-custom .custom-dropdown-trigger:not(:has(> .trigger-text.placeholder)) .dropdown-arrow,
+#non-otp-package-dropdown .custom-dropdown-trigger:not(:has(> .trigger-text.placeholder)) .dropdown-arrow {
+    color: #ffffff !important;
+}
+
+/* --- Pastikan Placeholder Tetap Hitam/Gelap --- */
+/* (Rule ini dari sebelumnya, pastikan masih ada dan benar) */
+#package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder),
+#non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder) {
+    color: #000 !important; /* HITAM untuk trigger saat placeholder */
+    /* Pastikan background placeholder tidak biru */
+    background-color: var(--input-bg-color, #fff) !important;
+    border-color: var(--border-color, #ccc) !important;
+}
+#package-dropdown-custom .custom-dropdown-trigger .trigger-text.placeholder,
+#non-otp-package-dropdown .custom-dropdown-trigger .trigger-text.placeholder {
+     color: #000 !important; /* HITAM untuk span placeholder */
+}
+#package-dropdown-custom .custom-dropdown-trigger:has(> .trigger-text.placeholder) .dropdown-arrow,
+#non-otp-package-dropdown .custom-dropdown-trigger:has(> .trigger-text.placeholder) .dropdown-arrow {
+    color: var(--text-color, #333); /* Warna panah default saat placeholder */
+}
+
+
+/* --- Opsi Dropdown (Pastikan Latar Terang & Teks Hitam) --- */
+/* (Rule ini dari sebelumnya, pastikan masih ada dan benar) */
+#package-dropdown-custom .custom-dropdown-list-wrapper,
+#non-otp-package-dropdown .custom-dropdown-list-wrapper {
+    background-color: #ffffff !important;
+     /* ... rest of wrapper styles ... */
+}
+#package-dropdown-custom .custom-dropdown-option,
+#non-otp-package-dropdown .custom-dropdown-option {
+    background-color: #ffffff !important;
+     /* ... rest of option styles ... */
+}
+#package-dropdown-custom ul.custom-dropdown-list > li.custom-dropdown-option > span.option-name,
+#non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-name {
+    color: #000000 !important;
+     /* ... rest of option name styles ... */
+}
+#package-dropdown-custom ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details,
+#non-otp-package-dropdown ul.custom-dropdown-list > li.custom-dropdown-option > span.option-details {
+    color: #000000 !important;
+     /* ... rest of option details styles ... */
+}
 :root {
     --primary-color: #4f46e5;
     --primary-dark-color: #4338ca;
