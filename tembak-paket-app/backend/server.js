@@ -38,6 +38,8 @@ const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const QRIS_STATIS_STRING = process.env.QRIS_STATIS_STRING;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+// Optional: explicit group chat id for system notifications (preferred)
+const TELEGRAM_GROUP_CHAT_ID = process.env.TELEGRAM_GROUP_CHAT_ID;
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID;
 const ORKUT_MERCHANT_ID = process.env.ORKUT_MERCHANT_ID;
 const ORKUT_USERNAME = process.env.ORKUT_USERNAME;
@@ -231,10 +233,30 @@ async function getEffectiveMaintenanceStatus() {
 }
 // --- FUNGSI HELPER ---
 async function sendTelegramNotification(message, target = 'group') {
-    let targetChatId = target === 'admin' ? TELEGRAM_ADMIN_CHAT_ID : TELEGRAM_CHAT_ID;
-    if (!TELEGRAM_BOT_TOKEN || !targetChatId) return;
+    // Map logical targets to chat IDs.
+    // 'admin' -> TELEGRAM_ADMIN_CHAT_ID
+    // 'group' -> TELEGRAM_GROUP_CHAT_ID if set, otherwise fallback to TELEGRAM_CHAT_ID (legacy)
+    // any other value -> TELEGRAM_CHAT_ID (legacy)
+    let targetChatId;
+    if (target === 'admin') targetChatId = TELEGRAM_ADMIN_CHAT_ID;
+    else if (target === 'group') targetChatId = TELEGRAM_GROUP_CHAT_ID || TELEGRAM_CHAT_ID;
+    else targetChatId = TELEGRAM_CHAT_ID;
+
+    if (!TELEGRAM_BOT_TOKEN || !targetChatId) {
+        console.warn(`[Telegram] Missing bot token or target chat id for target='${target}'. Skipping send.`);
+        return;
+    }
+
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    try { await fetch(url, { method: 'POST', body: JSON.stringify({ chat_id: targetChatId, text: message, parse_mode: 'HTML' }), headers: { 'Content-Type': 'application/json' } }); } catch (error) { console.error(`Error mengirim notifikasi Telegram ke '${target}':`, error.message); }
+    try {
+        await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ chat_id: targetChatId, text: message, parse_mode: 'HTML' }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error(`Error mengirim notifikasi Telegram ke target='${target}' (chat_id=${targetChatId}):`, error.message);
+    }
 }
 // MODIFIKASI: Menggunakan sistem cache untuk mengurangi panggilan API
 async function getKmspAdminBalance() {
