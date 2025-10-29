@@ -25,6 +25,10 @@ const transactionsPerPage = 5;
 let liveChatBubbleElement = null;
 let availableTutorials = [];
 
+// SVG icons for eye (visible) and eye-off (hidden)
+const EYE_OPEN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+const EYE_CLOSED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.86 21.86 0 0 1 5.06-6.94"></path><path d="M1 1l22 22"></path><path d="M9.88 9.88A3 3 0 0 0 14.12 14.12"></path></svg>`;
+
 class AuthError extends Error {
     constructor(message) {
         super(message);
@@ -53,58 +57,69 @@ function renderMainDashboardPage(container) {
     // IKON BARU: Tambahkan ikon untuk Laporan/Statistik
     const laporanIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>`;
     const rekeningIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
-    const dashboardContentHTML = `
-        <div class="page-content">
-            <div class="page-header">
-                <h1>Selamat Datang, ${currentUser.name}!</h1>
-            </div>
-            <div class="main-balance-card">
-                <div>
-                    <span class="balance-label">Saldo Anda Saat Ini</span>
-                    <div class="balance-amount-wrapper">
-                        <span class="currency">Rp</span>
-                        <span class="amount">${currentUser.balance.toLocaleString('id-ID')}</span>
+        // Compact + Marketplace combined layout (mobile-first)
+        const dashboardContentHTML = `
+            <div class="page-content compact-marketplace">
+                <div class="page-header">
+                    <div class="header-left">
+                        <h1>Halo, ${currentUser.name}</h1>
+                        <p class="subtitle">Cepat. Ringkas. Beli paket dalam hitungan detik.</p>
                     </div>
                 </div>
-                <button id="dashboard-topup-btn" class="topup-cta-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    Top Up Saldo
-                </button>
-            </div>
-            <div class="quick-access-menu">
-                <h2 class="quick-access-title">Menu Cepat</h2>
-                <div class="app-menu-grid">
-                    <a href="#beli-paket" class="app-menu-item"><div class="app-menu-icon">${beliPaketIcon}</div><span class="app-menu-label">Beli Paket</span></a>
-                    <a href="#paket-akrab" class="app-menu-item"><div class="app-menu-icon">${paketAkrabIcon}</div><span class="app-menu-label">Paket Akrab</span></a>
-                    <a href="#history" class="app-menu-item"><div class="app-menu-icon">${riwayatIcon}</div><span class="app-menu-label">Riwayat</span></a>
-                    <a href="#rekening-koran" class="app-menu-item"><div class="app-menu-icon">${rekeningIcon}</div><span class="app-menu-label">Lap. Keuangan</span></a>
-                    <a href="#tutorial" class="app-menu-item"><div class="app-menu-icon">${tutorialIcon}</div><span class="app-menu-label">Cara Beli</span></a>
-                    <a href="#kontak-admin" class="app-menu-item"><div class="app-menu-icon">${kontakIcon}</div><span class="app-menu-label">Kontak</span></a>
-                    <a href="#tentang-kami" class="app-menu-item"><div class="app-menu-icon">${tentangIcon}</div><span class="app-menu-label">Tentang</span></a>
-                    <a href="#kebijakan-privasi" class="app-menu-item"><div class="app-menu-icon">${privasiIcon}</div><span class="app-menu-label">Privasi</span></a>
-                    <a href="#syarat-ketentuan" class="app-menu-item"><div class="app-menu-icon">${syaratIcon}</div><span class="app-menu-label">S & K</span></a>
-                    <a href="#profile" class="app-menu-item"><div class="app-menu-icon">${profilIcon}</div><span class="app-menu-label">Profil</span></a>
 
-                    ${currentUser.role === 'admin' ? `
-                        <a href="#laporan" class="app-menu-item">
-                            <div class="app-menu-icon">${laporanIcon}</div>
-                            <span class="app-menu-label">Laporan</span>
-                        </a>
-                    ` : ''}
+                <!-- Sticky compact balance -->
+                                <div class="compact-balance" id="compact-balance">
+                                    <div class="balance-left">
+                                        <div class="balance-top">
+                                            <div class="label">Saldo</div>
+                                            <span class="role-badge role-${currentUser.role}">${currentUser.role ? (currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)) : ''}</span>
+                                        </div>
+                                        <div class="amount"><span class="currency">Rp</span><span class="num">${currentUser.balance.toLocaleString('id-ID')}</span><button id="toggle-balance-visibility" class="icon-eye-btn" aria-pressed="false" title="Sembunyikan/ Tampilkan saldo">${EYE_OPEN_SVG}</button></div>
+                                    </div>
+                                    <div class="balance-actions">
+                                        <button id="dashboard-topup-btn" class="btn btn-primary small">Top Up</button>
+                                        <a href="#history" class="btn btn-ghost small">Riwayat</a>
+                                    </div>
+                                </div>
+
+                <!-- Quick actions: horizontal scroll -->
+                <div class="quick-access-menu compact">
+                    <div class="app-menu-scroll">
+                        <a href="#beli-paket" class="app-menu-item"><div class="app-menu-icon">${beliPaketIcon}</div><span class="app-menu-label">Beli</span></a>
+                        <a href="#paket-akrab" class="app-menu-item"><div class="app-menu-icon">${paketAkrabIcon}</div><span class="app-menu-label">Akrab</span></a>
+                        <a href="#history" class="app-menu-item"><div class="app-menu-icon">${riwayatIcon}</div><span class="app-menu-label">Riwayat</span></a>
+                        <a href="#laporan" class="app-menu-item"><div class="app-menu-icon">${laporanIcon}</div><span class="app-menu-label">Laporan</span></a>
+                        <a href="#tutorial" class="app-menu-item"><div class="app-menu-icon">${tutorialIcon}</div><span class="app-menu-label">Tutorial</span></a>
+                        <a href="#kontak-admin" class="app-menu-item"><div class="app-menu-icon">${kontakIcon}</div><span class="app-menu-label">Kontak</span></a>
+                    </div>
                 </div>
+
+                                <!-- Recent activity (minimal) -->
+                                <div style="padding:12px;">
+                                    <div class="recent-activity">
+                                        <div class="section-header"><h4>Aktivitas Terbaru</h4><a href="#history" class="view-all small">Lihat semua</a></div>
+                                        <div id="recent-list" class="recent-list">Tidak ada aktivitas.</div>
+                                    </div>
+                                </div>
+
             </div>
-        </div>
-    `;
+        `;
 
-    container.insertAdjacentHTML('beforeend', dashboardContentHTML);
-    const header = container.querySelector('.page-header');
-if (header && !header.querySelector('#theme-toggle-btn')) {
-  header.insertAdjacentHTML('beforeend', '<button id="theme-toggle-btn" class="icon-btn" title="Ganti tema" style="margin-left:auto;display:flex;align-items:center;gap:.5rem"><span>Theme</span></button>');
-  document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
-}
+        container.insertAdjacentHTML('beforeend', dashboardContentHTML);
+        const header = container.querySelector('.page-header');
+        if (header && !header.querySelector('#theme-toggle-btn')) {
+            header.insertAdjacentHTML('beforeend', '<button id="theme-toggle-btn" class="icon-btn" title="Ganti tema" style="margin-left:auto;display:flex;align-items:center;gap:.5rem"><span>Theme</span></button>');
+            document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
+        }
 
+        // hook ke tombol-tombol baru
+        document.getElementById('dashboard-topup-btn')?.addEventListener('click', renderTopUpModal);
 
-    document.getElementById('dashboard-topup-btn')?.addEventListener('click', renderTopUpModal);
+    // bind any balance visibility toggle handlers (dashboard + pages)
+    bindBalanceToggleListeners();
+
+        // apply stored visibility preference immediately
+        applyBalanceVisibility();
 }
 
 // BARU: Fungsi untuk merender halaman informasi Reseller
@@ -134,6 +149,58 @@ function renderResellerInfoPage(container) {
             </div>
         </div>
     `;
+}
+// --- RENDER HELPERS: packages grid (mock fallback) ---
+function getMockPackages() {
+    return [
+        { id: 'PKT-PLN-5K', name: 'Pulsa 5K', description: 'Pulsa isi ulang 5.000 - semua operator', price: 5000 },
+        { id: 'PKT-PLN-10K', name: 'Pulsa 10K', description: 'Pulsa isi ulang 10.000 - semua operator', price: 10000 },
+        { id: 'PKT-PAKET-1', name: 'Paket Internet 1GB', description: '1GB kuota semua jaringan - 7 hari', price: 15000 },
+        { id: 'PKT-PAKET-2', name: 'Paket Internet 5GB', description: '5GB kuota - 30 hari', price: 35000 },
+        { id: 'PKT-VOUCHER-1', name: 'Voucher Game 20K', description: 'Voucher untuk game populer', price: 20000 },
+        { id: 'PKT-VOIP-1', name: 'Paket Nelpon 30 Menit', description: 'Kuota nelpon 30 menit lokal', price: 8000 }
+    ];
+}
+
+function renderPackageGridIfAvailable() {
+    const grid = document.getElementById('packages-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const pkgs = (Array.isArray(visiblePackages) && visiblePackages.length) ? visiblePackages : getMockPackages();
+
+    pkgs.slice(0, 12).forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'package-card';
+        card.innerHTML = `
+            <div class="title">${p.name}</div>
+            <div class="meta">${p.description || ''}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+              <div class="price">Rp ${typeof p.price === 'number' ? p.price.toLocaleString('id-ID') : p.price}</div>
+              <button class="buy-btn" data-id="${p.id}">Beli</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+
+    // attach listeners untuk tombol beli
+    grid.querySelectorAll('.buy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            showToast(`Memulai pembelian paket ${id}`);
+            // navigasi ke halaman beli atau buka modal pembelian jika tersedia
+            // gunakan hash agar aplikasi bisa meng-handle route
+            location.hash = '#beli-paket';
+        });
+    });
+
+    // update beberapa stat sederhana jika elemen tersedia
+    const statToday = document.getElementById('stat-today');
+    const statRevenue = document.getElementById('stat-revenue');
+    const statProvider = document.getElementById('stat-provider');
+    if (statToday) statToday.textContent = Math.floor(Math.random() * 20) + ' trx';
+    if (statRevenue) statRevenue.textContent = 'Rp ' + ((Math.floor(Math.random() * 200000) + 50000)).toLocaleString('id-ID');
+    if (statProvider) statProvider.textContent = providerBalance ? `Rp ${providerBalance.toLocaleString('id-ID')}` : '—';
 }
 /**
  * FUNGSI BARU & TERISOLASI
@@ -599,16 +666,73 @@ function updateBalanceUI(newBalance) {
     const formattedBalance = newBalance.toLocaleString('id-ID');
 
     // Update saldo di kartu dashboard utama
-    const amountEl = document.querySelector('.main-balance-card .amount');
-    if (amountEl) {
-        amountEl.textContent = formattedBalance;
+    // Update compact balance number (if visible)
+    const compactNum = document.querySelector('.compact-balance .num');
+    if (compactNum) {
+        if (isBalanceHidden()) compactNum.textContent = '••••••';
+        else compactNum.textContent = formattedBalance;
     }
 
-    // Update saldo di sidebar
-    const sidebarEl = document.getElementById('user-balance-sidebar');
-    if (sidebarEl) {
-        sidebarEl.textContent = `Saldo: Rp ${formattedBalance}`;
+    // Update sidebar balance value
+    const sidebarVal = document.querySelector('#user-balance-sidebar .balance-value');
+    if (sidebarVal) {
+        if (isBalanceHidden()) sidebarVal.textContent = 'Rp •••••';
+        else sidebarVal.textContent = `Rp ${formattedBalance}`;
     }
+
+    // Update any inline balance displays on other pages (packages page, non-otp page)
+    document.querySelectorAll('.inline-balance-num').forEach(el => {
+        if (isBalanceHidden()) el.textContent = '••••••';
+        else el.textContent = formattedBalance;
+    });
+}
+
+function isBalanceHidden(){
+    return localStorage.getItem('hide_balance') === '1';
+}
+
+function setBalanceHidden(v){
+    try{ localStorage.setItem('hide_balance', v ? '1' : '0'); }catch(e){}
+}
+
+function toggleBalanceHidden(e){
+    const hidden = !isBalanceHidden();
+    setBalanceHidden(hidden);
+    applyBalanceVisibility();
+    // update aria-pressed on both buttons
+    document.querySelectorAll('.icon-eye-btn').forEach(b=>b.setAttribute('aria-pressed', hidden ? 'true':'false'));
+}
+
+function applyBalanceVisibility(){
+    const hidden = isBalanceHidden();
+    const compactNum = document.querySelector('.compact-balance .num');
+    const sidebarVal = document.querySelector('#user-balance-sidebar .balance-value');
+    if (compactNum){
+        compactNum.textContent = hidden ? '••••••' : (currentUser && currentUser.balance ? currentUser.balance.toLocaleString('id-ID') : compactNum.textContent);
+    }
+    if (sidebarVal){
+        sidebarVal.textContent = hidden ? 'Rp •••••' : (currentUser && currentUser.balance ? `Rp ${currentUser.balance.toLocaleString('id-ID')}` : sidebarVal.textContent);
+    }
+    // set aria-pressed state
+    document.querySelectorAll('.icon-eye-btn').forEach(b=>b.setAttribute('aria-pressed', hidden ? 'true':'false'));
+
+    // update eye icon for all eye buttons
+    document.querySelectorAll('.icon-eye-btn').forEach(b => {
+        try { b.innerHTML = hidden ? EYE_CLOSED_SVG : EYE_OPEN_SVG; } catch(e){}
+    });
+
+    // update inline balance numbers across pages
+    document.querySelectorAll('.inline-balance-num').forEach(el => {
+        el.textContent = hidden ? '••••••' : (currentUser && currentUser.balance ? currentUser.balance.toLocaleString('id-ID') : el.textContent);
+    });
+}
+
+// Bind click listeners to any balance toggle buttons (icon-eye-btn)
+function bindBalanceToggleListeners(){
+    document.querySelectorAll('.icon-eye-btn').forEach(btn => {
+        btn.removeEventListener('click', toggleBalanceHidden);
+        btn.addEventListener('click', toggleBalanceHidden);
+    });
 }
 
 function startStatusPolling() {
@@ -1909,7 +2033,7 @@ async function renderDashboard(activePage = 'dashboard') {
                         Selamat datang, <strong>${currentUser.name}</strong>
                         <span class="user-role-badge role-${currentUser.role}">${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}</span>
                     </p>
-                    <p id="user-balance-sidebar">Saldo: Rp ${currentUser.balance.toLocaleString('id-ID')}</p>
+                    <p id="user-balance-sidebar">Saldo: <span class="balance-value">Rp ${currentUser.balance.toLocaleString('id-ID')}</span></p>
                 </div>
                 <nav class="sidebar-nav">
                      <ul>
@@ -2914,6 +3038,10 @@ function renderAdminDashboard(container) {
                 <button id="toggle-maintenance-btn" style="width:100%; background: ${isMaintenanceMode ? 'var(--danger-color)' : 'var(--success-color)'};">
                     ${isMaintenanceMode ? 'Nonaktifkan Mode Pemeliharaan' : 'Aktifkan Mode Pemeliharaan'}
                 </button>
+                <div style="margin-top:12px;">
+                    <button id="run-reseller-retention-btn" class="button" style="width:100%;">Jalankan Cek Reseller (Manual)</button>
+                    <div id="reseller-retention-feedback" style="margin-top:8px; font-size:0.95rem; color:var(--text-color-secondary);"></div>
+                </div>
             </div>
 
             <div class="admin-section">
@@ -3066,6 +3194,26 @@ function renderAdminDashboard(container) {
             displayFeedback('maintenance-feedback', error.message, true);
         } finally {
             button.disabled = false;
+        }
+    });
+    // Admin: run reseller retention check manually
+    document.getElementById('run-reseller-retention-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('run-reseller-retention-btn');
+        const fb = document.getElementById('reseller-retention-feedback');
+        if (!btn || !fb) return;
+        btn.disabled = true; btn.textContent = 'Menjalankan...'; fb.textContent = '';
+        try {
+            const { data, status } = await apiFetch('/admin/run-reseller-retention', { method: 'POST' });
+            if (status === 200 && data.status) {
+                const downgraded = data.data?.downgraded || [];
+                fb.innerHTML = `<strong>Hasil:</strong> Diperiksa. Pengguna diturunkan: <strong>${downgraded.length}</strong>` + (downgraded.length ? `<br/><small>${downgraded.map(d=>d.name+' ('+d.email+')').join(', ')}</small>` : '');
+            } else {
+                fb.textContent = data.message || 'Gagal menjalankan pemeriksaan.';
+            }
+        } catch (err) {
+            fb.textContent = err.message || String(err);
+        } finally {
+            btn.disabled = false; btn.textContent = 'Jalankan Cek Reseller (Manual)';
         }
     });
     const initializeTransactionManagement = () => {
@@ -4625,6 +4773,13 @@ async function renderPackagesPage(container) {
 
         regularPackagesHTML = `
             <div class="page-content" id="regular-package-section">
+                <div class="inline-balance">
+                    <div style="display:flex;flex-direction:column;align-items:flex-start;">
+                        <div class="label">Saldo</div>
+                        <div class="amount"><span class="currency">Rp</span><span class="inline-balance-num">${currentUser.balance.toLocaleString('id-ID')}</span></div>
+                    </div>
+                    <button class="icon-eye-btn" aria-pressed="false" title="Sembunyikan/ Tampilkan saldo">${EYE_OPEN_SVG}</button>
+                </div>
                 <div class="page-header"><h3>Beli Paket Satuan (Reguler/OTP)</h3></div>
                 <div class="form-group alert alert-warning">
                    <p style="margin:0; font-weight: bold; color: var(--danger-color);">WAJIB BACA DESKRIPSI PAKET SEBELUM MEMBELI!!!</p>
@@ -4665,6 +4820,9 @@ async function renderPackagesPage(container) {
     container.appendChild(packageSection);
 
     setupCustomDropdownListeners();
+    // bind eye toggle buttons on this page and apply current visibility
+    bindBalanceToggleListeners();
+    applyBalanceVisibility();
     document.getElementById('execute-multi-pulsa-btn')?.addEventListener('click', handleMultiPulsaPurchase);
 }
 
@@ -6003,6 +6161,14 @@ async function renderNonOtpPage(container) {
         <div class="page-header"><h1>Paket Akrab & Lainnya</h1></div>
         <p>Beli paket tanpa perlu verifikasi OTP di halaman ini. Cukup masukkan nomor tujuan.</p>
 
+        <div class="inline-balance" style="margin-top:8px;">
+            <div style="display:flex;flex-direction:column;align-items:flex-start;">
+                <div class="label">Saldo</div>
+                <div class="amount"><span class="currency">Rp</span><span class="inline-balance-num">${currentUser.balance.toLocaleString('id-ID')}</span></div>
+            </div>
+            <button class="icon-eye-btn" aria-pressed="false" title="Sembunyikan/ Tampilkan saldo">${EYE_OPEN_SVG}</button>
+        </div>
+
         <div class="page-content" style="margin-top: 1.5rem;">
             <form id="non-otp-purchase-form">
 
@@ -6046,6 +6212,9 @@ async function renderNonOtpPage(container) {
     `;
 
     setupNonOtpCustomDropdownListeners();
+    // bind eye toggle buttons on this page and apply current visibility
+    bindBalanceToggleListeners();
+    applyBalanceVisibility();
     document.getElementById('check-all-stock-btn')?.addEventListener('click', handleCheckAllAkrabStock);
     document.getElementById('non-otp-purchase-form')?.addEventListener('submit', handleNonOtpPurchaseSubmit);
 }

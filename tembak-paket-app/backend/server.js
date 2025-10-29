@@ -876,6 +876,17 @@ app.put('/api/admin/maintenance-schedule', isAuthenticated, isAdmin, async (req,
     }
 });
 
+// Admin endpoint: trigger reseller retention check on-demand
+app.post('/api/admin/run-reseller-retention', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const summary = await runResellerRetentionCheck();
+        res.json({ status: true, message: 'Reseller retention check executed', data: summary });
+    } catch (error) {
+        console.error('Error running reseller retention check (admin):', error);
+        res.status(500).json({ status: false, message: 'Failed to run retention check.' });
+    }
+});
+
 app.get('/api/user/packages', isAuthenticated, async (req, res) => {
     try { // --- PERBAIKAN: Filter paket berdasarkan peran pengguna ---
         const user = await dbGet('SELECT role FROM users WHERE id = ?', [req.session.userId]);
@@ -1057,8 +1068,9 @@ async function checkOrkutPaymentStatus(topUpId, uniqueAmount) {
 
         // --- LOGIKA BARU: Cek untuk upgrade ke Reseller ---
         const firstTopUpAmount = 50000;
-        // Cek jika: peran masih 'user', belum pernah di-upgrade, dan jumlah top up memenuhi syarat
-        if (user.role === 'user' && !user.upgradedToResellerAt && topUp.baseAmount >= firstTopUpAmount) {
+        // Cek jika: saat ini bukan reseller dan jumlah top up memenuhi syarat
+        // (izinkan re-upgrade jika sebelumnya sudah pernah diturunkan)
+        if (user.role !== 'reseller' && topUp.baseAmount >= firstTopUpAmount) {
             await dbRun("UPDATE users SET role = 'reseller', upgradedToResellerAt = ? WHERE id = ?", [new Date().toISOString(), user.id]);
             await sendTelegramNotification(
 `<b>🎉 Selamat! Akun Anda Telah Di-upgrade! 🎉</b>
@@ -2022,6 +2034,75 @@ Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
     scheduled: true,
     timezone: "Asia/Jakarta"
 });
+
+// --- Reseller retention check function (can be scheduled or triggered on-demand) ---
+async function runResellerRetentionCheck() {
+    console.log('[Scheduler][ResellerRetention] Menjalankan cek retention reseller pada', new Date().toISOString());
+    const downgraded = [];
+    try {
+        // Hitung periode: previous calendar month
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const end = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startISO = start.toISOString();
+        const endISO = end.toISOString();
+
+        const resellers = await dbAll("SELECT id, name, email, upgradedToResellerAt FROM users WHERE role = 'reseller'");
+        // Use calendar-month windows anchored to upgradedToResellerAt (fair per-user)
+        for (const r of resellers) {
+            if (!r.upgradedToResellerAt) {
+                console.log(`[Scheduler][ResellerRetention] Skipping ${r.id} (${r.name}) - no upgradedToResellerAt`);
+                continue;
+            }
+            const upgradedAt = new Date(r.upgradedToResellerAt);
+            const nowDate = new Date();
+            // compute how many whole months have passed since upgradedAt
+            const monthsDiff = (nowDate.getFullYear() - upgradedAt.getFullYear()) * 12 + (nowDate.getMonth() - upgradedAt.getMonth());
+            if (monthsDiff < 0) {
+                console.log(`[Scheduler][ResellerRetention] Skipping ${r.id} (${r.name}) - upgradedAt in future?`);
+                continue;
+            }
+
+            // helper to compute window start for a given month offset from upgradedAt
+            const getWindowStartForOffset = (offset) => {
+                const baseMonth = upgradedAt.getMonth() + offset;
+                const year = upgradedAt.getFullYear() + Math.floor(baseMonth / 12);
+                const month = ((baseMonth % 12) + 12) % 12;
+                const desiredDay = upgradedAt.getDate();
+                const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+                const day = Math.min(desiredDay, lastDayOfMonth);
+                return new Date(year, month, day, upgradedAt.getHours(), upgradedAt.getMinutes(), upgradedAt.getSeconds(), upgradedAt.getMilliseconds());
+            };
+
+            const windowStart = getWindowStartForOffset(monthsDiff);
+            const windowEnd = getWindowStartForOffset(monthsDiff + 1);
+            const windowStartISO = windowStart.toISOString();
+            const windowEndISO = windowEnd.toISOString();
+
+            // Count successful purchases in this calendar-window (anchored to upgrade date)
+            const row = await dbGet("SELECT COUNT(*) as cnt FROM transactions WHERE userId = ? AND status = 'success' AND createdAt >= ? AND createdAt < ?", [r.id, windowStartISO, windowEndISO]);
+            const cnt = row?.cnt || 0;
+            console.log(`[Scheduler][ResellerRetention] User ${r.id} (${r.name}) - purchases in window ${windowStartISO}..${windowEndISO}: ${cnt}`);
+            if (cnt < 5) {
+                await dbRun("UPDATE users SET role = 'user', upgradedToResellerAt = NULL WHERE id = ?", [r.id]);
+                downgraded.push({ id: r.id, name: r.name, email: r.email, purchasesInWindow: cnt, windowStart: windowStartISO, windowEnd: windowEndISO });
+                await sendTelegramNotification(`<b>⚠️ Status Reseller Diturunkan</b>\\n──────────────────────\\nPengguna: ${r.name}\\nAlasan: Hanya ${cnt} pembelian pada periode ${windowStart.toLocaleDateString()} - ${windowEnd.toLocaleDateString()} (< 5).\\nStatus Anda telah dikembalikan ke 'User'.`, 'group');
+                await sendTelegramNotification(`<b>ℹ️ Reseller diturunkan</b>\\n──────────────────────\\nPengguna: ${r.name} (${r.email})\\nPembelian periode: ${windowStart.toLocaleDateString()} - ${windowEnd.toLocaleDateString()}\\nJumlah pembelian: ${cnt}\\nAkun telah dikembalikan menjadi 'User'.`, 'admin');
+                sseSend(r.id, 'role_change', { newRole: 'user', reason: 'Jumlah pembelian kurang dari 5 pada periode retensi.' });
+                console.log(`[Scheduler][ResellerRetention] Downgraded ${r.name} due to insufficient purchases (${cnt}) in window.`);
+            }
+        }
+    } catch (err) {
+        console.error('[Scheduler][ResellerRetention] Error:', err && err.message ? err.message : err);
+        throw err;
+    }
+    return { downgraded, checkedAt: new Date().toISOString() };
+}
+
+// Schedule monthly (1st of month at 00:05)
+cron.schedule('5 0 1 * *', async () => {
+    try { await runResellerRetentionCheck(); } catch(e){ console.error('Monthly retention job failed:', e); }
+}, { scheduled: true, timezone: 'Asia/Jakarta' });
 
 // --- SCHEDULER UNTUK BACKUP OTOMATIS HARIAN ---
 cron.schedule('0 6,9,12,15,18,21,0,3 * * *', async () => { // Berjalan pada jam yang Anda tentukan

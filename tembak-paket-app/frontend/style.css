@@ -58,6 +58,123 @@
     max-width: 600px; /* Sesuaikan */
 }
 
+/* ==========================
+     Compact + Marketplace CSS
+     ========================== */
+
+.compact-marketplace .page-header{
+    display:flex;
+    align-items:flex-start;
+    gap:1rem;
+    padding:1rem 1rem 0.5rem;
+}
+.compact-marketplace .page-header h1{font-size:1.05rem;margin:0}
+.compact-marketplace .page-header .subtitle{margin:0;color:var(--text-color-secondary);font-size:0.9rem}
+
+.compact-balance{
+    position:sticky;top:0;z-index:40;
+    display:grid;
+    grid-template-columns: 1fr auto; /* left = balance, right = actions */
+    align-items:center;
+    gap:12px;
+    padding:14px 16px;
+    background:var(--card-bg-color);
+    border:1px solid var(--border-color);
+    border-radius:12px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+    margin: 0 12px 10px 12px; /* give horizontal breathing room and vertical gap */
+    position:relative; /* needed for accent pseudo */
+}
+.compact-balance .label{font-size:0.85rem;color:var(--text-color-secondary);margin-bottom:4px}
+.compact-balance .amount{font-size:1.25rem;font-weight:800;color:var(--text-color)}
+.compact-balance .balance-actions{display:flex;gap:.5rem}
+.compact-balance .balance-left{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.compact-balance .amount{display:flex;align-items:center;gap:8px;justify-content:flex-start}
+.compact-balance .amount .num{font-size:1.25rem}
+.compact-balance .amount .num{font-variant-numeric:tabular-nums}
+.compact-balance .amount .icon-eye-btn{margin-left:6px}
+
+.icon-eye-btn{
+    display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:0.95rem}
+.icon-eye-btn[aria-pressed="true"]{opacity:0.8}
+.icon-eye-btn:focus{outline:2px solid rgba(99,102,241,.2)}
+
+/* Ensure SVG inside icon button is visible and sized */
+.icon-eye-btn{ color: var(--primary-color, #6366f1); }
+.icon-eye-btn svg{ width:18px; height:18px; display:block; stroke: currentColor; }
+.compact-balance .balance-actions .icon-eye-btn{ margin-left:6px }
+
+/* Left accent strip for balance card */
+.compact-balance::before{
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 14px;
+    bottom: 14px;
+    width: 6px;
+    background: var(--primary-color, #6366f1);
+    border-radius: 6px;
+    opacity: 0.95;
+}
+
+.compact-balance .balance-top{display:flex;align-items:center;gap:10px}
+.role-badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:0.75rem;font-weight:600;background:rgba(99,102,241,0.12);color:var(--primary-color);}
+.role-badge.role-admin{background:rgba(236,72,153,0.08);color:#ec4899}
+.role-badge.role-reseller{background:rgba(16,185,129,0.08);color:#10b981}
+.role-badge.role-user{background:rgba(99,102,241,0.08);color:#6366f1}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem .7rem;border-radius:8px;border:1px solid transparent;cursor:pointer}
+.btn.small{padding:.35rem .6rem;font-size:.9rem}
+.btn-primary{background:var(--primary-color);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border-color)}
+
+.app-menu-scroll{display:flex;gap:.6rem;overflow:auto;padding:12px;scrollbar-width:none}
+.app-menu-scroll::-webkit-scrollbar{display:none}
+.app-menu-item{display:flex;flex-direction:column;align-items:center;min-width:72px;padding:.5rem .6rem;background:transparent;border-radius:8px;color:var(--text-color);text-decoration:none}
+.quick-access-menu{padding:0 12px 6px 12px;margin-top:6px}
+.compact-marketplace .app-menu-scroll{justify-content:flex-start;padding-left:0}
+.app-menu-item{margin-left:0}
+
+/* Inline balance display used on package pages */
+.inline-balance{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:var(--card-bg-color);border:1px solid var(--border-color);margin-bottom:10px}
+.inline-balance .label{font-size:0.85rem;color:var(--text-color-secondary);margin-bottom:2px}
+.inline-balance .amount{font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.inline-balance .icon-eye-btn{margin-left:8px}
+.app-menu-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+.app-menu-label{font-size:0.82rem;margin-top:6px}
+
+.promo-carousel{padding:12px;margin:0 12px 12px}
+.promo-slide{background:linear-gradient(90deg,rgba(99,102,241,.08),rgba(16,185,129,.06));padding:12px;border-radius:8px;color:var(--text-color);font-weight:600}
+
+.packages-section{padding:0 12px 16px}
+.packages-section .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.packages-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.package-card{background:var(--card-bg-color);padding:12px;border-radius:8px;border:1px solid var(--border-color);display:flex;flex-direction:column;gap:.5rem}
+.package-card .title{font-weight:600}
+.package-card .meta{font-size:0.9rem;color:var(--text-color-secondary)}
+.package-card .buy-btn{margin-top:auto;border-radius:6px;padding:.5rem .6rem;background:var(--primary-color);color:#fff;text-align:center}
+
+.secondary-row{display:flex;flex-direction:column;gap:12px;padding:0 12px 24px}
+.stat-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-card{background:var(--card-bg-color);padding:10px;border-radius:8px;border:1px solid var(--border-color);text-align:center;font-size:0.9rem}
+.recent-activity{background:var(--card-bg-color);padding:10px;border-radius:8px;border:1px solid var(--border-color)}
+
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--primary-color);color:#fff;font-size:28px;border:none;box-shadow:0 10px 30px rgba(15,23,42,.18);z-index:1000;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.fab:active{transform:translateY(1px);box-shadow:0 6px 18px rgba(15,23,42,.14)}
+
+@media (min-width:900px){
+    .packages-grid{grid-template-columns:repeat(3,1fr)}
+    .compact-marketplace .page-header h1{font-size:1.25rem}
+    .compact-balance{padding:18px}
+}
+
+@media (max-width:480px){
+    .packages-grid{grid-template-columns:repeat(2,1fr)}
+    .stat-cards{grid-template-columns:repeat(2,1fr)}
+    .fab{right:14px;bottom:calc(12px + env(safe-area-inset-bottom));width:48px;height:48px;font-size:22px}
+    /* Ensure FAB stays above any bottom navigation bars */
+    .page-content{padding-bottom:84px} /* give breathing room so FAB doesn't overlap content */
+}
+
 /* Tombol Trigger (yang terlihat saat dropdown tertutup) */
 .custom-dropdown-trigger {
     width: 100%;
