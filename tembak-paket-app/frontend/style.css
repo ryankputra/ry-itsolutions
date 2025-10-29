@@ -5,6 +5,52 @@
 
 /* --- Styling Dropdown Kustom (Berlaku untuk Keduanya) --- */
 
+
+/* Style untuk wrapper list dropdown */
+.custom-dropdown-list-wrapper {
+  position: relative; /* Diperlukan agar child bisa diposisikan relatif terhadapnya */
+    max-height: 420px; /* Tinggikan agar lebih banyak konten terlihat */
+  overflow-y: hidden; /* Sembunyikan scrollbar utama wrapper */
+  /* Tambahkan style lain jika perlu (border, background, dll) */
+  border: 1px solid var(--border-color);
+  border-top: none; /* Hapus border atas jika trigger sudah punya */
+  background-color: var(--card-bg-color); /* Sesuaikan dengan tema */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: none; /* Awalnya tersembunyi */
+}
+
+/* Tampilkan wrapper saat dropdown aktif */
+.custom-dropdown-list-wrapper.show {
+  display: block;
+}
+
+/* Style untuk wrapper input pencarian di dalam dropdown */
+.dropdown-search-wrapper {
+  position: sticky; /* Kunci elemen ini */
+  top: 0;          /* Posisikan di paling atas */
+  background-color: var(--card-bg-color); /* Beri background agar tidak transparan */
+  z-index: 1;      /* Pastikan di atas list */
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Style untuk list paket agar bisa discroll */
+.custom-dropdown-list {
+    max-height: calc(420px - 55px); /* Sesuaikan tinggi max = max-height wrapper - tinggi search box */
+  overflow-y: auto; /* Aktifkan scrollbar vertikal hanya untuk list ini */
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* Style untuk input search itu sendiri (opsional, sesuaikan) */
+.dropdown-search-wrapper input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
 /* Container Utama */
 .custom-dropdown-container {
     position: relative;
@@ -94,7 +140,7 @@ html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger
     border-top: none !important; /* Hapus border atas (menyatu dgn trigger) */
     border-radius: 0 0 4px 4px !important; /* Sudut bawah melengkung */
     z-index: 10;
-    max-height: 250px;
+    max-height: 420px;
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Bayangan ke bawah */
 }
@@ -214,7 +260,7 @@ html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger
 @media (max-width: 768px) {
     #package-dropdown-custom .custom-dropdown-list-wrapper,
     #non-otp-package-dropdown .custom-dropdown-list-wrapper {
-        max-height: 200px; /* Kurangi tinggi maksimal di mobile */
+        max-height: 55vh; /* Gunakan viewport height agar terlihat lebih banyak item */
     }
 }
 
@@ -783,20 +829,117 @@ input:focus, textarea:focus, select:focus {
     justify-content: center; align-items: center; z-index: 10000;
 }
 .modal-content {
-    background-color: var(--card-background); padding: 1.5rem;
-    border-radius: var(--border-radius); box-shadow: var(--box-shadow);
-    width: 90%; max-width: 500px; position: relative;
-    max-height: 90vh; overflow-y: auto;
+    background-color: var(--card-background);
+    padding: 0.9rem 1rem; /* lebih compact */
+    border-radius: 8px; /* sedikit lebih kecil */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+    width: 92%; max-width: 480px; position: relative;
+    max-height: 86vh; overflow-y: auto;
 }
 .modal-header {
     display: flex; justify-content: space-between; align-items: center;
-    padding-bottom: 1rem; margin-bottom: 1rem;
+    padding: 0.5rem 0.25rem; margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--border-color);
 }
-.modal-header h2 { margin: 0; font-size: 1.25rem; }
+.modal-header h2 { margin: 0; font-size: 1.05rem; }
 .modal-close {
-    background: none; border: none; font-size: 1.5rem;
-    color: var(--text-light-color); cursor: pointer;
+    background: none; border: none; font-size: 1.1rem;
+    color: var(--text-light-color); cursor: pointer; padding: 6px;
+}
+
+/* Gaya compact untuk modal konfirmasi (lebih ringkas lagi) */
+.confirmation-modal {
+    width: 100%;
+    max-width: 360px; /* sedikit lebih sempit untuk mengurangi area kosong */
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    display: flex;              /* make modal shrink-to-fit using flex layout */
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--card-background);
+}
+.confirmation-modal .conf-header{
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.confirmation-modal .conf-title{ font-size: 0.95rem; font-weight:700; }
+.confirmation-modal .conf-body{
+    padding: 8px 10px;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+.confirmation-modal .conf-desc{ margin: 0 0 6px 0; font-size: 0.92rem; color:var(--text-color); line-height:1.16; }
+.confirmation-modal .conf-fee{ font-size:0.8rem; color:var(--text-light-color); margin-bottom:4px; }
+.confirmation-modal .conf-price{ font-weight:700; font-size:0.95rem; margin-bottom:6px; }
+.confirmation-modal .conf-select{ margin-bottom:6px; }
+.confirmation-modal select{ padding:8px 10px; border-radius:6px; font-size:0.95rem; }
+
+/* Footer: cancel link on the left, primary action on the right. Minimal spacing. */
+.confirmation-modal .conf-footer{
+    padding: 8px 10px;
+    border-top:1px solid rgba(0,0,0,0.04);
+    display:flex;
+    gap:12px;
+    justify-content:space-between;
+    align-items:center;
+}
+
+/* Cancel as lightweight text link (anchor) */
+.confirmation-modal .conf-cancel-link{
+    font-size:0.88rem;
+    color:var(--text-light-color);
+    text-decoration:none;
+    padding: 4px 6px;
+    border-radius:6px;
+    opacity:0.95;
+}
+.confirmation-modal .conf-cancel-link:hover{ text-decoration:underline; background: transparent; }
+
+/* Primary button compact */
+.confirmation-modal button.conf-btn.primary{
+    padding:6px 12px !important;
+    border-radius:8px !important;
+    font-weight:700 !important;
+    font-size:0.95rem !important;
+    height:36px !important;
+    min-width:86px !important;
+    line-height:1 !important;
+}
+
+/* If any secondary class remains (defensive), make it text-like */
+.confirmation-modal button.conf-btn.secondary{ background:transparent !important; border:none !important; color:var(--text-light-color) !important; box-shadow:none !important; padding:4px 6px !important; height:auto !important; }
+
+/* Make modal auto-fit its content and avoid large empty gaps */
+.confirmation-modal { flex: 0 0 auto; }
+.modal-overlay { align-items: center; }
+.modal-content, .confirmation-modal { max-height: calc(100vh - 48px); }
+
+@media (max-width: 520px){
+    .modal-content { max-width: calc(100% - 24px); padding: 0.5rem; }
+    /* On small screens stack actions: cancel link above the primary full-width button */
+    .confirmation-modal .conf-footer{ flex-direction: column; align-items: stretch; gap:8px; }
+    .confirmation-modal .conf-cancel-link{ order: 0; text-align:center; }
+    .confirmation-modal button.conf-btn.primary{ width:100%; display:block; order: 1; }
+}
+
+/* Subtle close button specifically for confirmation modal (Option A) */
+.confirmation-modal .conf-close,
+.confirmation-modal .modal-close {
+    font-size: 0.9rem; /* smaller */
+    padding: 4px; /* less padding */
+    opacity: 0.6; /* subtle */
+    color: var(--text-light-color);
+    background: transparent;
+    border: none;
+    line-height: 1;
+    transition: opacity 120ms ease, color 120ms ease, transform 120ms ease;
+}
+.confirmation-modal .conf-close:hover,
+.confirmation-modal .modal-close:hover {
+    opacity: 1;
+    color: var(--text-color);
+    transform: none; /* avoid lift */
 }
 
 /* =================================================================== */
@@ -1040,11 +1183,10 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 1.5rem;
     box-shadow: var(--box-shadow);
 
-    /* PERBAIKAN TAMPILAN: Mengatur agar ikon dan teks sejajar dengan rapi */
-    display: grid;
-    grid-template-columns: 1fr auto; /* Kolom teks fleksibel, kolom tombol menyesuaikan */
-    align-items: start; /* Konten mulai dari atas */
-    gap: 1rem; /* Jarak antara teks dan tombol silang */
+    display: flex !important;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px; /* jarak lebih pas */
 }
 
 .announcement-banner p {
@@ -1069,6 +1211,46 @@ input:focus, textarea:focus, select:focus {
 
 .announcement-close:hover {
     opacity: 1;
+}
+
+/* --- Responsif: banner lebih kompak di layar kecil --- */
+@media (max-width: 600px) {
+    .announcement-banner {
+        flex-direction: column !important; /* tumpuk konten */
+        align-items: stretch !important;
+        padding: 8px 10px !important; /* rapatkan padding */
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .announcement-banner > span:first-child,
+    .announcement-banner .announcement-title {
+        font-size: 0.98rem !important;
+        font-weight: 700;
+        display: block;
+    }
+
+    .announcement-banner p {
+        font-size: 0.92rem;
+        margin: 0;
+        padding-right: 0;
+        line-height: 1.3;
+    }
+
+    .announcement-close {
+        align-self: flex-end; /* taruh tombol tutup di kanan */
+        font-size: 1.1rem;
+        padding: 6px;
+    }
+
+    /* Jika banner ditempatkan di sidebar yang sempit, pastikan teks tidak memotong terlalu banyak baris */
+    .announcement-banner { white-space: normal; }
+}
+
+/* Jika ingin tampilan lebih minimal pada very small screens */
+@media (max-width: 380px) {
+    .announcement-banner { padding: 6px 8px !important; gap: 6px !important; }
+    .announcement-banner p { font-size: 0.9rem; }
 }
 
 

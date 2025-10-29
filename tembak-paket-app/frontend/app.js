@@ -1368,24 +1368,31 @@ function renderPaymentChoiceModal(packageId, originalButton) {
     const modalContainer = document.getElementById('modal-container');
     if (!modalContainer) return;
 
-    modalContainer.innerHTML = `
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header"><h2>Konfirmasi Pembelian</h2><button class="modal-close">&times;</button></div>
-                <h4>${pkg.name}</h4>
-                <div class="form-group">
-                    <label>Biaya Layanan:</label>
-                    <p><strong>Rp ${platformFee.toLocaleString('id-ID')}</strong> (dipotong dari saldo)</p>
-                </div>
-                ${paymentSelectionUI}
-                <div id="modal-error-container"></div>
-                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                     <button id="cancel-purchase-btn" class="secondary" style="flex: 1;">Batal</button>
-                     <button id="confirm-purchase-btn" style="flex: 1;" ${paymentMethods.length === 0 && !isPulsaMethod ? 'disabled' : ''}>Lanjutkan</button>
-                </div>
-            </div>
-        </div>
-    `;
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="conf-title">
+                <div class="conf-header">
+                    <div id="conf-title" class="conf-title">Konfirmasi Pembelian</div>
+                    <button class="conf-close modal-close" aria-label="Tutup">&times;</button>
+                </div>
+
+                <div class="conf-body">
+                    <h4 style="margin:0 0 8px 0">${pkg.name}</h4>
+                    <div class="form-group">
+                        <label>Biaya Layanan:</label>
+                        <p><strong>Rp ${platformFee.toLocaleString('id-ID')}</strong> (dipotong dari saldo)</p>
+                    </div>
+                    ${paymentSelectionUI}
+                    <div id="modal-error-container"></div>
+                </div>
+
+                <div class="conf-footer">
+                    <a href="#" id="cancel-purchase-btn" class="conf-cancel-link">Batal</a>
+                    <button id="confirm-purchase-btn" class="conf-btn primary" ${paymentMethods.length === 0 && !isPulsaMethod ? 'disabled' : ''}>Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    `;
 
     // --- PERUBAHAN 2: Tambahkan event listener untuk menampilkan/menyembunyikan input OVO ---
     const paymentSelect = document.getElementById('payment-method-select');
@@ -4091,6 +4098,115 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
     });
 }
 
+/**
+ * Merender modal konfirmasi pembelian yang ringkas dan mobile-friendly.
+ * options: { title, description, feeLabel, priceText, paymentMethods: [{value,label}], onConfirm }
+ */
+function renderConfirmationModal(options = {}) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+    const {
+        title = 'Konfirmasi Pembelian',
+        description = '',
+        feeLabel = 'Biaya Layanan:',
+        priceText = '',
+        paymentMethods = [],
+        onConfirm = null
+    } = options;
+
+    const paymentOptionsHtml = (paymentMethods && paymentMethods.length)
+        ? paymentMethods.map(m => `<option value="${m.value || m}">${m.label || m}</option>`).join('')
+        : `<option>Metode DANA</option>`;
+
+    modalContainer.innerHTML = `
+        <div class="modal-overlay">
+            <div class="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="conf-title">
+                <div class="conf-header">
+                    <div id="conf-title" class="conf-title">${title}</div>
+                    <button class="conf-close" aria-label="Tutup">&times;</button>
+                </div>
+
+                <div class="conf-body">
+                    <p class="conf-desc">${description}</p>
+                    <div class="conf-fee">${feeLabel}</div>
+                    <div class="conf-price">${priceText}</div>
+
+                    <label for="confirm-payment-method" style="display:block;margin-bottom:6px;font-weight:600">Pilih Metode Pembayaran:</label>
+                    <div class="conf-select">
+                        <select id="confirm-payment-method">${paymentOptionsHtml}</select>
+                    </div>
+                </div>
+
+                <div class="conf-footer">
+                    <a href="#" class="conf-cancel-link" id="conf-cancel">Batal</a>
+                    <button class="conf-btn primary" id="conf-continue">Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const overlay = modalContainer.querySelector('.modal-overlay');
+    const closeBtn = modalContainer.querySelector('.conf-close');
+    const cancelBtn = document.getElementById('conf-cancel');
+    const continueBtn = document.getElementById('conf-continue');
+
+    function closeConfirmation() {
+        // bersihkan modal
+        try { overlay.classList.add('fade-out'); } catch(e){}
+        setTimeout(() => { if (modalContainer) modalContainer.innerHTML = ''; }, 180);
+    }
+
+    // klik area gelap menutup modal
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeConfirmation(); });
+    closeBtn?.addEventListener('click', closeConfirmation);
+    // cancel link should not navigate
+    if (cancelBtn) cancelBtn.addEventListener('click', (e) => { e.preventDefault(); closeConfirmation(); });
+
+    continueBtn?.addEventListener('click', async (e) => {
+        // ambil metode terpilih
+        const method = document.getElementById('confirm-payment-method')?.value;
+        // panggil callback jika ada
+        try {
+            if (typeof onConfirm === 'function') {
+                // berikan objek kontekstual ke callback
+                await onConfirm({ paymentMethod: method, rawOptions: options });
+            }
+        } catch (err) {
+            console.error('Error in onConfirm:', err);
+        }
+        // tutup modal setelah aksi
+        closeConfirmation();
+    });
+}
+
+// Event delegation: buka modal jika ada elemen dengan class .open-confirmation
+document.addEventListener('click', (e) => {
+    const trg = e.target.closest && e.target.closest('.open-confirmation');
+    if (!trg) return;
+    e.preventDefault();
+
+    // Ambil data dari atribut data-* (jika disediakan)
+    const title = trg.dataset.title || 'Konfirmasi Pembelian';
+    const description = trg.dataset.description || trg.dataset.desc || '';
+    const priceText = trg.dataset.price || '';
+    const feeLabel = trg.dataset.feelabel || 'Biaya Layanan:';
+
+    // payment methods bisa diberikan sebagai JSON di data-payments
+    let paymentMethods = [];
+    if (trg.dataset.payments) {
+        try { paymentMethods = JSON.parse(trg.dataset.payments); } catch (err) { paymentMethods = []; }
+    }
+
+    // default onConfirm: trigger custom event 'confirmed-purchase' pada trigger elemen
+    const onConfirm = async (ctx) => {
+        // dispatch event agar kode lain dapat menangani proses pembelian
+        const ev = new CustomEvent('confirmed-purchase', { detail: { trigger: trg, ctx } });
+        trg.dispatchEvent(ev);
+    };
+
+    renderConfirmationModal({ title, description, feeLabel, priceText, paymentMethods, onConfirm });
+});
+
     /**
      * Event handler untuk tombol 'Unduh Backup Database'.
      * Memulai proses unduh file database dari backend.
@@ -4514,14 +4630,16 @@ async function renderPackagesPage(container) {
                    <p style="margin:0; font-weight: bold; color: var(--danger-color);">WAJIB BACA DESKRIPSI PAKET SEBELUM MEMBELI!!!</p>
                 </div>
                 <div class="form-group">
-                    <input type="text" id="package-search-input-custom" placeholder="🔍 Cari nama paket..." autocomplete="off">
-                    <label style="margin-top: 10px; display: block;">Pilih Paket</label>
+                    <label>Pilih Paket</label> 
                     <div class="custom-dropdown-container" id="package-dropdown-custom">
                         <button type="button" class="custom-dropdown-trigger">
                             <span class="trigger-text">- Pilih Paket -</span>
                             <span class="dropdown-arrow">▼</span>
                         </button>
                         <div class="custom-dropdown-list-wrapper">
+                            <div class="dropdown-search-wrapper" style="padding: 8px; border-bottom: 1px solid var(--border-color);">
+                               <input type="text" id="package-search-input-custom" placeholder="🔍 Cari nama atau kode paket..." autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 8px;">
+                            </div>
                             <ul class="custom-dropdown-list">
                                 ${packageListItems}
                             </ul>
@@ -4530,6 +4648,7 @@ async function renderPackagesPage(container) {
                     </div>
                 </div>
                 <div id="package-details-area" style="display: none; margin-top: 1.5rem;">
+                    {/* Detail paket akan muncul di sini */}
                 </div>
             </div>
         `;
@@ -5898,14 +6017,16 @@ async function renderNonOtpPage(container) {
                 </div>
 
                 <div class="form-group">
-                    <input type="text" id="non-otp-search-input-custom" placeholder="🔍 Cari paket..." autocomplete="off">
-                     <label style="margin-top: 10px; display: block;">Pilih Paket</label>
+                     <label>Pilih Paket</label> 
                     <div class="custom-dropdown-container" id="non-otp-package-dropdown">
                         <button type="button" class="custom-dropdown-trigger">
                             <span class="trigger-text">- Pilih Paket -</span>
                             <span class="dropdown-arrow">▼</span>
                         </button>
                         <div class="custom-dropdown-list-wrapper">
+                            <div class="dropdown-search-wrapper" style="padding: 8px; border-bottom: 1px solid var(--border-color);">
+                                <input type="text" id="non-otp-search-input-custom" placeholder="🔍 Cari nama atau kode paket..." autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 8px;">
+                            </div>
                             <ul class="custom-dropdown-list">
                                 ${packageListItems}
                             </ul>
@@ -5915,6 +6036,7 @@ async function renderNonOtpPage(container) {
                 </div>
 
                 <div id="non-otp-details-area" style="margin-top: 1.5rem;">
+                   
                 </div>
 
                 <button type="submit" disabled>Pilih Paket Dulu</button>
