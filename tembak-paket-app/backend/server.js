@@ -108,7 +108,7 @@ async function initializeDatabase() {
          try {
              await dbRun("PRAGMA foreign_keys = ON;");
              await dbRun(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, balance REAL DEFAULT 0, role TEXT DEFAULT 'user', upgradedToResellerAt TEXT, verifiedPhone TEXT, savedPhones TEXT, status TEXT DEFAULT 'pending', createdAt TEXT NOT NULL, resetPasswordToken TEXT, resetPasswordExpires INTEGER)`);
-             await dbRun(`CREATE TABLE IF NOT EXISTS packages (package_code TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, original_price REAL DEFAULT 0, platform_fee REAL DEFAULT 0, reseller_fee REAL DEFAULT 0, isVisible INTEGER DEFAULT 0, category TEXT DEFAULT 'reguler', isMultiPurchase INTEGER DEFAULT 0, payment_methods TEXT)`);
+            await dbRun(`CREATE TABLE IF NOT EXISTS packages (package_code TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, original_price REAL DEFAULT 0, platform_fee REAL DEFAULT 0, reseller_fee REAL DEFAULT 0, isVisible INTEGER DEFAULT 0, category TEXT DEFAULT 'reguler', isMultiPurchase INTEGER DEFAULT 0, payment_methods TEXT, position INTEGER DEFAULT 0)`);
              // Kolom 'ewalletNumber TEXT' ditambahkan sebelum 'kmspTrxId' untuk menyimpan nomor OVO.
              await dbRun(`CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, packageId TEXT, packageName TEXT, platformFee REAL, originalPrice REAL, targetPhone TEXT, accessToken TEXT, paymentMethod TEXT, ewalletNumber TEXT, kmspTrxId TEXT, status TEXT NOT NULL, api_response TEXT, createdAt TEXT NOT NULL, paymentDetails TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
              await dbRun(`CREATE TABLE IF NOT EXISTS topups (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, baseAmount REAL NOT NULL, uniqueAmount REAL NOT NULL, status TEXT NOT NULL, createdAt TEXT NOT NULL, qrisBase64Image TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
@@ -135,6 +135,13 @@ async function initializeDatabase() {
              process.exit(1);
          }
      });
+    // Ensure older databases get the `position` column (safe ALTER, ignore error if exists)
+    try {
+        await dbRun(`ALTER TABLE packages ADD COLUMN position INTEGER DEFAULT 0`);
+        console.log('✅ Ensured packages.position column exists (added if missing).');
+    } catch (err) {
+        // If column already exists or any other DB-specific issue, ignore quietly
+    }
 }
 initializeDatabase();
 
@@ -909,16 +916,46 @@ app.post('/api/admin/run-reseller-retention', isAuthenticated, isAdmin, async (r
     }
 });
 
+// Public endpoint: ambil konten info publik (bisa berformat markdown)
+app.get('/api/public-info', async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'publicInfoBox'");
+        res.json({ status: true, data: row ? row.value : '' });
+    } catch (error) {
+        console.error('Error fetching public info:', error);
+        res.status(500).json({ status: false, message: 'Gagal mengambil info publik.' });
+    }
+});
+
+// Admin endpoint: update konten info publik (markdown)
+app.post('/api/admin/public-info', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (typeof content !== 'string') return res.status(400).json({ status: false, message: 'Content harus berupa string.' });
+
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('publicInfoBox', ?)", [content]);
+
+        // Broadcast via SSE supaya client bisa refresh jika terhubung
+        sseBroadcast('announcement', { id: 'publicInfoBox', content });
+
+        res.json({ status: true, message: 'Konten info publik berhasil disimpan.' });
+    } catch (error) {
+        console.error('Error saving public info:', error);
+        res.status(500).json({ status: false, message: 'Gagal menyimpan info publik.' });
+    }
+});
+
 app.get('/api/user/packages', isAuthenticated, async (req, res) => {
     try { // --- PERBAIKAN: Filter paket berdasarkan peran pengguna ---
         const user = await dbGet('SELECT role FROM users WHERE id = ?', [req.session.userId]);
         let query;
         // Admin dan Reseller melihat semua paket yang visible
         if (user && (user.role === 'admin' || user.role === 'reseller')) {
-            query = 'SELECT * FROM packages WHERE isVisible = 1 ORDER BY name ASC';
+            // Order by admin-defined position first, then name
+            query = 'SELECT * FROM packages WHERE isVisible = 1 ORDER BY position ASC, name ASC';
         } else {
             // User biasa hanya melihat paket yang visible dan BUKAN reseller-only
-            query = 'SELECT * FROM packages WHERE isVisible = 1 AND isResellerOnly = 0 ORDER BY name ASC';
+            query = 'SELECT * FROM packages WHERE isVisible = 1 AND isResellerOnly = 0 ORDER BY position ASC, name ASC';
         }
         const packages = await dbAll(query);
         res.status(200).json({ status: true, data: packages });
@@ -1699,8 +1736,8 @@ app.post('/api/admin/sync-packages', isAuthenticated, isAdmin, async (req, res) 
             } else {
                 // PERBAIKAN 2: Gunakan query INSERT yang lebih eksplisit dan aman.
                 await dbRun(`
-                    INSERT INTO packages (package_code, name, description, original_price, platform_fee, reseller_fee, isVisible, category, isMultiPurchase, payment_methods) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                    INSERT INTO packages (package_code, name, description, original_price, platform_fee, reseller_fee, isVisible, category, isMultiPurchase, payment_methods, position) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
                     [
                         code, pkg.package_name, pkg.package_description || '', price, 
                         0, // default platform_fee
@@ -1708,7 +1745,8 @@ app.post('/api/admin/sync-packages', isAuthenticated, isAdmin, async (req, res) 
                         0, // default isVisible
                         'reguler', // default category
                         0, // default isMultiPurchase
-                        methods
+                        methods,
+                        0 // default position
                     ]);
                 added++;
             }
@@ -1732,7 +1770,8 @@ app.post('/api/admin/sync-packages', isAuthenticated, isAdmin, async (req, res) 
 
 app.get('/api/admin/packages', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const packages = await dbAll('SELECT * FROM packages ORDER BY name ASC');
+        // Order packages by position set by admin, then name
+        const packages = await dbAll('SELECT * FROM packages ORDER BY position ASC, name ASC');
         const processed = packages.map(p => ({ ...p, isVisible: p.isVisible === 1, isMultiPurchase: p.isMultiPurchase === 1, payment_methods: p.payment_methods ? JSON.parse(p.payment_methods) : [] }));
         res.status(200).json({ status: true, data: processed });
     } catch (e) { res.status(500).json({ status: false, message: "Gagal mengambil data paket." }) }
@@ -1744,8 +1783,8 @@ app.put('/api/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req,
     try {
         await dbRun("BEGIN TRANSACTION");
         for (const update of packages) {
-            // --- PERBAIKAN: Tambahkan isResellerOnly ke query UPDATE ---
-            await dbRun(`UPDATE packages SET platform_fee = ?, reseller_fee = ?, isVisible = ?, isMultiPurchase = ?, category = ?, isResellerOnly = ? WHERE package_code = ?`,
+            // --- PERBAIKAN: Tambahkan isResellerOnly dan position ke query UPDATE ---
+            await dbRun(`UPDATE packages SET platform_fee = ?, reseller_fee = ?, isVisible = ?, isMultiPurchase = ?, category = ?, isResellerOnly = ?, position = ? WHERE package_code = ?`,
     [
         update.platform_fee || 0, 
         update.reseller_fee || 0, // Tambahkan ini
@@ -1753,6 +1792,7 @@ app.put('/api/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req,
         update.isMultiPurchase ? 1 : 0, 
         ['reguler', 'non-otp'].includes(update.category) ? update.category : 'reguler',
         update.isResellerOnly ? 1 : 0, // Tambahkan ini
+        Number.isFinite(Number(update.position)) ? Number(update.position) : 0,
         update.package_code
     ]
 );
@@ -1818,6 +1858,10 @@ app.post('/api/admin/announcement', isAuthenticated, isAdmin, async (req, res) =
         await dbRun("DELETE FROM announcements"); // Hanya simpan 1 pengumuman
         await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [`ann_${Date.now()}`, message.trim(), new Date().toISOString()]);
         await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('announcementBgColor', '#dc2626')`);
+        // TAMBAHAN: Konten info publik yang bisa diedit admin (format markdown)
+        await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('publicInfoBox', ? )`, [
+            `**REKOMENDASI TRIK INJECT SSH/VPN (BISA DIUPDATE OLEH ADMIN)**\n\n1. XCP 10GB Unli Apps (bagi yang sudah punya paketnya): Mohon sebaiknya dirawat saja, sediakan Pulsa 65 ribu untuk perpanjangan otomatis tiap bulannya.\n\n2. Vip double youtube 69K an unli no fup dan stabil. Paket ada di panel ini (tembak menggunakan saldo panel).\n\n3. Biz Lite/E-Commerce bukan yang biz tayo/starter ya saat ini masih aman UNTUK TKP JABAR, BANTEN, JAKARTA, DAN SUMATERA saja.\n\n**REKOMENDASI: PILIH NO 2.**\n\n(Anda bisa mengubah teks ini di Panel Admin)`
+        ]);
         res.json({ status: true, message: 'Pengumuman berhasil dikirim.' });
     } catch(e) { res.status(500).json({ status: false, message: "Gagal mengirim pengumuman." }) }
 });
@@ -2107,9 +2151,38 @@ async function runResellerRetentionCheck() {
             console.log(`[Scheduler][ResellerRetention] User ${r.id} (${r.name}) - purchases in window ${windowStartISO}..${windowEndISO}: ${cnt}`);
             if (cnt < 5) {
                 await dbRun("UPDATE users SET role = 'user', upgradedToResellerAt = NULL WHERE id = ?", [r.id]);
-                downgraded.push({ id: r.id, name: r.name, email: r.email, purchasesInWindow: cnt, windowStart: windowStartISO, windowEnd: windowEndISO });
-                await sendTelegramNotification(`<b>⚠️ Status Reseller Diturunkan</b>\\n──────────────────────\\nPengguna: ${r.name}\\nAlasan: Hanya ${cnt} pembelian pada periode ${windowStart.toLocaleDateString()} - ${windowEnd.toLocaleDateString()} (< 5).\\nStatus Anda telah dikembalikan ke 'User'.`, 'group');
-                await sendTelegramNotification(`<b>ℹ️ Reseller diturunkan</b>\\n──────────────────────\\nPengguna: ${r.name} (${r.email})\\nPembelian periode: ${windowStart.toLocaleDateString()} - ${windowEnd.toLocaleDateString()}\\nJumlah pembelian: ${cnt}\\nAkun telah dikembalikan menjadi 'User'.`, 'admin');
+                downgraded.push({
+                    id: r.id,
+                    name: r.name,
+                    email: r.email,
+                    purchasesInWindow: cnt,
+                    windowStart: windowStartISO,
+                    windowEnd: windowEndISO
+                });
+
+                const startFmt = windowStart.toLocaleDateString('id-ID');
+                const endFmt = windowEnd.toLocaleDateString('id-ID');
+                const nowFmt = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+
+                // Notifikasi singkat dan rapi ke grup/user
+                await sendTelegramNotification(
+                `<b>⚠️ Reseller Diturunkan</b>
+                ──────────────────────
+                Halo <b>${r.name}</b>,
+                Peran <b>Reseller</b> Anda dikembalikan menjadi <b>User</b>.
+                Alasan: Hanya <b>${cnt}</b> pembelian pada periode <b>${startFmt}</b> — <b>${endFmt}</b> (dibutuhkan ≥ 5).
+                Untuk kembali menjadi Reseller, lakukan top up minimal Rp 50.000 atau capai 5 pembelian.
+                Waktu: ${nowFmt}`, 'group');
+
+                // Notifikasi rinci untuk admin
+                await sendTelegramNotification(
+                `<b>ℹ️ Reseller Diturunkan — Detail</b>
+                ──────────────────────
+                Pengguna: <b>${r.name}</b> (${r.email})
+                Periode: <b>${startFmt}</b> — <b>${endFmt}</b>
+                Jumlah pembelian: <b>${cnt}</b>
+                Aksi: Peran diubah menjadi <b>User</b>
+                Waktu eksekusi: ${nowFmt}`, 'admin');
                 sseSend(r.id, 'role_change', { newRole: 'user', reason: 'Jumlah pembelian kurang dari 5 pada periode retensi.' });
                 console.log(`[Scheduler][ResellerRetention] Downgraded ${r.name} due to insufficient purchases (${cnt}) in window.`);
             }

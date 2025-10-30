@@ -398,6 +398,55 @@ html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger
 
 
 /* --- Styling Area Detail Paket (setelah dipilih) --- */
+
+/* =======================
+     Public info box (collapsible)
+     ======================= */
+.public-info-box{
+    margin: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(34,197,94,0.15);
+    background: linear-gradient(180deg, rgba(240,253,244,1), rgba(237,249,241,1));
+    padding: 0;
+    overflow: hidden;
+}
+.public-info-box .pib-header{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(34,197,94,0.08);
+}
+.public-info-box .pib-title{font-weight:700;color:#065f46}
+.public-info-box .pib-controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.public-info-box .pib-toggle{background:transparent;border:1px solid rgba(6,95,70,0.08);padding:6px 8px;border-radius:8px;color:#065f46;cursor:pointer}
+.public-info-box .pib-content{padding:12px 14px;color:#064e3b;background:transparent}
+.public-info-box .pib-content p{margin:.35rem 0}
+.public-info-box .pib-content pre{white-space:pre-wrap}
+.public-info-box.collapsed .pib-content{display:none}
+.pib-edit-btn{background:#065f46;color:#fff;border:none;padding:6px 8px;border-radius:8px;cursor:pointer}
+
+/* Improve spacing, line-height and list layout for readability */
+.public-info-box{padding:0 0 12px 0}
+.public-info-box .pib-content{
+    padding:16px 28px; /* more right padding so numbers/text don't feel cramped */
+    line-height:1.65;
+    font-size:0.98rem;
+    word-break:break-word;
+    hyphens:auto;
+}
+.public-info-box .pib-content ol,
+.public-info-box .pib-content ul{
+    margin: 0.5rem 0 0.5rem 1.1rem;
+    padding-left: 1.05rem;
+}
+.public-info-box .pib-content li{margin-bottom:.45rem}
+
+/* make the header area breathe a bit more */
+.public-info-box .pib-header{padding:14px 20px;border-radius:8px 8px 0 0}
+.public-info-box .pib-title{font-size:1.05rem}
+
+/* Edit modal (simple) */
+.pib-modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:2000}
+.pib-modal{background:var(--card-bg-color);padding:12px;border-radius:10px;max-width:720px;width:100%;box-shadow:0 10px 30px rgba(2,6,23,0.3)}
+.pib-modal textarea{width:100%;height:260px;padding:10px;border:1px solid var(--border-color);border-radius:8px}
+.pib-modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 .selected-package-info {
     padding: 15px;
     background-color: var(--card-bg-color);
@@ -419,6 +468,33 @@ html:not([data-theme="dark"]) #non-otp-package-dropdown .custom-dropdown-trigger
 .selected-package-info p strong {
      color: var(--text-color);
      margin-right: 5px;
+}
+
+/* Dark mode overrides for public info box: make text green and more visible */
+:root[data-theme="dark"] .public-info-box{
+    /* make the box slightly tinted so text stands out */
+    background: linear-gradient(180deg, rgba(6,95,70,0.06), rgba(6,95,70,0.03));
+    border: 1px solid rgba(6,95,70,0.22);
+}
+:root[data-theme="dark"] .public-info-box .pib-header{
+    border-bottom-color: rgba(6,95,70,0.12);
+}
+:root[data-theme="dark"] .public-info-box .pib-title{
+    color: #7ee7b7 !important; /* fresher green for title */
+}
+:root[data-theme="dark"] .public-info-box .pib-toggle{
+    color: #bbf7d0 !important;
+    border-color: rgba(187,247,208,0.12) !important;
+}
+:root[data-theme="dark"] .public-info-box .pib-content,
+:root[data-theme="dark"] .public-info-box .pib-content p,
+:root[data-theme="dark"] .public-info-box .pib-content pre{
+    color: #9be9c3 !important; /* slightly softer but still high-contrast green */
+    font-weight: 500;
+}
+:root[data-theme="dark"] .pib-edit-btn{
+    background:#0ea37a !important;
+    color:#042a1f !important;
 }
 
 /* Styling untuk deskripsi yang inline */
@@ -2736,6 +2812,32 @@ button.tutorial-card:hover {
 :root[data-theme="dark"] .history-table th { background-color: #111216; }
 :root[data-theme="dark"] .checkbox-package-list { background-color: #0f1013; }
 :root[data-theme="dark"] .package-card.active { box-shadow: 0 0 0 3px rgba(79,70,229,0.3); }
+
+/* Order summary banner for admin package management */
+.order-summary{
+    margin-bottom:8px;
+    padding:10px 12px;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    /* Support both variable names used across the stylesheet */
+    background: var(--card-bg-color, var(--card-background, #f6f6f6));
+    border: 1px solid var(--border-color, #e5e7eb);
+    color: var(--text-color, #111827);
+    font-size: 0.95rem;
+}
+.order-summary div{ line-height:1; }
+.order-summary .order-note{ margin-left:auto; font-size:0.85rem; color:var(--text-color-secondary,#6b7280); }
+
+/* Dark mode specific tweaks to ensure visibility */
+:root[data-theme="dark"] .order-summary{
+    /* pick darker card background fallback if variables differ */
+    background: var(--card-bg-color, var(--card-background, rgba(255,255,255,0.03)));
+    border: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-color, #e5e7eb);
+}
+:root[data-theme="dark"] .order-summary .order-note{ color: var(--text-light-color, #9ca3af); }
 
 /* === SKELETON SHIMMER === */
 :root{

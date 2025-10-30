@@ -105,7 +105,9 @@ function renderMainDashboardPage(container) {
             </div>
         `;
 
-        container.insertAdjacentHTML('beforeend', dashboardContentHTML);
+    container.insertAdjacentHTML('beforeend', dashboardContentHTML);
+    // render collapsible public info box (admin-editable)
+    try { renderCollapsibleInfoBox(container); } catch (e) { console.error('renderCollapsibleInfoBox failed', e); }
         const header = container.querySelector('.page-header');
         if (header && !header.querySelector('#theme-toggle-btn')) {
             header.insertAdjacentHTML('beforeend', '<button id="theme-toggle-btn" class="icon-btn" title="Ganti tema" style="margin-left:auto;display:flex;align-items:center;gap:.5rem"><span>Theme</span></button>');
@@ -253,6 +255,122 @@ function showAnnouncementPopupIfNeeded() {
         console.log(`Pengumuman dengan ID: ${announcementId} sudah pernah dilihat.`);
     }
 }
+// ----- PUBLIC INFO BOX: fetch + render + admin edit -----
+async function fetchPublicInfo() {
+    try {
+        const res = await fetch('/api/public-info', { credentials: 'same-origin' });
+        if (!res.ok) return '';
+        const j = await res.json();
+        return j && j.data ? j.data : '';
+    } catch (e) { console.error('fetchPublicInfo error', e); return ''; }
+}
+
+function createPibElement(container, markdownContent) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'public-info-box collapsed';
+
+    wrapper.innerHTML = `
+      <div class="pib-header">
+        <div class="pib-title">🔔 Informasi & Rekomendasi</div>
+        <div class="pib-controls">
+          <button class="pib-toggle" aria-expanded="false">Buka</button>
+        </div>
+      </div>
+      <div class="pib-content">${marked.parse(markdownContent || '')}</div>
+    `;
+
+    // remember collapsed state
+    const key = 'public_info_collapsed';
+    const btn = wrapper.querySelector('.pib-toggle');
+    const contentEl = wrapper.querySelector('.pib-content');
+
+    const setCollapsed = (collapsed) => {
+        if (collapsed) {
+            wrapper.classList.add('collapsed');
+            btn.textContent = 'Buka';
+            btn.setAttribute('aria-expanded', 'false');
+        } else {
+            wrapper.classList.remove('collapsed');
+            btn.textContent = 'Tutup';
+            btn.setAttribute('aria-expanded', 'true');
+        }
+        try { localStorage.setItem(key, collapsed ? '1' : '0'); } catch (e){}
+    };
+
+    btn.addEventListener('click', () => {
+        const collapsed = wrapper.classList.contains('collapsed');
+        setCollapsed(!collapsed);
+    });
+
+    // Admin edit button (if admin)
+    if (currentUser && currentUser.role === 'admin') {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'pib-edit-btn';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', () => openPibEditModal(markdownContent, async (newContent) => {
+            // save
+            try {
+                const res = await fetch('/api/admin/public-info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ content: newContent }) });
+                const j = await res.json();
+                if (j && j.status) {
+                    // update content
+                    contentEl.innerHTML = marked.parse(newContent || '');
+                    markdownContent = newContent;
+                    showToast('Konten informasi publik berhasil disimpan.');
+                } else {
+                    showToast(j && j.message ? j.message : 'Gagal menyimpan.', true);
+                }
+            } catch (e) { console.error(e); showToast('Gagal menyimpan konten.', true); }
+        }));
+        wrapper.querySelector('.pib-controls').appendChild(editBtn);
+    }
+
+    // apply stored state
+    try { const st = localStorage.getItem(key); if (st === '0') setCollapsed(false); } catch(e){}
+
+    return wrapper;
+}
+
+function openPibEditModal(currentMarkdown, onSave) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'pib-modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="pib-modal">
+        <div style="font-weight:700;margin-bottom:6px">Edit Informasi Publik (Markdown)</div>
+        <textarea>${(currentMarkdown||'').replace(/</g,'&lt;')}</textarea>
+        <div class="actions"><button class="btn btn-ghost cancel">Batal</button><button class="btn btn-primary save">Simpan</button></div>
+      </div>`;
+    document.body.appendChild(backdrop);
+    const ta = backdrop.querySelector('textarea');
+    const btnSave = backdrop.querySelector('.save');
+    const btnCancel = backdrop.querySelector('.cancel');
+    btnCancel.addEventListener('click', () => { backdrop.remove(); });
+    btnSave.addEventListener('click', () => { const v = ta.value; onSave(v); backdrop.remove(); });
+}
+
+function renderCollapsibleInfoBox(container) {
+    fetchPublicInfo().then(markdown => {
+        try {
+            const el = createPibElement(container, markdown);
+            // insert at top of container if possible
+            const first = container.querySelector('.page-header');
+            if (first && first.parentNode) first.parentNode.insertBefore(el, first.nextSibling);
+            else container.insertAdjacentElement('afterbegin', el);
+        } catch (e) { console.error('renderCollapsibleInfoBox error', e); }
+    });
+}
+
+function renderPublicInfoAboveVerification(container) {
+    fetchPublicInfo().then(markdown => {
+        try {
+            const el = createPibElement(container, markdown);
+            const phonePanel = container.querySelector('.phone-verification-panel');
+            if (phonePanel && phonePanel.parentNode) phonePanel.parentNode.insertBefore(el, phonePanel);
+            else container.insertAdjacentElement('afterbegin', el);
+        } catch (e) { console.error('renderPublicInfoAboveVerification error', e); }
+    });
+}
+
 function toggleLiveChatBubble(show) {
     if (!liveChatBubbleElement) {
         liveChatBubbleElement = document.querySelector('.we-are-here-bubble');
@@ -2137,7 +2255,15 @@ async function renderDashboard(activePage = 'dashboard') {
 
     const pageRenderers = {
         'dashboard': renderMainDashboardPage,
-        'packages': () => { mainContent.innerHTML += renderPhoneVerificationPanel(); renderPackagesPage(mainContent); setupPhoneVerificationListeners(); },
+        'packages': () => { 
+            // Render panel verifikasi terlebih dahulu
+            mainContent.innerHTML += renderPhoneVerificationPanel();
+            // Sisipkan kotak info publik persis di atas panel verifikasi
+            try { renderPublicInfoAboveVerification(mainContent); } catch(e){ console.error('renderPublicInfoAboveVerification failed', e); }
+            // Lanjutkan merender sisa halaman paket
+            renderPackagesPage(mainContent); 
+            setupPhoneVerificationListeners(); 
+        },
         'history': renderHistoryPage,
         'rekening-koran': renderRekeningKoranPage,
         'profile': renderProfilePage,
@@ -3324,7 +3450,8 @@ function renderAdminDashboard(container) {
         listElement.innerHTML = '<li>Tidak ada paket ditemukan. Coba sinkronisasi terlebih dahulu.</li>';
         return;
     }
-    packages.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    // Sort by admin-set position first, then by name as fallback
+    packages.sort((a, b) => ((a.position || 0) - (b.position || 0)) || ((a.name || '').localeCompare(b.name || '')));
     listElement.innerHTML = packages.map(pkg => `
         <li class="package-item" data-package-id="${pkg.package_code}">
             <div class="package-info">
@@ -3334,6 +3461,7 @@ function renderAdminDashboard(container) {
         
 <div class="package-controls">
     <label>Fee User: <input type="number" class="fee-input" value="${pkg.platform_fee || 0}" title="Biaya untuk User biasa"></label>
+    <label>Urutan: <input type="number" class="position-input" value="${pkg.position || 0}" title="Urutan tampil (0 = default)"></label>
     <label>Fee Reseller: <input type="number" class="reseller-fee-input" value="${pkg.reseller_fee || 0}" title="Biaya untuk Reseller"></label>
     <label>Kategori: 
         <select class="category-select">
@@ -3360,6 +3488,8 @@ function renderAdminDashboard(container) {
         // Gunakan 'input' event untuk input type 'number' agar setiap perubahan langsung terdeteksi
         feeInput?.addEventListener('input', () => handlePackageChange(packageId, item));
         resellerFeeInput?.addEventListener('input', () => handlePackageChange(packageId, item));
+    const positionInputEl = item.querySelector('.position-input');
+    positionInputEl?.addEventListener('input', () => handlePackageChange(packageId, item));
 
         // Gunakan 'change' event untuk checkbox dan select
         resellerOnlyCheckbox?.addEventListener('change', () => handlePackageChange(packageId, item)); // <-- TAMBAHKAN INI
@@ -3367,6 +3497,45 @@ function renderAdminDashboard(container) {
         categorySelect?.addEventListener('change', () => handlePackageChange(packageId, item));
         multiPurchaseCheckbox?.addEventListener('change', () => handlePackageChange(packageId, item));
     });
+    // Update the order summary banner (create or refresh)
+    updatePackageOrderSummaryFromDOM();
+}
+
+/**
+ * Memperbarui/menampilkan ringkasan jumlah paket yang memiliki nilai `position`
+ * Mengambil data langsung dari DOM (position inputs dan kategori) sehingga
+ * ringkasan akan langsung ter-update saat admin mengubah nilai dan menyimpan.
+ */
+function updatePackageOrderSummaryFromDOM() {
+    const listElement = document.getElementById('package-list');
+    if (!listElement) return;
+
+    const items = Array.from(listElement.querySelectorAll('.package-item'));
+    let total = 0, reguler = 0, nonOtp = 0;
+    items.forEach(item => {
+        const posVal = parseInt(item.querySelector('.position-input')?.value || '0', 10);
+        const category = item.querySelector('.category-select')?.value || 'reguler';
+        if (Number.isFinite(posVal) && posVal > 0) {
+            total++;
+            if (category === 'non-otp') nonOtp++; else reguler++;
+        }
+    });
+
+    const summaryHtml = `
+        <div id="package-order-summary" class="order-summary">
+            <div>Urutan terisi: <strong>${total}</strong></div>
+            <div class="order-regular">Reguler (OTP): <strong>${reguler}</strong></div>
+            <div class="order-nonotp">Non-OTP: <strong>${nonOtp}</strong></div>
+            <div class="order-note">Tip: nilai 0 = default/tidak diurutkan</div>
+        </div>`;
+
+    // Jika sudah ada summary, ganti; jika belum, sisipkan sebelum listElement
+    const existing = document.getElementById('package-order-summary');
+    if (existing) {
+        existing.outerHTML = summaryHtml;
+    } else {
+        listElement.insertAdjacentHTML('beforebegin', summaryHtml);
+    }
 }
 
 /**
@@ -3381,6 +3550,7 @@ async function handlePackageChange(packageId, packageItemElement) {
     const multiPurchaseCheckbox = packageItemElement.querySelector('.multi-purchase-checkbox');
     const resellerOnlyCheckbox = packageItemElement.querySelector('.reseller-only-checkbox'); // <-- TAMBAHKAN INI
     const resellerFeeInput = packageItemElement.querySelector('.reseller-fee-input'); // <-- TAMBAHKAN INI
+    const positionInput = packageItemElement.querySelector('.position-input');
 
     
 
@@ -3394,6 +3564,10 @@ async function handlePackageChange(packageId, packageItemElement) {
         isMultiPurchase: multiPurchaseCheckbox?.checked || false,
         isResellerOnly: resellerOnlyCheckbox?.checked || false // <-- TAMBAHKAN INI
     };
+    // Include position if present
+    if (positionInput) {
+        updatePayload.position = parseInt(positionInput.value || '0');
+    }
 
     // Tambahkan spinner kecil di samping item yang sedang disimpan
     let currentSpinner = packageItemElement.querySelector('.small-spinner');
@@ -3415,6 +3589,8 @@ async function handlePackageChange(packageId, packageItemElement) {
         if (status === 200 && data.status) {
             // showToast('Perubahan paket berhasil disimpan!', false);
             currentSpinner.innerHTML = '<span style="color: var(--success-color);">✔</span>'; // Tanda sukses
+            // Perbarui ringkasan urutan setelah perubahan berhasil disimpan
+            try { updatePackageOrderSummaryFromDOM(); } catch (e) {}
         } else {
             throw new Error(data.message || 'Gagal menyimpan perubahan.');
         }
@@ -3742,6 +3918,8 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
             isVisible: visibilityCheckbox?.checked || false,
             category: categorySelect ? categorySelect.value : 'reguler',
             isMultiPurchase: multiPurchaseCheckbox?.checked || false
+            ,
+            position: parseInt(item.querySelector('.position-input')?.value || '0')
         });
     });
 
@@ -3758,6 +3936,8 @@ document.getElementById('update-balance-form')?.addEventListener('submit', async
         if (status === 200 && data.status) {
             displayFeedback('manage-feedback', data.message, false);
             showToast('Perubahan paket berhasil disimpan!', false);
+            // Update order summary after bulk save
+            try { updatePackageOrderSummaryFromDOM(); } catch (e) {}
         } else {
             throw new Error(data.message || 'Gagal menyimpan perubahan.');
         }
@@ -4729,6 +4909,10 @@ async function renderPackagesPage(container) {
     const multiPurchasePackages = visiblePackages.filter(pkg => pkg.isMultiPurchase === 1 && pkg.category === 'reguler' && pkg.isVisible);
     const regularPackages = visiblePackages.filter(pkg => pkg.isMultiPurchase === 0 && pkg.category === 'reguler' && pkg.isVisible);
 
+    // Apply admin-defined ordering (position) with fallback to name
+    multiPurchasePackages.sort((a, b) => ((a.position || 0) - (b.position || 0)) || ((a.name || '').localeCompare(b.name || '')));
+    regularPackages.sort((a, b) => ((a.position || 0) - (b.position || 0)) || ((a.name || '').localeCompare(b.name || '')));
+
     const multiPurchaseHTML = multiPurchasePackages.length > 0 ? `
         <div class="page-content" id="multi-purchase-section" style="margin-bottom: 2rem;">
             <div class="page-header">
@@ -4758,7 +4942,6 @@ async function renderPackagesPage(container) {
     let regularPackagesHTML = '';
     if (regularPackages.length > 0) {
         const packageListItems = regularPackages
-            .sort((a, b) => a.name.localeCompare(b.name))
             .map(pkg => {
                 const isReseller = currentUser.role === 'reseller';
                 const fee = isReseller ? (pkg.reseller_fee ?? pkg.platform_fee ?? 0) : (pkg.platform_fee ?? 0);
