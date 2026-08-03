@@ -2870,7 +2870,8 @@ IMEI: ${imei}
 Status: ${finalStatus}
 
 Segera cek di Panel Admin!`;
-                sendManualOrderNotification(tMsg, trxId);
+                const localImagePath = req.files && req.files['image'] ? req.files['image'][0].path : null;
+                sendManualOrderNotification(tMsg, trxId, localImagePath);
             }
             res.json({ status: true, message: finalStatus === 'success' ? "Pesanan otomatis berhasil diproses!" : "Pesanan berhasil dibuat, sedang diproses." });
 
@@ -3009,17 +3010,33 @@ function getInlineKeyboard(trxId) {
     };
 }
 
-async function sendManualOrderNotification(message, trxId) {
+async function sendManualOrderNotification(message, trxId, imageLocalPath) {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return;
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const body = {
-        chat_id: TELEGRAM_ADMIN_CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-        reply_markup: getInlineKeyboard(trxId)
-    };
+    
     try {
-        await fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }});
+        if (imageLocalPath && fs.existsSync(imageLocalPath)) {
+            const FormData = require('form-data');
+            const form = new FormData();
+            form.append('chat_id', TELEGRAM_ADMIN_CHAT_ID);
+            form.append('photo', fs.createReadStream(imageLocalPath));
+            form.append('caption', message);
+            form.append('parse_mode', 'HTML');
+            form.append('reply_markup', JSON.stringify(getInlineKeyboard(trxId)));
+            
+            await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+                method: 'POST',
+                body: form
+            });
+        } else {
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            const body = {
+                chat_id: TELEGRAM_ADMIN_CHAT_ID,
+                text: message,
+                parse_mode: 'HTML',
+                reply_markup: getInlineKeyboard(trxId)
+            };
+            await fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }});
+        }
     } catch (e) { console.error('Error sendManualOrderNotification', e); }
 }
 

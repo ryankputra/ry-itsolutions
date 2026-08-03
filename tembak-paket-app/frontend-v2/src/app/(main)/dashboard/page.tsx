@@ -174,20 +174,53 @@ export default function DashboardPage() {
       </div>
 
       {/* QRIS Modal */}
-      {selectedQris && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <Card className="max-w-xs w-full p-6 text-center space-y-4 relative">
-            <button onClick={() => setSelectedQris(null)} className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <h3 className="font-bold text-lg">Bayar Top Up</h3>
-            <p className="text-primary font-black text-2xl">Rp {selectedQris.uniqueAmount?.toLocaleString('id-ID')}</p>
-            <img src={selectedQris.base64Image} alt="QRIS" className="w-full h-auto border border-hairline p-2 rounded-xl" />
-            <p className="text-xs text-ink-muted">Scan QRIS ini di aplikasi e-Wallet atau m-Banking Anda.</p>
-          </Card>
-        </div>
-      )}
+      {selectedQris && (() => {
+        const expiresAt = selectedQris.createdAt 
+          ? Math.floor(new Date(selectedQris.createdAt).getTime() / 1000) + 900 // 15 mins
+          : Math.floor(Date.now() / 1000) + 900;
+        
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <Card className="max-w-xs w-full p-6 text-center space-y-4 relative">
+              <button onClick={() => setSelectedQris(null)} className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+              <h3 className="font-bold text-lg">Bayar Top Up</h3>
+              <p className="text-primary font-black text-2xl">Rp {selectedQris.uniqueAmount?.toLocaleString('id-ID')}</p>
+              
+              <div className="relative mx-auto border-2 border-hairline p-2 rounded-xl">
+                <div className="absolute -top-3 -right-3 bg-rose-500 text-white font-bold px-3 py-1.5 rounded-full text-sm shadow-md flex items-center gap-1.5 animate-pulse">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <CountdownTimer expiresAt={expiresAt} onExpire={() => setSelectedQris(null)} />
+                </div>
+                <img src={selectedQris.base64Image || selectedQris.qrisData?.base64Image} alt="QRIS" className="w-full h-auto" />
+              </div>
+              <p className="text-xs text-ink-muted">Scan QRIS ini di aplikasi e-Wallet atau m-Banking Anda sebelum waktu habis.</p>
+            </Card>
+          </div>
+        );
+      })()}
 
     </div>
   );
+}
+
+function CountdownTimer({ expiresAt, onExpire }: { expiresAt: number, onExpire: () => void }) {
+  const [timeLeft, setTimeLeft] = useState(Math.max(0, expiresAt - Math.floor(Date.now() / 1000)));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const remaining = Math.max(0, expiresAt - Math.floor(Date.now() / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        onExpire();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt, onExpire]);
+
+  const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const s = (timeLeft % 60).toString().padStart(2, '0');
+  return <span>{m}:{s}</span>;
 }
