@@ -33,7 +33,7 @@ export default function UnblockImeiPage() {
     Promise.all([
       fetch('/api/imei-packages').then(res => res.json()),
       fetch('/api/manual-services-pricing').then(res => res.json()),
-      fetch('/api/imei-service-status').then(res => res.json()).catch(() => ({ status: true, isOpen: true, note: "" }))
+      fetch('/api/imei-service-status', { cache: 'no-store' }).then(res => res.json()).catch(() => ({ status: true, isOpen: true, note: "" }))
     ]).then(([pkgData, prcData, statusData]) => {
       if (statusData && statusData.status) {
         setServiceStatus({ isOpen: statusData.isOpen, note: statusData.note || "" });

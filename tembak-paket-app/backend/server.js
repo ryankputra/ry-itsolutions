@@ -2738,12 +2738,13 @@ app.get('/api/imei-service-status', async (req, res) => {
 app.post('/api/admin/imei-service-status', isAuthenticated, isAdmin, async (req, res) => {
     const { isOpen, note } = req.body;
     try {
-        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_status', ?)", [isOpen ? 'true' : 'false']);
+        const isServiceOpen = (isOpen === true || isOpen === 'true');
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_status', ?)", [isServiceOpen ? 'true' : 'false']);
         await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_note', ?)", [note || '']);
         
-        const statusText = isOpen ? 'OPEN / BUKA 🔓' : 'CLOSE / TUTUP 🔒';
+        const statusText = isServiceOpen ? 'OPEN / BUKA 🔓' : 'CLOSE / TUTUP 🔒';
         let msg = `Layanan Unblock IMEI sekarang statusnya: ${statusText}.`;
-        if (!isOpen && note) msg += ` Info: ${note}`;
+        if (!isServiceOpen && note) msg += ` Info: ${note}`;
         
         await dbRun("DELETE FROM announcements");
         await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [`ann_${Date.now()}`, msg, new Date().toISOString()]);

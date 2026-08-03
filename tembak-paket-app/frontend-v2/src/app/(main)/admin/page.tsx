@@ -113,7 +113,7 @@ export default function AdminPage() {
         fetch('/api/imei-packages?all=true'),
         fetch('/api/admin/ceirgo-services', { credentials: 'include' }),
         fetch('/api/ceirgo-pricing'),
-        fetch('/api/imei-service-status')
+        fetch('/api/imei-service-status', { cache: 'no-store' })
       ]);
       if (ordRes.ok) {
         const d = await ordRes.json();
@@ -712,16 +712,48 @@ export default function AdminPage() {
                     <div className="flex gap-4 flex-wrap">
                       {o.user_image && (
                         <div>
-                          <p className="text-xs font-semibold mb-1">Bukti SS *#06#:</p>
+                          <p className="text-xs font-semibold mb-1">Bukti SS *#06# (Klik Buat Zoom):</p>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={o.user_image} alt="Bukti User" className="h-32 object-contain rounded border border-hairline bg-white p-1" />
+                          <img 
+                            src={o.user_image} 
+                            alt="Bukti User" 
+                            className="h-32 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
+                            onClick={() => {
+                              Swal.fire({
+                                imageUrl: o.user_image,
+                                imageAlt: 'Bukti User',
+                                showConfirmButton: false,
+                                showCloseButton: true,
+                                background: 'rgba(0,0,0,0.9)',
+                                customClass: {
+                                  image: 'max-h-[85vh] object-contain'
+                                }
+                              });
+                            }}
+                          />
                         </div>
                       )}
                       {o.user_image_ceir && (
                         <div>
-                          <p className="text-xs font-semibold mb-1">Bukti SS Cek CEIR:</p>
+                          <p className="text-xs font-semibold mb-1">Bukti SS Cek CEIR (Klik Buat Zoom):</p>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={o.user_image_ceir} alt="Bukti CEIR User" className="h-32 object-contain rounded border border-hairline bg-white p-1" />
+                          <img 
+                            src={o.user_image_ceir} 
+                            alt="Bukti CEIR User" 
+                            className="h-32 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
+                            onClick={() => {
+                              Swal.fire({
+                                imageUrl: o.user_image_ceir,
+                                imageAlt: 'Bukti CEIR User',
+                                showConfirmButton: false,
+                                showCloseButton: true,
+                                background: 'rgba(0,0,0,0.9)',
+                                customClass: {
+                                  image: 'max-h-[85vh] object-contain'
+                                }
+                              });
+                            }}
+                          />
                         </div>
                       )}
                     </div>
