@@ -3068,14 +3068,14 @@ async function handleTelegramCallbackQuery(cb) {
                 }
             }
 
-            let apiRes = 'Diproses via Telegram';
-            if (status === 'success') apiRes = 'Selesai via Telegram';
-            if (status === 'failed') apiRes = 'Gagal / Ditolak Admin';
+            let apiRes = 'Pesanan diproses';
+            if (status === 'success') apiRes = 'Pesanan berhasil diselesaikan';
+            if (status === 'failed') apiRes = 'Pesanan dibatalkan/ditolak';
             if (status === 'pending') apiRes = 'Menunggu Proses';
-            if (status === 'processing') apiRes = 'Sedang Diproses Admin';
+            if (status === 'processing') apiRes = 'Sedang diproses';
 
             await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ? WHERE id = ?", 
-                [status, `Diupdate ke ${status.toUpperCase()} via Telegram`, apiRes, trxId]);
+                [status, `Status diperbarui menjadi ${status.toUpperCase()}`, apiRes, trxId]);
 
             // Only refund if it is transitioning to failed from pending/processing
             if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing')) {

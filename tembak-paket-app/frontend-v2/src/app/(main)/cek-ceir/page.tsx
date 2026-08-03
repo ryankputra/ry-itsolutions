@@ -109,6 +109,22 @@ export default function CekCeirPage() {
       formData.append("duration", durationStr);
       formData.append("price_key", getPriceKey(option));
 
+      const confirm = await Swal.fire({
+        title: 'Konfirmasi Pembayaran',
+        text: 'Apakah kamu yakin ingin melanjutkan pembayaran?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya',
+        cancelButtonText: 'Tidak'
+      });
+
+      if (!confirm.isConfirmed) {
+        setSubmitting(false);
+        return;
+      }
+
       const res = await fetch("/api/order/manual", {
         method: "POST",
         credentials: 'include',
@@ -116,8 +132,14 @@ export default function CekCeirPage() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
-        setSuccess("Pesanan berhasil! Jika menggunakan layanan otomatis Ceirgo, hasil akan langsung muncul di riwayat transaksi Anda.");
-        setTimeout(() => router.push('/history'), 4000);
+        Swal.fire({
+          title: 'Pembayaran Telah Berhasil!',
+          html: '<div style="font-size: 60px; animation: bounce 1s infinite;">🙌</div>',
+          icon: 'success',
+          showConfirmButton: false,
+          timer: 3000
+        });
+        setTimeout(() => router.push('/history'), 3000);
       } else {
         setError(data.message || "Gagal membuat pesanan.");
       }

@@ -75,6 +75,21 @@ export default function UnblockImeiPage() {
     return setError('Saldo tidak mencukupi.');
     }
 
+    const confirm = await Swal.fire({
+      title: 'Konfirmasi Pembayaran',
+      text: 'Apakah kamu yakin ingin melanjutkan pembayaran?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya',
+      cancelButtonText: 'Tidak'
+    });
+
+    if (!confirm.isConfirmed) {
+      return;
+    }
+
     setError("");
     setSubmitting(true);
 
@@ -97,7 +112,13 @@ export default function UnblockImeiPage() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
-        setSuccess("Pesanan Unblock IMEI berhasil dibuat. Silakan pantau di Riwayat Transaksi.");
+        Swal.fire({
+          title: 'Pembayaran Telah Berhasil!',
+          html: '<div style="font-size: 60px; animation: bounce 1s infinite;">🙌</div>',
+          icon: 'success',
+          showConfirmButton: false,
+          timer: 3000
+        });
         setTimeout(() => router.push('/history'), 3000);
       } else {
         setError(data.message || "Gagal membuat pesanan.");
