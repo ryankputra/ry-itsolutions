@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
 import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
-
+import { SuccessModal } from "@/components/ui/SuccessModal";
 
 const ceirgoNameMapping: Record<string, string> = {
   'cek_validity': 'Cek Masa Aktif',
@@ -38,6 +38,7 @@ export default function CekCeirPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showSuccessPop, setShowSuccessPop] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -132,14 +133,7 @@ export default function CekCeirPage() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
-        Swal.fire({
-          title: 'Pembayaran Telah Berhasil!',
-          html: '<div style="font-size: 60px; animation: bounce 1s infinite;">🙌</div>',
-          icon: 'success',
-          showConfirmButton: false,
-          timer: 3000
-        });
-        setTimeout(() => router.push('/history'), 3000);
+        setShowSuccessPop(true);
       } else {
         setError(data.message || "Gagal membuat pesanan.");
       }
@@ -268,11 +262,21 @@ export default function CekCeirPage() {
             )}
           </div>
 
-          <Button className="w-full h-14 text-lg font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
-            Bayar Rp {getPrice(option).toLocaleString('id-ID')}
-          </Button>
-        </form>
-      </Card>
-    </div>
+        <Button className="w-full h-14 text-lg font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
+          Bayar Rp {getPrice(option).toLocaleString('id-ID')}
+        </Button>
+      </form>
+    </Card>
+
+    <SuccessModal 
+      isOpen={showSuccessPop} 
+      onClose={() => router.push('/history')} 
+      amount={getPrice(option)} 
+      title="Pembayaran Berhasil"
+      statusText="Pesanan CEIR berhasil dibuat!"
+      recipientLabel="IMEI Target"
+      recipientValue={imei}
+    />
+  </div>
   );
 }
