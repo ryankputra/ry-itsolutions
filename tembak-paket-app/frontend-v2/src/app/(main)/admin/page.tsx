@@ -101,15 +101,19 @@ export default function AdminPage() {
     if (!userLoading && user?.role !== 'admin') redirect("/dashboard");
   }, [user, userLoading]);
 
+  const [imeiServiceOpen, setImeiServiceOpen] = useState(true);
+  const [imeiServiceNote, setImeiServiceNote] = useState("");
+
   const loadManualData = async () => {
     setLoadingManual(true);
     try {
-      const [ordRes, prcRes, imeiRes, ceirSvcRes, ceirPrcRes] = await Promise.all([
+      const [ordRes, prcRes, imeiRes, ceirSvcRes, ceirPrcRes, statusRes] = await Promise.all([
         fetch('/api/admin/manual-orders', { credentials: 'include' }),
         fetch('/api/manual-services-pricing'),
         fetch('/api/imei-packages?all=true'),
         fetch('/api/admin/ceirgo-services', { credentials: 'include' }),
-        fetch('/api/ceirgo-pricing')
+        fetch('/api/ceirgo-pricing'),
+        fetch('/api/imei-service-status')
       ]);
       if (ordRes.ok) {
         const d = await ordRes.json();
@@ -130,6 +134,13 @@ export default function AdminPage() {
       if (ceirPrcRes?.ok) {
         const d = await ceirPrcRes.json();
         if (d.status) setCeirgoPricing(d.data);
+      }
+      if (statusRes.ok) {
+        const d = await statusRes.json();
+        if (d.status) {
+          setImeiServiceOpen(d.isOpen);
+          setImeiServiceNote(d.note || "");
+        }
       }
     } finally { setLoadingManual(false); }
   };
@@ -483,8 +494,56 @@ export default function AdminPage() {
         <div className="space-y-6">
           <Card glass className="p-6 space-y-6">
             <h2 className="text-xl font-bold">Pengaturan Layanan Manual</h2>
+
+            {/* Status Layanan Toggle */}
+            <div className="bg-canvas border border-hairline p-4 rounded-2xl space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-ink">Status Layanan Unblock IMEI</h3>
+                  <p className="text-xs text-ink-muted mt-0.5">Atur apakah user bisa melakukan order Unblock IMEI.</p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    const newStatus = !imeiServiceOpen;
+                    setImeiServiceOpen(newStatus);
+                    await fetch('/api/admin/imei-service-status', {
+                      method: 'POST',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ isOpen: newStatus, note: imeiServiceNote })
+                    });
+                    Swal.fire({ title: 'Tersimpan', text: `Layanan IMEI sekarang ${newStatus ? 'BUKA' : 'TUTUP'}`, icon: 'success', timer: 2000 });
+                  }} 
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${imeiServiceOpen ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'}`}
+                >
+                  {imeiServiceOpen ? '🟢 OPEN / BUKA' : '🔴 CLOSE / TUTUP'}
+                </button>
+              </div>
+              <div className="flex gap-2 items-end">
+                <Input 
+                  label="Catatan Khusus saat Tutup (Opsional)" 
+                  placeholder="Contoh: Server lagi maintenance..." 
+                  value={imeiServiceNote} 
+                  onChange={e => setImeiServiceNote(e.target.value)} 
+                />
+                <Button 
+                  className="h-10 shrink-0" 
+                  onClick={async () => {
+                    await fetch('/api/admin/imei-service-status', {
+                      method: 'POST',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ isOpen: imeiServiceOpen, note: imeiServiceNote })
+                    });
+                    Swal.fire({ title: 'Berhasil', text: 'Catatan IMEI berhasil disimpan!', icon: 'success', timer: 2000 });
+                  }}
+                >
+                  Simpan Catatan
+                </Button>
+              </div>
+            </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 pt-4 border-t border-hairline">
               <h3 className="font-bold text-ink">Paket Unblock IMEI</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {imeiPackages.map(pkg => (

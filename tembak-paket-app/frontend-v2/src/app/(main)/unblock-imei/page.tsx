@@ -27,12 +27,17 @@ export default function UnblockImeiPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: "" });
 
   useEffect(() => {
     Promise.all([
       fetch('/api/imei-packages').then(res => res.json()),
-      fetch('/api/manual-services-pricing').then(res => res.json())
-    ]).then(([pkgData, prcData]) => {
+      fetch('/api/manual-services-pricing').then(res => res.json()),
+      fetch('/api/imei-service-status').then(res => res.json()).catch(() => ({ status: true, isOpen: true, note: "" }))
+    ]).then(([pkgData, prcData, statusData]) => {
+      if (statusData && statusData.status) {
+        setServiceStatus({ isOpen: statusData.isOpen, note: statusData.note || "" });
+      }
       if (pkgData.status && pkgData.data.length > 0) {
         setPackages(pkgData.data);
         setSelectedPkgId(pkgData.data[0].id);
@@ -164,86 +169,98 @@ export default function UnblockImeiPage() {
         {error && <div className="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{error}</div>}
         {success && <div className="p-3 bg-green-500/10 text-green-700 rounded-xl text-sm">{success}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <Input 
-            label="Nomor IMEI" 
-            placeholder="Masukkan 15 digit IMEI" 
-            value={imei} 
-            onChange={e => setImei(e.target.value)} 
-            maxLength={15} 
-            required 
-          />
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink/80">Upload Screenshot *#06# <span className="text-rose-500">*</span></label>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={e => setFile(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                required
-              />
+        {serviceStatus.isOpen ? (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input 
+              label="Nomor IMEI" 
+              placeholder="Masukkan 15 digit IMEI" 
+              value={imei} 
+              onChange={e => setImei(e.target.value)} 
+              maxLength={15} 
+              required 
+            />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-ink/80">Upload Screenshot *#06# <span className="text-rose-500">*</span></label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={e => setFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-ink/80">Upload Hasil Cek CEIR <span className="text-ink-muted text-xs">(Opsional)</span></label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={e => setCeirFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink/80">Upload Hasil Cek CEIR <span className="text-ink-muted text-xs">(Opsional)</span></label>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={e => setCeirFile(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink/80">Pilih Masa Aktif</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {loading ? <p className="text-sm text-ink-muted col-span-3">Memuat paket...</p> : packages.length === 0 ? <p className="text-sm text-ink-muted col-span-3">Belum ada pilihan paket.</p> : packages.map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setSelectedPkgId(opt.id)}
-                  className={`p-3 rounded-xl border text-center transition-all ${selectedPkgId === opt.id ? 'border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
-                >
-                  <div className="font-bold text-sm">{opt.duration}</div>
-                  <div className="text-xs mt-1">Rp {opt.price.toLocaleString('id-ID')}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {speedOptions.length > 0 && (
-            <div className="space-y-1.5 pt-2">
-              <label className="text-sm font-medium text-ink/80">Pilih Kecepatan Proses</label>
+              <label className="text-sm font-medium text-ink/80">Pilih Masa Aktif</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {speedOptions.map(opt => (
+                {loading ? <p className="text-sm text-ink-muted col-span-3">Memuat paket...</p> : packages.length === 0 ? <p className="text-sm text-ink-muted col-span-3">Belum ada pilihan paket.</p> : packages.map(opt => (
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setSelectedSpeed(opt.id)}
-                    className={`p-3 rounded-xl border text-center transition-all ${selectedSpeed === opt.id ? 'border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
+                    onClick={() => setSelectedPkgId(opt.id)}
+                    className={`p-3 rounded-xl border text-center transition-all ${selectedPkgId === opt.id ? 'border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
                   >
-                    <div className="font-bold text-sm capitalize">{opt.label}</div>
-                    <div className="text-xs mt-1">{opt.price === 0 ? 'Gratis' : `+ Rp ${opt.price.toLocaleString('id-ID')}`}</div>
+                    <div className="font-bold text-sm">{opt.duration}</div>
+                    <div className="text-xs mt-1">Rp {opt.price.toLocaleString('id-ID')}</div>
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          <div className="pt-4 border-t border-hairline">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" className="mt-1 w-5 h-5 rounded border-hairline text-primary" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
-              <span className="text-sm text-ink-muted">Saya menyatakan bahwa HP saya memenuhi seluruh persyaratan di atas dan setuju memproses pesanan ini.</span>
-            </label>
+            {speedOptions.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <label className="text-sm font-medium text-ink/80">Pilih Kecepatan Proses</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {speedOptions.map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setSelectedSpeed(opt.id)}
+                      className={`p-3 rounded-xl border text-center transition-all ${selectedSpeed === opt.id ? 'border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
+                    >
+                      <div className="font-bold text-sm capitalize">{opt.label}</div>
+                      <div className="text-xs mt-1">{opt.price === 0 ? 'Gratis' : `+ Rp ${opt.price.toLocaleString('id-ID')}`}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-hairline">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" className="mt-1 w-5 h-5 rounded border-hairline text-primary" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
+                <span className="text-sm text-ink-muted">Saya menyatakan bahwa HP saya memenuhi seluruh persyaratan di atas dan setuju memproses pesanan ini.</span>
+              </label>
+            </div>
+            
+            <Button className="w-full h-12" type="submit" isLoading={submitting}>
+              Bayar Rp {totalPrice.toLocaleString('id-ID')}
+            </Button>
+          </form>
+        ) : (
+          <div className="bg-rose-500/10 border border-rose-200/50 p-6 rounded-2xl text-center space-y-3">
+            <span className="text-4xl block">🔒</span>
+            <h3 className="font-black text-rose-700 text-lg">Server IMEI Sedang Tutup</h3>
+            <p className="text-sm text-rose-600 font-semibold max-w-md mx-auto leading-relaxed">
+              {serviceStatus.note || "Layanan unblock IMEI sedang tidak menerima pesanan baru. Silakan pantau terus notifikasi dari kami ya!"}
+            </p>
           </div>
+        )}
 
-        <Button className="w-full h-12" type="submit" isLoading={submitting}>
-          Bayar Rp {totalPrice.toLocaleString('id-ID')}
-        </Button>
-      </form>
+
     </Card>
 
     <SuccessModal 

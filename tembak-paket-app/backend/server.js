@@ -2727,6 +2727,31 @@ app.post('/api/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) 
     } catch (error) { res.status(500).json({ status: false, message: error.message }); }
 });
 
+app.get('/api/imei-service-status', async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_status'");
+        const noteRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_note'");
+        res.json({ status: true, isOpen: row ? row.value === 'true' : true, note: noteRow ? noteRow.value : '' });
+    } catch(e) { res.status(500).json({ status: false }); }
+});
+
+app.post('/api/admin/imei-service-status', isAuthenticated, isAdmin, async (req, res) => {
+    const { isOpen, note } = req.body;
+    try {
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_status', ?)", [isOpen ? 'true' : 'false']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_note', ?)", [note || '']);
+        
+        const statusText = isOpen ? 'OPEN / BUKA 🔓' : 'CLOSE / TUTUP 🔒';
+        let msg = `Layanan Unblock IMEI sekarang statusnya: ${statusText}.`;
+        if (!isOpen && note) msg += ` Info: ${note}`;
+        
+        await dbRun("DELETE FROM announcements");
+        await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [`ann_${Date.now()}`, msg, new Date().toISOString()]);
+        
+        res.json({ status: true, message: 'Status IMEI berhasil diupdate.' });
+    } catch(e) { res.status(500).json({ status: false, message: e.message }); }
+});
+
 app.delete('/api/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
         await dbRun("DELETE FROM imei_packages WHERE id = ?", [req.params.id]);
