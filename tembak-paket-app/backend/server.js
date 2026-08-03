@@ -23,6 +23,7 @@ const fs = require('fs');
 const SibApiV3Sdk = require('sib-api-v3-sdk');
 const FormData = require('form-data');
 const https = require('https');
+const APP_START_TIME = Date.now();
 https.globalAgent.options.rejectUnauthorized = false;
 
 
@@ -972,6 +973,11 @@ app.get('/api/status', isAuthenticated, async (req, res) => {
          console.error("Error fetching status:", error);
          res.status(500).json({ status: false, message: "Gagal mengambil status." });
      }
+ // Rute version
+});
+
+app.get('/api/system-version', (req, res) => {
+    res.json({ status: true, version: APP_START_TIME });
 });
 
 app.get('/api/admin/maintenance-schedule', isAuthenticated, isAdmin, async (req, res) => {
