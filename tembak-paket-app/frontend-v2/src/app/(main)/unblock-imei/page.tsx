@@ -151,12 +151,13 @@ export default function UnblockImeiPage() {
 
       <Card glass className="p-6 space-y-6">
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
-          <h3 className="font-bold flex items-center gap-1.5 text-base">⚠️ Rules (Wajib Baca!)</h3>
+          <h3 className="font-bold flex items-center gap-1.5 text-base">⚠️ Rules (Wajib Baca Dulu Ngab!)</h3>
           <ul className="list-decimal pl-5 space-y-2 leading-relaxed">
             <li>Cuma buat <b>HP Inter (Internasional)</b> ya.</li>
-            <li>Siapin screenshot <b>*#06#</b> yang bener (keliatan jelas).</li>
-            <li>Cek lagi IMEI-nya sebelum dicheckout, jangan sampe typo!</li>
-            <li>Order = Setuju. No drama.</li>
+            <li>Buat user iPhone, <i>wajib banget</i> pastiin HP lo <b>bukan barang bypass-an</b>!</li>
+            <li>Pastiin <b>IC Baseband HP lo masih sehat</b>. Cara ngeceknya: masukin SIM Card, kalo munculnya <span className="font-semibold text-rose-600">"Tidak ada layanan" (No Service)</span> berarti aman. BUKAN "Tidak ada SIM" (No SIM Card) ya.</li>
+            <li>Kalo HP lo statusnya <b>simlock</b>, wajib udah kepasang <i>rsim</i> atau <i>sim sticker</i> dari awal.</li>
+            <li>Proses ini manual dikerjain admin (estimasi 1-24 jam). Kalo gagal gara-gara sistem, <b>saldo lo di-refund 100%</b>. (TAPI KALO GAGAL KARENA KESALAHAN LO SENDIRI, NO REFUND!).</li>
           </ul>
         </div>
 

@@ -130,17 +130,24 @@ export default function TopUpPage() {
           </div>
         ) : !qrisData ? (
           <>
-            <div className="bg-gradient-to-r from-primary to-primary-focus p-6 sm:p-8 text-white">
-              <h2 className="text-xl font-bold mb-2">QRIS Auto-Detect ⚡</h2>
-              <p className="text-white/80 text-sm mb-6 max-w-sm">Support semua e-Wallet & m-Banking. Bayar langsung masuk, sat-set anti ribet.</p>
+            <div className="relative bg-gradient-to-br from-primary via-indigo-600 to-indigo-900 p-6 sm:p-8 text-white overflow-hidden">
+              {/* Glowing orbs */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full translate-x-8 -translate-y-8"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 blur-xl rounded-full -translate-x-8 translate-y-8"></div>
               
-              <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-sm">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 flex items-center justify-center border border-white/20">
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-11v6h2v-6h-2zm0-4v2h2V7h-2z"/></svg>
+              <div className="relative z-10">
+                <div className="inline-block bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-3 border border-white/20 shadow-sm">
+                  ⚡ Auto-Detect System
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 flex items-center justify-center border border-white/20 font-black italic tracking-tighter">OVO</div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 flex items-center justify-center border border-white/20 font-bold tracking-tight text-blue-200">DANA</div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 flex items-center justify-center border border-white/20 font-bold">QRIS</div>
+                <h2 className="text-2xl font-black mb-2 tracking-tight">QRIS Bebas Ribet</h2>
+                <p className="text-white/80 text-sm mb-6 max-w-xs leading-relaxed font-medium">Support semua e-Wallet & m-Banking. Bayar langsung masuk, sat-set anti nunggu lama.</p>
+                
+                <div className="flex flex-wrap gap-2">
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-black italic tracking-tighter">OVO</div>
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-bold tracking-tight text-blue-200">DANA</div>
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-black">GOPAY</div>
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-bold">QRIS</div>
+                </div>
               </div>
             </div>
 

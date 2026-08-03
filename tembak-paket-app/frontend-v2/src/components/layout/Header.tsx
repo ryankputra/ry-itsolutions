@@ -57,16 +57,32 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     }
   }, [user]);
   
+  const [notifHistory, setNotifHistory] = useState<any[]>([]);
 
   useEffect(() => {
+    const saved = localStorage.getItem('ry_notif_history');
+    if (saved) {
+      try { setNotifHistory(JSON.parse(saved)); } catch(e) {}
+    }
+
     // Ambil Pengumuman Sistem
     fetch('/api/user/announcement')
       .then(res => res.json())
       .then(data => {
         if (data.status && data.data?.message) {
-          setAnnouncement(data.data);
-          // Simple logic: jika ada pengumuman, tandai unread
-          setUnread(true);
+          const ann = data.data;
+          setAnnouncement(ann);
+          
+          setNotifHistory(prev => {
+            const exists = prev.find(n => n.message === ann.message);
+            if (!exists) {
+              const newHist = [{ ...ann, id: Date.now() }, ...prev].slice(0, 10);
+              localStorage.setItem('ry_notif_history', JSON.stringify(newHist));
+              setUnread(true);
+              return newHist;
+            }
+            return prev;
+          });
         }
       })
       .catch(() => {});
@@ -137,20 +153,21 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                     </div>
                   </div>
                 )}
-                {announcement ? (
-                    <div className="p-4 border-b border-hairline hover:bg-parchment/50 transition-colors cursor-pointer bg-blue-50/50">
-                      <p className="text-xs font-bold text-primary mb-1">INFO SISTEM</p>
-                      <p className="text-sm font-semibold text-ink leading-tight">Pengumuman Terbaru</p>
-                      <p className="text-xs text-ink-muted mt-1">{announcement.message}</p>
-                      <p className="text-[10px] text-ink-muted mt-2">{new Date(announcement.createdAt).toLocaleString('id-ID')}</p>
-                    </div>
-                  ) : (
-                    <div className="p-4 border-b border-hairline hover:bg-parchment/50 transition-colors cursor-pointer">
-                      <p className="text-xs font-bold text-primary mb-1">SELAMAT DATANG</p>
-                      <p className="text-sm font-semibold text-ink leading-tight">Hai {user?.name?.split(' ')[0]} 👋</p>
-                      <p className="text-xs text-ink-muted mt-1">Platform PPOB dan Unblock IMEI Terpercaya. Gunakan layanan kami dengan bijak.</p>
-                    </div>
-                  )}
+                
+                {notifHistory.length > 0 ? notifHistory.map((notif, idx) => (
+                  <div key={notif.id || idx} className="p-4 border-b border-hairline hover:bg-parchment/50 transition-colors cursor-pointer bg-blue-50/50">
+                    <p className="text-xs font-bold text-primary mb-1">INFO SISTEM</p>
+                    <p className="text-sm font-semibold text-ink leading-tight">Pengumuman Terbaru</p>
+                    <p className="text-xs text-ink-muted mt-1">{notif.message}</p>
+                    <p className="text-[10px] text-ink-muted mt-2">{new Date(notif.createdAt).toLocaleString('id-ID')}</p>
+                  </div>
+                )) : (
+                  <div className="p-4 border-b border-hairline hover:bg-parchment/50 transition-colors cursor-pointer">
+                    <p className="text-xs font-bold text-primary mb-1">SELAMAT DATANG</p>
+                    <p className="text-sm font-semibold text-ink leading-tight">Hai {user?.name?.split(' ')[0]} 👋</p>
+                    <p className="text-xs text-ink-muted mt-1">Platform PPOB dan Unblock IMEI Terpercaya. Gunakan layanan kami dengan bijak.</p>
+                  </div>
+                )}
 
                   {user?.role === 'admin' && (
                     <div className="p-4 border-b border-hairline hover:bg-parchment/50 transition-colors cursor-pointer">

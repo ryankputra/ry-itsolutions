@@ -101,7 +101,7 @@ export default function DashboardPage() {
           <div className="flex gap-3">
             <a href="/topup" className="flex-1 bg-white text-[#005bb5] hover:bg-white/90 transition-colors py-2.5 rounded-full font-bold text-sm shadow-sm flex items-center justify-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
-              Isi Amunisi
+              Top Up Cuan
             </a>
             <a href="/history" className="flex-1 bg-[#004080]/50 hover:bg-[#004080]/80 transition-colors border border-white/20 py-2.5 rounded-full font-bold text-sm text-center flex items-center justify-center gap-2">
               History
