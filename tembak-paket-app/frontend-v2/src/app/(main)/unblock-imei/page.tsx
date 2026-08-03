@@ -78,14 +78,14 @@ export default function UnblockImeiPage() {
     }
 
     const confirm = await Swal.fire({
-      title: 'Konfirmasi Pembayaran',
-      text: 'Apakah kamu yakin ingin melanjutkan pembayaran?',
+      title: 'Ready buat checkout? 💸',
+      text: 'Udah fix nih mau lanjut bayar? Saldo lo bakal kepotong ya.',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Ya',
-      cancelButtonText: 'Tidak'
+      confirmButtonText: 'Gass!',
+      cancelButtonText: 'Ntar Dulu'
     });
 
     if (!confirm.isConfirmed) {
@@ -144,20 +144,19 @@ export default function UnblockImeiPage() {
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Unblock IMEI</h1>
-          <p className="text-sm text-ink-muted">Buka blokir sinyal IMEI untuk HP Anda.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Buka Gembok IMEI 🔓</h1>
+          <p className="text-sm text-ink-muted">Bikin sinyal HP Inter lo auto on terus.</p>
         </div>
       </div>
 
       <Card glass className="p-6 space-y-6">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3">
-          <h3 className="font-bold flex items-center gap-1.5 text-base">⚠️ Syarat & Ketentuan Unblock IMEI</h3>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
+          <h3 className="font-bold flex items-center gap-1.5 text-base">⚠️ Rules (Wajib Baca!)</h3>
           <ul className="list-decimal pl-5 space-y-2 leading-relaxed">
-            <li>Khusus untuk <b>HP Inter (Internasional)</b>.</li>
-            <li>Untuk HP iPhone, dipastikan <b>bukan perangkat bypass</b>.</li>
-            <li>Pastikan <b>IC Baseband HP Anda tidak rusak</b>. Tandanya: ketika dipasang kartu SIM, muncul tulisan <span className="font-semibold text-rose-700">"Tidak ada layanan" (No Service)</span>, <i>BUKAN</i> "Tidak ada SIM" (No SIM Card).</li>
-            <li>Untuk HP dengan status <b>simlock</b>, wajib sudah tertanam rsim atau sim sticker.</li>
-            <li>Proses pengerjaan bersifat manual oleh admin (estimasi 1-24 jam). Jika gagal, <b>saldo Anda di-refund 100% (JIKA BUKAN KESALAHAN USER)</b>.</li>
+            <li>Cuma buat <b>HP Inter (Internasional)</b> ya.</li>
+            <li>Siapin screenshot <b>*#06#</b> yang bener (keliatan jelas).</li>
+            <li>Cek lagi IMEI-nya sebelum dicheckout, jangan sampe typo!</li>
+            <li>Order = Setuju. No drama.</li>
           </ul>
         </div>
 

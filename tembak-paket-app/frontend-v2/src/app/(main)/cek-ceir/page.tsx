@@ -111,14 +111,14 @@ export default function CekCeirPage() {
       formData.append("price_key", getPriceKey(option));
 
       const confirm = await Swal.fire({
-        title: 'Konfirmasi Pembayaran',
-        text: 'Apakah kamu yakin ingin melanjutkan pembayaran?',
+        title: 'Ready buat checkout? 💸',
+        text: 'Udah fix nih mau lanjut bayar? Saldo lo bakal kepotong ya.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'Ya',
-        cancelButtonText: 'Tidak'
+        confirmButtonText: 'Gass!',
+        cancelButtonText: 'Ntar Dulu'
       });
 
       if (!confirm.isConfirmed) {
@@ -200,8 +200,8 @@ export default function CekCeirPage() {
           <svg width="20" height="20" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Layanan Telematika & CEIR</h1>
-          <p className="text-sm text-ink-muted">Pengecekan status IMEI dan pembuatan barcode box HP.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Investigasi & Cek CEIR 🔍</h1>
+          <p className="text-sm text-ink-muted">Kepoin status IMEI lo atau generate barcode box HP auto sat-set.</p>
         </div>
       </div>
 

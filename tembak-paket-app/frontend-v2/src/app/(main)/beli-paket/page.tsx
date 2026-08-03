@@ -258,8 +258,8 @@ export default function BeliPaketPage() {
     return (
       <div className="space-y-6 max-w-2xl mx-auto pb-12">
         <div className="flex flex-col gap-1 mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Beli Paket</h1>
-          <p className="text-sm text-ink-muted">Pilih provider layanan yang ingin Anda beli.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Suntik Kuota 🚀</h1>
+          <p className="text-sm text-ink-muted">Pilih provider yang mau lo inject kuotanya.</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -310,10 +310,10 @@ export default function BeliPaketPage() {
         </button>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-ink">
-            {selectedPkg ? "Detail Pembelian" : `Paket ${activeProvider?.name}`}
+            {selectedPkg ? "Checkout Kuy 🛒" : `Katalog ${activeProvider?.name}`}
           </h1>
           <p className="text-sm text-ink-muted">
-            {selectedPkg ? "Selesaikan pembayaran Anda." : "Pilih paket yang sesuai."}
+            {selectedPkg ? "Lengkapin data trus gass bayar." : "Pilih paket yang paling pas buat lo."}
           </p>
         </div>
       </div>

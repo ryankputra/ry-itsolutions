@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
+import { SuccessModal } from "@/components/ui/SuccessModal";
 
 export default function TopUpPage() {
   const { user, setUser } = useApp();
@@ -116,26 +117,22 @@ export default function TopUpPage() {
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Isi Saldo</h1>
-          <p className="text-sm text-ink-muted">Otomatis masuk 24 Jam Non-stop</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Top Up Cuan 💸</h1>
+          <p className="text-sm text-ink-muted">Langsung masuk detik ini juga, 24/7 non-stop!</p>
         </div>
       </div>
 
       <Card glass className="p-0 overflow-hidden">
         {success ? (
           <div className="text-center space-y-4 py-16 px-6">
-            <div className="w-24 h-24 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-              <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-20"></div>
-              <svg className="w-12 h-12 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            </div>
-            <h3 className="text-3xl font-black text-ink">Berhasil!</h3>
-            <p className="text-ink-muted">Saldo Anda telah ditambahkan secara instan. Mengalihkan Anda ke dashboard...</p>
+            <h3 className="text-3xl font-black text-ink">Tunggu Bentar...</h3>
+            <p className="text-ink-muted">Sistem lagi direct lo balik ke Dashboard 🚀</p>
           </div>
         ) : !qrisData ? (
           <>
             <div className="bg-gradient-to-r from-primary to-primary-focus p-6 sm:p-8 text-white">
               <h2 className="text-xl font-bold mb-2">QRIS Auto-Detect ⚡</h2>
-              <p className="text-white/80 text-sm mb-6 max-w-sm">Dukung semua pembayaran e-Wallet dan Mobile Banking. Saldo masuk dalam hitungan detik.</p>
+              <p className="text-white/80 text-sm mb-6 max-w-sm">Support semua e-Wallet & m-Banking. Bayar langsung masuk, sat-set anti ribet.</p>
               
               <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-sm">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 flex items-center justify-center border border-white/20">
@@ -222,6 +219,17 @@ export default function TopUpPage() {
           </div>
         )}
       </Card>
+
+      <SuccessModal
+        isOpen={success}
+        onClose={() => router.push('/dashboard')}
+        amount={qrisData ? qrisData.uniqueAmount : 0}
+        title="Top Up Berhasil"
+        statusText="Saldo lo udah bertambah secara instan!"
+        recipientLabel="Username"
+        recipientValue={user?.name || "Bestie"}
+        methodValue="QRIS Auto-Detect"
+      />
     </div>
   );
 }
