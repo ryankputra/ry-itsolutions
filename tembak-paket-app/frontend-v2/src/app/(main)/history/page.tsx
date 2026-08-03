@@ -82,7 +82,7 @@ export default function HistoryPage() {
                   </div>
                   <div>
                     <p className="font-bold text-sm text-ink">{trx.packageName || "Paket Data"}</p>
-                    <p className="text-xs text-ink-muted mt-0.5">{trx.imei ? `IMEI: ${trx.imei}` : trx.targetPhone} • {new Date(trx.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-ink-muted mt-0.5">{trx.imei ? `IMEI: ${trx.imei}` : trx.targetPhone} • {new Date(trx.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                     {trx.speed_option && (
                       <span className="inline-block bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded capitalize mt-1">
                         Kecepatan: {trx.speed_option === 'fast' ? '⚡ Fast' : trx.speed_option === 'semi' ? '🚀 Semi Fast' : '🐌 Slow'}
