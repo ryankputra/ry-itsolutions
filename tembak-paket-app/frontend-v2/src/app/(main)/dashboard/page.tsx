@@ -1,0 +1,169 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { Card } from "@/components/ui/Card";
+import { useApp } from "@/lib/store";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+
+export default function DashboardPage() {
+  const { user, setUser, menuSettings } = useApp();
+  
+
+  
+
+  const [announcement, setAnnouncement] = useState<any>(null);
+  const [publicInfo, setPublicInfo] = useState<string>("");
+  const [recentTrx, setRecentTrx] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Meminta Izin Push Notification
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            new Notification("Notifikasi Aktif!", {
+              body: "Anda akan menerima update transaksi dan pengumuman di sini.",
+              icon: "/icon-192.png"
+            });
+          }
+        });
+      }
+    }
+    
+    async function loadDashboardData() {
+      try {
+        const [annRes, trxRes] = await Promise.all([
+          fetch("/api/user/announcement", { credentials: 'include' }).catch(() => null),
+          fetch("/api/user/transactions", { credentials: 'include' }).catch(() => null)
+        ]);
+        
+        if (annRes?.ok) {
+          const data = await annRes.json();
+          if (data.status && data.data?.message) setAnnouncement(data.data);
+        }
+        if (trxRes?.ok) {
+          const data = await trxRes.json();
+          if (data.status && data.data) setRecentTrx(data.data.slice(0, 3));
+        }
+      } catch (err) { console.error(err); }
+    }
+    loadDashboardData();
+  }, []);
+
+
+  return (
+    <div className="space-y-6 max-w-2xl mx-auto pb-12">
+      {/* Header Profile */}
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Halo, {user?.name?.split(' ')[0] || "User"} 👋</h1>
+          <p className="text-sm text-ink-muted">Selamat datang kembali di Ry-ITSolutions</p>
+        </div>
+      </div>
+
+      {/* Announcement Banner */}
+      {announcement && (
+        <div 
+          className="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden" 
+          style={{ backgroundColor: announcement.bgColor || '#dc2626' }}
+        >
+          <div className="absolute -right-4 -top-4 text-white/10">
+            <svg width="100" height="100" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          </div>
+          <div className="relative z-10">
+            <h3 className="font-bold text-sm mb-1">📢 Pengumuman Sistem</h3>
+            <p className="text-sm opacity-90">{announcement.message}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Wallet Card Premium PPOB Style */}
+      <div className="relative rounded-[24px] p-6 text-white overflow-hidden shadow-xl shadow-primary/20 bg-gradient-to-br from-[#0066cc] via-[#005bb5] to-[#004080]">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <svg width="120" height="120" fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
+        </div>
+        
+        <div className="relative z-10 flex flex-col gap-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-white/80 text-sm font-medium mb-1">Total Saldo</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold">Rp</span>
+                <span className="text-4xl font-black tracking-tight">{user?.balance?.toLocaleString('id-ID') || "0"}</span>
+              </div>
+            </div>
+            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold capitalize border border-white/10">
+              {user?.role}
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <a href="/topup" className="flex-1 bg-white text-[#005bb5] hover:bg-white/90 transition-colors py-2.5 rounded-full font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+              Top Up
+            </a>
+            <a href="/history" className="flex-1 bg-[#004080]/50 hover:bg-[#004080]/80 transition-colors border border-white/20 py-2.5 rounded-full font-bold text-sm text-center flex items-center justify-center gap-2">
+              Riwayat
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      {/* Category Grid */}
+      <div>
+        <h2 className="text-lg font-bold text-ink mb-4">Layanan Populer</h2>
+        <div className="grid grid-cols-3 sm:grid-cols-3 gap-4">
+          {[
+            ...(menuSettings?.showBeliPaket ? [{ name: "Paket Data", icon: "🌐", href: "/beli-paket", color: "bg-blue-50 text-blue-600" }] : []),
+            { name: "Unblock IMEI", icon: "🔓", href: "/unblock-imei", color: "bg-rose-50 text-rose-600" },
+            { name: "Cek CEIR", icon: "🔍", href: "/cek-ceir", color: "bg-emerald-50 text-emerald-600" }
+          ].map(item => (
+            <a key={item.name} href={item.href} className="flex flex-col items-center gap-2 group">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-transform group-hover:scale-105 ${item.color}`}>
+                {item.icon}
+              </div>
+              <span className="text-xs font-semibold text-center text-ink/80">{item.name}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Transactions */}
+      <div>
+        <div className="flex justify-between items-center mb-4 mt-6">
+          <h2 className="text-lg font-bold text-ink">Transaksi Terakhir</h2>
+          <a href="/history" className="text-sm font-semibold text-primary">Lihat Semua</a>
+        </div>
+        
+        {recentTrx.length === 0 ? (
+          <div className="text-center py-8 bg-canvas border border-hairline rounded-2xl">
+            <p className="text-sm text-ink-muted">Belum ada transaksi.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentTrx.map((trx, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 bg-canvas border border-hairline rounded-[18px] hover:border-primary/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-lg">
+                    {trx.packageName?.toLowerCase().includes('pulsa') ? '📱' : '🌐'}
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-ink line-clamp-1">{trx.packageName || "Paket Data"}</p>
+                    <p className="text-xs text-ink-muted mt-0.5">{trx.targetPhone}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-sm text-ink">Rp {(trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
+                  <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-bold rounded uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-green-100 text-green-700' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {trx.status === 'completed' ? 'success' : trx.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+          </div>
+  );
+}

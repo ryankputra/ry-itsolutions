@@ -10,6 +10,10 @@ const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
+const { OAuth2Client } = require('google-auth-library');
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
 const qrcode = require('qrcode');
 const multer = require('multer');
 const excel = require('exceljs');
@@ -44,6 +48,10 @@ const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID;
 const ORKUT_MERCHANT_ID = process.env.ORKUT_MERCHANT_ID;
 const ORKUT_USERNAME = process.env.ORKUT_USERNAME;
 const ORKUT_TOKEN = process.env.ORKUT_TOKEN;
+const GOPAY_GATEWAY_URL = process.env.GOPAY_GATEWAY_URL;
+const GOPAY_GATEWAY_API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
+const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.id';
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'ganti-dengan-string-acak-yang-super-aman-dan-panjang';
 
@@ -129,7 +137,33 @@ async function initializeDatabase() {
              await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceNotificationSent', 'none')`);
              // --- AKHIR PERBAIKAN ---
 
-             console.log("✅ Database schema initialized successfully.");
+             // Gateway pembayaran aktif: 'orkut' atau 'gopay'
+             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('paymentGateway', 'orkut')`);
+
+            // Tambahan kolom untuk fitur layanan manual
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN service_type TEXT DEFAULT 'reguler'"); } catch (e) {}
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN imei TEXT"); } catch (e) {}
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN user_image TEXT"); } catch (e) {}
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN admin_image TEXT"); } catch (e) {}
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN admin_note TEXT"); } catch (e) {}
+            // Buat tabel imei_packages untuk durasi kustom
+            await dbRun(`CREATE TABLE IF NOT EXISTS imei_packages (id TEXT PRIMARY KEY, duration TEXT NOT NULL, price REAL NOT NULL)`);
+            await dbRun(`INSERT OR IGNORE INTO imei_packages (id, duration, price) VALUES ('imei_1_bln', '1 Bulan', 100000)`);
+            await dbRun(`INSERT OR IGNORE INTO imei_packages (id, duration, price) VALUES ('imei_3_bln', '3 Bulan', 250000)`);
+            // Removed imei_permanen default
+
+            // Tambah kolom opsional hasil cek ceir dan speed option
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN user_image_ceir TEXT"); } catch (e) {}
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN speed_option TEXT"); } catch (e) {}
+
+            // Set harga default jika belum ada
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('price_ceir_history', '50000')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('price_ceir_register', '50000')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('imei_speed_fast', '50000')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('imei_speed_semi', '20000')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('imei_speed_slow', '0')`);
+
+            console.log("✅ Database schema initialized successfully.");
          } catch (error) {
              console.error("Database initialization failed:", error);
              process.exit(1);
@@ -202,11 +236,11 @@ async function getEffectiveMaintenanceStatus() {
             return true;
         }
 
-        // 2. Prioritas kedua: Saldo KMSP Rendah
-        const lastBalance = parseFloat(settings.lastKmspBalance) || 0;
-        if (lastBalance < 1500) {
-            return true;
-        }
+        // 2. Prioritas kedua: Saldo KMSP Rendah (DISABLED untuk local dev)
+        // const lastBalance = parseFloat(settings.lastKmspBalance) || 0;
+        // if (lastBalance < 1500) {
+        //     return true;
+        // }
 
         // 3. Prioritas ketiga: Maintenance Terjadwal
         if (settings.maintenanceScheduleEnabled === 'true') {
@@ -310,6 +344,60 @@ async function getKmspAdminBalance() {
 // =======================================================
 // RUTE AUTENTIKASI PENGGUNA
 // =======================================================
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { credential } = req.body;
+        if (!credential) return res.status(400).json({ status: false, message: 'Google Token diperlukan.' });
+        if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'GANTI_DENGAN_GOOGLE_CLIENT_ID_ANDA') {
+            return res.status(500).json({ status: false, message: 'Google Login belum dikonfigurasi oleh Admin.' });
+        }
+
+        const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        
+        if (!payload || !payload.email) return res.status(400).json({ status: false, message: 'Gagal mendapatkan data Google.' });
+
+        const email = payload.email;
+        const name = payload.name || 'User Google';
+        
+        let user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+        
+        // Jika belum terdaftar, otomatis daftarkan (Auto Register + Approve)
+        if (!user) {
+            const defaultPassword = await bcrypt.hash(crypto.randomBytes(8).toString('hex'), 10);
+            const newId = `user_${Date.now()}`;
+            await dbRun('INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+                [newId, name, email, defaultPassword, 0, 'user', null, '[]', 'approved', new Date().toISOString()]);
+            
+            user = await dbGet('SELECT * FROM users WHERE id = ?', [newId]);
+            sendTelegramNotification(`<b>🎉 User Baru Mendaftar Via Google</b>\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}`);
+        } else {
+            // Jika akun ada tapi masih pending, otomatis di-approve karena login pakai Google
+            if (user.status === 'pending') {
+                await dbRun('UPDATE users SET status = ? WHERE id = ?', ['approved', user.id]);
+                user.status = 'approved';
+            }
+        }
+
+        if (user.status !== 'approved' && user.role !== 'admin') {
+            return res.status(403).json({ status: false, message: 'Akun Anda diblokir.' });
+        }
+
+        // Set session
+        req.session.userId = user.id;
+        const { password: _, ...userWithoutPassword } = user;
+        if(userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
+        
+        res.status(200).json({ status: true, message: 'Login Google Berhasil!', user: userWithoutPassword });
+    } catch (error) {
+        console.error("Google Login Error:", error.message);
+        res.status(500).json({ status: false, message: 'Verifikasi Google gagal.' });
+    }
+});
+
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -474,6 +562,20 @@ app.post('/api/phone/verify-otp', isAuthenticated, async (req, res) => {
         res.status(200).json({ status: true, message: "Nomor berhasil diverifikasi!", data: loginData.data });
     } catch (error) { res.status(500).json({ status: false, message: error.message }); }
 });
+
+app.post('/api/phone/check-token', isAuthenticated, async (req, res) => {
+    const { access_token } = req.body;
+    if (!access_token) return res.status(400).json({ status: false, message: "Token diperlukan." });
+    try {
+        const response = await fetch(`https://golang-openapi-quotadetails-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}&access_token=${access_token}`);
+        const data = await response.json();
+        if (!response.ok || !data.status) {
+            return res.status(200).json({ status: false, message: data.message || "Token tidak valid." });
+        }
+        res.status(200).json({ status: true, message: "Token valid." });
+    } catch (error) { res.status(500).json({ status: false, message: "Gagal mengecek token." }); }
+});
+
 // GANTI FUNGSI INI SEPENUHNYA di backend/server.js
 // backend/server.js -> Ganti rute ini
 app.post('/api/purchase', isAuthenticated, async (req, res) => {
@@ -496,8 +598,11 @@ app.post('/api/purchase', isAuthenticated, async (req, res) => {
         if (!user || user.verifiedPhone !== phone) return res.status(403).json({ status: false, message: "Nomor telepon ini tidak terverifikasi untuk akun Anda." });
         if (!pkg) return res.status(404).json({ status: false, message: "Paket tidak ditemukan." });
 
-        // MODIFIKASI: Tentukan biaya efektif berdasarkan peran pengguna
-        effectiveFee = user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+        // MODIFIKASI: Tentukan biaya efektif berdasarkan metode pembayaran
+        const isBalancePayment = paymentMethod === 'balance';
+        const fee = user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+        effectiveFee = isBalancePayment ? (pkg.original_price + fee) : fee;
+        const platformFeeOnly = fee;
 
         if (user.balance < effectiveFee) {
             return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk membayar biaya Rp ${effectiveFee.toLocaleString()}.` });
@@ -527,7 +632,7 @@ Transaksi diantrekan. Mohon segera top up saldo KMSP Anda.`, 'admin');
         }
         
         // PERUBAHAN 3: Tambahkan 'ewalletNumber' saat menyimpan transaksi normal
-        await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, effectiveFee, packagePrice, phone, access_token, paymentMethod, ewallet_number || null, new Date().toISOString(), 'processing', 'Menghubungi provider...']);
+        await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [trxId, user.id, user.name, packageId, pkg.name, platformFeeOnly, packagePrice, phone, access_token, paymentMethod, ewallet_number || null, new Date().toISOString(), 'processing', 'Menghubungi provider...']);
 
         // PERUBAHAN 4: Susun parameter API baru
         const purchaseParams = {
@@ -609,22 +714,28 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
         const pkg = await dbGet("SELECT * FROM packages WHERE package_code = ?", [packageId]);
         if (!pkg) return res.status(404).json({ status: false, message: "Paket tidak ditemukan." });
 
-        const effectiveFee = user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
-        if (user.balance < effectiveFee) return res.status(402).json({ status: false, message: `Saldo Anda tidak cukup.` });
+        // MODIFIKASI: Tentukan biaya berdasarkan metode pembayaran
+        const isBalancePayment = req.body.paymentMethod === 'balance';
+        const fee = user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+        const effectiveFee = isBalancePayment ? (pkg.original_price + fee) : fee;
+
+        if (user.balance < effectiveFee) {
+            return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk membayar biaya Rp ${effectiveFee.toLocaleString()}.` });
+        }
 
         await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [effectiveFee, user.id]);
         
-        const baseTransaction = { id: `trx_${Date.now()}`, userId: user.id, userName: user.name, packageId, packageName: pkg.name, platformFee: effectiveFee, originalPrice: pkg.original_price, targetPhone, paymentMethod: 'balance', createdAt: new Date().toISOString() };
+        const baseTransaction = { id: `trx_${Date.now()}`, userId: user.id, userName: user.name, packageId, packageName: pkg.name, platformFee: fee, originalPrice: pkg.original_price, targetPhone, paymentMethod: req.body.paymentMethod, ewalletNumber: req.body.ewallet_number || '', createdAt: new Date().toISOString() };
         const adminBalance = await getKmspAdminBalance();
 
         if (adminBalance < pkg.original_price) {
-            await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [...Object.values(baseTransaction), 'menunggu_saldo_provider', 'Menunggu Saldo Provider']);
+            await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [...Object.values(baseTransaction), 'menunggu_saldo_provider', 'Menunggu Saldo Provider']);
             sendTelegramNotification(`<b>⚠️ Saldo KMSP Kurang! (Non-OTP)</b>\nPengguna: ${user.name}\nPaket: ${pkg.name}\nTransaksi diantrekan.`, 'admin');
             const updatedUser = await dbGet('SELECT balance FROM users WHERE id = ?', [user.id]);
             return res.status(202).json({ status: true, message: "Permintaan Anda masuk antrean.", newBalance: updatedUser.balance });
         }
         
-        await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [...Object.values(baseTransaction), 'processing', 'Processing...']);
+        await dbRun('INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, ewalletNumber, createdAt, status, api_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [...Object.values(baseTransaction), 'processing', 'Processing...']);
         const trxFromDb = await dbGet("SELECT * FROM transactions WHERE id = ?", [baseTransaction.id]);
         
         await executeNonOtpPurchase(trxFromDb);
@@ -906,6 +1017,26 @@ app.put('/api/admin/maintenance-schedule', isAuthenticated, isAdmin, async (req,
 });
 
 // Admin endpoint: trigger reseller retention check on-demand
+
+// === ADMIN PAYMENT GATEWAY SETTINGS ===
+app.get('/api/admin/payment-gateway', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+        res.json({ status: true, data: { gateway: row ? row.value : 'orkut' } });
+    } catch (e) { res.status(500).json({ status: false, message: 'Gagal mengambil setting gateway.' }); }
+});
+
+app.put('/api/admin/payment-gateway', isAuthenticated, isAdmin, async (req, res) => {
+    const { gateway } = req.body;
+    if (!['orkut', 'gopay'].includes(gateway)) {
+        return res.status(400).json({ status: false, message: "Gateway harus 'orkut' atau 'gopay'." });
+    }
+    try {
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('paymentGateway', ?)", [gateway]);
+        res.json({ status: true, message: `Payment gateway berhasil diubah ke ${gateway.toUpperCase()}.` });
+    } catch (e) { res.status(500).json({ status: false, message: 'Gagal menyimpan setting gateway.' }); }
+});
+
 app.post('/api/admin/run-reseller-retention', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const summary = await runResellerRetentionCheck();
@@ -1035,6 +1166,85 @@ app.get('/api/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) =>
     }
 });
 
+app.get('/api/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        if (!CEIRGO_API_KEY) return res.status(200).json({ status: false, message: 'CEIRGO_API_KEY tidak dikonfigurasi' });
+        
+        const response = await axios.get(`${CEIRGO_BASE_URL}/api/wallet/snap`, {
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` }
+        });
+        
+        if (response.data && typeof response.data.balance !== 'undefined') {
+            res.status(200).json({ status: true, data: { balance: response.data.balance, reserved: response.data.reserved } });
+        } else {
+            res.status(500).json({ status: false, message: 'Gagal parse saldo CEIRGO' });
+        }
+    } catch (e) { 
+        res.status(500).json({ status: false, message: 'Gagal mengambil saldo CEIRGO' }); 
+    }
+});
+
+// GET metode pembayaran Ceirgo
+app.get('/api/admin/ceirgo-deposit-providers', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        if (!CEIRGO_API_KEY) return res.status(200).json({ status: false, message: 'CEIRGO_API_KEY tidak dikonfigurasi' });
+        
+        const response = await axios.get(`${CEIRGO_BASE_URL}/api/deposit/provider?limit=20`, {
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` }
+        });
+        
+        if (response.data?.data?.items) {
+            res.json({ status: true, data: response.data.data.items });
+        } else {
+            res.json({ status: false, message: 'Gagal mengambil provider Ceirgo' });
+        }
+    } catch (e) { 
+        res.status(500).json({ status: false, message: e.response?.data?.message || 'Gagal menghubungi CEIRGO' }); 
+    }
+});
+
+// POST request deposit Ceirgo
+app.post('/api/admin/ceirgo-deposit', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { amount, provider_code } = req.body;
+        if (!amount || amount < 10000) return res.status(400).json({ status: false, message: 'Minimal top up Rp 10.000' });
+        if (!provider_code) return res.status(400).json({ status: false, message: 'Pilih provider' });
+
+        const response = await axios.post(`${CEIRGO_BASE_URL}/api/deposit`, {
+            amount: parseInt(amount),
+            provider_code
+        }, {
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}`, 'Content-Type': 'application/json' }
+        });
+
+        if (response.data && response.data.id) {
+            // response.data berisi { id, amounts: {total_pay}, qr_url, qr_string, dsb }
+            // Jika dia QRIS dan punya qr_string tapi ga punya qr_url yang valid, kita generate base64-nya
+            let finalQris = response.data.qr_url;
+            if (!finalQris && response.data.qr_string) {
+                finalQris = await qrcode.toDataURL(response.data.qr_string);
+            }
+            
+            res.json({ 
+                status: true, 
+                data: {
+                    id: response.data.id,
+                    total_pay: response.data.amounts?.total_pay || amount,
+                    qr: finalQris,
+                    qr_string: response.data.qr_string,
+                    provider: response.data.provider_code,
+                    account_number: response.data.account_number,
+                    account_holder: response.data.account_holder_name
+                }
+            });
+        } else {
+            res.json({ status: false, message: 'Respons API Ceirgo tidak valid' });
+        }
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.response?.data?.message || 'Gagal membuat deposit Ceirgo' });
+    }
+});
+
 app.post('/api/user/change-password', isAuthenticated, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword || newPassword.length < 6) return res.status(400).json({ status: false, message: 'Password tidak valid.' });
@@ -1065,6 +1275,85 @@ app.post('/api/user/update-profile', isAuthenticated, async (req, res) => {
 // RUTE TOP UP SALDO
 // =======================================================
 const qrisPollingTimeouts = new Map();
+
+// --- GOPAY GATEWAY: Generate QRIS via GoPay Gateway API ---
+async function generateGopayQris(amount) {
+    const URL = process.env.GOPAY_GATEWAY_URL;
+    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+    if (!URL || !API_KEY) {
+        throw new Error("GOPAY_GATEWAY_URL atau GOPAY_GATEWAY_API_KEY belum dikonfigurasi di .env");
+    }
+    try {
+        const response = await axios.get(`${URL}/create-qris`, {
+            params: { amount, api_key: API_KEY },
+            timeout: 15000
+        });
+        if (response.data?.success && response.data.data) {
+            return response.data.data;
+        }
+        throw new Error(response.data?.message || 'Gagal membuat QRIS dari GoPay Gateway.');
+    } catch (error) {
+        console.error(`[GOPAY_QRIS_ERROR]`, error.message);
+        throw new Error(error.response?.data?.message || error.message || 'Gagal menghubungi GoPay Gateway.');
+    }
+}
+
+// --- GOPAY GATEWAY: Check payment status ---
+async function checkGopayPaymentStatus(topUpId, amount, gopayTrxId, startTime) {
+    const URL = process.env.GOPAY_GATEWAY_URL;
+    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+    if (!URL || !API_KEY) return;
+    const maxDurationMs = 5 * 60 * 1000;
+    const interval = 8000;
+
+    const pollingLoop = async () => {
+        try {
+            const topUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUpId]);
+            if (!topUp || topUp.status !== 'pending') { qrisPollingTimeouts.delete(topUpId); return; }
+            const timeElapsed = Date.now() - new Date(topUp.createdAt).getTime();
+            if (timeElapsed >= maxDurationMs) {
+                await dbRun("UPDATE topups SET status = 'expired' WHERE id = ?", [topUpId]);
+                qrisPollingTimeouts.delete(topUpId);
+                return;
+            }
+            
+            // Tambahkan parameter startTime ke URL
+            const response = await axios.get(`${URL}/check-payment`, {
+                params: { amount, trx_id: gopayTrxId, api_key: API_KEY, start_time: startTime },
+                timeout: 15000
+            });
+            console.log(`[GOPAY_POLL] Cek trx ${gopayTrxId} (Rp ${amount}) -> response:`, response.data);
+            if (response.data?.success && response.data.paid) {
+                await dbRun("BEGIN TRANSACTION");
+                const result = await dbRun("UPDATE topups SET status = 'completed' WHERE id = ? AND status = 'pending'", [topUpId]);
+                if (result.changes > 0) {
+                    const user = await dbGet("SELECT id, name, email, role FROM users WHERE id = ?", [topUp.userId]);
+                    await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, user.id]);
+                    if (user.role !== 'reseller' && topUp.baseAmount >= 50000) {
+                        await dbRun("UPDATE users SET role = 'reseller', upgradedToResellerAt = ? WHERE id = ?", [new Date().toISOString(), user.id]);
+                        sseSend(user.id, 'role_change', { newRole: 'reseller', reason: 'Upgrade otomatis ke Reseller.' });
+                    }
+                    await dbRun("COMMIT");
+                    const updatedUser = await dbGet("SELECT balance FROM users WHERE id = ?", [user.id]);
+                    sseSend(user.id, 'balance_update', { balance: updatedUser.balance, source: 'gopay_topup' });
+                    sseSend(user.id, 'transaction_status', { id: topUpId, type: 'topup', status: 'completed', message: 'Top up via GoPay berhasil!' });
+                    sendTelegramNotification(`<b>💰 Top Up Berhasil (GoPay)!</b>\n<b>User:</b> ${user.name}\n<b>Jumlah:</b> Rp ${topUp.baseAmount.toLocaleString('id-ID')}\n<b>TRX:</b> <code>${gopayTrxId}</code>`);
+                } else {
+                    await dbRun("ROLLBACK");
+                }
+                qrisPollingTimeouts.delete(topUpId);
+                return;
+            }
+        } catch (error) {
+            console.error(`[GOPAY_POLL_ERROR] ${topUpId}:`, error.message);
+        }
+        const timeoutId = setTimeout(pollingLoop, interval);
+        qrisPollingTimeouts.set(topUpId, timeoutId);
+    };
+    if (!qrisPollingTimeouts.has(topUpId)) {
+        qrisPollingTimeouts.set(topUpId, setTimeout(pollingLoop, 5000));
+    }
+}
 
 async function generateDynamicQris(amount) {
     try {
@@ -1214,28 +1503,61 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
             return res.status(404).json({ status: false, message: 'Pengguna tidak ditemukan.' });
         }
 
-        // --- LOGIKA BARU YANG DIPERBAIKI ---
-        // 1. Secara otomatis batalkan permintaan top-up lama yang masih 'pending'.
+        // Batalkan top-up lama yang masih pending
         await dbRun("UPDATE topups SET status = 'canceled' WHERE userId = ? AND status = 'pending'", [userId]);
-        console.log(`[TopUp] Membatalkan top-up lama yang pending untuk user: ${userId}`);
 
-        // 2. Lanjutkan untuk membuat permintaan top-up yang baru.
-        const uniqueCode = Math.floor(Math.random() * 900) + 100;
-        const uniqueAmount = baseAmount + uniqueCode;
-        const qrisBase64Image = await generateDynamicQris(uniqueAmount);
         const topUpId = `TU-${Date.now()}`;
-        
-        await dbRun("INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [topUpId, req.session.userId, user.name, baseAmount, uniqueAmount, 'pending', new Date().toISOString(), qrisBase64Image]);
-        
-        // Mulai polling untuk transaksi baru ini
-        checkOrkutPaymentStatus(topUpId, uniqueAmount);
+        // Baca gateway aktif dari setting admin
+        const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+        const activeGateway = gwRow ? gwRow.value : 'orkut';
+        const useGopayGw = activeGateway === 'gopay' && process.env.GOPAY_GATEWAY_URL && process.env.GOPAY_GATEWAY_API_KEY;
 
-        res.status(200).json({
-            status: true,
-            message: 'Silakan scan QRIS dan transfer sesuai jumlah unik.',
-            topUpId,
-            qrisData: { base64Image: qrisBase64Image, uniqueAmount, expiresAt: Math.floor((Date.now() + 15 * 60 * 1000) / 1000) }
-        });
+        if (useGopayGw) {
+            // === GOPAY GATEWAY MODE ===
+            const gopayData = await generateGopayQris(baseAmount);
+            const qrisBase64Image = await qrcode.toDataURL(gopayData.qris_code);
+
+            // Kirim start_time (ISO string) saat topup dibuat agar gateway hanya cek mutasi baru
+            const topUpStartTime = new Date().toISOString();
+            
+            await dbRun(
+                "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image, gopayTrxId, gopayQrisId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', topUpStartTime, qrisBase64Image, gopayData.trx_id, gopayData.qris_id]
+            );
+
+            checkGopayPaymentStatus(topUpId, baseAmount, gopayData.trx_id, topUpStartTime);
+
+            res.status(200).json({
+                status: true,
+                message: 'Silakan scan QRIS GoPay dan bayar sesuai nominal.',
+                topUpId,
+                qrisData: {
+                    base64Image: qrisBase64Image,
+                    uniqueAmount: baseAmount,
+                    qrisUrl: gopayData.qris_url,
+                    expiresAt: Math.floor(new Date(gopayData.expires_at).getTime() / 1000)
+                }
+            });
+        } else {
+            // === LEGACY ORKUT MODE ===
+            const uniqueCode = Math.floor(Math.random() * 900) + 100;
+            const uniqueAmount = baseAmount + uniqueCode;
+            const qrisBase64Image = await generateDynamicQris(uniqueAmount);
+
+            await dbRun(
+                "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [topUpId, userId, user.name, baseAmount, uniqueAmount, 'pending', new Date().toISOString(), qrisBase64Image]
+            );
+
+            checkOrkutPaymentStatus(topUpId, uniqueAmount);
+
+            res.status(200).json({
+                status: true,
+                message: 'Silakan scan QRIS dan transfer sesuai jumlah unik.',
+                topUpId,
+                qrisData: { base64Image: qrisBase64Image, uniqueAmount, expiresAt: Math.floor((Date.now() + 15 * 60 * 1000) / 1000) }
+            });
+        }
 
     } catch (error) {
         console.error("[REQUEST_QRIS_ERROR]", error);
@@ -1959,7 +2281,7 @@ async function executePurchase(trx, isOtp) {
         api_key: KMSP_API_KEY,
         package_code: trx.packageId,
         phone: trx.targetPhone,
-        payment_method: isOtp ? trx.paymentMethod : 'balance',
+        payment_method: trx.paymentMethod || 'balance',
         price_or_fee: trx.originalPrice,
         ewallet_number: '' // Default ke string kosong
     };
@@ -2267,6 +2589,334 @@ cron.schedule('0 6,9,12,15,18,21,0,3 * * *', async () => { // Berjalan pada jam 
 });
 
 
+// --- MANUAL SERVICES (UNBLOCK IMEI & CEIR) ---
+const manualOrderStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = path.join(__dirname, 'public', 'uploads', 'manual_orders');
+        if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${Math.round(Math.random()*1E9)}${path.extname(file.originalname)}`);
+    }
+});
+const manualOrderUpload = multer({ storage: manualOrderStorage, limits: { fileSize: 10 * 1024 * 1024 } }).fields([{ name: 'image' }, { name: 'ceir_image' }]);
+
+app.get('/api/admin/ceirgo-services', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        if (!CEIRGO_API_KEY) return res.status(200).json({ status: false, message: 'CEIRGO_API_KEY tidak dikonfigurasi' });
+        
+        const response = await axios.get(`${CEIRGO_BASE_URL}/api/services?limit=50`, {
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` }
+        });
+        
+        if (response.data?.data?.page?.items) {
+            const services = response.data.data.page.items;
+            const detailedServices = await Promise.all(services.map(async (svc) => {
+                try {
+                    const detailRes = await axios.get(`${CEIRGO_BASE_URL}/api/services/${svc.code}`, {
+                        headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` }
+                    });
+                    return {
+                        code: svc.code,
+                        name: svc.name,
+                        modalPrice: detailRes.data?.data?.rule?.unit_price || 0
+                    };
+                } catch (e) {
+                    return { code: svc.code, name: svc.name, modalPrice: 0 };
+                }
+            }));
+            res.json({ status: true, data: detailedServices });
+        } else {
+            res.json({ status: false, message: 'Gagal mengambil layanan CEIRGO' });
+        }
+    } catch (e) { res.status(500).json({ status: false, message: 'Kesalahan CEIRGO' }); }
+});
+
+app.post('/api/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const pricing = req.body;
+        await dbRun("BEGIN TRANSACTION");
+        for (const [code, price] of Object.entries(pricing)) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [`ceirgo_price_${code}`, price.toString()]);
+        }
+        await dbRun("COMMIT");
+        res.json({ status: true, message: 'Harga berhasil disimpan!' });
+    } catch (error) { 
+        await dbRun("ROLLBACK");
+        res.status(500).json({ status: false, message: error.message }); 
+    }
+});
+
+app.get('/api/ceirgo-pricing', async (req, res) => {
+    try {
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'ceirgo_price_%'");
+        const pricing = rows.reduce((acc, row) => {
+            acc[row.key.replace('ceirgo_price_', '')] = parseInt(row.value) || 0;
+            return acc;
+        }, {});
+        res.json({ status: true, data: pricing });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+// Endpoint untuk membaca menu aktif
+app.get('/api/admin/menu-settings', async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'show_beli_paket'");
+        // Default: false (hidden) jika belum diset
+        res.json({ status: true, data: { showBeliPaket: row ? row.value === 'true' : false } });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+// Endpoint untuk Admin menyimpan status menu
+app.put('/api/admin/menu-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { showBeliPaket } = req.body;
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('show_beli_paket', ?)", [showBeliPaket ? 'true' : 'false']);
+        res.json({ status: true, message: 'Pengaturan menu berhasil disimpan' });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.get('/api/manual-services-pricing', async (req, res) => {
+    try {
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status')");
+        const pricing = rows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
+        res.json({ status: true, data: pricing });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.post('/api/admin/manual-services-pricing', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const pricing = req.body;
+        for (const [key, value] of Object.entries(pricing)) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, value.toString()]);
+        }
+        res.json({ status: true, message: 'Harga layanan CEIR berhasil diperbarui' });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.get('/api/imei-packages', async (req, res) => {
+    try {
+        const showAll = req.query.all === 'true';
+        const packages = await dbAll(showAll ? "SELECT * FROM imei_packages" : "SELECT * FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL");
+        res.json({ status: true, data: packages });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.put('/api/admin/imei-packages/:id/toggle', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { isVisible } = req.body;
+        await dbRun("UPDATE imei_packages SET isVisible = ? WHERE id = ?", [isVisible ? 1 : 0, req.params.id]);
+        res.json({ status: true, message: "Status paket berhasil diubah" });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.post('/api/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { duration, price } = req.body;
+        if (!duration || !price) return res.status(400).json({ status: false, message: "Isi durasi dan harga" });
+        const id = `imei_${Date.now()}`;
+        await dbRun("INSERT INTO imei_packages (id, duration, price) VALUES (?, ?, ?)", [id, duration, price]);
+        res.json({ status: true, message: "Paket berhasil ditambahkan" });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.delete('/api/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("DELETE FROM imei_packages WHERE id = ?", [req.params.id]);
+        res.json({ status: true, message: "Paket berhasil dihapus" });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.put('/api/admin/imei-packages/:id/toggle', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { isVisible } = req.body;
+        await dbRun("UPDATE imei_packages SET isVisible = ? WHERE id = ?", [isVisible ? 1 : 0, req.params.id]);
+        res.json({ status: true, message: "Status paket berhasil diubah" });
+    } catch (error) { res.status(500).json({ status: false, message: error.message }); }
+});
+
+app.post('/api/order/manual', isAuthenticated, (req, res) => {
+    manualOrderUpload(req, res, async (err) => {
+        if (err) return res.status(400).json({ status: false, message: err.message });
+        try {
+            const { service_type, imei, duration, price_key, speed_option } = req.body;
+            if (!['imei', 'ceir'].includes(service_type)) return res.status(400).json({ status: false, message: "Tipe layanan tidak valid" });
+            if (!imei) return res.status(400).json({ status: false, message: "IMEI harus diisi" });
+
+            let price = 0;
+            if (service_type === 'imei') {
+                const pkg = await dbGet("SELECT price FROM imei_packages WHERE id = ?", [price_key]);
+                if (!pkg) return res.status(400).json({ status: false, message: "Paket IMEI tidak ditemukan" });
+                price = pkg.price;
+                
+                // Tambah harga speed jika ada
+                if (speed_option) {
+                    const speedPriceRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${speed_option}`]);
+                    if (speedPriceRow && speedPriceRow.value !== 'disabled') {
+                        price += parseInt(speedPriceRow.value) || 0;
+                    }
+                }
+            } else {
+                const priceRow = await dbGet("SELECT value FROM settings WHERE key = ?", [price_key]);
+                if (!priceRow) return res.status(400).json({ status: false, message: "Harga CEIR tidak ditemukan" });
+                price = parseInt(priceRow.value) || 0;
+            }
+
+            const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+            if (user.balance < price) return res.status(402).json({ status: false, message: "Saldo tidak mencukupi" });
+
+            await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [price, req.session.userId]);
+            
+            const trxId = `trx_m_${Date.now()}`;
+            const packageName = service_type === 'imei' ? `Unblock IMEI (${duration})` : `Cek CEIR (${duration})`;
+            
+            const imagePath = req.files && req.files['image'] ? `/public/uploads/manual_orders/${req.files['image'][0].filename}` : null;
+            const ceirImagePath = req.files && req.files['ceir_image'] ? `/public/uploads/manual_orders/${req.files['ceir_image'][0].filename}` : null;
+
+            let finalStatus = 'pending';
+            let apiResponse = 'Selesai / Sedang Diproses Admin';
+            let adminNote = null;
+            let refId = null;
+
+            // Jika layanan CEIR, otomatis tembak ke Ceirgo API
+            if (service_type === 'ceir') {
+                try {
+                    // Mapping service code langsung dari frontend price_key
+                    let ceirgoServiceCode = price_key;
+                    if (price_key === 'price_ceir_register') ceirgoServiceCode = 'cek_imei_beacukai';
+                    if (price_key === 'price_ceir_history') ceirgoServiceCode = 'cek_history_imei';
+
+                    let payloadData = {};
+                    const isBarcode = ceirgoServiceCode.includes('barcode');
+
+                    if (isBarcode) {
+                        // Jika layanan barcode, payload nya { items: [{ primary_imei, secondary_imei, theme }] }
+                        // Kita asumsikan secondary_imei dikirim via req.body.imei2
+                        payloadData = {
+                            items: [{
+                                primary_imei: imei,
+                                secondary_imei: req.body.imei2 || imei,
+                                theme: req.body.theme || "dark"
+                            }]
+                        };
+                    } else {
+                        // Layanan biasa
+                        payloadData = { imeis: [imei] };
+                    }
+
+                    const ceirResponse = await orderCeirgo(ceirgoServiceCode, payloadData);
+                    refId = ceirResponse.reference_id || ceirResponse.order_id?.toString();
+                    
+                    if (ceirResponse.status === 'success') {
+                        finalStatus = 'success';
+                        const resultObj = ceirResponse.result;
+                        
+                        if (ceirgoServiceCode === 'cek_imei_beacukai' && Array.isArray(resultObj)) {
+                            const resultItem = resultObj.find(r => r.imei === imei);
+                            adminNote = `Status Beacukai: ${resultItem?.status || 'UNKNOWN'}`;
+                        } else if (ceirgoServiceCode === 'cek_history_imei' && Array.isArray(resultObj)) {
+                            const resultItem = resultObj.find(r => r.imei === imei);
+                            adminNote = `Ditemukan ${resultItem?.history?.length || 0} riwayat CEIR.`;
+                        } else if (ceirgoServiceCode === 'cek_validity' && Array.isArray(resultObj)) {
+                            const resultItem = resultObj.find(r => r.imei === imei);
+                            adminNote = `Status: ${resultItem?.status || 'UNKNOWN'} | Valid Until: ${resultItem?.valid_until || 'N/A'}`;
+                        } else if (isBarcode && resultObj && resultObj.items && Array.isArray(resultObj.items)) {
+                            // Untuk layanan barcode
+                            const item = resultObj.items[0];
+                            if (item && item.url) {
+                                adminImagePath = item.url; // Langsung masukkan URL asli dari Ceirgo ke kolom admin_image!
+                                adminNote = `Barcode berhasil di-generate. Silakan lihat gambar.`;
+                            } else {
+                                adminNote = `Gagal me-render Barcode.`;
+                            }
+                        } else {
+                            // Untuk SF, DIGI, dll (model bucket array di dalam object)
+                            let foundBucket = 'UNKNOWN';
+                            if (resultObj && typeof resultObj === 'object' && !Array.isArray(resultObj)) {
+                                for (const [bucketName, imeiArray] of Object.entries(resultObj)) {
+                                    if (Array.isArray(imeiArray) && imeiArray.includes(imei)) {
+                                        foundBucket = bucketName;
+                                        break;
+                                    }
+                                }
+                            }
+                            adminNote = `Status Terdeteksi: ${foundBucket}`;
+                        }
+                        apiResponse = 'Berhasil otomatis dari CEIRGO';
+                        
+                    } else if (ceirResponse.status === 'pending') {
+                        finalStatus = 'processing';
+                        adminNote = "Pesanan sedang diproses oleh API CEIRGO...";
+                    }
+                } catch (e) {
+                    console.error("[AUTO_CEIR_ERROR]", e);
+                    // Jika gagal hit API, biarkan status pending agar admin yang proses manual (fallback)
+                    adminNote = "Gagal auto-cek via API. Admin akan mengecek manual.";
+                }
+            }
+
+            await dbRun(`
+                INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, status, api_response, admin_note, kmspTrxId, createdAt, service_type, imei, user_image, user_image_ceir, speed_option)
+                VALUES (?, ?, (SELECT name FROM users WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, price, price, '', 'balance', finalStatus, apiResponse, adminNote, refId, new Date().toISOString(), service_type, imei, imagePath, ceirImagePath, speed_option]);
+
+            
+            if (finalStatus !== 'success') {
+                const tMsg = `📦 <b>Ada Pesanan Manual Baru</b>
+Layanan: ${packageName}
+Harga: Rp ${price.toLocaleString('id-ID')}
+IMEI: ${imei}
+Status: ${finalStatus}
+
+Segera cek di Panel Admin!`;
+                sendManualOrderNotification(tMsg, trxId);
+            }
+            res.json({ status: true, message: finalStatus === 'success' ? "Pesanan otomatis berhasil diproses!" : "Pesanan berhasil dibuat, sedang diproses." });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ status: false, message: "Terjadi kesalahan server" });
+        }
+    });
+});
+
+app.get('/api/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const orders = await dbAll("SELECT * FROM transactions WHERE service_type IN ('imei', 'ceir') ORDER BY createdAt DESC");
+        res.json({ status: true, data: orders });
+    } catch (e) { res.status(500).json({ status: false, message: e.message }); }
+});
+
+app.put('/api/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
+    manualOrderUpload(req, res, async (err) => {
+        if (err) return res.status(400).json({ status: false, message: err.message });
+        try {
+            const trxId = req.params.id;
+            const { status, admin_note } = req.body;
+            
+            const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
+            if (!trx) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan" });
+
+            let adminImagePath = trx.admin_image;
+            if (req.files && req.files['image']) adminImagePath = `/public/uploads/manual_orders/${req.files['image'][0].filename}`;
+
+            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ?, api_response = ? WHERE id = ?", 
+                [status, admin_note, adminImagePath, status === 'failed' ? 'Gagal / Ditolak Admin' : 'Selesai / Sedang Diproses Admin', trxId]);
+
+            // Refund if failed and previously was pending/processing
+            if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing')) {
+                await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [trx.platformFee, trx.userId]);
+            }
+
+            res.json({ status: true, message: "Pesanan berhasil diupdate" });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ status: false, message: "Terjadi kesalahan server" });
+        }
+    });
+});
+
 // --- SAJIKAN FRONTEND & CATCH-ALL ---
 const frontendPath = path.join(__dirname, '..', 'frontend'); // HAPUS ', 'build'' DARI SINI
 app.use(express.static(frontendPath));
@@ -2340,6 +2990,133 @@ cron.schedule('0 1 1 * *', async () => { // Berjalan jam 01:00 pada hari pertama
     timezone: "Asia/Jakarta"
 });
 
+
+// --- TELEGRAM INTERACTIVE NOTIFICATION ---
+let tgLastUpdateId = 0;
+
+function getInlineKeyboard(trxId) {
+    return {
+        inline_keyboard: [
+            [
+                { text: "⏳ Pending", callback_data: `manual_pending_${trxId}` },
+                { text: "⚙️ Proses", callback_data: `manual_processing_${trxId}` }
+            ],
+            [
+                { text: "✅ Sukses", callback_data: `manual_success_${trxId}` },
+                { text: "❌ Gagal", callback_data: `manual_failed_${trxId}` }
+            ]
+        ]
+    };
+}
+
+async function sendManualOrderNotification(message, trxId) {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return;
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const body = {
+        chat_id: TELEGRAM_ADMIN_CHAT_ID,
+        text: message,
+        parse_mode: 'HTML',
+        reply_markup: getInlineKeyboard(trxId)
+    };
+    try {
+        await fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }});
+    } catch (e) { console.error('Error sendManualOrderNotification', e); }
+}
+
+async function pollTelegramUpdates() {
+    if (!TELEGRAM_BOT_TOKEN) return;
+    try {
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${tgLastUpdateId + 1}&timeout=30`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.ok && data.result.length > 0) {
+                for (const update of data.result) {
+                    tgLastUpdateId = update.update_id;
+                    if (update.callback_query) {
+                        await handleTelegramCallbackQuery(update.callback_query);
+                    }
+                }
+            }
+        }
+    } catch(e) {}
+    setTimeout(pollTelegramUpdates, 2000);
+}
+
+async function handleTelegramCallbackQuery(cb) {
+    const data = cb.data; 
+    const chatId = cb.message.chat.id;
+    const messageId = cb.message.message_id;
+    const cbId = cb.id;
+
+    if (data.startsWith('manual_')) {
+        const parts = data.split('_');
+        const status = parts[1]; 
+        const trxId = parts.slice(2).join('_');
+
+        try {
+            const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
+            if (!trx) {
+                await answerCallback(cbId, "Transaksi tidak ditemukan.");
+                return;
+            }
+            if (trx.status === 'success' || trx.status === 'failed') {
+                // If it's already final, prevent changes to prevent double refund bugs
+                if (trx.status !== status) {
+                    await answerCallback(cbId, `Transaksi sudah final (${trx.status}). Tidak bisa diubah lagi via bot.`);
+                    return;
+                }
+            }
+
+            let apiRes = 'Diproses via Telegram';
+            if (status === 'success') apiRes = 'Selesai via Telegram';
+            if (status === 'failed') apiRes = 'Gagal / Ditolak Admin';
+            if (status === 'pending') apiRes = 'Menunggu Proses';
+            if (status === 'processing') apiRes = 'Sedang Diproses Admin';
+
+            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ? WHERE id = ?", 
+                [status, `Diupdate ke ${status.toUpperCase()} via Telegram`, apiRes, trxId]);
+
+            // Only refund if it is transitioning to failed from pending/processing
+            if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing')) {
+                await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [trx.platformFee, trx.userId]);
+            }
+
+            await answerCallback(cbId, `Pesanan ${trxId} diubah menjadi ${status}!`);
+
+            const originalText = cb.message.text.split('\n\n<b>Status Diupdate:')[0];
+            const isFinal = (status === 'success' || status === 'failed');
+            const editUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`;
+            await fetch(editUrl, {
+                method: 'POST',
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    message_id: messageId,
+                    text: originalText + `\n\n<b>Status Diupdate: ${status.toUpperCase()}</b>`,
+                    parse_mode: 'HTML',
+                    reply_markup: isFinal ? { inline_keyboard: [] } : getInlineKeyboard(trxId)
+                }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+        } catch (e) {
+            console.error('Callback error', e);
+            await answerCallback(cbId, "Terjadi kesalahan server.");
+        }
+    }
+}
+
+async function answerCallback(callbackQueryId, text) {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
+    await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+// --- END TELEGRAM INTERACTIVE NOTIFICATION ---
+
 app.listen(PORT, () => {
+    pollTelegramUpdates();
     console.log(`🚀 Server 100% Lengkap dengan SQLite3 berjalan di http://localhost:${PORT}`);
 });
