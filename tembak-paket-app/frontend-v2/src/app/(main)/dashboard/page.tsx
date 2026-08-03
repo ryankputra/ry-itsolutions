@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [announcement, setAnnouncement] = useState<any>(null);
   const [publicInfo, setPublicInfo] = useState<string>("");
   const [recentTrx, setRecentTrx] = useState<any[]>([]);
+  const [selectedQris, setSelectedQris] = useState<any>(null);
 
   useEffect(() => {
     // Meminta Izin Push Notification
@@ -157,6 +158,14 @@ export default function DashboardPage() {
                   <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-bold rounded uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-green-100 text-green-700' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                     {trx.status === 'completed' ? 'success' : trx.status}
                   </span>
+                  {trx.type === 'topup' && trx.status === 'pending' && trx.qrisData && (
+                    <button 
+                      onClick={() => setSelectedQris(trx.qrisData)}
+                      className="block mt-2 px-2 py-1 text-xs bg-primary text-white font-bold rounded"
+                    >
+                      Lihat QRIS
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -164,6 +173,21 @@ export default function DashboardPage() {
         )}
       </div>
 
-          </div>
+      {/* QRIS Modal */}
+      {selectedQris && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="max-w-xs w-full p-6 text-center space-y-4 relative">
+            <button onClick={() => setSelectedQris(null)} className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 className="font-bold text-lg">Bayar Top Up</h3>
+            <p className="text-primary font-black text-2xl">Rp {selectedQris.uniqueAmount?.toLocaleString('id-ID')}</p>
+            <img src={selectedQris.base64Image} alt="QRIS" className="w-full h-auto border border-hairline p-2 rounded-xl" />
+            <p className="text-xs text-ink-muted">Scan QRIS ini di aplikasi e-Wallet atau m-Banking Anda.</p>
+          </Card>
+        </div>
+      )}
+
+    </div>
   );
 }

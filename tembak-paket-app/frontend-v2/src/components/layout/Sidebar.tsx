@@ -28,6 +28,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isActive = (path: string) => pathname === path;
 
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      (window as any).deferredPrompt = e;
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
   const handleInstallPWA = () => {
     if (typeof window !== "undefined" && (window as any).deferredPrompt) {
       const promptEvent = (window as any).deferredPrompt;

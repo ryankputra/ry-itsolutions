@@ -156,7 +156,7 @@ export default function TopUpPage() {
                     <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 mt-1">1</div>
                     <div className="flex-1">
                       <p className="font-bold text-ink">Masukkan Nominal</p>
-                      <p className="text-sm text-ink-muted mb-3">Minimal Rp 5.000 tanpa potongan fee.</p>
+                      <p className="text-sm text-ink-muted mb-3">Minimal Rp 10.000 tanpa potongan fee.</p>
                       <Input 
                         type="number" 
                         placeholder="Contoh: 50000" 
