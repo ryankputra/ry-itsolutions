@@ -11,11 +11,16 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+  themeColor: "#0066cc",
+};
+
 export const metadata: Metadata = {
   title: "Ry-ITSolutions",
   description: "Cepat. Ringkas. Beli paket dalam hitungan detik.",
   manifest: "/manifest.json",
-  themeColor: "#0066cc",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
