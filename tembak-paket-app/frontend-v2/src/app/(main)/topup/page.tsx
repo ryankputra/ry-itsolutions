@@ -142,11 +142,27 @@ export default function TopUpPage() {
                 <h2 className="text-2xl font-black mb-2 tracking-tight">QRIS Bebas Ribet</h2>
                 <p className="text-white/80 text-sm mb-6 max-w-xs leading-relaxed font-medium">Support semua e-Wallet & m-Banking. Bayar langsung masuk, sat-set anti nunggu lama.</p>
                 
-                <div className="flex flex-wrap gap-2">
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-black italic tracking-tighter">OVO</div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-bold tracking-tight text-blue-200">DANA</div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-black">GOPAY</div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 flex items-center justify-center border border-white/20 hover:bg-white/20 transition-colors shadow-sm font-bold">QRIS</div>
+                <div className="flex flex-wrap gap-2.5">
+                  <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg shadow-black/5 hover:scale-105 transition-transform h-10 min-w-[60px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" alt="QRIS" className="h-5 object-contain" />
+                  </div>
+                  <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg shadow-black/5 hover:scale-105 transition-transform h-10 min-w-[60px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/86/Gopay_logo.svg" alt="GoPay" className="h-4 object-contain" />
+                  </div>
+                  <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg shadow-black/5 hover:scale-105 transition-transform h-10 min-w-[60px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" alt="DANA" className="h-3.5 object-contain" />
+                  </div>
+                  <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg shadow-black/5 hover:scale-105 transition-transform h-10 min-w-[60px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/Logo_OVO.svg" alt="OVO" className="h-3.5 object-contain" />
+                  </div>
+                  <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg shadow-black/5 hover:scale-105 transition-transform h-10 min-w-[60px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/85/LinkAja.svg" alt="LinkAja" className="h-4 object-contain" />
+                  </div>
                 </div>
               </div>
             </div>
