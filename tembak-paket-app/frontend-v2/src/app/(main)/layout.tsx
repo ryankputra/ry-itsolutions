@@ -9,6 +9,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(console.error);
+    }
+    
     // Listen for PWA Install Prompt
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
