@@ -178,7 +178,11 @@ export default function UnblockImeiPage() {
               <textarea 
                 placeholder="Masukkan 15 digit IMEI (Bisa banyak sekaligus, pisahkan dengan enter atau koma)" 
                 value={imei} 
-                onChange={e => setImei(e.target.value)} 
+                onChange={e => {
+                  const val = e.target.value;
+                  const sanitized = val.replace(/[^0-9,\n\r ]/g, '');
+                  setImei(sanitized);
+                }}
                 className="w-full rounded-xl border border-hairline bg-canvas px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all min-h-[100px] leading-relaxed"
                 required 
               />
