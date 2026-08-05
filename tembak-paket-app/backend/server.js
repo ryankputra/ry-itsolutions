@@ -2830,6 +2830,7 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
             let finalStatus = 'pending';
             let apiResponse = 'Selesai / Sedang Diproses Admin';
             let adminNote = null;
+            let adminImagePath = null;
             let refId = null;
 
             // Jika layanan CEIR, otomatis tembak ke Ceirgo API
@@ -2906,9 +2907,9 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
             }
 
             await dbRun(`
-                INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, status, api_response, admin_note, kmspTrxId, createdAt, service_type, imei, user_image, user_image_ceir, speed_option)
-                VALUES (?, ?, (SELECT name FROM users WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, totalPrice, totalPrice, '', 'balance', finalStatus, apiResponse, adminNote, refId, new Date().toISOString(), service_type, cleanImei, imagePath, ceirImagePath, speed_option]);
+                INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, status, api_response, admin_note, admin_image, kmspTrxId, createdAt, service_type, imei, user_image, user_image_ceir, speed_option)
+                VALUES (?, ?, (SELECT name FROM users WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, totalPrice, totalPrice, '', 'balance', finalStatus, apiResponse, adminNote, typeof adminImagePath !== 'undefined' ? adminImagePath : null, refId, new Date().toISOString(), service_type, cleanImei, imagePath, ceirImagePath, speed_option]);
 
             
             if (finalStatus !== 'success') {
@@ -2923,7 +2924,14 @@ Segera cek di Panel Admin!`;
                 const localImagePath = req.files && req.files['image'] && req.files['image'][0] ? req.files['image'][0].path : null;
                 sendManualOrderNotification(tMsg, trxId, localImagePath);
             }
-            res.json({ status: true, message: finalStatus === 'success' ? "Pesanan otomatis berhasil diproses!" : "Pesanan berhasil dibuat, sedang diproses." });
+            res.json({ 
+                status: true, 
+                message: finalStatus === 'success' ? "Pesanan otomatis berhasil diproses!" : "Pesanan berhasil dibuat, sedang diproses.",
+                data: {
+                    adminNote: adminNote,
+                    adminImage: typeof adminImagePath !== 'undefined' ? adminImagePath : null
+                }
+            });
 
         } catch (error) {
             console.error(error);

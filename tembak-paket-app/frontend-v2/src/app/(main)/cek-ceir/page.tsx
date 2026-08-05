@@ -39,6 +39,7 @@ export default function CekCeirPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
+  const [ceirResult, setCeirResult] = useState<{note: string | null, image: string | null} | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -133,6 +134,9 @@ export default function CekCeirPage() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
+        if (data.data?.adminNote || data.data?.adminImage) {
+          setCeirResult({ note: data.data.adminNote, image: data.data.adminImage });
+        }
         setShowSuccessPop(true);
       } else {
         setError(data.message || "Gagal membuat pesanan.");
@@ -268,12 +272,26 @@ export default function CekCeirPage() {
       </form>
     </Card>
 
+    {ceirResult && (
+      <Card className="mt-6 p-6 border-2 border-primary/30 bg-primary/5 animate-fade-in">
+        <h3 className="font-bold text-lg mb-2 text-primary">🎉 Hasil Pengecekan:</h3>
+        <p className="text-ink font-medium leading-relaxed">{ceirResult.note}</p>
+        {ceirResult.image && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={ceirResult.image} alt="Barcode/Hasil CEIR" className="mt-4 rounded-xl border border-hairline w-full max-w-sm object-contain bg-white p-2 shadow-sm" />
+        )}
+      </Card>
+    )}
+
     <SuccessModal 
       isOpen={showSuccessPop} 
-      onClose={() => router.push('/history')} 
+      onClose={() => {
+        setShowSuccessPop(false);
+        if (!ceirResult) router.push('/history');
+      }} 
       amount={getPrice(option)} 
       title="Pembayaran Berhasil"
-      statusText="Pesanan CEIR berhasil dibuat!"
+      statusText="Cek CEIR otomatis berhasil!"
       recipientLabel="IMEI Target"
       recipientValue={imei}
     />
