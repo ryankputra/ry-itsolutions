@@ -53,7 +53,7 @@ export default function UnblockImeiPage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 14);
+  const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 15);
   const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
 
   const selectedPkg = packages.find(p => p.id === selectedPkgId);
@@ -67,7 +67,7 @@ export default function UnblockImeiPage() {
     e.preventDefault();
     if (!agreed) return setError("Anda harus menyetujui Syarat & Ketentuan.");
     if (files.length === 0) return setError("Screenshot *#06# wajib diupload.");
-    if (imeiList.length === 0) return setError("Tidak ada IMEI yang valid (minimal 14/15 digit).");
+    if (imeiList.length === 0) return setError("Tidak ada IMEI yang valid (harus 15 digit angka).");
     if (!selectedPkg) return setError("Silakan pilih paket durasi.");
     if (user && user.balance < totalPrice) {
       Swal.fire({
