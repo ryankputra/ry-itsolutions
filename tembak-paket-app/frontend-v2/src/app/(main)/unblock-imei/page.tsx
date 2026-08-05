@@ -19,8 +19,8 @@ export default function UnblockImeiPage() {
   const [selectedPkgId, setSelectedPkgId] = useState("");
   const [selectedSpeed, setSelectedSpeed] = useState("");
   
-  const [file, setFile] = useState<File | null>(null);
-  const [ceirFile, setCeirFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [ceirFiles, setCeirFiles] = useState<File[]>([]);
   const [agreed, setAgreed] = useState(false);
   
   const [submitting, setSubmitting] = useState(false);
@@ -53,18 +53,21 @@ export default function UnblockImeiPage() {
     }).finally(() => setLoading(false));
   }, []);
 
+  const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 14);
+  const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
+
   const selectedPkg = packages.find(p => p.id === selectedPkgId);
   const basePrice = selectedPkg ? selectedPkg.price : 0;
   const speedPrice = speedPricing[`imei_speed_${selectedSpeed}`] 
     ? parseInt(speedPricing[`imei_speed_${selectedSpeed}`]) || 0 
     : 0;
-  const totalPrice = basePrice + speedPrice;
+  const totalPrice = (basePrice + speedPrice) * imeiCount;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) return setError("Anda harus menyetujui Syarat & Ketentuan.");
-    if (!file) return setError("Screenshot *#06# wajib diupload.");
-    if (!imei || imei.length < 15) return setError("IMEI tidak valid (minimal 15 digit).");
+    if (files.length === 0) return setError("Screenshot *#06# wajib diupload.");
+    if (imeiList.length === 0) return setError("Tidak ada IMEI yang valid (minimal 14/15 digit).");
     if (!selectedPkg) return setError("Silakan pilih paket durasi.");
     if (user && user.balance < totalPrice) {
       Swal.fire({
@@ -84,7 +87,7 @@ export default function UnblockImeiPage() {
 
     const confirm = await Swal.fire({
       title: 'Ready buat checkout? 💸',
-      text: 'Udah fix nih mau lanjut bayar? Saldo lo bakal kepotong ya.',
+      text: `Yakin mau lanjut bayar untuk ${imeiList.length} IMEI? Saldo kepotong Rp ${totalPrice.toLocaleString('id-ID')} ya.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -106,10 +109,9 @@ export default function UnblockImeiPage() {
     formData.append("duration", selectedPkg.duration);
     formData.append("price_key", selectedPkg.id);
     formData.append("speed_option", selectedSpeed);
-    formData.append("image", file);
-    if (ceirFile) {
-      formData.append("ceir_image", ceirFile);
-    }
+    
+    files.forEach(f => formData.append("image", f));
+    ceirFiles.forEach(f => formData.append("ceir_image", f));
 
     try {
       const res = await fetch("/api/order/manual", {
@@ -171,14 +173,17 @@ export default function UnblockImeiPage() {
 
         {serviceStatus.isOpen ? (
           <form onSubmit={handleSubmit} className="space-y-5">
-            <Input 
-              label="Nomor IMEI" 
-              placeholder="Masukkan 15 digit IMEI" 
-              value={imei} 
-              onChange={e => setImei(e.target.value)} 
-              maxLength={15} 
-              required 
-            />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-ink/80">Nomor IMEI</label>
+              <textarea 
+                placeholder="Masukkan 15 digit IMEI (Bisa banyak sekaligus, pisahkan dengan enter atau koma)" 
+                value={imei} 
+                onChange={e => setImei(e.target.value)} 
+                className="w-full rounded-xl border border-hairline bg-canvas px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all min-h-[100px] leading-relaxed"
+                required 
+              />
+              <p className="text-xs text-ink-muted">Terdeteksi: <b className="text-primary">{imeiList.length}</b> IMEI Valid</p>
+            </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -186,7 +191,8 @@ export default function UnblockImeiPage() {
                 <input 
                   type="file" 
                   accept="image/*" 
-                  onChange={e => setFile(e.target.files?.[0] || null)}
+                  multiple
+                  onChange={e => setFiles(Array.from(e.target.files || []))}
                   className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                   required
                 />
@@ -197,7 +203,8 @@ export default function UnblockImeiPage() {
                 <input 
                   type="file" 
                   accept="image/*" 
-                  onChange={e => setCeirFile(e.target.files?.[0] || null)}
+                  multiple
+                  onChange={e => setCeirFiles(Array.from(e.target.files || []))}
                   className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                 />
               </div>

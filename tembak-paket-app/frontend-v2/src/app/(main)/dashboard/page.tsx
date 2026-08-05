@@ -150,7 +150,9 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="font-bold text-sm text-ink line-clamp-1">{trx.packageName || "Paket Data"}</p>
-                    <p className="text-xs text-ink-muted mt-0.5">{trx.targetPhone}</p>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      {trx.imei ? (trx.imei.split(',').length > 1 ? `${trx.imei.split(',')[0]} (+${trx.imei.split(',').length - 1})` : trx.imei) : trx.targetPhone}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">

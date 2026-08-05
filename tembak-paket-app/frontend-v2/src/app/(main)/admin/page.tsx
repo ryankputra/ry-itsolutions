@@ -698,7 +698,12 @@ export default function AdminPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-bold">{o.packageName}</p>
-                        <p className="text-sm">User: {o.userName} • IMEI: <b>{o.imei}</b></p>
+                        <p className="text-sm">User: {o.userName}</p>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {o.imei?.split(',').map((im: string, i: number) => (
+                            <span key={i} className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded border border-primary/20">{im.trim()}</span>
+                          ))}
+                        </div>
                         {o.speed_option && (
                           <p className="text-xs font-semibold text-primary mt-1">
                             Kecepatan: <span className="capitalize">{o.speed_option === 'fast' ? '⚡ Fast' : o.speed_option === 'semi' ? '🚀 Semi Fast' : '🐌 Slow'}</span>
@@ -711,49 +716,59 @@ export default function AdminPage() {
 
                     <div className="flex gap-4 flex-wrap">
                       {o.user_image && (
-                        <div>
-                          <p className="text-xs font-semibold mb-1">Bukti SS *#06# (Klik Buat Zoom):</p>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={o.user_image} 
-                            alt="Bukti User" 
-                            className="h-32 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
-                            onClick={() => {
-                              Swal.fire({
-                                imageUrl: o.user_image,
-                                imageAlt: 'Bukti User',
-                                showConfirmButton: false,
-                                showCloseButton: true,
-                                background: 'rgba(0,0,0,0.9)',
-                                customClass: {
-                                  image: 'max-h-[85vh] object-contain'
-                                }
-                              });
-                            }}
-                          />
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold">Bukti SS *#06#:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {o.user_image.split(',').map((imgUrl: string, idx: number) => (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img 
+                                key={idx}
+                                src={imgUrl} 
+                                alt={`Bukti User ${idx+1}`} 
+                                className="h-24 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
+                                onClick={() => {
+                                  Swal.fire({
+                                    imageUrl: imgUrl,
+                                    imageAlt: 'Bukti User',
+                                    showConfirmButton: false,
+                                    showCloseButton: true,
+                                    background: 'rgba(0,0,0,0.9)',
+                                    customClass: {
+                                      image: 'max-h-[85vh] object-contain'
+                                    }
+                                  });
+                                }}
+                              />
+                            ))}
+                          </div>
                         </div>
                       )}
                       {o.user_image_ceir && (
-                        <div>
-                          <p className="text-xs font-semibold mb-1">Bukti SS Cek CEIR (Klik Buat Zoom):</p>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={o.user_image_ceir} 
-                            alt="Bukti CEIR User" 
-                            className="h-32 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
-                            onClick={() => {
-                              Swal.fire({
-                                imageUrl: o.user_image_ceir,
-                                imageAlt: 'Bukti CEIR User',
-                                showConfirmButton: false,
-                                showCloseButton: true,
-                                background: 'rgba(0,0,0,0.9)',
-                                customClass: {
-                                  image: 'max-h-[85vh] object-contain'
-                                }
-                              });
-                            }}
-                          />
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold">Bukti SS Cek CEIR:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {o.user_image_ceir.split(',').map((imgUrl: string, idx: number) => (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img 
+                                key={idx}
+                                src={imgUrl} 
+                                alt={`Bukti CEIR User ${idx+1}`} 
+                                className="h-24 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
+                                onClick={() => {
+                                  Swal.fire({
+                                    imageUrl: imgUrl,
+                                    imageAlt: 'Bukti CEIR User',
+                                    showConfirmButton: false,
+                                    showCloseButton: true,
+                                    background: 'rgba(0,0,0,0.9)',
+                                    customClass: {
+                                      image: 'max-h-[85vh] object-contain'
+                                    }
+                                  });
+                                }}
+                              />
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

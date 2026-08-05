@@ -2606,7 +2606,7 @@ const manualOrderStorage = multer.diskStorage({
         cb(null, `${Date.now()}-${Math.round(Math.random()*1E9)}${path.extname(file.originalname)}`);
     }
 });
-const manualOrderUpload = multer({ storage: manualOrderStorage, limits: { fileSize: 10 * 1024 * 1024 } }).fields([{ name: 'image' }, { name: 'ceir_image' }]);
+const manualOrderUpload = multer({ storage: manualOrderStorage, limits: { fileSize: 10 * 1024 * 1024 } }).fields([{ name: 'image', maxCount: 20 }, { name: 'ceir_image', maxCount: 20 }]);
 
 app.get('/api/admin/ceirgo-services', isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -2776,6 +2776,16 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
             if (!['imei', 'ceir'].includes(service_type)) return res.status(400).json({ status: false, message: "Tipe layanan tidak valid" });
             if (!imei) return res.status(400).json({ status: false, message: "IMEI harus diisi" });
 
+            // Parsing multi-IMEI
+            const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 14);
+            if (imeiList.length === 0) return res.status(400).json({ status: false, message: "Tidak ada IMEI valid yang dimasukkan" });
+            const imeiCount = imeiList.length;
+            const cleanImei = imeiList.join(', ');
+
+            if (service_type === 'ceir' && imeiCount > 1) {
+                return res.status(400).json({ status: false, message: "Layanan Cek CEIR hanya bisa 1 IMEI per transaksi." });
+            }
+
             let price = 0;
             if (service_type === 'imei') {
                 const pkg = await dbGet("SELECT price FROM imei_packages WHERE id = ?", [price_key]);
@@ -2795,16 +2805,27 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                 price = parseInt(priceRow.value) || 0;
             }
 
-            const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
-            if (user.balance < price) return res.status(402).json({ status: false, message: "Saldo tidak mencukupi" });
+            const totalPrice = price * imeiCount;
 
-            await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [price, req.session.userId]);
+            const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+            if (user.balance < totalPrice) return res.status(402).json({ status: false, message: `Saldo tidak mencukupi untuk ${imeiCount} IMEI` });
+
+            await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [totalPrice, req.session.userId]);
             
             const trxId = `trx_m_${Date.now()}`;
-            const packageName = service_type === 'imei' ? `Unblock IMEI (${duration})` : `Cek CEIR (${duration})`;
+            const packageName = service_type === 'imei' ? `Unblock IMEI (${duration}) x${imeiCount}` : `Cek CEIR (${duration})`;
             
-            const imagePath = req.files && req.files['image'] ? `/public/uploads/manual_orders/${req.files['image'][0].filename}` : null;
-            const ceirImagePath = req.files && req.files['ceir_image'] ? `/public/uploads/manual_orders/${req.files['ceir_image'][0].filename}` : null;
+            let imagePaths = [];
+            if (req.files && req.files['image']) {
+                imagePaths = req.files['image'].map(f => `/public/uploads/manual_orders/${f.filename}`);
+            }
+            const imagePath = imagePaths.length > 0 ? imagePaths.join(',') : null;
+
+            let ceirImagePaths = [];
+            if (req.files && req.files['ceir_image']) {
+                ceirImagePaths = req.files['ceir_image'].map(f => `/public/uploads/manual_orders/${f.filename}`);
+            }
+            const ceirImagePath = ceirImagePaths.length > 0 ? ceirImagePaths.join(',') : null;
 
             let finalStatus = 'pending';
             let apiResponse = 'Selesai / Sedang Diproses Admin';
@@ -2823,18 +2844,15 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                     const isBarcode = ceirgoServiceCode.includes('barcode');
 
                     if (isBarcode) {
-                        // Jika layanan barcode, payload nya { items: [{ primary_imei, secondary_imei, theme }] }
-                        // Kita asumsikan secondary_imei dikirim via req.body.imei2
                         payloadData = {
                             items: [{
-                                primary_imei: imei,
-                                secondary_imei: req.body.imei2 || imei,
+                                primary_imei: cleanImei,
+                                secondary_imei: req.body.imei2 || cleanImei,
                                 theme: req.body.theme || "dark"
                             }]
                         };
                     } else {
-                        // Layanan biasa
-                        payloadData = { imeis: [imei] };
+                        payloadData = { imeis: [cleanImei] };
                     }
 
                     const ceirResponse = await orderCeirgo(ceirgoServiceCode, payloadData);
@@ -2845,19 +2863,19 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                         const resultObj = ceirResponse.result;
                         
                         if (ceirgoServiceCode === 'cek_imei_beacukai' && Array.isArray(resultObj)) {
-                            const resultItem = resultObj.find(r => r.imei === imei);
+                            const resultItem = resultObj.find(r => r.imei === cleanImei);
                             adminNote = `Status Beacukai: ${resultItem?.status || 'UNKNOWN'}`;
                         } else if (ceirgoServiceCode === 'cek_history_imei' && Array.isArray(resultObj)) {
-                            const resultItem = resultObj.find(r => r.imei === imei);
+                            const resultItem = resultObj.find(r => r.imei === cleanImei);
                             adminNote = `Ditemukan ${resultItem?.history?.length || 0} riwayat CEIR.`;
                         } else if (ceirgoServiceCode === 'cek_validity' && Array.isArray(resultObj)) {
-                            const resultItem = resultObj.find(r => r.imei === imei);
+                            const resultItem = resultObj.find(r => r.imei === cleanImei);
                             adminNote = `Status: ${resultItem?.status || 'UNKNOWN'} | Valid Until: ${resultItem?.valid_until || 'N/A'}`;
                         } else if (isBarcode && resultObj && resultObj.items && Array.isArray(resultObj.items)) {
                             // Untuk layanan barcode
                             const item = resultObj.items[0];
                             if (item && item.url) {
-                                adminImagePath = item.url; // Langsung masukkan URL asli dari Ceirgo ke kolom admin_image!
+                                adminImagePath = item.url;
                                 adminNote = `Barcode berhasil di-generate. Silakan lihat gambar.`;
                             } else {
                                 adminNote = `Gagal me-render Barcode.`;
@@ -2867,7 +2885,7 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                             let foundBucket = 'UNKNOWN';
                             if (resultObj && typeof resultObj === 'object' && !Array.isArray(resultObj)) {
                                 for (const [bucketName, imeiArray] of Object.entries(resultObj)) {
-                                    if (Array.isArray(imeiArray) && imeiArray.includes(imei)) {
+                                    if (Array.isArray(imeiArray) && imeiArray.includes(cleanImei)) {
                                         foundBucket = bucketName;
                                         break;
                                     }
@@ -2883,7 +2901,6 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                     }
                 } catch (e) {
                     console.error("[AUTO_CEIR_ERROR]", e);
-                    // Jika gagal hit API, biarkan status pending agar admin yang proses manual (fallback)
                     adminNote = "Gagal auto-cek via API. Admin akan mengecek manual.";
                 }
             }
@@ -2891,18 +2908,19 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
             await dbRun(`
                 INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, status, api_response, admin_note, kmspTrxId, createdAt, service_type, imei, user_image, user_image_ceir, speed_option)
                 VALUES (?, ?, (SELECT name FROM users WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, price, price, '', 'balance', finalStatus, apiResponse, adminNote, refId, new Date().toISOString(), service_type, imei, imagePath, ceirImagePath, speed_option]);
+            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, totalPrice, totalPrice, '', 'balance', finalStatus, apiResponse, adminNote, refId, new Date().toISOString(), service_type, cleanImei, imagePath, ceirImagePath, speed_option]);
 
             
             if (finalStatus !== 'success') {
                 const tMsg = `📦 <b>Ada Pesanan Manual Baru</b>
 Layanan: ${packageName}
-Harga: Rp ${price.toLocaleString('id-ID')}
-IMEI: ${imei}
+Harga: Rp ${totalPrice.toLocaleString('id-ID')}
+IMEI: ${cleanImei}
 Status: ${finalStatus}
 
 Segera cek di Panel Admin!`;
-                const localImagePath = req.files && req.files['image'] ? req.files['image'][0].path : null;
+                // Kirim gambar pertama ke Telegram jika ada
+                const localImagePath = req.files && req.files['image'] && req.files['image'][0] ? req.files['image'][0].path : null;
                 sendManualOrderNotification(tMsg, trxId, localImagePath);
             }
             res.json({ status: true, message: finalStatus === 'success' ? "Pesanan otomatis berhasil diproses!" : "Pesanan berhasil dibuat, sedang diproses." });
