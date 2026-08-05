@@ -184,7 +184,12 @@ export function SuccessModal({
         }
 
         .info-label-pop { color: rgba(255, 255, 255, 0.7); }
-        .info-value-pop { font-weight: 600; }
+        .info-value-pop { 
+          font-weight: 600; 
+          word-break: break-all; 
+          max-width: 65%; 
+          text-align: right; 
+        }
 
         .btn-done-pop {
           width: 100%;
