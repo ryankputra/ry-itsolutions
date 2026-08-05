@@ -2777,7 +2777,7 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
             if (!imei) return res.status(400).json({ status: false, message: "IMEI harus diisi" });
 
             // Parsing multi-IMEI
-            const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 14);
+            const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 15);
             if (imeiList.length === 0) return res.status(400).json({ status: false, message: "Tidak ada IMEI valid yang dimasukkan" });
             const imeiCount = imeiList.length;
             const cleanImei = imeiList.join(', ');

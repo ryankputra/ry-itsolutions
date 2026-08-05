@@ -157,7 +157,7 @@ export default function TopUpPage() {
                   </div>
                   <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg shadow-black/5 hover:scale-105 transition-transform h-10 min-w-[60px]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/Logo_OVO.svg" alt="OVO" className="h-3.5 object-contain" />
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" alt="OVO" className="h-3.5 object-contain" />
                   </div>
                   <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-lg shadow-black/5 hover:scale-105 transition-transform h-10 min-w-[60px]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -179,7 +179,7 @@ export default function TopUpPage() {
                       <p className="text-sm text-ink-muted mb-3">Minimal Rp 10.000 tanpa potongan fee.</p>
                       <Input 
                         type="number" 
-                        placeholder="Contoh: 50000" 
+                        placeholder="Contoh: 10000" 
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         required 
