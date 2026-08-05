@@ -1615,6 +1615,16 @@ app.get('/api/admin/users', isAuthenticated, isAdmin, async (req, res) => {
     } catch (e) { res.status(500).json({ status: false, message: "Gagal mengambil data pengguna." }) }
 });
 
+app.delete('/api/admin/delete-zero-balance', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("DELETE FROM users WHERE balance = 0 AND role != 'admin'");
+        res.status(200).json({ status: true, message: "Semua pengguna dengan saldo 0 (kecuali admin) berhasil dihapus." });
+    } catch (e) {
+        console.error("Error deleting zero balance users:", e);
+        res.status(500).json({ status: false, message: "Gagal menghapus pengguna dengan saldo 0." });
+    }
+});
+
 app.post('/api/admin/update-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { userId, amount } = req.body;

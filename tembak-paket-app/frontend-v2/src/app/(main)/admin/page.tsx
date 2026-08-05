@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchUser, setSearchUser] = useState("");
+  const [userPage, setUserPage] = useState(1);
   const [balAmount, setBalAmount] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
@@ -250,6 +251,36 @@ export default function AdminPage() {
     } catch (e) { Swal.fire({title: "Info", text: "Error update balance", icon: "info"}); }
   };
 
+  const handleDeleteZeroBalance = async () => {
+    const res = await Swal.fire({
+      title: 'Hapus Semua Akun Saldo 0?',
+      text: 'Semua user (kecuali admin) dengan saldo Rp 0 akan dihapus permanen! Ini tidak bisa dibatalkan.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus Semua!',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#d33'
+    });
+    
+    if (!res.isConfirmed) return;
+    
+    try {
+      const resp = await fetch('/api/admin/delete-zero-balance', {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        Swal.fire('Berhasil', data.message, 'success');
+        loadUsers();
+      } else {
+        Swal.fire('Gagal', data.message || 'Gagal menghapus pengguna', 'error');
+      }
+    } catch (e) {
+      Swal.fire('Error', 'Kesalahan jaringan', 'error');
+    }
+  };
+
   const handleSaveAnnouncement = async () => {
     setSavingAnn(true);
     try {
@@ -275,6 +306,14 @@ export default function AdminPage() {
     u.name.toLowerCase().includes(searchUser.toLowerCase()) || 
     u.email.toLowerCase().includes(searchUser.toLowerCase())
   );
+
+  const usersPerPage = 10;
+  const totalUserPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const paginatedUsers = filteredUsers.slice((userPage - 1) * usersPerPage, userPage * usersPerPage);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [searchUser]);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -387,7 +426,12 @@ export default function AdminPage() {
       {activeTab === 'pengguna' && (
         <Card glass className="p-6 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <h2 className="text-xl font-bold">Kelola Saldo & Pengguna</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              Kelola Pengguna
+              <Button size="sm" variant="outline" className="text-xs text-rose-500 border-rose-200 hover:bg-rose-50 px-3 py-1 ml-2" onClick={handleDeleteZeroBalance}>
+                🗑 Hapus Semua Saldo 0
+              </Button>
+            </h2>
             <input 
               type="text" 
               className="h-10 rounded-full border border-hairline bg-canvas px-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary min-w-[250px]"
@@ -398,7 +442,7 @@ export default function AdminPage() {
           </div>
           {loadingUsers ? <p className="text-sm text-ink-muted">Memuat...</p> : (
             <div className="space-y-4">
-              {filteredUsers.map(u => (
+              {paginatedUsers.map(u => (
                 <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border border-hairline rounded-lg bg-canvas gap-4">
                   <div className="flex-1">
                     <p className="font-bold text-ink">{u.name}</p>
@@ -431,13 +475,13 @@ export default function AdminPage() {
                     </select>
 
                     {selectedUserId === u.id ? (
-                      <div className="flex gap-2">
-                        <Input type="number" placeholder="Nominal (+)" value={balAmount} onChange={(e) => setBalAmount(e.target.value)} />
-                        <Button size="sm" onClick={() => handleUpdateBalance(u.id)}>Add</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setSelectedUserId(null)}>X</Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input type="number" placeholder="Gunakan - untuk kurang (misal: -10000)" className="w-60 text-xs" value={balAmount} onChange={(e) => setBalAmount(e.target.value)} />
+                        <Button size="sm" onClick={() => handleUpdateBalance(u.id)}>Simpan Saldo</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setSelectedUserId(null); setBalAmount(""); }}>X</Button>
                       </div>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={() => setSelectedUserId(u.id)}>Topup</Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedUserId(u.id)}>Edit Saldo</Button>
                     )}
 
                     {u.status === 'pending' && (
@@ -485,6 +529,29 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+              
+              {/* Pagination Controls */}
+              {totalUserPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-6">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                    disabled={userPage === 1}
+                  >
+                    Sebelumnya
+                  </Button>
+                  <span className="text-sm font-medium">Halaman {userPage} dari {totalUserPages}</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                    disabled={userPage === totalUserPages}
+                  >
+                    Selanjutnya
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </Card>
