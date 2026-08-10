@@ -20,7 +20,7 @@ export default function AdminPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [syncing, setSyncing] = useState(false);
   const [savingPkg, setSavingPkg] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Users State
   const [users, setUsers] = useState<any[]>([]);
