@@ -1201,6 +1201,25 @@ app.get('/api/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) 
     }
 });
 
+app.get('/api/admin/ceirgo-display-settings', isAuthenticated, async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'ceirgoDisplaySettings'");
+        res.json({ status: true, data: row ? JSON.parse(row.value) : {} });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal mengambil setting tampilan.' });
+    }
+});
+
+app.put('/api/admin/ceirgo-display-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const settings = req.body;
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ceirgoDisplaySettings', ?)", [JSON.stringify(settings)]);
+        res.json({ status: true, message: 'Pengaturan tampilan berhasil disimpan.' });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal menyimpan setting tampilan.' });
+    }
+});
+
 // GET metode pembayaran Ceirgo
 app.get('/api/admin/ceirgo-deposit-providers', isAuthenticated, isAdmin, async (req, res) => {
     try {

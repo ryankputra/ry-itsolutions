@@ -68,6 +68,7 @@ export default function AdminPage() {
   const [loadingManual, setLoadingManual] = useState(false);
   const [manualActionData, setManualActionData] = useState<{ id: string, status: string, note: string, file: File | null } | null>(null);
   const [hideSuccess, setHideSuccess] = useState(true);
+  const [hideFailed, setHideFailed] = useState(true);
 
 
   useEffect(() => {
@@ -116,17 +117,19 @@ export default function AdminPage() {
 
   const [imeiServiceOpen, setImeiServiceOpen] = useState(true);
   const [imeiServiceNote, setImeiServiceNote] = useState("");
+  const [ceirgoDisplayCodes, setCeirgoDisplayCodes] = useState<Set<string>>(new Set());
 
   const loadManualData = async () => {
     setLoadingManual(true);
     try {
-      const [ordRes, prcRes, imeiRes, ceirSvcRes, ceirPrcRes, statusRes] = await Promise.all([
+      const [ordRes, prcRes, imeiRes, ceirSvcRes, ceirPrcRes, statusRes, displayRes] = await Promise.all([
         fetch('/api/admin/manual-orders', { credentials: 'include' }),
         fetch('/api/manual-services-pricing'),
         fetch('/api/imei-packages?all=true'),
         fetch('/api/admin/ceirgo-services', { credentials: 'include' }),
         fetch('/api/ceirgo-pricing'),
-        fetch('/api/imei-service-status', { cache: 'no-store' })
+        fetch('/api/imei-service-status', { cache: 'no-store' }),
+        fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' })
       ]);
       if (ordRes.ok) {
         const d = await ordRes.json();
@@ -140,9 +143,13 @@ export default function AdminPage() {
         const d = await imeiRes.json();
         if (d.status) setImeiPackages(d.data);
       }
+      let loadedServices: any[] = [];
       if (ceirSvcRes?.ok) {
         const d = await ceirSvcRes.json();
-        if (d.status) setCeirgoServices(d.data);
+        if (d.status) {
+          setCeirgoServices(d.data);
+          loadedServices = d.data;
+        }
       }
       if (ceirPrcRes?.ok) {
         const d = await ceirPrcRes.json();
@@ -153,6 +160,14 @@ export default function AdminPage() {
         if (d.status) {
           setImeiServiceOpen(d.isOpen);
           setImeiServiceNote(d.note || "");
+        }
+      }
+      if (displayRes?.ok) {
+        const d = await displayRes.json();
+        if (d.status && d.data && Array.isArray(d.data.cekCeir)) {
+          setCeirgoDisplayCodes(new Set(d.data.cekCeir));
+        } else if (loadedServices.length > 0) {
+          setCeirgoDisplayCodes(new Set(loadedServices.map(s => s.code)));
         }
       }
     } finally { setLoadingManual(false); }
@@ -838,12 +853,23 @@ export default function AdminPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {ceirgoServices.map((svc) => (
-                    <div key={svc.code} className="bg-canvas border border-hairline p-4 rounded-xl flex flex-col gap-3">
-                      <div>
-                        <p className="font-bold text-ink">{svc.name}</p>
-                        <p className="text-xs text-primary font-semibold font-mono">{svc.code}</p>
-                        <p className="text-xs text-ink-muted mt-1">Modal Asli: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
-                        {ceirgoPricing[svc.code] != null && <p className="text-xs font-bold text-green-600 mt-0.5">Harga Admin: Rp {Number(ceirgoPricing[svc.code]).toLocaleString('id-ID')}</p>}
+                    <div key={svc.code} className={`bg-canvas border p-4 rounded-xl flex flex-col gap-3 ${ceirgoDisplayCodes.has(svc.code) ? 'border-primary ring-1 ring-primary/30' : 'border-hairline opacity-75'}`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-ink">{svc.name}</p>
+                          <p className="text-xs text-primary font-semibold font-mono">{svc.code}</p>
+                          <p className="text-xs text-ink-muted mt-1">Modal Asli: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
+                          {ceirgoPricing[svc.code] != null && <p className="text-xs font-bold text-green-600 mt-0.5">Harga Admin: Rp {Number(ceirgoPricing[svc.code]).toLocaleString('id-ID')}</p>}
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                          <input type="checkbox" className="sr-only peer" checked={ceirgoDisplayCodes.has(svc.code)} onChange={(e) => {
+                             const newSet = new Set(ceirgoDisplayCodes);
+                             if (e.target.checked) newSet.add(svc.code);
+                             else newSet.delete(svc.code);
+                             setCeirgoDisplayCodes(newSet);
+                          }} />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                        </label>
                       </div>
                       <Input
                         label="Harga Jual ke User (Rp)"
@@ -856,30 +882,46 @@ export default function AdminPage() {
                 </div>
                 <Button onClick={async () => {
                   try {
+                    await fetch('/api/admin/ceirgo-display-settings', {
+                      method: 'PUT',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ cekCeir: Array.from(ceirgoDisplayCodes) })
+                    });
                     const res = await fetch('/api/admin/ceirgo-pricing', {
                       method: 'POST',
                       credentials: 'include',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(ceirgoPricing)
                     });
-                    if (res.ok) Swal.fire({ title: "Info", text: "Harga layanan Ceirgo berhasil disimpan!", icon: "info" });
-                  } catch (e) { Swal.fire({ title: "Info", text: "Error menyimpan harga", icon: "info" }); }
-                }} className="w-full">Simpan Harga Jual Ceirgo</Button>
+                    if (res.ok) Swal.fire({ title: "Info", text: "Harga dan tampilan layanan Ceirgo berhasil disimpan!", icon: "info" });
+                  } catch (e) { Swal.fire({ title: "Info", text: "Error menyimpan", icon: "info" }); }
+                }} className="w-full">Simpan Harga & Tampilan Ceirgo</Button>
               </div>
             )}
           </Card>
 
           <Card glass className="p-6 space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-2">
               <h2 className="text-xl font-bold">Antrean Pesanan Manual</h2>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={hideSuccess} onChange={e => setHideSuccess(e.target.checked)} className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">Sembunyikan Sukses</span>
-              </label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={hideSuccess} onChange={e => setHideSuccess(e.target.checked)} className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Sembunyikan Sukses</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={hideFailed} onChange={e => setHideFailed(e.target.checked)} className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Sembunyikan Gagal</span>
+                </label>
+              </div>
             </div>
             {loadingManual ? <p>Memuat...</p> : manualOrders.length === 0 ? <p className="text-ink-muted">Tidak ada pesanan.</p> : (
               <div className="space-y-4">
-                {manualOrders.filter(o => hideSuccess ? o.status !== "success" : true).map(o => (
+                {manualOrders.filter(o => {
+                  if (hideSuccess && o.status === "success") return false;
+                  if (hideFailed && o.status === "failed") return false;
+                  return true;
+                }).map(o => (
                   <div key={o.id} className="p-4 border border-hairline rounded-lg bg-canvas space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
@@ -1075,6 +1117,22 @@ export default function AdminPage() {
             >
               Simpan Gateway Aktif
             </Button>
+          </Card>
+
+          <Card glass className="p-6 space-y-4">
+            <h2 className="text-xl font-bold">Pengaturan Menu</h2>
+            <p className="text-sm text-ink-muted">Atur visibilitas menu di sidebar pengguna.</p>
+            <div className="flex items-center justify-between p-4 border border-hairline rounded-xl bg-canvas">
+              <div>
+                <p className="font-bold text-ink">Menu Suntik Kuota</p>
+                <p className="text-xs text-ink-muted">Tampilkan menu Suntik Kuota di sidebar.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={showBeliPaket} onChange={(e) => setShowBeliPaket(e.target.checked)} />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+            <Button className="w-full" onClick={handleSaveMenuSettings} isLoading={savingMenuSettings}>Simpan Pengaturan Menu</Button>
           </Card>
 
           <Card glass className="p-6 space-y-4">
