@@ -24,7 +24,7 @@ const ceirgoNameMapping: Record<string, string> = {
 export default function CekCeirPage() {
   const { user } = useApp();
   const router = useRouter();
-  
+
   const [pricing, setPricing] = useState<any>({});
   const [ceirgoPricing, setCeirgoPricing] = useState<any>({});
   const [ceirgoServices, setCeirgoServices] = useState<any[]>([]);
@@ -34,32 +34,65 @@ export default function CekCeirPage() {
   const [imei2, setImei2] = useState("");
   const [theme, setTheme] = useState("dark");
   const [option, setOption] = useState("register");
-  
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
-  const [ceirResult, setCeirResult] = useState<{note: string | null, image: string | null} | null>(null);
+  const [ceirResult, setCeirResult] = useState<{ note: string | null, image: string | null } | null>(null);
+
+  const normalizeServices = (payload: any) => {
+    const services = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.data?.page?.items)
+          ? payload.data.page.items
+          : [];
+
+    return services
+      .map((svc: any) => ({
+        code: svc?.code,
+        name: svc?.name || ceirgoNameMapping[svc?.code] || svc?.code,
+        modalPrice: Number(svc?.modalPrice ?? svc?.price ?? svc?.unit_price ?? 0) || 0,
+      }))
+      .filter((svc: any) => svc.code && !/barcode|create|dummy|test|sample|demo/i.test(`${svc.code} ${svc.name}`));
+  };
 
   useEffect(() => {
     Promise.all([
       fetch('/api/manual-services-pricing').then(res => res.json()),
       fetch('/api/ceirgo-pricing').then(res => res.json()),
-      fetch('/api/admin/ceirgo-services', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
-    ]).then(([prcData, ceirPrcData, ceirSvcData]) => {
+      fetch('/api/admin/ceirgo-services', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false })),
+      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
+    ]).then(([prcData, ceirPrcData, ceirSvcData, displayData]) => {
       if (prcData.status) setPricing(prcData.data);
       if (ceirPrcData.status) setCeirgoPricing(ceirPrcData.data);
-      if (ceirSvcData.status && ceirSvcData.data) setCeirgoServices(ceirSvcData.data);
+      const services = ceirSvcData.status ? normalizeServices(ceirSvcData.data) : [];
+      const hasCeirSetting = displayData?.status && displayData.data && Object.prototype.hasOwnProperty.call(displayData.data, 'cekCeir');
+      const visibleCodes = hasCeirSetting
+        ? new Set(Array.isArray(displayData.data.cekCeir) ? displayData.data.cekCeir : [])
+        : null;
+      setCeirgoServices(visibleCodes ? services.filter((s: any) => visibleCodes.has(s.code)) : services);
     }).finally(() => setLoading(false));
   }, []);
 
   const getPrice = (opt: string) => {
-    if (ceirgoPricing[opt]) return ceirgoPricing[opt];
-    switch (opt) {
-      case 'register': return ceirgoPricing['cek_imei_beacukai'] || pricing['price_ceir_register'] || 0;
-      case 'history': return ceirgoPricing['cek_history_imei'] || pricing['price_ceir_history'] || 0;
-      default: return 0;
+    const svc = ceirgoServices.find(s => s.code === opt);
+    const aliases = [
+      opt,
+      `ceirgo_price_${opt}`,
+      opt.startsWith('ceirgo_price_') ? opt.replace(/^ceirgo_price_/, '') : null,
+      opt.startsWith('price_') ? opt.replace(/^price_/, '') : null,
+    ].filter(Boolean) as string[];
+
+    for (const key of aliases) {
+      const sellingPrice = Number(ceirgoPricing?.[key]);
+      if (Number.isFinite(sellingPrice) && sellingPrice > 0) return sellingPrice;
     }
+
+    const modalPrice = Number(svc?.modalPrice);
+    return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 0;
   };
 
   const getPriceKey = (opt: string) => {
@@ -71,25 +104,25 @@ export default function CekCeirPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit).");
-    
+
     const isBarcodeMode = option.includes('barcode');
     if (isBarcodeMode && imei2 && imei2.length < 15) return setError("IMEI Kedua tidak valid (minimal 15 digit).");
 
     const price = getPrice(option);
     if (user && user.balance < price) {
       Swal.fire({
-      title: 'Saldo Tidak Mencukupi',
-      text: 'Saldo Anda kurang untuk melakukan pesanan ini. Silakan isi saldo terlebih dahulu.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Top Up Sekarang',
-      cancelButtonText: 'Batal'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        router.push('/topup');
-      }
-    });
-    return setError('Saldo tidak mencukupi.');
+        title: 'Saldo Tidak Mencukupi',
+        text: 'Saldo Anda kurang untuk melakukan pesanan ini. Silakan isi saldo terlebih dahulu.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Top Up Sekarang',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push('/topup');
+        }
+      });
+      return setError('Saldo tidak mencukupi.');
     }
 
     setError("");
@@ -101,7 +134,7 @@ export default function CekCeirPage() {
       formData.append("imei", imei);
       if (isBarcodeMode && imei2) formData.append("imei2", imei2);
       if (isBarcodeMode) formData.append("theme", theme);
-      
+
       let durationStr = "Cek Layanan CEIR";
       const svc = ceirgoServices.find(s => s.code === option);
       if (svc) durationStr = svc.name;
@@ -127,7 +160,7 @@ export default function CekCeirPage() {
         return;
       }
 
-      const res = await fetch("/api/order/manual", {
+      const res = await fetch("/api/order/ceir", {
         method: "POST",
         credentials: 'include',
         body: formData
@@ -152,21 +185,15 @@ export default function CekCeirPage() {
     if (loading) return <p className="text-sm text-ink-muted col-span-2">Memuat layanan...</p>;
 
     const buttons: { id: string, label: string, price: number }[] = [];
-    
-    if (!ceirgoPricing['cek_imei_beacukai'] && pricing['price_ceir_register']) {
-      buttons.push({ id: 'register', label: 'Cek Beacukai (Manual)', price: pricing['price_ceir_register'] });
-    }
-    if (!ceirgoPricing['cek_history_imei'] && pricing['price_ceir_history']) {
-      buttons.push({ id: 'history', label: 'Cek History (Manual)', price: pricing['price_ceir_history'] });
-    }
 
-    Object.keys(ceirgoPricing).forEach(code => {
-      const price = ceirgoPricing[code];
-      if (price > 0 && !code.includes('barcode')) {
-        const svc = ceirgoServices.find(s => s.code === code);
-        const name = svc ? svc.name : (ceirgoNameMapping[code] || code.replace(/_/g, " ").toUpperCase());
-        buttons.push({ id: code, label: name, price: price });
-      }
+    const visibleCodes = new Set(ceirgoServices.map(s => s.code));
+    const addButton = (id: string, label: string, price: number) => {
+      if (price > 0 && !buttons.some(btn => btn.id === id)) buttons.push({ id, label, price });
+    };
+
+    ceirgoServices.forEach(svc => {
+      const price = getPrice(svc.code);
+      if (price > 0) addButton(svc.code, svc.name || ceirgoNameMapping[svc.code] || svc.code.replace(/_/g, " ").toUpperCase(), price);
     });
 
     if (buttons.length === 0) {
@@ -180,11 +207,10 @@ export default function CekCeirPage() {
           key={btn.id}
           type="button"
           onClick={() => setOption(btn.id)}
-          className={`p-4 rounded-xl border text-center transition-all duration-200 flex flex-col items-center justify-center gap-1 ${
-            isSelected 
-              ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 text-primary ring-1 ring-primary scale-[1.02]' 
+          className={`p-4 rounded-xl border text-center transition-all duration-200 flex flex-col items-center justify-center gap-1 ${isSelected
+              ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 text-primary ring-1 ring-primary scale-[1.02]'
               : 'border-hairline bg-canvas hover:bg-parchment hover:border-primary/30'
-          }`}
+            }`}
         >
           <div className="font-bold text-sm leading-tight px-1">{btn.label}</div>
           <div className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 ${isSelected ? 'bg-primary/10 text-primary' : 'bg-parchment text-ink-muted'}`}>
@@ -205,7 +231,7 @@ export default function CekCeirPage() {
         </button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Investigasi & Cek CEIR 🔍</h1>
-          <p className="text-sm text-ink-muted">Kepoin status IMEI lo atau generate barcode box HP auto sat-set.</p>
+          <p className="text-sm text-ink-muted">Kepoin status IMEI (ceir) lo sebelum unblock imei lo.</p>
         </div>
       </div>
 
@@ -229,26 +255,26 @@ export default function CekCeirPage() {
               <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">2</span>
               Detail Perangkat
             </label>
-            
-            <Input 
-              label={isBarcodeMode ? "IMEI Utama (SIM 1)" : "Nomor IMEI"} 
-              placeholder="Masukkan 15 digit IMEI" 
-              value={imei} 
-              onChange={e => setImei(e.target.value)} 
-              maxLength={15} 
-              required 
+
+            <Input
+              label={isBarcodeMode ? "IMEI Utama (SIM 1)" : "Nomor IMEI"}
+              placeholder="Masukkan 15 digit IMEI"
+              value={imei}
+              onChange={e => setImei(e.target.value)}
+              maxLength={15}
+              required
             />
 
             {isBarcodeMode && (
               <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-4 mt-2">
-                <Input 
-                  label="IMEI Kedua (SIM 2) - Opsional" 
-                  placeholder="Masukkan 15 digit IMEI SIM 2" 
-                  value={imei2} 
-                  onChange={e => setImei2(e.target.value)} 
-                  maxLength={15} 
+                <Input
+                  label="IMEI Kedua (SIM 2) - Opsional"
+                  placeholder="Masukkan 15 digit IMEI SIM 2"
+                  value={imei2}
+                  onChange={e => setImei2(e.target.value)}
+                  maxLength={15}
                 />
-                
+
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink/80">Tema Barcode</label>
                   <div className="flex gap-4">
@@ -266,35 +292,35 @@ export default function CekCeirPage() {
             )}
           </div>
 
-        <Button className="w-full h-14 text-lg font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
-          Bayar Rp {getPrice(option).toLocaleString('id-ID')}
-        </Button>
-      </form>
-    </Card>
-
-    {ceirResult && (
-      <Card className="mt-6 p-6 border-2 border-primary/30 bg-primary/5 animate-fade-in">
-        <h3 className="font-bold text-lg mb-2 text-primary">🎉 Hasil Pengecekan:</h3>
-        <p className="text-ink font-medium leading-relaxed">{ceirResult.note}</p>
-        {ceirResult.image && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={ceirResult.image} alt="Barcode/Hasil CEIR" className="mt-4 rounded-xl border border-hairline w-full max-w-sm object-contain bg-white p-2 shadow-sm" />
-        )}
+          <Button className="w-full h-14 text-lg font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
+            Bayar Rp {getPrice(option).toLocaleString('id-ID')}
+          </Button>
+        </form>
       </Card>
-    )}
 
-    <SuccessModal 
-      isOpen={showSuccessPop} 
-      onClose={() => {
-        setShowSuccessPop(false);
-        if (!ceirResult) router.push('/history');
-      }} 
-      amount={getPrice(option)} 
-      title="Pembayaran Berhasil"
-      statusText="Cek CEIR otomatis berhasil!"
-      recipientLabel="IMEI Target"
-      recipientValue={imei}
-    />
-  </div>
+      {ceirResult && (
+        <Card className="mt-6 p-6 border-2 border-primary/30 bg-primary/5 animate-fade-in">
+          <h3 className="font-bold text-lg mb-2 text-primary">🎉 Hasil Pengecekan:</h3>
+          <p className="text-ink font-medium leading-relaxed">{ceirResult.note}</p>
+          {ceirResult.image && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={ceirResult.image} alt="Barcode/Hasil CEIR" className="mt-4 rounded-xl border border-hairline w-full max-w-sm object-contain bg-white p-2 shadow-sm" />
+          )}
+        </Card>
+      )}
+
+      <SuccessModal
+        isOpen={showSuccessPop}
+        onClose={() => {
+          setShowSuccessPop(false);
+          if (!ceirResult) router.push('/history');
+        }}
+        amount={getPrice(option)}
+        title="Pembayaran Berhasil"
+        statusText="Cek CEIR otomatis berhasil!"
+        recipientLabel="IMEI Target"
+        recipientValue={imei}
+      />
+    </div>
   );
 }

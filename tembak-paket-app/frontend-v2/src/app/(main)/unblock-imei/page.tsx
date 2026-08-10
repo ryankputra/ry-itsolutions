@@ -44,10 +44,12 @@ export default function UnblockImeiPage() {
       }
       if (prcData.status) {
         setSpeedPricing(prcData.data);
-        // Find first active speed
-        const activeSpeed = Object.keys(prcData.data)
-          .filter(k => k.startsWith('imei_speed_') && !k.endsWith('_status') && prcData.data[`${k}_status`] !== 'hidden')
-          .map(k => k.replace('imei_speed_', ''))[0] || "";
+        const speedDefs = [
+          { id: 'fast', key: 'imei_speed_fast', label: '⚡ Fast' },
+          { id: 'semi', key: 'imei_speed_semi', label: '🚀 Semi Fast' },
+          { id: 'slow', key: 'imei_speed_slow', label: '🐌 Slow' }
+        ];
+        const activeSpeed = speedDefs.find(({ key }) => prcData.data?.[`${key}_status`] !== 'hidden' && Number(prcData.data?.[key]) >= 0)?.id || '';
         setSelectedSpeed(activeSpeed);
       }
     }).finally(() => setLoading(false));
@@ -132,17 +134,17 @@ export default function UnblockImeiPage() {
     }
   };
 
-  const speedOptions = Object.keys(speedPricing)
-    .filter(k => k.startsWith('imei_speed_') && !k.endsWith('_status') && speedPricing[`${k}_status`] !== 'hidden')
-    .map(k => {
-      const key = k.replace('imei_speed_', '');
-      const prc = parseInt(speedPricing[k]) || 0;
-      return {
-        id: key,
-        label: key === 'fast' ? '⚡ Fast' : key === 'semi' ? '🚀 Semi Fast' : '🐌 Slow',
-        price: prc
-      };
-    });
+  const speedOptions = [
+    { id: 'fast', key: 'imei_speed_fast', label: '⚡ Fast' },
+    { id: 'semi', key: 'imei_speed_semi', label: '🚀 Semi Fast' },
+    { id: 'slow', key: 'imei_speed_slow', label: '🐌 Slow' }
+  ]
+    .filter(opt => speedPricing[`${opt.key}_status`] !== 'hidden')
+    .map(opt => ({
+      id: opt.id,
+      label: opt.label,
+      price: parseInt(speedPricing[opt.key]) || 0
+    }));
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-12">

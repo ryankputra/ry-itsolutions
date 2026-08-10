@@ -7,25 +7,15 @@ import { Input } from "@/components/ui/Input";
 
 export default function DashboardPage() {
   const { user, setUser, menuSettings } = useApp();
-  
 
-  
+
+
 
   const [announcement, setAnnouncement] = useState<any>(null);
   const [publicInfo, setPublicInfo] = useState<string>("");
   const [recentTrx, setRecentTrx] = useState<any[]>([]);
   const [selectedQris, setSelectedQris] = useState<any>(null);
-  const [showBalance, setShowBalance] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('hideBalance');
-      return saved === 'false';
-    }
-    return true;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('hideBalance', (!showBalance).toString());
-  }, [showBalance]);
+  const [showBalance, setShowBalance] = useState(true);
 
   useEffect(() => {
     // Meminta Izin Push Notification
@@ -41,14 +31,14 @@ export default function DashboardPage() {
         });
       }
     }
-    
+
     async function loadDashboardData() {
       try {
         const [annRes, trxRes] = await Promise.all([
           fetch("/api/user/announcement", { credentials: 'include' }).catch(() => null),
           fetch("/api/user/transactions", { credentials: 'include' }).catch(() => null)
         ]);
-        
+
         if (annRes?.ok) {
           const data = await annRes.json();
           if (data.status && data.data?.message) setAnnouncement(data.data);
@@ -75,12 +65,12 @@ export default function DashboardPage() {
 
       {/* Announcement Banner */}
       {announcement && (
-        <div 
-          className="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden" 
+        <div
+          className="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden"
           style={{ backgroundColor: announcement.bgColor || '#dc2626' }}
         >
           <div className="absolute -right-4 -top-4 text-white/10">
-            <svg width="100" height="100" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            <svg width="100" height="100" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
           </div>
           <div className="relative z-10">
             <h3 className="font-bold text-sm mb-1">📢 Info Penting Nih!</h3>
@@ -88,35 +78,41 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      
+
       {/* Wallet Card Premium PPOB Style */}
       <div className="relative rounded-[24px] p-6 text-white overflow-hidden shadow-xl shadow-primary/20 bg-gradient-to-br from-[#0066cc] via-[#005bb5] to-[#004080] hover:scale-[1.02] transition-transform duration-300">
         <div className="absolute top-0 right-0 p-4 opacity-10">
-          <svg width="120" height="120" fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
+          <svg width="120" height="120" fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" /></svg>
         </div>
-        
+
         <div className="relative z-10 flex flex-col gap-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-white/80 text-sm font-medium">Cuan Aktif 💰</p>
-                <button onClick={() => setShowBalance(!showBalance)} className="text-white/60 hover:text-white transition-colors">
-                  {showBalance ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>}
-                </button>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold">Rp</span>
-                <span className="text-4xl font-black tracking-tight">{showBalance ? (user?.balance?.toLocaleString('id-ID') || "0") : '••••••'}</span>
-              </div>
-            </div>
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-white/80 text-sm font-medium mb-1">Cuan Aktif 💰</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold">Rp</span>
+                    <span className="text-4xl font-black tracking-tight">
+                      {showBalance ? (user?.balance?.toLocaleString('id-ID') || "0") : "******"}
+                    </span>
+                    <button onClick={() => setShowBalance(!showBalance)} className="ml-2 text-white/80 hover:text-white transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {showBalance ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 .983-3.178 3.39-5.544 6.467-6.524M11.008 3.177A10.07 10.07 0 0112 3c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-1.428 0-2.812-.073-4.14-.216m-.658-.113A10.08 10.08 0 0112 5c-.452 0-.898.026-1.336.078M12 21.082V21c.452 0 .898-.026 1.336-.078m0 0a2.25 2.25 0 00-4.14-.216m-.658-.113A10.08 10.08 0 0112 5c-.452 0-.898.026-1.336.078M12 21.082V21c.452 0 .898-.026 1.336-.078" />
+                        )}
+                      </svg>
+                    </button>
+                  </div>
+                </div>
             <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold capitalize border border-white/10">
               {user?.role}
             </div>
           </div>
-          
+
           <div className="flex gap-3">
             <a href="/topup" className="flex-1 bg-white text-[#005bb5] hover:bg-white/90 transition-colors py-2.5 rounded-full font-bold text-sm shadow-sm flex items-center justify-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
               Top Up Cuan
             </a>
             <a href="/history" className="flex-1 bg-[#004080]/50 hover:bg-[#004080]/80 transition-colors border border-white/20 py-2.5 rounded-full font-bold text-sm text-center flex items-center justify-center gap-2">
@@ -125,7 +121,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Category Grid */}
       <div>
         <h2 className="text-lg font-bold text-ink mb-4">Trending Now 🔥</h2>
@@ -151,7 +147,7 @@ export default function DashboardPage() {
           <h2 className="text-lg font-bold text-ink">Jejak Transaksi 👣</h2>
           <a href="/history" className="text-sm font-semibold text-primary">See All</a>
         </div>
-        
+
         {recentTrx.length === 0 ? (
           <div className="text-center py-8 bg-canvas border border-hairline rounded-2xl">
             <p className="text-sm text-ink-muted">Belum ada pergerakan nih. Yuk checkout!</p>
@@ -177,7 +173,7 @@ export default function DashboardPage() {
                     {trx.status === 'completed' ? 'success' : trx.status}
                   </span>
                   {trx.type === 'topup' && trx.status === 'pending' && trx.qrisData && (
-                    <button 
+                    <button
                       onClick={() => setSelectedQris(trx.qrisData)}
                       className="block mt-2 px-2 py-1 text-xs bg-primary text-white font-bold rounded"
                     >
@@ -193,10 +189,10 @@ export default function DashboardPage() {
 
       {/* QRIS Modal */}
       {selectedQris && (() => {
-        const expiresAt = selectedQris.createdAt 
+        const expiresAt = selectedQris.createdAt
           ? Math.floor(new Date(selectedQris.createdAt).getTime() / 1000) + 900 // 15 mins
           : Math.floor(Date.now() / 1000) + 900;
-        
+
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <Card className="max-w-xs w-full p-6 text-center space-y-4 relative">
@@ -205,7 +201,7 @@ export default function DashboardPage() {
               </button>
               <h3 className="font-bold text-lg">Bayar Top Up</h3>
               <p className="text-primary font-black text-2xl">Rp {selectedQris.uniqueAmount?.toLocaleString('id-ID')}</p>
-              
+
               <div className="relative mx-auto border-2 border-hairline p-2 rounded-xl">
                 <div className="absolute -top-3 -right-3 bg-rose-500 text-white font-bold px-3 py-1.5 rounded-full text-sm shadow-md flex items-center gap-1.5 animate-pulse">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

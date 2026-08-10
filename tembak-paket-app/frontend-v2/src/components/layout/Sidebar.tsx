@@ -77,14 +77,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </svg>
         </button>
       </div>
-      
+
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         {menuItems.map(item => {
           const active = isActive(item.href);
           return (
-            <Link 
-              key={item.name} 
-              href={item.href} 
+            <Link
+              key={item.name}
+              href={item.href}
               onClick={onClose}
               className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${active ? "bg-primary/10 text-primary font-bold shadow-sm" : "text-ink/70 hover:bg-parchment hover:text-ink font-medium"}`}
             >
@@ -98,8 +98,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {user?.role === 'admin' && (
           <div className="pt-4 mt-2 border-t border-hairline">
-            <Link 
-              href="/admin" 
+            <Link
+              href="/admin"
               onClick={onClose}
               className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${isActive("/admin") ? "bg-primary text-white shadow-md shadow-primary/20" : "text-ink bg-parchment border border-hairline hover:border-primary/50"}`}
             >
@@ -109,7 +109,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         )}
       </nav>
-      
+
       <div className="p-4 border-t border-hairline flex flex-col gap-4 bg-canvas/50">
         <button onClick={handleInstallPWA} className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl text-sm font-bold hover:bg-primary-focus transition-all shadow-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
@@ -134,7 +134,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
           onClick={onClose}
         />
@@ -150,3 +150,4 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     </>
   );
 }
+

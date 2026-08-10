@@ -40,23 +40,54 @@ export default function BarcodePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const normalizeServices = (payload: any) => {
+    const services = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.data?.page?.items)
+          ? payload.data.page.items
+          : [];
+
+    return services
+      .map((svc: any) => ({
+        code: svc?.code,
+        name: svc?.name || ceirgoNameMapping[svc?.code] || svc?.code,
+        modalPrice: Number(svc?.modalPrice ?? svc?.price ?? svc?.unit_price ?? 0) || 0,
+      }))
+      .filter((svc: any) => svc.code && /barcode|create/i.test(`${svc.code} ${svc.name}`));
+  };
+
   useEffect(() => {
     Promise.all([
       fetch('/api/ceirgo-pricing').then(res => res.json()),
-      fetch('/api/admin/ceirgo-services', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
-    ]).then(([ceirPrcData, ceirSvcData]) => {
+      fetch('/api/admin/ceirgo-services', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false })),
+      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
+    ]).then(([ceirPrcData, ceirSvcData, displayData]) => {
       if (ceirPrcData.status) {
-        setCeirgoPricing(ceirPrcData.data);
-        // auto select first barcode option
-        const firstBarcode = Object.keys(ceirPrcData.data).find(k => k.includes('barcode') && ceirPrcData.data[k] > 0);
-        if (firstBarcode) setOption(firstBarcode);
+        const normalizedPricing = Object.fromEntries(
+          Object.entries(ceirPrcData.data || {}).map(([key, value]) => [
+            key.replace(/^ceirgo_price_/, ''),
+            value
+          ])
+        );
+        setCeirgoPricing(normalizedPricing);
       }
-      if (ceirSvcData.status && ceirSvcData.data) setCeirgoServices(ceirSvcData.data);
+      const services = ceirSvcData.status ? normalizeServices(ceirSvcData.data) : [];
+      const hasBarcodeSetting = displayData?.status && displayData.data && Object.prototype.hasOwnProperty.call(displayData.data, 'barcode');
+      const visibleCodes = hasBarcodeSetting
+        ? new Set(Array.isArray(displayData.data.barcode) ? displayData.data.barcode : [])
+        : null;
+      setCeirgoServices(visibleCodes ? services.filter((s: any) => visibleCodes.has(s.code)) : services);
     }).finally(() => setLoading(false));
   }, []);
 
   const getPrice = (opt: string) => {
-    return ceirgoPricing[opt] || 0;
+    const svc = ceirgoServices.find(s => s.code === opt);
+    const sellingPrice = Number(ceirgoPricing?.[opt] ?? ceirgoPricing?.[`ceirgo_price_${opt}`]);
+    if (Number.isFinite(sellingPrice) && sellingPrice > 0) return sellingPrice;
+    const modalPrice = Number(svc?.modalPrice);
+    return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +130,7 @@ export default function BarcodePage() {
       formData.append("duration", durationStr);
       formData.append("price_key", option);
 
-      const res = await fetch("/api/order/manual", {
+      const res = await fetch("/api/order/ceir", {
         method: "POST",
         credentials: 'include',
         body: formData
@@ -123,12 +154,12 @@ export default function BarcodePage() {
 
     const buttons: { id: string, label: string, price: number }[] = [];
 
-    Object.keys(ceirgoPricing).forEach(code => {
-      const price = ceirgoPricing[code];
-      if (price > 0 && code.includes('barcode')) {
-        const svc = ceirgoServices.find(s => s.code === code);
-        const name = svc ? svc.name : (ceirgoNameMapping[code] || code.replace(/_/g, " ").toUpperCase());
-        buttons.push({ id: code, label: name, price: price });
+    ceirgoServices.forEach(svc => {
+      const isBarcodeService = /barcode|create/i.test(`${svc.code} ${svc.name}`);
+      if (!isBarcodeService) return;
+      const price = Number(ceirgoPricing[svc.code]);
+      if (price > 0) {
+        buttons.push({ id: svc.code, label: svc.name || ceirgoNameMapping[svc.code] || svc.code.replace(/_/g, " ").toUpperCase(), price });
       }
     });
 

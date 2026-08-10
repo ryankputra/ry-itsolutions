@@ -20,22 +20,29 @@ export default function AdminPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [syncing, setSyncing] = useState(false);
   const [savingPkg, setSavingPkg] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout>();
 
   // Users State
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchUser, setSearchUser] = useState("");
-  const [userPage, setUserPage] = useState(1);
   const [balAmount, setBalAmount] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [userPage, setUserPage] = useState(1);
 
   // Settings State
   const [announcement, setAnnouncement] = useState("");
   const [savingAnn, setSavingAnn] = useState(false);
   const [paymentGateway, setPaymentGateway] = useState("orkut");
   const [savingGateway, setSavingGateway] = useState(false);
-  const [providerBalances, setProviderBalances] = useState<{kmsp: number | null, ceirgo: number | null}>({ kmsp: null, ceirgo: null });
-  
+  const [providerBalances, setProviderBalances] = useState<{ kmsp: number | null, ceirgo: number | null }>({ kmsp: null, ceirgo: null });
+  const [showBeliPaket, setShowBeliPaket] = useState(false);
+  const [savingMenuSettings, setSavingMenuSettings] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(true);
+  const [depositMinAmount, setDepositMinAmount] = useState<number>(10000);
+  const [autoAcceptCeirgo, setAutoAcceptCeirgo] = useState(false);
+  const [savingDepositSettings, setSavingDepositSettings] = useState(false);
+
   // Ceirgo Admin Top Up State
   const [showCeirgoTopUp, setShowCeirgoTopUp] = useState(false);
   const [ceirgoProviders, setCeirgoProviders] = useState<any[]>([]);
@@ -43,8 +50,13 @@ export default function AdminPage() {
   const [ceirgoProviderCode, setCeirgoProviderCode] = useState("");
   const [ceirgoTopUpLoading, setCeirgoTopUpLoading] = useState(false);
   const [ceirgoPaymentData, setCeirgoPaymentData] = useState<any>(null);
-  
-  
+  const [ceirgoDepositProviders, setCeirgoDepositProviders] = useState<any[]>([]);
+  const [ceirgoDepositProviderCode, setCeirgoDepositProviderCode] = useState("");
+  const [ceirgoDepositAmount, setCeirgoDepositAmount] = useState("");
+  const [ceirgoPaymentMethods, setCeirgoPaymentMethods] = useState<any[]>([]);
+  const [ceirgoPaymentMethodCode, setCeirgoPaymentMethodCode] = useState("");
+
+
 
   // Manual Orders State
   const [manualOrders, setManualOrders] = useState<any[]>([]);
@@ -57,11 +69,11 @@ export default function AdminPage() {
   const [manualActionData, setManualActionData] = useState<{ id: string, status: string, note: string, file: File | null } | null>(null);
   const [hideSuccess, setHideSuccess] = useState(true);
 
-  
+
   useEffect(() => {
     if (activeTab === 'pesanan-manual') {
       Notification.requestPermission();
-      
+
       const interval = setInterval(async () => {
         try {
           const res = await fetch('/api/admin/manual-orders', { credentials: 'include' });
@@ -92,12 +104,12 @@ export default function AdminPage() {
               });
             }
           }
-        } catch(e) {}
+        } catch (e) { }
       }, 10000);
       return () => clearInterval(interval);
     }
   }, [activeTab]);
-  
+
   useEffect(() => {
     if (!userLoading && user?.role !== 'admin') redirect("/dashboard");
   }, [user, userLoading]);
@@ -172,31 +184,66 @@ export default function AdminPage() {
     if (user?.role === 'admin') {
       if (activeTab === "paket") loadPackages();
       if (activeTab === "pengguna") loadUsers();
-      if (activeTab === "pesanan-manual") loadManualData();
+      if (activeTab === "pesanan-manual") {
+        loadManualData(); // Auto-refresh ceirgo services
+      }
       if (activeTab === "pengaturan") {
         fetch('/api/admin/payment-gateway').then(r => r.json()).then(d => {
           if (d.status) setPaymentGateway(d.data.gateway);
-        }).catch(() => {});
-        
+        }).catch(() => { });
+
         // Ambil saldo provider
         fetch('/api/admin/kmsp-balance', { credentials: 'include' })
           .then(r => r.json())
           .then(d => setProviderBalances(prev => ({ ...prev, kmsp: d.data?.balance })))
-          .catch(() => {});
-          
+          .catch(() => { });
+
         fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
           .then(r => r.json())
           .then(d => setProviderBalances(prev => ({ ...prev, ceirgo: d.data?.balance })))
-          .catch(() => {});
-          
+          .catch(() => { });
+
         // Ambil daftar provider deposit ceirgo
         fetch('/api/admin/ceirgo-deposit-providers', { credentials: 'include' })
           .then(r => r.json())
           .then(d => { if (d.status) setCeirgoProviders(d.data); })
-          .catch(() => {});
+          .catch(() => { });
+
+        // Fetch menu settings
+        fetch('/api/admin/menu-settings').then(r => r.json()).then(d => {
+          if (d.status) setShowBeliPaket(d.data.showBeliPaket);
+        }).catch(() => { });
+
+        // Fetch auto-accept Ceirgo setting
+        fetch('/api/admin/ceirgo-auto-accept', { credentials: 'include' })
+          .then(r => r.json())
+          .then(d => {
+            if (d.status) setAutoAcceptCeirgo(d.data.autoAcceptCeirgo);
+          })
+          .catch(() => { });
+
+        // Fetch deposit settings
+        fetch('/api/admin/deposit-settings').then(r => r.json()).then(d => {
+          if (d.status) {
+            setShowDeposit(d.data.showDeposit);
+            setDepositMinAmount(d.data.minAmount);
+          }
+        }).catch(() => { });
+
+        fetch('/api/admin/ceirgo-deposit-providers', { credentials: 'include' })
+          .then(r => r.json())
+          .then(d => { if (d.status) setCeirgoDepositProviders(d.data); })
+          .catch(() => { });
+
+        fetch('/api/admin/ceirgo-payment-methods', { credentials: 'include' })
+          .then(r => r.json())
+          .then(d => { if (d.status) setCeirgoPaymentMethods(d.data); })
+          .catch(() => { });
       }
     }
   }, [user, activeTab]);
+
+
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -213,8 +260,8 @@ export default function AdminPage() {
       if (res.ok) {
         await loadPackages();
         setSelectedPkgIndex(null);
-        Swal.fire({title: "Info", text: 'Sinkronisasi KMSP berhasil!', icon: "info"});
-      } else Swal.fire({title: "Info", text: 'Gagal sinkronisasi', icon: "info"});
+        Swal.fire({ title: "Info", text: 'Sinkronisasi KMSP berhasil!', icon: "info" });
+      } else Swal.fire({ title: "Info", text: 'Gagal sinkronisasi', icon: "info" });
     } finally { setSyncing(false); }
   };
 
@@ -228,8 +275,8 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packages: [packages[selectedPkgIndex!]] })
       });
-      if (res.ok) Swal.fire({title: "Info", text: 'Tersimpan!', icon: "info"});
-      else Swal.fire({title: "Info", text: 'Gagal menyimpan', icon: "info"});
+      if (res.ok) Swal.fire({ title: "Info", text: 'Tersimpan!', icon: "info" });
+      else Swal.fire({ title: "Info", text: 'Gagal menyimpan', icon: "info" });
     } finally { setSavingPkg(false); }
   };
 
@@ -243,12 +290,12 @@ export default function AdminPage() {
         body: JSON.stringify({ userId, amount: parseInt(balAmount) })
       });
       if (res.ok) {
-        Swal.fire({title: "Info", text: "Saldo ditambahkan", icon: "info"});
+        Swal.fire({ title: "Info", text: "Saldo ditambahkan", icon: "info" });
         loadUsers();
         setBalAmount("");
         setSelectedUserId(null);
       }
-    } catch (e) { Swal.fire({title: "Info", text: "Error update balance", icon: "info"}); }
+    } catch (e) { Swal.fire({ title: "Info", text: "Error update balance", icon: "info" }); }
   };
 
   const handleDeleteZeroBalance = async () => {
@@ -261,9 +308,9 @@ export default function AdminPage() {
       cancelButtonText: 'Batal',
       confirmButtonColor: '#d33'
     });
-    
+
     if (!res.isConfirmed) return;
-    
+
     try {
       const resp = await fetch('/api/admin/delete-zero-balance', {
         method: 'DELETE',
@@ -281,6 +328,42 @@ export default function AdminPage() {
     }
   };
 
+  const handleSaveMenuSettings = async () => {
+    setSavingMenuSettings(true);
+    try {
+      const res = await fetch('/api/admin/menu-settings', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showBeliPaket })
+      });
+      if (res.ok) {
+        Swal.fire({ title: "Info", text: "Pengaturan menu disimpan!", icon: "info" });
+      } else {
+        Swal.fire({ title: "Info", text: "Gagal menyimpan pengaturan menu", icon: "info" });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Info", text: "Error menyimpan pengaturan menu", icon: "info" });
+    } finally {
+      setSavingMenuSettings(false);
+    }
+  };
+
+
+
+
+
+  const autoSavePricing = (p: any, instant = false) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const doSave = async () => {
+      try {
+        await fetch('/api/admin/manual-services-pricing', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
+      } catch (e) { }
+    };
+    if (instant) { doSave(); return; }
+    debounceRef.current = setTimeout(doSave, 1000);
+  };
+
   const handleSaveAnnouncement = async () => {
     setSavingAnn(true);
     try {
@@ -290,20 +373,38 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: announcement, isEnabled: true })
       });
-      if (res.ok) Swal.fire({title: "Info", text: "Pengumuman disimpan!", icon: "info"});
+      if (res.ok) Swal.fire({ title: "Info", text: "Pengumuman disimpan!", icon: "info" });
     } finally { setSavingAnn(false); }
+  };
+
+  const handleSaveDepositSettings = async () => {
+    setSavingDepositSettings(true);
+    try {
+      const res = await fetch('/api/admin/deposit-settings', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showDeposit, minAmount: depositMinAmount, autoAcceptCeirgo })
+      });
+      if (res.ok) Swal.fire({ title: "Info", text: "Pengaturan deposit disimpan!", icon: "info" });
+      else Swal.fire({ title: "Info", text: "Gagal menyimpan pengaturan deposit", icon: "info" });
+    } catch (e) {
+      Swal.fire({ title: "Info", text: "Error menyimpan pengaturan deposit", icon: "info" });
+    } finally {
+      setSavingDepositSettings(false);
+    }
   };
 
   if (userLoading) return <p>Memuat Admin Panel...</p>;
 
-  const filteredPackages = packages.filter(p => 
-    p.name.toLowerCase().includes(searchPkg.toLowerCase()) || 
+  const filteredPackages = packages.filter(p =>
+    p.name.toLowerCase().includes(searchPkg.toLowerCase()) ||
     p.package_code.toLowerCase().includes(searchPkg.toLowerCase())
   );
   const selectedPkg = selectedPkgIndex !== null ? packages[selectedPkgIndex!] : null;
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchUser.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchUser.toLowerCase()) ||
     u.email.toLowerCase().includes(searchUser.toLowerCase())
   );
 
@@ -319,8 +420,8 @@ export default function AdminPage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex gap-4 border-b border-hairline pb-4 overflow-x-auto">
         {['paket', 'pengguna', 'pesanan-manual', 'pengaturan'].map(tab => (
-          <button 
-            key={tab} 
+          <button
+            key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-semibold capitalize rounded-full transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-primary text-white' : 'text-ink-muted hover:bg-parchment hover:text-ink'}`}
           >
@@ -337,7 +438,7 @@ export default function AdminPage() {
           </div>
           <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
             <label className="text-sm font-medium text-ink/80">Cari & Pilih Paket</label>
-            <input 
+            <input
               type="text"
               className="w-full h-11 rounded-full border border-hairline bg-canvas px-5 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Ketik nama paket atau kode..."
@@ -354,7 +455,7 @@ export default function AdminPage() {
                 {filteredPackages.map((p) => {
                   const originalIdx = packages.findIndex(pkg => pkg.package_code === p.package_code);
                   return (
-                    <div 
+                    <div
                       key={p.package_code}
                       className="p-3 hover:bg-parchment cursor-pointer border-b border-hairline last:border-0"
                       onClick={() => {
@@ -380,9 +481,9 @@ export default function AdminPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Input 
-                  label="Platform Fee (Rp)" 
-                  type="number" 
+                <Input
+                  label="Platform Fee (Rp)"
+                  type="number"
                   value={selectedPkg.platform_fee || 0}
                   onChange={(e) => {
                     const newPkgs = [...packages];
@@ -390,9 +491,9 @@ export default function AdminPage() {
                     setPackages(newPkgs);
                   }}
                 />
-                <Input 
-                  label="Reseller Fee (Rp)" 
-                  type="number" 
+                <Input
+                  label="Reseller Fee (Rp)"
+                  type="number"
                   value={selectedPkg.reseller_fee || 0}
                   onChange={(e) => {
                     const newPkgs = [...packages];
@@ -404,8 +505,8 @@ export default function AdminPage() {
 
               <div className="flex flex-col gap-4">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-5 h-5 rounded border-hairline text-primary"
                     checked={selectedPkg.isVisible}
                     onChange={(e) => {
@@ -432,8 +533,8 @@ export default function AdminPage() {
                 🗑 Hapus Semua Saldo 0
               </Button>
             </h2>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="h-10 rounded-full border border-hairline bg-canvas px-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary min-w-[250px]"
               placeholder="Cari nama atau email..."
               value={searchUser}
@@ -449,9 +550,9 @@ export default function AdminPage() {
                     <p className="text-xs text-ink-muted">{u.email}</p>
                     <p className="text-sm font-semibold text-primary mt-1">Saldo: Rp {u.balance?.toLocaleString('id-ID')}</p>
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <select 
+                    <select
                       className="h-9 px-3 rounded-md border border-hairline bg-canvas text-sm focus:outline-none focus:border-primary cursor-pointer"
                       value={u.role}
                       onChange={async (e) => {
@@ -463,10 +564,10 @@ export default function AdminPage() {
                             body: JSON.stringify({ userId: u.id, newRole: e.target.value })
                           });
                           if (res.ok) {
-                            Swal.fire({title: "Info", text: "Role diubah!", icon: "info"});
+                            Swal.fire({ title: "Info", text: "Role diubah!", icon: "info" });
                             loadUsers();
-                          } else Swal.fire({title: "Info", text: "Gagal mengubah role", icon: "info"});
-                        } catch(err) { Swal.fire({title: "Info", text: "Error ubah role", icon: "info"}); }
+                          } else Swal.fire({ title: "Info", text: "Gagal mengubah role", icon: "info" });
+                        } catch (err) { Swal.fire({ title: "Info", text: "Error ubah role", icon: "info" }); }
                       }}
                     >
                       <option value="user">User</option>
@@ -487,7 +588,7 @@ export default function AdminPage() {
                     {u.status === 'pending' && (
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={async () => {
-                          const res = await Swal.fire({title: "Konfirmasi", text: "Setujui pendaftaran user ini?", icon: "warning", showCancelButton: true}); if(!res.isConfirmed) return;
+                          const res = await Swal.fire({ title: "Konfirmasi", text: "Setujui pendaftaran user ini?", icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
                           try {
                             const res = await fetch('/api/admin/approve-user', {
                               method: 'POST',
@@ -495,11 +596,11 @@ export default function AdminPage() {
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ userId: u.id })
                             });
-                            if(res.ok) loadUsers();
-                          } catch(e) {}
+                            if (res.ok) loadUsers();
+                          } catch (e) { }
                         }}>Approve</Button>
                         <Button variant="danger" size="sm" onClick={async () => {
-                          const res = await Swal.fire({title: "Konfirmasi", text: "Tolak user ini?", icon: "warning", showCancelButton: true}); if(!res.isConfirmed) return;
+                          const res = await Swal.fire({ title: "Konfirmasi", text: "Tolak user ini?", icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
                           try {
                             const res = await fetch('/api/admin/reject-user', {
                               method: 'POST',
@@ -507,14 +608,14 @@ export default function AdminPage() {
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ userId: u.id })
                             });
-                            if(res.ok) loadUsers();
-                          } catch(e) {}
+                            if (res.ok) loadUsers();
+                          } catch (e) { }
                         }}>Reject</Button>
                       </div>
                     )}
-                    
+
                     <Button variant="danger" size="sm" onClick={async () => {
-                      const res = await Swal.fire({title: "Konfirmasi", text: "Yakin ingin menghapus pengguna ini?", icon: "warning", showCancelButton: true}); if(!res.isConfirmed) return;
+                      const res = await Swal.fire({ title: "Konfirmasi", text: "Yakin ingin menghapus pengguna ini?", icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
                       try {
                         const res = await fetch('/api/admin/delete-user', {
                           method: 'POST',
@@ -522,29 +623,29 @@ export default function AdminPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ userId: u.id })
                         });
-                        if(res.ok) loadUsers();
-                        else Swal.fire({title: "Info", text: "Gagal hapus, mungkin anda menghapus diri sendiri.", icon: "info"});
-                      } catch(e) { Swal.fire({title: "Info", text: "Error", icon: "info"}); }
+                        if (res.ok) loadUsers();
+                        else Swal.fire({ title: "Info", text: "Gagal hapus, mungkin anda menghapus diri sendiri.", icon: "info" });
+                      } catch (e) { Swal.fire({ title: "Info", text: "Error", icon: "info" }); }
                     }}>Hapus</Button>
                   </div>
                 </div>
               ))}
-              
+
               {/* Pagination Controls */}
               {totalUserPages > 1 && (
                 <div className="flex justify-center items-center gap-4 mt-6">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setUserPage(p => Math.max(1, p - 1))}
                     disabled={userPage === 1}
                   >
                     Sebelumnya
                   </Button>
                   <span className="text-sm font-medium">Halaman {userPage} dari {totalUserPages}</span>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
                     disabled={userPage === totalUserPages}
                   >
@@ -569,7 +670,7 @@ export default function AdminPage() {
                   <h3 className="font-bold text-ink">Status Layanan Unblock IMEI</h3>
                   <p className="text-xs text-ink-muted mt-0.5">Atur apakah user bisa melakukan order Unblock IMEI.</p>
                 </div>
-                <button 
+                <button
                   onClick={async () => {
                     const newStatus = !imeiServiceOpen;
                     setImeiServiceOpen(newStatus);
@@ -580,21 +681,21 @@ export default function AdminPage() {
                       body: JSON.stringify({ isOpen: newStatus, note: imeiServiceNote })
                     });
                     Swal.fire({ title: 'Tersimpan', text: `Layanan IMEI sekarang ${newStatus ? 'BUKA' : 'TUTUP'}`, icon: 'success', timer: 2000 });
-                  }} 
+                  }}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${imeiServiceOpen ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'}`}
                 >
                   {imeiServiceOpen ? '🟢 OPEN / BUKA' : '🔴 CLOSE / TUTUP'}
                 </button>
               </div>
               <div className="flex gap-2 items-end">
-                <Input 
-                  label="Catatan Khusus saat Tutup (Opsional)" 
-                  placeholder="Contoh: Server lagi maintenance..." 
-                  value={imeiServiceNote} 
-                  onChange={e => setImeiServiceNote(e.target.value)} 
+                <Input
+                  label="Catatan Khusus saat Tutup (Opsional)"
+                  placeholder="Contoh: Server lagi maintenance..."
+                  value={imeiServiceNote}
+                  onChange={e => setImeiServiceNote(e.target.value)}
                 />
-                <Button 
-                  className="h-10 shrink-0" 
+                <Button
+                  className="h-10 shrink-0"
                   onClick={async () => {
                     await fetch('/api/admin/imei-service-status', {
                       method: 'POST',
@@ -609,7 +710,7 @@ export default function AdminPage() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="space-y-3 pt-4 border-t border-hairline">
               <h3 className="font-bold text-ink">Paket Unblock IMEI</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -621,9 +722,9 @@ export default function AdminPage() {
                     </div>
                     <div className="flex gap-2 items-center">
                       <button onClick={async () => {
-                        await fetch(`/api/admin/imei-packages/${pkg.id}/toggle`, { 
-                          method: 'PUT', 
-                          credentials: 'include', 
+                        await fetch(`/api/admin/imei-packages/${pkg.id}/toggle`, {
+                          method: 'PUT',
+                          credentials: 'include',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ isVisible: pkg.isVisible === 1 ? 0 : 1 })
                         });
@@ -632,7 +733,7 @@ export default function AdminPage() {
                         {pkg.isVisible === 1 ? 'Aktif' : 'Hidden'}
                       </button>
                       <button onClick={async () => {
-                        const res = await Swal.fire({title: "Konfirmasi", text: "Hapus paket ini?", icon: "warning", showCancelButton: true}); if(res.isConfirmed) {
+                        const res = await Swal.fire({ title: "Konfirmasi", text: "Hapus paket ini?", icon: "warning", showCancelButton: true }); if (res.isConfirmed) {
                           await fetch(`/api/admin/imei-packages/${pkg.id}`, { method: 'DELETE', credentials: 'include' });
                           loadManualData();
                         }
@@ -642,10 +743,10 @@ export default function AdminPage() {
                 ))}
               </div>
               <div className="flex gap-2 items-end pt-2">
-                <Input label="Durasi Baru (Misal: 6 Bulan)" value={newImeiPkg.duration} onChange={e => setNewImeiPkg({...newImeiPkg, duration: e.target.value})} />
-                <Input label="Harga (Rp)" type="number" value={newImeiPkg.price} onChange={e => setNewImeiPkg({...newImeiPkg, price: e.target.value})} />
+                <Input label="Durasi Baru (Misal: 6 Bulan)" value={newImeiPkg.duration} onChange={e => setNewImeiPkg({ ...newImeiPkg, duration: e.target.value })} />
+                <Input label="Harga (Rp)" type="number" value={newImeiPkg.price} onChange={e => setNewImeiPkg({ ...newImeiPkg, price: e.target.value })} />
                 <Button className="h-10 shrink-0" onClick={async () => {
-                  if (!newImeiPkg.duration || !newImeiPkg.price) return Swal.fire({title: "Info", text: "Isi durasi dan harga", icon: "info"});
+                  if (!newImeiPkg.duration || !newImeiPkg.price) return Swal.fire({ title: "Info", text: "Isi durasi dan harga", icon: "info" });
                   await fetch('/api/admin/imei-packages', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration: newImeiPkg.duration, price: parseInt(newImeiPkg.price) }) });
                   setNewImeiPkg({ duration: "", price: "" });
                   loadManualData();
@@ -654,53 +755,70 @@ export default function AdminPage() {
             </div>
             <div className="pt-4 border-t border-hairline space-y-3">
               <h3 className="font-bold text-ink">Kecepatan Proses IMEI (Biaya Tambahan)</h3>
-              <p className="text-xs text-ink-muted">Tekan tombol status untuk menampilkan atau menyembunyikan opsi kecepatan dari user.</p>
-              
+              <p className="text-xs text-ink-muted">Perubahan otomatis tersimpan. Tekan tombol status untuk menampilkan atau menyembunyikan.</p>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Fast */}
                 <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-sm">⚡ Fast</span>
-                    <button onClick={() => setPricing({ ...pricing, imei_speed_fast_status: pricing.imei_speed_fast_status === 'hidden' ? 'active' : 'hidden' })} 
+                    <button onClick={() => {
+                      const updated = { ...pricing, imei_speed_fast_status: pricing.imei_speed_fast_status === 'hidden' ? 'active' : 'hidden' };
+                      setPricing(updated);
+                      autoSavePricing(updated, true);
+                    }}
                       className={`px-2 py-1 text-xs font-bold rounded ${pricing.imei_speed_fast_status !== 'hidden' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
                       {pricing.imei_speed_fast_status !== 'hidden' ? 'Aktif' : 'Hidden'}
                     </button>
                   </div>
-                  <Input placeholder="Harga (Rp)" type="number" value={pricing.imei_speed_fast || ''} onChange={e => setPricing({...pricing, imei_speed_fast: e.target.value})} />
+                  <Input placeholder="Harga (Rp)" type="number" value={pricing.imei_speed_fast || ''} onChange={e => {
+                    const updated = { ...pricing, imei_speed_fast: e.target.value };
+                    setPricing(updated);
+                    autoSavePricing(updated);
+                  }} />
                 </div>
 
                 {/* Semi Fast */}
                 <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-3">
                   <div className="flex justify-between items-center">
-                    <p className="font-bold text-sm">Menu &quot;Beli Paket&quot;</p>
-                    <button onClick={() => setPricing({ ...pricing, imei_speed_semi_status: pricing.imei_speed_semi_status === 'hidden' ? 'active' : 'hidden' })} 
+                    <p className="font-bold text-sm">🚀 Semi Fast</p>
+                    <button onClick={() => {
+                      const updated = { ...pricing, imei_speed_semi_status: pricing.imei_speed_semi_status === 'hidden' ? 'active' : 'hidden' };
+                      setPricing(updated);
+                      autoSavePricing(updated, true);
+                    }}
                       className={`px-2 py-1 text-xs font-bold rounded ${pricing.imei_speed_semi_status !== 'hidden' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
                       {pricing.imei_speed_semi_status !== 'hidden' ? 'Aktif' : 'Hidden'}
                     </button>
                   </div>
-                  <Input placeholder="Harga (Rp)" type="number" value={pricing.imei_speed_semi || ''} onChange={e => setPricing({...pricing, imei_speed_semi: e.target.value})} />
+                  <Input placeholder="Harga (Rp)" type="number" value={pricing.imei_speed_semi || ''} onChange={e => {
+                    const updated = { ...pricing, imei_speed_semi: e.target.value };
+                    setPricing(updated);
+                    autoSavePricing(updated);
+                  }} />
                 </div>
 
                 {/* Slow */}
                 <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-sm">🐌 Slow</span>
-                    <button onClick={() => setPricing({ ...pricing, imei_speed_slow_status: pricing.imei_speed_slow_status === 'hidden' ? 'active' : 'hidden' })} 
+                    <button onClick={() => {
+                      const updated = { ...pricing, imei_speed_slow_status: pricing.imei_speed_slow_status === 'hidden' ? 'active' : 'hidden' };
+                      setPricing(updated);
+                      autoSavePricing(updated, true);
+                    }}
                       className={`px-2 py-1 text-xs font-bold rounded ${pricing.imei_speed_slow_status !== 'hidden' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
                       {pricing.imei_speed_slow_status !== 'hidden' ? 'Aktif' : 'Hidden'}
                     </button>
                   </div>
-                  <Input placeholder="Harga (Rp)" type="number" value={pricing.imei_speed_slow || ''} onChange={e => setPricing({...pricing, imei_speed_slow: e.target.value})} />
+                  <Input placeholder="Harga (Rp)" type="number" value={pricing.imei_speed_slow || ''} onChange={e => {
+                    const updated = { ...pricing, imei_speed_slow: e.target.value };
+                    setPricing(updated);
+                    autoSavePricing(updated);
+                  }} />
                 </div>
               </div>
             </div>
-
-            <Button onClick={async () => {
-              try {
-                const res = await fetch('/api/admin/manual-services-pricing', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pricing) });
-                if(res.ok) Swal.fire({title: "Info", text: "Harga tersimpan!", icon: "info"});
-              } catch(e) {}
-            }}>Simpan Pengaturan Harga</Button>
           </Card>
 
           <Card glass className="p-6 space-y-6 border-primary/50">
@@ -711,7 +829,7 @@ export default function AdminPage() {
               </div>
               <Button size="sm" variant="outline" onClick={loadManualData}>🔄 Refresh dari Ceirgo</Button>
             </div>
-            
+
             {ceirgoServices.length === 0 ? (
               <div className="bg-amber-50 text-amber-800 p-4 rounded-xl text-sm border border-amber-200">
                 Layanan Ceirgo tidak ditemukan. Pastikan <b>CEIRGO_API_KEY</b> di <code>.env</code> sudah benar.
@@ -725,12 +843,13 @@ export default function AdminPage() {
                         <p className="font-bold text-ink">{svc.name}</p>
                         <p className="text-xs text-primary font-semibold font-mono">{svc.code}</p>
                         <p className="text-xs text-ink-muted mt-1">Modal Asli: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
+                        {ceirgoPricing[svc.code] != null && <p className="text-xs font-bold text-green-600 mt-0.5">Harga Admin: Rp {Number(ceirgoPricing[svc.code]).toLocaleString('id-ID')}</p>}
                       </div>
-                      <Input 
-                        label="Harga Jual ke User (Rp)" 
+                      <Input
+                        label="Harga Jual ke User (Rp)"
                         type="number"
-                        value={ceirgoPricing[svc.code] ?? svc.modalPrice} 
-                        onChange={(e) => setCeirgoPricing({...ceirgoPricing, [svc.code]: parseInt(e.target.value) || 0})}
+                        value={ceirgoPricing[svc.code] ?? svc.modalPrice}
+                        onChange={(e) => setCeirgoPricing({ ...ceirgoPricing, [svc.code]: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                   ))}
@@ -743,8 +862,8 @@ export default function AdminPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(ceirgoPricing)
                     });
-                    if (res.ok) Swal.fire({title: "Info", text: "Harga layanan Ceirgo berhasil disimpan!", icon: "info"});
-                  } catch(e) { Swal.fire({title: "Info", text: "Error menyimpan harga", icon: "info"}); }
+                    if (res.ok) Swal.fire({ title: "Info", text: "Harga layanan Ceirgo berhasil disimpan!", icon: "info" });
+                  } catch (e) { Swal.fire({ title: "Info", text: "Error menyimpan harga", icon: "info" }); }
                 }} className="w-full">Simpan Harga Jual Ceirgo</Button>
               </div>
             )}
@@ -788,11 +907,11 @@ export default function AdminPage() {
                           <div className="flex flex-wrap gap-2">
                             {o.user_image.split(',').map((imgUrl: string, idx: number) => (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img 
+                              <img
                                 key={idx}
-                                src={imgUrl} 
-                                alt={`Bukti User ${idx+1}`} 
-                                className="h-24 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
+                                src={imgUrl}
+                                alt={`Bukti User ${idx + 1}`}
+                                className="h-24 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
                                 onClick={() => {
                                   Swal.fire({
                                     imageUrl: imgUrl,
@@ -816,11 +935,11 @@ export default function AdminPage() {
                           <div className="flex flex-wrap gap-2">
                             {o.user_image_ceir.split(',').map((imgUrl: string, idx: number) => (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img 
+                              <img
                                 key={idx}
-                                src={imgUrl} 
-                                alt={`Bukti CEIR User ${idx+1}`} 
-                                className="h-24 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform" 
+                                src={imgUrl}
+                                alt={`Bukti CEIR User ${idx + 1}`}
+                                className="h-24 object-contain rounded border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
                                 onClick={() => {
                                   Swal.fire({
                                     imageUrl: imgUrl,
@@ -842,16 +961,16 @@ export default function AdminPage() {
 
                     {manualActionData?.id === o.id ? (
                       <div className="bg-parchment p-4 rounded-xl space-y-3 mt-4">
-                        <select className="w-full h-10 rounded-lg border border-hairline px-3" value={manualActionData?.status || "pending"} onChange={e => setManualActionData(prev => prev ? {...prev, status: e.target.value} : null)}>
+                        <select className="w-full h-10 rounded-lg border border-hairline px-3" value={manualActionData?.status || "pending"} onChange={e => setManualActionData(prev => prev ? { ...prev, status: e.target.value } : null)}>
                           <option value="pending">Pending</option>
                           <option value="processing">Processing</option>
                           <option value="success">Success</option>
                           <option value="failed">Failed (Refund Saldo)</option>
                         </select>
-                        <Input label="Catatan Admin" placeholder="Berikan catatan..." value={manualActionData?.note || ""} onChange={e => setManualActionData(prev => prev ? {...prev, note: e.target.value} : null)} />
+                        <Input label="Catatan Admin" placeholder="Berikan catatan..." value={manualActionData?.note || ""} onChange={e => setManualActionData(prev => prev ? { ...prev, note: e.target.value } : null)} />
                         <div>
                           <label className="text-sm font-medium">Upload Hasil/Bukti (Opsional)</label>
-                          <input type="file" className="block w-full text-sm mt-1" onChange={e => setManualActionData(prev => prev ? {...prev, file: e.target.files?.[0] || null} : null)} />
+                          <input type="file" className="block w-full text-sm mt-1" onChange={e => setManualActionData(prev => prev ? { ...prev, file: e.target.files?.[0] || null } : null)} />
                         </div>
                         <div className="flex gap-2">
                           <Button onClick={async () => {
@@ -859,15 +978,15 @@ export default function AdminPage() {
                             formData.append("status", manualActionData?.status || "pending");
                             formData.append("admin_note", manualActionData?.note || "");
                             if (manualActionData?.file) formData.append("image", manualActionData?.file);
-                            
+
                             try {
                               const res = await fetch(`/api/admin/manual-orders/${o.id}`, { method: 'PUT', credentials: 'include', body: formData });
-                              if(res.ok) {
-                                Swal.fire({title: "Info", text: "Tersimpan!", icon: "info"});
+                              if (res.ok) {
+                                Swal.fire({ title: "Info", text: "Tersimpan!", icon: "info" });
                                 setManualActionData(null);
                                 loadManualData();
                               }
-                            } catch(e) {}
+                            } catch (e) { }
                           }}>Simpan</Button>
                           <Button variant="ghost" onClick={() => setManualActionData(null)}>Batal</Button>
                         </div>
@@ -885,193 +1004,89 @@ export default function AdminPage() {
 
       {activeTab === 'pengaturan' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card glass className="p-6 space-y-4">
-              <h2 className="text-xl font-bold">Saldo Provider Modal</h2>
-              <p className="text-sm text-ink-muted">Sisa saldo di server pusat penyedia layanan.</p>
-              <div className="space-y-3 mt-4">
-                <div className="flex justify-between items-center p-3 bg-canvas border border-hairline rounded-xl">
-                  <div className="font-bold text-sm">🌐 KMSP Store</div>
-                  <div className="font-black text-primary">Rp {providerBalances.kmsp !== null ? providerBalances.kmsp?.toLocaleString('id-ID') : '...'}</div>
-                </div>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-canvas border border-hairline rounded-xl gap-3">
-                  <div>
-                    <div className="font-bold text-sm flex items-center gap-1.5">📱 Ceirgo.id</div>
-                    <div className="font-black text-primary">Rp {providerBalances.ceirgo !== null ? providerBalances.ceirgo?.toLocaleString('id-ID') : '...'}</div>
-                  </div>
-                  <Button size="sm" onClick={() => setShowCeirgoTopUp(true)}>Isi Saldo</Button>
-                </div>
+          <Card glass className="p-6 space-y-4">
+            <h2 className="text-xl font-bold">Saldo Provider Modal</h2>
+            <p className="text-sm text-ink-muted">Sisa saldo di server pusat penyedia layanan.</p>
+            <div className="space-y-3 mt-4">
+              <div className="flex justify-between items-center p-3 bg-canvas border border-hairline rounded-xl">
+                <div className="font-bold text-sm">🌐 KMSP Store</div>
+                <div className="font-black text-primary">Rp {providerBalances.kmsp !== null ? providerBalances.kmsp?.toLocaleString('id-ID') : '...'}</div>
               </div>
-            </Card>
-
-            <Card glass className="p-6 space-y-4">
-              <h2 className="text-xl font-bold">Pengumuman Sistem</h2>
-              <textarea 
-                className="w-full p-4 border border-hairline rounded-lg bg-canvas text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                rows={4}
-                placeholder="Masukkan pengumuman penting di sini..."
-                value={announcement}
-                onChange={(e) => setAnnouncement(e.target.value)}
-              />
-              <Button onClick={handleSaveAnnouncement} isLoading={savingAnn}>Simpan Pengumuman</Button>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card glass className="p-6 space-y-4">
-              <h2 className="text-xl font-bold">Payment Gateway (Top Up)</h2>
-              <p className="text-sm text-ink-muted">Pilih gateway pembayaran QRIS yang aktif untuk top up saldo user.</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setPaymentGateway("orkut")}
-                  className={`p-4 rounded-xl border text-center transition-all ${paymentGateway === 'orkut' ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
-                >
-                  <div className="font-bold text-sm">🏦 ORKUT (QRIS Statis)</div>
-                  <div className="text-xs text-ink-muted mt-1">Polling via ORKUT API, nominal unik</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentGateway("gopay")}
-                  className={`p-4 rounded-xl border text-center transition-all ${paymentGateway === 'gopay' ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
-                >
-                  <div className="font-bold text-sm">💚 GoPay Gateway</div>
-                  <div className="text-xs text-ink-muted mt-1">QRIS dinamis, nominal tepat, auto-detect</div>
-                </button>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-canvas border border-hairline rounded-xl gap-3">
+                <div>
+                  <div className="font-bold text-sm flex items-center gap-1.5">📱 Ceirgo.id</div>
+                  <div className="font-black text-primary">Rp {providerBalances.ceirgo !== null ? providerBalances.ceirgo?.toLocaleString('id-ID') : '...'}</div>
+                </div>
+                <Button size="sm" onClick={() => setShowCeirgoTopUp(true)}>Isi Saldo</Button>
               </div>
-              <Button 
-                className="w-full" 
-                isLoading={savingGateway}
-                onClick={async () => {
-                  setSavingGateway(true);
-                  try {
-                    const res = await fetch('/api/admin/payment-gateway', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ gateway: paymentGateway })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.status) Swal.fire({title: "Info", text: data.message, icon: "info"});
-                    else Swal.fire({title: "Info", text: data.message || 'Gagal menyimpan', icon: "info"});
-                  } catch (e) { Swal.fire({title: "Info", text: 'Error menyimpan gateway', icon: "info"}); }
-                  finally { setSavingGateway(false); }
-                }}
+            </div>
+          </Card>
+
+          <Card glass className="p-6 space-y-4">
+            <h2 className="text-xl font-bold">Pengumuman Sistem</h2>
+            <textarea
+              className="w-full p-4 border border-hairline rounded-lg bg-canvas text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              rows={4}
+              placeholder="Masukkan pengumuman penting di sini..."
+              value={announcement}
+              onChange={(e) => setAnnouncement(e.target.value)}
+            />
+            <Button onClick={handleSaveAnnouncement} isLoading={savingAnn}>Simpan Pengumuman</Button>
+          </Card>
+
+          <Card glass className="p-6 space-y-4">
+            <h2 className="text-xl font-bold">Payment Gateway (Top Up)</h2>
+            <p className="text-sm text-ink-muted">Pilih gateway pembayaran QRIS yang aktif untuk top up saldo user.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setPaymentGateway("orkut")}
+                className={`p-4 rounded-xl border text-center transition-all ${paymentGateway === 'orkut' ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
               >
-                Simpan Gateway Aktif
-              </Button>
-            </Card>
+                <div className="font-bold text-sm">🏦 ORKUT (QRIS Statis)</div>
+                <div className="text-xs text-ink-muted mt-1">Polling via ORKUT API, nominal unik</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentGateway("gopay")}
+                className={`p-4 rounded-xl border text-center transition-all ${paymentGateway === 'gopay' ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
+              >
+                <div className="font-bold text-sm">💚 GoPay Gateway</div>
+                <div className="text-xs text-ink-muted mt-1">QRIS dinamis, nominal tepat, auto-detect</div>
+              </button>
+            </div>
+            <Button
+              className="w-full"
+              isLoading={savingGateway}
+              onClick={async () => {
+                setSavingGateway(true);
+                try {
+                  const res = await fetch('/api/admin/payment-gateway', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gateway: paymentGateway })
+                  });
+                  const data = await res.json();
+                  if (res.ok && data.status) Swal.fire({ title: "Info", text: data.message, icon: "info" });
+                  else Swal.fire({ title: "Info", text: data.message || 'Gagal menyimpan', icon: "info" });
+                } catch (e) { Swal.fire({ title: "Info", text: 'Error menyimpan gateway', icon: "info" }); }
+                finally { setSavingGateway(false); }
+              }}
+            >
+              Simpan Gateway Aktif
+            </Button>
+          </Card>
 
-            <Card glass className="p-6 space-y-4">
-              <h2 className="text-xl font-bold">Database & Sistem</h2>
-              <p className="text-sm text-ink-muted">Backup semua data (pengguna, transaksi, paket) ke file .sqlite</p>
-              <a href="/api/admin/backup-database" download>
-                <Button variant="outline" className="w-full">Unduh Backup Database (.sqlite)</Button>
-              </a>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Top Up Ceirgo */}
-      {showCeirgoTopUp && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
-            <button onClick={() => {
-              setShowCeirgoTopUp(false);
-              setCeirgoPaymentData(null);
-            }} className="absolute right-4 top-4 text-ink-muted hover:text-ink w-8 h-8 flex items-center justify-center bg-slate-50 rounded-full font-bold">✕</button>
-            
-            <h3 className="text-xl font-bold mb-4">Isi Saldo Ceirgo.id</h3>
-            
-            {!ceirgoPaymentData ? (
-              <div className="space-y-4">
-                <Input 
-                  label="Jumlah Isi Saldo (Min 10.000)" 
-                  type="number" 
-                  placeholder="Contoh: 50000" 
-                  value={ceirgoTopUpAmount}
-                  onChange={(e) => setCeirgoTopUpAmount(e.target.value)}
-                />
-                
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink/80">Pilih Metode Pembayaran</label>
-                  {ceirgoProviders.length === 0 ? (
-                    <p className="text-xs text-ink-muted">Memuat provider...</p>
-                  ) : (
-                    <select 
-                      className="w-full h-11 rounded-xl border border-hairline px-3 bg-canvas text-sm outline-none focus:border-primary"
-                      value={ceirgoProviderCode}
-                      onChange={(e) => setCeirgoProviderCode(e.target.value)}
-                    >
-                      <option value="">-- Pilih Provider --</option>
-                      {ceirgoProviders.map(p => (
-                        <option key={p.code} value={p.code}>{p.display_name} ({p.channel})</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <Button 
-                  className="w-full" 
-                  isLoading={ceirgoTopUpLoading}
-                  onClick={async () => {
-                    if (!ceirgoTopUpAmount || !ceirgoProviderCode) return Swal.fire({title: "Info", text: 'Isi nominal dan pilih provider', icon: "info"});
-                    setCeirgoTopUpLoading(true);
-                    try {
-                      const res = await fetch('/api/admin/ceirgo-deposit', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ amount: ceirgoTopUpAmount, provider_code: ceirgoProviderCode })
-                      });
-                      const d = await res.json();
-                      if (d.status) setCeirgoPaymentData(d.data);
-                      else alert(d.message);
-                    } catch (e) { Swal.fire({title: "Info", text: 'Error membuat deposit', icon: "info"}); }
-                    finally { setCeirgoTopUpLoading(false); }
-                  }}
-                >
-                  Lanjut Pembayaran
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center space-y-4">
-                <p className="text-sm font-medium text-ink-muted">Selesaikan pembayaran Anda:</p>
-                
-                {ceirgoPaymentData.qr ? (
-                  <>
-                    <div className="bg-white p-4 rounded-2xl inline-block border border-hairline shadow-sm">
-                      <img src={ceirgoPaymentData.qr} alt="QRIS" className="w-64 h-64 object-contain mx-auto" />
-                    </div>
-                    <div className="bg-primary/5 p-4 rounded-xl">
-                      <p className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Jumlah Harus Dibayar</p>
-                      <p className="text-3xl font-black text-primary mt-1">Rp {ceirgoPaymentData.total_pay.toLocaleString('id-ID')}</p>
-                    </div>
-                  </>
-                ) : ceirgoPaymentData.account_number ? (
-                  <div className="bg-primary/5 p-4 rounded-xl text-left space-y-2">
-                    <p className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Transfer Ke:</p>
-                    <p className="font-bold text-lg">{ceirgoPaymentData.provider}</p>
-                    <div className="flex justify-between items-center bg-white p-2 rounded border border-hairline">
-                      <span className="font-mono text-lg tracking-wider">{ceirgoPaymentData.account_number}</span>
-                    </div>
-                    <p className="text-sm">A/n: <b>{ceirgoPaymentData.account_holder}</b></p>
-                    
-                    <div className="pt-3 mt-3 border-t border-hairline">
-                      <p className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Jumlah Harus Dibayar</p>
-                      <p className="text-2xl font-black text-primary mt-1">Rp {ceirgoPaymentData.total_pay.toLocaleString('id-ID')}</p>
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="bg-blue-50 text-blue-800 p-3 rounded-xl text-xs text-left">
-                  Saldo CEIRGO akan otomatis bertambah setelah pembayaran berhasil. Silakan cek saldo secara berkala di menu Pengaturan.
-                </div>
-              </div>
-            )}
+          <Card glass className="p-6 space-y-4">
+            <h2 className="text-xl font-bold">Database & Sistem</h2>
+            <p className="text-sm text-ink-muted">Backup semua data (pengguna, transaksi, paket) ke file .sqlite</p>
+            <a href="/api/admin/backup-database" download>
+              <Button variant="outline" className="w-full">Unduh Backup Database (.sqlite)</Button>
+            </a>
           </Card>
         </div>
       )}
     </div>
   );
 }
+
