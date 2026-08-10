@@ -189,9 +189,8 @@ export default function DashboardPage() {
 
       {/* QRIS Modal */}
       {selectedQris && (() => {
-        const expiresAt = selectedQris.createdAt
-          ? Math.floor(new Date(selectedQris.createdAt).getTime() / 1000) + 900 // 15 mins
-          : Math.floor(Date.now() / 1000) + 900;
+        const createdAt = selectedQris.createdAt ? new Date(selectedQris.createdAt).getTime() : Date.now();
+        const expiresAt = Math.floor((createdAt + 15 * 60 * 1000) / 1000);
 
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
