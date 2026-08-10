@@ -1143,6 +1143,98 @@ export default function AdminPage() {
             </a>
           </Card>
         </div>
+      {showCeirgoTopUp && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-lg">Top Up Saldo Ceirgo</h3>
+              <button onClick={() => { setShowCeirgoTopUp(false); setCeirgoPaymentData(null); }} className="text-gray-500 hover:text-red-500 font-bold text-2xl">&times;</button>
+            </div>
+            
+            {!ceirgoPaymentData ? (
+              <>
+                <Input 
+                  label="Jumlah (Rp)" 
+                  type="number" 
+                  min={10000}
+                  value={ceirgoDepositAmount} 
+                  onChange={e => setCeirgoDepositAmount(e.target.value)} 
+                />
+                
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Pilih Metode Pembayaran</label>
+                  <select 
+                    className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm"
+                    value={ceirgoDepositProviderCode}
+                    onChange={e => setCeirgoDepositProviderCode(e.target.value)}
+                  >
+                    <option value="">-- Pilih --</option>
+                    {ceirgoDepositProviders.map(p => (
+                      <option key={p.code} value={p.code}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  isLoading={ceirgoTopUpLoading}
+                  onClick={async () => {
+                    if (!ceirgoDepositAmount || parseInt(ceirgoDepositAmount) < 10000) return Swal.fire('Error', 'Minimal top up Rp 10.000', 'error');
+                    if (!ceirgoDepositProviderCode) return Swal.fire('Error', 'Pilih provider', 'error');
+                    
+                    setCeirgoTopUpLoading(true);
+                    try {
+                      const res = await fetch('/api/admin/ceirgo-deposit', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ amount: parseInt(ceirgoDepositAmount), provider_code: ceirgoDepositProviderCode })
+                      });
+                      const d = await res.json();
+                      if (d.status) {
+                        setCeirgoPaymentData(d.data);
+                      } else {
+                        Swal.fire('Gagal', d.message, 'error');
+                      }
+                    } catch(e) {
+                      Swal.fire('Error', 'Kesalahan jaringan', 'error');
+                    } finally {
+                      setCeirgoTopUpLoading(false);
+                    }
+                  }}
+                >
+                  Buat Pesanan Deposit
+                </Button>
+              </>
+            ) : (
+              <div className="space-y-4 text-center">
+                <div className="p-4 bg-green-50 text-green-800 rounded-xl border border-green-200">
+                  <p className="text-sm font-semibold mb-1">Total yang harus dibayar:</p>
+                  <p className="text-2xl font-black text-green-600">Rp {ceirgoPaymentData.total_pay?.toLocaleString('id-ID')}</p>
+                </div>
+                
+                {ceirgoPaymentData.qr ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-sm font-medium">Scan QRIS di bawah ini:</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ceirgoPaymentData.qr} alt="QRIS" className="w-48 h-48 border border-gray-200 rounded-lg p-2 bg-white" />
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-sm text-left bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p><b>Provider:</b> {ceirgoPaymentData.provider}</p>
+                    {ceirgoPaymentData.account_number && (
+                      <p><b>No Rekening/VA:</b> {ceirgoPaymentData.account_number}</p>
+                    )}
+                    {ceirgoPaymentData.account_holder && (
+                      <p><b>Atas Nama:</b> {ceirgoPaymentData.account_holder}</p>
+                    )}
+                  </div>
+                )}
+                <Button className="w-full" variant="outline" onClick={() => { setShowCeirgoTopUp(false); setCeirgoPaymentData(null); }}>Tutup & Selesai</Button>
+              </div>
+            )}
+          </Card>
+        </div>
       )}
     </div>
   );
