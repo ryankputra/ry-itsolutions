@@ -1171,7 +1171,7 @@ export default function AdminPage() {
                   >
                     <option value="">-- Pilih --</option>
                     {ceirgoDepositProviders.map(p => (
-                      <option key={p.code} value={p.code}>{p.name}</option>
+                      <option key={p.code} value={p.code}>{p.display_name || p.name}</option>
                     ))}
                   </select>
                 </div>
