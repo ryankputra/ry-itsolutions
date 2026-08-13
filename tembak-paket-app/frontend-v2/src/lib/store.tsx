@@ -2,6 +2,9 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { API_URL } from "./api";
 
+const MENU_SETTINGS_STORAGE_KEY = "menu_settings";
+const DEFAULT_MENU_SETTINGS = { showBeliPaket: false };
+
 interface User {
   id: string;
   name: string;
@@ -29,12 +32,24 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [menuSettings, setMenuSettings] = useState({ showBeliPaket: false });
+  const [menuSettings, setMenuSettings] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_MENU_SETTINGS;
+    try {
+      const saved = window.localStorage.getItem(MENU_SETTINGS_STORAGE_KEY);
+      return saved ? { ...DEFAULT_MENU_SETTINGS, ...JSON.parse(saved) } : DEFAULT_MENU_SETTINGS;
+    } catch {
+      return DEFAULT_MENU_SETTINGS;
+    }
+  });
   const [ceirgoDisplaySettings, setCeirgoDisplaySettings] = useState({ cekCeir: [] as string[], barcode: [] as string[] });
 
   // Update setMenuSettings di Context agar bisa dipanggil dari mana saja
   const updateMenuSettings = (settings: { showBeliPaket: boolean }) => {
     setMenuSettings(settings);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MENU_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      window.dispatchEvent(new CustomEvent("menu_settings_updated", { detail: settings }));
+    }
   };
 
   const updateCeirgoDisplaySettings = (settings: { cekCeir: string[]; barcode: string[] }) => {
@@ -57,7 +72,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (menuRes.ok) {
           const menuData = await menuRes.json();
-          if (menuData.status) setMenuSettings(menuData.data);
+          if (menuData.status) updateMenuSettings({ showBeliPaket: !!menuData.data?.showBeliPaket });
         }
         if (ceirgoDisplayRes.ok) {
           const displayData = await ceirgoDisplayRes.json();

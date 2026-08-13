@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 import Swal from "sweetalert2";
 
 export default function AdminPage() {
-  const { user, loading: userLoading } = useApp();
+  const { user, loading: userLoading, updateMenuSettings } = useApp();
   const [activeTab, setActiveTab] = useState("paket");
 
   // Packages State
@@ -70,6 +70,12 @@ export default function AdminPage() {
   const [hideSuccess, setHideSuccess] = useState(true);
   const [hideFailed, setHideFailed] = useState(true);
 
+  // Tickets State
+  const [adminTickets, setAdminTickets] = useState<any[]>([]);
+  const [adminActiveTicket, setAdminActiveTicket] = useState<any>(null);
+  const [adminTicketMessages, setAdminTicketMessages] = useState<any[]>([]);
+  const [adminReply, setAdminReply] = useState("");
+  const adminMessagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeTab === 'pesanan-manual') {
@@ -353,6 +359,7 @@ export default function AdminPage() {
         body: JSON.stringify({ showBeliPaket })
       });
       if (res.ok) {
+        updateMenuSettings({ showBeliPaket });
         Swal.fire({ title: "Info", text: "Pengaturan menu disimpan!", icon: "info" });
       } else {
         Swal.fire({ title: "Info", text: "Gagal menyimpan pengaturan menu", icon: "info" });
@@ -410,6 +417,64 @@ export default function AdminPage() {
     }
   };
 
+  const loadAdminTickets = async () => {
+    try {
+      const res = await fetch("/api/admin/tickets", { credentials: "include" });
+      const data = await res.json();
+      if (data.status) setAdminTickets(data.data);
+    } catch (e) { }
+  };
+
+  const loadAdminTicketDetail = async (id: string) => {
+    try {
+      const res = await fetch(`/api/tickets/${id}`, { credentials: "include" });
+      const data = await res.json();
+      if (data.status) {
+        setAdminActiveTicket(data.data.ticket);
+        setAdminTicketMessages(data.data.messages);
+        setTimeout(() => adminMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      }
+    } catch (e) { }
+  };
+
+  useEffect(() => {
+    if (activeTab === "tiket-bantuan") {
+      loadAdminTickets();
+    }
+  }, [activeTab]);
+
+  const handleAdminReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminReply) return;
+    try {
+      const res = await fetch(`/api/tickets/${adminActiveTicket.id}/messages`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: adminReply }),
+      });
+      const data = await res.json();
+      if (data.status) {
+        setAdminReply("");
+        loadAdminTicketDetail(adminActiveTicket.id);
+        loadAdminTickets();
+      } else Swal.fire("Gagal", data.message, "error");
+    } catch (e) { }
+  };
+
+  const handleAdminCloseTicket = async (id: string) => {
+    if (!confirm("Tutup tiket ini?")) return;
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/close`, { method: "PUT", credentials: "include" });
+      const data = await res.json();
+      if (data.status) {
+        setAdminActiveTicket(null);
+        loadAdminTickets();
+        Swal.fire("Sukses", "Tiket ditutup", "success");
+      }
+    } catch (e) { }
+  };
+
   if (userLoading) return <p>Memuat Admin Panel...</p>;
 
   const filteredPackages = packages.filter(p =>
@@ -434,7 +499,7 @@ export default function AdminPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex gap-4 border-b border-hairline pb-4 overflow-x-auto">
-        {['paket', 'pengguna', 'pesanan-manual', 'pengaturan'].map(tab => (
+        {['paket', 'pengguna', 'pesanan-manual', 'tiket-bantuan', 'pengaturan'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1041,6 +1106,81 @@ export default function AdminPage() {
               </div>
             )}
           </Card>
+        </div>
+      )}
+
+      {activeTab === 'tiket-bantuan' && (
+        <div className="space-y-6">
+          {adminActiveTicket ? (
+            <Card glass className="p-0 overflow-hidden flex flex-col h-[600px] border-primary/20">
+              <div className="p-4 border-b border-hairline bg-canvas/50 flex justify-between items-center">
+                <div>
+                  <h2 className="font-bold text-lg">{adminActiveTicket.subject}</h2>
+                  <p className="text-xs text-ink-muted">User: {adminActiveTicket.userName} | Status: <span className="font-bold uppercase">{adminActiveTicket.status}</span></p>
+                </div>
+                <div className="flex gap-2">
+                  {adminActiveTicket.status !== 'closed' && (
+                    <Button variant="outline" size="sm" className="border-red-500 text-red-500 hover:bg-red-50" onClick={() => handleAdminCloseTicket(adminActiveTicket.id)}>Tutup Tiket</Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => setAdminActiveTicket(null)}>Kembali</Button>
+                </div>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-parchment/30">
+                {adminTicketMessages.map((m) => {
+                  const isAdminMsg = m.senderRole === "admin";
+                  return (
+                    <div key={m.id} className={`flex flex-col ${isAdminMsg ? 'items-end' : 'items-start'}`}>
+                      <div className={`max-w-[80%] p-3 rounded-2xl ${isAdminMsg ? 'bg-primary text-white rounded-tr-sm' : 'bg-white border border-hairline text-ink rounded-tl-sm shadow-sm'}`}>
+                        {!isAdminMsg && <p className="text-[10px] font-bold text-primary mb-1">{m.senderName} (User)</p>}
+                        <p className="text-sm whitespace-pre-wrap">{m.message}</p>
+                        <p className={`text-[10px] mt-1 text-right ${isAdminMsg ? 'text-white/70' : 'text-ink-muted'}`}>
+                          {new Date(m.createdAt).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={adminMessagesEndRef} />
+              </div>
+              <div className="p-4 bg-canvas border-t border-hairline">
+                {adminActiveTicket.status === 'closed' ? (
+                  <p className="text-center text-sm text-ink-muted font-medium py-2">Tiket ini sudah ditutup.</p>
+                ) : (
+                  <form onSubmit={handleAdminReply} className="flex gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 h-12 rounded-full border border-hairline bg-parchment px-5 text-sm focus:border-primary outline-none"
+                      placeholder="Ketik balasan untuk user..."
+                      value={adminReply}
+                      onChange={(e) => setAdminReply(e.target.value)}
+                    />
+                    <Button type="submit" className="rounded-full px-6 h-12 shrink-0">Balas</Button>
+                  </form>
+                )}
+              </div>
+            </Card>
+          ) : (
+            <Card glass className="p-6">
+              <h2 className="text-xl font-bold mb-4">Daftar Tiket Bantuan</h2>
+              {adminTickets.length === 0 ? (
+                <p className="text-sm text-ink-muted">Belum ada tiket.</p>
+              ) : (
+                <div className="space-y-3">
+                  {adminTickets.map((t) => (
+                    <div key={t.id} onClick={() => loadAdminTicketDetail(t.id)} className="p-4 border border-hairline rounded-xl bg-canvas hover:border-primary/50 cursor-pointer transition-colors flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-ink">{t.subject}</h3>
+                        <p className="text-xs text-ink-muted mt-1">{t.userName} • {new Date(t.createdAt).toLocaleString('id-ID')}</p>
+                      </div>
+                      <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${t.status === 'closed' ? 'bg-red-100 text-red-600' : t.status === 'answered' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {t.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
         </div>
       )}
 

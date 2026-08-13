@@ -63,7 +63,7 @@ export default function CekCeirPage() {
     Promise.all([
       fetch('/api/manual-services-pricing').then(res => res.json()),
       fetch('/api/ceirgo-pricing').then(res => res.json()),
-      fetch('/api/admin/ceirgo-services', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false })),
+      fetch('/api/ceirgo-services').then(res => res.json()).catch(() => ({ status: false })),
       fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
     ]).then(([prcData, ceirPrcData, ceirSvcData, displayData]) => {
       if (prcData.status) setPricing(prcData.data);

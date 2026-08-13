@@ -61,7 +61,7 @@ export default function BarcodePage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/ceirgo-pricing').then(res => res.json()),
-      fetch('/api/admin/ceirgo-services', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false })),
+      fetch('/api/ceirgo-services').then(res => res.json()).catch(() => ({ status: false })),
       fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
     ]).then(([ceirPrcData, ceirSvcData, displayData]) => {
       if (ceirPrcData.status) {
