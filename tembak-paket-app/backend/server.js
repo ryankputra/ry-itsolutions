@@ -152,8 +152,9 @@ async function initializeDatabase() {
             await dbRun(`CREATE TABLE IF NOT EXISTS imei_packages (id TEXT PRIMARY KEY, duration TEXT NOT NULL, price REAL NOT NULL)`);
             await dbRun(`INSERT OR IGNORE INTO imei_packages (id, duration, price) VALUES ('imei_1_bln', '1 Bulan', 100000)`);
             await dbRun(`INSERT OR IGNORE INTO imei_packages (id, duration, price) VALUES ('imei_3_bln', '3 Bulan', 250000)`);
-            // Removed imei_permanen default
-
+            // Buat tabel tiket
+            await dbRun(`CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, userId INTEGER, subject TEXT, status TEXT, createdAt TEXT, updatedAt TEXT)`);
+            await dbRun(`CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticketId TEXT, senderId INTEGER, senderRole TEXT, message TEXT, createdAt TEXT)`);
             // Tambah kolom opsional hasil cek ceir dan speed option
             try { await dbRun("ALTER TABLE transactions ADD COLUMN user_image_ceir TEXT"); } catch (e) { }
             try { await dbRun("ALTER TABLE transactions ADD COLUMN speed_option TEXT"); } catch (e) { }
@@ -384,7 +385,7 @@ app.post('/api/auth/google', async (req, res) => {
                 [newId, name, email, defaultPassword, 0, 'user', null, '[]', 'approved', new Date().toISOString()]);
 
             user = await dbGet('SELECT * FROM users WHERE id = ?', [newId]);
-            sendTelegramNotification(`<b>🎉 User Baru Mendaftar Via Google</b>\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}`);
+            sendTelegramNotification(`<b>🎉 User Baru Mendaftar</b>\n<b>Metode:</b> 🌐 Login via Google\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}`, 'admin');
         } else {
             // Jika akun ada tapi masih pending, otomatis di-approve karena login pakai Google
             if (user.status === 'pending') {
@@ -424,11 +425,12 @@ app.post('/api/auth/register', async (req, res) => {
             `<b>──────────────────────</b>
 <b>👤 Registrasi Baru Menunggu Persetujuan</b>
 <b>──────────────────────</b>
+<b>Metode:</b> 📝 Manual (Form Web)
 <b>Nama:</b> ${name}
 <b>Email:</b> ${email}
 <b>──────────────────────</b>
 <b>Harap setujui akun ini di Panel Admin.</b>
-<b>Notif:panel.cloudrystore.com</b>`
+<b>Notif:panel.cloudrystore.com</b>`, 'admin'
         );
 
         res.status(201).json({ status: true, message: "Registrasi berhasil! Akun Anda sedang menunggu persetujuan dari Admin." });
@@ -3338,8 +3340,138 @@ async function answerCallback(callbackQueryId, text) {
         headers: { 'Content-Type': 'application/json' }
     });
 }
-// --- END TELEGRAM INTERACTIVE NOTIFICATION ---
+// =======================================================
+// RUTE PUSAT BANTUAN (TIKET)
+// =======================================================
 
+// User: Ambil semua tiket milik user
+app.get('/api/user/tickets', isAuthenticated, async (req, res) => {
+    try {
+        const tickets = await dbAll("SELECT * FROM tickets WHERE userId = ? ORDER BY updatedAt DESC", [req.session.userId]);
+        res.json({ status: true, data: tickets });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal mengambil daftar tiket.' });
+    }
+});
+
+// User: Buat tiket baru
+app.post('/api/user/tickets', isAuthenticated, async (req, res) => {
+    try {
+        const { subject, message } = req.body;
+        if (!subject || !message) return res.status(400).json({ status: false, message: 'Subjek dan pesan wajib diisi.' });
+
+        const ticketId = `TKT-${Date.now()}`;
+        const messageId = `MSG-${Date.now()}`;
+        const now = new Date().toISOString();
+
+        await dbRun("BEGIN TRANSACTION");
+        await dbRun("INSERT INTO tickets (id, userId, subject, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)", [ticketId, req.session.userId, subject, 'open', now, now]);
+        await dbRun("INSERT INTO ticket_messages (id, ticketId, senderId, senderRole, message, createdAt) VALUES (?, ?, ?, ?, ?, ?)", [messageId, ticketId, req.session.userId, 'user', message, now]);
+        await dbRun("COMMIT");
+
+        const user = await dbGet("SELECT name FROM users WHERE id = ?", [req.session.userId]);
+        sendTelegramNotification(`<b>💬 TIKET BANTUAN BARU</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Subjek:</b> ${subject}\n<b>Pesan:</b>\n<i>${message}</i>\n──────────────────────\nSegera balas di Panel Admin!`, 'admin');
+
+        res.json({ status: true, message: 'Tiket berhasil dibuat.' });
+    } catch (e) {
+        await dbRun("ROLLBACK");
+        res.status(500).json({ status: false, message: 'Gagal membuat tiket.' });
+    }
+});
+
+// General: Ambil detail tiket & pesannya
+app.get('/api/tickets/:id', isAuthenticated, async (req, res) => {
+    try {
+        const ticket = await dbGet("SELECT tickets.*, users.name as userName FROM tickets JOIN users ON tickets.userId = users.id WHERE tickets.id = ?", [req.params.id]);
+        if (!ticket) return res.status(404).json({ status: false, message: 'Tiket tidak ditemukan.' });
+
+        const currentUser = await dbGet('SELECT role FROM users WHERE id = ?', [req.session.userId]);
+        if (currentUser.role !== 'admin' && ticket.userId !== req.session.userId) {
+            return res.status(403).json({ status: false, message: 'Anda tidak berhak melihat tiket ini.' });
+        }
+
+        const messages = await dbAll("SELECT ticket_messages.*, users.name as senderName FROM ticket_messages JOIN users ON ticket_messages.senderId = users.id WHERE ticketId = ? ORDER BY ticket_messages.createdAt ASC", [req.params.id]);
+        res.json({ status: true, data: { ticket, messages } });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal mengambil detail tiket.' });
+    }
+});
+
+// General: Balas tiket
+app.post('/api/tickets/:id/messages', isAuthenticated, async (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ status: false, message: 'Pesan wajib diisi.' });
+
+        const ticket = await dbGet("SELECT * FROM tickets WHERE id = ?", [req.params.id]);
+        if (!ticket) return res.status(404).json({ status: false, message: 'Tiket tidak ditemukan.' });
+        
+        const currentUser = await dbGet('SELECT role, name FROM users WHERE id = ?', [req.session.userId]);
+        const isAdminUser = currentUser.role === 'admin';
+
+        if (!isAdminUser && ticket.userId !== req.session.userId) {
+            return res.status(403).json({ status: false, message: 'Anda tidak berhak membalas tiket ini.' });
+        }
+
+        if (ticket.status === 'closed') {
+            return res.status(400).json({ status: false, message: 'Tiket sudah ditutup, tidak bisa dibalas lagi.' });
+        }
+
+        const messageId = `MSG-${Date.now()}`;
+        const now = new Date().toISOString();
+        const newStatus = isAdminUser ? 'answered' : 'open';
+
+        await dbRun("BEGIN TRANSACTION");
+        await dbRun("INSERT INTO ticket_messages (id, ticketId, senderId, senderRole, message, createdAt) VALUES (?, ?, ?, ?, ?, ?)", [messageId, req.params.id, req.session.userId, isAdminUser ? 'admin' : 'user', message, now]);
+        await dbRun("UPDATE tickets SET status = ?, updatedAt = ? WHERE id = ?", [newStatus, now, req.params.id]);
+        await dbRun("COMMIT");
+
+        if (isAdminUser) {
+            sseSend(ticket.userId, 'announcement', { title: 'Balasan Tiket', message: `Admin telah membalas tiket Anda: ${ticket.subject}` });
+        } else {
+            sendTelegramNotification(`<b>💬 BALASAN TIKET</b>\n──────────────────────\n<b>User:</b> ${currentUser.name}\n<b>Subjek:</b> ${ticket.subject}\n<b>Pesan:</b>\n<i>${message}</i>`, 'admin');
+        }
+
+        res.json({ status: true, message: 'Balasan terkirim.' });
+    } catch (e) {
+        await dbRun("ROLLBACK");
+        res.status(500).json({ status: false, message: 'Gagal membalas tiket.' });
+    }
+});
+
+// Admin: Ambil semua tiket
+app.get('/api/admin/tickets', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const tickets = await dbAll("SELECT tickets.*, users.name as userName FROM tickets JOIN users ON tickets.userId = users.id ORDER BY tickets.updatedAt DESC");
+        res.json({ status: true, data: tickets });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal mengambil semua tiket.' });
+    }
+});
+
+// Admin: Tutup tiket
+app.put('/api/admin/tickets/:id/close', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("UPDATE tickets SET status = 'closed', updatedAt = ? WHERE id = ?", [new Date().toISOString(), req.params.id]);
+        res.json({ status: true, message: 'Tiket berhasil ditutup.' });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal menutup tiket.' });
+    }
+});
+
+// Admin: Hapus tiket
+app.delete('/api/admin/tickets/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("BEGIN TRANSACTION");
+        await dbRun("DELETE FROM ticket_messages WHERE ticketId = ?", [req.params.id]);
+        await dbRun("DELETE FROM tickets WHERE id = ?", [req.params.id]);
+        await dbRun("COMMIT");
+        res.json({ status: true, message: 'Tiket beserta percakapannya berhasil dihapus.' });
+    } catch (e) {
+        await dbRun("ROLLBACK");
+        res.status(500).json({ status: false, message: 'Gagal menghapus tiket.' });
+    }
+});
 app.listen(PORT, () => {
     pollTelegramUpdates();
     console.log(`🚀 Server 100% Lengkap dengan SQLite3 berjalan di http://localhost:${PORT}`);
