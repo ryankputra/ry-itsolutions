@@ -199,24 +199,6 @@ const brevoApiClient = SibApiV3Sdk.ApiClient.instance;
 brevoApiClient.authentications['api-key'].apiKey = BREVO_API_KEY;
 
 // --- PENGATURAN MULTER ---
-const tutorialStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, 'public', 'uploads');
-        fs.mkdir(uploadPath, { recursive: true }, (err) => cb(err, uploadPath));
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
-});
-const tutorialUpload = multer({ storage: tutorialStorage, limits: { fileSize: 10 * 1024 * 1024 } }).array('files');
-const handleUploadErrors = (req, res, next) => {
-    tutorialUpload(req, res, (err) => {
-        if (err instanceof multer.MulterError) return res.status(400).json({ status: false, message: `File upload error: ${err.message}.` });
-        if (err) return res.status(500).json({ status: false, message: `Terjadi kesalahan saat upload: ${err.message}` });
-        next();
-    });
-};
 const dbBackupUpload = multer({ dest: path.join(__dirname, 'temp_uploads/') });
 
 // --- MIDDLEWARE AUTENTIKASI ---
@@ -2260,72 +2242,6 @@ app.get('/api/user/announcement', isAuthenticated, async (req, res) => {
 });
 
 
-// =======================================================
-// RUTE KONTEN TUTORIAL
-// =======================================================
-app.get('/api/tutorial-content', isAuthenticated, async (req, res) => {
-    try {
-        const tutorials = await dbAll("SELECT id, title, description FROM tutorialContent ORDER BY position ASC");
-        res.json({ status: true, data: tutorials });
-    } catch (e) { res.status(500).json({ status: false, message: "Gagal memuat daftar tutorial." }); }
-});
-
-app.get('/api/tutorial-content/:id', isAuthenticated, async (req, res) => {
-    try {
-        const tutorial = await dbGet("SELECT * FROM tutorialContent WHERE id = ?", [req.params.id]);
-        if (!tutorial) return res.status(404).json({ status: false, message: "Tutorial tidak ditemukan." });
-        if (tutorial.content) tutorial.content = JSON.parse(tutorial.content);
-        res.json({ status: true, data: tutorial });
-    } catch (e) { res.status(500).json({ status: false, message: "Gagal memuat detail tutorial." }); }
-});
-
-app.put('/api/admin/tutorial-content', isAuthenticated, isAdmin, handleUploadErrors, async (req, res) => {
-    try {
-        const { tutorialId, title, description, content } = req.body;
-        if (!title || !content) return res.status(400).json({ status: false, message: "Judul dan konten wajib diisi." });
-
-        let parsedContent;
-        try { parsedContent = JSON.parse(content); } catch (e) { return res.status(400).json({ status: false, message: "Format konten tidak valid." }); }
-
-        const uploadedFilesMap = new Map(req.files?.map(file => [file.originalname, `/public/uploads/${file.filename}`]) || []);
-        const finalContentBlocks = parsedContent.map(block => uploadedFilesMap.has(block.content) ? { ...block, content: uploadedFilesMap.get(block.content) } : block);
-        const finalContentJson = JSON.stringify(finalContentBlocks);
-
-        if (tutorialId) {
-            await dbRun("UPDATE tutorialContent SET title = ?, description = ?, content = ?, updatedAt = ? WHERE id = ?", [title, description, finalContentJson, new Date().toISOString(), tutorialId]);
-        } else {
-            const newId = `tut_${Date.now()}`;
-            const now = new Date().toISOString();
-            await dbRun("INSERT INTO tutorialContent (id, title, description, content, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)", [newId, title, description, finalContentJson, now, now]);
-        }
-        res.json({ status: true, message: "Konten tutorial berhasil disimpan!" });
-    } catch (error) { console.error("Error saving tutorial:", error); res.status(500).json({ status: false, message: "Gagal menyimpan konten tutorial." }); }
-});
-
-app.delete('/api/admin/tutorial-content/:id', isAuthenticated, isAdmin, async (req, res) => {
-    try {
-        const result = await dbRun("DELETE FROM tutorialContent WHERE id = ?", [req.params.id]);
-        if (result.changes === 0) return res.status(404).json({ status: false, message: "Tutorial tidak ditemukan." });
-        res.json({ status: true, message: "Tutorial berhasil dihapus." });
-    } catch (e) { res.status(500).json({ status: false, message: "Gagal menghapus tutorial." }); }
-});
-
-app.put('/api/admin/tutorial-content/reorder', isAuthenticated, isAdmin, async (req, res) => {
-    const { order } = req.body;
-    if (!Array.isArray(order)) return res.status(400).json({ status: false, message: "Data urutan tidak valid." });
-    try {
-        await dbRun("BEGIN TRANSACTION");
-        for (const [index, id] of order.entries()) {
-            await dbRun("UPDATE tutorialContent SET position = ? WHERE id = ?", [index, id]);
-        }
-        await dbRun("COMMIT");
-        res.json({ status: true, message: "Urutan tutorial berhasil disimpan." });
-    } catch (error) {
-        await dbRun("ROLLBACK");
-        console.error("Error reordering tutorials:", error);
-        res.status(500).json({ status: false, message: "Gagal menyimpan urutan." });
-    }
-});
 
 // =======================================================
 // SCHEDULER OTOMATIS
@@ -3126,18 +3042,7 @@ app.put('/api/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => 
     });
 });
 
-// --- SAJIKAN FRONTEND & CATCH-ALL ---
-const frontendPath = path.join(__dirname, '..', 'frontend'); // HAPUS ', 'build'' DARI SINI
-app.use(express.static(frontendPath));
-app.get('*', (req, res) => {
-    const indexPath = path.resolve(frontendPath, 'index.html');
-    // fs.access tidak lagi diperlukan karena express.static sudah menanganinya,
-    // tapi kita biarkan untuk keamanan jika file index.html hilang.
-    fs.access(indexPath, fs.constants.F_OK, (err) => {
-        if (err) return res.status(404).send("File index.html tidak ditemukan di dalam folder /frontend.");
-        res.sendFile(indexPath);
-    });
-});
+
 
 cron.schedule('0 1 1 * *', async () => { // Berjalan jam 01:00 pada hari pertama setiap bulan
     console.log(`[Reseller Check] Memulai pengecekan status reseller bulanan...`);
