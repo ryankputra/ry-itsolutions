@@ -150,8 +150,7 @@ async function initializeDatabase() {
             try { await dbRun("ALTER TABLE transactions ADD COLUMN admin_note TEXT"); } catch (e) { }
             // Buat tabel imei_packages untuk durasi kustom
             await dbRun(`CREATE TABLE IF NOT EXISTS imei_packages (id TEXT PRIMARY KEY, duration TEXT NOT NULL, price REAL NOT NULL)`);
-            await dbRun(`INSERT OR IGNORE INTO imei_packages (id, duration, price) VALUES ('imei_1_bln', '1 Bulan', 100000)`);
-            await dbRun(`INSERT OR IGNORE INTO imei_packages (id, duration, price) VALUES ('imei_3_bln', '3 Bulan', 250000)`);
+            // (Hardcode IMEI packages dihapus agar tidak muncul terus setiap direstart)
             // Buat tabel tiket
             await dbRun(`CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, userId INTEGER, subject TEXT, status TEXT, createdAt TEXT, updatedAt TEXT)`);
             await dbRun(`CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticketId TEXT, senderId INTEGER, senderRole TEXT, message TEXT, createdAt TEXT)`);
@@ -430,7 +429,7 @@ app.post('/api/auth/register', async (req, res) => {
 <b>Email:</b> ${email}
 <b>──────────────────────</b>
 <b>Harap setujui akun ini di Panel Admin.</b>
-<b>Notif:panel.cloudrystore.com</b>`, 'admin'
+<b>Notif:ry-itsolutionts.web.id</b>`, 'admin'
         );
 
         res.status(201).json({ status: true, message: "Registrasi berhasil! Akun Anda sedang menunggu persetujuan dari Admin." });
@@ -465,7 +464,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const oneHour = Date.now() + 3600000;
         await dbRun('UPDATE users SET resetPasswordToken = ?, resetPasswordExpires = ? WHERE id = ?', [token, oneHour, user.id]);
 
-        const resetUrl = `https://panel.cloudrystore.com/#reset-password?token=${token}`;
+        const resetUrl = `https://ry-itsolutionts.web.id/#reset-password?token=${token}`;
         const htmlContent = `<div style="font-family: Arial, sans-serif; line-height: 1.6;"><h2>Permintaan Reset Password</h2><p>Klik link di bawah ini untuk mereset password Anda:</p><p style="margin: 20px 0;"><a href="${resetUrl}" style="background-color: #7c3aed; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px;">Reset Password Saya</a></p><p>Link ini kedaluwarsa dalam 1 jam. Jika Anda tidak meminta ini, abaikan email ini.</p></div>`;
         const tranEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
         await tranEmailApi.sendTransacEmail({ sender: { email: 'no-reply@tembak.cloudrystore.com', name: 'RYYSTOREV2' }, to: [{ email: user.email }], subject: 'Reset Password Akun RYYSTORE Anda', htmlContent });
@@ -1491,7 +1490,7 @@ Akun telah di-upgrade secara otomatis.`, 'admin'
 <b>Jumlah Masuk:</b> Rp ${topUp.baseAmount.toLocaleString('id-ID')}
 <b>ID Transaksi:</b> <code>${topUpId}</code>
 <b>──────────────────────</b>
-<b>Notif:panel.cloudrystore.com</b>`
+<b>Notif:ry-itsolutionts.web.id</b>`
                         );
                         console.log(`[ORKUT_POLL] Saldo dan notifikasi untuk ${user.name} berhasil diproses.`);
 
@@ -1683,7 +1682,7 @@ app.post('/api/admin/update-balance', isAuthenticated, isAdmin, async (req, res)
 💰 <b>Jumlah:</b> Rp ${parsedAmount.toLocaleString('id-ID')}
 📈 <b>Saldo Baru:</b> Rp ${updatedUser.balance.toLocaleString('id-ID')}
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`;
+<b>Notif:ry-itsolutionts.web.id</b>`;
             sendTelegramNotification(notifMessage, 'group');
 
             // ⬇️ Tambahkan 2 baris SSE ini
@@ -2067,7 +2066,7 @@ app.post('/api/admin/maintenance', isAuthenticated, isAdmin, async (req, res) =>
 Admin telah mengaktifkan mode pemeliharaan. 
 Layanan tidak akan dapat diakses untuk sementara waktu.
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`, 'group');
+<b>Notif:ry-itsolutionts.web.id</b>`, 'group');
             await dbRun("UPDATE settings SET value = 'manual_on' WHERE key = 'maintenanceNotificationSent'");
         } else {
             // Cek dulu apakah ada maintenance lain yang masih aktif
@@ -2078,7 +2077,7 @@ Layanan tidak akan dapat diakses untuk sementara waktu.
 ──────────────────────
 Layanan kini telah kembali normal dan dapat diakses.
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`, 'group');
+<b>Notif:ry-itsolutionts.web.id</b>`, 'group');
                 await dbRun("UPDATE settings SET value = 'none' WHERE key = 'maintenanceNotificationSent'");
             }
         }
@@ -2405,14 +2404,14 @@ cron.schedule('*/1 * * * *', async () => {
 Saldo KMSP Anda saat ini adalah <b>Rp ${currentBalance.toLocaleString('id-ID')}</b>. 
 Sistem mengaktifkan mode pemeliharaan. Mohon segera isi ulang.
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`, 'admin');
+<b>Notif:ry-itsolutionts.web.id</b>`, 'admin');
                 await sendTelegramNotification(
                     `<b>🔧 MAINTENANCE INTERNAL</b>
 ──────────────────────
 Layanan sedang mengalami pemeliharaan internal singkat.
 Mohon coba kembali dalam beberapa saat.
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`, 'group');
+<b>Notif:ry-itsolutionts.web.id</b>`, 'group');
                 await dbRun("UPDATE settings SET value = 'low_balance' WHERE key = 'maintenanceNotificationSent'");
 
             } else if (settings.maintenanceScheduleEnabled === 'true') {
@@ -2423,7 +2422,7 @@ Mohon coba kembali dalam beberapa saat.
 Sistem sedang dalam mode pemeliharaan terjadwal dari pukul <b>${settings.maintenanceStartTime}</b> hingga <b>${settings.maintenanceEndTime}</b> WIB.
 Layanan akan kembali normal setelahnya.
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`, 'group');
+<b>Notif:ry-itsolutionts.web.id</b>`, 'group');
                 await dbRun("UPDATE settings SET value = 'scheduled' WHERE key = 'maintenanceNotificationSent'");
             }
         }
@@ -2434,7 +2433,7 @@ Layanan akan kembali normal setelahnya.
 ──────────────────────
 Layanan kini telah kembali normal dan dapat diakses.
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`, 'group');
+<b>Notif:ry-itsolutionts.web.id</b>`, 'group');
             await dbRun("UPDATE settings SET value = 'none' WHERE key = 'maintenanceNotificationSent'");
         }
 
@@ -2452,7 +2451,7 @@ Layanan kini telah kembali normal dan dapat diakses.
 <b>Paket:</b> ${trx.packageName}
 ──────────────────────
 Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
-<b>Notif:panel.cloudrystore.com</b>`;
+<b>Notif:ry-itsolutionts.web.id</b>`;
                     sendTelegramNotification(userMessage, 'group');
 
                     await (trx.accessToken ? executeOtpPurchase(trx) : executeNonOtpPurchase(trx));
@@ -2466,7 +2465,7 @@ Sistem sedang mencoba mengirimkan paket Anda. Mohon ditunggu.
 <b>Status Akhir:</b> <b>${updatedTrx.status.toUpperCase()}</b>
 <b>Pesan API:</b> ${updatedTrx.api_response}
 ──────────────────────
-<b>Notif:panel.cloudrystore.com</b>`;
+<b>Notif:ry-itsolutionts.web.id</b>`;
                     sendTelegramNotification(adminReportMessage, 'admin');
                 }
             }
@@ -3405,7 +3404,7 @@ app.post('/api/tickets/:id/messages', isAuthenticated, async (req, res) => {
 
         const ticket = await dbGet("SELECT * FROM tickets WHERE id = ?", [req.params.id]);
         if (!ticket) return res.status(404).json({ status: false, message: 'Tiket tidak ditemukan.' });
-        
+
         const currentUser = await dbGet('SELECT role, name FROM users WHERE id = ?', [req.session.userId]);
         const isAdminUser = currentUser.role === 'admin';
 

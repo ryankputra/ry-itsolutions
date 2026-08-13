@@ -36,6 +36,35 @@ function normalizeServices(payload) {
 function initCeirgoRoutes() {
     // ponytail: /manual-services-pricing moved to server.js (returns all keys including imei_speed_*)
 
+    // Public list for user pages (filtered client-side by display settings)
+    ceirgoRoutes.get('/ceirgo-services', async (req, res) => {
+        try {
+            if (!CEIRGO_API_KEY) {
+                return res.status(500).json({ status: false, message: 'CEIRGO_API_KEY tidak dikonfigurasi.' });
+            }
+
+            const ceirgoRes = await fetch(`${CEIRGO_BASE_URL}/api/services?limit=50`, {
+                headers: {
+                    'Authorization': `Bearer ${CEIRGO_API_KEY}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!ceirgoRes.ok) {
+                const errorText = await ceirgoRes.text();
+                throw new Error(`CeirGO API responded with status ${ceirgoRes.status}: ${errorText}`);
+            }
+
+            const servicesPayload = await ceirgoRes.json();
+            const services = normalizeServices(servicesPayload);
+
+            res.json({ status: true, data: services });
+        } catch (error) {
+            console.error("[API] Error fetching public CeirGO services:", error.message);
+            res.status(500).json({ status: false, message: 'Gagal mengambil daftar layanan CeirGO.' });
+        }
+    });
+
     // Return admin-set prices from DB (not modal prices from API)
     ceirgoRoutes.get('/ceirgo-pricing', async (req, res) => {
         try {
