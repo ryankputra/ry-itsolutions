@@ -235,31 +235,25 @@ export default function AdminPage() {
           if (d.status) setShowBeliPaket(d.data.showBeliPaket);
         }).catch(() => { });
 
-        // Fetch auto-accept Ceirgo setting
-        fetch('/api/admin/ceirgo-auto-accept', { credentials: 'include' })
-          .then(r => r.json())
-          .then(d => {
-            if (d.status) setAutoAcceptCeirgo(d.data.autoAcceptCeirgo);
-          })
-          .catch(() => { });
+        // (Komentar untuk menghindari 404 pada endpoint yang tidak ada di backend)
+        // fetch('/api/admin/ceirgo-auto-accept', { credentials: 'include' })
+        //  .then(r => r.json())
+        //  .then(d => { if (d.status) setAutoAcceptCeirgo(d.data.autoAcceptCeirgo); })
+        //  .catch(() => { });
 
-        // Fetch deposit settings
-        fetch('/api/admin/deposit-settings').then(r => r.json()).then(d => {
-          if (d.status) {
-            setShowDeposit(d.data.showDeposit);
-            setDepositMinAmount(d.data.minAmount);
-          }
-        }).catch(() => { });
+        // fetch('/api/admin/deposit-settings').then(r => r.json()).then(d => {
+        //  if (d.status) { setShowDeposit(d.data.showDeposit); setDepositMinAmount(d.data.minAmount); }
+        // }).catch(() => { });
 
         fetch('/api/admin/ceirgo-deposit-providers', { credentials: 'include' })
           .then(r => r.json())
           .then(d => { if (d.status) setCeirgoDepositProviders(d.data); })
           .catch(() => { });
 
-        fetch('/api/admin/ceirgo-payment-methods', { credentials: 'include' })
-          .then(r => r.json())
-          .then(d => { if (d.status) setCeirgoPaymentMethods(d.data); })
-          .catch(() => { });
+        // fetch('/api/admin/ceirgo-payment-methods', { credentials: 'include' })
+        //  .then(r => r.json())
+        //  .then(d => { if (d.status) setCeirgoPaymentMethods(d.data); })
+        //  .catch(() => { });
       }
     }
   }, [user, activeTab]);
@@ -904,15 +898,15 @@ export default function AdminPage() {
           <Card glass className="p-6 space-y-6 border-primary/50">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-xl font-bold">Sinkronisasi Layanan Ceirgo.id</h2>
-                <p className="text-sm text-ink-muted mt-1">Atur harga jual layanan otomatis dari API Ceirgo.</p>
+                <h2 className="text-xl font-bold">Sinkronisasi Layanan Pusat</h2>
+                <p className="text-sm text-ink-muted mt-1">Atur harga jual layanan otomatis dari API Pusat.</p>
               </div>
-              <Button size="sm" variant="outline" onClick={loadManualData}>🔄 Refresh dari Ceirgo</Button>
+              <Button size="sm" variant="outline" onClick={loadManualData}>🔄 Refresh Data</Button>
             </div>
 
             {ceirgoServices.length === 0 ? (
-              <div className="bg-amber-50 text-amber-800 p-4 rounded-xl text-sm border border-amber-200">
-                Layanan Ceirgo tidak ditemukan. Pastikan <b>CEIRGO_API_KEY</b> di <code>.env</code> sudah benar.
+              <div className="text-center text-ink-muted text-sm py-4 border rounded-xl border-dashed">
+                Layanan Pusat tidak ditemukan. Pastikan konfigurasi API di server sudah benar.
               </div>
             ) : (
               <div className="space-y-4">
@@ -959,9 +953,9 @@ export default function AdminPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(ceirgoPricing)
                     });
-                    if (res.ok) Swal.fire({ title: "Info", text: "Harga dan tampilan layanan Ceirgo berhasil disimpan!", icon: "info" });
+                    if (res.ok) Swal.fire({ title: "Info", text: "Harga dan tampilan layanan berhasil disimpan!", icon: "info" });
                   } catch (e) { Swal.fire({ title: "Info", text: "Error menyimpan", icon: "info" }); }
-                }} className="w-full">Simpan Harga & Tampilan Ceirgo</Button>
+                }} className="w-full">Simpan Harga & Tampilan Layanan Pusat</Button>
               </div>
             )}
           </Card>
@@ -1196,7 +1190,7 @@ export default function AdminPage() {
               </div>
               <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-canvas border border-hairline rounded-xl gap-3">
                 <div>
-                  <div className="font-bold text-sm flex items-center gap-1.5">📱 Ceirgo.id</div>
+                  <div className="font-bold text-sm flex items-center gap-1.5">📱 Server Pusat</div>
                   <div className="font-black text-primary">Rp {providerBalances.ceirgo !== null ? providerBalances.ceirgo?.toLocaleString('id-ID') : '...'}</div>
                 </div>
                 <Button size="sm" onClick={() => setShowCeirgoTopUp(true)}>Isi Saldo</Button>
@@ -1317,7 +1311,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-lg">Top Up Saldo Ceirgo</h3>
+              <h3 className="font-bold text-lg">Top Up Saldo Pusat</h3>
               <button onClick={() => { setShowCeirgoTopUp(false); setCeirgoPaymentData(null); }} className="text-gray-500 hover:text-red-500 font-bold text-2xl">&times;</button>
             </div>
             

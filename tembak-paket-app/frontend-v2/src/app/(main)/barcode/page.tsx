@@ -197,7 +197,7 @@ export default function BarcodePage() {
         </button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Cetak Barcode</h1>
-          <p className="text-sm text-ink-muted">Buat barcode box HP otomatis via Ceirgo.</p>
+          <p className="text-sm text-ink-muted">Buat barcode box HP otomatis via Server Pusat.</p>
         </div>
       </div>
 
