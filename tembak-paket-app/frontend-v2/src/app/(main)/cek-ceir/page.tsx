@@ -208,8 +208,8 @@ export default function CekCeirPage() {
           type="button"
           onClick={() => setOption(btn.id)}
           className={`p-4 rounded-xl border text-center transition-all duration-200 flex flex-col items-center justify-center gap-1 ${isSelected
-              ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 text-primary ring-1 ring-primary scale-[1.02]'
-              : 'border-hairline bg-canvas hover:bg-parchment hover:border-primary/30'
+            ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 text-primary ring-1 ring-primary scale-[1.02]'
+            : 'border-hairline bg-canvas hover:bg-parchment hover:border-primary/30'
             }`}
         >
           <div className="font-bold text-sm leading-tight px-1">{btn.label}</div>
@@ -230,7 +230,7 @@ export default function CekCeirPage() {
           <svg width="20" height="20" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Investigasi & Cek CEIR 🔍</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Cek CEIR 🔍</h1>
           <p className="text-sm text-ink-muted">Kepoin status IMEI (ceir) lo sebelum unblock imei lo.</p>
         </div>
       </div>
