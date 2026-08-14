@@ -1281,6 +1281,35 @@ export default function AdminPage() {
             <a href="/api/admin/backup-database" download>
               <Button variant="outline" className="w-full">Unduh Backup Database (.sqlite)</Button>
             </a>
+
+            <div className="pt-4 mt-4 border-t border-hairline space-y-4">
+              <div>
+                <h3 className="text-md font-bold">Tarik Update Server</h3>
+                <p className="text-xs text-ink-muted">Tarik kode terbaru dari GitHub, build ulang UI, dan restart server otomatis.</p>
+              </div>
+              <Button 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0" 
+                onClick={async () => {
+                  if (!confirm("Peringatan: Proses ini akan memakan 100% CPU selama ±3 menit dan web akan ter-restart. Pastikan tidak ada transaksi yang sedang berlangsung. Lanjutkan?")) return;
+                  try {
+                    const res = await fetch('/api/admin/deploy', { method: 'POST', credentials: 'include' });
+                    const d = await res.json();
+                    if (d.status) {
+                      Swal.fire({
+                        title: "Update Dimulai! 🚀",
+                        text: "Server sedang menarik kode dan memproses build. Web akan offline selama ±3 menit. Silakan refresh secara berkala.",
+                        icon: "success",
+                        confirmButtonText: "Mengerti"
+                      });
+                    }
+                  } catch (e) {
+                    Swal.fire("Error", "Gagal memicu update.", "error");
+                  }
+                }}
+              >
+                🚀 Tarik Update Server (Auto Deploy)
+              </Button>
+            </div>
           </Card>
         </div>
       )}

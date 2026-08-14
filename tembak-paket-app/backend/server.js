@@ -3376,6 +3376,29 @@ app.delete('/api/admin/tickets/:id', isAuthenticated, isAdmin, async (req, res) 
         res.status(500).json({ status: false, message: 'Gagal menghapus tiket.' });
     }
 });
+
+// Admin: Auto Deploy / Update Server
+app.post('/api/admin/deploy', isAuthenticated, isAdmin, (req, res) => {
+    // Kembalikan response secepatnya agar request tidak terputus karena pm2 restart
+    res.json({ status: true, message: 'Proses update & build dimulai. Server akan restart.' });
+    
+    setTimeout(() => {
+        const { exec } = require('child_process');
+        // Pindah ke root, stash perubahan lokal (jika ada) biar tidak bentrok, lalu pull dan build
+        const cmd = 'cd /www/wwwroot/ry-itsolutions/tembak-paket-app && git stash && git pull origin main && cd frontend-v2 && npm run build && pm2 restart all';
+        
+        console.log("🚀 Memulai proses Auto Deploy...");
+        sendTelegramNotification(`<b>🚀 PROSES AUTO DEPLOY DIMULAI</b>\nSistem sedang menarik update dari GitHub dan melakukan build...`, 'admin');
+        
+        exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+                console.error("❌ Deploy error:", error);
+            }
+            console.log("Deploy output:", stdout);
+        });
+    }, 2000); // Eksekusi 2 detik setelah merespons ke frontend
+});
+
 app.listen(PORT, () => {
     pollTelegramUpdates();
     console.log(`🚀 Server 100% Lengkap dengan SQLite3 berjalan di http://localhost:${PORT}`);
