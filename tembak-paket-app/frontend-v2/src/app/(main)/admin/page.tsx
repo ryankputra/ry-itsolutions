@@ -56,9 +56,60 @@ export default function AdminPage() {
   const [ceirgoPaymentMethods, setCeirgoPaymentMethods] = useState<any[]>([]);
   const [ceirgoPaymentMethodCode, setCeirgoPaymentMethodCode] = useState("");
 
+  // Deploy Console State
+  const [showDeployConsole, setShowDeployConsole] = useState(false);
+  const [deployLogs, setDeployLogs] = useState("");
+  const [isDeploying, setIsDeploying] = useState(false);
 
+  const startDeploy = async () => {
+    try {
+      const res = await fetch('/api/admin/deploy', { method: 'POST', credentials: 'include' });
+      const d = await res.json();
+      if (d.status) {
+        setShowDeployConsole(true);
+        setIsDeploying(true);
+        setDeployLogs("Menghubungi server...\n");
 
-  // Manual Orders State
+        const interval = setInterval(async () => {
+          try {
+            const statusRes = await fetch('/api/admin/deploy-status', { credentials: 'include' });
+            const statusData = await statusRes.json();
+            if (statusData.status) {
+              setDeployLogs(statusData.log);
+              if (statusData.log.includes("SELESAI DENGAN KODE")) {
+                clearInterval(interval);
+                setIsDeploying(false);
+              }
+            }
+          } catch (err) {
+            setDeployLogs(prev => prev + "\n[SISTEM] Server sedang offline (merestart PM2...). Menunggu koneksi...\n");
+            clearInterval(interval);
+            let checkCount = 0;
+            const reconnectInterval = setInterval(async () => {
+              checkCount++;
+              try {
+                const ping = await fetch('/api/admin/menu-settings');
+                if (ping.ok) {
+                  clearInterval(reconnectInterval);
+                  setDeployLogs(prev => prev + "\n[SISTEM] Koneksi terhubung! Update Sukses. Silakan Muat Ulang Halaman.\n");
+                  setIsDeploying(false);
+                  Swal.fire("Sukses!", "Server berhasil diperbarui dan kembali online!", "success");
+                }
+              } catch (e) {
+                if (checkCount > 20) {
+                  clearInterval(reconnectInterval);
+                  setDeployLogs(prev => prev + "\n[ERROR] Waktu tunggu habis. Silakan muat ulang halaman manual.\n");
+                  setIsDeploying(false);
+                }
+              }
+            }, 3000);
+          }
+        }, 1500);
+      }
+    } catch (e) {
+      Swal.fire("Error", "Gagal memicu deployment", "error");
+    }
+  };  // Manual Orders State
   const [manualOrders, setManualOrders] = useState<any[]>([]);
   const [pricing, setPricing] = useState<any>({});
   const [imeiPackages, setImeiPackages] = useState<any[]>([]);
@@ -1283,26 +1334,44 @@ export default function AdminPage() {
               </div>
               <Button 
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0" 
-                onClick={async () => {
-                  if (!confirm("Peringatan: Proses ini akan memakan 100% CPU selama ±3 menit dan web akan ter-restart. Pastikan tidak ada transaksi yang sedang berlangsung. Lanjutkan?")) return;
-                  try {
-                    const res = await fetch('/api/admin/deploy', { method: 'POST', credentials: 'include' });
-                    const d = await res.json();
-                    if (d.status) {
-                      Swal.fire({
-                        title: "Update Dimulai! 🚀",
-                        text: "Server sedang menarik kode dan memproses build. Web akan offline selama ±3 menit. Silakan refresh secara berkala.",
-                        icon: "success",
-                        confirmButtonText: "Mengerti"
-                      });
-                    }
-                  } catch (e) {
-                    Swal.fire("Error", "Gagal memicu update.", "error");
-                  }
+                onClick={() => {
+                  Swal.fire({
+                    title: 'Mulai Auto Deploy?',
+                    text: 'Proses ini memakan 100% CPU STB (±2 menit) dan server akan ter-restart. Pastikan tidak ada transaksi tertunda.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#2563eb',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: '🚀 Ya, Mulai!',
+                    cancelButtonText: 'Batal'
+                  }).then((result) => {
+                    if (result.isConfirmed) startDeploy();
+                  });
                 }}
               >
                 🚀 Tarik Update Server (Auto Deploy)
               </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showDeployConsole && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <Card className="w-full max-w-2xl bg-[#1e1e1e] border border-zinc-700 p-0 overflow-hidden flex flex-col shadow-2xl">
+            <div className="flex justify-between items-center bg-zinc-900 p-4 border-b border-zinc-800">
+              <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                🚀 Terminal Auto Deploy
+                {isDeploying && <span className="animate-spin inline-block w-4 h-4 border-2 border-zinc-500 border-t-amber-400 rounded-full ml-2"></span>}
+              </h3>
+              {!isDeploying && <button onClick={() => setShowDeployConsole(false)} className="text-zinc-500 hover:text-white font-bold text-2xl transition-colors">&times;</button>}
+            </div>
+            <pre className="w-full h-[60vh] max-h-[500px] bg-black p-4 overflow-y-auto text-xs text-green-400 font-mono whitespace-pre-wrap leading-relaxed select-all">
+              {deployLogs}
+            </pre>
+            <div className="p-4 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center">
+              <span className="text-xs text-zinc-500">*Jangan menutup halaman ini hingga proses selesai.</span>
+              {!isDeploying && <Button size="sm" onClick={() => window.location.reload()} className="bg-primary hover:bg-primary-hover text-white">Muat Ulang Halaman</Button>}
             </div>
           </Card>
         </div>

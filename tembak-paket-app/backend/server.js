@@ -3379,24 +3379,55 @@ app.delete('/api/admin/tickets/:id', isAuthenticated, isAdmin, async (req, res) 
 
 // Admin: Auto Deploy / Update Server
 app.post('/api/admin/deploy', isAuthenticated, isAdmin, (req, res) => {
-    // Kembalikan response secepatnya agar request tidak terputus karena pm2 restart
-    res.json({ status: true, message: 'Proses update & build dimulai. Server akan restart.' });
+    const logPath = path.join(__dirname, 'deploy.log');
+    
+    // Tulis header log awal
+    fs.writeFileSync(logPath, `=== MEMULAI PROSES AUTO DEPLOY ===\nWaktu: ${new Date().toLocaleString('id-ID')}\n\n`);
+
+    res.json({ status: true, message: 'Proses update dimulai.' });
     
     setTimeout(() => {
-        const { exec } = require('child_process');
-        // Pindah ke root, stash perubahan lokal (jika ada) biar tidak bentrok, lalu pull dan build
-        const cmd = 'cd /www/wwwroot/ry-itsolutions/tembak-paket-app && git stash && git pull origin main && cd frontend-v2 && npm run build && pm2 restart all';
+        const { spawn } = require('child_process');
+        // Jalankan bash di Linux (STB)
+        const child = spawn('bash');
         
         console.log("🚀 Memulai proses Auto Deploy...");
         sendTelegramNotification(`<b>🚀 PROSES AUTO DEPLOY DIMULAI</b>\nSistem sedang menarik update dari GitHub dan melakukan build...`, 'admin');
         
-        exec(cmd, (error, stdout, stderr) => {
-            if (error) {
-                console.error("❌ Deploy error:", error);
-            }
-            console.log("Deploy output:", stdout);
+        // Kirim rentetan perintah ke stdin bash
+        child.stdin.write('cd /www/wwwroot/ry-itsolutions/tembak-paket-app && echo "[LOG] Menyimpan perubahan lokal (stash)..." && git stash\n');
+        child.stdin.write('echo "[LOG] Menarik kode terbaru dari GitHub..." && git pull origin main\n');
+        child.stdin.write('cd frontend-v2 && echo "[LOG] Memulai build frontend Next.js..." && npm run build\n');
+        child.stdin.write('echo "[LOG] Merestart server PM2..." && pm2 restart all\n');
+        child.stdin.end();
+
+        // Rekam output ke file deploy.log
+        child.stdout.on('data', (data) => {
+            fs.appendFileSync(logPath, data.toString());
         });
-    }, 2000); // Eksekusi 2 detik setelah merespons ke frontend
+
+        child.stderr.on('data', (data) => {
+            fs.appendFileSync(logPath, data.toString());
+        });
+
+        child.on('close', (code) => {
+            fs.appendFileSync(logPath, `\n=== PROSES SELESAI DENGAN KODE: ${code} ===\n`);
+        });
+    }, 1000);
+});
+
+// GET Status Deploy Log
+app.get('/api/admin/deploy-status', isAuthenticated, isAdmin, (req, res) => {
+    const logPath = path.join(__dirname, 'deploy.log');
+    if (!fs.existsSync(logPath)) {
+        return res.json({ status: false, log: 'Belum ada log deployment.' });
+    }
+    try {
+        const logContent = fs.readFileSync(logPath, 'utf8');
+        res.json({ status: true, log: logContent });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal membaca log.' });
+    }
 });
 
 app.listen(PORT, () => {
