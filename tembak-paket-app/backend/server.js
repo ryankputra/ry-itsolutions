@@ -2934,7 +2934,10 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                             adminNote = `Status Beacukai: ${resultItem?.status || 'UNKNOWN'}`;
                         } else if (ceirgoServiceCode === 'cek_history_imei' && Array.isArray(resultObj)) {
                             const resultItem = resultObj.find(r => r.imei === cleanImei);
-                            adminNote = `Ditemukan ${resultItem?.history?.length || 0} riwayat CEIR.`;
+                            const historyStr = (resultItem?.history || [])
+                                .map((h, i) => `${i + 1}. ${h.date || '-'} | Action: ${h.action || '-'} | Note: ${h.note || '-'}`)
+                                .join('\n');
+                            adminNote = `Ditemukan ${resultItem?.history?.length || 0} riwayat CEIR:\n${historyStr}`;
                         } else if (ceirgoServiceCode === 'cek_validity' && Array.isArray(resultObj)) {
                             const resultItem = resultObj.find(r => r.imei === cleanImei);
                             adminNote = `Status: ${resultItem?.status || 'UNKNOWN'} | Valid Until: ${resultItem?.valid_until || 'N/A'}`;
