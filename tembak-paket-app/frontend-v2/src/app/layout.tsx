@@ -45,7 +45,6 @@ export default function RootLayout({
       <body className="min-h-screen bg-canvas text-ink font-sans" suppressHydrationWarning>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
           <AppProvider>
-            <TelegramPopup />
             {children}
           </AppProvider>
         </GoogleOAuthProvider>

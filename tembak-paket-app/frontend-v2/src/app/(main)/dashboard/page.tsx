@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { useApp } from "@/lib/store";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import TelegramPopup from "@/components/ui/TelegramPopup";
 
 export default function DashboardPage() {
   const { user, setUser, menuSettings } = useApp();
@@ -56,6 +57,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-12">
       {/* Header Profile */}
+      <TelegramPopup />
       <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Wassup, {user?.name?.split(' ')[0] || "Bestie"} ✨</h1>

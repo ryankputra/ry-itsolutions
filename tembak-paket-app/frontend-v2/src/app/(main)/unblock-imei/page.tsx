@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
+import TelegramPopup from "@/components/ui/TelegramPopup";
 import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
@@ -148,6 +149,7 @@ export default function UnblockImeiPage() {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-12">
+      <TelegramPopup />
       <div className="flex items-center gap-4 mb-4">
         <button onClick={() => router.push('/dashboard')} className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors">
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -159,6 +161,10 @@ export default function UnblockImeiPage() {
       </div>
 
       <Card glass className="p-6 space-y-6">
+        {/* Announcement Banner */}
+        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-primary text-sm font-medium">
+          📢 Pastikan selalu cek status IMEI terbaru di grup Telegram kami!
+        </div>
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
           <h3 className="font-bold flex items-center gap-1.5 text-base">⚠️ Rules (Wajib Baca Dulu Ngab!)</h3>
           <ul className="list-decimal pl-5 space-y-2 leading-relaxed">
