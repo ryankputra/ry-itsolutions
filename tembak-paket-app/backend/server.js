@@ -2961,7 +2961,7 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                                     }
                                 }
                             }
-                            adminNote = `Status Terdeteksi: ${foundBucket}`;
+                            adminNote = JSON.stringify({ status: `Status Terdeteksi: ${foundBucket}`, data: resultObj });
                         }
                         apiResponse = 'Berhasil otomatis dari CEIRGO';
 

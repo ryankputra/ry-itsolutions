@@ -109,7 +109,19 @@ export default function HistoryPage() {
               {(trx.admin_note || trx.admin_image) && (
                 <div className="mt-2 pt-3 border-t border-hairline space-y-2 bg-parchment/50 p-3 rounded-xl">
                   <p className="text-xs font-bold text-primary">HASIL / CATATAN ADMIN</p>
-                  {trx.admin_note && <p className="text-sm text-ink">{trx.admin_note}</p>}
+                  {trx.admin_note && (() => {
+                    try {
+                      const note = JSON.parse(trx.admin_note);
+                      return (
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-ink">{note.status}</p>
+                          {note.data && <pre className="text-[10px] bg-white p-2 rounded border border-divider overflow-x-auto">{JSON.stringify(note.data, null, 2)}</pre>}
+                        </div>
+                      );
+                    } catch {
+                      return <p className="text-sm text-ink">{trx.admin_note}</p>;
+                    }
+                  })()}
                   {trx.admin_image && (
                     <a href={trx.admin_image} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline font-medium mt-1 block">
                       Lihat Gambar Bukti / Hasil
