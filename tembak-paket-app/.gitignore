@@ -1,0 +1,10 @@
+node_modules/  
+database/  
+*.db  
+*.log  
+.env  
+.env.*  
+dist/  
+build/  
+.next/  
+.output/ 

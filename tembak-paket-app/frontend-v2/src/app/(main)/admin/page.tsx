@@ -1144,7 +1144,25 @@ export default function AdminPage() {
                         </div>
                       </div>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={() => setManualActionData({ id: o.id, status: o.status, note: o.admin_note || '', file: null })}>Proses Pesanan</Button>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={() => setManualActionData({ id: o.id, status: o.status, note: o.admin_note || '', file: null })}>Proses Pesanan</Button>
+                        {o.service_type === 'ceir' && (
+                          <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/5" onClick={async () => {
+                            const confirm = await Swal.fire({ title: 'Re-check CeirGO?', text: `Re-query IMEI ${o.imei?.split(',')[0]} ke API CeirGO. Saldo akan terpotong lagi dari akun CeirGO.`, icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Re-check', cancelButtonText: 'Batal' });
+                            if (!confirm.isConfirmed) return;
+                            try {
+                              const res = await fetch(`/api/admin/manual-orders/${o.id}/recheck`, { method: 'POST', credentials: 'include' });
+                              const data = await res.json();
+                              if (res.ok && data.status) {
+                                Swal.fire({ title: 'Berhasil!', text: data.data?.adminNote || 'Data berhasil diperbarui.', icon: 'success' });
+                                loadManualData();
+                              } else {
+                                Swal.fire({ title: 'Gagal', text: data.message || 'Re-check gagal', icon: 'error' });
+                              }
+                            } catch (e) { Swal.fire({ title: 'Error', text: 'Kesalahan jaringan', icon: 'error' }); }
+                          }}>🔄 Re-check CeirGO</Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}

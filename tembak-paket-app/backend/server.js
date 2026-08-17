@@ -3016,6 +3016,95 @@ app.get('/api/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =
     } catch (e) { res.status(500).json({ status: false, message: e.message }); }
 });
 
+// Re-check: re-query CeirGO API for existing CEIR transaction
+app.post('/api/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const trx = await dbGet("SELECT * FROM transactions WHERE id = ? AND service_type = 'ceir'", [req.params.id]);
+        if (!trx) return res.status(404).json({ status: false, message: "Transaksi CEIR tidak ditemukan" });
+        if (!CEIRGO_API_KEY) return res.status(500).json({ status: false, message: "CEIRGO_API_KEY tidak dikonfigurasi" });
+
+        const cleanImei = (trx.imei || '').split(',')[0].trim();
+        if (!cleanImei) return res.status(400).json({ status: false, message: "IMEI tidak valid" });
+
+        // Determine service code from packageId (price_key)
+        let ceirgoServiceCode = trx.packageId || '';
+        if (ceirgoServiceCode === 'price_ceir_register') ceirgoServiceCode = 'cek_imei_beacukai';
+        if (ceirgoServiceCode === 'price_ceir_history') ceirgoServiceCode = 'cek_history_imei';
+
+        const isBarcode = ceirgoServiceCode.includes('barcode');
+        let payloadData = isBarcode
+            ? { items: [{ primary_imei: cleanImei, secondary_imei: cleanImei, theme: "dark" }] }
+            : { imeis: [cleanImei] };
+
+        const ceirRes = await fetch(`${CEIRGO_BASE_URL}/api/order`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${CEIRGO_API_KEY}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ code: ceirgoServiceCode, data: payloadData })
+        });
+
+        if (!ceirRes.ok) {
+            const errText = await ceirRes.text();
+            return res.status(502).json({ status: false, message: `CeirGO API Error ${ceirRes.status}: ${errText}` });
+        }
+
+        const ceirResponse = await ceirRes.json();
+        let adminNote = trx.admin_note || '';
+        let adminImage = trx.admin_image;
+        let newStatus = trx.status;
+
+        if (ceirResponse.status === 'success') {
+            newStatus = 'success';
+            const resultObj = ceirResponse.result;
+
+            if (ceirgoServiceCode === 'cek_imei_beacukai' && Array.isArray(resultObj)) {
+                const resultItem = resultObj.find(r => r.imei === cleanImei);
+                adminNote = `Status Beacukai: ${resultItem?.status || 'UNKNOWN'}`;
+            } else if (ceirgoServiceCode === 'cek_history_imei' && Array.isArray(resultObj)) {
+                const resultItem = resultObj.find(r => r.imei === cleanImei);
+                const historyStr = (resultItem?.history || [])
+                    .map((h, i) => `${i + 1}. ${h.date || '-'} | Action: ${h.action || '-'} | Note: ${h.note || '-'}`)
+                    .join('\n');
+                adminNote = `Ditemukan ${resultItem?.history?.length || 0} riwayat CEIR:\n${historyStr}`;
+            } else if (ceirgoServiceCode === 'cek_validity' && Array.isArray(resultObj)) {
+                const resultItem = resultObj.find(r => r.imei === cleanImei);
+                adminNote = `Status: ${resultItem?.status || 'UNKNOWN'} | Valid Until: ${resultItem?.valid_until || 'N/A'}`;
+            } else if (isBarcode && resultObj?.items && Array.isArray(resultObj.items)) {
+                const item = resultObj.items[0];
+                if (item?.url) {
+                    adminImage = item.url;
+                    adminNote = `Barcode berhasil di-generate (re-check). Silakan lihat gambar.`;
+                }
+            } else {
+                let foundBucket = 'UNKNOWN';
+                if (resultObj && typeof resultObj === 'object' && !Array.isArray(resultObj)) {
+                    for (const [bucketName, imeiArray] of Object.entries(resultObj)) {
+                        if (Array.isArray(imeiArray) && imeiArray.includes(cleanImei)) {
+                            foundBucket = bucketName;
+                            break;
+                        }
+                    }
+                }
+                adminNote = `Status Terdeteksi: ${foundBucket}`;
+            }
+        } else if (ceirResponse.status === 'pending') {
+            newStatus = 'processing';
+            adminNote = "Re-check: Pesanan masih diproses oleh API CEIRGO...";
+        }
+
+        await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ?, api_response = ? WHERE id = ?",
+            [newStatus, adminNote, adminImage, 'Re-check dari CEIRGO', req.params.id]);
+
+        res.json({ status: true, message: "Re-check berhasil!", data: { adminNote, adminImage, newStatus } });
+    } catch (error) {
+        console.error("[RECHECK_ERROR]", error);
+        res.status(500).json({ status: false, message: error.message });
+    }
+});
+
 app.put('/api/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
     manualOrderUpload(req, res, async (err) => {
         if (err) return res.status(400).json({ status: false, message: err.message });
