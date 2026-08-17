@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AppProvider } from "@/lib/store";
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import TelegramPopup from "@/components/ui/TelegramPopup";
 import "./globals.css";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "GANTI_DENGAN_GOOGLE_CLIENT_ID_ANDA";
@@ -44,6 +45,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-canvas text-ink font-sans" suppressHydrationWarning>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
           <AppProvider>
+            <TelegramPopup />
             {children}
           </AppProvider>
         </GoogleOAuthProvider>

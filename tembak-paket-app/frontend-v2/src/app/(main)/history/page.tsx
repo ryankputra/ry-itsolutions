@@ -75,6 +75,7 @@ export default function HistoryPage() {
         ) : (
           filteredHistory.map((trx, idx) => (
             <Card key={idx} className="flex flex-col p-4 bg-canvas border border-hairline hover:border-primary/30 transition-colors gap-3">
+              {console.log("Transaction Data:", trx)}
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-lg">
