@@ -29,16 +29,19 @@ export default function UnblockImeiPage() {
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: "" });
+  const [announcement, setAnnouncement] = useState<any>(null);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/imei-packages').then(res => res.json()),
       fetch('/api/manual-services-pricing').then(res => res.json()),
-      fetch('/api/imei-service-status', { cache: 'no-store' }).then(res => res.json()).catch(() => ({ status: true, isOpen: true, note: "" }))
-    ]).then(([pkgData, prcData, statusData]) => {
+      fetch('/api/imei-service-status', { cache: 'no-store' }).then(res => res.json()).catch(() => ({ status: true, isOpen: true, note: "" })),
+      fetch('/api/user/announcement', { credentials: 'include' }).then(res => res.json()).catch(() => null)
+    ]).then(([pkgData, prcData, statusData, annData]) => {
       if (statusData && statusData.status) {
         setServiceStatus({ isOpen: statusData.isOpen, note: statusData.note || "" });
       }
+      if (annData?.status && annData?.data?.message) setAnnouncement(annData.data);
       if (pkgData.status && pkgData.data.length > 0) {
         setPackages(pkgData.data);
         setSelectedPkgId(pkgData.data[0].id);
@@ -161,10 +164,14 @@ export default function UnblockImeiPage() {
       </div>
 
       <Card glass className="p-6 space-y-6">
-        {/* Announcement Banner */}
-        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-primary text-sm font-medium">
-          📢 Pastikan selalu cek status IMEI terbaru di grup Telegram kami!
-        </div>
+        {announcement && (
+          <div
+            className="rounded-2xl p-4 text-white text-sm font-medium"
+            style={{ backgroundColor: announcement.bgColor || '#0066cc' }}
+          >
+            📢 {announcement.message}
+          </div>
+        )}
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
           <h3 className="font-bold flex items-center gap-1.5 text-base">⚠️ Rules (Wajib Baca Dulu Ngab!)</h3>
           <ul className="list-decimal pl-5 space-y-2 leading-relaxed">
