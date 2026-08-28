@@ -267,8 +267,10 @@ export default function DashboardPage() {
         <Card glass className="p-4 sm:p-5 space-y-3.5 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
-                🎓
+              <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
               </span>
               <div>
                 <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
@@ -285,13 +287,19 @@ export default function DashboardPage() {
                 className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
                 title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
               >
-                <span className="animate-bounce text-sm">🔊</span> Tur Audio AI
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+                </svg>
+                <span>Tur Audio AI</span>
               </button>
               <button
                 onClick={() => setShowTutorialModal(true)}
-                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1"
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5"
               >
-                <span>Lihat Panduan</span> ➔
+                <span>Lihat Panduan</span>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
               </button>
             </div>
           </div>
@@ -300,11 +308,61 @@ export default function DashboardPage() {
           <div className="relative">
             <div className="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x snap-mandatory">
               {[
-                { step: "1", title: "Top Up Saldo", desc: "Scan QRIS 24 jam", icon: "💳", href: "/topup" },
-                { step: "2", title: "Cek Database", desc: "Histori CEIR & Bea Cukai", icon: "🔍", href: "/cek-ceir" },
-                { step: "3", title: "Buka Sinyal", desc: "Input IMEI & durasi", icon: "📱", href: "/unblock-imei" },
-                { step: "4", title: "Notif WhatsApp", desc: "Nota otomatis ke WA", icon: "📲", href: "/history" },
-                { step: "5", title: "Garansi Digital", desc: "Pantau aktif & klaim", icon: "🛡️", href: "/cek-garansi" }
+                { 
+                  step: "1", 
+                  title: "Top Up Saldo", 
+                  desc: "Scan QRIS 24 jam", 
+                  href: "/topup",
+                  svg: (
+                    <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                    </svg>
+                  )
+                },
+                { 
+                  step: "2", 
+                  title: "Cek Database", 
+                  desc: "Histori CEIR & Bea Cukai", 
+                  href: "/cek-ceir",
+                  svg: (
+                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                  )
+                },
+                { 
+                  step: "3", 
+                  title: "Buka Sinyal", 
+                  desc: "Input IMEI & durasi", 
+                  href: "/unblock-imei",
+                  svg: (
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
+                    </svg>
+                  )
+                },
+                { 
+                  step: "4", 
+                  title: "Notif WhatsApp", 
+                  desc: "Nota otomatis ke WA", 
+                  href: "/history",
+                  svg: (
+                    <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.84-.945 4.47 4.47 0 00.743-1.807C3.916 16.71 3 14.473 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                    </svg>
+                  )
+                },
+                { 
+                  step: "5", 
+                  title: "Garansi Digital", 
+                  desc: "Pantau aktif & klaim", 
+                  href: "/cek-garansi",
+                  svg: (
+                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                  )
+                }
               ].map((s, idx) => (
                 <a
                   key={idx}
@@ -312,10 +370,12 @@ export default function DashboardPage() {
                   className="w-[135px] sm:w-auto shrink-0 snap-start p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center">
                       {s.step}
                     </span>
-                    <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
+                    <span className="p-1 rounded-lg bg-parchment/60 group-hover:scale-110 transition-transform flex items-center justify-center">
+                      {s.svg}
+                    </span>
                   </div>
                   <div>
                     <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors line-clamp-1">{s.title}</h4>
@@ -517,8 +577,10 @@ export default function DashboardPage() {
             {/* Header Modal */}
             <div className="p-5 bg-gradient-to-r from-primary to-blue-700 text-white flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl">
-                  🚀
+                <span className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
                 </span>
                 <div>
                   <h3 className="font-bold text-lg leading-tight">Panduan Lengkap Ry-ITSolutions</h3>
@@ -527,7 +589,7 @@ export default function DashboardPage() {
               </div>
               <button
                 onClick={() => setShowTutorialModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-lg text-white transition-colors"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-sm text-white transition-colors"
               >
                 ✕
               </button>
@@ -538,11 +600,46 @@ export default function DashboardPage() {
               {/* Step Tab Buttons */}
               <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar">
                 {[
-                  { label: "1. Top Up", icon: "💳" },
-                  { label: "2. Cek IMEI", icon: "🔍" },
-                  { label: "3. Buka Sinyal", icon: "📱" },
-                  { label: "4. Notif WA", icon: "📲" },
-                  { label: "5. Garansi", icon: "🛡️" },
+                  { 
+                    label: "1. Top Up", 
+                    svg: (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                      </svg>
+                    ) 
+                  },
+                  { 
+                    label: "2. Cek IMEI", 
+                    svg: (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                      </svg>
+                    ) 
+                  },
+                  { 
+                    label: "3. Buka Sinyal", 
+                    svg: (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
+                      </svg>
+                    ) 
+                  },
+                  { 
+                    label: "4. Notif WA", 
+                    svg: (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.84-.945 4.47 4.47 0 00.743-1.807C3.916 16.71 3 14.473 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                      </svg>
+                    ) 
+                  },
+                  { 
+                    label: "5. Garansi", 
+                    svg: (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                      </svg>
+                    ) 
+                  },
                 ].map((tab, idx) => (
                   <button
                     key={idx}
@@ -554,7 +651,7 @@ export default function DashboardPage() {
                         : 'bg-canvas border border-hairline text-ink-muted hover:bg-parchment'
                     }`}
                   >
-                    <span>{tab.icon}</span>
+                    <span>{tab.svg}</span>
                     <span>{tab.label}</span>
                   </button>
                 ))}
@@ -564,7 +661,7 @@ export default function DashboardPage() {
               {activeTutorialTab === 0 && (
                 <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
                   <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
-                    <span>💳</span> Langkah 1: Top Up Saldo Otomatis
+                    <span>Langkah 1: Top Up Saldo Otomatis</span>
                   </div>
                   <p className="text-xs text-blue-950 leading-relaxed">
                     Sistem menggunakan <b>QRIS Dinamis 24 Jam</b>. Masukkan nominal top up yang Anda inginkan di menu Top Up, scan QRIS menggunakan GoPay, OVO, DANA, BCA, atau M-Banking mana pun. Saldo akan otomatis bertambah detik itu juga tanpa perlu konfirmasi admin.
@@ -580,7 +677,7 @@ export default function DashboardPage() {
               {activeTutorialTab === 1 && (
                 <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
-                    <span>🔍</span> Langkah 2: Cek Status Database IMEI
+                    <span>Langkah 2: Cek Status Database IMEI</span>
                   </div>
                   <p className="text-xs text-emerald-950 leading-relaxed">
                     Sebelum melakukan order aktivasi sinyal, Anda disarankan mengecek status IMEI perangkat melalui menu <b>Cek Database CEIR</b> atau <b>Cek Bea Cukai</b> untuk mengetahui histori dan status registrasi perangkat sebelumnya.
@@ -596,7 +693,7 @@ export default function DashboardPage() {
               {activeTutorialTab === 2 && (
                 <div className="p-5 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-3">
                   <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
-                    <span>📱</span> Langkah 3: Order Buka Sinyal IMEI
+                    <span>Langkah 3: Order Buka Sinyal IMEI</span>
                   </div>
                   <p className="text-xs text-rose-950 leading-relaxed">
                     Masuk ke menu <b>Buka IMEI</b>, ketik 15 digit nomor IMEI HP Anda (bisa banyak IMEI sekaligus), upload screenshot *#06#, masukkan nomor WhatsApp Anda, lalu pilih paket durasi & kecepatan yang diinginkan.
@@ -612,7 +709,7 @@ export default function DashboardPage() {
               {activeTutorialTab === 3 && (
                 <div className="p-5 rounded-2xl bg-green-50/60 border border-green-200 space-y-3">
                   <div className="flex items-center gap-2 text-green-900 font-bold text-sm">
-                    <span>📲</span> Langkah 4: Terima Nota Resmi via WhatsApp
+                    <span>Langkah 4: Terima Nota Resmi via WhatsApp</span>
                   </div>
                   <p className="text-xs text-green-950 leading-relaxed">
                     Begitu admin atau server menyelesaikan proses aktivasi (status <b>Sukses</b>), Bot Toko resmi kami akan <b>otomatis mengirimkan nota digital & link garansi</b> langsung ke nomor WhatsApp Anda. Anda juga bisa meneruskan nota ke customer jika Anda adalah Reseller.
@@ -628,7 +725,7 @@ export default function DashboardPage() {
               {activeTutorialTab === 4 && (
                 <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
                   <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                    <span>🛡️</span> Langkah 5: Cek & Klaim Garansi Digital
+                    <span>Langkah 5: Cek & Klaim Garansi Digital</span>
                   </div>
                   <p className="text-xs text-amber-950 leading-relaxed">
                     Setiap transaksi dilengkapi garansi digital. Cukup masukkan nomor IMEI di menu <b>Cek Garansi</b> untuk melihat sisa masa aktif garansi, mengunduh ulang nota PDF, atau mengajukan bantuan teknis secara instan.
@@ -646,9 +743,9 @@ export default function DashboardPage() {
                 <button
                   disabled={activeTutorialTab === 0}
                   onClick={() => setActiveTutorialTab(prev => Math.max(0, prev - 1))}
-                  className="px-4 py-2 rounded-xl text-xs font-bold border border-hairline disabled:opacity-30 hover:bg-parchment"
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-hairline disabled:opacity-30 hover:bg-parchment flex items-center gap-1"
                 >
-                  ⬅ Sebelumnya
+                  <span>&larr;</span> Sebelumnya
                 </button>
 
                 <div className="flex gap-1.5">
@@ -666,16 +763,16 @@ export default function DashboardPage() {
                 {activeTutorialTab < 4 ? (
                   <button
                     onClick={() => setActiveTutorialTab(prev => Math.min(4, prev + 1))}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-sm"
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-sm flex items-center gap-1"
                   >
-                    Selanjutnya ➔
+                    Selanjutnya <span>&rarr;</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => setShowTutorialModal(false)}
                     className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
                   >
-                    Saya Sudah Paham! 🎉
+                    Saya Sudah Paham
                   </button>
                 )}
               </div>
