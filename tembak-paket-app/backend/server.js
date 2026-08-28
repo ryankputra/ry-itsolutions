@@ -2467,9 +2467,14 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
     const { amount } = req.body;
     const userId = req.session.userId;
     const baseAmount = parseInt(amount, 10);
+    const isAdminUser = req.session.role === 'admin';
+    const minAmount = isAdminUser ? 1 : 10000;
 
-    if (!baseAmount || baseAmount < 10000) {
-        return res.status(400).json({ status: false, message: 'Jumlah top-up minimal adalah Rp 10.000.' });
+    if (!baseAmount || baseAmount < minAmount) {
+        return res.status(400).json({ 
+            status: false, 
+            message: `Jumlah top-up minimal adalah Rp ${minAmount.toLocaleString('id-ID')}.` 
+        });
     }
 
     try {

@@ -275,8 +275,11 @@ export default function TopUpPage() {
   const handleRequestQris = async (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseInt(amount);
-    if (!num || num < 10000) {
-      setError("Minimal top up saldo adalah Rp 10.000");
+    const isAdmin = user?.role === "admin";
+    const minLimit = isAdmin ? 1 : 10000;
+
+    if (!num || num < minLimit) {
+      setError(`Minimal top up saldo adalah Rp ${minLimit.toLocaleString("id-ID")}`);
       return;
     }
 
@@ -425,7 +428,9 @@ export default function TopUpPage() {
             <div className="space-y-2.5">
               <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-ink">Pilih Nominal Top Up</label>
-                <span className="text-[11px] text-ink-muted">Min. Rp 10.000</span>
+                <span className="text-[11px] text-ink-muted">
+                  {user?.role === "admin" ? "Admin: Bebas Nominal (Min Rp 1)" : "Min. Rp 10.000"}
+                </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -466,9 +471,9 @@ export default function TopUpPage() {
                 </span>
                 <input
                   type="number"
-                  min="10000"
-                  step="1000"
-                  placeholder="Contoh: 75000"
+                  min={user?.role === "admin" ? "1" : "10000"}
+                  step={user?.role === "admin" ? "1" : "1000"}
+                  placeholder={user?.role === "admin" ? "Bebas (Contoh: 1, 500, 10000)" : "Contoh: 75000"}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-2xl border border-hairline bg-canvas text-sm font-bold text-ink outline-none focus:ring-2 focus:ring-primary focus:border-primary"
