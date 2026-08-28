@@ -182,6 +182,7 @@ export default function AdminPage() {
     message: "",
     voucherCode: "",
     targetTelegram: true,
+    targetWhatsApp: true,
     targetInApp: true,
     bgColor: "#0066cc"
   });
@@ -246,7 +247,7 @@ export default function AdminPage() {
 
     const confirmRes = await Swal.fire({
       title: "Kirim Broadcast Promo?",
-      text: "Pesan promo akan dipublikasikan ke Telegram dan/atau Banner In-App ke semua pengguna.",
+      text: "Pesan promo akan dipublikasikan ke WhatsApp (semua user terdaftar), Telegram, dan/atau Banner In-App.",
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Ya, Kirim Sekarang!",
@@ -2174,7 +2175,20 @@ export default function AdminPage() {
               {/* Target Channel Switches */}
               <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline space-y-3">
                 <p className="text-xs font-bold text-ink">Saluran Tujuan Broadcast:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label className="flex items-center gap-3 p-3 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={broadcastData.targetWhatsApp}
+                      onChange={e => setBroadcastData({ ...broadcastData, targetWhatsApp: e.target.checked })}
+                      className="w-4 h-4 rounded text-primary"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-ink block">Pesan WhatsApp</span>
+                      <span className="text-[10px] text-ink-muted">Kirim langsung ke WA semua user (Gratis Bot)</span>
+                    </div>
+                  </label>
+
                   <label className="flex items-center gap-3 p-3 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
                     <input
                       type="checkbox"
@@ -2183,8 +2197,8 @@ export default function AdminPage() {
                       className="w-4 h-4 rounded text-primary"
                     />
                     <div>
-                      <span className="text-xs font-bold text-ink block">Channel / Grup Telegram</span>
-                      <span className="text-[10px] text-ink-muted">Kirim notifikasi bot langsung ke grup komunitas</span>
+                      <span className="text-xs font-bold text-ink block">Telegram Bot / Group</span>
+                      <span className="text-[10px] text-ink-muted">Kirim notifikasi bot ke grup komunitas</span>
                     </div>
                   </label>
 
@@ -2197,7 +2211,7 @@ export default function AdminPage() {
                     />
                     <div>
                       <span className="text-xs font-bold text-ink block">Banner In-App Pengguna</span>
-                      <span className="text-[10px] text-ink-muted">Tampilkan di dashboard utama semua pengguna</span>
+                      <span className="text-[10px] text-ink-muted">Tampilkan di dashboard semua user</span>
                     </div>
                   </label>
                 </div>

@@ -313,14 +313,10 @@ async function getEffectiveMaintenanceStatus() {
 }
 // --- FUNGSI HELPER ---
 async function sendTelegramNotification(message, target = 'group') {
-    // Map logical targets to chat IDs.
-    // 'admin' -> TELEGRAM_ADMIN_CHAT_ID
-    // 'group' -> TELEGRAM_GROUP_CHAT_ID if set, otherwise fallback to TELEGRAM_CHAT_ID (legacy)
-    // any other value -> TELEGRAM_CHAT_ID (legacy)
     let targetChatId;
-    if (target === 'admin') targetChatId = TELEGRAM_ADMIN_CHAT_ID;
-    else if (target === 'group') targetChatId = TELEGRAM_GROUP_CHAT_ID || TELEGRAM_CHAT_ID;
-    else targetChatId = TELEGRAM_CHAT_ID;
+    if (target === 'admin') targetChatId = TELEGRAM_ADMIN_CHAT_ID || TELEGRAM_CHAT_ID || TELEGRAM_GROUP_CHAT_ID;
+    else if (target === 'group') targetChatId = TELEGRAM_GROUP_CHAT_ID || TELEGRAM_CHAT_ID || TELEGRAM_ADMIN_CHAT_ID;
+    else targetChatId = TELEGRAM_CHAT_ID || TELEGRAM_ADMIN_CHAT_ID || TELEGRAM_GROUP_CHAT_ID;
 
     if (!TELEGRAM_BOT_TOKEN || !targetChatId) {
         console.warn(`[Telegram] Missing bot token or target chat id for target='${target}'. Skipping send.`);
@@ -2289,18 +2285,19 @@ app.post('/api/admin/reject-user', isAuthenticated, isAdmin, async (req, res) =>
     } catch (error) { console.error("Error rejecting user:", error); res.status(500).json({ status: false, message: "Gagal menolak pengguna." }); }
 });
 
-// Broadcast Promo Message to Telegram & In-App Announcement
+// Broadcast Promo Message to Telegram, WhatsApp & In-App Announcement
 app.post('/api/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { title, message, voucherCode, targetTelegram, targetInApp, bgColor } = req.body;
+        const { title, message, voucherCode, targetTelegram, targetWhatsApp, targetInApp, bgColor } = req.body;
         if (!message || !message.trim()) {
             return res.status(400).json({ status: false, message: 'Pesan broadcast tidak boleh kosong.' });
         }
 
         let telegramSent = false;
         let inAppUpdated = false;
+        let waCount = 0;
 
-        // 1. Send to Telegram Group/Channel if enabled
+        // 1. Send to Telegram Group/Channel & Admin if enabled
         if (targetTelegram) {
             let teleText = `📢 <b>${(title || 'PENGUMUMAN PROMO').toUpperCase()}</b>\n──────────────────────\n${message.trim()}`;
             if (voucherCode) {
@@ -2314,23 +2311,68 @@ app.post('/api/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
         // 2. Update In-App Announcement Banner if enabled
         if (targetInApp) {
             let fullMsg = message.trim();
-            if (voucherCode) fullMsg += ` (Kupon: ${voucherCode.trim().toUpperCase()})`;
-            const newAnnouncement = {
-                message: fullMsg,
-                bgColor: bgColor || '#0066cc',
-                createdAt: new Date().toISOString()
-            };
+            if (voucherCode) fullMsg += ` (Kupon Diskon: ${voucherCode.trim().toUpperCase()})`;
+            const newAnnId = `ann_${Date.now()}`;
+            const finalBgColor = bgColor || '#0066cc';
+
+            await dbRun("DELETE FROM announcements");
             await dbRun(
-                `INSERT INTO settings (key, value) VALUES ('announcement', ?) 
-                 ON CONFLICT(key) DO UPDATE SET value = ?`,
-                [JSON.stringify(newAnnouncement), JSON.stringify(newAnnouncement)]
+                "INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)",
+                [newAnnId, fullMsg, new Date().toISOString()]
             );
+            await dbRun(
+                `INSERT INTO settings (key, value) VALUES ('announcementBgColor', ?)
+                 ON CONFLICT(key) DO UPDATE SET value = ?`,
+                [finalBgColor, finalBgColor]
+            );
+
+            // Broadcast real-time SSE to all connected clients
+            sseBroadcast('announcement', {
+                id: newAnnId,
+                message: fullMsg,
+                bgColor: finalBgColor,
+                createdAt: new Date().toISOString()
+            });
+
             inAppUpdated = true;
         }
 
+        // 3. Send WhatsApp Broadcast via Baileys to registered users
+        if (targetWhatsApp) {
+            let waText = `📢 *${(title || 'PENGUMUMAN PROMO').toUpperCase()}*\n────────────────────────\n${message.trim()}`;
+            if (voucherCode) {
+                waText += `\n\n🎟️ *Kupon Diskon:* *${voucherCode.trim().toUpperCase()}*\n_Gunakan kupon saat checkout untuk klaim potongan harga!_`;
+            }
+            waText += `\n\n👉 *Buka Web Resmi:* https://ry-itsolutionts.web.id\n_Ry-ITSolutions Official Broadcast_`;
+
+            const usersWithPhone = await dbAll(
+                "SELECT DISTINCT phone FROM users WHERE phone IS NOT NULL AND TRIM(phone) != ''"
+            );
+
+            // Run asynchronous background broadcast with safe delay (1.2s per user)
+            if (usersWithPhone && usersWithPhone.length > 0) {
+                waCount = usersWithPhone.length;
+                (async () => {
+                    for (const u of usersWithPhone) {
+                        try {
+                            await sendWhatsAppNotification(u.phone, waText);
+                            await new Promise(r => setTimeout(r, 1200));
+                        } catch (err) {
+                            console.error(`[WA_BROADCAST_ERR] Failed sending to ${u.phone}:`, err.message);
+                        }
+                    }
+                })().catch(e => console.error('[WA_BROADCAST_BG_ERR]', e));
+            }
+        }
+
+        const summaryParts = [];
+        if (telegramSent) summaryParts.push('Telegram ✅');
+        if (inAppUpdated) summaryParts.push('In-App Banner ✅');
+        if (targetWhatsApp) summaryParts.push(`WhatsApp (${waCount} user) ✅`);
+
         res.json({
             status: true,
-            message: `Broadcast berhasil dikirim! (${telegramSent ? 'Telegram ✅' : ''} ${inAppUpdated ? 'In-App Banner ✅' : ''})`
+            message: `Broadcast berhasil dikirim! (${summaryParts.join(' ' || 'Sukses')})`
         });
     } catch (err) {
         console.error('[BROADCAST_ERROR]', err);
