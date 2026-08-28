@@ -4315,8 +4315,7 @@ app.post('/api/admin/deploy', isAuthenticated, isAdmin, (req, res) => {
         
         // Kirim rentetan perintah ke stdin bash (Instant Deploy tanpa build di STB)
         child.stdin.write('cd /www/wwwroot/ry-itsolutions/tembak-paket-app\n');
-        child.stdin.write('echo "[LOG] Mereset cache file lokal..." && git checkout -- .\n');
-        child.stdin.write('echo "[LOG] Menarik kode & bundle Next.js terbaru dari GitHub..." && git pull origin main\n');
+        child.stdin.write('echo "[LOG] Menyelaraskan dengan repositori GitHub..." && git fetch origin main && git reset --hard origin/main\n');
         child.stdin.write('cd backend && echo "[LOG] Memperbarui dependensi Backend..." && npm install --no-audit --no-fund\n');
         child.stdin.write('echo "[LOG] Merestart server PM2..." && pm2 restart all\n');
         child.stdin.end();
