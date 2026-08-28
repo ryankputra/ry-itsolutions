@@ -9,6 +9,8 @@ import { analyzeImei } from "@/lib/imeiHelper";
 import { useRouter } from "next/navigation";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import InteractiveTour from "@/components/ui/InteractiveTour";
+import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
+import Swal from "sweetalert2";
 
 export default function DashboardPage() {
   const { user, setUser, menuSettings } = useApp();
@@ -20,6 +22,8 @@ export default function DashboardPage() {
   const [allTrx, setAllTrx] = useState<any[]>([]);
   const [selectedQris, setSelectedQris] = useState<any>(null);
   const [showBalance, setShowBalance] = useState(true);
+  const [vouchers, setVouchers] = useState<CouponItem[]>([]);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
 
   // Universal Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,9 +34,13 @@ export default function DashboardPage() {
   const [showTutorialModal, setShowTutorialModal] = useState(false);
   const [showGuidedTour, setShowGuidedTour] = useState(false);
   const [activeTutorialTab, setActiveTutorialTab] = useState<number>(0);
-  const [tutorialDismissed, setTutorialDismissed] = useState(false);
+  const [tutorialDismissed, setTutorialDismissed] = useState<boolean>(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setTutorialDismissed(localStorage.getItem("ry_hide_quick_guide") === "true");
+    }
+
     // Meminta Izin Push Notification
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
@@ -49,9 +57,10 @@ export default function DashboardPage() {
 
     async function loadDashboardData() {
       try {
-        const [annRes, trxRes] = await Promise.all([
+        const [annRes, trxRes, cpnRes] = await Promise.all([
           fetch("/api/user/announcement", { credentials: 'include' }).catch(() => null),
-          fetch("/api/user/transactions", { credentials: 'include' }).catch(() => null)
+          fetch("/api/user/transactions", { credentials: 'include' }).catch(() => null),
+          fetch("/api/coupons/public", { credentials: 'include' }).catch(() => null)
         ]);
 
         if (annRes?.ok) {
@@ -65,10 +74,55 @@ export default function DashboardPage() {
             setRecentTrx(data.data.slice(0, 3));
           }
         }
+        if (cpnRes?.ok) {
+          const data = await cpnRes.json();
+          if (data.status && Array.isArray(data.data)) {
+            setVouchers(data.data);
+          }
+        }
       } catch (err) { console.error(err); }
     }
     loadDashboardData();
   }, []);
+
+  const handleClaimCoupon = async (coupon: CouponItem) => {
+    setClaimingId(coupon.id);
+    try {
+      const res = await fetch('/api/coupons/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ coupon_id: coupon.id })
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        Swal.fire({
+          title: "Voucher Berhasil Diklaim!",
+          text: data.message,
+          icon: "success",
+          timer: 2000,
+          showConfirmButton: false
+        });
+        setVouchers(prev =>
+          prev.map(c =>
+            c.id === coupon.id
+              ? { ...c, is_claimed: true, total_claimed_count: (c.total_claimed_count || 0) + 1 }
+              : c
+          )
+        );
+      } else {
+        Swal.fire({
+          title: "Gagal Mengklaim",
+          text: data.message || "Voucher tidak dapat diklaim saat ini.",
+          icon: "error"
+        });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error", text: "Kesalahan jaringan.", icon: "error" });
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   // Universal Search Filter
   const cleanSearch = searchQuery.trim();
@@ -262,9 +316,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Tutorial & Quick Start Guide Hub */}
-      {!tutorialDismissed && (
-        <Card glass className="p-4 sm:p-5 space-y-3.5 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm overflow-hidden">
+      {/* Tutorial & Quick Start Guide Hub (Bisa di-hide / collapse) */}
+      {!tutorialDismissed ? (
+        <Card glass className="p-4 sm:p-5 space-y-3.5 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm overflow-hidden relative">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
@@ -284,7 +338,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setShowGuidedTour(true)}
-                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
                 title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
               >
                 <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -294,11 +348,23 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={() => setShowTutorialModal(true)}
-                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-xs transition-all flex items-center justify-center gap-1.5"
               >
                 <span>Lihat Panduan</span>
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  setTutorialDismissed(true);
+                  if (typeof window !== "undefined") localStorage.setItem("ry_hide_quick_guide", "true");
+                }}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-canvas transition-colors"
+                title="Sembunyikan Panduan Cepat"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -386,6 +452,53 @@ export default function DashboardPage() {
             </div>
           </div>
         </Card>
+      ) : (
+        <div className="flex justify-end -mt-2">
+          <button
+            onClick={() => {
+              setTutorialDismissed(false);
+              if (typeof window !== "undefined") localStorage.removeItem("ry_hide_quick_guide");
+            }}
+            className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 py-1 px-2.5 rounded-full bg-primary/5 border border-primary/10"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            Tampilkan Panduan Cepat
+          </button>
+        </div>
+      )}
+
+      {/* Zona Voucher & Promo Diskon (Shopee Style E-Commerce Experience) */}
+      {vouchers.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+              <h2 className="text-base font-bold text-ink flex items-center gap-1.5">
+                Voucher Diskon & Promo Cuan
+              </h2>
+              <span className="text-[10px] font-bold text-orange-700 bg-orange-100 border border-orange-200 px-2 py-0.5 rounded-full">
+                Klaim Sekarang
+              </span>
+            </div>
+            <p className="text-xs text-ink-muted hidden sm:block">Klaim kupon & pakai saat checkout</p>
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto pb-2 pt-0.5 no-scrollbar snap-x snap-mandatory">
+            {vouchers.map((coupon) => (
+              <div key={coupon.id} className="snap-start shrink-0">
+                <ShopeeVoucherCard
+                  coupon={coupon}
+                  compact
+                  isClaiming={claimingId === coupon.id}
+                  onClaim={handleClaimCoupon}
+                  onUse={() => router.push("/unblock-imei")}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Category Grid */}

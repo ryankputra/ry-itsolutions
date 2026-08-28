@@ -170,6 +170,7 @@ async function initializeDatabase() {
                 min_order_amount REAL DEFAULT 0,
                 max_discount_amount REAL DEFAULT 0,
                 max_usage_limit INTEGER DEFAULT 100,
+                max_claim_limit INTEGER DEFAULT 100,
                 used_count INTEGER DEFAULT 0,
                 start_date TEXT,
                 end_date TEXT,
@@ -180,6 +181,13 @@ async function initializeDatabase() {
             )`);
             try { await dbRun("ALTER TABLE coupons ADD COLUMN is_public INTEGER DEFAULT 1"); } catch (e) { }
             try { await dbRun("ALTER TABLE coupons ADD COLUMN max_per_user INTEGER DEFAULT 1"); } catch (e) { }
+            try { await dbRun("ALTER TABLE coupons ADD COLUMN max_claim_limit INTEGER DEFAULT 100"); } catch (e) { }
+            await dbRun(`CREATE TABLE IF NOT EXISTS user_claimed_coupons (
+                id TEXT PRIMARY KEY,
+                coupon_id TEXT NOT NULL,
+                userId TEXT NOT NULL,
+                claimed_at TEXT NOT NULL
+            )`);
             await dbRun(`CREATE TABLE IF NOT EXISTS coupon_usages (
                 id TEXT PRIMARY KEY,
                 coupon_id TEXT NOT NULL,
@@ -1416,7 +1424,7 @@ app.get('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-// Daftar Kupon Publik yang bisa langsung dipilih oleh Pengguna
+// Daftar Kupon Publik yang bisa langsung dipilih dan diklaim oleh Pengguna (Shopee Style)
 app.get('/api/coupons/public', isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
@@ -1424,7 +1432,9 @@ app.get('/api/coupons/public', isAuthenticated, async (req, res) => {
 
         const coupons = await dbAll(`
             SELECT c.*,
-                COALESCE((SELECT COUNT(*) FROM coupon_usages u WHERE u.coupon_id = c.id AND u.userId = ?), 0) as user_used_count
+                COALESCE((SELECT COUNT(*) FROM coupon_usages u WHERE u.coupon_id = c.id AND u.userId = ?), 0) as user_used_count,
+                COALESCE((SELECT COUNT(*) FROM user_claimed_coupons uc WHERE uc.coupon_id = c.id), 0) as total_claimed_count,
+                CASE WHEN (SELECT id FROM user_claimed_coupons uc WHERE uc.coupon_id = c.id AND uc.userId = ?) IS NOT NULL THEN 1 ELSE 0 END as is_claimed
             FROM coupons c
             WHERE c.is_active = 1
               AND (c.is_public = 1 OR c.is_public IS NULL)
@@ -1432,7 +1442,7 @@ app.get('/api/coupons/public', isAuthenticated, async (req, res) => {
               AND (c.end_date IS NULL OR c.end_date = '' OR c.end_date >= ?)
               AND c.used_count < c.max_usage_limit
             ORDER BY c.discount_value DESC
-        `, [userId, today, today]);
+        `, [userId, userId, today, today]);
 
         res.json({ status: true, data: coupons });
     } catch (e) {
@@ -1441,9 +1451,87 @@ app.get('/api/coupons/public', isAuthenticated, async (req, res) => {
     }
 });
 
+// Endpoint Klaim Kupon (Shopee Style: Wajib Klaim Dulu)
+app.post('/api/coupons/claim', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const { coupon_id, code } = req.body;
+
+        let coupon = null;
+        if (coupon_id) {
+            coupon = await dbGet("SELECT * FROM coupons WHERE id = ?", [coupon_id]);
+        } else if (code) {
+            coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [code.trim().toUpperCase()]);
+        }
+
+        if (!coupon) return res.status(404).json({ status: false, message: "Voucher promo tidak ditemukan." });
+        if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Voucher ini sedang tidak aktif." });
+
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        if (coupon.start_date && todayStr < coupon.start_date) {
+            return res.status(400).json({ status: false, message: `Voucher promo baru dapat diklaim mulai ${new Date(coupon.start_date).toLocaleDateString('id-ID')}.` });
+        }
+        if (coupon.end_date && todayStr > coupon.end_date) {
+            return res.status(400).json({ status: false, message: "Voucher promo telah berakhir/kedaluwarsa." });
+        }
+
+        // Cek apakah user sudah mengklaim voucher ini
+        const alreadyClaimed = await dbGet("SELECT id FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
+        if (alreadyClaimed) {
+            return res.status(400).json({ status: false, message: "Anda sudah mengklaim voucher ini sebelumnya." });
+        }
+
+        // Cek kuota klaim maksimal yang diatur admin
+        const maxClaims = coupon.max_claim_limit || 100;
+        const totalClaimed = await dbGet("SELECT COUNT(*) as count FROM user_claimed_coupons WHERE coupon_id = ?", [coupon.id]);
+        if (totalClaimed && totalClaimed.count >= maxClaims) {
+            return res.status(400).json({ status: false, message: "Mohon maaf, kuota klaim voucher ini sudah habis." });
+        }
+
+        // Simpan klaim voucher
+        const claimId = `clm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        await dbRun("INSERT INTO user_claimed_coupons (id, coupon_id, userId, claimed_at) VALUES (?, ?, ?, ?)", [
+            claimId,
+            coupon.id,
+            userId,
+            new Date().toISOString()
+        ]);
+
+        res.json({ status: true, message: `Voucher ${coupon.code} berhasil diklaim! Gunakan saat order.` });
+    } catch (e) {
+        console.error("Error claiming coupon:", e);
+        res.status(500).json({ status: false, message: "Gagal mengklaim voucher." });
+    }
+});
+
+// Daftar Voucher yang Sudah Diklaim oleh Pengguna
+app.get('/api/coupons/my-claimed', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const today = new Date().toISOString().split('T')[0];
+
+        const claimed = await dbAll(`
+            SELECT c.*, uc.claimed_at,
+                COALESCE((SELECT COUNT(*) FROM coupon_usages u WHERE u.coupon_id = c.id AND u.userId = ?), 0) as user_used_count
+            FROM user_claimed_coupons uc
+            JOIN coupons c ON uc.coupon_id = c.id
+            WHERE uc.userId = ?
+              AND c.is_active = 1
+              AND (c.end_date IS NULL OR c.end_date = '' OR c.end_date >= ?)
+            ORDER BY uc.claimed_at DESC
+        `, [userId, userId, today]);
+
+        res.json({ status: true, data: claimed });
+    } catch (e) {
+        console.error("Error fetching user claimed coupons:", e);
+        res.status(500).json({ status: false, message: "Gagal memuat voucher saya." });
+    }
+});
+
 app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_per_user, is_public, start_date, end_date } = req.body;
+        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_claim_limit, max_per_user, is_public, start_date, end_date } = req.body;
         if (!code || !discount_type || !discount_value) {
             return res.status(400).json({ status: false, message: "Kode, tipe potongan, dan nilai potongan wajib diisi." });
         }
@@ -1455,8 +1543,8 @@ app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
 
         const id = `cpn_${Date.now()}`;
         await dbRun(`
-            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_per_user, is_public, used_count, start_date, end_date, is_active, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, ?)
+            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_claim_limit, max_per_user, is_public, used_count, start_date, end_date, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, ?)
         `, [
             id, 
             cleanCode, 
@@ -1465,6 +1553,7 @@ app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
             Number(min_order_amount) || 0, 
             Number(max_discount_amount) || 0, 
             parseInt(max_usage_limit) || 100,
+            parseInt(max_claim_limit) || 100,
             parseInt(max_per_user) || 1,
             is_public === false || is_public === 0 || is_public === '0' ? 0 : 1,
             start_date || null, 
@@ -1482,13 +1571,14 @@ app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
 app.put('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { is_active, is_public, max_usage_limit, max_per_user, discount_value, min_order_amount, max_discount_amount, start_date, end_date } = req.body;
+        const { is_active, is_public, max_usage_limit, max_claim_limit, max_per_user, discount_value, min_order_amount, max_discount_amount, start_date, end_date } = req.body;
         
         await dbRun(`
             UPDATE coupons 
             SET is_active = COALESCE(?, is_active),
                 is_public = COALESCE(?, is_public),
                 max_usage_limit = COALESCE(?, max_usage_limit),
+                max_claim_limit = COALESCE(?, max_claim_limit),
                 max_per_user = COALESCE(?, max_per_user),
                 discount_value = COALESCE(?, discount_value),
                 min_order_amount = COALESCE(?, min_order_amount),
@@ -1500,6 +1590,7 @@ app.put('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => 
             typeof is_active !== 'undefined' ? (is_active ? 1 : 0) : null,
             typeof is_public !== 'undefined' ? (is_public ? 1 : 0) : null,
             typeof max_usage_limit !== 'undefined' ? parseInt(max_usage_limit) : null,
+            typeof max_claim_limit !== 'undefined' ? parseInt(max_claim_limit) : null,
             typeof max_per_user !== 'undefined' ? parseInt(max_per_user) : null,
             typeof discount_value !== 'undefined' ? Number(discount_value) : null,
             typeof min_order_amount !== 'undefined' ? Number(min_order_amount) : null,
@@ -1520,15 +1611,17 @@ app.delete('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) 
     try {
         const { id } = req.params;
         await dbRun("DELETE FROM coupons WHERE id = ?", [id]);
+        await dbRun("DELETE FROM user_claimed_coupons WHERE coupon_id = ?", [id]);
         res.json({ status: true, message: "Kupon berhasil dihapus." });
     } catch (e) {
         res.status(500).json({ status: false, message: "Gagal menghapus kupon." });
     }
 });
 
-// Endpoint validasi kupon untuk checkout
+// Endpoint validasi kupon untuk checkout (Shopee Style: Cek Status Klaim User)
 app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
     try {
+        const userId = req.session.userId;
         const { code, order_amount } = req.body;
         if (!code) return res.status(400).json({ status: false, message: "Masukkan kode kupon." });
         const cleanCode = code.trim().toUpperCase();
@@ -1553,9 +1646,22 @@ app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
             return res.status(400).json({ status: false, message: `Minimal pembelian untuk kupon ini adalah Rp ${coupon.min_order_amount.toLocaleString('id-ID')}.` });
         }
 
+        // Cek apakah kupon publik wajib diklaim terlebih dahulu
+        if (coupon.is_public === 1 || coupon.is_public === '1') {
+            const isClaimed = await dbGet("SELECT id FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
+            if (!isClaimed) {
+                return res.status(400).json({ 
+                    status: false, 
+                    require_claim: true,
+                    coupon_id: coupon.id,
+                    message: `Voucher ${coupon.code} wajib diklaim terlebih dahulu sebelum digunakan! Silakan klaim di menu Voucher.` 
+                });
+            }
+        }
+
         // Cek batasan penggunaan per akun user
         const maxPerUser = coupon.max_per_user || 1;
-        const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, req.session.userId]);
+        const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
         if (userUsage && userUsage.count >= maxPerUser) {
             return res.status(400).json({ status: false, message: `Anda sudah mencapai batas maksimal penggunaan kupon ini (${maxPerUser}x per akun).` });
         }

@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { analyzeImei, parseMultipleImeis } from "@/lib/imeiHelper";
+import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
 
 export default function UnblockImeiPage() {
   const { user } = useApp();
@@ -37,8 +38,9 @@ export default function UnblockImeiPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
-  const [publicCoupons, setPublicCoupons] = useState<any[]>([]);
+  const [publicCoupons, setPublicCoupons] = useState<CouponItem[]>([]);
   const [showManualCouponInput, setShowManualCouponInput] = useState(false);
+  const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
 
   // WhatsApp Recipient Phone State
   const [targetPhone, setTargetPhone] = useState("");
@@ -51,45 +53,67 @@ export default function UnblockImeiPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/imei-packages').then(res => res.json()),
-      fetch('/api/manual-services-pricing').then(res => res.json()),
-      fetch('/api/imei-service-status', { cache: 'no-store' }).then(res => res.json()).catch(() => ({ status: true, isOpen: true, note: "" })),
+      fetch('/api/imei-packages', { credentials: 'include' }).then(res => res.json()).catch(() => null),
+      fetch('/api/speed-pricing', { credentials: 'include' }).then(res => res.json()).catch(() => null),
+      fetch('/api/imei-service-status', { credentials: 'include' }).then(res => res.json()).catch(() => null),
       fetch('/api/user/announcement', { credentials: 'include' }).then(res => res.json()).catch(() => null),
       fetch('/api/coupons/public', { credentials: 'include' }).then(res => res.json()).catch(() => null)
     ]).then(([pkgData, prcData, statusData, annData, couponData]) => {
-      if (statusData && statusData.status) {
-        setServiceStatus({ isOpen: statusData.isOpen, note: statusData.note || "" });
-      }
+      if (pkgData?.status && pkgData?.data) setPackages(pkgData.data.filter((p: any) => p.isVisible));
+      if (prcData?.status && prcData?.data) setSpeedPricing(prcData.data);
+      if (statusData?.status) setServiceStatus({ isOpen: statusData.isOpen, note: statusData.note });
       if (annData?.status && annData?.data?.message) setAnnouncement(annData.data);
       if (couponData?.status && couponData?.data) setPublicCoupons(couponData.data);
-      if (pkgData.status && pkgData.data.length > 0) {
-        setPackages(pkgData.data);
-        setSelectedPkgId(pkgData.data[0].id);
-      }
-      if (prcData.status) {
-        setSpeedPricing(prcData.data);
-        const speedDefs = [
-          { id: 'fast', key: 'imei_speed_fast', label: '⚡ Fast' },
-          { id: 'semi', key: 'imei_speed_semi', label: '🚀 Semi Fast' },
-          { id: 'slow', key: 'imei_speed_slow', label: '🐌 Slow' }
-        ];
-        const activeSpeed = speedDefs.find(({ key }) => prcData.data?.[`${key}_status`] !== 'hidden' && Number(prcData.data?.[key]) >= 0)?.id || '';
-        setSelectedSpeed(activeSpeed);
-      }
-    }).finally(() => setLoading(false));
+      setLoading(false);
+    });
   }, []);
 
-  const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 15);
-  const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
-
+  const imeiList = parseMultipleImeis(imei);
   const selectedPkg = packages.find(p => p.id === selectedPkgId);
   const basePrice = selectedPkg ? selectedPkg.price : 0;
-  const speedPrice = speedPricing[`imei_speed_${selectedSpeed}`] 
-    ? parseInt(speedPricing[`imei_speed_${selectedSpeed}`]) || 0 
-    : 0;
-  const rawTotalPrice = (basePrice + speedPrice) * imeiCount;
+  const speedCost = selectedSpeed && speedPricing[selectedSpeed] ? speedPricing[selectedSpeed] : 0;
+  const pricePerImei = basePrice + speedCost;
+  const rawTotalPrice = pricePerImei * imeiList.length;
+
   const discountAmount = appliedCoupon ? Math.min(appliedCoupon.discount_amount, rawTotalPrice) : 0;
   const totalPrice = Math.max(0, rawTotalPrice - discountAmount);
+
+  const handleClaimCoupon = async (coupon: CouponItem) => {
+    setClaimingCouponId(coupon.id);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/coupons/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ coupon_id: coupon.id })
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        Swal.fire({
+          title: "Voucher Berhasil Diklaim!",
+          text: "Sekarang Anda dapat menggunakannya.",
+          icon: "success",
+          timer: 1800,
+          showConfirmButton: false
+        });
+        setPublicCoupons(prev =>
+          prev.map(c =>
+            c.id === coupon.id
+              ? { ...c, is_claimed: true, total_claimed_count: (c.total_claimed_count || 0) + 1 }
+              : c
+          )
+        );
+        handleApplyCoupon(coupon.code);
+      } else {
+        setCouponError(data.message || "Gagal mengklaim voucher.");
+      }
+    } catch (e) {
+      setCouponError("Terjadi kesalahan jaringan.");
+    } finally {
+      setClaimingCouponId(null);
+    }
+  };
 
   const handleApplyCoupon = async (codeToApply?: string) => {
     const targetCode = (typeof codeToApply === 'string' ? codeToApply : couponCode).trim();
@@ -104,16 +128,14 @@ export default function UnblockImeiPage() {
         body: JSON.stringify({ code: targetCode, order_amount: rawTotalPrice })
       });
       const d = await res.json();
-      if (res.ok && d.status) {
+      if (res.ok && d.status && d.data) {
         setAppliedCoupon(d.data);
         setCouponCode(d.data.code);
         Swal.fire({
+          title: "Voucher Terpasang!",
+          text: `Hemat Rp ${Number(d.data.discount_amount).toLocaleString('id-ID')} dengan kode ${d.data.code}`,
           icon: "success",
-          title: "Kupon Berhasil Dipasang! 🎉",
-          text: `Hemat Rp ${d.data.discount_amount.toLocaleString('id-ID')} dengan kupon ${d.data.code}`,
-          toast: true,
-          position: "top-end",
-          timer: 3500,
+          timer: 2000,
           showConfirmButton: false
         });
       } else {
@@ -456,14 +478,14 @@ export default function UnblockImeiPage() {
               </div>
             )}
 
-            {/* Kupon Diskon Promo (Voucher Publik & Rahasia) */}
+            {/* Kupon Diskon Promo (Voucher Shopee Style) */}
             <div className="pt-2 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-ink flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
                   </svg>
-                  Voucher Promo & Kupon Diskon
+                  Voucher Diskon & Promo
                 </label>
                 {!appliedCoupon && (
                   <button
@@ -478,14 +500,16 @@ export default function UnblockImeiPage() {
 
               {/* Status Kupon yang Sedang Terpasang */}
               {appliedCoupon ? (
-                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs shadow-sm">
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs shadow-xs">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-base">
-                      🎟️
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
                     </div>
                     <div>
                       <p className="font-bold text-emerald-950 text-sm">
-                        Kupon <span className="font-mono">{appliedCoupon.code}</span> Terpasang!
+                        Voucher <span className="font-mono">{appliedCoupon.code}</span> Terpasang!
                       </p>
                       <p className="text-xs text-emerald-700 font-semibold mt-0.5">
                         Potongan Diskon: -Rp {discountAmount.toLocaleString('id-ID')}
@@ -502,56 +526,23 @@ export default function UnblockImeiPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* Daftar Voucher Publik (Bisa Langsung Diklaim) */}
+                  {/* Daftar Voucher Shopee Style */}
                   {publicCoupons.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs text-ink-muted font-medium">Voucher Publik Tersedia (Pilih Langsung):</p>
+                      <div className="flex justify-between items-center text-xs text-ink-muted">
+                        <span>Pilih atau Klaim Voucher:</span>
+                        <span>{publicCoupons.length} Voucher Tersedia</span>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {publicCoupons.map((c) => {
-                          const isUsedUp = (c.user_used_count || 0) >= (c.max_per_user || 1);
-                          const isMinReached = rawTotalPrice >= (c.min_order_amount || 0);
-                          const remainingQuota = Math.max(0, c.max_usage_limit - c.used_count);
-
-                          return (
-                            <div
-                              key={c.id}
-                              className={`p-3 rounded-2xl border text-xs flex flex-col justify-between gap-2.5 transition-all ${
-                                isUsedUp
-                                  ? 'bg-slate-100/70 border-slate-200 opacity-60'
-                                  : 'bg-canvas border-primary/20 hover:border-primary/50 shadow-sm'
-                              }`}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <span className="font-mono font-black text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                                    {c.code}
-                                  </span>
-                                  <p className="font-bold text-ink mt-1.5 text-xs">
-                                    Diskon {c.discount_type === 'percent' ? `${c.discount_value}%` : `Rp ${Number(c.discount_value).toLocaleString('id-ID')}`}
-                                  </p>
-                                  <p className="text-[10px] text-ink-muted mt-0.5">
-                                    Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Sisa Kuota: {remainingQuota}
-                                  </p>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={isUsedUp || couponLoading}
-                                  onClick={() => handleApplyCoupon(c.code)}
-                                  className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
-                                    isUsedUp
-                                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                                      : !isMinReached
-                                      ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                                      : 'bg-primary text-white hover:bg-primary-hover shadow-sm'
-                                  }`}
-                                >
-                                  {isUsedUp ? "Sudah Dipakai" : !isMinReached ? "Klaim (Cek Min)" : "Klaim & Pakai ➔"}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {publicCoupons.map((c) => (
+                          <ShopeeVoucherCard
+                            key={c.id}
+                            coupon={c}
+                            isClaiming={claimingCouponId === c.id}
+                            onClaim={handleClaimCoupon}
+                            onUse={(cpn) => handleApplyCoupon(cpn.code)}
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
@@ -572,7 +563,7 @@ export default function UnblockImeiPage() {
                           type="button"
                           onClick={() => handleApplyCoupon()}
                           disabled={couponLoading || !couponCode.trim()}
-                          className="px-4 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm shrink-0"
+                          className="px-4 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-xs shrink-0"
                         >
                           {couponLoading ? "Cek..." : "Terapkan"}
                         </button>
@@ -583,7 +574,7 @@ export default function UnblockImeiPage() {
               )}
 
               {couponError && (
-                <p className="text-xs text-rose-600 font-medium flex items-center gap-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200">
+                <p className="text-xs text-rose-600 font-medium flex items-center gap-1.5 p-2.5 rounded-xl bg-rose-50 border border-rose-200">
                   <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                   </svg>

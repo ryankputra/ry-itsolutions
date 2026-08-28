@@ -161,6 +161,7 @@ export default function AdminPage() {
     min_order_amount: "",
     max_discount_amount: "",
     max_usage_limit: "100",
+    max_claim_limit: "100",
     max_per_user: "1",
     is_public: "1",
     start_date: "",
@@ -314,6 +315,7 @@ export default function AdminPage() {
           min_order_amount: "",
           max_discount_amount: "",
           max_usage_limit: "100",
+          max_claim_limit: "100",
           max_per_user: "1",
           is_public: "1",
           start_date: "",
@@ -2320,15 +2322,26 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
-                    label="Total Kuota Stok"
+                    label="Maksimal User yang Klaim"
+                    type="number"
+                    placeholder="100"
+                    value={newCoupon.max_claim_limit}
+                    onChange={e => setNewCoupon({ ...newCoupon, max_claim_limit: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Total Kuota Pemakaian (Stok)"
                     type="number"
                     placeholder="100"
                     value={newCoupon.max_usage_limit}
                     onChange={e => setNewCoupon({ ...newCoupon, max_usage_limit: e.target.value })}
                     required
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] font-semibold text-ink/80 block mb-1">Mulai (Opsional)</label>
                     <input
@@ -2376,7 +2389,7 @@ export default function AdminPage() {
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-purple-100 text-purple-800'
                             }`}>
-                              {c.is_public === 1 || c.is_public === true || c.is_public === '1' ? 'Publik' : 'Rahasia'}
+                              {c.is_public === 1 || c.is_public === true || c.is_public === '1' ? 'Publik (Wajib Klaim)' : 'Kode Rahasia'}
                             </span>
                           </div>
                           <p className="font-bold text-xs text-ink mt-1.5">
@@ -2385,9 +2398,14 @@ export default function AdminPage() {
                           <p className="text-[11px] text-ink-muted mt-0.5">
                             Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Batas/User: {c.max_per_user || 1}x
                           </p>
-                          <p className="text-[11px] text-ink-muted mt-0.5">
-                            Terpakai: <span className="font-bold text-ink">{c.used_count}</span>/{c.max_usage_limit}
-                          </p>
+                          <div className="flex flex-wrap gap-2 text-[11px] text-ink-muted mt-1">
+                            <span className="bg-primary/5 px-2 py-0.5 rounded border border-primary/10 font-medium">
+                              Maks. Klaim: <b className="text-primary">{c.max_claim_limit || 100}</b> User
+                            </span>
+                            <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-medium">
+                              Terpakai: <b className="text-ink">{c.used_count}</b>/{c.max_usage_limit}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-2">
