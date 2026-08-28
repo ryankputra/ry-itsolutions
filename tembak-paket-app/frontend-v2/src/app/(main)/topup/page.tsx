@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
+import { PaymentLogosGrid } from "@/components/ui/PaymentLogos";
 import Swal from "sweetalert2";
 
 const QUICK_AMOUNTS = [
@@ -320,34 +321,9 @@ export default function TopUpPage() {
               </div>
             </div>
 
-            {/* Metode Pembayaran Supported E-Commerce */}
-            <div className="p-3.5 rounded-2xl bg-parchment/50 border border-hairline space-y-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-ink">Metode Pembayaran:</span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  QRIS Semua Bank & E-Wallet
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <div className="bg-white rounded-xl px-2.5 py-1 border border-hairline h-8 flex items-center shadow-xs">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" alt="QRIS" className="h-4 object-contain" />
-                </div>
-                <div className="bg-white rounded-xl px-2.5 py-1 border border-hairline h-8 flex items-center shadow-xs">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/8/86/Gopay_logo.svg" alt="GoPay" className="h-3.5 object-contain" />
-                </div>
-                <div className="bg-white rounded-xl px-2.5 py-1 border border-hairline h-8 flex items-center shadow-xs">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" alt="DANA" className="h-3 object-contain" />
-                </div>
-                <div className="bg-white rounded-xl px-2.5 py-1 border border-hairline h-8 flex items-center shadow-xs">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" alt="OVO" className="h-3 object-contain" />
-                </div>
-                <div className="bg-white rounded-xl px-2.5 py-1 border border-hairline h-8 flex items-center shadow-xs">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/8/85/LinkAja.svg" alt="LinkAja" className="h-3.5 object-contain" />
-                </div>
-                <span className="text-[10px] text-ink-muted font-bold pl-1">+ BCA, Mandiri, BRI, BNI</span>
-              </div>
+            {/* Metode Pembayaran Supported E-Commerce (Full Vector SVGs) */}
+            <div className="p-4 rounded-2xl bg-parchment/50 border border-hairline">
+              <PaymentLogosGrid />
             </div>
 
             {/* Submit Button */}
