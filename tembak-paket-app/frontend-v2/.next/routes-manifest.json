@@ -154,6 +154,12 @@
       "regex": "^/unblock\\-imei(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/unblock\\-imei(?:/)?$"
+    },
+    {
+      "page": "/vouchers",
+      "regex": "^/vouchers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/vouchers(?:/)?$"
     }
   ],
   "dataRoutes": [],

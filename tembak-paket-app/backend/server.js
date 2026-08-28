@@ -3548,6 +3548,11 @@ app.put('/api/admin/menu-settings', isAuthenticated, isAdmin, async (req, res) =
     } catch (error) { res.status(500).json({ status: false, message: error.message }); }
 });
 
+app.get('/api/speed-pricing', async (req, res) => {
+    req.url = '/api/manual-services-pricing';
+    app.handle(req, res);
+});
+
 app.get('/api/manual-services-pricing', async (req, res) => {
     try {
         const defaults = {

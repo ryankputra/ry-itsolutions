@@ -15,5 +15,6 @@
   "/(main)/referral/page": "/referral",
   "/(main)/tickets/page": "/tickets",
   "/(main)/topup/page": "/topup",
-  "/(main)/unblock-imei/page": "/unblock-imei"
+  "/(main)/unblock-imei/page": "/unblock-imei",
+  "/(main)/vouchers/page": "/vouchers"
 }

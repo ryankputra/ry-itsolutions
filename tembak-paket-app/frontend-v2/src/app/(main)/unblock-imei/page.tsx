@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { analyzeImei, parseMultipleImeis } from "@/lib/imeiHelper";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
+import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
 
 export default function UnblockImeiPage() {
   const { user } = useApp();
@@ -33,13 +34,13 @@ export default function UnblockImeiPage() {
   const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: "" });
   const [announcement, setAnnouncement] = useState<any>(null);
 
-  // Coupon Promo State
+  // Coupon Promo & Voucher Modal State (Shopee Style)
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
   const [publicCoupons, setPublicCoupons] = useState<CouponItem[]>([]);
-  const [showManualCouponInput, setShowManualCouponInput] = useState(false);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
 
   // WhatsApp Recipient Phone State
@@ -54,7 +55,7 @@ export default function UnblockImeiPage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/imei-packages', { credentials: 'include' }).then(res => res.json()).catch(() => null),
-      fetch('/api/speed-pricing', { credentials: 'include' }).then(res => res.json()).catch(() => null),
+      fetch('/api/manual-services-pricing', { credentials: 'include' }).then(res => res.json()).catch(() => null),
       fetch('/api/imei-service-status', { credentials: 'include' }).then(res => res.json()).catch(() => null),
       fetch('/api/user/announcement', { credentials: 'include' }).then(res => res.json()).catch(() => null),
       fetch('/api/coupons/public', { credentials: 'include' }).then(res => res.json()).catch(() => null)
@@ -234,7 +235,10 @@ export default function UnblockImeiPage() {
     { id: 'semi', key: 'imei_speed_semi', label: '🚀 Semi Fast' },
     { id: 'slow', key: 'imei_speed_slow', label: '🐌 Slow' }
   ]
-    .filter(opt => speedPricing[`${opt.key}_status`] !== 'hidden')
+    .filter(opt => {
+      const status = speedPricing[`${opt.key}_status`];
+      return status === 'visible' || status === 'active';
+    })
     .map(opt => ({
       id: opt.id,
       label: opt.label,
@@ -479,99 +483,67 @@ export default function UnblockImeiPage() {
               </div>
             )}
 
-            {/* Kupon Diskon Promo (Voucher Shopee Style) */}
-            <div className="pt-2 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-ink flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
-                  </svg>
-                  Voucher Diskon & Promo
-                </label>
-                {!appliedCoupon && (
-                  <button
-                    type="button"
-                    onClick={() => setShowManualCouponInput(!showManualCouponInput)}
-                    className="text-xs font-semibold text-primary hover:underline"
-                  >
-                    {showManualCouponInput ? "Tutup Ketik Manual" : "Punya Kode Rahasia?"}
-                  </button>
-                )}
-              </div>
+            {/* Voucher Diskon Checkout Bar (Shopee Style) */}
+            <div className="pt-1 space-y-2">
+              <label className="text-xs font-bold text-ink flex items-center justify-between">
+                <span>Voucher Diskon & Promo</span>
+                <span className="text-[10px] text-ink-muted">Bisa hemat biaya order</span>
+              </label>
 
-              {/* Status Kupon yang Sedang Terpasang */}
               {appliedCoupon ? (
-                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs shadow-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                      </svg>
-                    </div>
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
+                      🎟️
+                    </span>
                     <div>
-                      <p className="font-bold text-emerald-950 text-sm">
-                        Voucher <span className="font-mono">{appliedCoupon.code}</span> Terpasang!
+                      <p className="font-bold text-emerald-950 text-xs">
+                        Voucher <span className="font-mono">{appliedCoupon.code}</span> Terpasang
                       </p>
-                      <p className="text-xs text-emerald-700 font-semibold mt-0.5">
+                      <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
                         Potongan Diskon: -Rp {discountAmount.toLocaleString('id-ID')}
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRemoveCoupon}
-                    className="text-xs font-bold text-rose-600 hover:text-rose-800 px-3 py-1.5 bg-rose-50 rounded-xl border border-rose-200/60 transition-colors"
-                  >
-                    Hapus
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowVoucherModal(true)}
+                      className="text-xs font-bold text-primary hover:underline px-2 py-1"
+                    >
+                      Ubah
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2.5 py-1 bg-rose-50 rounded-xl border border-rose-200/60 transition-colors"
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {/* Daftar Voucher Shopee Style */}
-                  {publicCoupons.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-xs text-ink-muted">
-                        <span>Pilih atau Klaim Voucher:</span>
-                        <span>{publicCoupons.length} Voucher Tersedia</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {publicCoupons.map((c) => (
-                          <ShopeeVoucherCard
-                            key={c.id}
-                            coupon={c}
-                            isClaiming={claimingCouponId === c.id}
-                            onClaim={handleClaimCoupon}
-                            onUse={(cpn) => handleApplyCoupon(cpn.code)}
-                          />
-                        ))}
-                      </div>
+                <button
+                  type="button"
+                  onClick={() => setShowVoucherModal(true)}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-canvas border border-dashed border-primary/40 hover:border-primary hover:bg-primary/5 transition-all text-xs font-bold shadow-2xs group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform shrink-0">
+                      🎟️
+                    </span>
+                    <div className="text-left">
+                      <p className="text-ink font-bold text-xs">Voucher Ry-ITSolutions</p>
+                      <p className="text-[10px] text-ink-muted">Pilih atau klaim voucher untuk hemat lebih banyak</p>
                     </div>
-                  )}
-
-                  {/* Input Kode Kupon Rahasia / Ketik Manual */}
-                  {(showManualCouponInput || publicCoupons.length === 0) && (
-                    <div className="p-3.5 rounded-2xl bg-parchment/60 border border-hairline space-y-2">
-                      <p className="text-xs font-bold text-ink">Ketik Kode Kupon Khusus / Rahasia:</p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Masukkan kode kupon rahasia..."
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="flex-1 rounded-xl border border-hairline bg-canvas px-4 py-2.5 text-xs font-mono font-bold uppercase focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleApplyCoupon()}
-                          disabled={couponLoading || !couponCode.trim()}
-                          className="px-4 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-xs shrink-0"
-                        >
-                          {couponLoading ? "Cek..." : "Terapkan"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-primary font-bold text-xs shrink-0">
+                    <span>Gunakan / Masukkan Kode</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
+                </button>
               )}
 
               {couponError && (
@@ -623,18 +595,30 @@ export default function UnblockImeiPage() {
           </div>
         )}
 
+      </Card>
 
-    </Card>
+      <ShopeeVoucherModal
+        isOpen={showVoucherModal}
+        onClose={() => setShowVoucherModal(false)}
+        publicCoupons={publicCoupons}
+        appliedCoupon={appliedCoupon}
+        onApplyCoupon={handleApplyCoupon}
+        onRemoveCoupon={handleRemoveCoupon}
+        onClaimCoupon={handleClaimCoupon}
+        claimingId={claimingCouponId}
+        loading={couponLoading}
+        rawTotalPrice={rawTotalPrice}
+      />
 
-    <SuccessModal 
-      isOpen={showSuccessPop} 
-      onClose={() => router.push('/history')} 
-      amount={totalPrice} 
-      title="Pembayaran Berhasil"
-      statusText="Pesanan Unblock IMEI berhasil dibuat!"
-      recipientLabel="IMEI Target"
-      recipientValue={imei}
-    />
-  </div>
+      <SuccessModal 
+        isOpen={showSuccessPop} 
+        onClose={() => router.push('/history')} 
+        amount={totalPrice} 
+        title="Pembayaran Berhasil"
+        statusText="Pesanan Unblock IMEI berhasil dibuat!"
+        recipientLabel="IMEI Target"
+        recipientValue={imei}
+      />
+    </div>
   );
 }
