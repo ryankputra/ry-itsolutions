@@ -21,7 +21,7 @@ const QUICK_AMOUNTS = [
 ];
 
 export default function TopUpPage() {
-  const { user, setUser } = useApp();
+  const { user, setUser, updateBalance } = useApp();
   const router = useRouter();
 
   const [amount, setAmount] = useState<string>("100000");
@@ -46,7 +46,7 @@ export default function TopUpPage() {
     if (success) return;
     setSuccess(true);
     if (typeof newBalance === "number") {
-      setUser((prev) => (prev ? { ...prev, balance: newBalance } : null));
+      updateBalance(newBalance);
     }
     setTimeout(() => {
       router.push("/dashboard");
