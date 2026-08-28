@@ -25,6 +25,11 @@ export default function DashboardPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
 
+  // Tutorial / Onboarding State
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [activeTutorialTab, setActiveTutorialTab] = useState<number>(0);
+  const [tutorialDismissed, setTutorialDismissed] = useState(false);
+
   useEffect(() => {
     // Meminta Izin Push Notification
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -255,6 +260,59 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Tutorial & Quick Start Guide Hub */}
+      {!tutorialDismissed && (
+        <Card glass className="p-5 space-y-4 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
+                🎓
+              </span>
+              <div>
+                <h2 className="text-base font-bold text-ink">Panduan Cepat Penggunaan</h2>
+                <p className="text-xs text-ink-muted">5 Langkah mudah menggunakan layanan Ry-ITSolutions</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowTutorialModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center gap-1"
+              >
+                <span>Lihat Panduan</span> ➔
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Steps Horizontal Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 pt-1">
+            {[
+              { step: "1", title: "Top Up Saldo", desc: "Scan QRIS otomatis 24 jam", icon: "💳", href: "/topup" },
+              { step: "2", title: "Cek Database", desc: "Cek riwayat CEIR/Bea Cukai", icon: "🔍", href: "/cek-ceir" },
+              { step: "3", title: "Buka Sinyal", desc: "Input IMEI & pilih durasi", icon: "📱", href: "/unblock-imei" },
+              { step: "4", title: "Notif WhatsApp", desc: "Nota otomatis ke nomor Anda", icon: "📲", href: "/history" },
+              { step: "5", title: "Garansi Digital", desc: "Pantau aktif & klaim garansi", icon: "🛡️", href: "/cek-garansi" }
+            ].map((s, idx) => (
+              <a
+                key={idx}
+                href={s.href}
+                className="p-3 rounded-xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center">
+                    {s.step}
+                  </span>
+                  <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors">{s.title}</h4>
+                  <p className="text-[10px] text-ink-muted leading-tight mt-0.5">{s.desc}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Category Grid */}
       <div>
         <h2 className="text-lg font-bold text-ink mb-4">Layanan Utama</h2>
@@ -425,6 +483,180 @@ export default function DashboardPage() {
           adminNote: selectedInvoiceTrx.admin_note || selectedInvoiceTrx.adminNote
         } : null}
       />
+
+      {/* Interactive Tutorial & Onboarding Modal */}
+      {showTutorialModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
+          <Card className="w-full max-w-xl bg-canvas border border-hairline p-0 overflow-hidden flex flex-col shadow-2xl rounded-3xl max-h-[90vh]">
+            {/* Header Modal */}
+            <div className="p-5 bg-gradient-to-r from-primary to-blue-700 text-white flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl">
+                  🚀
+                </span>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight">Panduan Lengkap Ry-ITSolutions</h3>
+                  <p className="text-xs text-white/80">Ikuti 5 langkah mudah berikut untuk menggunakan web</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTutorialModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-lg text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body: Steps Carousel / Tabs */}
+            <div className="p-6 space-y-6 overflow-y-auto">
+              {/* Step Tab Buttons */}
+              <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar">
+                {[
+                  { label: "1. Top Up", icon: "💳" },
+                  { label: "2. Cek IMEI", icon: "🔍" },
+                  { label: "3. Buka Sinyal", icon: "📱" },
+                  { label: "4. Notif WA", icon: "📲" },
+                  { label: "5. Garansi", icon: "🛡️" },
+                ].map((tab, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveTutorialTab(idx)}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                      activeTutorialTab === idx
+                        ? 'bg-primary text-white shadow-sm ring-2 ring-primary/30'
+                        : 'bg-canvas border border-hairline text-ink-muted hover:bg-parchment'
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Step Content */}
+              {activeTutorialTab === 0 && (
+                <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
+                  <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
+                    <span>💳</span> Langkah 1: Top Up Saldo Otomatis
+                  </div>
+                  <p className="text-xs text-blue-950 leading-relaxed">
+                    Sistem menggunakan <b>QRIS Dinamis 24 Jam</b>. Masukkan nominal top up yang Anda inginkan di menu Top Up, scan QRIS menggunakan GoPay, OVO, DANA, BCA, atau M-Banking mana pun. Saldo akan otomatis bertambah detik itu juga tanpa perlu konfirmasi admin.
+                  </p>
+                  <div className="pt-2">
+                    <Button size="sm" onClick={() => { setShowTutorialModal(false); router.push('/topup'); }}>
+                      Menuju Menu Top Up ➔
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTutorialTab === 1 && (
+                <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+                    <span>🔍</span> Langkah 2: Cek Status Database IMEI
+                  </div>
+                  <p className="text-xs text-emerald-950 leading-relaxed">
+                    Sebelum melakukan order aktivasi sinyal, Anda disarankan mengecek status IMEI perangkat melalui menu <b>Cek Database CEIR</b> atau <b>Cek Bea Cukai</b> untuk mengetahui histori dan status registrasi perangkat sebelumnya.
+                  </p>
+                  <div className="pt-2">
+                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { setShowTutorialModal(false); router.push('/cek-ceir'); }}>
+                      Menuju Menu Cek CEIR ➔
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTutorialTab === 2 && (
+                <div className="p-5 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-3">
+                  <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
+                    <span>📱</span> Langkah 3: Order Buka Sinyal IMEI
+                  </div>
+                  <p className="text-xs text-rose-950 leading-relaxed">
+                    Masuk ke menu <b>Buka IMEI</b>, ketik 15 digit nomor IMEI HP Anda (bisa banyak IMEI sekaligus), upload screenshot *#06#, masukkan nomor WhatsApp Anda, lalu pilih paket durasi & kecepatan yang diinginkan.
+                  </p>
+                  <div className="pt-2">
+                    <Button size="sm" className="bg-rose-600 hover:bg-rose-700" onClick={() => { setShowTutorialModal(false); router.push('/unblock-imei'); }}>
+                      Menuju Form Buka IMEI ➔
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTutorialTab === 3 && (
+                <div className="p-5 rounded-2xl bg-green-50/60 border border-green-200 space-y-3">
+                  <div className="flex items-center gap-2 text-green-900 font-bold text-sm">
+                    <span>📲</span> Langkah 4: Terima Nota Resmi via WhatsApp
+                  </div>
+                  <p className="text-xs text-green-950 leading-relaxed">
+                    Begitu admin atau server menyelesaikan proses aktivasi (status <b>Sukses</b>), Bot Toko resmi kami akan <b>otomatis mengirimkan nota digital & link garansi</b> langsung ke nomor WhatsApp Anda. Anda juga bisa meneruskan nota ke customer jika Anda adalah Reseller.
+                  </p>
+                  <div className="pt-2">
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => { setShowTutorialModal(false); router.push('/history'); }}>
+                      Lihat Riwayat Transaksi ➔
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTutorialTab === 4 && (
+                <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                    <span>🛡️</span> Langkah 5: Cek & Klaim Garansi Digital
+                  </div>
+                  <p className="text-xs text-amber-950 leading-relaxed">
+                    Setiap transaksi dilengkapi garansi digital. Cukup masukkan nomor IMEI di menu <b>Cek Garansi</b> untuk melihat sisa masa aktif garansi, mengunduh ulang nota PDF, atau mengajukan bantuan teknis secara instan.
+                  </p>
+                  <div className="pt-2">
+                    <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setShowTutorialModal(false); router.push('/cek-garansi'); }}>
+                      Menuju Cek Garansi ➔
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Footer */}
+              <div className="flex justify-between items-center pt-2 border-t border-hairline">
+                <button
+                  disabled={activeTutorialTab === 0}
+                  onClick={() => setActiveTutorialTab(prev => Math.max(0, prev - 1))}
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-hairline disabled:opacity-30 hover:bg-parchment"
+                >
+                  ⬅ Sebelumnya
+                </button>
+
+                <div className="flex gap-1.5">
+                  {[0, 1, 2, 3, 4].map(idx => (
+                    <span
+                      key={idx}
+                      onClick={() => setActiveTutorialTab(idx)}
+                      className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-all ${
+                        activeTutorialTab === idx ? 'w-6 bg-primary' : 'bg-slate-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {activeTutorialTab < 4 ? (
+                  <button
+                    onClick={() => setActiveTutorialTab(prev => Math.min(4, prev + 1))}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-sm"
+                  >
+                    Selanjutnya ➔
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowTutorialModal(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+                  >
+                    Saya Sudah Paham! 🎉
+                  </button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
     </div>
   );

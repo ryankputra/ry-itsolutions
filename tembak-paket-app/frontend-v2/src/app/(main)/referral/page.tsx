@@ -23,7 +23,7 @@ export default function ReferralPage() {
   }, []);
 
   const referralCode = referralData?.referral_code || "RYY...";
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ry-itsolutions.web.id';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ry-itsolutionts.web.id';
   const referralLink = `${origin}/register?ref=${referralCode}`;
 
   const copyToClipboard = (text: string, type: 'code' | 'link') => {

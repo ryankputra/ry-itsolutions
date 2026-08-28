@@ -504,7 +504,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const resetUrl = `https://ry-itsolutionts.web.id/#reset-password?token=${token}`;
         const htmlContent = `<div style="font-family: Arial, sans-serif; line-height: 1.6;"><h2>Permintaan Reset Password</h2><p>Klik link di bawah ini untuk mereset password Anda:</p><p style="margin: 20px 0;"><a href="${resetUrl}" style="background-color: #7c3aed; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px;">Reset Password Saya</a></p><p>Link ini kedaluwarsa dalam 1 jam. Jika Anda tidak meminta ini, abaikan email ini.</p></div>`;
         const tranEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
-        await tranEmailApi.sendTransacEmail({ sender: { email: 'no-reply@tembak.cloudrystore.com', name: 'RYYSTOREV2' }, to: [{ email: user.email }], subject: 'Reset Password Akun RYYSTORE Anda', htmlContent });
+        await tranEmailApi.sendTransacEmail({ sender: { email: 'no-reply@ry-itsolutionts.web.id', name: 'Ry-ITSolutions' }, to: [{ email: user.email }], subject: 'Reset Password Akun Ry-ITSolutions Anda', htmlContent });
         res.json({ status: true, message: 'Jika email Anda terdaftar, Anda akan menerima link reset.' });
     } catch (error) { console.error("[FORGOT_PASSWORD_ERROR]", error); res.status(500).json({ status: false, message: 'Gagal mengirim email reset.' }); }
 });
@@ -2306,7 +2306,7 @@ app.post('/api/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
             if (voucherCode) {
                 teleText += `\n\n🎟️ <b>Kupon Diskon:</b> <code>${voucherCode.trim().toUpperCase()}</code>\n<i>Gunakan kupon saat checkout untuk klaim potongan harga!</i>`;
             }
-            teleText += `\n\n👉 <i>Buka Web: https://panel.cloudrystore.com</i>`;
+            teleText += `\n\n👉 <i>Buka Web: https://ry-itsolutionts.web.id</i>`;
             await sendTelegramNotification(teleText, 'group');
             telegramSent = true;
         }
@@ -3814,7 +3814,7 @@ app.put('/api/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => 
                     const targetPhone = trx.targetPhone || userRow?.phone;
                     if (targetPhone) {
                         const firstImei = (trx.imei || '').split(',')[0].trim();
-                        const verifyLink = `https://panel.cloudrystore.com/cek-garansi?imei=${firstImei}`;
+                        const verifyLink = `https://ry-itsolutionts.web.id/cek-garansi?imei=${firstImei}`;
                         const waMsg = `Halo Kak *${userRow?.name || 'Pelanggan'}*,\nPesanan *${trx.packageName || 'Layanan IMEI'}* Anda telah SELESAI diproses! ✅\n\n` +
                             `📱 *IMEI:* ${trx.imei || '-'}\n` +
                             `🛡️ *Status:* Sukses / Aktif\n` +

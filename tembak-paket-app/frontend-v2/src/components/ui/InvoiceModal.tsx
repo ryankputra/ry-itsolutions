@@ -76,7 +76,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   const verifyUrl = typeof window !== "undefined" 
     ? `${window.location.origin}/cek-garansi?imei=${data.imei}` 
-    : `https://panel.cloudrystore.com/cek-garansi?imei=${data.imei}`;
+    : `https://ry-itsolutionts.web.id/cek-garansi?imei=${data.imei}`;
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(verifyUrl)}`;
 
