@@ -866,6 +866,9 @@
   .max-w-\[80\%\] {
     max-width: 80%;
   }
+  .max-w-\[120px\] {
+    max-width: 120px;
+  }
   .max-w-\[180px\] {
     max-width: 180px;
   }
@@ -1044,6 +1047,9 @@
   }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
+  }
+  .gap-5 {
+    gap: calc(var(--spacing) * 5);
   }
   .gap-6 {
     gap: calc(var(--spacing) * 6);
@@ -1929,6 +1935,13 @@
     --tw-gradient-from: var(--color-primary);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
+  .from-primary\/5 {
+    --tw-gradient-from: color-mix(in srgb, #0066cc 5%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      --tw-gradient-from: color-mix(in oklab, var(--color-primary) 5%, transparent);
+    }
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
   .from-primary\/10 {
     --tw-gradient-from: color-mix(in srgb, #0066cc 10%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -2472,6 +2485,12 @@
       color: color-mix(in oklab, var(--color-ink) 80%, transparent);
     }
   }
+  .text-ink\/90 {
+    color: color-mix(in srgb, #1d1d1f 90%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-ink) 90%, transparent);
+    }
+  }
   .text-primary {
     color: var(--color-primary);
   }
@@ -2575,6 +2594,12 @@
     color: color-mix(in srgb, #fff 80%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       color: color-mix(in oklab, var(--color-white) 80%, transparent);
+    }
+  }
+  .text-white\/90 {
+    color: color-mix(in srgb, #fff 90%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-white) 90%, transparent);
     }
   }
   .text-yellow-500 {
@@ -3100,6 +3125,13 @@
       }
     }
   }
+  .hover\:scale-\[1\.01\] {
+    &:hover {
+      @media (hover: hover) {
+        scale: 1.01;
+      }
+    }
+  }
   .hover\:scale-\[1\.02\] {
     &:hover {
       @media (hover: hover) {
@@ -3220,6 +3252,13 @@
       }
     }
   }
+  .hover\:bg-emerald-600 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-emerald-600);
+      }
+    }
+  }
   .hover\:bg-emerald-700 {
     &:hover {
       @media (hover: hover) {
@@ -3254,6 +3293,16 @@
         background-color: color-mix(in srgb, #f5f5f7 50%, transparent);
         @supports (color: color-mix(in lab, red, red)) {
           background-color: color-mix(in oklab, var(--color-parchment) 50%, transparent);
+        }
+      }
+    }
+  }
+  .hover\:bg-parchment\/60 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: color-mix(in srgb, #f5f5f7 60%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-parchment) 60%, transparent);
         }
       }
     }
@@ -3639,6 +3688,11 @@
       bottom: calc(var(--spacing) * 24);
     }
   }
+  .sm\:flex {
+    @media (width >= 40rem) {
+      display: flex;
+    }
+  }
   .sm\:grid {
     @media (width >= 40rem) {
       display: grid;
@@ -3881,6 +3935,16 @@
       padding-left: calc(var(--spacing) * 64);
     }
   }
+  .lg\:sticky {
+    @media (width >= 64rem) {
+      position: sticky;
+    }
+  }
+  .lg\:top-20 {
+    @media (width >= 64rem) {
+      top: calc(var(--spacing) * 20);
+    }
+  }
   .lg\:col-span-5 {
     @media (width >= 64rem) {
       grid-column: span 5 / span 5;
@@ -3894,6 +3958,11 @@
   .lg\:mx-0 {
     @media (width >= 64rem) {
       margin-inline: 0;
+    }
+  }
+  .lg\:block {
+    @media (width >= 64rem) {
+      display: block;
     }
   }
   .lg\:grid-cols-3 {
@@ -3946,10 +4015,26 @@
       text-align: left;
     }
   }
+  .lg\:text-3xl {
+    @media (width >= 64rem) {
+      font-size: var(--text-3xl);
+      line-height: var(--tw-leading, var(--text-3xl--line-height));
+    }
+  }
   .lg\:text-6xl {
     @media (width >= 64rem) {
       font-size: var(--text-6xl);
       line-height: var(--tw-leading, var(--text-6xl--line-height));
+    }
+  }
+  .xl\:col-span-4 {
+    @media (width >= 80rem) {
+      grid-column: span 4 / span 4;
+    }
+  }
+  .xl\:col-span-8 {
+    @media (width >= 80rem) {
+      grid-column: span 8 / span 8;
     }
   }
   .print\:hidden {
