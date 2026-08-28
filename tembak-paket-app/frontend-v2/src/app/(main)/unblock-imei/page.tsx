@@ -69,11 +69,12 @@ export default function UnblockImeiPage() {
   }, []);
 
   const imeiList = parseMultipleImeis(imei);
+  const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
   const selectedPkg = packages.find(p => p.id === selectedPkgId);
   const basePrice = selectedPkg ? selectedPkg.price : 0;
   const speedCost = selectedSpeed && speedPricing[selectedSpeed] ? speedPricing[selectedSpeed] : 0;
   const pricePerImei = basePrice + speedCost;
-  const rawTotalPrice = pricePerImei * imeiList.length;
+  const rawTotalPrice = pricePerImei * imeiCount;
 
   const discountAmount = appliedCoupon ? Math.min(appliedCoupon.discount_amount, rawTotalPrice) : 0;
   const totalPrice = Math.max(0, rawTotalPrice - discountAmount);
