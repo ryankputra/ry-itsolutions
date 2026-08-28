@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import InteractiveTour from "@/components/ui/InteractiveTour";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
+import { safeJson } from "@/lib/api";
 import Swal from "sweetalert2";
 
 export default function DashboardPage() {

@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { API_URL } from "./api";
+import { API_URL, safeJson } from "./api";
 
 const MENU_SETTINGS_STORAGE_KEY = "menu_settings";
 const DEFAULT_MENU_SETTINGS = { showBeliPaket: false };
