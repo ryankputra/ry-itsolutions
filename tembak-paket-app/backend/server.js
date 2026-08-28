@@ -1425,26 +1425,43 @@ app.get('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // Daftar Kupon Publik yang bisa langsung dipilih dan diklaim oleh Pengguna (Shopee Style)
-app.get('/api/coupons/public', isAuthenticated, async (req, res) => {
+app.get('/api/coupons/public', async (req, res) => {
     try {
-        const userId = req.session.userId;
-        const today = new Date().toISOString().split('T')[0];
+        const userId = req.session?.userId || null;
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 
         const coupons = await dbAll(`
             SELECT c.*,
                 COALESCE((SELECT COUNT(*) FROM coupon_usages u WHERE u.coupon_id = c.id AND u.userId = ?), 0) as user_used_count,
                 COALESCE((SELECT COUNT(*) FROM user_claimed_coupons uc WHERE uc.coupon_id = c.id), 0) as total_claimed_count,
-                CASE WHEN (SELECT id FROM user_claimed_coupons uc WHERE uc.coupon_id = c.id AND uc.userId = ?) IS NOT NULL THEN 1 ELSE 0 END as is_claimed
+                CASE WHEN ? IS NOT NULL AND (SELECT id FROM user_claimed_coupons uc WHERE uc.coupon_id = c.id AND uc.userId = ?) IS NOT NULL THEN 1 ELSE 0 END as is_claimed
             FROM coupons c
             WHERE c.is_active = 1
               AND (c.is_public = 1 OR c.is_public IS NULL)
-              AND (c.start_date IS NULL OR c.start_date = '' OR c.start_date <= ?)
-              AND (c.end_date IS NULL OR c.end_date = '' OR c.end_date >= ?)
-              AND c.used_count < c.max_usage_limit
             ORDER BY c.discount_value DESC
-        `, [userId, userId, today, today]);
+        `, [userId, userId, userId]);
 
-        res.json({ status: true, data: coupons });
+        // Filter valid date & usage in JavaScript to be 100% immune to date format / timezone mismatch
+        const validCoupons = coupons.filter(c => {
+            // Check max usage
+            if (c.max_usage_limit && c.used_count >= c.max_usage_limit) return false;
+            
+            // Check start_date
+            if (c.start_date && c.start_date.trim()) {
+                const sDate = c.start_date.trim().split('T')[0];
+                if (sDate > todayWIB) return false;
+            }
+
+            // Check end_date
+            if (c.end_date && c.end_date.trim()) {
+                const eDate = c.end_date.trim().split('T')[0];
+                if (eDate < todayWIB) return false;
+            }
+
+            return true;
+        });
+
+        res.json({ status: true, data: validCoupons });
     } catch (e) {
         console.error("Error fetching public coupons:", e);
         res.status(500).json({ status: false, message: "Gagal memuat kupon publik." });
@@ -1467,13 +1484,18 @@ app.post('/api/coupons/claim', isAuthenticated, async (req, res) => {
         if (!coupon) return res.status(404).json({ status: false, message: "Voucher promo tidak ditemukan." });
         if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Voucher ini sedang tidak aktif." });
 
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        if (coupon.start_date && todayStr < coupon.start_date) {
-            return res.status(400).json({ status: false, message: `Voucher promo baru dapat diklaim mulai ${new Date(coupon.start_date).toLocaleDateString('id-ID')}.` });
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+        if (coupon.start_date && coupon.start_date.trim()) {
+            const sDate = coupon.start_date.trim().split('T')[0];
+            if (sDate > todayWIB) {
+                return res.status(400).json({ status: false, message: `Voucher promo baru dapat diklaim mulai ${sDate}.` });
+            }
         }
-        if (coupon.end_date && todayStr > coupon.end_date) {
-            return res.status(400).json({ status: false, message: "Voucher promo telah berakhir/kedaluwarsa." });
+        if (coupon.end_date && coupon.end_date.trim()) {
+            const eDate = coupon.end_date.trim().split('T')[0];
+            if (eDate < todayWIB) {
+                return res.status(400).json({ status: false, message: "Voucher promo telah berakhir/kedaluwarsa." });
+            }
         }
 
         // Cek apakah user sudah mengklaim voucher ini
@@ -1509,7 +1531,7 @@ app.post('/api/coupons/claim', isAuthenticated, async (req, res) => {
 app.get('/api/coupons/my-claimed', isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
-        const today = new Date().toISOString().split('T')[0];
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 
         const claimed = await dbAll(`
             SELECT c.*, uc.claimed_at,
@@ -1518,11 +1540,18 @@ app.get('/api/coupons/my-claimed', isAuthenticated, async (req, res) => {
             JOIN coupons c ON uc.coupon_id = c.id
             WHERE uc.userId = ?
               AND c.is_active = 1
-              AND (c.end_date IS NULL OR c.end_date = '' OR c.end_date >= ?)
             ORDER BY uc.claimed_at DESC
-        `, [userId, userId, today]);
+        `, [userId, userId]);
 
-        res.json({ status: true, data: claimed });
+        const validClaimed = claimed.filter(c => {
+            if (c.end_date && c.end_date.trim()) {
+                const eDate = c.end_date.trim().split('T')[0];
+                if (eDate < todayWIB) return false;
+            }
+            return true;
+        });
+
+        res.json({ status: true, data: validClaimed });
     } catch (e) {
         console.error("Error fetching user claimed coupons:", e);
         res.status(500).json({ status: false, message: "Gagal memuat voucher saya." });
@@ -3923,9 +3952,10 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                 const cleanCode = req.body.coupon_code.trim().toUpperCase();
                 const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ? AND is_active = 1", [cleanCode]);
                 if (coupon) {
-                    const now = new Date();
-                    const todayStr = now.toISOString().split('T')[0];
-                    const validDate = (!coupon.start_date || todayStr >= coupon.start_date) && (!coupon.end_date || todayStr <= coupon.end_date);
+                    const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+                    const validStart = !coupon.start_date || !coupon.start_date.trim() || coupon.start_date.trim().split('T')[0] <= todayWIB;
+                    const validEnd = !coupon.end_date || !coupon.end_date.trim() || coupon.end_date.trim().split('T')[0] >= todayWIB;
+                    const validDate = validStart && validEnd;
                     const validQuota = coupon.used_count < coupon.max_usage_limit;
                     const validMin = totalPrice >= coupon.min_order_amount;
                     const maxPerUser = coupon.max_per_user || 1;
