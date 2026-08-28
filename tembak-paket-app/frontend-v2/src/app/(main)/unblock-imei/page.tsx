@@ -38,6 +38,15 @@ export default function UnblockImeiPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
 
+  // WhatsApp Recipient Phone State
+  const [targetPhone, setTargetPhone] = useState("");
+
+  useEffect(() => {
+    if (user?.phone && !targetPhone) {
+      setTargetPhone(user.phone);
+    }
+  }, [user]);
+
   useEffect(() => {
     Promise.all([
       fetch('/api/imei-packages').then(res => res.json()),
@@ -164,6 +173,7 @@ export default function UnblockImeiPage() {
     formData.append("duration", selectedPkg.duration);
     formData.append("price_key", selectedPkg.id);
     formData.append("speed_option", selectedSpeed);
+    formData.append("target_phone", targetPhone);
     if (appliedCoupon) {
       formData.append("coupon_code", appliedCoupon.code);
     }
@@ -355,6 +365,28 @@ export default function UnblockImeiPage() {
                   </div>
                 );
               })()}
+            </div>
+
+            {/* WhatsApp Recipient Phone Input */}
+            <div className="space-y-1.5 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-200/70">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-ink flex items-center gap-1.5">
+                  <span className="text-emerald-600">📲</span> Nomor WhatsApp Penerima Nota
+                </label>
+                <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                  Auto Kirim Nota via WA
+                </span>
+              </div>
+              <input
+                type="tel"
+                placeholder="Contoh: 081234567890 (Nomor WhatsApp Anda atau Pembeli)"
+                value={targetPhone}
+                onChange={e => setTargetPhone(e.target.value.replace(/[^0-9+]/g, ''))}
+                className="w-full rounded-xl border border-hairline bg-canvas px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+              />
+              <p className="text-[11px] text-ink-muted leading-relaxed">
+                Bot WhatsApp akan otomatis mengirimkan nota &amp; link garansi ke nomor ini begitu pesanan sukses.
+              </p>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -3629,10 +3629,18 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                 }
             }
 
+            const targetPhone = req.body.target_phone ? String(req.body.target_phone).trim() : '';
+
             await dbRun(`
                 INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, status, api_response, admin_note, admin_image, kmspTrxId, createdAt, service_type, imei, user_image, user_image_ceir, speed_option, coupon_code, discount_amount)
                 VALUES (?, ?, (SELECT name FROM users WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, finalPriceToPay, totalPrice, '', 'balance', finalStatus, apiResponse, adminNote, typeof adminImagePath !== 'undefined' ? adminImagePath : null, refId, new Date().toISOString(), service_type, cleanImei, imagePath, ceirImagePath, speed_option, appliedCoupon ? appliedCoupon.code : null, discountAmount]);
+            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, finalPriceToPay, totalPrice, targetPhone, 'balance', finalStatus, apiResponse, adminNote, typeof adminImagePath !== 'undefined' ? adminImagePath : null, refId, new Date().toISOString(), service_type, cleanImei, imagePath, ceirImagePath, speed_option, appliedCoupon ? appliedCoupon.code : null, discountAmount]);
+
+            if (targetPhone) {
+                try {
+                    await dbRun("UPDATE users SET phone = ? WHERE id = ? AND (phone IS NULL OR phone = '')", [targetPhone, req.session.userId]);
+                } catch (e) {}
+            }
 
             // Proses Komisi Referral Otomatis jika akun ini diajak oleh orang lain
             try {
