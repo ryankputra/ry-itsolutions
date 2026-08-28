@@ -532,12 +532,12 @@ export default function AdminPage() {
 
       fetch('/api/admin/kmsp-balance', { credentials: 'include' })
         .then(r => r.json())
-        .then(d => setProviderBalances(prev => ({ ...prev, kmsp: d.data?.balance })))
+        .then(d => setProviderBalances(prev => ({ ...prev, kmsp: d.data?.balance != null ? Number(d.data.balance) : null })))
         .catch(() => { });
 
       fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
         .then(r => r.json())
-        .then(d => setProviderBalances(prev => ({ ...prev, ceirgo: d.data?.balance })))
+        .then(d => setProviderBalances(prev => ({ ...prev, ceirgo: d.data?.balance != null ? Number(d.data.balance) : null })))
         .catch(() => { });
 
       fetch('/api/admin/payment-gateway').then(r => r.json()).then(d => {
@@ -901,47 +901,43 @@ export default function AdminPage() {
     return true;
   });
 
-  // Menu Groups Definition
+  // Menu Groups Definition (Clean & Professional - No Emojis)
   const menuCategories = [
     {
       id: "operasional",
       name: "Operasional & CS",
-      icon: "📦",
       description: "Pesanan, Tiket, & Pengguna",
       tabs: [
-        { id: "pesanan-manual", label: "Antrean Pesanan", icon: "📥", badge: pendingOrdersCount > 0 ? pendingOrdersCount : null, badgeColor: "bg-rose-500" },
-        { id: "tiket-bantuan", label: "Pusat Bantuan CS", icon: "💬", badge: openTicketsCount > 0 ? openTicketsCount : null, badgeColor: "bg-amber-500" },
-        { id: "pengguna", label: "Kelola Pengguna", icon: "👥", badge: null },
+        { id: "pesanan-manual", label: "Antrean Pesanan", badge: pendingOrdersCount > 0 ? pendingOrdersCount : null, badgeColor: "bg-rose-500" },
+        { id: "tiket-bantuan", label: "Pusat Bantuan CS", badge: openTicketsCount > 0 ? openTicketsCount : null, badgeColor: "bg-amber-500" },
+        { id: "pengguna", label: "Kelola Pengguna", badge: null },
       ]
     },
     {
       id: "produk",
       name: "Produk & Harga",
-      icon: "🏷️",
       description: "Harga IMEI, CEIR, & Kuota",
       tabs: [
-        { id: "layanan-imei", label: "Layanan & Harga IMEI/CEIR", icon: "📱", badge: null },
-        { id: "paket", label: "Paket Kuota KMSP", icon: "🌐", badge: null },
+        { id: "layanan-imei", label: "Layanan & Harga IMEI/CEIR", badge: null },
+        { id: "paket", label: "Paket Kuota KMSP", badge: null },
       ]
     },
     {
       id: "marketing",
       name: "Promosi & Marketing",
-      icon: "🚀",
       description: "Broadcast, Kupon, & Referral",
       tabs: [
-        { id: "broadcast-promo", label: "Broadcast & Promo", icon: "📢", badge: null },
-        { id: "kupon-promo", label: "Kupon Diskon", icon: "🎟️", badge: null },
-        { id: "referral", label: "Program Referral", icon: "🤝", badge: null },
+        { id: "broadcast-promo", label: "Broadcast Promo", badge: null },
+        { id: "kupon-promo", label: "Kupon Diskon", badge: null },
+        { id: "referral", label: "Program Referral", badge: null },
       ]
     },
     {
       id: "sistem",
       name: "Sistem & Server",
-      icon: "⚙️",
       description: "Gateway, Database, & Server",
       tabs: [
-        { id: "pengaturan", label: "Pengaturan Umum & Gateway", icon: "⚙️", badge: null },
+        { id: "pengaturan", label: "Pengaturan & Gateway", badge: null },
       ]
     }
   ];
@@ -950,29 +946,29 @@ export default function AdminPage() {
   const currentCategory = menuCategories.find(c => c.tabs.some(t => t.id === activeTab))?.id || activeCategory;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-16">
+    <div className="space-y-5 max-w-7xl mx-auto pb-16">
       
       {/* 1. Header Control Hub & Status Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-canvas to-parchment p-6 rounded-2xl border border-hairline shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-canvas p-5 rounded-2xl border border-hairline shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider bg-primary/10 text-primary rounded-full border border-primary/20">
-              Admin Hub
+              Admin Control Panel
             </span>
             <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Sistem Online
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Sistem Aktif
             </span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-ink">Control Panel Administrator</h1>
-          <p className="text-xs text-ink-muted mt-0.5">Pusat kelola transaksi harian, pengaturan harga, manajemen pengguna, dan sistem promosi.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Panel Manajemen Administrator</h1>
+          <p className="text-xs text-ink-muted mt-0.5">Kelola antrean pesanan, harga layanan, tiket pelanggan, dan konfigurasi server.</p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             variant="outline"
-            className="text-xs flex items-center gap-1.5 bg-canvas"
+            className="text-xs bg-canvas"
             onClick={() => {
               loadManualData();
               loadUsers();
@@ -980,38 +976,32 @@ export default function AdminPage() {
               Swal.fire({ title: "Segar!", text: "Data antrean & pengguna berhasil diperbarui.", icon: "success", timer: 1500, showConfirmButton: false });
             }}
           >
-            <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-            Refresh Semua
+            Muat Ulang Data
           </Button>
 
           <Button
             size="sm"
-            className="text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm"
+            className="text-xs bg-primary hover:bg-primary/90 text-white shadow-xs"
             onClick={() => setShowCeirgoTopUp(true)}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Isi Saldo Pusat
+            + Isi Saldo Pusat
           </Button>
         </div>
       </div>
 
-      {/* 2. Quick Action KPI Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* 2. Quick Action KPI Metric Cards (Clean, No Emojis) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <button
           onClick={() => { setActiveCategory("operasional"); setActiveTab("pesanan-manual"); }}
-          className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pesanan-manual'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-sm'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment'}`}
+          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pesanan-manual'
+            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
+            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-2xl">📥</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Antrean Pesanan</span>
             {pendingOrdersCount > 0 ? (
-              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-500 text-white animate-bounce">
-                {pendingOrdersCount} Pending
+              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-500 text-white">
+                {pendingOrdersCount} Menunggu
               </span>
             ) : (
               <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600">
@@ -1019,20 +1009,20 @@ export default function AdminPage() {
               </span>
             )}
           </div>
-          <div className="mt-3">
-            <p className="text-xl font-black text-ink leading-tight">{manualOrders.length}</p>
-            <p className="text-xs font-semibold text-ink-muted">Antrean Pesanan</p>
+          <div className="mt-2">
+            <p className="text-xl font-bold text-ink leading-tight">{manualOrders.length}</p>
+            <p className="text-[11px] text-ink-muted">Total transaksi tercatat</p>
           </div>
         </button>
 
         <button
           onClick={() => { setActiveCategory("operasional"); setActiveTab("tiket-bantuan"); }}
-          className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'tiket-bantuan'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-sm'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment'}`}
+          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'tiket-bantuan'
+            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
+            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-2xl">💬</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Pusat Bantuan CS</span>
             {openTicketsCount > 0 ? (
               <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-white">
                 {openTicketsCount} Aktif
@@ -1043,53 +1033,53 @@ export default function AdminPage() {
               </span>
             )}
           </div>
-          <div className="mt-3">
-            <p className="text-xl font-black text-ink leading-tight">{adminTickets.length}</p>
-            <p className="text-xs font-semibold text-ink-muted">Pusat Bantuan CS</p>
+          <div className="mt-2">
+            <p className="text-xl font-bold text-ink leading-tight">{adminTickets.length}</p>
+            <p className="text-[11px] text-ink-muted">Total tiket keluhan</p>
           </div>
         </button>
 
         <button
           onClick={() => { setActiveCategory("operasional"); setActiveTab("pengguna"); }}
-          className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pengguna'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-sm'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment'}`}
+          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pengguna'
+            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
+            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-2xl">👥</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Pengguna & Mitra</span>
             <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary">
               {totalResellersCount} Reseller
             </span>
           </div>
-          <div className="mt-3">
-            <p className="text-xl font-black text-ink leading-tight">{users.length}</p>
-            <p className="text-xs font-semibold text-ink-muted">Total Pengguna</p>
+          <div className="mt-2">
+            <p className="text-xl font-bold text-ink leading-tight">{users.length}</p>
+            <p className="text-[11px] text-ink-muted">Pengguna terdaftar</p>
           </div>
         </button>
 
         <button
           onClick={() => { setActiveCategory("sistem"); setActiveTab("pengaturan"); }}
-          className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pengaturan'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-sm'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment'}`}
+          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pengaturan'
+            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
+            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-2xl">💳</span>
-            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">
-              Gateway OK
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Saldo Server Pusat</span>
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">
+              Terkoneksi
             </span>
           </div>
-          <div className="mt-3">
-            <p className="text-base font-black text-primary leading-tight truncate">
-              Rp {providerBalances.ceirgo !== null ? providerBalances.ceirgo.toLocaleString('id-ID') : '...'}
+          <div className="mt-2">
+            <p className="text-lg font-bold text-primary leading-tight truncate">
+              Rp {providerBalances?.ceirgo != null ? Number(providerBalances.ceirgo).toLocaleString('id-ID') : '...'}
             </p>
-            <p className="text-xs font-semibold text-ink-muted">Saldo Server Pusat</p>
+            <p className="text-[11px] text-ink-muted">Gateway & Database</p>
           </div>
         </button>
       </div>
 
-      {/* 3. Re-organized Categorized Navigation System */}
-      <div className="bg-canvas border border-hairline p-2 rounded-2xl shadow-sm space-y-2">
+      {/* 3. Re-organized Categorized Navigation System (Clean, No Emojis) */}
+      <div className="bg-canvas border border-hairline p-2 rounded-2xl shadow-xs space-y-2">
         {/* Category Selector Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-parchment/60 rounded-xl border border-hairline">
           {menuCategories.map(cat => {
@@ -1103,11 +1093,10 @@ export default function AdminPage() {
                     setActiveTab(cat.tabs[0].id);
                   }
                 }}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${isCatActive
-                  ? 'bg-canvas text-primary shadow-sm border border-hairline'
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center ${isCatActive
+                  ? 'bg-canvas text-primary shadow-xs border border-hairline'
                   : 'text-ink-muted hover:text-ink hover:bg-canvas/50'}`}
               >
-                <span>{cat.icon}</span>
                 <span className="truncate">{cat.name}</span>
               </button>
             );
@@ -1122,11 +1111,10 @@ export default function AdminPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 border ${isTabActive
-                  ? 'bg-primary text-white border-primary shadow-sm'
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 border ${isTabActive
+                  ? 'bg-primary text-white border-primary shadow-xs'
                   : 'bg-canvas text-ink-muted border-hairline hover:bg-parchment hover:text-ink'}`}
               >
-                <span>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {tab.badge !== null && (
                   <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black text-white ${tab.badgeColor || 'bg-rose-500'}`}>
@@ -1143,57 +1131,55 @@ export default function AdminPage() {
       {/* TAB 1: ANTREAN PESANAN MANUAL (Transaksional)                             */}
       {/* ========================================================================= */}
       {activeTab === 'pesanan-manual' && (
-        <div className="space-y-6">
-          <Card glass className="p-6 space-y-5">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="space-y-4">
+          <Card glass className="p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
               <div>
-                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                  <span className="text-primary">📥</span> Antrean Pesanan Transaksi
-                </h2>
+                <h2 className="text-lg font-bold text-ink">Antrean Pesanan Transaksi</h2>
                 <p className="text-xs text-ink-muted mt-0.5">Pantau dan proses pesanan IMEI & pengecekan status yang masuk dari pelanggan.</p>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
                 <Button size="sm" variant="outline" onClick={loadManualData} className="text-xs">
-                  🔄 Muat Ulang Antrean
+                  Muat Ulang
                 </Button>
               </div>
             </div>
 
             {/* Filter & Search Bar */}
-            <div className="flex flex-col md:flex-row gap-3 pt-2">
+            <div className="flex flex-col md:flex-row gap-2.5 pt-1">
               <div className="flex-1">
                 <input
                   type="text"
                   placeholder="Cari berdasarkan IMEI, nama user, layanan, atau ID..."
                   value={searchOrder}
                   onChange={(e) => setSearchOrder(e.target.value)}
-                  className="w-full h-10 px-4 rounded-xl border border-hairline bg-canvas text-xs focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  className="w-full h-9 px-3.5 rounded-xl border border-hairline bg-canvas text-xs focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                 />
               </div>
 
-              <div className="flex items-center gap-2 overflow-x-auto">
+              <div className="flex items-center gap-1.5 overflow-x-auto">
                 <button
                   onClick={() => setOrderStatusFilter("all")}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
                 >
                   Semua ({manualOrders.length})
                 </button>
                 <button
                   onClick={() => setOrderStatusFilter("pending")}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-600 border-hairline'}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-700 border-hairline'}`}
                 >
                   Tertunda ({manualOrders.filter(o => o.status === 'pending' || o.status === 'processing').length})
                 </button>
                 <button
                   onClick={() => setOrderStatusFilter("success")}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'success' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-600 border-hairline'}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'success' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-700 border-hairline'}`}
                 >
                   Sukses ({manualOrders.filter(o => o.status === 'success').length})
                 </button>
                 <button
                   onClick={() => setOrderStatusFilter("failed")}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'failed' ? 'bg-rose-600 text-white border-rose-600' : 'bg-canvas text-rose-600 border-hairline'}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'failed' ? 'bg-rose-600 text-white border-rose-600' : 'bg-canvas text-rose-700 border-hairline'}`}
                 >
                   Gagal ({manualOrders.filter(o => o.status === 'failed').length})
                 </button>
@@ -1202,21 +1188,20 @@ export default function AdminPage() {
 
             {/* Order Items */}
             {loadingManual ? (
-              <div className="py-12 text-center text-ink-muted text-sm">Memuat daftar antrean pesanan...</div>
+              <div className="py-12 text-center text-ink-muted text-xs">Memuat daftar antrean pesanan...</div>
             ) : filteredOrders.length === 0 ? (
-              <div className="py-12 text-center border border-dashed rounded-2xl space-y-2">
-                <span className="text-3xl block">🎉</span>
-                <p className="font-bold text-sm text-ink">Tidak ada pesanan pada filter ini</p>
-                <p className="text-xs text-ink-muted">Seluruh antrean telah diproses atau tidak ditemukan hasil pencarian.</p>
+              <div className="py-10 text-center border border-dashed rounded-2xl space-y-1 bg-parchment/20">
+                <p className="font-bold text-xs text-ink">Tidak ada pesanan pada filter ini</p>
+                <p className="text-[11px] text-ink-muted">Seluruh antrean telah diproses atau tidak ditemukan hasil pencarian.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {filteredOrders.map(o => (
-                  <div key={o.id} className="p-4 border border-hairline rounded-2xl bg-canvas space-y-3.5 hover:border-primary/30 transition-colors">
+                  <div key={o.id} className="p-4 border border-hairline rounded-2xl bg-canvas space-y-3 hover:border-primary/30 transition-colors">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-base text-ink">{o.packageName}</span>
+                          <span className="font-bold text-sm text-ink">{o.packageName}</span>
                           <span className="text-xs font-mono text-ink-muted bg-parchment px-2 py-0.5 rounded border border-hairline">
                             #{o.id.substring(0, 14)}
                           </span>
@@ -1225,7 +1210,7 @@ export default function AdminPage() {
                           Pemesan: <span className="font-bold">{o.userName}</span>
                           {o.targetPhone && <span className="ml-1 text-ink-muted">({o.targetPhone})</span>}
                         </p>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
+                        <div className="flex flex-wrap gap-1 mt-1.5">
                           {o.imei?.split(',').map((im: string, i: number) => (
                             <span key={i} className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20 font-mono">
                               {im.trim()}
@@ -1233,18 +1218,18 @@ export default function AdminPage() {
                           ))}
                         </div>
                         {o.speed_option && (
-                          <p className="text-xs font-bold text-primary mt-1.5 flex items-center gap-1">
-                            Kecepatan: <span className="capitalize">{o.speed_option === 'fast' ? '⚡ Fast' : o.speed_option === 'semi' ? '🚀 Semi Fast' : '🐌 Slow'}</span>
+                          <p className="text-xs font-semibold text-primary mt-1">
+                            Opsi Kecepatan: <span className="font-bold">{o.speed_option === 'fast' ? 'Fast (1-3 Jam)' : o.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}</span>
                           </p>
                         )}
                         <p className="text-[11px] text-ink-muted mt-1">{new Date(o.createdAt).toLocaleString('id-ID')}</p>
                       </div>
 
                       <div className="flex sm:flex-col items-end justify-between gap-1.5 shrink-0">
-                        <span className={`px-2.5 py-1 text-xs font-black rounded-full uppercase tracking-wider ${o.status === 'success' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : o.status === 'failed' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
+                        <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase tracking-wider ${o.status === 'success' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : o.status === 'failed' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
                           {o.status}
                         </span>
-                        <span className="text-sm font-black text-ink">
+                        <span className="text-sm font-bold text-ink">
                           Rp {(o.platformFee || 0).toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -1255,7 +1240,7 @@ export default function AdminPage() {
                       <div className="flex gap-4 flex-wrap pt-2 border-t border-hairline/60">
                         {o.user_image && (
                           <div className="space-y-1">
-                            <p className="text-xs font-bold text-ink">Bukti SS *#06#:</p>
+                            <p className="text-xs font-bold text-ink">Bukti Foto *#06#:</p>
                             <div className="flex flex-wrap gap-2">
                               {o.user_image.split(',').map((imgUrl: string, idx: number) => (
                                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -1263,7 +1248,7 @@ export default function AdminPage() {
                                   key={idx}
                                   src={imgUrl}
                                   alt={`Bukti User ${idx + 1}`}
-                                  className="h-20 object-contain rounded-xl border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
+                                  className="h-16 object-contain rounded-xl border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
                                   onClick={() => {
                                     Swal.fire({
                                       imageUrl: imgUrl,
@@ -1281,7 +1266,7 @@ export default function AdminPage() {
                         )}
                         {o.user_image_ceir && (
                           <div className="space-y-1">
-                            <p className="text-xs font-bold text-ink">Bukti SS Pengecekan:</p>
+                            <p className="text-xs font-bold text-ink">Bukti Foto Cek Sinyal:</p>
                             <div className="flex flex-wrap gap-2">
                               {o.user_image_ceir.split(',').map((imgUrl: string, idx: number) => (
                                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -1289,7 +1274,7 @@ export default function AdminPage() {
                                   key={idx}
                                   src={imgUrl}
                                   alt={`Bukti CEIR User ${idx + 1}`}
-                                  className="h-20 object-contain rounded-xl border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
+                                  className="h-16 object-contain rounded-xl border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
                                   onClick={() => {
                                     Swal.fire({
                                       imageUrl: imgUrl,
@@ -1310,12 +1295,12 @@ export default function AdminPage() {
 
                     {/* Result Note if available */}
                     {(o.admin_note || o.admin_image) && (
-                      <div className="p-3 bg-parchment/60 rounded-xl border border-hairline text-xs space-y-1">
-                        <p className="font-bold text-primary">HASIL / CATATAN PROSES:</p>
+                      <div className="p-2.5 bg-parchment/60 rounded-xl border border-hairline text-xs space-y-0.5">
+                        <p className="font-bold text-primary text-[11px] uppercase tracking-wider">Hasil / Catatan Admin:</p>
                         {o.admin_note && <p className="text-ink">{o.admin_note}</p>}
                         {o.admin_image && (
-                          <a href={o.admin_image} target="_blank" rel="noreferrer" className="text-blue-600 underline font-medium block">
-                            Lihat Gambar Bukti Hasil
+                          <a href={o.admin_image} target="_blank" rel="noreferrer" className="text-blue-600 underline font-medium block mt-1">
+                            Buka Lampiran Bukti
                           </a>
                         )}
                       </div>
@@ -1323,28 +1308,28 @@ export default function AdminPage() {
 
                     {/* Action Toolbar */}
                     {manualActionData?.id === o.id ? (
-                      <div className="bg-parchment p-4 rounded-xl space-y-3 mt-3 border border-hairline">
+                      <div className="bg-parchment p-3.5 rounded-xl space-y-2.5 mt-2 border border-hairline">
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-ink">Ubah Status Pengerjaan</label>
                           <select
-                            className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-sm font-semibold"
+                            className="w-full h-9 rounded-lg border border-hairline px-3 bg-canvas text-xs font-bold"
                             value={manualActionData?.status || "pending"}
                             onChange={e => setManualActionData(prev => prev ? { ...prev, status: e.target.value } : null)}
                           >
-                            <option value="pending">🟡 Pending (Menunggu)</option>
-                            <option value="processing">🔵 Processing (Sedang Diproses)</option>
-                            <option value="success">🟢 Success (Selesai & Aktif)</option>
-                            <option value="failed">🔴 Failed (Gagal & Refund Saldo Otomatis)</option>
+                            <option value="pending">Pending (Menunggu)</option>
+                            <option value="processing">Processing (Sedang Diproses)</option>
+                            <option value="success">Success (Selesai & Sinyal Aktif)</option>
+                            <option value="failed">Failed (Gagal & Refund Otomatis)</option>
                           </select>
                         </div>
                         <Input
-                          label="Catatan Admin / Keterangan untuk User"
+                          label="Catatan Admin untuk User"
                           placeholder="Contoh: Sinyal sudah aktif All Operator / Bukti terlampir"
                           value={manualActionData?.note || ""}
                           onChange={e => setManualActionData(prev => prev ? { ...prev, note: e.target.value } : null)}
                         />
                         <div>
-                          <label className="text-xs font-bold text-ink block mb-1">Upload Bukti / Screenshot Hasil (Opsional)</label>
+                          <label className="text-xs font-bold text-ink block mb-1">Lampiran Foto Bukti Hasil (Opsional)</label>
                           <input
                             type="file"
                             className="block w-full text-xs"
@@ -1354,7 +1339,7 @@ export default function AdminPage() {
                         <div className="flex gap-2 pt-1">
                           <Button
                             size="sm"
-                            className="bg-primary text-white"
+                            className="bg-primary text-white text-xs"
                             onClick={async () => {
                               const formData = new FormData();
                               formData.append("status", manualActionData?.status || "pending");
@@ -1373,7 +1358,7 @@ export default function AdminPage() {
                           >
                             Simpan Perubahan
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setManualActionData(null)}>Batal</Button>
+                          <Button size="sm" variant="ghost" className="text-xs" onClick={() => setManualActionData(null)}>Batal</Button>
                         </div>
                       </div>
                     ) : (
@@ -1381,17 +1366,17 @@ export default function AdminPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-primary/5 text-primary border-primary/30 hover:bg-primary hover:text-white"
+                          className="bg-primary/5 text-primary border-primary/30 hover:bg-primary hover:text-white text-xs"
                           onClick={() => setManualActionData({ id: o.id, status: o.status, note: o.admin_note || '', file: null })}
                         >
-                          ⚙️ Proses Pesanan
+                          Proses Pesanan
                         </Button>
 
                         {o.service_type === 'ceir' && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-primary text-primary hover:bg-primary/5"
+                            className="border-primary text-primary hover:bg-primary/5 text-xs"
                             onClick={async () => {
                               const confirm = await Swal.fire({
                                 title: 'Re-check Server Pusat?',
@@ -1414,13 +1399,14 @@ export default function AdminPage() {
                               } catch (e) { Swal.fire({ title: 'Error', text: 'Kesalahan jaringan', icon: 'error' }); }
                             }}
                           >
-                            🔄 Re-check Server Pusat
+                            Cek Ulang Server
                           </Button>
                         )}
 
                         <Button
                           variant="outline"
                           size="sm"
+                          className="text-xs"
                           onClick={() => {
                             const firstImei = o.imei ? o.imei.split(/[\n,]+/)[0].trim() : '';
                             setSelectedInvoiceTrx({
@@ -1435,16 +1421,16 @@ export default function AdminPage() {
                             });
                           }}
                         >
-                          🧾 Cetak Nota
+                          Cetak Nota
                         </Button>
 
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          className="bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 text-xs font-bold"
                           onClick={() => handleAdminQuickShareWA(o)}
                         >
-                          📲 Kirim WA
+                          Kirim WhatsApp
                         </Button>
                       </div>
                     )}
@@ -1457,320 +1443,329 @@ export default function AdminPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: LAYANAN & HARGA IMEI / CEIR (Konfigurasi Produk)                   */}
+      {/* TAB 2: LAYANAN & HARGA IMEI / CEIR (Konfigurasi Produk 2-Kolom)           */}
       {/* ========================================================================= */}
       {activeTab === 'layanan-imei' && (
-        <div className="space-y-6">
-          {/* Status Layanan Toggle */}
-          <Card glass className="p-6 space-y-4">
-            <div className="flex justify-between items-start flex-wrap gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                  <span className="text-primary">🛠️</span> Status Layanan Buka Gembok IMEI
-                </h2>
-                <p className="text-xs text-ink-muted mt-0.5">Buka atau tutup akses pemesanan IMEI secara global untuk seluruh pelanggan.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          
+          {/* Kolom Kiri: Status Layanan, Durasi Paket IMEI, & Kecepatan */}
+          <div className="lg:col-span-6 space-y-4">
+            {/* Status Layanan Toggle */}
+            <Card glass className="p-5 space-y-3.5">
+              <div className="flex justify-between items-start flex-wrap gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-ink">Status Layanan Buka Gembok IMEI</h2>
+                  <p className="text-xs text-ink-muted mt-0.5">Buka atau tutup akses pemesanan IMEI secara global untuk seluruh pelanggan.</p>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    const newStatus = !imeiServiceOpen;
+                    setImeiServiceOpen(newStatus);
+                    await fetch('/api/admin/imei-service-status', {
+                      method: 'POST',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ isOpen: newStatus, note: imeiServiceNote })
+                    });
+                    Swal.fire({ title: 'Tersimpan', text: `Layanan IMEI sekarang ${newStatus ? 'BUKA' : 'TUTUP'}`, icon: 'success', timer: 2000 });
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${imeiServiceOpen ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}
+                >
+                  {imeiServiceOpen ? 'STATUS: BUKA (OPEN)' : 'STATUS: TUTUP (CLOSE)'}
+                </button>
               </div>
 
-              <button
-                onClick={async () => {
-                  const newStatus = !imeiServiceOpen;
-                  setImeiServiceOpen(newStatus);
-                  await fetch('/api/admin/imei-service-status', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ isOpen: newStatus, note: imeiServiceNote })
-                  });
-                  Swal.fire({ title: 'Tersimpan', text: `Layanan IMEI sekarang ${newStatus ? 'BUKA' : 'TUTUP'}`, icon: 'success', timer: 2000 });
-                }}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${imeiServiceOpen ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-rose-600 text-white shadow-rose-600/20'}`}
-              >
-                {imeiServiceOpen ? '🟢 STATUS: BUKA (OPEN)' : '🔴 STATUS: TUTUP (CLOSE)'}
-              </button>
-            </div>
+              <div className="flex gap-2 items-end pt-1">
+                <Input
+                  label="Catatan Khusus saat Layanan Tutup (Opsional)"
+                  placeholder="Contoh: Server sedang maintenance rutin..."
+                  value={imeiServiceNote}
+                  onChange={e => setImeiServiceNote(e.target.value)}
+                />
+                <Button
+                  className="h-10 shrink-0 text-xs"
+                  onClick={async () => {
+                    await fetch('/api/admin/imei-service-status', {
+                      method: 'POST',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ isOpen: imeiServiceOpen, note: imeiServiceNote })
+                    });
+                    Swal.fire({ title: 'Berhasil', text: 'Catatan status IMEI berhasil disimpan!', icon: 'success', timer: 2000 });
+                  }}
+                >
+                  Simpan
+                </Button>
+              </div>
+            </Card>
 
-            <div className="flex gap-2 items-end pt-2">
-              <Input
-                label="Catatan Khusus saat Layanan Tutup (Opsional)"
-                placeholder="Contoh: Server sedang maintenance rutin, buka kembali pukul 14:00..."
-                value={imeiServiceNote}
-                onChange={e => setImeiServiceNote(e.target.value)}
-              />
-              <Button
-                className="h-10 shrink-0"
-                onClick={async () => {
-                  await fetch('/api/admin/imei-service-status', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ isOpen: imeiServiceOpen, note: imeiServiceNote })
-                  });
-                  Swal.fire({ title: 'Berhasil', text: 'Catatan status IMEI berhasil disimpan!', icon: 'success', timer: 2000 });
-                }}
-              >
-                Simpan Catatan
-              </Button>
-            </div>
-          </Card>
+            {/* Kecepatan Pengerjaan */}
+            <Card glass className="p-5 space-y-3.5">
+              <div>
+                <h2 className="text-base font-bold text-ink">Kecepatan Pengerjaan IMEI (Biaya Tambahan)</h2>
+                <p className="text-xs text-ink-muted">Biaya tambahan opsi express saat pelanggan melakukan checkout IMEI.</p>
+              </div>
 
-          {/* Paket Unblock IMEI */}
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink">Daftar Paket Durasi Unblock IMEI</h2>
-            <p className="text-xs text-ink-muted">Kelola pilihan paket garansi durasi aktivasi sinyal yang tampil di menu Buka Gembok IMEI.</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
-              {imeiPackages.map(pkg => (
-                <div key={pkg.id} className="p-3.5 border border-hairline rounded-2xl flex justify-between items-center bg-canvas">
-                  <div>
-                    <p className="font-bold text-sm text-ink">{pkg.duration}</p>
-                    <p className="text-xs font-black text-primary">Rp {pkg.price.toLocaleString('id-ID')}</p>
-                  </div>
-                  <div className="flex gap-2 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                {/* Fast */}
+                <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xs text-ink">Fast (1-3 Jam)</span>
                     <button
-                      onClick={async () => {
-                        await fetch(`/api/admin/imei-packages/${pkg.id}/toggle`, {
+                      onClick={() => {
+                        const updated = { ...pricing, imei_speed_fast_status: pricing.imei_speed_fast_status === 'hidden' ? 'active' : 'hidden' };
+                        setPricing(updated);
+                        autoSavePricing(updated, true);
+                      }}
+                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${pricing.imei_speed_fast_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                    >
+                      {pricing.imei_speed_fast_status !== 'hidden' ? 'Aktif' : 'Hidden'}
+                    </button>
+                  </div>
+                  <Input
+                    placeholder="Harga Rp"
+                    type="number"
+                    value={pricing.imei_speed_fast || ''}
+                    onChange={e => {
+                      const updated = { ...pricing, imei_speed_fast: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                </div>
+
+                {/* Semi Fast */}
+                <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xs text-ink">Semi Fast (1-12 Jam)</span>
+                    <button
+                      onClick={() => {
+                        const updated = { ...pricing, imei_speed_semi_status: pricing.imei_speed_semi_status === 'hidden' ? 'active' : 'hidden' };
+                        setPricing(updated);
+                        autoSavePricing(updated, true);
+                      }}
+                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${pricing.imei_speed_semi_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                    >
+                      {pricing.imei_speed_semi_status !== 'hidden' ? 'Aktif' : 'Hidden'}
+                    </button>
+                  </div>
+                  <Input
+                    placeholder="Harga Rp"
+                    type="number"
+                    value={pricing.imei_speed_semi || ''}
+                    onChange={e => {
+                      const updated = { ...pricing, imei_speed_semi: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                </div>
+
+                {/* Slow */}
+                <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xs text-ink">Standar (1-3 Hari)</span>
+                    <button
+                      onClick={() => {
+                        const updated = { ...pricing, imei_speed_slow_status: pricing.imei_speed_slow_status === 'hidden' ? 'active' : 'hidden' };
+                        setPricing(updated);
+                        autoSavePricing(updated, true);
+                      }}
+                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${pricing.imei_speed_slow_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                    >
+                      {pricing.imei_speed_slow_status !== 'hidden' ? 'Aktif' : 'Hidden'}
+                    </button>
+                  </div>
+                  <Input
+                    placeholder="Harga Rp"
+                    type="number"
+                    value={pricing.imei_speed_slow || ''}
+                    onChange={e => {
+                      const updated = { ...pricing, imei_speed_slow: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* Paket Unblock IMEI */}
+            <Card glass className="p-5 space-y-3.5">
+              <div>
+                <h2 className="text-base font-bold text-ink">Daftar Paket Durasi Unblock IMEI</h2>
+                <p className="text-xs text-ink-muted">Kelola pilihan paket garansi durasi aktivasi sinyal.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                {imeiPackages.map(pkg => (
+                  <div key={pkg.id} className="p-3 border border-hairline rounded-xl flex justify-between items-center bg-canvas">
+                    <div>
+                      <p className="font-bold text-xs text-ink">{pkg.duration}</p>
+                      <p className="text-xs font-bold text-primary">Rp {pkg.price.toLocaleString('id-ID')}</p>
+                    </div>
+                    <div className="flex gap-1.5 items-center">
+                      <button
+                        onClick={async () => {
+                          await fetch(`/api/admin/imei-packages/${pkg.id}/toggle`, {
+                            method: 'PUT',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ isVisible: pkg.isVisible === 1 ? 0 : 1 })
+                          });
+                          loadManualData();
+                        }}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded ${pkg.isVisible === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                      >
+                        {pkg.isVisible === 1 ? 'Aktif' : 'Hidden'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const res = await Swal.fire({ title: "Konfirmasi", text: `Hapus paket ${pkg.duration}?`, icon: "warning", showCancelButton: true });
+                          if (res.isConfirmed) {
+                            await fetch(`/api/admin/imei-packages/${pkg.id}`, { method: 'DELETE', credentials: 'include' });
+                            loadManualData();
+                          }
+                        }}
+                        className="text-rose-500 hover:text-rose-700 font-bold p-1 text-sm"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tambah Paket Baru */}
+              <div className="flex gap-2 items-end pt-2 border-t border-hairline">
+                <Input
+                  label="Durasi Baru (Misal: 6 Bulan)"
+                  value={newImeiPkg.duration}
+                  onChange={e => setNewImeiPkg({ ...newImeiPkg, duration: e.target.value })}
+                />
+                <Input
+                  label="Harga Jual (Rp)"
+                  type="number"
+                  value={newImeiPkg.price}
+                  onChange={e => setNewImeiPkg({ ...newImeiPkg, price: e.target.value })}
+                />
+                <Button
+                  className="h-10 shrink-0 text-xs"
+                  onClick={async () => {
+                    if (!newImeiPkg.duration || !newImeiPkg.price) return Swal.fire({ title: "Info", text: "Isi durasi dan harga", icon: "info" });
+                    await fetch('/api/admin/imei-packages', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration: newImeiPkg.duration, price: parseInt(newImeiPkg.price) }) });
+                    setNewImeiPkg({ duration: "", price: "" });
+                    loadManualData();
+                  }}
+                >
+                  + Tambah
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          {/* Kolom Kanan: Layanan Diagnostik & Server Pusat (CEIR, Bea Cukai, dsb) */}
+          <div className="lg:col-span-6 space-y-4">
+            <Card glass className="p-5 space-y-4">
+              <div className="flex justify-between items-start flex-wrap gap-2 border-b border-hairline pb-3">
+                <div>
+                  <h2 className="text-base font-bold text-ink">Layanan Diagnostik & Server Pusat</h2>
+                  <p className="text-xs text-ink-muted mt-0.5">Atur harga jual untuk Cek Database CEIR, Bea Cukai, dan Barcode.</p>
+                </div>
+                <Button size="sm" variant="outline" className="text-xs" onClick={loadManualData}>Muat Ulang</Button>
+              </div>
+
+              {ceirgoServices.length === 0 ? (
+                <div className="text-center text-ink-muted text-xs py-8 border rounded-2xl border-dashed">
+                  Layanan Server Pusat sedang dimuat atau belum terhubung.
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {ceirgoServices.map((svc) => (
+                      <div key={svc.code} className={`bg-canvas border p-3 rounded-xl flex flex-col gap-2.5 ${ceirgoDisplayCodes.has(svc.code) ? 'border-primary ring-1 ring-primary/30' : 'border-hairline opacity-75'}`}>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-bold text-ink text-xs">{svc.name}</p>
+                            <p className="text-[10px] text-primary font-mono">{svc.code}</p>
+                            <p className="text-[11px] text-ink-muted mt-0.5">Modal: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={ceirgoDisplayCodes.has(svc.code)}
+                              onChange={(e) => {
+                                const newSet = new Set(ceirgoDisplayCodes);
+                                if (e.target.checked) newSet.add(svc.code);
+                                else newSet.delete(svc.code);
+                                setCeirgoDisplayCodes(newSet);
+                              }}
+                            />
+                            <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+                          </label>
+                        </div>
+                        <Input
+                          label="Harga Jual (Rp)"
+                          type="number"
+                          value={ceirgoPricing[svc.code] ?? svc.modalPrice}
+                          onChange={(e) => setCeirgoPricing({ ...ceirgoPricing, [svc.code]: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/admin/ceirgo-display-settings', {
                           method: 'PUT',
                           credentials: 'include',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ isVisible: pkg.isVisible === 1 ? 0 : 1 })
+                          body: JSON.stringify({ cekCeir: Array.from(ceirgoDisplayCodes) })
                         });
-                        loadManualData();
-                      }}
-                      className={`px-2 py-1 text-xs font-bold rounded-lg ${pkg.isVisible === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
-                    >
-                      {pkg.isVisible === 1 ? 'Aktif' : 'Hidden'}
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const res = await Swal.fire({ title: "Konfirmasi", text: `Hapus paket ${pkg.duration}?`, icon: "warning", showCancelButton: true });
-                        if (res.isConfirmed) {
-                          await fetch(`/api/admin/imei-packages/${pkg.id}`, { method: 'DELETE', credentials: 'include' });
-                          loadManualData();
-                        }
-                      }}
-                      className="text-rose-500 hover:text-rose-700 font-bold p-1 text-lg"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Tambah Paket Baru */}
-            <div className="flex gap-2 items-end pt-3 border-t border-hairline">
-              <Input
-                label="Durasi Baru (Misal: 6 Bulan)"
-                value={newImeiPkg.duration}
-                onChange={e => setNewImeiPkg({ ...newImeiPkg, duration: e.target.value })}
-              />
-              <Input
-                label="Harga Jual (Rp)"
-                type="number"
-                value={newImeiPkg.price}
-                onChange={e => setNewImeiPkg({ ...newImeiPkg, price: e.target.value })}
-              />
-              <Button
-                className="h-10 shrink-0"
-                onClick={async () => {
-                  if (!newImeiPkg.duration || !newImeiPkg.price) return Swal.fire({ title: "Info", text: "Isi durasi dan harga", icon: "info" });
-                  await fetch('/api/admin/imei-packages', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration: newImeiPkg.duration, price: parseInt(newImeiPkg.price) }) });
-                  setNewImeiPkg({ duration: "", price: "" });
-                  loadManualData();
-                }}
-              >
-                + Tambah Paket
-              </Button>
-            </div>
-          </Card>
-
-          {/* Kecepatan Pengerjaan */}
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink">Kecepatan Pengerjaan IMEI (Biaya Tambahan)</h2>
-            <p className="text-xs text-ink-muted">Biaya tambahan opsi express saat pelanggan melakukan checkout IMEI.</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-              {/* Fast */}
-              <div className="bg-canvas border border-hairline p-4 rounded-2xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-ink">⚡ Fast (1-3 Jam)</span>
-                  <button
-                    onClick={() => {
-                      const updated = { ...pricing, imei_speed_fast_status: pricing.imei_speed_fast_status === 'hidden' ? 'active' : 'hidden' };
-                      setPricing(updated);
-                      autoSavePricing(updated, true);
+                        const res = await fetch('/api/admin/ceirgo-pricing', {
+                          method: 'POST',
+                          credentials: 'include',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(ceirgoPricing)
+                        });
+                        if (res.ok) Swal.fire({ title: "Info", text: "Harga dan tampilan layanan berhasil disimpan!", icon: "info" });
+                      } catch (e) { Swal.fire({ title: "Info", text: "Error menyimpan", icon: "info" }); }
                     }}
-                    className={`px-2 py-1 text-xs font-bold rounded-lg ${pricing.imei_speed_fast_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                    className="w-full text-xs font-bold"
                   >
-                    {pricing.imei_speed_fast_status !== 'hidden' ? 'Aktif' : 'Hidden'}
-                  </button>
+                    Simpan Pengaturan Layanan Pusat
+                  </Button>
                 </div>
-                <Input
-                  placeholder="Harga Tambahan (Rp)"
-                  type="number"
-                  value={pricing.imei_speed_fast || ''}
-                  onChange={e => {
-                    const updated = { ...pricing, imei_speed_fast: e.target.value };
-                    setPricing(updated);
-                    autoSavePricing(updated);
-                  }}
-                />
-              </div>
+              )}
+            </Card>
+          </div>
 
-              {/* Semi Fast */}
-              <div className="bg-canvas border border-hairline p-4 rounded-2xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-ink">🚀 Semi Fast (1-12 Jam)</span>
-                  <button
-                    onClick={() => {
-                      const updated = { ...pricing, imei_speed_semi_status: pricing.imei_speed_semi_status === 'hidden' ? 'active' : 'hidden' };
-                      setPricing(updated);
-                      autoSavePricing(updated, true);
-                    }}
-                    className={`px-2 py-1 text-xs font-bold rounded-lg ${pricing.imei_speed_semi_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
-                  >
-                    {pricing.imei_speed_semi_status !== 'hidden' ? 'Aktif' : 'Hidden'}
-                  </button>
-                </div>
-                <Input
-                  placeholder="Harga Tambahan (Rp)"
-                  type="number"
-                  value={pricing.imei_speed_semi || ''}
-                  onChange={e => {
-                    const updated = { ...pricing, imei_speed_semi: e.target.value };
-                    setPricing(updated);
-                    autoSavePricing(updated);
-                  }}
-                />
-              </div>
-
-              {/* Slow */}
-              <div className="bg-canvas border border-hairline p-4 rounded-2xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-ink">🐌 Standar (1-3 Hari)</span>
-                  <button
-                    onClick={() => {
-                      const updated = { ...pricing, imei_speed_slow_status: pricing.imei_speed_slow_status === 'hidden' ? 'active' : 'hidden' };
-                      setPricing(updated);
-                      autoSavePricing(updated, true);
-                    }}
-                    className={`px-2 py-1 text-xs font-bold rounded-lg ${pricing.imei_speed_slow_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
-                  >
-                    {pricing.imei_speed_slow_status !== 'hidden' ? 'Aktif' : 'Hidden'}
-                  </button>
-                </div>
-                <Input
-                  placeholder="Harga Tambahan (Rp)"
-                  type="number"
-                  value={pricing.imei_speed_slow || ''}
-                  onChange={e => {
-                    const updated = { ...pricing, imei_speed_slow: e.target.value };
-                    setPricing(updated);
-                    autoSavePricing(updated);
-                  }}
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* Layanan & Harga Server Pusat (CEIR, Bea Cukai, iCloud, Simlock) */}
-          <Card glass className="p-6 space-y-5">
-            <div className="flex justify-between items-start flex-wrap gap-2">
-              <div>
-                <h2 className="text-xl font-bold text-ink">Layanan Diagnostik & Server Pusat</h2>
-                <p className="text-xs text-ink-muted mt-0.5">Atur visibilitas dan harga jual ke pelanggan untuk Cek Database CEIR, Bea Cukai, iCloud/FMI, dan Carrier Simlock.</p>
-              </div>
-              <Button size="sm" variant="outline" onClick={loadManualData}>🔄 Refresh Data</Button>
-            </div>
-
-            {ceirgoServices.length === 0 ? (
-              <div className="text-center text-ink-muted text-sm py-6 border rounded-2xl border-dashed">
-                Layanan Server Pusat sedang dimuat atau API belum terhubung.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {ceirgoServices.map((svc) => (
-                    <div key={svc.code} className={`bg-canvas border p-4 rounded-2xl flex flex-col gap-3 ${ceirgoDisplayCodes.has(svc.code) ? 'border-primary ring-1 ring-primary/30' : 'border-hairline opacity-75'}`}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold text-ink text-sm">{svc.name}</p>
-                          <p className="text-[11px] text-primary font-semibold font-mono">{svc.code}</p>
-                          <p className="text-xs text-ink-muted mt-1">Modal Server: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
-                          {ceirgoPricing[svc.code] != null && (
-                            <p className="text-xs font-bold text-emerald-600 mt-0.5">Harga Jual: Rp {Number(ceirgoPricing[svc.code]).toLocaleString('id-ID')}</p>
-                          )}
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={ceirgoDisplayCodes.has(svc.code)}
-                            onChange={(e) => {
-                              const newSet = new Set(ceirgoDisplayCodes);
-                              if (e.target.checked) newSet.add(svc.code);
-                              else newSet.delete(svc.code);
-                              setCeirgoDisplayCodes(newSet);
-                            }}
-                          />
-                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </div>
-                      <Input
-                        label="Harga Jual ke Pelanggan (Rp)"
-                        type="number"
-                        value={ceirgoPricing[svc.code] ?? svc.modalPrice}
-                        onChange={(e) => setCeirgoPricing({ ...ceirgoPricing, [svc.code]: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  onClick={async () => {
-                    try {
-                      await fetch('/api/admin/ceirgo-display-settings', {
-                        method: 'PUT',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ cekCeir: Array.from(ceirgoDisplayCodes) })
-                      });
-                      const res = await fetch('/api/admin/ceirgo-pricing', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(ceirgoPricing)
-                      });
-                      if (res.ok) Swal.fire({ title: "Info", text: "Harga dan tampilan layanan berhasil disimpan!", icon: "info" });
-                    } catch (e) { Swal.fire({ title: "Info", text: "Error menyimpan", icon: "info" }); }
-                  }}
-                  className="w-full"
-                >
-                  Simpan Harga & Tampilan Layanan
-                </Button>
-              </div>
-            )}
-          </Card>
         </div>
       )}
 
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
       {/* TAB 3: PAKET SUNTIK KUOTA KMSP                                            */}
       {/* ========================================================================= */}
       {activeTab === 'paket' && (
-        <Card glass className="p-6 space-y-6 overflow-visible">
-          <div className="flex justify-between items-center">
+        <Card glass className="p-5 space-y-4 overflow-visible max-w-3xl">
+          <div className="flex justify-between items-center flex-wrap gap-2">
             <div>
-              <h2 className="text-xl font-bold text-ink">Kelola Paket Kuota KMSP</h2>
-              <p className="text-xs text-ink-muted mt-0.5">Sinkronisasi paket dari KMSP dan atur margin laba.</p>
+              <h2 className="text-base font-bold text-ink">Kelola Paket Kuota KMSP</h2>
+              <p className="text-xs text-ink-muted mt-0.5">Sinkronisasi paket dari KMSP dan atur margin laba user/reseller.</p>
             </div>
-            <Button variant="outline" onClick={handleSync} isLoading={syncing}>🔄 Sync KMSP</Button>
+            <Button variant="outline" size="sm" onClick={handleSync} isLoading={syncing} className="text-xs">
+              Sinkronisasi KMSP
+            </Button>
           </div>
           <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
-            <label className="text-sm font-medium text-ink/80">Cari & Pilih Paket</label>
+            <label className="text-xs font-bold text-ink/80">Cari & Pilih Paket</label>
             <input
               type="text"
-              className="w-full h-11 rounded-full border border-hairline bg-canvas px-5 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-10 rounded-xl border border-hairline bg-canvas px-4 text-xs transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
               placeholder="Ketik nama paket atau kode..."
               value={selectedPkg ? selectedPkg.name : searchPkg}
               onChange={(e) => {
@@ -1781,7 +1776,7 @@ export default function AdminPage() {
               onFocus={() => setIsOpenPkg(true)}
             />
             {isOpenPkg && filteredPackages.length > 0 && (
-              <div className="absolute top-[72px] left-0 right-0 max-h-60 overflow-y-auto bg-canvas border border-hairline rounded-xl shadow-lg z-50">
+              <div className="absolute top-[68px] left-0 right-0 max-h-60 overflow-y-auto bg-canvas border border-hairline rounded-xl shadow-lg z-50">
                 {filteredPackages.map((p) => {
                   const originalIdx = packages.findIndex(pkg => pkg.package_code === p.package_code);
                   return (
@@ -1793,8 +1788,8 @@ export default function AdminPage() {
                         setIsOpenPkg(false);
                       }}
                     >
-                      <p className="font-semibold text-sm text-ink">{p.name}</p>
-                      <p className="text-xs text-ink-muted">{p.package_code}</p>
+                      <p className="font-semibold text-xs text-ink">{p.name}</p>
+                      <p className="text-[10px] text-ink-muted">{p.package_code}</p>
                     </div>
                   );
                 })}
@@ -1803,14 +1798,14 @@ export default function AdminPage() {
           </div>
 
           {selectedPkg && (
-            <div className="pt-4 border-t border-hairline space-y-6">
+            <div className="pt-3 border-t border-hairline space-y-4">
               <div>
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Editing Paket</p>
-                <h4 className="font-bold text-lg text-ink">{selectedPkg.name}</h4>
-                <p className="text-sm text-ink-muted">Harga Asli Modal: Rp {selectedPkg.original_price?.toLocaleString('id-ID')}</p>
+                <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">Edit Paket Terpilih</p>
+                <h4 className="font-bold text-sm text-ink">{selectedPkg.name}</h4>
+                <p className="text-xs text-ink-muted">Modal Server Asli: Rp {selectedPkg.original_price?.toLocaleString('id-ID')}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <Input
                   label="Platform Fee (Laba User Rp)"
                   type="number"
@@ -1833,11 +1828,11 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-4">
-                <label className="flex items-center gap-3 cursor-pointer">
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="w-5 h-5 rounded border-hairline text-primary"
+                    className="w-4 h-4 rounded border-hairline text-primary"
                     checked={selectedPkg.isVisible}
                     onChange={(e) => {
                       const newPkgs = [...packages];
@@ -1845,10 +1840,10 @@ export default function AdminPage() {
                       setPackages(newPkgs);
                     }}
                   />
-                  <span className="text-sm font-medium text-ink">Tampilkan Paket ke User (Aktif)</span>
+                  <span className="text-xs font-semibold text-ink">Tampilkan Paket ke Pengguna (Aktif)</span>
                 </label>
               </div>
-              <Button className="w-full" onClick={handleSaveSinglePkg} isLoading={savingPkg}>Simpan Pengaturan Paket</Button>
+              <Button className="w-full text-xs font-bold" onClick={handleSaveSinglePkg} isLoading={savingPkg}>Simpan Pengaturan Paket</Button>
             </div>
           )}
         </Card>
@@ -1858,34 +1853,32 @@ export default function AdminPage() {
       {/* TAB 4: KELOLA PENGGUNA                                                    */}
       {/* ========================================================================= */}
       {activeTab === 'pengguna' && (
-        <Card glass className="p-6 space-y-5">
-          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+        <Card glass className="p-5 space-y-4">
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-3">
             <div>
-              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                <span className="text-primary">👥</span> Kelola Pengguna & Reseller
-              </h2>
-              <p className="text-xs text-ink-muted mt-0.5">Kelola role, saldo akun, persetujuan member, dan reset akun.</p>
+              <h2 className="text-base font-bold text-ink">Kelola Pengguna & Mitra Reseller</h2>
+              <p className="text-xs text-ink-muted mt-0.5">Kelola role, saldo akun, persetujuan member baru, dan penyesuaian akun.</p>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" variant="outline" className="text-xs text-rose-500 border-rose-200 hover:bg-rose-50" onClick={handleDeleteZeroBalance}>
-                🗑 Hapus Semua Saldo 0
+              <Button size="sm" variant="outline" className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50" onClick={handleDeleteZeroBalance}>
+                Hapus Semua Saldo 0
               </Button>
             </div>
           </div>
 
           {/* Search & Role Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
             <div className="flex-1">
               <input
                 type="text"
-                className="w-full h-10 rounded-xl border border-hairline bg-canvas px-4 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                className="w-full h-9 rounded-xl border border-hairline bg-canvas px-3.5 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                 placeholder="Cari berdasarkan nama atau email pengguna..."
                 value={searchUser}
                 onChange={(e) => setSearchUser(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
               <button
                 onClick={() => setUserRoleFilter("all")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${userRoleFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
@@ -1907,24 +1900,24 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {loadingUsers ? <p className="text-sm text-ink-muted py-6 text-center">Memuat daftar pengguna...</p> : (
-            <div className="space-y-3">
+          {loadingUsers ? <p className="text-xs text-ink-muted py-6 text-center">Memuat daftar pengguna...</p> : (
+            <div className="space-y-2.5">
               {paginatedUsers.map(u => (
-                <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border border-hairline rounded-2xl bg-canvas gap-4 hover:border-primary/30 transition-colors">
+                <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between p-3.5 border border-hairline rounded-2xl bg-canvas gap-3 hover:border-primary/30 transition-colors">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-ink">{u.name}</p>
-                      <span className={`px-2 py-0.5 text-[10px] font-black rounded-full uppercase ${u.role === 'admin' ? 'bg-rose-100 text-rose-800' : u.role === 'reseller' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-700'}`}>
+                      <p className="font-bold text-xs text-ink">{u.name}</p>
+                      <span className={`px-2 py-0.5 text-[9px] font-black rounded-full uppercase ${u.role === 'admin' ? 'bg-rose-100 text-rose-800' : u.role === 'reseller' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-700'}`}>
                         {u.role || 'User'}
                       </span>
                     </div>
-                    <p className="text-xs text-ink-muted mt-0.5">{u.email} {u.phone && `• ${u.phone}`}</p>
-                    <p className="text-sm font-black text-primary mt-1">Saldo: Rp {u.balance?.toLocaleString('id-ID')}</p>
+                    <p className="text-[11px] text-ink-muted mt-0.5">{u.email} {u.phone && `• ${u.phone}`}</p>
+                    <p className="text-xs font-bold text-primary mt-1">Saldo: Rp {u.balance?.toLocaleString('id-ID')}</p>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
                     <select
-                      className="h-9 px-3 rounded-lg border border-hairline bg-canvas text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
+                      className="h-8 px-2.5 rounded-lg border border-hairline bg-canvas text-xs font-semibold focus:outline-none focus:border-primary cursor-pointer"
                       value={u.role || 'user'}
                       onChange={async (e) => {
                         try {
@@ -1947,35 +1940,35 @@ export default function AdminPage() {
                     </select>
 
                     {selectedUserId === u.id ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Input type="number" placeholder="Gunakan - untuk kurangi saldo" className="w-52 text-xs" value={balAmount} onChange={(e) => setBalAmount(e.target.value)} />
-                        <Button size="sm" onClick={() => handleUpdateBalance(u.id)}>Simpan</Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setSelectedUserId(null); setBalAmount(""); }}>✕</Button>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Input type="number" placeholder="Gunakan - untuk kurangi" className="w-44 text-xs" value={balAmount} onChange={(e) => setBalAmount(e.target.value)} />
+                        <Button size="sm" className="text-xs h-8" onClick={() => handleUpdateBalance(u.id)}>Simpan</Button>
+                        <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => { setSelectedUserId(null); setBalAmount(""); }}>✕</Button>
                       </div>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={() => setSelectedUserId(u.id)}>Edit Saldo</Button>
+                      <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => setSelectedUserId(u.id)}>Edit Saldo</Button>
                     )}
 
                     {u.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <Button size="sm" className="bg-emerald-600 text-white" onClick={async () => {
+                      <div className="flex gap-1.5">
+                        <Button size="sm" className="bg-emerald-600 text-white text-xs h-8" onClick={async () => {
                           const res = await Swal.fire({ title: "Konfirmasi", text: "Setujui pendaftaran user ini?", icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
                           try {
                             const res = await fetch('/api/admin/approve-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id }) });
                             if (res.ok) loadUsers();
                           } catch (e) { }
-                        }}>Approve</Button>
-                        <Button variant="danger" size="sm" onClick={async () => {
+                        }}>Setujui</Button>
+                        <Button variant="danger" size="sm" className="text-xs h-8" onClick={async () => {
                           const res = await Swal.fire({ title: "Konfirmasi", text: "Tolak user ini?", icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
                           try {
                             const res = await fetch('/api/admin/reject-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id }) });
                             if (res.ok) loadUsers();
                           } catch (e) { }
-                        }}>Reject</Button>
+                        }}>Tolak</Button>
                       </div>
                     )}
 
-                    <Button variant="danger" size="sm" onClick={async () => {
+                    <Button variant="danger" size="sm" className="text-xs h-8" onClick={async () => {
                       const res = await Swal.fire({ title: "Konfirmasi", text: `Yakin ingin menghapus pengguna ${u.name}?`, icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
                       try {
                         const res = await fetch('/api/admin/delete-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id }) });
@@ -1989,12 +1982,12 @@ export default function AdminPage() {
 
               {/* Pagination */}
               {totalUserPages > 1 && (
-                <div className="flex justify-center items-center gap-4 mt-6">
-                  <Button variant="outline" size="sm" onClick={() => setUserPage(p => Math.max(1, p - 1))} disabled={userPage === 1}>
+                <div className="flex justify-center items-center gap-3 mt-4">
+                  <Button variant="outline" size="sm" className="text-xs" onClick={() => setUserPage(p => Math.max(1, p - 1))} disabled={userPage === 1}>
                     Sebelumnya
                   </Button>
                   <span className="text-xs font-semibold text-ink-muted">Halaman {userPage} dari {totalUserPages}</span>
-                  <Button variant="outline" size="sm" onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))} disabled={userPage === totalUserPages}>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))} disabled={userPage === totalUserPages}>
                     Selanjutnya
                   </Button>
                 </div>
@@ -2005,121 +1998,138 @@ export default function AdminPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 5: PUSAT BANTUAN CS & TIKET                                           */}
+      {/* TAB 5: PUSAT BANTUAN CS & TIKET (Side-by-Side Split View)                 */}
       {/* ========================================================================= */}
       {activeTab === 'tiket-bantuan' && (
-        <div className="space-y-6">
-          {adminActiveTicket ? (
-            <Card glass className="p-0 overflow-hidden flex flex-col h-[620px] border-primary/20">
-              <div className="p-4 border-b border-hairline bg-canvas/50 flex justify-between items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Kolom Kiri: Daftar Tiket */}
+          <div className="lg:col-span-5 space-y-3">
+            <Card glass className="p-4 space-y-3">
+              <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="font-bold text-lg text-ink">{adminActiveTicket.subject}</h2>
-                  <p className="text-xs text-ink-muted">User: <span className="font-semibold text-primary">{adminActiveTicket.user_name}</span> ({adminActiveTicket.user_email})</p>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <Button variant="outline" size="sm" onClick={() => setAdminActiveTicket(null)}>← Kembali</Button>
-                  {adminActiveTicket.status !== 'closed' && (
-                    <Button variant="danger" size="sm" onClick={handleAdminCloseTicket}>Tutup Tiket</Button>
-                  )}
+                  <h2 className="text-base font-bold text-ink">Pusat Bantuan CS</h2>
+                  <p className="text-[11px] text-ink-muted">Tiket kendala masuk dari pelanggan.</p>
                 </div>
               </div>
 
-              {/* Messages Thread */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-parchment/30">
-                {adminTicketMessages.map(msg => (
-                  <div key={msg.id} className={`flex flex-col ${msg.sender_role === 'admin' ? 'items-end' : 'items-start'}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
-                        {msg.sender_role === 'admin' ? '👮 Admin Support' : msg.sender_name}
-                      </span>
-                      <span className="text-[10px] text-ink-muted">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div className={`p-3.5 rounded-2xl max-w-[80%] text-sm leading-relaxed ${msg.sender_role === 'admin' ? 'bg-primary text-white rounded-tr-none' : 'bg-canvas border border-hairline text-ink rounded-tl-none'}`}>
-                      {msg.message}
-                    </div>
-                  </div>
-                ))}
-                <div ref={adminMessagesEndRef} />
+              {/* Filter Tabs */}
+              <div className="flex gap-1.5 pt-1">
+                <button
+                  onClick={() => setTicketFilter("all")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${ticketFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
+                >
+                  Semua ({adminTickets.length})
+                </button>
+                <button
+                  onClick={() => setTicketFilter("open")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${ticketFilter === 'open' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-700 border-hairline'}`}
+                >
+                  Terbuka ({adminTickets.filter(t => t.status === 'open' || t.status === 'replied').length})
+                </button>
+                <button
+                  onClick={() => setTicketFilter("closed")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${ticketFilter === 'closed' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-700 border-hairline'}`}
+                >
+                  Ditutup ({adminTickets.filter(t => t.status === 'closed').length})
+                </button>
               </div>
 
-              {/* Reply Box */}
-              {adminActiveTicket.status !== 'closed' ? (
-                <form onSubmit={handleAdminReplyTicket} className="p-4 border-t border-hairline bg-canvas flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Tulis balasan untuk pelanggan..."
-                    value={adminReply}
-                    onChange={e => setAdminReply(e.target.value)}
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-hairline bg-parchment text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <Button type="submit">Kirim Balasan</Button>
-                </form>
-              ) : (
-                <div className="p-4 bg-slate-100 text-center text-xs text-slate-500 font-bold border-t">
-                  Tiket ini telah ditutup.
-                </div>
-              )}
-            </Card>
-          ) : (
-            <Card glass className="p-6 space-y-5">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div>
-                  <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                    <span className="text-primary">💬</span> Pusat Bantuan & Layanan Tiket
-                  </h2>
-                  <p className="text-xs text-ink-muted mt-0.5">Daftar pertanyaan dan kendala langsung dari pelanggan toko.</p>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setTicketFilter("all")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${ticketFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
-                  >
-                    Semua ({adminTickets.length})
-                  </button>
-                  <button
-                    onClick={() => setTicketFilter("open")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${ticketFilter === 'open' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-600 border-hairline'}`}
-                  >
-                    Terbuka ({adminTickets.filter(t => t.status === 'open' || t.status === 'replied').length})
-                  </button>
-                  <button
-                    onClick={() => setTicketFilter("closed")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${ticketFilter === 'closed' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-600 border-hairline'}`}
-                  >
-                    Ditutup ({adminTickets.filter(t => t.status === 'closed').length})
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-2">
+              {/* List */}
+              <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
                 {filteredAdminTickets.length === 0 ? (
-                  <div className="py-12 text-center border border-dashed rounded-2xl text-ink-muted text-sm">
+                  <div className="py-8 text-center border border-dashed rounded-xl text-ink-muted text-xs">
                     Tidak ada tiket pada filter ini.
                   </div>
                 ) : (
-                  filteredAdminTickets.map(t => (
-                    <div
-                      key={t.id}
-                      onClick={() => loadAdminTicketDetail(t.id)}
-                      className="p-4 rounded-2xl border border-hairline bg-canvas hover:border-primary cursor-pointer transition-all flex justify-between items-center gap-4"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-ink text-base">{t.subject}</span>
-                          <span className={`px-2 py-0.5 text-[10px] font-black rounded-full uppercase ${t.status === 'open' ? 'bg-amber-100 text-amber-800' : t.status === 'replied' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                  filteredAdminTickets.map(t => {
+                    const isSelected = adminActiveTicket?.id === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => loadAdminTicketDetail(t.id)}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'bg-canvas border-hairline hover:border-primary/40'}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-ink text-xs truncate">{t.subject}</span>
+                          <span className={`px-2 py-0.2 text-[9px] font-black rounded-full uppercase shrink-0 ${t.status === 'open' ? 'bg-amber-100 text-amber-800' : t.status === 'replied' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
                             {t.status}
                           </span>
                         </div>
-                        <p className="text-xs text-ink-muted mt-1">User: <span className="font-semibold text-primary">{t.user_name}</span> ({t.user_email}) • {new Date(t.created_at).toLocaleString('id-ID')}</p>
+                        <p className="text-[11px] text-ink-muted mt-1 truncate">
+                          {t.user_name} ({t.user_email})
+                        </p>
+                        <p className="text-[10px] text-ink-muted mt-0.5">
+                          {new Date(t.created_at).toLocaleString('id-ID')}
+                        </p>
                       </div>
-                      <span className="text-sm font-bold text-primary shrink-0">Buka Percakapan →</span>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </Card>
-          )}
+          </div>
+
+          {/* Kolom Kanan: Chat Thread & Balasan */}
+          <div className="lg:col-span-7">
+            {adminActiveTicket ? (
+              <Card glass className="p-0 overflow-hidden flex flex-col h-[580px] border-primary/20">
+                <div className="p-3.5 border-b border-hairline bg-canvas flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-sm text-ink">{adminActiveTicket.subject}</h3>
+                    <p className="text-xs text-ink-muted">Pelanggan: <span className="font-semibold text-primary">{adminActiveTicket.user_name}</span> ({adminActiveTicket.user_email})</p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    {adminActiveTicket.status !== 'closed' && (
+                      <Button variant="danger" size="sm" className="text-xs h-8" onClick={handleAdminCloseTicket}>Tutup Tiket</Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Messages Thread */}
+                <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-parchment/30">
+                  {adminTicketMessages.map(msg => (
+                    <div key={msg.id} className={`flex flex-col ${msg.sender_role === 'admin' ? 'items-end' : 'items-start'}`}>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-ink-muted">
+                          {msg.sender_role === 'admin' ? 'Admin Support' : msg.sender_name}
+                        </span>
+                        <span className="text-[9px] text-ink-muted">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className={`p-3 rounded-xl max-w-[85%] text-xs leading-relaxed ${msg.sender_role === 'admin' ? 'bg-primary text-white rounded-tr-none' : 'bg-canvas border border-hairline text-ink rounded-tl-none'}`}>
+                        {msg.message}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={adminMessagesEndRef} />
+                </div>
+
+                {/* Reply Box */}
+                {adminActiveTicket.status !== 'closed' ? (
+                  <form onSubmit={handleAdminReplyTicket} className="p-3 border-t border-hairline bg-canvas flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Tulis balasan untuk pelanggan..."
+                      value={adminReply}
+                      onChange={e => setAdminReply(e.target.value)}
+                      className="flex-1 px-3.5 py-2 rounded-xl border border-hairline bg-parchment text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <Button type="submit" size="sm" className="text-xs">Kirim</Button>
+                  </form>
+                ) : (
+                  <div className="p-3 bg-slate-100 text-center text-xs text-slate-500 font-bold border-t">
+                    Tiket ini telah ditutup.
+                  </div>
+                )}
+              </Card>
+            ) : (
+              <Card glass className="p-8 h-[580px] flex flex-col items-center justify-center text-center space-y-2 border-dashed">
+                <h3 className="font-bold text-sm text-ink">Percakapan Tiket Belum Dipilih</h3>
+                <p className="text-xs text-ink-muted max-w-sm">
+                  Pilih salah satu tiket di sebelah kiri untuk membaca pesan pelanggan dan mengirimkan balasan langsung.
+                </p>
+              </Card>
+            )}
+          </div>
         </div>
       )}
 
@@ -2127,27 +2137,23 @@ export default function AdminPage() {
       {/* TAB 6: BROADCAST PROMO MASSAL                                             */}
       {/* ========================================================================= */}
       {activeTab === 'broadcast-promo' && (
-        <div className="space-y-6">
-          <Card glass className="p-6 space-y-5">
-            <div className="flex justify-between items-center border-b border-hairline pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                  <span className="text-primary">📢</span> Broadcast Pesan Promo & Diskon Event
-                </h2>
-                <p className="text-xs text-ink-muted mt-0.5">Kirim pengumuman promo massal ke Channel/Grup Telegram dan Banner In-App Pengguna.</p>
-              </div>
+        <div className="space-y-4 max-w-4xl">
+          <Card glass className="p-5 space-y-4">
+            <div className="border-b border-hairline pb-3">
+              <h2 className="text-base font-bold text-ink">Broadcast Pesan Promo & Diskon Event</h2>
+              <p className="text-xs text-ink-muted mt-0.5">Kirim pengumuman promo massal ke WhatsApp pelanggan, Telegram, dan Banner Dashboard.</p>
             </div>
 
-            <form onSubmit={handleSendBroadcast} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleSendBroadcast} className="space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-ink block mb-1">Judul Promo / Event</label>
                   <input
                     type="text"
                     value={broadcastData.title}
                     onChange={e => setBroadcastData({ ...broadcastData, title: e.target.value })}
-                    placeholder="Contoh: FLASH SALE 12.12 POTONGAN RP 50.000!"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-hairline bg-canvas text-sm font-bold text-ink outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Contoh: FLASH SALE DISKON PROMO 12.12"
+                    className="w-full px-3.5 py-2 rounded-xl border border-hairline bg-canvas text-xs font-bold text-ink outline-none focus:ring-1 focus:ring-primary"
                     required
                   />
                 </div>
@@ -2159,7 +2165,7 @@ export default function AdminPage() {
                     value={broadcastData.voucherCode}
                     onChange={e => setBroadcastData({ ...broadcastData, voucherCode: e.target.value.toUpperCase() })}
                     placeholder="Contoh: PROMO1212"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-hairline bg-canvas text-sm font-mono font-bold text-primary outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3.5 py-2 rounded-xl border border-hairline bg-canvas text-xs font-mono font-bold text-primary outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -2167,20 +2173,20 @@ export default function AdminPage() {
               <div>
                 <label className="text-xs font-bold text-ink block mb-1">Isi Pesan Broadcast</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={broadcastData.message}
                   onChange={e => setBroadcastData({ ...broadcastData, message: e.target.value })}
                   placeholder="Tuliskan detail promo, syarat ketentuan, dan ajakan checkout ke pelanggan..."
-                  className="w-full p-3.5 rounded-xl border border-hairline bg-canvas text-sm text-ink outline-none focus:ring-1 focus:ring-primary leading-relaxed"
+                  className="w-full p-3 rounded-xl border border-hairline bg-canvas text-xs text-ink outline-none focus:ring-1 focus:ring-primary leading-relaxed"
                   required
                 />
               </div>
 
               {/* Target Channel Switches */}
-              <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline space-y-3">
+              <div className="p-3 rounded-xl bg-parchment/60 border border-hairline space-y-2">
                 <p className="text-xs font-bold text-ink">Saluran Tujuan Broadcast:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <label className="flex items-center gap-3 p-3 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
                     <input
                       type="checkbox"
                       checked={broadcastData.targetWhatsApp}
@@ -2189,11 +2195,11 @@ export default function AdminPage() {
                     />
                     <div>
                       <span className="text-xs font-bold text-ink block">Pesan WhatsApp</span>
-                      <span className="text-[10px] text-ink-muted">Kirim langsung ke WA semua user (Gratis Bot)</span>
+                      <span className="text-[10px] text-ink-muted">Kirim via WA Bot Toko</span>
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-3 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
+                  <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
                     <input
                       type="checkbox"
                       checked={broadcastData.targetTelegram}
@@ -2201,12 +2207,12 @@ export default function AdminPage() {
                       className="w-4 h-4 rounded text-primary"
                     />
                     <div>
-                      <span className="text-xs font-bold text-ink block">Telegram Bot / Group</span>
-                      <span className="text-[10px] text-ink-muted">Kirim notifikasi bot ke grup komunitas</span>
+                      <span className="text-xs font-bold text-ink block">Telegram Channel/Bot</span>
+                      <span className="text-[10px] text-ink-muted">Notifikasi ke grup komunitas</span>
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-3 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
+                  <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
                     <input
                       type="checkbox"
                       checked={broadcastData.targetInApp}
@@ -2214,8 +2220,8 @@ export default function AdminPage() {
                       className="w-4 h-4 rounded text-primary"
                     />
                     <div>
-                      <span className="text-xs font-bold text-ink block">Banner In-App Pengguna</span>
-                      <span className="text-[10px] text-ink-muted">Tampilkan di dashboard semua user</span>
+                      <span className="text-xs font-bold text-ink block">Banner In-App</span>
+                      <span className="text-[10px] text-ink-muted">Tampil di dashboard user</span>
                     </div>
                   </label>
                 </div>
@@ -2224,12 +2230,9 @@ export default function AdminPage() {
               <Button
                 type="submit"
                 isLoading={broadcasting}
-                className="w-full h-12 font-bold bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/20 flex items-center justify-center gap-2 text-sm"
+                className="w-full text-xs font-bold h-10"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-                Kirim Broadcast Promo Sekarang
+                Kirim Broadcast Promo
               </Button>
             </form>
           </Card>
@@ -2240,168 +2243,171 @@ export default function AdminPage() {
       {/* TAB 7: KUPON PROMO DISKON                                                 */}
       {/* ========================================================================= */}
       {activeTab === 'kupon-promo' && (
-        <div className="space-y-6">
-          <Card glass className="p-6 space-y-5">
-            <div>
-              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                <span className="text-primary">🎟️</span> Buat Kupon Diskon Baru
-              </h2>
-              <p className="text-xs text-ink-muted mt-0.5">Atur kode voucher event (12.12, 10.10, dsb), potongan harga, kuota stok, & masa berlaku.</p>
-            </div>
-
-            <form onSubmit={handleCreateCoupon} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Input
-                  label="Kode Kupon / Voucher"
-                  placeholder="Misal: PROMO1212"
-                  value={newCoupon.code}
-                  onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                  required
-                />
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink/80">Tipe Visibilitas Kupon</label>
-                  <select
-                    className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm outline-none focus:ring-1 focus:ring-primary"
-                    value={newCoupon.is_public}
-                    onChange={e => setNewCoupon({ ...newCoupon, is_public: e.target.value })}
-                  >
-                    <option value="1">🌐 Publik (Bisa Dipilih & Diklaim Semua User)</option>
-                    <option value="0">🔒 Rahasia (Hanya Bisa Diketik Manual)</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink/80">Tipe Potongan</label>
-                  <select
-                    className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm outline-none focus:ring-1 focus:ring-primary"
-                    value={newCoupon.discount_type}
-                    onChange={e => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
-                  >
-                    <option value="fixed">Nominal Tetap (Rp)</option>
-                    <option value="percent">Persentase (%)</option>
-                  </select>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-6 space-y-4">
+            <Card glass className="p-5 space-y-4">
+              <div>
+                <h2 className="text-base font-bold text-ink">Buat Kupon Diskon Baru</h2>
+                <p className="text-xs text-ink-muted mt-0.5">Atur kode voucher potongan harga dan batas pemakaian.</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <Input
-                  label={newCoupon.discount_type === 'percent' ? "Nilai Diskon (%)" : "Nilai Diskon (Rp)"}
-                  type="number"
-                  placeholder={newCoupon.discount_type === 'percent' ? "10" : "20000"}
-                  value={newCoupon.discount_value}
-                  onChange={e => setNewCoupon({ ...newCoupon, discount_value: e.target.value })}
-                  required
-                />
-                <Input
-                  label="Minimal Transaksi (Rp)"
-                  type="number"
-                  placeholder="0 (Tanpa minimal)"
-                  value={newCoupon.min_order_amount}
-                  onChange={e => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
-                />
-                <Input
-                  label="Maksimal Diskon (Rp, Jika %)"
-                  type="number"
-                  placeholder="0 (Tanpa batas max)"
-                  value={newCoupon.max_discount_amount}
-                  onChange={e => setNewCoupon({ ...newCoupon, max_discount_amount: e.target.value })}
-                />
-                <Input
-                  label="Batas Pakai Per User"
-                  type="number"
-                  placeholder="1"
-                  value={newCoupon.max_per_user}
-                  onChange={e => setNewCoupon({ ...newCoupon, max_per_user: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Input
-                  label="Total Kuota / Stok Penggunaan"
-                  type="number"
-                  placeholder="100"
-                  value={newCoupon.max_usage_limit}
-                  onChange={e => setNewCoupon({ ...newCoupon, max_usage_limit: e.target.value })}
-                  required
-                />
-                <div>
-                  <label className="text-xs font-medium text-ink/80 block mb-1">Tanggal Mulai (Opsional)</label>
-                  <input
-                    type="date"
-                    className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm outline-none focus:ring-1 focus:ring-primary"
-                    value={newCoupon.start_date}
-                    onChange={e => setNewCoupon({ ...newCoupon, start_date: e.target.value })}
+              <form onSubmit={handleCreateCoupon} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Kode Kupon"
+                    placeholder="Misal: PROMO1212"
+                    value={newCoupon.code}
+                    onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                    required
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-ink/80 block mb-1">Tanggal Berakhir (Opsional)</label>
-                  <input
-                    type="date"
-                    className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm outline-none focus:ring-1 focus:ring-primary"
-                    value={newCoupon.end_date}
-                    onChange={e => setNewCoupon({ ...newCoupon, end_date: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" isLoading={creatingCoupon} className="w-full h-11 font-bold">
-                + Terbitkan Kupon Promo
-              </Button>
-            </form>
-          </Card>
-
-          {/* Daftar Kupon Aktif */}
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink">Daftar Kupon Promo</h2>
-            {loadingCoupons ? <p className="text-sm text-ink-muted">Memuat kupon...</p> : coupons.length === 0 ? (
-              <p className="text-sm text-ink-muted py-4 text-center">Belum ada kupon promo yang dibuat.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {coupons.map(c => (
-                  <div key={c.id} className={`p-4 rounded-2xl border bg-canvas flex flex-col justify-between gap-3 ${c.is_active ? 'border-primary/40' : 'border-hairline opacity-60'}`}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-black text-base text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
-                            {c.code}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            c.is_public === 1 || c.is_public === true || c.is_public === '1'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
-                          }`}>
-                            {c.is_public === 1 || c.is_public === true || c.is_public === '1' ? '🌐 Publik (Klaim)' : '🔒 Rahasia (Ketik)'}
-                          </span>
-                        </div>
-                        <p className="font-bold text-sm text-ink mt-2">
-                          Diskon: {c.discount_type === 'percent' ? `${c.discount_value}%` : `Rp ${Number(c.discount_value).toLocaleString('id-ID')}`}
-                        </p>
-                        <p className="text-xs text-ink-muted mt-0.5">
-                          Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Batas/User: {c.max_per_user || 1}x
-                        </p>
-                        <p className="text-xs text-ink-muted mt-0.5">
-                          Kuota Terpakai: <span className="font-bold text-ink">{c.used_count}</span>/{c.max_usage_limit}
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={() => handleToggleCoupon(c.id, c.is_active)}
-                        className={`px-2.5 py-1 text-xs font-bold rounded-lg ${c.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
-                      >
-                        {c.is_active ? 'Aktif' : 'Nonaktif'}
-                      </button>
-                    </div>
-
-                    <div className="flex justify-end pt-2 border-t border-hairline">
-                      <button onClick={() => handleDeleteCoupon(c.id)} className="text-xs font-bold text-rose-600 hover:text-rose-800">
-                        🗑 Hapus Kupon
-                      </button>
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-ink/80">Tipe Visibilitas</label>
+                    <select
+                      className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
+                      value={newCoupon.is_public}
+                      onChange={e => setNewCoupon({ ...newCoupon, is_public: e.target.value })}
+                    >
+                      <option value="1">Publik (Bisa Dipilih & Diklaim)</option>
+                      <option value="0">Rahasia (Ketik Manual)</option>
+                    </select>
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-ink/80">Tipe Potongan</label>
+                    <select
+                      className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
+                      value={newCoupon.discount_type}
+                      onChange={e => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
+                    >
+                      <option value="fixed">Nominal Tetap (Rp)</option>
+                      <option value="percent">Persentase (%)</option>
+                    </select>
+                  </div>
+                  <Input
+                    label={newCoupon.discount_type === 'percent' ? "Nilai Diskon (%)" : "Nilai Diskon (Rp)"}
+                    type="number"
+                    placeholder={newCoupon.discount_type === 'percent' ? "10" : "20000"}
+                    value={newCoupon.discount_value}
+                    onChange={e => setNewCoupon({ ...newCoupon, discount_value: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    label="Min. Order (Rp)"
+                    type="number"
+                    placeholder="0"
+                    value={newCoupon.min_order_amount}
+                    onChange={e => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
+                  />
+                  <Input
+                    label="Maks. Diskon (Rp)"
+                    type="number"
+                    placeholder="0"
+                    value={newCoupon.max_discount_amount}
+                    onChange={e => setNewCoupon({ ...newCoupon, max_discount_amount: e.target.value })}
+                  />
+                  <Input
+                    label="Batas/User"
+                    type="number"
+                    placeholder="1"
+                    value={newCoupon.max_per_user}
+                    onChange={e => setNewCoupon({ ...newCoupon, max_per_user: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    label="Total Kuota Stok"
+                    type="number"
+                    placeholder="100"
+                    value={newCoupon.max_usage_limit}
+                    onChange={e => setNewCoupon({ ...newCoupon, max_usage_limit: e.target.value })}
+                    required
+                  />
+                  <div>
+                    <label className="text-[11px] font-semibold text-ink/80 block mb-1">Mulai (Opsional)</label>
+                    <input
+                      type="date"
+                      className="w-full h-10 rounded-lg border border-hairline px-2 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                      value={newCoupon.start_date}
+                      onChange={e => setNewCoupon({ ...newCoupon, start_date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-ink/80 block mb-1">Berakhir (Opsional)</label>
+                    <input
+                      type="date"
+                      className="w-full h-10 rounded-lg border border-hairline px-2 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                      value={newCoupon.end_date}
+                      onChange={e => setNewCoupon({ ...newCoupon, end_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" isLoading={creatingCoupon} className="w-full text-xs font-bold h-10 mt-1">
+                  + Terbitkan Kupon Promo
+                </Button>
+              </form>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-6 space-y-4">
+            <Card glass className="p-5 space-y-3.5">
+              <h2 className="text-base font-bold text-ink">Daftar Kupon Promo Aktif</h2>
+              {loadingCoupons ? <p className="text-xs text-ink-muted">Memuat kupon...</p> : coupons.length === 0 ? (
+                <p className="text-xs text-ink-muted py-6 text-center border border-dashed rounded-xl">Belum ada kupon promo yang dibuat.</p>
+              ) : (
+                <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+                  {coupons.map(c => (
+                    <div key={c.id} className={`p-3 rounded-xl border bg-canvas flex flex-col justify-between gap-2 ${c.is_active ? 'border-primary/40' : 'border-hairline opacity-60'}`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                              {c.code}
+                            </span>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                              c.is_public === 1 || c.is_public === true || c.is_public === '1'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}>
+                              {c.is_public === 1 || c.is_public === true || c.is_public === '1' ? 'Publik' : 'Rahasia'}
+                            </span>
+                          </div>
+                          <p className="font-bold text-xs text-ink mt-1.5">
+                            Diskon: {c.discount_type === 'percent' ? `${c.discount_value}%` : `Rp ${Number(c.discount_value).toLocaleString('id-ID')}`}
+                          </p>
+                          <p className="text-[11px] text-ink-muted mt-0.5">
+                            Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Batas/User: {c.max_per_user || 1}x
+                          </p>
+                          <p className="text-[11px] text-ink-muted mt-0.5">
+                            Terpakai: <span className="font-bold text-ink">{c.used_count}</span>/{c.max_usage_limit}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleCoupon(c.id, c.is_active)}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${c.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                          >
+                            {c.is_active ? 'Aktif' : 'Nonaktif'}
+                          </button>
+                          <button onClick={() => handleDeleteCoupon(c.id)} className="text-xs font-bold text-rose-600 hover:text-rose-800 p-1">
+                            Hapus
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
       )}
 
@@ -2409,36 +2415,34 @@ export default function AdminPage() {
       {/* TAB 8: PROGRAM REFERRAL                                                   */}
       {/* ========================================================================= */}
       {activeTab === 'referral' && (
-        <div className="space-y-6">
-          <Card glass className="p-6 space-y-6">
+        <div className="space-y-4 max-w-3xl">
+          <Card glass className="p-5 space-y-4">
             <div>
-              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                <span className="text-primary">🤝</span> Pengaturan Sistem Referral & Komisi
-              </h2>
-              <p className="text-xs text-ink-muted mt-0.5">Kelola besaran komisi saldo untuk pengguna yang mengajak orang lain serta diskon untuk member baru.</p>
+              <h2 className="text-base font-bold text-ink">Pengaturan Sistem Referral & Komisi</h2>
+              <p className="text-xs text-ink-muted mt-0.5">Kelola besaran komisi saldo untuk mitra referral dan diskon member baru.</p>
             </div>
 
-            <form onSubmit={handleSaveRefSettings} className="space-y-5">
-              <div className="p-4 rounded-2xl bg-canvas border border-hairline space-y-3">
+            <form onSubmit={handleSaveRefSettings} className="space-y-4">
+              <div className="p-3.5 rounded-xl bg-canvas border border-hairline space-y-2">
                 <label className="flex items-center justify-between cursor-pointer">
                   <div>
-                    <p className="font-bold text-sm text-ink">Aktifkan Sistem Referral</p>
-                    <p className="text-xs text-ink-muted">Jika diaktifkan, setiap pengguna akan memiliki kode referral unik.</p>
+                    <p className="font-bold text-xs text-ink">Aktifkan Sistem Referral</p>
+                    <p className="text-[11px] text-ink-muted">Jika aktif, seluruh pengguna mendapatkan kode referral unik.</p>
                   </div>
                   <input
                     type="checkbox"
                     checked={refSettings.referral_enabled === 'true' || refSettings.referral_enabled === true}
                     onChange={e => setRefSettings({ ...refSettings, referral_enabled: e.target.checked ? 'true' : 'false' })}
-                    className="w-5 h-5 text-primary rounded border-hairline"
+                    className="w-4 h-4 text-primary rounded border-hairline"
                   />
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink/80">Tipe Komisi Upline</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink/80">Tipe Komisi Upline</label>
                   <select
-                    className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary font-medium"
                     value={refSettings.referral_commission_type || 'fixed'}
                     onChange={e => setRefSettings({ ...refSettings, referral_commission_type: e.target.value })}
                   >
@@ -2457,7 +2461,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Diskon Saldo Pengguna Baru (Rp)"
                   type="number"
@@ -2467,7 +2471,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <Button type="submit" isLoading={savingRefSettings} className="w-full h-12 font-bold">
+              <Button type="submit" isLoading={savingRefSettings} className="w-full text-xs font-bold h-10">
                 Simpan Pengaturan Referral
               </Button>
             </form>
@@ -2476,352 +2480,357 @@ export default function AdminPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 9: PENGATURAN UMUM & SISTEM                                           */}
+      {/* TAB 9: PENGATURAN UMUM & SISTEM (2-Kolom Bento Grid)                      */}
       {/* ========================================================================= */}
       {activeTab === 'pengaturan' && (
-        <div className="space-y-6">
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-              <span className="text-primary">💳</span> Saldo Modal Provider
-            </h2>
-            <p className="text-sm text-ink-muted">Sisa saldo di server pusat penyedia layanan.</p>
-            <div className="space-y-3 mt-4">
-              <div className="flex justify-between items-center p-3.5 bg-canvas border border-hairline rounded-xl">
-                <div className="font-bold text-sm">🌐 KMSP Store</div>
-                <div className="font-black text-primary">Rp {providerBalances.kmsp !== null ? providerBalances.kmsp?.toLocaleString('id-ID') : '...'}</div>
-              </div>
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3.5 bg-canvas border border-hairline rounded-xl gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          
+          {/* Kolom Kiri: WhatsApp Bot Toko, External Gateway, & Payment Method */}
+          <div className="lg:col-span-6 space-y-4">
+            {/* WhatsApp Bot Baileys */}
+            <Card glass className="p-5 space-y-4 border-emerald-500/30">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                 <div>
-                  <div className="font-bold text-sm flex items-center gap-1.5">📱 Server Pusat</div>
-                  <div className="font-black text-primary">Rp {providerBalances.ceirgo !== null ? providerBalances.ceirgo?.toLocaleString('id-ID') : '...'}</div>
+                  <h2 className="text-base font-bold text-ink">WhatsApp Bot Toko (Gratis Engine)</h2>
+                  <p className="text-xs text-ink-muted mt-0.5">Tautkan nomor WhatsApp toko untuk kirim nota otomatis.</p>
                 </div>
-                <Button size="sm" onClick={() => setShowCeirgoTopUp(true)}>Isi Saldo</Button>
-              </div>
-            </div>
-          </Card>
 
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink">Payment Gateway (Top Up Saldo)</h2>
-            <p className="text-sm text-ink-muted">Pilih gateway pembayaran QRIS yang aktif untuk deposit saldo pengguna.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setPaymentGateway("orkut")}
-                className={`p-4 rounded-2xl border text-left transition-all ${paymentGateway === 'orkut' ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
-              >
-                <div className="font-bold text-sm">🏦 ORKUT (QRIS Statis)</div>
-                <div className="text-xs text-ink-muted mt-1">Polling via ORKUT API, kode unik otomatis</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentGateway("gopay")}
-                className={`p-4 rounded-2xl border text-left transition-all ${paymentGateway === 'gopay' ? 'border-primary bg-primary/5 shadow-sm ring-2 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
-              >
-                <div className="font-bold text-sm">💚 GoPay Gateway</div>
-                <div className="text-xs text-ink-muted mt-1">QRIS dinamis, nominal tepat, auto-detect</div>
-              </button>
-            </div>
-            <Button
-              className="w-full"
-              isLoading={savingGateway}
-              onClick={async () => {
-                setSavingGateway(true);
-                try {
-                  const res = await fetch('/api/admin/payment-gateway', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ gateway: paymentGateway })
-                  });
-                  const data = await res.json();
-                  if (res.ok && data.status) Swal.fire({ title: "Info", text: data.message, icon: "info" });
-                  else Swal.fire({ title: "Info", text: data.message || 'Gagal menyimpan', icon: "info" });
-                } catch (e) { Swal.fire({ title: "Info", text: 'Error menyimpan gateway', icon: "info" }); }
-                finally { setSavingGateway(false); }
-              }}
-            >
-              Simpan Gateway Aktif
-            </Button>
-          </Card>
-
-          {/* CARD 1: WHATSAPP BOT BAILEYS (100% GRATIS & UNLIMITED) */}
-          <Card glass className="p-6 space-y-5 border-emerald-500/30">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-              <div>
-                <h2 className="text-xl font-bold flex items-center gap-2 text-ink">
-                  <span className="text-emerald-500">🤖</span> WhatsApp Bot Toko (100% Gratis Selamanya)
-                </h2>
-                <p className="text-xs text-ink-muted mt-0.5">Tautkan nomor WhatsApp toko Anda langsung ke server website tanpa pihak ketiga & tanpa biaya langganan.</p>
+                <div>
+                  {baileysStatus.isConnected ? (
+                    <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Terhubung: +{baileysStatus.connectedPhone}
+                    </span>
+                  ) : baileysStatus.state === 'qr_ready' ? (
+                    <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                      Menunggu Scan QR
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                      Belum Login
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div>
-                {baileysStatus.isConnected ? (
-                  <span className="px-3 py-1 text-xs font-black rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 shadow-sm">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Terhubung: +{baileysStatus.connectedPhone}
-                  </span>
-                ) : baileysStatus.state === 'qr_ready' ? (
-                  <span className="px-3 py-1 text-xs font-black rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1.5 animate-bounce">
-                    🟡 Menunggu Scan QR
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                    ⚪ Belum Login
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Content Area Based on Connection State */}
-            {baileysStatus.isConnected ? (
-              <div className="p-5 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2.5 bg-emerald-500 text-white rounded-xl text-xl">✅</div>
+              {/* State Area */}
+              {baileysStatus.isConnected ? (
+                <div className="p-4 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-3">
                   <div>
-                    <h3 className="font-bold text-sm text-emerald-950">WhatsApp Bot Siap & Aktif!</h3>
-                    <p className="text-xs text-emerald-800 mt-0.5">
-                      Nomor <b>+{baileysStatus.connectedPhone}</b> terhubung langsung ke backend server. Seluruh pengiriman nota dan update pesanan akan dikirim via nomor ini secara otomatis tanpa batasan kuota.
+                    <h3 className="font-bold text-xs text-emerald-950">WhatsApp Bot Aktif (+{baileysStatus.connectedPhone})</h3>
+                    <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
+                      Pesan nota transaksi dan update pengerjaan pesanan otomatis terkirim melalui nomor ini.
                     </p>
                   </div>
-                </div>
 
-                <div className="flex gap-2 flex-wrap pt-2">
-                  <Button
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 text-xs"
-                    onClick={async () => {
-                      const { value: phone } = await Swal.fire({
-                        title: "Tes WhatsApp Bot",
-                        input: "text",
-                        inputLabel: "Masukkan nomor WhatsApp tujuan (misal: 08123456789):",
-                        inputPlaceholder: "08xxxxxxxxxx",
-                        showCancelButton: true,
-                        confirmButtonText: "Kirim Pesan Tes 🚀",
-                        cancelButtonText: "Batal",
-                        inputValidator: (val) => {
-                          if (!val || val.replace(/\D/g, '').length < 9) return "Nomor WA tidak valid!";
-                        }
-                      });
-                      if (!phone) return;
-
-                      try {
-                        Swal.showLoading();
-                        const res = await fetch('/api/admin/baileys/test', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          credentials: 'include',
-                          body: JSON.stringify({ targetPhone: phone })
+                  <div className="flex gap-2 flex-wrap pt-1">
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+                      onClick={async () => {
+                        const { value: phone } = await Swal.fire({
+                          title: "Tes WhatsApp Bot",
+                          input: "text",
+                          inputLabel: "Nomor WhatsApp tujuan (misal: 08123456789):",
+                          inputPlaceholder: "08xxxxxxxxxx",
+                          showCancelButton: true,
+                          confirmButtonText: "Kirim Pesan Tes",
+                          cancelButtonText: "Batal",
+                          inputValidator: (val) => {
+                            if (!val || val.replace(/\D/g, '').length < 9) return "Nomor WA tidak valid!";
+                          }
                         });
-                        const d = await res.json();
-                        if (res.ok && d.status) {
-                          Swal.fire({ title: "Berhasil! 🚀", text: d.message, icon: "success" });
-                        } else {
-                          Swal.fire({ title: "Gagal", text: d.message || "Gagal mengirim pesan tes.", icon: "error" });
+                        if (!phone) return;
+
+                        try {
+                          Swal.showLoading();
+                          const res = await fetch('/api/admin/baileys/test', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ targetPhone: phone })
+                          });
+                          const d = await res.json();
+                          if (res.ok && d.status) {
+                            Swal.fire({ title: "Berhasil!", text: d.message, icon: "success" });
+                          } else {
+                            Swal.fire({ title: "Gagal", text: d.message || "Gagal mengirim pesan tes.", icon: "error" });
+                          }
+                        } catch (e) {
+                          Swal.fire({ title: "Error", text: "Kesalahan jaringan", icon: "error" });
                         }
-                      } catch (e) {
-                        Swal.fire({ title: "Error", text: "Kesalahan jaringan", icon: "error" });
-                      }
+                      }}
+                    >
+                      Tes Kirim Pesan
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      isLoading={loadingBaileys}
+                      onClick={handleLogoutBaileys}
+                      className="text-xs h-8"
+                    >
+                      Putus Koneksi / Logout
+                    </Button>
+                  </div>
+                </div>
+              ) : baileysStatus.qrCode ? (
+                <div className="p-4 bg-canvas border border-hairline rounded-xl flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="space-y-0.5">
+                    <h3 className="font-bold text-xs text-ink">Pindai Kode QR dengan WhatsApp</h3>
+                    <p className="text-[11px] text-ink-muted">
+                      Buka WhatsApp &gt; Perangkat Tertaut &gt; Tautkan Perangkat
+                    </p>
+                  </div>
+
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <div className="p-2 bg-white border border-emerald-400 rounded-xl shadow-xs">
+                    <img
+                      src={baileysStatus.qrCode}
+                      alt="WhatsApp QR Code"
+                      className="w-48 h-48 object-contain"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      isLoading={loadingBaileys}
+                      onClick={() => handleInitBaileys(true)}
+                      className="text-xs h-8"
+                    >
+                      Buat Ulang QR
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleLogoutBaileys}
+                      className="text-xs h-8 text-rose-600"
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-parchment/60 border border-hairline rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                  <div>
+                    <h3 className="font-bold text-xs text-ink">Tautkan WhatsApp Toko</h3>
+                    <p className="text-[11px] text-ink-muted">
+                      Hasilkan Kode QR lalu scan langsung dari aplikasi WhatsApp di HP.
+                    </p>
+                  </div>
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0 h-8"
+                    isLoading={loadingBaileys}
+                    onClick={() => handleInitBaileys(false)}
+                  >
+                    Tautkan WhatsApp (Scan QR)
+                  </Button>
+                </div>
+              )}
+
+              {/* Toggle Auto Send */}
+              <div className="flex items-center justify-between p-3 border border-hairline rounded-xl bg-canvas">
+                <div>
+                  <p className="font-bold text-xs text-ink">Auto Kirim Notifikasi WhatsApp</p>
+                  <p className="text-[11px] text-ink-muted">Kirim nota & link garansi otomatis saat pesanan sukses.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={waAutoSend}
+                    onChange={async (e) => {
+                      const newAuto = e.target.checked;
+                      setWaAutoSend(newAuto);
+                      await fetch('/api/admin/whatsapp-settings', {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: waToken, url: waUrl, autoSend: newAuto })
+                      });
+                      Swal.fire({ title: "Tersimpan", text: `Auto-send WhatsApp ${newAuto ? 'AKTIF' : 'NONAKTIF'}`, icon: "success", timer: 1500 });
                     }}
-                  >
-                    🧪 Tes Kirim Pesan
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    isLoading={loadingBaileys}
-                    onClick={handleLogoutBaileys}
-                    className="text-xs"
-                  >
-                    🔌 Putus Koneksi / Logout
-                  </Button>
-                </div>
-              </div>
-            ) : baileysStatus.qrCode ? (
-              <div className="p-6 bg-canvas border border-hairline rounded-2xl flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-                <div className="space-y-1">
-                  <h3 className="font-black text-base text-ink">Pindai Kode QR dengan WhatsApp</h3>
-                  <p className="text-xs text-ink-muted max-w-md">
-                    Buka WhatsApp di HP Anda &gt; Menu Titik Tiga / Pengaturan &gt; <b>Perangkat Tertaut</b> &gt; <b>Tautkan Perangkat</b> &gt; Arahkan kamera ke QR di bawah:
-                  </p>
-                </div>
-
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <div className="p-3 bg-white border-2 border-emerald-500/40 rounded-2xl shadow-md">
-                  <img
-                    src={baileysStatus.qrCode}
-                    alt="WhatsApp QR Code"
-                    className="w-56 h-56 object-contain"
                   />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    isLoading={loadingBaileys}
-                    onClick={() => handleInitBaileys(true)}
-                    className="text-xs"
-                  >
-                    🔄 Buat Ulang QR
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleLogoutBaileys}
-                    className="text-xs text-rose-600"
-                  >
-                    Batal
-                  </Button>
-                </div>
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
               </div>
-            ) : (
-              <div className="p-5 bg-parchment/60 border border-hairline rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div className="space-y-1">
-                  <h3 className="font-bold text-sm text-ink">Tautkan WhatsApp Toko Sekarang</h3>
-                  <p className="text-xs text-ink-muted">
-                    Klik tombol di samping untuk menghasilkan Kode QR, lalu scan dari aplikasi WhatsApp di HP Anda.
-                  </p>
-                </div>
-                <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0 shadow-sm"
-                  isLoading={loadingBaileys}
-                  onClick={() => handleInitBaileys(false)}
-                >
-                  📱 Tautkan WhatsApp (Scan QR)
-                </Button>
-              </div>
-            )}
+            </Card>
 
-            {/* Toggle Auto Send */}
-            <div className="flex items-center justify-between p-4 border border-hairline rounded-2xl bg-canvas">
+            {/* Fallback REST API */}
+            <Card glass className="p-5 space-y-3">
               <div>
-                <p className="font-bold text-sm text-ink">Auto Kirim Notifikasi WhatsApp</p>
-                <p className="text-xs text-ink-muted">Kirim pesan otomatis berisi nota & link garansi ke WhatsApp pembeli saat pesanan manual berstatus sukses.</p>
+                <h2 className="text-base font-bold text-ink">Fallback REST API Gateway (Opsional)</h2>
+                <p className="text-xs text-ink-muted mt-0.5">Cadangan token pihak ketiga (Fonnte / Wablas).</p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={waAutoSend}
-                  onChange={async (e) => {
-                    const newAuto = e.target.checked;
-                    setWaAutoSend(newAuto);
-                    await fetch('/api/admin/whatsapp-settings', {
-                      method: 'PUT',
-                      credentials: 'include',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ token: waToken, url: waUrl, autoSend: newAuto })
-                    });
-                    Swal.fire({ title: "Tersimpan", text: `Auto-send WhatsApp ${newAuto ? 'AKTIF' : 'NONAKTIF'}`, icon: "success", timer: 1500 });
-                  }}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-              </label>
-            </div>
-          </Card>
 
-          {/* CARD 2: EXTERNAL REST API GATEWAY (OPSIONAL / FALLBACK) */}
-          <Card glass className="p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-bold flex items-center gap-2 text-ink">
-                <span>🌐</span> Fallback REST API Gateway (Opsional)
-              </h2>
-              <p className="text-xs text-ink-muted mt-0.5">Jika Anda juga memiliki API Token dari Fonnte / Wablas, Anda dapat mengisinya di sini sebagai cadangan.</p>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-ink block mb-1">WhatsApp API Token / Key</label>
-                <input
-                  type="text"
-                  className="w-full p-3 border border-hairline rounded-xl bg-canvas text-sm focus:outline-none focus:ring-1 focus:ring-primary font-mono"
-                  placeholder="Contoh: 1a2b3c4d5e6f7g8h9i0j..."
+              <div className="space-y-2.5">
+                <Input
+                  label="API Token / Key"
+                  placeholder="Contoh: 1a2b3c4d5e6f..."
                   value={waToken}
                   onChange={(e) => setWaToken(e.target.value)}
                 />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-ink block mb-1">WhatsApp Gateway API URL Endpoint</label>
-                <input
-                  type="text"
-                  className="w-full p-3 border border-hairline rounded-xl bg-canvas text-sm focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                <Input
+                  label="API URL Endpoint"
                   placeholder="https://api.fonnte.com/send"
                   value={waUrl}
                   onChange={(e) => setWaUrl(e.target.value)}
                 />
               </div>
-            </div>
 
-            <Button
-              className="w-full"
-              variant="outline"
-              isLoading={savingWhatsApp}
-              onClick={handleSaveWhatsAppSettings}
-            >
-              Simpan Fallback Gateway
-            </Button>
-          </Card>
+              <Button
+                className="w-full text-xs"
+                variant="outline"
+                isLoading={savingWhatsApp}
+                onClick={handleSaveWhatsAppSettings}
+              >
+                Simpan Fallback Gateway
+              </Button>
+            </Card>
 
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink">Pengumuman Sistem Banner</h2>
-            <textarea
-              className="w-full p-4 border border-hairline rounded-xl bg-canvas text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-              rows={4}
-              placeholder="Masukkan pengumuman penting di sini..."
-              value={announcement}
-              onChange={(e) => setAnnouncement(e.target.value)}
-            />
-            <Button onClick={handleSaveAnnouncement} isLoading={savingAnn}>Simpan Pengumuman</Button>
-          </Card>
-
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink">Pengaturan Menu Sidebar</h2>
-            <p className="text-sm text-ink-muted">Atur visibilitas menu di sidebar pengguna.</p>
-            <div className="flex items-center justify-between p-4 border border-hairline rounded-xl bg-canvas">
+            {/* Payment Gateway Selector */}
+            <Card glass className="p-5 space-y-3.5">
               <div>
-                <p className="font-bold text-ink">Menu Suntik Kuota</p>
-                <p className="text-xs text-ink-muted">Tampilkan menu Suntik Kuota di sidebar.</p>
+                <h2 className="text-base font-bold text-ink">Payment Gateway (Top Up Saldo)</h2>
+                <p className="text-xs text-ink-muted">Pilih gateway QRIS yang aktif untuk deposit pengguna.</p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={showBeliPaket} onChange={(e) => setShowBeliPaket(e.target.checked)} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-            <Button className="w-full" onClick={handleSaveMenuSettings} isLoading={savingMenuSettings}>Simpan Pengaturan Menu</Button>
-          </Card>
 
-          <Card glass className="p-6 space-y-4">
-            <h2 className="text-xl font-bold text-ink">Database & Sistem</h2>
-            <p className="text-sm text-ink-muted">Backup semua data (pengguna, transaksi, paket) ke file .sqlite aman.</p>
-            <a href="/api/admin/backup-database" download>
-              <Button variant="outline" className="w-full">Unduh Backup Database (.sqlite)</Button>
-            </a>
-
-            <div className="pt-4 mt-4 border-t border-hairline space-y-4">
-              <div>
-                <h3 className="text-md font-bold text-ink">Tarik Update Server (Auto Deploy)</h3>
-                <p className="text-xs text-ink-muted">Tarik kode terbaru dari GitHub, build ulang UI, dan restart server otomatis tanpa downtime panjang.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentGateway("orkut")}
+                  className={`p-3 rounded-xl border text-left transition-all ${paymentGateway === 'orkut' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
+                >
+                  <div className="font-bold text-xs text-ink">ORKUT (QRIS Statis)</div>
+                  <div className="text-[10px] text-ink-muted mt-0.5">Polling kode unik otomatis</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentGateway("gopay")}
+                  className={`p-3 rounded-xl border text-left transition-all ${paymentGateway === 'gopay' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
+                >
+                  <div className="font-bold text-xs text-ink">GoPay Gateway</div>
+                  <div className="text-[10px] text-ink-muted mt-0.5">QRIS dinamis auto-detect</div>
+                </button>
               </div>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0" 
-                onClick={() => {
-                  Swal.fire({
-                    title: 'Mulai Auto Deploy?',
-                    text: 'Proses ini memakan CPU server beberapa saat untuk rebuild UI dan restart server otomatis.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Ya, Jalankan Deploy',
-                    cancelButtonText: 'Batal'
-                  }).then((res) => {
-                    if (res.isConfirmed) startDeploy();
-                  });
+
+              <Button
+                className="w-full text-xs font-bold"
+                isLoading={savingGateway}
+                onClick={async () => {
+                  setSavingGateway(true);
+                  try {
+                    const res = await fetch('/api/admin/payment-gateway', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ gateway: paymentGateway })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status) Swal.fire({ title: "Info", text: data.message, icon: "info" });
+                    else Swal.fire({ title: "Info", text: data.message || 'Gagal menyimpan', icon: "info" });
+                  } catch (e) { Swal.fire({ title: "Info", text: 'Error menyimpan gateway', icon: "info" }); }
+                  finally { setSavingGateway(false); }
                 }}
               >
-                🚀 Jalankan Auto Deploy Sekarang
+                Simpan Gateway Aktif
               </Button>
-            </div>
-          </Card>
+            </Card>
+          </div>
+
+          {/* Kolom Kanan: Saldo Modal, Pengumuman, Menu, Database & Deploy */}
+          <div className="lg:col-span-6 space-y-4">
+            {/* Saldo Modal Provider */}
+            <Card glass className="p-5 space-y-3">
+              <div>
+                <h2 className="text-base font-bold text-ink">Saldo Modal Provider</h2>
+                <p className="text-xs text-ink-muted">Sisa saldo di server pusat penyedia.</p>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center p-3 bg-canvas border border-hairline rounded-xl">
+                  <div className="font-bold text-xs">KMSP Store</div>
+                  <div className="font-bold text-xs text-primary">Rp {providerBalances?.kmsp != null ? Number(providerBalances.kmsp).toLocaleString('id-ID') : '...'}</div>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-canvas border border-hairline rounded-xl">
+                  <div>
+                    <div className="font-bold text-xs">Server Pusat (CEIR/IMEI)</div>
+                    <div className="font-bold text-xs text-primary">Rp {providerBalances?.ceirgo != null ? Number(providerBalances.ceirgo).toLocaleString('id-ID') : '...'}</div>
+                  </div>
+                  <Button size="sm" className="text-xs h-8" onClick={() => setShowCeirgoTopUp(true)}>Isi Saldo</Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Pengumuman Banner */}
+            <Card glass className="p-5 space-y-3">
+              <div>
+                <h2 className="text-base font-bold text-ink">Pengumuman Banner Dashboard</h2>
+                <p className="text-xs text-ink-muted">Teks pengumuman di bagian atas dashboard pelanggan.</p>
+              </div>
+              <textarea
+                className="w-full p-3 border border-hairline rounded-xl bg-canvas text-xs focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
+                rows={3}
+                placeholder="Masukkan pengumuman penting di sini..."
+                value={announcement}
+                onChange={(e) => setAnnouncement(e.target.value)}
+              />
+              <Button className="w-full text-xs font-bold" onClick={handleSaveAnnouncement} isLoading={savingAnn}>Simpan Pengumuman</Button>
+            </Card>
+
+            {/* Menu Sidebar Settings */}
+            <Card glass className="p-5 space-y-3">
+              <div>
+                <h2 className="text-base font-bold text-ink">Pengaturan Menu Sidebar</h2>
+                <p className="text-xs text-ink-muted">Atur visibilitas fitur di menu pengguna.</p>
+              </div>
+              <div className="flex items-center justify-between p-3 border border-hairline rounded-xl bg-canvas">
+                <div>
+                  <p className="font-bold text-xs text-ink">Menu Suntik Kuota</p>
+                  <p className="text-[11px] text-ink-muted">Tampilkan menu Suntik Kuota di sidebar.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={showBeliPaket} onChange={(e) => setShowBeliPaket(e.target.checked)} />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+              <Button className="w-full text-xs font-bold" onClick={handleSaveMenuSettings} isLoading={savingMenuSettings}>Simpan Pengaturan Menu</Button>
+            </Card>
+
+            {/* Database & Auto Deploy */}
+            <Card glass className="p-5 space-y-3">
+              <div>
+                <h2 className="text-base font-bold text-ink">Database & Pembaruan Sistem</h2>
+                <p className="text-xs text-ink-muted">Backup database dan update server langsung dari GitHub.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <a href="/api/admin/backup-database" download className="block">
+                  <Button variant="outline" className="w-full text-xs h-9">Unduh Database (.sqlite)</Button>
+                </a>
+
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-9" 
+                  onClick={() => {
+                    Swal.fire({
+                      title: 'Mulai Auto Deploy?',
+                      text: 'Server akan menarik update kode terbaru dari GitHub dan rebuild aplikasi otomatis.',
+                      icon: 'question',
+                      showCancelButton: true,
+                      confirmButtonText: 'Ya, Jalankan Deploy',
+                      cancelButtonText: 'Batal'
+                    }).then((res) => {
+                      if (res.isConfirmed) startDeploy();
+                    });
+                  }}
+                >
+                  Jalankan Auto Deploy
+                </Button>
+              </div>
+            </Card>
+          </div>
+
         </div>
       )}
 
@@ -2836,19 +2845,19 @@ export default function AdminPage() {
       {showDeployConsole && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
           <Card className="w-full max-w-2xl bg-[#1e1e1e] border border-zinc-700 p-0 overflow-hidden flex flex-col shadow-2xl">
-            <div className="flex justify-between items-center bg-zinc-900 p-4 border-b border-zinc-800">
-              <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                🚀 Terminal Auto Deploy
-                {isDeploying && <span className="animate-spin inline-block w-4 h-4 border-2 border-zinc-500 border-t-amber-400 rounded-full ml-2"></span>}
+            <div className="flex justify-between items-center bg-zinc-900 p-3.5 border-b border-zinc-800">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                Terminal Auto Deploy
+                {isDeploying && <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-zinc-500 border-t-amber-400 rounded-full ml-2"></span>}
               </h3>
-              {!isDeploying && <button onClick={() => setShowDeployConsole(false)} className="text-zinc-500 hover:text-white font-bold text-2xl transition-colors">&times;</button>}
+              {!isDeploying && <button onClick={() => setShowDeployConsole(false)} className="text-zinc-500 hover:text-white font-bold text-xl transition-colors">&times;</button>}
             </div>
-            <pre className="w-full h-[60vh] max-h-[500px] bg-black p-4 overflow-y-auto text-xs text-green-400 font-mono whitespace-pre-wrap leading-relaxed select-all">
+            <pre className="w-full h-[55vh] max-h-[450px] bg-black p-4 overflow-y-auto text-xs text-green-400 font-mono whitespace-pre-wrap leading-relaxed select-all">
               {deployLogs}
             </pre>
-            <div className="p-4 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center">
-              <span className="text-xs text-zinc-500">*Jangan menutup halaman ini hingga proses selesai.</span>
-              {!isDeploying && <Button size="sm" onClick={() => window.location.reload()} className="bg-primary hover:bg-primary-hover text-white">Muat Ulang Halaman</Button>}
+            <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center">
+              <span className="text-[11px] text-zinc-500">*Jangan menutup jendela ini hingga proses selesai.</span>
+              {!isDeploying && <Button size="sm" onClick={() => window.location.reload()} className="bg-primary hover:bg-primary-hover text-white text-xs">Muat Ulang</Button>}
             </div>
           </Card>
         </div>
