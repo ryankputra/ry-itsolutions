@@ -4313,10 +4313,11 @@ app.post('/api/admin/deploy', isAuthenticated, isAdmin, (req, res) => {
         console.log("🚀 Memulai proses Auto Deploy...");
         sendTelegramNotification(`<b>🚀 PROSES AUTO DEPLOY DIMULAI</b>\nSistem sedang menarik update dari GitHub dan melakukan build...`, 'admin');
         
-        // Kirim rentetan perintah ke stdin bash
-        child.stdin.write('cd /www/wwwroot/ry-itsolutions/tembak-paket-app && echo "[LOG] Menyimpan perubahan lokal (stash)..." && git stash\n');
-        child.stdin.write('echo "[LOG] Menarik kode & bundle build terbaru dari GitHub..." && git pull origin main\n');
-        child.stdin.write('cd backend && echo "[LOG] Memperbarui dependensi Backend (npm install)..." && npm install --no-audit --no-fund\n');
+        // Kirim rentetan perintah ke stdin bash (Instant Deploy tanpa build di STB)
+        child.stdin.write('cd /www/wwwroot/ry-itsolutions/tembak-paket-app\n');
+        child.stdin.write('echo "[LOG] Mereset cache file lokal..." && git checkout -- .\n');
+        child.stdin.write('echo "[LOG] Menarik kode & bundle Next.js terbaru dari GitHub..." && git pull origin main\n');
+        child.stdin.write('cd backend && echo "[LOG] Memperbarui dependensi Backend..." && npm install --no-audit --no-fund\n');
         child.stdin.write('echo "[LOG] Merestart server PM2..." && pm2 restart all\n');
         child.stdin.end();
 
