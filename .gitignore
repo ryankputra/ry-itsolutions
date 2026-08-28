@@ -1,7 +1,12 @@
-﻿*.sqlite
+*.sqlite
 *.sqlite3
 backend/sessions/*
 backend/backups/*
 tembak-paket-app/backend/*.sqlite
 tembak-paket-app/backend/sessions/*
 tembak-paket-app/backend/backups/*
+**/.next/cache/**
+**/.next/dev/**
+**/.next/types/**
+*.pack.gz
+*.pack

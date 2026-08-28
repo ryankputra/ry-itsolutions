@@ -32,6 +32,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Next.js build cache & dev hot updates (never track in git)
+.next/cache/
+.next/dev/
+.next/types/
+*.pack.gz
+*.pack
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
