@@ -5,16 +5,17 @@ const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
   register: true,
+  skipWaiting: true,
 });
 
 const nextConfig: NextConfig = {
-  // Optimasi Build Khusus Perangkat Low-Resource (Armbian STB / VPS 1GB-2GB RAM)
+  // Optimasi Khusus Perangkat Low-Resource (Armbian STB / VPS RAM 1GB-2GB)
   typescript: {
-    // Lewati type-check saat build di STB karena sudah divalidasi saat development di komputer lokal
+    // Lewati type-check saat build di STB (menghemat 88+ menit)
     ignoreBuildErrors: true,
   },
   experimental: {
-    // Batasi worker thread menjadi 1 agar tidak menghabiskan RAM STB
+    // Batasi worker thread menjadi 1 agar hemat RAM & tidak OOM di STB
     cpus: 1,
     workerThreads: false,
   },
