@@ -264,60 +264,66 @@ export default function DashboardPage() {
 
       {/* Tutorial & Quick Start Guide Hub */}
       {!tutorialDismissed && (
-        <Card glass className="p-5 space-y-4 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm">
-          <div className="flex items-center justify-between">
+        <Card glass className="p-4 sm:p-5 space-y-3.5 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
+              <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
                 🎓
               </span>
               <div>
-                <h2 className="text-base font-bold text-ink">Panduan Cepat Penggunaan</h2>
-                <p className="text-xs text-ink-muted">5 Langkah mudah menggunakan layanan Ry-ITSolutions</p>
+                <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
+                  Panduan Cepat Penggunaan
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full hidden sm:inline-block">5 Langkah</span>
+                </h2>
+                <p className="text-[11px] sm:text-xs text-ink-muted">Cara mudah & cepat menggunakan layanan Ry-ITSolutions</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setShowGuidedTour(true)}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 animate-pulse"
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
                 title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
               >
-                <span>🔊</span> Tur Audio AI
+                <span className="animate-bounce text-sm">🔊</span> Tur Audio AI
               </button>
               <button
                 onClick={() => setShowTutorialModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center gap-1"
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1"
               >
                 <span>Lihat Panduan</span> ➔
               </button>
             </div>
           </div>
 
-          {/* Quick Steps Horizontal Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 pt-1">
-            {[
-              { step: "1", title: "Top Up Saldo", desc: "Scan QRIS otomatis 24 jam", icon: "💳", href: "/topup" },
-              { step: "2", title: "Cek Database", desc: "Cek riwayat CEIR/Bea Cukai", icon: "🔍", href: "/cek-ceir" },
-              { step: "3", title: "Buka Sinyal", desc: "Input IMEI & pilih durasi", icon: "📱", href: "/unblock-imei" },
-              { step: "4", title: "Notif WhatsApp", desc: "Nota otomatis ke nomor Anda", icon: "📲", href: "/history" },
-              { step: "5", title: "Garansi Digital", desc: "Pantau aktif & klaim garansi", icon: "🛡️", href: "/cek-garansi" }
-            ].map((s, idx) => (
-              <a
-                key={idx}
-                href={s.href}
-                className="p-3 rounded-xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center">
-                    {s.step}
-                  </span>
-                  <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors">{s.title}</h4>
-                  <p className="text-[10px] text-ink-muted leading-tight mt-0.5">{s.desc}</p>
-                </div>
-              </a>
-            ))}
+          {/* Quick Steps: Horizontal Swipeable Carousel on Mobile, Clean Grid on Desktop */}
+          <div className="relative">
+            <div className="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x snap-mandatory">
+              {[
+                { step: "1", title: "Top Up Saldo", desc: "Scan QRIS 24 jam", icon: "💳", href: "/topup" },
+                { step: "2", title: "Cek Database", desc: "Histori CEIR & Bea Cukai", icon: "🔍", href: "/cek-ceir" },
+                { step: "3", title: "Buka Sinyal", desc: "Input IMEI & durasi", icon: "📱", href: "/unblock-imei" },
+                { step: "4", title: "Notif WhatsApp", desc: "Nota otomatis ke WA", icon: "📲", href: "/history" },
+                { step: "5", title: "Garansi Digital", desc: "Pantau aktif & klaim", icon: "🛡️", href: "/cek-garansi" }
+              ].map((s, idx) => (
+                <a
+                  key={idx}
+                  href={s.href}
+                  className="w-[135px] sm:w-auto shrink-0 snap-start p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center">
+                      {s.step}
+                    </span>
+                    <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors line-clamp-1">{s.title}</h4>
+                    <p className="text-[10px] text-ink-muted leading-tight mt-0.5 line-clamp-1">{s.desc}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         </Card>
       )}
