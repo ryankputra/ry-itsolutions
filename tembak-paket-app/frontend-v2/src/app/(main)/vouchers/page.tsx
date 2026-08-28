@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { useRouter } from "next/navigation";
+import { safeJson } from "@/lib/api";
 import Swal from "sweetalert2";
 
 export default function VouchersPage() {
@@ -15,8 +16,8 @@ export default function VouchersPage() {
   const loadVouchers = async () => {
     try {
       const res = await fetch("/api/coupons/public", { credentials: "include" });
-      const data = await res.json();
-      if (data.status && Array.isArray(data.data)) {
+      const data = await safeJson(res);
+      if (data && data.status && Array.isArray(data.data)) {
         setVouchers(data.data);
       }
     } catch (e) {
@@ -39,8 +40,8 @@ export default function VouchersPage() {
         credentials: "include",
         body: JSON.stringify({ coupon_id: coupon.id }),
       });
-      const data = await res.json();
-      if (res.ok && data.status) {
+      const data = await safeJson(res);
+      if (res.ok && data?.status) {
         Swal.fire({
           title: "Voucher Berhasil Diklaim! 🎉",
           text: data.message || `Voucher ${coupon.code} siap digunakan saat checkout order.`,
@@ -58,7 +59,7 @@ export default function VouchersPage() {
       } else {
         Swal.fire({
           title: "Gagal Mengklaim",
-          text: data.message || "Voucher tidak dapat diklaim saat ini.",
+          text: data?.message || "Voucher tidak dapat diklaim saat ini.",
           icon: "error",
         });
       }
@@ -82,13 +83,13 @@ export default function VouchersPage() {
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <div className="inline-block bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 border border-white/20">
-              ⚡ Zona Promo & Voucher Cuan
+              ⚡ Promo & Diskon Spesial
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-sm">
               Pusat Klaim Voucher
             </h1>
             <p className="text-white/90 text-xs sm:text-sm mt-1 max-w-md">
-              Klaim voucher potongan harga sekarang sebelum kuota habis dan gunakan langsung saat checkout!
+              Klaim voucher diskon spesial Anda sekarang dan nikmati potongan harga langsung saat checkout transaksi!
             </p>
           </div>
 

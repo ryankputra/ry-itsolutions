@@ -64,19 +64,19 @@ export default function DashboardPage() {
         ]);
 
         if (annRes?.ok) {
-          const data = await annRes.json();
-          if (data.status && data.data?.message) setAnnouncement(data.data);
+          const data = await safeJson(annRes);
+          if (data?.status && data?.data?.message) setAnnouncement(data.data);
         }
         if (trxRes?.ok) {
-          const data = await trxRes.json();
-          if (data.status && data.data) {
+          const data = await safeJson(trxRes);
+          if (data?.status && data?.data) {
             setAllTrx(data.data);
             setRecentTrx(data.data.slice(0, 3));
           }
         }
         if (cpnRes?.ok) {
-          const data = await cpnRes.json();
-          if (data.status && Array.isArray(data.data)) {
+          const data = await safeJson(cpnRes);
+          if (data?.status && Array.isArray(data?.data)) {
             setVouchers(data.data);
           }
         }
@@ -94,8 +94,8 @@ export default function DashboardPage() {
         credentials: 'include',
         body: JSON.stringify({ coupon_id: coupon.id })
       });
-      const data = await res.json();
-      if (res.ok && data.status) {
+      const data = await safeJson(res);
+      if (res.ok && data?.status) {
         Swal.fire({
           title: "Voucher Berhasil Diklaim!",
           text: data.message,
@@ -476,7 +476,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
               <h2 className="text-base font-bold text-ink flex items-center gap-1.5">
-                Voucher Diskon & Promo Cuan
+                Voucher & Promo Diskon Spesial
               </h2>
               <span className="text-[10px] font-bold text-orange-700 bg-orange-100 border border-orange-200 px-2 py-0.5 rounded-full">
                 Klaim Sekarang

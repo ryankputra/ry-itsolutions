@@ -61,22 +61,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async function loadData() {
       try {
         const [sessionRes, menuRes, ceirgoDisplayRes] = await Promise.all([
-          fetch(`${API_URL}/auth/me`, { credentials: 'include' }),
-          fetch(`${API_URL}/admin/menu-settings`, { credentials: 'include' }),
-          fetch(`${API_URL}/admin/ceirgo-display-settings`, { credentials: 'include' })
+          fetch(`${API_URL}/auth/me`, { credentials: 'include' }).catch(() => null),
+          fetch(`${API_URL}/admin/menu-settings`, { credentials: 'include' }).catch(() => null),
+          fetch(`${API_URL}/admin/ceirgo-display-settings`, { credentials: 'include' }).catch(() => null)
         ]);
 
-        if (sessionRes.ok) {
-          const data = await sessionRes.json();
-          if (data.status && data.user) setUser(data.user);
+        if (sessionRes && sessionRes.ok) {
+          const data = await safeJson(sessionRes);
+          if (data && data.status && data.user) setUser(data.user);
         }
-        if (menuRes.ok) {
-          const menuData = await menuRes.json();
-          if (menuData.status) updateMenuSettings({ showBeliPaket: !!menuData.data?.showBeliPaket });
+        if (menuRes && menuRes.ok) {
+          const menuData = await safeJson(menuRes);
+          if (menuData && menuData.status) updateMenuSettings({ showBeliPaket: !!menuData.data?.showBeliPaket });
         }
-        if (ceirgoDisplayRes.ok) {
-          const displayData = await ceirgoDisplayRes.json();
-          if (displayData.status) {
+        if (ceirgoDisplayRes && ceirgoDisplayRes.ok) {
+          const displayData = await safeJson(ceirgoDisplayRes);
+          if (displayData && displayData.status) {
             setCeirgoDisplaySettings({
               cekCeir: Array.isArray(displayData.data?.cekCeir) ? displayData.data.cekCeir : [],
               barcode: Array.isArray(displayData.data?.barcode) ? displayData.data.barcode : []

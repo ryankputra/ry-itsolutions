@@ -33,22 +33,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch("/api/system-version", { credentials: "omit" });
         if (res.ok) {
-          const data = await res.json();
-          if (data.status && data.version) {
-            if (currentVersion === null) {
-              currentVersion = data.version;
-            } else if (currentVersion !== data.version) {
-              // Version mismatch! Trigger refresh
-              const Swal = (await import("sweetalert2")).default;
-              await Swal.fire({
-                title: 'Update Sistem 🚀',
-                text: 'Ada pembaruan web terbaru nih. Halaman bakal di-refresh otomatis biar lancar!',
-                icon: 'info',
-                showConfirmButton: false,
-                timer: 3000,
-                allowOutsideClick: false
-              });
-              window.location.reload();
+          const contentType = res.headers?.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (data?.status && data?.version) {
+              if (currentVersion === null) {
+                currentVersion = data.version;
+              } else if (currentVersion !== data.version) {
+                // Version mismatch! Trigger refresh
+                const Swal = (await import("sweetalert2")).default;
+                await Swal.fire({
+                  title: 'Update Sistem 🚀',
+                  text: 'Ada pembaruan web terbaru nih. Halaman bakal di-refresh otomatis biar lancar!',
+                  icon: 'info',
+                  showConfirmButton: false,
+                  timer: 3000,
+                  allowOutsideClick: false
+                });
+                window.location.reload();
+              }
             }
           }
         }
