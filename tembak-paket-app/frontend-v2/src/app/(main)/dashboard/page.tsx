@@ -339,158 +339,188 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Tutorial & Quick Start Guide Hub (Bisa di-hide / collapse) */}
-      {!tutorialDismissed ? (
-        <Card glass className="p-4 sm:p-5 space-y-3.5 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm overflow-hidden relative">
+      {/* Tutorial & Quick Start Guide Hub (Smooth Animated Expand/Collapse) */}
+      <Card glass className="overflow-hidden border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm transition-all duration-500">
+        <div className="p-4 sm:p-5">
+          {/* Header Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            <div 
+              onClick={() => {
+                const next = !tutorialDismissed;
+                setTutorialDismissed(next);
+                if (typeof window !== "undefined") {
+                  if (next) localStorage.setItem("ry_hide_quick_guide", "true");
+                  else localStorage.removeItem("ry_hide_quick_guide");
+                }
+              }}
+              className="flex items-center gap-3 cursor-pointer select-none group"
+            >
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-primary/20 to-blue-500/20 text-primary flex items-center justify-center font-bold shrink-0 border border-primary/20 group-hover:scale-105 transition-transform duration-300 shadow-xs">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                 </svg>
-              </span>
+              </div>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
-                  Panduan Cepat Penggunaan
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full hidden sm:inline-block">5 Langkah</span>
-                </h2>
-                <p className="text-[11px] sm:text-xs text-ink-muted">Cara mudah & cepat menggunakan layanan Ry-ITSolutions</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm sm:text-base font-bold text-ink group-hover:text-primary transition-colors">
+                    Panduan Cepat Penggunaan
+                  </h2>
+                  <span className="text-[10px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                    5 Langkah
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-ink-muted">
+                  {tutorialDismissed ? "Klik untuk membuka alur langkah mudah transaksi" : "Cara mudah & cepat menggunakan layanan Ry-ITSolutions"}
+                </p>
               </div>
             </div>
 
+            {/* Actions & Collapse Toggle */}
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                onClick={() => setShowGuidedTour(true)}
-                className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
-                title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
-              >
-                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
-                </svg>
-                <span>Tur Audio AI</span>
-              </button>
-              <button
-                onClick={() => setShowTutorialModal(true)}
-                className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-xs transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>Lihat Panduan</span>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-              </button>
+              {!tutorialDismissed && (
+                <>
+                  <button
+                    onClick={() => setShowGuidedTour(true)}
+                    className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-xs hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                    title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
+                  >
+                    <svg className="w-3.5 h-3.5 text-white animate-pulse" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+                    </svg>
+                    <span>Tur Audio AI</span>
+                  </button>
+                  <button
+                    onClick={() => setShowTutorialModal(true)}
+                    className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-xs hover:shadow-primary/20 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                  >
+                    <span>Detail Panduan</span>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
               <button
                 onClick={() => {
-                  setTutorialDismissed(true);
-                  if (typeof window !== "undefined") localStorage.setItem("ry_hide_quick_guide", "true");
+                  const next = !tutorialDismissed;
+                  setTutorialDismissed(next);
+                  if (typeof window !== "undefined") {
+                    if (next) localStorage.setItem("ry_hide_quick_guide", "true");
+                    else localStorage.removeItem("ry_hide_quick_guide");
+                  }
                 }}
-                className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-canvas transition-colors"
-                title="Sembunyikan Panduan Cepat"
+                className={`p-2 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-semibold ${
+                  tutorialDismissed 
+                    ? "bg-primary/10 text-primary border-primary/30 hover:bg-primary/15 shadow-2xs" 
+                    : "bg-canvas border-hairline text-ink-muted hover:text-ink hover:bg-parchment"
+                }`}
+                title={tutorialDismissed ? "Tampilkan Panduan Cepat" : "Sembunyikan Panduan Cepat"}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <span className="text-[11px] sm:inline hidden">{tutorialDismissed ? "Tampilkan" : "Sembunyikan"}</span>
+                <svg 
+                  className={`w-4 h-4 transition-transform duration-300 ${tutorialDismissed ? "" : "rotate-180"}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth={2.5} 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                 </svg>
               </button>
             </div>
           </div>
 
-          {/* Quick Steps: Horizontal Swipeable Carousel on Mobile, Clean Grid on Desktop */}
-          <div className="relative">
-            <div className="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x snap-mandatory">
-              {[
-                { 
-                  step: "1", 
-                  title: "Top Up Saldo", 
-                  desc: "Scan QRIS 24 jam", 
-                  href: "/topup",
-                  svg: (
-                    <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
-                    </svg>
-                  )
-                },
-                { 
-                  step: "2", 
-                  title: "Cek Database", 
-                  desc: "Histori CEIR & Bea Cukai", 
-                  href: "/cek-ceir",
-                  svg: (
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                  )
-                },
-                { 
-                  step: "3", 
-                  title: "Buka Sinyal", 
-                  desc: "Input IMEI & durasi", 
-                  href: "/unblock-imei",
-                  svg: (
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
-                    </svg>
-                  )
-                },
-                { 
-                  step: "4", 
-                  title: "Notif WhatsApp", 
-                  desc: "Nota otomatis ke WA", 
-                  href: "/history",
-                  svg: (
-                    <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.84-.945 4.47 4.47 0 00.743-1.807C3.916 16.71 3 14.473 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                    </svg>
-                  )
-                },
-                { 
-                  step: "5", 
-                  title: "Garansi Digital", 
-                  desc: "Pantau aktif & klaim", 
-                  href: "/cek-garansi",
-                  svg: (
-                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                    </svg>
-                  )
-                }
-              ].map((s, idx) => (
-                <a
-                  key={idx}
-                  href={s.href}
-                  className="w-[135px] sm:w-auto shrink-0 snap-start p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center">
-                      {s.step}
-                    </span>
-                    <span className="p-1 rounded-lg bg-parchment/60 group-hover:scale-110 transition-transform flex items-center justify-center">
-                      {s.svg}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors line-clamp-1">{s.title}</h4>
-                    <p className="text-[10px] text-ink-muted leading-tight mt-0.5 line-clamp-1">{s.desc}</p>
-                  </div>
-                </a>
-              ))}
+          {/* Collapsible Content Body with Smooth CSS Grid Animation */}
+          <div
+            className={`grid transition-all duration-500 ease-in-out overflow-hidden ${
+              tutorialDismissed ? "grid-rows-[0fr] opacity-0 mt-0" : "grid-rows-[1fr] opacity-100 mt-4 pt-3 border-t border-hairline/60"
+            }`}
+          >
+            <div className="overflow-hidden">
+              {/* Quick Steps: Horizontal Swipeable Carousel on Mobile, Clean Grid on Desktop */}
+              <div className="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x snap-mandatory">
+                {[
+                  { 
+                    step: "1", 
+                    title: "Top Up Saldo", 
+                    desc: "Scan QRIS 24 jam", 
+                    href: "/topup",
+                    svg: (
+                      <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    step: "2", 
+                    title: "Cek Database", 
+                    desc: "Histori CEIR & Bea Cukai", 
+                    href: "/cek-ceir",
+                    svg: (
+                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    step: "3", 
+                    title: "Buka Sinyal", 
+                    desc: "Input IMEI & durasi", 
+                    href: "/unblock-imei",
+                    svg: (
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    step: "4", 
+                    title: "Notif WhatsApp", 
+                    desc: "Nota otomatis ke WA", 
+                    href: "/history",
+                    svg: (
+                      <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.84-.945 4.47 4.47 0 00.743-1.807C3.916 16.71 3 14.473 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    step: "5", 
+                    title: "Garansi Digital", 
+                    desc: "Pantau aktif & klaim", 
+                    href: "/cek-garansi",
+                    svg: (
+                      <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                      </svg>
+                    )
+                  }
+                ].map((s, idx) => (
+                  <a
+                    key={idx}
+                    href={s.href}
+                    className="w-[135px] sm:w-auto shrink-0 snap-start p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center">
+                        {s.step}
+                      </span>
+                      <span className="p-1 rounded-lg bg-parchment/60 group-hover:scale-110 transition-transform flex items-center justify-center">
+                        {s.svg}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors line-clamp-1">{s.title}</h4>
+                      <p className="text-[10px] text-ink-muted leading-tight mt-0.5 line-clamp-1">{s.desc}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
-        </Card>
-      ) : (
-        <div className="flex justify-end -mt-2">
-          <button
-            onClick={() => {
-              setTutorialDismissed(false);
-              if (typeof window !== "undefined") localStorage.removeItem("ry_hide_quick_guide");
-            }}
-            className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 py-1 px-2.5 rounded-full bg-primary/5 border border-primary/10"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            Tampilkan Panduan Cepat
-          </button>
         </div>
-      )}
+      </Card>
 
       {/* Zona Voucher & Promo Diskon (Shopee Style E-Commerce Experience) */}
       {vouchers.length > 0 && (
