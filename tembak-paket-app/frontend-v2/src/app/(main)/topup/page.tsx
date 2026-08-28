@@ -38,6 +38,20 @@ export default function TopUpPage() {
 
   // States for Timer & Polling
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [topUpId, setTopUpId] = useState<string | null>(null);
+  const [isCheckingManual, setIsCheckingManual] = useState(false);
+
+  // Helper untuk trigger sukses
+  const triggerSuccess = (newBalance?: number) => {
+    if (success) return;
+    setSuccess(true);
+    if (typeof newBalance === "number") {
+      setUser((prev) => (prev ? { ...prev, balance: newBalance } : null));
+    }
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 3500);
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -113,17 +127,24 @@ export default function TopUpPage() {
     }
   };
 
-  // Polling Saldo & Timer
+  // Polling Saldo, Status Transaksi & SSE Listener
   useEffect(() => {
+    // 1. Dengarkan event SSE global 'topup_success'
+    const handleTopUpSuccessEvent = () => {
+      triggerSuccess();
+    };
+    window.addEventListener("topup_success", handleTopUpSuccessEvent);
+
     let timerInterval: NodeJS.Timeout;
     let pollingInterval: NodeJS.Timeout;
 
     if (qrisData && !success) {
-      // 1. Timer Countdown
+      // 2. Timer Countdown
       timerInterval = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            setQrisData(null); // Timeout! Hapus QRIS
+            setQrisData(null);
+            setTopUpId(null);
             setError("Waktu pembayaran telah habis. Silakan buat QRIS baru.");
             return 0;
           }
@@ -131,37 +152,79 @@ export default function TopUpPage() {
         });
       }, 1000);
 
-      // 2. Fallback Polling (Bertanya ke server setiap 5 detik)
+      // 3. Polling status transaksi via /api/topup/status/:topUpId dan /api/auth/me
       pollingInterval = setInterval(async () => {
         try {
-          const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status && data.user) {
-              if (user && data.user.balance > user.balance) {
-                setUser(data.user);
-                setSuccess(true);
-                setTimeout(() => router.push("/dashboard"), 3500);
+          if (topUpId) {
+            const statusRes = await fetch(`/api/topup/status/${topUpId}`, { credentials: "include" });
+            if (statusRes.ok) {
+              const statusData = await safeJson(statusRes);
+              if (statusData?.status && statusData?.transactionStatus === "completed") {
+                triggerSuccess(statusData.balance);
+                return;
+              }
+            }
+          }
+
+          // Fallback cek saldo profil
+          const meRes = await fetch("/api/auth/me", { credentials: "include" });
+          if (meRes.ok) {
+            const meData = await safeJson(meRes);
+            if (meData?.status && meData?.user) {
+              if (initialBalance !== null && meData.user.balance > initialBalance) {
+                triggerSuccess(meData.user.balance);
               }
             }
           }
         } catch (err) {}
-      }, 4000);
+      }, 2500);
     }
 
     return () => {
+      window.removeEventListener("topup_success", handleTopUpSuccessEvent);
       if (timerInterval) clearInterval(timerInterval);
       if (pollingInterval) clearInterval(pollingInterval);
     };
-  }, [qrisData, success, user, router, setUser]);
+  }, [qrisData, success, topUpId, initialBalance, router, setUser]);
 
-  // Cek perubahan saldo untuk trigger animasi sukses (Fast track)
-  if (qrisData && !success && initialBalance !== null && user && user.balance > initialBalance) {
-    setSuccess(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 3500);
-  }
+  // Cek perubahan saldo user dari store (Fast track)
+  useEffect(() => {
+    if (qrisData && !success && initialBalance !== null && user && user.balance > initialBalance) {
+      triggerSuccess(user.balance);
+    }
+  }, [user?.balance, initialBalance, qrisData, success]);
+
+  // Tombol Cek Manual On-Demand
+  const handleManualCheck = async () => {
+    if (!topUpId) return;
+    setIsCheckingManual(true);
+    try {
+      const res = await fetch(`/api/topup/status/${topUpId}`, { credentials: "include" });
+      const data = await safeJson(res);
+      if (data?.status && data?.transactionStatus === "completed") {
+        Swal.fire({
+          title: "Pembayaran Berhasil! 🎉",
+          text: "Saldo otomatis ditambahkan ke akun Anda.",
+          icon: "success",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        triggerSuccess(data.balance);
+      } else {
+        Swal.fire({
+          title: "Menunggu Mutasi Bank",
+          text: "Pembayaran belum terdeteksi di mutasi gateway. Jika Anda baru saja transfer, mohon tunggu beberapa detik lagi.",
+          icon: "info",
+          confirmButtonText: "Mengerti",
+          confirmButtonColor: "#2563eb",
+        });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error", text: "Gagal menghubungi server.", icon: "error" });
+    } finally {
+      setIsCheckingManual(false);
+    }
+  };
 
   const handleRequestQris = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,12 +245,13 @@ export default function TopUpPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: num }),
       });
-      const data = await res.json();
-      if (data.status) {
+      const data = await safeJson(res);
+      if (data?.status) {
         setQrisData(data.qrisData);
-        setTimeLeft(data.qrisData.expiresAt ? data.qrisData.expiresAt - Math.floor(Date.now() / 1000) : 5 * 60);
+        setTopUpId(data.topUpId || null);
+        setTimeLeft(data.qrisData?.expiresAt ? data.qrisData.expiresAt - Math.floor(Date.now() / 1000) : 5 * 60);
       } else {
-        setError(data.message || "Gagal membuat QRIS");
+        setError(data?.message || "Gagal membuat QRIS");
         setInitialBalance(null);
       }
     } catch (err) {
@@ -420,12 +484,23 @@ export default function TopUpPage() {
                 Menunggu pembayaran QRIS Anda...
               </div>
 
+              {/* Tombol Cek Status Manual On-Demand */}
+              <Button
+                type="button"
+                onClick={handleManualCheck}
+                isLoading={isCheckingManual}
+                className="w-full h-11 text-xs font-bold bg-primary text-white shadow-md shadow-primary/20 hover:bg-primary-hover"
+              >
+                🔄 Sudah Bayar? Cek Status Sekarang
+              </Button>
+
               <Button
                 variant="ghost"
                 size="sm"
                 className="w-full text-xs text-ink-muted hover:text-ink"
                 onClick={() => {
                   setQrisData(null);
+                  setTopUpId(null);
                   setInitialBalance(null);
                 }}
               >
