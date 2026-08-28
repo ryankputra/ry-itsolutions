@@ -1660,13 +1660,18 @@ app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
         if (!coupon) return res.status(404).json({ status: false, message: "Kode kupon tidak ditemukan atau salah." });
         if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Kupon ini sedang tidak aktif." });
 
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        if (coupon.start_date && todayStr < coupon.start_date) {
-            return res.status(400).json({ status: false, message: `Kupon promo baru dapat digunakan mulai ${new Date(coupon.start_date).toLocaleDateString('id-ID')}.` });
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+        if (coupon.start_date && coupon.start_date.trim()) {
+            const sDate = coupon.start_date.trim().split('T')[0];
+            if (sDate > todayWIB) {
+                return res.status(400).json({ status: false, message: `Kupon promo baru dapat digunakan mulai ${sDate}.` });
+            }
         }
-        if (coupon.end_date && todayStr > coupon.end_date) {
-            return res.status(400).json({ status: false, message: "Kupon promo telah kedaluwarsa." });
+        if (coupon.end_date && coupon.end_date.trim()) {
+            const eDate = coupon.end_date.trim().split('T')[0];
+            if (eDate < todayWIB) {
+                return res.status(400).json({ status: false, message: "Kupon promo telah kedaluwarsa." });
+            }
         }
         if (coupon.used_count >= coupon.max_usage_limit) {
             return res.status(400).json({ status: false, message: "Kuota kupon promo ini sudah habis." });
