@@ -8,6 +8,18 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  // Optimasi Build Khusus Perangkat Low-Resource (Armbian STB / VPS 1GB-2GB RAM)
+  typescript: {
+    // Lewati type-check saat build di STB karena sudah divalidasi saat development di komputer lokal
+    ignoreBuildErrors: true,
+  },
+  experimental: {
+    // Batasi worker thread menjadi 1 agar tidak menghabiskan RAM STB
+    cpus: 1,
+    workerThreads: false,
+  },
+  productionBrowserSourceMaps: false,
+
   async rewrites() {
     return [
       {
