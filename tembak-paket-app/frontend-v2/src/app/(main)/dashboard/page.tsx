@@ -36,10 +36,20 @@ export default function DashboardPage() {
   const [activeTutorialTab, setActiveTutorialTab] = useState<number>(0);
   const [tutorialDismissed, setTutorialDismissed] = useState<boolean>(false);
 
+  // Auto Dismiss Quick Guide & Sync Show Balance preference
   useEffect(() => {
     if (typeof window !== "undefined") {
       setTutorialDismissed(localStorage.getItem("ry_hide_quick_guide") === "true");
+      const savedBalance = localStorage.getItem("ry_show_balance");
+      if (savedBalance !== null) {
+        setShowBalance(savedBalance === "true");
+      }
     }
+
+    const handleBalanceVisibility = (e: any) => {
+      if (e.detail !== undefined) setShowBalance(e.detail);
+    };
+    window.addEventListener("balance_visibility_changed", handleBalanceVisibility);
 
     // Meminta Izin Push Notification
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -83,7 +93,20 @@ export default function DashboardPage() {
       } catch (err) { console.error(err); }
     }
     loadDashboardData();
+
+    return () => {
+      window.removeEventListener("balance_visibility_changed", handleBalanceVisibility);
+    };
   }, []);
+
+  const toggleShowBalance = () => {
+    const next = !showBalance;
+    setShowBalance(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ry_show_balance", next.toString());
+      window.dispatchEvent(new CustomEvent("balance_visibility_changed", { detail: next }));
+    }
+  };
 
   const handleClaimCoupon = async (coupon: CouponItem) => {
     setClaimingId(coupon.id);
@@ -285,7 +308,7 @@ export default function DashboardPage() {
                     <span className="text-4xl font-black tracking-tight">
                       {showBalance ? (user?.balance?.toLocaleString('id-ID') || "0") : "******"}
                     </span>
-                    <button onClick={() => setShowBalance(!showBalance)} className="ml-2 text-white/80 hover:text-white transition-colors">
+                    <button onClick={toggleShowBalance} className="ml-2 text-white/80 hover:text-white transition-colors">
                       {showBalance ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -551,6 +574,18 @@ export default function DashboardPage() {
               color: "bg-amber-50 text-amber-600 border border-amber-100" 
             },
             { 
+              name: "Klaim Voucher", 
+              tourId: "service-voucher",
+              badge: "PROMO",
+              svg: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+              ), 
+              href: "/vouchers", 
+              color: "bg-orange-50 text-orange-600 border border-orange-200" 
+            },
+            { 
               name: "Cetak Barcode", 
               tourId: "service-barcode",
               svg: (
@@ -577,10 +612,15 @@ export default function DashboardPage() {
               key={item.name} 
               href={item.href} 
               data-tour={item.tourId}
-              className="flex flex-col items-center gap-2 group"
+              className="flex flex-col items-center gap-2 group relative"
             >
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:shadow-md ${item.color}`}>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:shadow-md relative ${item.color}`}>
                 {item.svg}
+                {(item as any).badge && (
+                  <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 rounded-md bg-gradient-to-r from-orange-500 to-rose-500 text-white font-extrabold text-[8px] shadow-xs">
+                    {(item as any).badge}
+                  </span>
+                )}
               </div>
               <span className="text-xs font-semibold text-center text-ink/80">{item.name}</span>
             </a>
@@ -743,13 +783,21 @@ export default function DashboardPage() {
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.84-.945 4.47 4.47 0 00.743-1.807C3.916 16.71 3 14.473 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
                       </svg>
-                    ) 
+                    )
                   },
-                  { 
+                  {
                     label: "5. Garansi", 
                     svg: (
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                      </svg>
+                    ) 
+                  },
+                  { 
+                    label: "6. Klaim Voucher", 
+                    svg: (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
                       </svg>
                     ) 
                   },
@@ -851,6 +899,22 @@ export default function DashboardPage() {
                 </div>
               )}
 
+              {activeTutorialTab === 5 && (
+                <div className="p-5 rounded-2xl bg-orange-50/60 border border-orange-200 space-y-3">
+                  <div className="flex items-center gap-2 text-orange-900 font-bold text-sm">
+                    <span>Langkah 6: Klaim & Gunakan Voucher Diskon</span>
+                  </div>
+                  <p className="text-xs text-orange-950 leading-relaxed">
+                    Mau hemat biaya order? Buka menu <b>Klaim Voucher</b> di dashboard atau sidebar, klik tombol <b>Klaim</b> pada voucher diskon yang Anda inginkan. Saat checkout di formulir Buka IMEI, klik <b>Voucher Ry-ITSolutions</b> untuk memasang voucher dan dapatkan potongan harga langsung!
+                  </p>
+                  <div className="pt-2">
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white" onClick={() => { setShowTutorialModal(false); router.push('/vouchers'); }}>
+                      Buka Pusat Klaim Voucher ➔
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Navigation Footer */}
               <div className="flex justify-between items-center pt-2 border-t border-hairline">
                 <button
@@ -862,7 +926,7 @@ export default function DashboardPage() {
                 </button>
 
                 <div className="flex gap-1.5">
-                  {[0, 1, 2, 3, 4].map(idx => (
+                  {[0, 1, 2, 3, 4, 5].map(idx => (
                     <span
                       key={idx}
                       onClick={() => setActiveTutorialTab(idx)}
@@ -873,9 +937,9 @@ export default function DashboardPage() {
                   ))}
                 </div>
 
-                {activeTutorialTab < 4 ? (
+                {activeTutorialTab < 5 ? (
                   <button
-                    onClick={() => setActiveTutorialTab(prev => Math.min(4, prev + 1))}
+                    onClick={() => setActiveTutorialTab(prev => Math.min(5, prev + 1))}
                     className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-sm flex items-center gap-1"
                   >
                     Selanjutnya <span>&rarr;</span>

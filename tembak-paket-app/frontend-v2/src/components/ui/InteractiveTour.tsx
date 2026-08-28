@@ -65,6 +65,16 @@ const DEFAULT_STEPS: TourStep[] = [
     actionUrl: "/cek-garansi"
   },
   {
+    targetSelector: '[data-tour="service-voucher"]',
+    title: "Pusat Klaim Voucher Promo",
+    badge: "Diskon Hemat",
+    description: "Klaim berbagai voucher diskon potongan harga spesial di menu ini. Setelah diklaim, voucher bisa langsung dipasang saat checkout pesanan untuk mendapatkan potongan harga seketika!",
+    audioUrl: "/audio/tour/step_voucher.mp3",
+    icon: "🎟️",
+    preferredPlacement: "bottom",
+    actionUrl: "/vouchers"
+  },
+  {
     targetSelector: '[data-tour="service-referral"]',
     title: "Program Referral & Cuan",
     badge: "Bonus Cuan",
