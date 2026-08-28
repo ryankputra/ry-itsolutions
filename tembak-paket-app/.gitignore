@@ -6,5 +6,4 @@ database/
 .env.*  
 dist/  
 build/  
-.next/  
-.output/ 
+.output/

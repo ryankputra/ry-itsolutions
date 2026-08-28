@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST='{"app/(main)/layout.tsx -> sweetalert2":{"id":7042,"files":[]}}';

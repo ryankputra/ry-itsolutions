@@ -1,0 +1,19 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/register/page": "app/(auth)/register/page.js",
+  "/page": "app/page.js",
+  "/(main)/admin/page": "app/(main)/admin/page.js",
+  "/(main)/barcode/page": "app/(main)/barcode/page.js",
+  "/(main)/beli-paket/page": "app/(main)/beli-paket/page.js",
+  "/(main)/cek-ceir/page": "app/(main)/cek-ceir/page.js",
+  "/(main)/cek-garansi/page": "app/(main)/cek-garansi/page.js",
+  "/(main)/dashboard/page": "app/(main)/dashboard/page.js",
+  "/(main)/history/page": "app/(main)/history/page.js",
+  "/(main)/referral/page": "app/(main)/referral/page.js",
+  "/(main)/tickets/page": "app/(main)/tickets/page.js",
+  "/(main)/topup/page": "app/(main)/topup/page.js",
+  "/(main)/unblock-imei/page": "app/(main)/unblock-imei/page.js"
+}

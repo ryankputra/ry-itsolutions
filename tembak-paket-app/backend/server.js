@@ -4315,9 +4315,8 @@ app.post('/api/admin/deploy', isAuthenticated, isAdmin, (req, res) => {
         
         // Kirim rentetan perintah ke stdin bash
         child.stdin.write('cd /www/wwwroot/ry-itsolutions/tembak-paket-app && echo "[LOG] Menyimpan perubahan lokal (stash)..." && git stash\n');
-        child.stdin.write('echo "[LOG] Menarik kode terbaru dari GitHub..." && git pull origin main\n');
+        child.stdin.write('echo "[LOG] Menarik kode & bundle build terbaru dari GitHub..." && git pull origin main\n');
         child.stdin.write('cd backend && echo "[LOG] Memperbarui dependensi Backend (npm install)..." && npm install --no-audit --no-fund\n');
-        child.stdin.write('cd ../frontend-v2 && echo "[LOG] Memulai build frontend Next.js..." && npm run build\n');
         child.stdin.write('echo "[LOG] Merestart server PM2..." && pm2 restart all\n');
         child.stdin.end();
 

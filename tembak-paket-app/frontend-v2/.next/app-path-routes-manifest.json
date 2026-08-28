@@ -1,0 +1,19 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/_global-error/page": "/_global-error",
+  "/icon.svg/route": "/icon.svg",
+  "/(auth)/login/page": "/login",
+  "/(auth)/register/page": "/register",
+  "/page": "/",
+  "/(main)/admin/page": "/admin",
+  "/(main)/barcode/page": "/barcode",
+  "/(main)/beli-paket/page": "/beli-paket",
+  "/(main)/cek-ceir/page": "/cek-ceir",
+  "/(main)/cek-garansi/page": "/cek-garansi",
+  "/(main)/dashboard/page": "/dashboard",
+  "/(main)/history/page": "/history",
+  "/(main)/referral/page": "/referral",
+  "/(main)/tickets/page": "/tickets",
+  "/(main)/topup/page": "/topup",
+  "/(main)/unblock-imei/page": "/unblock-imei"
+}
