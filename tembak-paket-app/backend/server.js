@@ -174,8 +174,12 @@ async function initializeDatabase() {
                 start_date TEXT,
                 end_date TEXT,
                 is_active INTEGER DEFAULT 1,
+                is_public INTEGER DEFAULT 1,
+                max_per_user INTEGER DEFAULT 1,
                 created_at TEXT NOT NULL
             )`);
+            try { await dbRun("ALTER TABLE coupons ADD COLUMN is_public INTEGER DEFAULT 1"); } catch (e) { }
+            try { await dbRun("ALTER TABLE coupons ADD COLUMN max_per_user INTEGER DEFAULT 1"); } catch (e) { }
             await dbRun(`CREATE TABLE IF NOT EXISTS coupon_usages (
                 id TEXT PRIMARY KEY,
                 coupon_id TEXT NOT NULL,
@@ -1412,9 +1416,34 @@ app.get('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
+// Daftar Kupon Publik yang bisa langsung dipilih oleh Pengguna
+app.get('/api/coupons/public', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const today = new Date().toISOString().split('T')[0];
+
+        const coupons = await dbAll(`
+            SELECT c.*,
+                COALESCE((SELECT COUNT(*) FROM coupon_usages u WHERE u.coupon_id = c.id AND u.userId = ?), 0) as user_used_count
+            FROM coupons c
+            WHERE c.is_active = 1
+              AND (c.is_public = 1 OR c.is_public IS NULL)
+              AND (c.start_date IS NULL OR c.start_date = '' OR c.start_date <= ?)
+              AND (c.end_date IS NULL OR c.end_date = '' OR c.end_date >= ?)
+              AND c.used_count < c.max_usage_limit
+            ORDER BY c.discount_value DESC
+        `, [userId, today, today]);
+
+        res.json({ status: true, data: coupons });
+    } catch (e) {
+        console.error("Error fetching public coupons:", e);
+        res.status(500).json({ status: false, message: "Gagal memuat kupon publik." });
+    }
+});
+
 app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, start_date, end_date } = req.body;
+        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_per_user, is_public, start_date, end_date } = req.body;
         if (!code || !discount_type || !discount_value) {
             return res.status(400).json({ status: false, message: "Kode, tipe potongan, dan nilai potongan wajib diisi." });
         }
@@ -1426,9 +1455,22 @@ app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
 
         const id = `cpn_${Date.now()}`;
         await dbRun(`
-            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, used_count, start_date, end_date, is_active, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, ?)
-        `, [id, cleanCode, discount_type, Number(discount_value) || 0, Number(min_order_amount) || 0, Number(max_discount_amount) || 0, parseInt(max_usage_limit) || 100, start_date || null, end_date || null, new Date().toISOString()]);
+            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_per_user, is_public, used_count, start_date, end_date, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, ?)
+        `, [
+            id, 
+            cleanCode, 
+            discount_type, 
+            Number(discount_value) || 0, 
+            Number(min_order_amount) || 0, 
+            Number(max_discount_amount) || 0, 
+            parseInt(max_usage_limit) || 100,
+            parseInt(max_per_user) || 1,
+            is_public === false || is_public === 0 || is_public === '0' ? 0 : 1,
+            start_date || null, 
+            end_date || null, 
+            new Date().toISOString()
+        ]);
 
         res.json({ status: true, message: `Kupon ${cleanCode} berhasil dibuat!` });
     } catch (e) {
@@ -1440,12 +1482,14 @@ app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
 app.put('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { is_active, max_usage_limit, discount_value, min_order_amount, max_discount_amount, start_date, end_date } = req.body;
+        const { is_active, is_public, max_usage_limit, max_per_user, discount_value, min_order_amount, max_discount_amount, start_date, end_date } = req.body;
         
         await dbRun(`
             UPDATE coupons 
             SET is_active = COALESCE(?, is_active),
+                is_public = COALESCE(?, is_public),
                 max_usage_limit = COALESCE(?, max_usage_limit),
+                max_per_user = COALESCE(?, max_per_user),
                 discount_value = COALESCE(?, discount_value),
                 min_order_amount = COALESCE(?, min_order_amount),
                 max_discount_amount = COALESCE(?, max_discount_amount),
@@ -1454,7 +1498,9 @@ app.put('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => 
             WHERE id = ?
         `, [
             typeof is_active !== 'undefined' ? (is_active ? 1 : 0) : null,
+            typeof is_public !== 'undefined' ? (is_public ? 1 : 0) : null,
             typeof max_usage_limit !== 'undefined' ? parseInt(max_usage_limit) : null,
+            typeof max_per_user !== 'undefined' ? parseInt(max_per_user) : null,
             typeof discount_value !== 'undefined' ? Number(discount_value) : null,
             typeof min_order_amount !== 'undefined' ? Number(min_order_amount) : null,
             typeof max_discount_amount !== 'undefined' ? Number(max_discount_amount) : null,
@@ -1489,14 +1535,15 @@ app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
         const orderAmt = Number(order_amount) || 0;
 
         const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [cleanCode]);
-        if (!coupon) return res.status(404).json({ status: false, message: "Kode kupon tidak ditemukan." });
+        if (!coupon) return res.status(404).json({ status: false, message: "Kode kupon tidak ditemukan atau salah." });
         if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Kupon ini sedang tidak aktif." });
 
         const now = new Date();
-        if (coupon.start_date && now < new Date(coupon.start_date)) {
+        const todayStr = now.toISOString().split('T')[0];
+        if (coupon.start_date && todayStr < coupon.start_date) {
             return res.status(400).json({ status: false, message: `Kupon promo baru dapat digunakan mulai ${new Date(coupon.start_date).toLocaleDateString('id-ID')}.` });
         }
-        if (coupon.end_date && now > new Date(coupon.end_date)) {
+        if (coupon.end_date && todayStr > coupon.end_date) {
             return res.status(400).json({ status: false, message: "Kupon promo telah kedaluwarsa." });
         }
         if (coupon.used_count >= coupon.max_usage_limit) {
@@ -1506,10 +1553,11 @@ app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
             return res.status(400).json({ status: false, message: `Minimal pembelian untuk kupon ini adalah Rp ${coupon.min_order_amount.toLocaleString('id-ID')}.` });
         }
 
-        // Cek apakah user sudah pernah pakai kupon ini
+        // Cek batasan penggunaan per akun user
+        const maxPerUser = coupon.max_per_user || 1;
         const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, req.session.userId]);
-        if (userUsage && userUsage.count > 0) {
-            return res.status(400).json({ status: false, message: "Anda sudah pernah menggunakan kupon promo ini." });
+        if (userUsage && userUsage.count >= maxPerUser) {
+            return res.status(400).json({ status: false, message: `Anda sudah mencapai batas maksimal penggunaan kupon ini (${maxPerUser}x per akun).` });
         }
 
         let discount = 0;
@@ -1531,6 +1579,9 @@ app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
                 discount_type: coupon.discount_type,
                 discount_value: coupon.discount_value,
                 discount_amount: finalDiscount,
+                is_public: coupon.is_public,
+                max_per_user: maxPerUser,
+                remaining_quota: Math.max(0, coupon.max_usage_limit - coupon.used_count),
                 final_amount: Math.max(0, orderAmt - finalDiscount)
             }
         });
@@ -3524,10 +3575,15 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                 const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ? AND is_active = 1", [cleanCode]);
                 if (coupon) {
                     const now = new Date();
-                    const validDate = (!coupon.start_date || now >= new Date(coupon.start_date)) && (!coupon.end_date || now <= new Date(coupon.end_date));
+                    const todayStr = now.toISOString().split('T')[0];
+                    const validDate = (!coupon.start_date || todayStr >= coupon.start_date) && (!coupon.end_date || todayStr <= coupon.end_date);
                     const validQuota = coupon.used_count < coupon.max_usage_limit;
                     const validMin = totalPrice >= coupon.min_order_amount;
-                    if (validDate && validQuota && validMin) {
+                    const maxPerUser = coupon.max_per_user || 1;
+                    const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, req.session.userId]);
+                    const validUserUsage = !userUsage || userUsage.count < maxPerUser;
+
+                    if (validDate && validQuota && validMin && validUserUsage) {
                         if (coupon.discount_type === 'percent') {
                             discountAmount = (coupon.discount_value / 100) * totalPrice;
                             if (coupon.max_discount_amount > 0 && discountAmount > coupon.max_discount_amount) {

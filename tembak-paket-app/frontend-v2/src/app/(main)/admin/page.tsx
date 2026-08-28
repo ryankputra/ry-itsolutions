@@ -161,6 +161,8 @@ export default function AdminPage() {
     min_order_amount: "",
     max_discount_amount: "",
     max_usage_limit: "100",
+    max_per_user: "1",
+    is_public: "1",
     start_date: "",
     end_date: ""
   });
@@ -312,6 +314,8 @@ export default function AdminPage() {
           min_order_amount: "",
           max_discount_amount: "",
           max_usage_limit: "100",
+          max_per_user: "1",
+          is_public: "1",
           start_date: "",
           end_date: ""
         });
@@ -2255,6 +2259,17 @@ export default function AdminPage() {
                   required
                 />
                 <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-ink/80">Tipe Visibilitas Kupon</label>
+                  <select
+                    className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm outline-none focus:ring-1 focus:ring-primary"
+                    value={newCoupon.is_public}
+                    onChange={e => setNewCoupon({ ...newCoupon, is_public: e.target.value })}
+                  >
+                    <option value="1">🌐 Publik (Bisa Dipilih & Diklaim Semua User)</option>
+                    <option value="0">🔒 Rahasia (Hanya Bisa Diketik Manual)</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink/80">Tipe Potongan</label>
                   <select
                     className="w-full h-11 rounded-lg border border-hairline px-3 bg-canvas text-sm outline-none focus:ring-1 focus:ring-primary"
@@ -2265,6 +2280,9 @@ export default function AdminPage() {
                     <option value="percent">Persentase (%)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <Input
                   label={newCoupon.discount_type === 'percent' ? "Nilai Diskon (%)" : "Nilai Diskon (Rp)"}
                   type="number"
@@ -2273,9 +2291,6 @@ export default function AdminPage() {
                   onChange={e => setNewCoupon({ ...newCoupon, discount_value: e.target.value })}
                   required
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="Minimal Transaksi (Rp)"
                   type="number"
@@ -2291,16 +2306,24 @@ export default function AdminPage() {
                   onChange={e => setNewCoupon({ ...newCoupon, max_discount_amount: e.target.value })}
                 />
                 <Input
-                  label="Kuota / Stok Penggunaan"
+                  label="Batas Pakai Per User"
+                  type="number"
+                  placeholder="1"
+                  value={newCoupon.max_per_user}
+                  onChange={e => setNewCoupon({ ...newCoupon, max_per_user: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Input
+                  label="Total Kuota / Stok Penggunaan"
                   type="number"
                   placeholder="100"
                   value={newCoupon.max_usage_limit}
                   onChange={e => setNewCoupon({ ...newCoupon, max_usage_limit: e.target.value })}
                   required
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-medium text-ink/80 block mb-1">Tanggal Mulai (Opsional)</label>
                   <input
@@ -2338,14 +2361,26 @@ export default function AdminPage() {
                   <div key={c.id} className={`p-4 rounded-2xl border bg-canvas flex flex-col justify-between gap-3 ${c.is_active ? 'border-primary/40' : 'border-hairline opacity-60'}`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="font-mono font-black text-base text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
-                          {c.code}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-base text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                            {c.code}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            c.is_public === 1 || c.is_public === true || c.is_public === '1'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {c.is_public === 1 || c.is_public === true || c.is_public === '1' ? '🌐 Publik (Klaim)' : '🔒 Rahasia (Ketik)'}
+                          </span>
+                        </div>
                         <p className="font-bold text-sm text-ink mt-2">
                           Diskon: {c.discount_type === 'percent' ? `${c.discount_value}%` : `Rp ${Number(c.discount_value).toLocaleString('id-ID')}`}
                         </p>
                         <p className="text-xs text-ink-muted mt-0.5">
-                          Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Terpakai: {c.used_count}/{c.max_usage_limit}
+                          Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Batas/User: {c.max_per_user || 1}x
+                        </p>
+                        <p className="text-xs text-ink-muted mt-0.5">
+                          Kuota Terpakai: <span className="font-bold text-ink">{c.used_count}</span>/{c.max_usage_limit}
                         </p>
                       </div>
 
