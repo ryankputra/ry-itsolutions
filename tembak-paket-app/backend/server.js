@@ -2408,6 +2408,59 @@ app.get('/api/topup/status/:topUpId', isAuthenticated, async (req, res) => {
     }
 });
 
+// --- ADMIN ONLY: Simulasi Pembayaran QRIS Berhasil (Untuk testing tanpa transfer uang asli) ---
+app.post('/api/topup/simulate-pay', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { topUpId } = req.body;
+        const userId = req.session.userId;
+        
+        let topUp = null;
+        if (topUpId) {
+            topUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUpId]);
+        } else {
+            topUp = await dbGet("SELECT * FROM topups WHERE userId = ? AND status = 'pending' ORDER BY rowid DESC LIMIT 1", [userId]);
+        }
+
+        if (!topUp) {
+            return res.status(404).json({ status: false, message: 'Tidak ada transaksi top up pending untuk disimulasikan.' });
+        }
+
+        if (topUp.status !== 'pending') {
+            return res.status(400).json({ status: false, message: `Transaksi ini sudah berstatus: ${topUp.status}` });
+        }
+
+        await dbRun("BEGIN TRANSACTION");
+        const result = await dbRun("UPDATE topups SET status = 'completed' WHERE id = ? AND status = 'pending'", [topUp.id]);
+        if (result.changes > 0) {
+            await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, topUp.userId]);
+            await dbRun("COMMIT");
+
+            const u = await dbGet("SELECT balance FROM users WHERE id = ?", [topUp.userId]);
+            sseSend(topUp.userId, 'balance_update', { balance: u.balance, source: 'simulation_topup' });
+            sseSend(topUp.userId, 'transaction_status', { id: topUp.id, type: 'topup', status: 'completed', message: 'Simulasi Top up berhasil!' });
+
+            const timeoutId = qrisPollingTimeouts.get(topUp.id);
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                qrisPollingTimeouts.delete(topUp.id);
+            }
+
+            return res.status(200).json({
+                status: true,
+                message: `[SIMULASI] Transaksi ${topUp.id} berhasil disetujui! Saldo Rp ${topUp.baseAmount.toLocaleString('id-ID')} telah ditambahkan.`,
+                balance: u.balance,
+                topUpId: topUp.id
+            });
+        } else {
+            await dbRun("ROLLBACK");
+            return res.status(400).json({ status: false, message: 'Gagal memproses simulasi.' });
+        }
+    } catch (err) {
+        console.error("[SIMULATE_PAY_ERROR]", err);
+        return res.status(500).json({ status: false, message: 'Terjadi kesalahan server saat simulasi.' });
+    }
+});
+
 // Ganti seluruh rute /api/topup/request-qris dengan versi final ini
 
 app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {

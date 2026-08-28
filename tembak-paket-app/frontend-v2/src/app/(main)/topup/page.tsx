@@ -40,6 +40,7 @@ export default function TopUpPage() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [topUpId, setTopUpId] = useState<string | null>(null);
   const [isCheckingManual, setIsCheckingManual] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   // Helper untuk trigger sukses
   const triggerSuccess = (newBalance?: number) => {
@@ -222,6 +223,52 @@ export default function TopUpPage() {
       Swal.fire({ title: "Error", text: "Gagal menghubungi server.", icon: "error" });
     } finally {
       setIsCheckingManual(false);
+    }
+  };
+
+  // Khusus Admin: Simulasi Pembayaran QRIS Sukses Tanpa Bayar Asli
+  const handleSimulatePayment = async () => {
+    const result = await Swal.fire({
+      title: "🧪 Simulasi Bayar QRIS",
+      html: `Simulasikan pembayaran QRIS sebesar <b>Rp ${(qrisData?.uniqueAmount || 0).toLocaleString("id-ID")}</b> berhasil secara instan tanpa perlu bayar uang asli?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Simulasikan Sukses",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#7c3aed",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setIsSimulating(true);
+    try {
+      const res = await fetch("/api/topup/simulate-pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ topUpId }),
+      });
+      const data = await safeJson(res);
+      if (res.ok && data?.status) {
+        Swal.fire({
+          title: "Simulasi Berhasil! 🎉",
+          text: data.message || "Saldo uji coba berhasil ditambahkan ke akun Anda.",
+          icon: "success",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        triggerSuccess(data.balance);
+      } else {
+        Swal.fire({
+          title: "Gagal Simulasi",
+          text: data?.message || "Hanya akun admin yang dapat menggunakan fitur simulasi.",
+          icon: "error",
+        });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error", text: "Gagal menghubungi server.", icon: "error" });
+    } finally {
+      setIsSimulating(false);
     }
   };
 
@@ -492,6 +539,19 @@ export default function TopUpPage() {
               >
                 🔄 Sudah Bayar? Cek Status Sekarang
               </Button>
+
+              {/* Khusus Akun Admin: Tombol Simulasi Pembayaran Sandbox */}
+              {user?.role === "admin" && (
+                <button
+                  type="button"
+                  onClick={handleSimulatePayment}
+                  disabled={isSimulating}
+                  className="w-full py-2.5 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs group"
+                >
+                  <span className="group-hover:rotate-12 transition-transform">🧪</span>
+                  <span>{isSimulating ? "Memproses Simulasi..." : "Mode Admin: Simulasi Bayar Berhasil (Rp 0)"}</span>
+                </button>
+              )}
 
               <Button
                 variant="ghost"
