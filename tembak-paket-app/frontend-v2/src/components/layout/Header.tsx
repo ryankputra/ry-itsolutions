@@ -148,30 +148,9 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         </svg>
       </button>
 
-      <div className="flex flex-1 items-center justify-between gap-x-4 self-stretch lg:gap-x-6">
-        {/* Left: Breadcrumb / Status Brand Badge */}
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Server Pusat Online
-          </span>
-        </div>
-
-        {/* Right: Actions (Theme, Notif, User Profile Pill) */}
+      <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
+        <div className="flex flex-1"></div>
         <div className="flex items-center gap-x-2 sm:gap-x-3">
-          
-          {/* User Role Pill (Desktop) */}
-          {user && (
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-xl bg-canvas border border-hairline text-xs">
-              <span className="w-6 h-6 rounded-lg bg-primary/10 text-primary font-black flex items-center justify-center text-[10px]">
-                {user?.name?.charAt(0).toUpperCase()}
-              </span>
-              <span className="font-bold text-ink truncate max-w-[120px]">{user?.name}</span>
-              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded capitalize">
-                {user?.role}
-              </span>
-            </div>
-          )}
           
           {/* Dark Mode Toggle Button */}
           <button

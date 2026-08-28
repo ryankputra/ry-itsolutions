@@ -82,373 +82,153 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 max-w-2xl mx-auto pb-12">
       {/* Header Profile */}
       <TelegramPopup />
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Wassup, {user?.name?.split(' ')[0] || "Bestie"} ✨</h1>
+          <p className="text-sm text-ink-muted">Welcome back to Ry-ITSolutions</p>
+        </div>
+      </div>
 
-      {/* Main Grid: 2 Columns on Desktop, 1 Column on Mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Left Column: Greeting, Search, Quick Guide, Services, & Transactions */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
-          {/* Greeting */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-ink">
-                Wassup, {user?.name?.split(' ')[0] || "Bestie"} ✨
-              </h1>
-              <p className="text-xs sm:text-sm text-ink-muted mt-0.5">Welcome back to Ry-ITSolutions • Solusi Aktivasi Sinyal & Database CEIR</p>
-            </div>
+      {/* Universal Instant Search Bar */}
+      <div data-tour="search-bar" className="relative z-20">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari cepat: Ketik/Paste IMEI (15 digit) atau ID Transaksi..."
+            className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-canvas border border-hairline shadow-sm text-sm text-ink placeholder:text-ink-muted outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+          />
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
           </div>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-parchment flex items-center justify-center text-xs text-ink-muted hover:text-ink"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
-          {/* Universal Instant Search Bar */}
-          <div data-tour="search-bar" className="relative z-20">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari cepat: Ketik/Paste IMEI (15 digit) atau ID Transaksi..."
-                className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-canvas border border-hairline shadow-sm text-sm text-ink placeholder:text-ink-muted outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-              />
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-parchment flex items-center justify-center text-xs text-ink-muted hover:text-ink"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Live Search Quick Results Dropdown */}
-            {cleanSearch.length >= 3 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-canvas border border-hairline rounded-2xl shadow-2xl p-3 text-xs space-y-2.5 backdrop-blur-md z-30 max-h-[340px] overflow-y-auto">
-                {/* Live IMEI Detection Card */}
-                {detectedDevice?.brand && (
-                  <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                        </svg>
-                      </div>
-                      <div>
-                        <span className="font-bold text-ink block">{detectedDevice.brand} {detectedDevice.model}</span>
-                        <span className="text-[10px] text-ink-muted font-mono">IMEI: {cleanSearch}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => router.push(`/cek-garansi?imei=${cleanSearch}`)}
-                        className="px-2.5 py-1 rounded-lg bg-canvas border border-hairline font-bold text-xs hover:bg-parchment transition-colors"
-                      >
-                        Cek Garansi
-                      </button>
-                      <button
-                        onClick={() => router.push(`/unblock-imei?imei=${cleanSearch}`)}
-                        className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors"
-                      >
-                        Unblock
-                      </button>
-                    </div>
+        {/* Live Search Quick Results Dropdown */}
+        {cleanSearch.length >= 3 && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-canvas border border-hairline rounded-2xl shadow-2xl p-3 text-xs space-y-2.5 backdrop-blur-md z-30 max-h-[340px] overflow-y-auto">
+            {/* Live IMEI Detection Card */}
+            {detectedDevice?.brand && (
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                    </svg>
                   </div>
-                )}
-
-                {/* Matched Transactions */}
-                {filteredTrx.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <p className="text-[10px] font-bold text-ink-muted uppercase tracking-wider px-1">Riwayat Transaksi Ditemukan:</p>
-                    {filteredTrx.map((trx) => (
-                      <div
-                        key={trx.id}
-                        className="p-2.5 rounded-xl bg-parchment/60 hover:bg-parchment border border-hairline flex items-center justify-between gap-2 transition-colors"
-                      >
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-ink">{trx.packageName || "Unblock IMEI"}</span>
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                              trx.status === 'success' ? 'bg-emerald-100 text-emerald-800' :
-                              trx.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {trx.status.toUpperCase()}
-                            </span>
-                          </div>
-                          <p className="text-[10px] font-mono text-ink-muted mt-0.5">IMEI: {trx.imei} • #{trx.id.substring(0, 12)}</p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedInvoiceTrx(trx)}
-                          className="px-2.5 py-1 rounded-lg bg-canvas border border-hairline font-bold text-[11px] text-ink hover:bg-parchment transition-colors shrink-0"
-                        >
-                          Nota
-                        </button>
-                      </div>
-                    ))}
+                  <div>
+                    <span className="font-bold text-ink block">{detectedDevice.brand} {detectedDevice.model}</span>
+                    <span className="text-[10px] text-ink-muted font-mono">IMEI: {cleanSearch}</span>
                   </div>
-                )}
-
-                {cleanSearch.length >= 8 && !detectedDevice?.brand && filteredTrx.length === 0 && (
-                  <div className="p-3 text-center text-ink-muted">
-                    <p>Tidak ada transaksi yang cocok. Tekan untuk cek IMEI langsung:</p>
-                    <div className="flex justify-center gap-2 mt-2">
-                      <button
-                        onClick={() => router.push(`/cek-garansi?imei=${cleanSearch}`)}
-                        className="px-3 py-1 rounded-lg bg-primary text-white font-bold text-xs"
-                      >
-                        Cek Garansi IMEI #{cleanSearch}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => router.push(`/cek-garansi?imei=${cleanSearch}`)}
+                    className="px-2.5 py-1 rounded-lg bg-canvas border border-hairline font-bold text-xs hover:bg-parchment transition-colors"
+                  >
+                    Cek Garansi
+                  </button>
+                  <button
+                    onClick={() => router.push(`/unblock-imei?imei=${cleanSearch}`)}
+                    className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors"
+                  >
+                    Unblock
+                  </button>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Tutorial & Quick Start Guide Hub */}
-          {!tutorialDismissed && (
-            <Card glass className="p-4 sm:p-5 space-y-3.5 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
-                    🎓
-                  </span>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
-                      Panduan Cepat Penggunaan
-                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full hidden sm:inline-block">5 Langkah</span>
-                    </h2>
-                    <p className="text-[11px] sm:text-xs text-ink-muted">Cara mudah & cepat menggunakan layanan Ry-ITSolutions</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => setShowGuidedTour(true)}
-                    className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
-                    title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
+            {/* Matched Transactions */}
+            {filteredTrx.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[10px] font-bold text-ink-muted uppercase tracking-wider px-1">Riwayat Transaksi Ditemukan:</p>
+                {filteredTrx.map((trx) => (
+                  <div
+                    key={trx.id}
+                    className="p-2.5 rounded-xl bg-parchment/60 hover:bg-parchment border border-hairline flex items-center justify-between gap-2 transition-colors"
                   >
-                    <span className="animate-bounce text-sm">🔊</span> Tur Audio AI
-                  </button>
-                  <button
-                    onClick={() => setShowTutorialModal(true)}
-                    className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1"
-                  >
-                    <span>Lihat Panduan</span> ➔
-                  </button>
-                </div>
-              </div>
-
-              {/* Quick Steps: Horizontal Swipeable Carousel on Mobile, Clean Grid on Desktop */}
-              <div className="relative">
-                <div className="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x snap-mandatory">
-                  {[
-                    { step: "1", title: "Top Up Saldo", desc: "Scan QRIS 24 jam", icon: "💳", href: "/topup" },
-                    { step: "2", title: "Cek Database", desc: "Histori CEIR & Bea Cukai", icon: "🔍", href: "/cek-ceir" },
-                    { step: "3", title: "Buka Sinyal", desc: "Input IMEI & durasi", icon: "📱", href: "/unblock-imei" },
-                    { step: "4", title: "Notif WhatsApp", desc: "Nota otomatis ke WA", icon: "📲", href: "/history" },
-                    { step: "5", title: "Garansi Digital", desc: "Pantau aktif & klaim", icon: "🛡️", href: "/cek-garansi" }
-                  ].map((s, idx) => (
-                    <a
-                      key={idx}
-                      href={s.href}
-                      className="w-[135px] sm:w-auto shrink-0 snap-start p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center">
-                          {s.step}
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-ink">{trx.packageName || "Unblock IMEI"}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          trx.status === 'success' ? 'bg-emerald-100 text-emerald-800' :
+                          trx.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {trx.status.toUpperCase()}
                         </span>
-                        <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors line-clamp-1">{s.title}</h4>
-                        <p className="text-[10px] text-ink-muted leading-tight mt-0.5 line-clamp-1">{s.desc}</p>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Category Grid: Layanan Utama */}
-          <div className="p-5 rounded-3xl bg-canvas border border-hairline shadow-xs space-y-4">
-            <h2 className="text-base font-bold text-ink flex items-center gap-2">
-              <span className="text-primary">⚡</span> Layanan Utama
-            </h2>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3.5">
-              {[
-                { 
-                  name: "Buka IMEI", 
-                  tourId: "service-unblock",
-                  svg: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 12.75v6.75a2.25 2.25 0 002.25 2.25z" />
-                    </svg>
-                  ), 
-                  href: "/unblock-imei", 
-                  color: "bg-rose-50 text-rose-600 border border-rose-100" 
-                },
-                { 
-                  name: "Cek CEIR", 
-                  tourId: "service-ceir",
-                  svg: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                  ), 
-                  href: "/cek-ceir", 
-                  color: "bg-emerald-50 text-emerald-600 border border-emerald-100" 
-                },
-                { 
-                  name: "Cek Garansi", 
-                  tourId: "service-garansi",
-                  svg: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                    </svg>
-                  ), 
-                  href: "/cek-garansi", 
-                  color: "bg-blue-50 text-blue-600 border border-blue-100" 
-                },
-                { 
-                  name: "Program Referral", 
-                  tourId: "service-referral",
-                  svg: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                    </svg>
-                  ), 
-                  href: "/referral", 
-                  color: "bg-amber-50 text-amber-600 border border-amber-100" 
-                },
-                { 
-                  name: "Cetak Barcode", 
-                  tourId: "service-barcode",
-                  svg: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
-                    </svg>
-                  ), 
-                  href: "/barcode", 
-                  color: "bg-teal-50 text-teal-600 border border-teal-100" 
-                },
-                ...(menuSettings?.showBeliPaket ? [{ 
-                  name: "Suntik Kuota", 
-                  tourId: "service-kuota",
-                  svg: (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
-                    </svg>
-                  ), 
-                  href: "/beli-paket", 
-                  color: "bg-purple-50 text-purple-600 border border-purple-100" 
-                }] : [])
-              ].map(item => (
-                <a 
-                  key={item.name} 
-                  href={item.href} 
-                  data-tour={item.tourId}
-                  className="flex flex-col items-center gap-2 group p-2 rounded-2xl hover:bg-parchment/60 transition-colors"
-                >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:shadow-md ${item.color}`}>
-                    {item.svg}
-                  </div>
-                  <span className="text-xs font-bold text-center text-ink/90 group-hover:text-primary transition-colors">{item.name}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Transactions */}
-          <div className="p-5 rounded-3xl bg-canvas border border-hairline shadow-xs space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                <span>📜</span> Jejak Transaksi
-              </h2>
-              <a href="/history" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                <span>Lihat Semua</span> ➔
-              </a>
-            </div>
-
-            {recentTrx.length === 0 ? (
-              <div className="text-center py-8 bg-parchment/40 border border-hairline rounded-2xl">
-                <p className="text-xs text-ink-muted">Belum ada pergerakan transaksi.</p>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {recentTrx.map((trx, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3.5 bg-canvas border border-hairline rounded-2xl hover:border-primary/40 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-base shrink-0">
-                        📱
-                      </div>
-                      <div>
-                        <p className="font-bold text-xs text-ink line-clamp-1">{trx.packageName || "Layanan IMEI"}</p>
-                        <p className="text-[10px] text-ink-muted mt-0.5 font-mono">
-                          {trx.imei ? (trx.imei.split(',').length > 1 ? `${trx.imei.split(',')[0]} (+${trx.imei.split(',').length - 1})` : trx.imei) : trx.targetPhone}
-                        </p>
-                      </div>
+                      <p className="text-[10px] font-mono text-ink-muted mt-0.5">IMEI: {trx.imei} • #{trx.id.substring(0, 12)}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-xs text-ink">Rp {(trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
-                      <span className={`inline-block mt-0.5 px-2 py-0.5 text-[9px] font-bold rounded-md uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
-                        {trx.status === 'completed' ? 'success' : trx.status}
-                      </span>
-                      {trx.type === 'topup' && trx.status === 'pending' && trx.qrisData && (
-                        <button
-                          onClick={() => setSelectedQris(trx.qrisData)}
-                          className="block mt-1 px-2 py-0.5 text-[10px] bg-primary text-white font-bold rounded"
-                        >
-                          Bayar QRIS
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => setSelectedInvoiceTrx(trx)}
+                      className="px-2.5 py-1 rounded-lg bg-canvas border border-hairline font-bold text-[11px] text-ink hover:bg-parchment transition-colors shrink-0"
+                    >
+                      Nota
+                    </button>
                   </div>
                 ))}
               </div>
             )}
+
+            {cleanSearch.length >= 8 && !detectedDevice?.brand && filteredTrx.length === 0 && (
+              <div className="p-3 text-center text-ink-muted">
+                <p>Tidak ada transaksi yang cocok. Tekan untuk cek IMEI langsung:</p>
+                <div className="flex justify-center gap-2 mt-2">
+                  <button
+                    onClick={() => router.push(`/cek-garansi?imei=${cleanSearch}`)}
+                    className="px-3 py-1 rounded-lg bg-primary text-white font-bold text-xs"
+                  >
+                    Cek Garansi IMEI #{cleanSearch}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Announcement Banner */}
+      {announcement && (
+        <div
+          className="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden"
+          style={{ backgroundColor: announcement.bgColor || '#dc2626' }}
+        >
+          <div className="absolute -right-4 -top-4 text-white/10">
+            <svg width="100" height="100" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
+          </div>
+          <div className="relative z-10">
+            <h3 className="font-bold text-sm mb-1">📢 Info Penting Nih!</h3>
+            <p className="text-sm opacity-90">{announcement.message}</p>
           </div>
         </div>
+      )}
 
-        {/* Right Column: Wallet Card, Announcement, CS Support, & Referral Pill */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-20">
-          
-          {/* Announcement Banner (if any) */}
-          {announcement && (
-            <div
-              className="rounded-3xl p-4 text-white shadow-lg relative overflow-hidden"
-              style={{ backgroundColor: announcement.bgColor || '#dc2626' }}
-            >
-              <div className="absolute -right-4 -top-4 text-white/10">
-                <svg width="90" height="90" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
-              </div>
-              <div className="relative z-10">
-                <h3 className="font-bold text-xs mb-1 flex items-center gap-1.5">📢 Info Penting!</h3>
-                <p className="text-xs opacity-90 leading-relaxed">{announcement.message}</p>
-              </div>
-            </div>
-          )}
+      {/* Wallet Card Premium PPOB Style */}
+      <div data-tour="wallet-card" className="relative rounded-[24px] p-6 text-white overflow-hidden shadow-xl shadow-primary/20 bg-gradient-to-br from-[#0066cc] via-[#005bb5] to-[#004080] hover:scale-[1.02] transition-transform duration-300">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <svg width="120" height="120" fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" /></svg>
+        </div>
 
-          {/* Wallet Card Premium PPOB Style */}
-          <div data-tour="wallet-card" className="relative rounded-3xl p-6 text-white overflow-hidden shadow-xl shadow-primary/20 bg-gradient-to-br from-[#0066cc] via-[#005bb5] to-[#004080] hover:scale-[1.01] transition-transform duration-300">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <svg width="120" height="120" fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" /></svg>
-            </div>
-
-            <div className="relative z-10 flex flex-col gap-5">
+        <div className="relative z-10 flex flex-col gap-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-white/80 text-xs font-medium mb-1 flex items-center gap-1.5">
-                    <span>Cuan Aktif</span> 💰
-                  </p>
+                  <p className="text-white/80 text-sm font-medium mb-1">Cuan Aktif 💰</p>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-white/90">Rp</span>
-                    <span className="text-3xl sm:text-4xl font-black tracking-tight">
+                    <span className="text-2xl font-bold">Rp</span>
+                    <span className="text-4xl font-black tracking-tight">
                       {showBalance ? (user?.balance?.toLocaleString('id-ID') || "0") : "******"}
                     </span>
                     <button onClick={() => setShowBalance(!showBalance)} className="ml-2 text-white/80 hover:text-white transition-colors">
@@ -465,65 +245,222 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-                <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold capitalize border border-white/10">
-                  {user?.role}
-                </div>
-              </div>
-
-              <div className="flex gap-2.5 pt-1">
-                <a href="/topup" className="flex-1 bg-white text-[#005bb5] hover:bg-white/90 transition-all py-2.5 rounded-2xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                  Top Up Cuan
-                </a>
-                <a href="/history" className="flex-1 bg-white/10 hover:bg-white/20 transition-all border border-white/20 py-2.5 rounded-2xl font-bold text-xs text-center flex items-center justify-center gap-1.5">
-                  History
-                </a>
-              </div>
+            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold capitalize border border-white/10">
+              {user?.role}
             </div>
           </div>
 
-          {/* Quick CS WhatsApp Support Widget (Desktop) */}
-          <div className="p-5 rounded-3xl bg-canvas border border-hairline shadow-xs space-y-3.5 hidden lg:block">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold shrink-0 shadow-xs">
-                💬
-              </div>
-              <div>
-                <h4 className="font-bold text-sm text-ink">Bantuan CS Admin 24 Jam</h4>
-                <p className="text-xs text-ink-muted">Kendala sinyal, CEIR, atau top up saldo?</p>
-              </div>
-            </div>
-            <a
-              href="https://wa.me/6288706611370"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-2.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm shadow-emerald-500/20"
-            >
-              <span>Hubungi CS WhatsApp</span> ➔
+          <div className="flex gap-3">
+            <a href="/topup" className="flex-1 bg-white text-[#005bb5] hover:bg-white/90 transition-colors py-2.5 rounded-full font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+              Top Up Cuan
             </a>
-          </div>
-
-          {/* Quick Referral Bonus Widget (Desktop) */}
-          <div className="p-5 rounded-3xl bg-gradient-to-br from-primary/5 to-canvas border border-primary/20 shadow-xs space-y-3 hidden lg:block">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🤝</span>
-                <h4 className="font-bold text-xs text-ink">Program Cuan Referral</h4>
-              </div>
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Komisi Cuan</span>
-            </div>
-            <p className="text-xs text-ink-muted leading-relaxed">
-              Bagikan link referral Anda dan nikmati komisi saldo otomatis dari setiap transaksi rekan Anda.
-            </p>
-            <a
-              href="/referral"
-              className="w-full py-2 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-primary/20"
-            >
-              <span>Cek Link Referral Anda</span> ➔
+            <a href="/history" className="flex-1 bg-[#004080]/50 hover:bg-[#004080]/80 transition-colors border border-white/20 py-2.5 rounded-full font-bold text-sm text-center flex items-center justify-center gap-2">
+              History
             </a>
           </div>
         </div>
+      </div>
 
+      {/* Tutorial & Quick Start Guide Hub */}
+      {!tutorialDismissed && (
+        <Card glass className="p-4 sm:p-5 space-y-3.5 border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
+                🎓
+              </span>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
+                  Panduan Cepat Penggunaan
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full hidden sm:inline-block">5 Langkah</span>
+                </h2>
+                <p className="text-[11px] sm:text-xs text-ink-muted">Cara mudah & cepat menggunakan layanan Ry-ITSolutions</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => setShowGuidedTour(true)}
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
+                title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
+              >
+                <span className="animate-bounce text-sm">🔊</span> Tur Audio AI
+              </button>
+              <button
+                onClick={() => setShowTutorialModal(true)}
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1"
+              >
+                <span>Lihat Panduan</span> ➔
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Steps: Horizontal Swipeable Carousel on Mobile, Clean Grid on Desktop */}
+          <div className="relative">
+            <div className="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x snap-mandatory">
+              {[
+                { step: "1", title: "Top Up Saldo", desc: "Scan QRIS 24 jam", icon: "💳", href: "/topup" },
+                { step: "2", title: "Cek Database", desc: "Histori CEIR & Bea Cukai", icon: "🔍", href: "/cek-ceir" },
+                { step: "3", title: "Buka Sinyal", desc: "Input IMEI & durasi", icon: "📱", href: "/unblock-imei" },
+                { step: "4", title: "Notif WhatsApp", desc: "Nota otomatis ke WA", icon: "📲", href: "/history" },
+                { step: "5", title: "Garansi Digital", desc: "Pantau aktif & klaim", icon: "🛡️", href: "/cek-garansi" }
+              ].map((s, idx) => (
+                <a
+                  key={idx}
+                  href={s.href}
+                  className="w-[135px] sm:w-auto shrink-0 snap-start p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center">
+                      {s.step}
+                    </span>
+                    <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors line-clamp-1">{s.title}</h4>
+                    <p className="text-[10px] text-ink-muted leading-tight mt-0.5 line-clamp-1">{s.desc}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Category Grid */}
+      <div>
+        <h2 className="text-lg font-bold text-ink mb-4">Layanan Utama</h2>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+          {[
+            { 
+              name: "Buka IMEI", 
+              tourId: "service-unblock",
+              svg: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 12.75v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              ), 
+              href: "/unblock-imei", 
+              color: "bg-rose-50 text-rose-600 border border-rose-100" 
+            },
+            { 
+              name: "Cek CEIR", 
+              tourId: "service-ceir",
+              svg: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              ), 
+              href: "/cek-ceir", 
+              color: "bg-emerald-50 text-emerald-600 border border-emerald-100" 
+            },
+            { 
+              name: "Cek Garansi", 
+              tourId: "service-garansi",
+              svg: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              ), 
+              href: "/cek-garansi", 
+              color: "bg-blue-50 text-blue-600 border border-blue-100" 
+            },
+            { 
+              name: "Program Referral", 
+              tourId: "service-referral",
+              svg: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              ), 
+              href: "/referral", 
+              color: "bg-amber-50 text-amber-600 border border-amber-100" 
+            },
+            { 
+              name: "Cetak Barcode", 
+              tourId: "service-barcode",
+              svg: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
+                </svg>
+              ), 
+              href: "/barcode", 
+              color: "bg-teal-50 text-teal-600 border border-teal-100" 
+            },
+            ...(menuSettings?.showBeliPaket ? [{ 
+              name: "Suntik Kuota", 
+              tourId: "service-kuota",
+              svg: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                </svg>
+              ), 
+              href: "/beli-paket", 
+              color: "bg-purple-50 text-purple-600 border border-purple-100" 
+            }] : [])
+          ].map(item => (
+            <a 
+              key={item.name} 
+              href={item.href} 
+              data-tour={item.tourId}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:shadow-md ${item.color}`}>
+                {item.svg}
+              </div>
+              <span className="text-xs font-semibold text-center text-ink/80">{item.name}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Transactions */}
+      <div>
+        <div className="flex justify-between items-center mb-4 mt-6">
+          <h2 className="text-lg font-bold text-ink">Jejak Transaksi</h2>
+          <a href="/history" className="text-sm font-semibold text-primary">Lihat Semua</a>
+        </div>
+
+        {recentTrx.length === 0 ? (
+          <div className="text-center py-8 bg-canvas border border-hairline rounded-2xl">
+            <p className="text-sm text-ink-muted">Belum ada pergerakan transaksi.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentTrx.map((trx, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 bg-canvas border border-hairline rounded-[18px] hover:border-primary/30 transition-colors">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-700 shrink-0">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-ink line-clamp-1">{trx.packageName || "Layanan IMEI"}</p>
+                    <p className="text-xs text-ink-muted mt-0.5 font-mono">
+                      {trx.imei ? (trx.imei.split(',').length > 1 ? `${trx.imei.split(',')[0]} (+${trx.imei.split(',').length - 1})` : trx.imei) : trx.targetPhone}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-sm text-ink">Rp {(trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
+                  <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-bold rounded uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-green-100 text-green-700' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {trx.status === 'completed' ? 'success' : trx.status}
+                  </span>
+                  {trx.type === 'topup' && trx.status === 'pending' && trx.qrisData && (
+                    <button
+                      onClick={() => setSelectedQris(trx.qrisData)}
+                      className="block mt-2 px-2 py-1 text-xs bg-primary text-white font-bold rounded"
+                    >
+                      Lihat QRIS
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* QRIS Modal */}
