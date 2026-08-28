@@ -152,17 +152,15 @@ export default function TopUpPage() {
         });
       }, 1000);
 
-      // 3. Polling status transaksi via /api/topup/status/:topUpId dan /api/auth/me
+      // 3. Polling status transaksi via /api/topup/latest-status dan /api/auth/me
       pollingInterval = setInterval(async () => {
         try {
-          if (topUpId) {
-            const statusRes = await fetch(`/api/topup/status/${topUpId}`, { credentials: "include" });
-            if (statusRes.ok) {
-              const statusData = await safeJson(statusRes);
-              if (statusData?.status && statusData?.transactionStatus === "completed") {
-                triggerSuccess(statusData.balance);
-                return;
-              }
+          const statusRes = await fetch("/api/topup/latest-status", { credentials: "include" });
+          if (statusRes.ok) {
+            const statusData = await safeJson(statusRes);
+            if (statusData?.status && statusData?.transactionStatus === "completed") {
+              triggerSuccess(statusData.balance);
+              return;
             }
           }
 
@@ -196,10 +194,11 @@ export default function TopUpPage() {
 
   // Tombol Cek Manual On-Demand
   const handleManualCheck = async () => {
-    if (!topUpId) return;
     setIsCheckingManual(true);
     try {
-      const res = await fetch(`/api/topup/status/${topUpId}`, { credentials: "include" });
+      const res = await fetch(topUpId ? `/api/topup/status/${topUpId}` : "/api/topup/latest-status", {
+        credentials: "include",
+      });
       const data = await safeJson(res);
       if (data?.status && data?.transactionStatus === "completed") {
         Swal.fire({
@@ -213,7 +212,7 @@ export default function TopUpPage() {
       } else {
         Swal.fire({
           title: "Menunggu Mutasi Bank",
-          text: "Pembayaran belum terdeteksi di mutasi gateway. Jika Anda baru saja transfer, mohon tunggu beberapa detik lagi.",
+          text: "Pembayaran belum terdeteksi di mutasi gateway. Jika Anda baru saja transfer, mohon tunggu beberapa detik lagi lalu tekan tombol ini kembali.",
           icon: "info",
           confirmButtonText: "Mengerti",
           confirmButtonColor: "#2563eb",

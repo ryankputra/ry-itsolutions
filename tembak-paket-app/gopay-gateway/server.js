@@ -578,14 +578,15 @@ async function verifyPayment(amount, startTime, merchantIdOverride = null, userA
     const fetchCheckPayment = async (activeHeaders) => {
         const merchantId = merchantIdOverride || process.env.GOPAY_MERCHANT_ID || '';
         const now = new Date();
-        const startTimeISO = startTime ? new Date(startTime).toISOString() : new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-        const endTimeISO = now.toISOString();
+        // Berikan toleransi 5 menit ke belakang untuk menghindari filter API GoJek membuang transaksi akibat selisih detik/clock skew
+        const startTimeISO = startTime ? new Date(new Date(startTime).getTime() - 5 * 60 * 1000).toISOString() : new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        const endTimeISO = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
 
         return await axios.get(GOJEK_TRANSACTIONS_URL, {
             headers: activeHeaders,
             params: {
                 from: 0,
-                size: 20,
+                size: 30,
                 statuses: 'SETTLEMENT,CAPTURE,REFUND,PARTIAL_REFUND',
                 payment_types: 'QRIS,GOPAY,OFFLINE_CREDIT_CARD,OFFLINE_DEBIT_CARD,CREDIT_CARD',
                 start_time: startTimeISO,
@@ -617,7 +618,19 @@ async function verifyPayment(amount, startTime, merchantIdOverride = null, userA
     const rawTransactions = response.data?.transactions || response.data?.data?.transactions || response.data?.data || [];
     
     const targetAmount = parseInt(amount, 10);
-    const filterStartTimeMs = startTime ? new Date(startTime).getTime() : 0;
+    // Berikan toleransi 3 menit untuk filter start time
+    const filterStartTimeMs = startTime ? (new Date(startTime).getTime() - 3 * 60 * 1000) : 0;
+
+    const parseTxTime = (timeStr) => {
+        if (!timeStr) return 0;
+        if (typeof timeStr === 'number') return timeStr;
+        let s = String(timeStr).trim();
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) {
+            s = s.replace(' ', 'T') + '+07:00';
+        }
+        const t = new Date(s).getTime();
+        return isNaN(t) ? 0 : t;
+    };
 
     for (const tx of rawTransactions) {
         // --- FIX BAGI 100 ---
@@ -625,12 +638,11 @@ async function verifyPayment(amount, startTime, merchantIdOverride = null, userA
         const txAmount = rawAmount > 0 && rawAmount.toString().endsWith('00') && rawAmount > targetAmount * 10 ? rawAmount / 100 : rawAmount;
         // --- END FIX ---
         
-        const txTimestamp = new Date(tx.transaction_time || tx.created_at || tx.settlement_time || 0).getTime();
+        const txTimestamp = parseTxTime(tx.transaction_time || tx.created_at || tx.settlement_time || 0);
         const txId = tx.id || tx.order_id || tx.wallstreet_transaction_id;
 
-        // FIX KRITIS: Pastikan waktu transaksi LEBIH BESAR SAMA DENGAN waktu qris dibuat
-        // dan belum pernah diklaim sebelumnya
-        if (txAmount === targetAmount && txTimestamp >= filterStartTimeMs) {
+        // FIX KRITIS: Pastikan waktu transaksi cocok (dengan toleransi skew) dan belum pernah diklaim
+        if (txAmount === targetAmount && (filterStartTimeMs === 0 || txTimestamp >= filterStartTimeMs)) {
             const existingClaim = claimedTransactions.get(txId);
 
             if (!existingClaim) {

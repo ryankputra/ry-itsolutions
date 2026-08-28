@@ -2244,6 +2244,91 @@ Akun telah di-upgrade secara otomatis.`, 'admin'
     }
 }
 
+app.get('/api/topup/latest-status', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        let topUp = await dbGet("SELECT * FROM topups WHERE userId = ? ORDER BY rowid DESC LIMIT 1", [userId]);
+        if (!topUp) return res.status(200).json({ status: true, transactionStatus: 'none' });
+
+        if (topUp.status === 'pending') {
+            const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+            const activeGateway = gwRow ? gwRow.value : 'orkut';
+            const useGopayGw = activeGateway === 'gopay' && process.env.GOPAY_GATEWAY_URL && process.env.GOPAY_GATEWAY_API_KEY;
+
+            if (useGopayGw && topUp.gopayTrxId) {
+                try {
+                    const gopayRes = await axios.get(`${process.env.GOPAY_GATEWAY_URL}/check-payment`, {
+                        params: {
+                            amount: topUp.baseAmount,
+                            trx_id: topUp.gopayTrxId,
+                            api_key: process.env.GOPAY_GATEWAY_API_KEY,
+                            start_time: topUp.createdAt
+                        },
+                        timeout: 10000
+                    });
+                    if (gopayRes.data?.success && gopayRes.data.paid) {
+                        await dbRun("BEGIN TRANSACTION");
+                        const result = await dbRun("UPDATE topups SET status = 'completed' WHERE id = ? AND status = 'pending'", [topUp.id]);
+                        if (result.changes > 0) {
+                            await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, userId]);
+                            await dbRun("COMMIT");
+                            const u = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+                            sseSend(userId, 'balance_update', { balance: u.balance, source: 'gopay_topup' });
+                            sseSend(userId, 'transaction_status', { id: topUp.id, type: 'topup', status: 'completed', message: 'Top up via GoPay berhasil!' });
+                            topUp.status = 'completed';
+                        } else {
+                            await dbRun("ROLLBACK");
+                        }
+                    }
+                } catch (err) {
+                    console.error("[LATEST_STATUS_GOPAY_CHECK_ERROR]", err.message);
+                }
+            } else if (!useGopayGw && ORKUT_MERCHANT_ID && ORKUT_USERNAME && ORKUT_TOKEN) {
+                try {
+                    const orkutRes = await axios.post(`https://qris.payment.web.id/payment/qris/${ORKUT_MERCHANT_ID}`, {
+                        username: ORKUT_USERNAME,
+                        token: ORKUT_TOKEN
+                    }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
+                    if (orkutRes.data && Array.isArray(orkutRes.data.data)) {
+                        const paymentFound = orkutRes.data.data.find(item =>
+                            (item.type === 'CR' || item.tipe === 'CR') && parseFloat(item.nominal || item.amount) === parseFloat(topUp.uniqueAmount)
+                        );
+                        if (paymentFound) {
+                            await dbRun("BEGIN TRANSACTION");
+                            const result = await dbRun("UPDATE topups SET status = 'completed' WHERE id = ? AND status = 'pending'", [topUp.id]);
+                            if (result.changes > 0) {
+                                await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, userId]);
+                                await dbRun("COMMIT");
+                                const u = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+                                sseSend(userId, 'balance_update', { balance: u.balance, source: 'orkut_topup' });
+                                sseSend(userId, 'transaction_status', { id: topUp.id, type: 'topup', status: 'completed', message: 'Top up via QRIS berhasil!' });
+                                topUp.status = 'completed';
+                            } else {
+                                await dbRun("ROLLBACK");
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("[LATEST_STATUS_ORKUT_CHECK_ERROR]", err.message);
+                }
+            }
+        }
+
+        const freshUser = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+        res.status(200).json({
+            status: true,
+            transactionStatus: topUp.status,
+            topUpId: topUp.id,
+            baseAmount: topUp.baseAmount,
+            uniqueAmount: topUp.uniqueAmount,
+            balance: freshUser?.balance
+        });
+    } catch (error) {
+        console.error("[LATEST_TOPUP_STATUS_ERROR]", error);
+        res.status(500).json({ status: false, message: "Gagal memeriksa status terbaru." });
+    }
+});
+
 app.get('/api/topup/status/:topUpId', isAuthenticated, async (req, res) => {
     try {
         const { topUpId } = req.params;
