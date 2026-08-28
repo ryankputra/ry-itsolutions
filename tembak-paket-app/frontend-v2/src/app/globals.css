@@ -19,8 +19,24 @@
 
 @layer base {
   :root {
-    --background: var(--color-canvas);
-    --foreground: var(--color-ink);
+    --background: #ffffff;
+    --foreground: #1d1d1f;
+  }
+
+  .dark {
+    --color-primary: #38bdf8;
+    --color-primary-focus: #0ea5e9;
+    --color-primary-on-dark: #60a5fa;
+    --color-ink: #f8fafc;
+    --color-ink-muted: #94a3b8;
+    --color-divider: #1e293b;
+    --color-hairline: #1e293b;
+    --color-canvas: #090d16;
+    --color-parchment: #0f172a;
+    --color-surface-pearl: #141e33;
+    --color-surface-tile: #1e293b;
+    --background: #090d16;
+    --foreground: #f8fafc;
   }
 
   body {
@@ -31,6 +47,7 @@
     line-height: 1.47;
     letter-spacing: -0.022em;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {

@@ -24,6 +24,7 @@ const SibApiV3Sdk = require('sib-api-v3-sdk');
 const FormData = require('form-data');
 const https = require('https');
 const { ceirgoRoutes, setDependencies, initCeirgoRoutes } = require('./ceirgoRoutes');
+const whatsappBaileys = require('./whatsappBaileys');
 const APP_START_TIME = Date.now();
 https.globalAgent.options.rejectUnauthorized = false;
 
@@ -157,6 +158,51 @@ async function initializeDatabase() {
             // Tambah kolom opsional hasil cek ceir dan speed option
             try { await dbRun("ALTER TABLE transactions ADD COLUMN user_image_ceir TEXT"); } catch (e) { }
             try { await dbRun("ALTER TABLE transactions ADD COLUMN speed_option TEXT"); } catch (e) { }
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN coupon_code TEXT"); } catch (e) { }
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN discount_amount REAL DEFAULT 0"); } catch (e) { }
+
+            // === TABEL KUPON PROMO (EVENT 12.12, 10.10, DLL) ===
+            await dbRun(`CREATE TABLE IF NOT EXISTS coupons (
+                id TEXT PRIMARY KEY,
+                code TEXT UNIQUE NOT NULL,
+                discount_type TEXT NOT NULL, -- 'fixed' (nominal Rp) atau 'percent' (%)
+                discount_value REAL NOT NULL,
+                min_order_amount REAL DEFAULT 0,
+                max_discount_amount REAL DEFAULT 0,
+                max_usage_limit INTEGER DEFAULT 100,
+                used_count INTEGER DEFAULT 0,
+                start_date TEXT,
+                end_date TEXT,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL
+            )`);
+            await dbRun(`CREATE TABLE IF NOT EXISTS coupon_usages (
+                id TEXT PRIMARY KEY,
+                coupon_id TEXT NOT NULL,
+                userId TEXT NOT NULL,
+                trxId TEXT,
+                discount_amount REAL NOT NULL,
+                used_at TEXT NOT NULL
+            )`);
+
+            // === TABEL & KOLOM SISTEM REFERRAL ===
+            try { await dbRun("ALTER TABLE users ADD COLUMN referral_code TEXT"); } catch (e) { }
+            try { await dbRun("ALTER TABLE users ADD COLUMN referred_by TEXT"); } catch (e) { }
+            await dbRun(`CREATE TABLE IF NOT EXISTS referral_rewards (
+                id TEXT PRIMARY KEY,
+                referrer_id TEXT NOT NULL,
+                referee_id TEXT NOT NULL,
+                trx_id TEXT,
+                amount REAL NOT NULL,
+                status TEXT DEFAULT 'completed',
+                created_at TEXT NOT NULL
+            )`);
+
+            // Default pengaturan referral di tabel settings (100% dinamis)
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_enabled', 'true')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_commission_type', 'fixed')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_commission_value', '5000')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_new_user_discount', '5000')`);
 
             // Set harga default jika belum ada
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('price_ceir_history', '50000')`);
@@ -393,13 +439,22 @@ app.post('/api/auth/google', async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, referral_code } = req.body;
         if (!name || !email || !password) return res.status(400).json({ status: false, message: "Nama, email, dan password wajib diisi." });
         if (await dbGet('SELECT id FROM users WHERE email = ?', [email])) return res.status(409).json({ status: false, message: "Email sudah terdaftar." });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = { id: `user_${Date.now()}`, name, email, password: hashedPassword, balance: 0, role: 'user', verifiedPhone: null, savedPhones: '[]', status: 'pending', createdAt: new Date().toISOString() };
-        await dbRun('INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', Object.values(newUser));
+        const cleanName = (name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'RYY';
+        const generatedRefCode = `${cleanName}${Math.floor(1000 + Math.random() * 9000)}`;
+
+        let referredById = null;
+        if (referral_code) {
+            const referrer = await dbGet('SELECT id FROM users WHERE UPPER(referral_code) = ?', [referral_code.trim().toUpperCase()]);
+            if (referrer) referredById = referrer.id;
+        }
+
+        const newUser = { id: `user_${Date.now()}`, name, email, password: hashedPassword, balance: 0, role: 'user', verifiedPhone: null, savedPhones: '[]', status: 'pending', createdAt: new Date().toISOString(), referral_code: generatedRefCode, referred_by: referredById };
+        await dbRun('INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', Object.values(newUser));
 
         // --- FORMAT PESAN ASLI ANDA ---
         sendTelegramNotification(
@@ -974,6 +1029,147 @@ app.get('/api/system-version', (req, res) => {
     res.json({ status: true, version: APP_START_TIME });
 });
 
+// === PUBLIC WARRANTY & IMEI STATUS CHECKER ===
+app.get('/api/public/check-warranty', async (req, res) => {
+    try {
+        const queryImei = (req.query.imei || '').trim().replace(/\D/g, '');
+        if (!queryImei || queryImei.length < 8) {
+            return res.status(400).json({ status: false, message: 'Nomor IMEI minimal 8 digit valid.' });
+        }
+
+        // Cari transaksi berdasarkan nomor IMEI
+        const trx = await dbGet(`
+            SELECT id, userId, packageName, platformFee, status, createdAt, service_type, imei, admin_note, speed_option
+            FROM transactions
+            WHERE imei LIKE ? AND service_type IN ('imei', 'ceir')
+            ORDER BY datetime(createdAt) DESC
+            LIMIT 1
+        `, [`%${queryImei}%`]);
+
+        if (!trx) {
+            return res.status(404).json({
+                status: false,
+                message: `Tidak ditemukan data garansi untuk IMEI ${queryImei}. Pastikan nomor IMEI sudah benar atau telah terdaftar di sistem.`
+            });
+        }
+
+        // Cek tipe layanan: 'ceir' (Pengecekan data CEIR) vs 'imei' (Buka Gembok Sinyal Bergaransi)
+        const isCeirService = trx.service_type === 'ceir';
+        const pkgName = (trx.packageName || '').toLowerCase();
+
+        let isPermanent = false;
+        let durationDays = 0;
+        let expiryDate = null;
+        let remainingDays = 0;
+        let warrantyStatus = 'not_applicable';
+
+        if (!isCeirService) {
+            isPermanent = pkgName.includes('permanen') || pkgName.includes('permanent');
+            durationDays = 90; // Default 3 bulan
+
+            if (isPermanent) {
+                durationDays = 9999;
+            } else if (pkgName.includes('1 tahun') || pkgName.includes('12 bulan') || pkgName.includes('365')) {
+                durationDays = 365;
+            } else if (pkgName.includes('6 bulan') || pkgName.includes('180')) {
+                durationDays = 180;
+            } else if (pkgName.includes('3 bulan') || pkgName.includes('90')) {
+                durationDays = 90;
+            } else if (pkgName.includes('2 bulan') || pkgName.includes('60')) {
+                durationDays = 60;
+            } else if (pkgName.includes('1 bulan') || pkgName.includes('30')) {
+                durationDays = 30;
+            }
+
+            const createdAtDate = new Date(trx.createdAt);
+            expiryDate = new Date(createdAtDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+            const now = new Date();
+            const diffTime = expiryDate.getTime() - now.getTime();
+            remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (trx.status === 'pending' || trx.status === 'processing') {
+                warrantyStatus = 'in_progress';
+            } else if (trx.status === 'failed' || trx.status === 'canceled') {
+                warrantyStatus = 'failed';
+            } else if (isPermanent) {
+                warrantyStatus = 'permanent';
+            } else if (remainingDays <= 0) {
+                warrantyStatus = 'expired';
+            } else {
+                warrantyStatus = 'active';
+            }
+        } else {
+            // Transaksi Cek CEIR (Non-Garansi Sinyal)
+            if (trx.status === 'pending' || trx.status === 'processing') {
+                warrantyStatus = 'in_progress';
+            } else if (trx.status === 'failed' || trx.status === 'canceled') {
+                warrantyStatus = 'failed';
+            } else {
+                warrantyStatus = 'ceir_completed';
+            }
+        }
+
+        let ceirData = null;
+        if (isCeirService) {
+            let parsedNote = null;
+            try {
+                parsedNote = JSON.parse(trx.admin_note);
+            } catch {
+                parsedNote = null;
+            }
+
+            const rawNote = trx.admin_note || '';
+            let ceirStatus = 'TERDAFTAR DI DATABASE CEIR';
+            if (rawNote.toLowerCase().includes('tidak terdaftar') || trx.status === 'failed') {
+                ceirStatus = 'TIDAK TERDAFTAR';
+            } else if (rawNote.toLowerCase().includes('beacukai')) {
+                ceirStatus = 'TERDAFTAR BEA CUKAI';
+            } else if (rawNote.toLowerCase().includes('riwayat')) {
+                ceirStatus = 'TERDAFTAR (MEMILIKI RIWAYAT CEIR)';
+            }
+
+            ceirData = {
+                gateway: 'CEIR Kemenperin & Bea Cukai RI Gateway',
+                status: ceirStatus,
+                detail: rawNote || 'Data IMEI telah berhasil diverifikasi oleh server CEIR.',
+                verifiedAt: trx.createdAt,
+                operators: 'Semua Operator Indonesia (Telkomsel, Indosat, XL, Smartfren, Tri)',
+                parsed: parsedNote
+            };
+        }
+
+        res.json({
+            status: true,
+            data: {
+                trxId: trx.id,
+                imei: queryImei,
+                fullImei: trx.imei,
+                packageName: trx.packageName || (isCeirService ? 'Cek Status & Riwayat CEIR' : 'Unblock IMEI'),
+                serviceType: trx.service_type,
+                hasWarranty: !isCeirService,
+                orderStatus: trx.status,
+                speedOption: trx.speed_option,
+                createdAt: trx.createdAt,
+                adminNote: trx.admin_note,
+                ceirData,
+                warranty: {
+                    hasWarranty: !isCeirService,
+                    isPermanent,
+                    durationDays: isPermanent || isCeirService ? null : durationDays,
+                    startDate: trx.createdAt,
+                    expiryDate: expiryDate ? expiryDate.toISOString() : null,
+                    remainingDays: isPermanent ? 'Permanen' : isCeirService ? null : Math.max(0, remainingDays),
+                    warrantyStatus,
+                    notice: isCeirService ? 'Layanan Cek CEIR merupakan layanan informasi pengecekan data di CEIR Kemenperin / Bea Cukai (bukan aktivasi sinyal, sehingga tidak memiliki garansi masa aktif sinyal).' : null
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Error in check-warranty:", error);
+        res.status(500).json({ status: false, message: 'Terjadi kesalahan saat memeriksa garansi.' });
+    }
+});
+
 app.get('/api/admin/maintenance-schedule', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('maintenanceScheduleEnabled', 'maintenanceStartTime', 'maintenanceEndTime')");
@@ -1035,6 +1231,380 @@ app.put('/api/admin/payment-gateway', isAuthenticated, isAdmin, async (req, res)
         await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('paymentGateway', ?)", [gateway]);
         res.json({ status: true, message: `Payment gateway berhasil diubah ke ${gateway.toUpperCase()}.` });
     } catch (e) { res.status(500).json({ status: false, message: 'Gagal menyimpan setting gateway.' }); }
+});
+
+// === BAILEYS WHATSAPP BOT (100% GRATIS & UNLIMITED) ===
+app.get('/api/admin/baileys/status', isAuthenticated, isAdmin, (req, res) => {
+    try {
+        res.json({ status: true, data: whatsappBaileys.getStatus() });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+app.post('/api/admin/baileys/init', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const forceNew = req.body?.forceNew === true;
+        await whatsappBaileys.initWhatsApp(forceNew);
+        res.json({ status: true, message: 'Inisialisasi bot WhatsApp dimulai...' });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+app.post('/api/admin/baileys/logout', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await whatsappBaileys.logoutWhatsApp();
+        res.json({ status: true, message: 'Sesi WhatsApp bot berhasil diputus.' });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+app.post('/api/admin/baileys/test', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { targetPhone } = req.body;
+        if (!targetPhone) return res.status(400).json({ status: false, message: 'Nomor WhatsApp tujuan wajib diisi.' });
+
+        const testMsg = `*TES WHATSAPP BOT RY-ITSOLUTIONS* 🚀\n\nHalo! WhatsApp Bot toko Anda telah berhasil terhubung langsung tanpa biaya bulanan! ✅`;
+        const result = await whatsappBaileys.sendTextMessage(targetPhone, testMsg);
+        if (result.status) {
+            res.json({ status: true, message: result.message });
+        } else {
+            res.status(400).json({ status: false, message: result.message });
+        }
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// === ADMIN WHATSAPP GATEWAY SETTINGS ===
+app.get('/api/admin/whatsapp-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const tokenRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_gateway_token'");
+        const urlRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_gateway_url'");
+        const autoSendRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_auto_send'");
+
+        res.json({
+            status: true,
+            data: {
+                token: tokenRow ? tokenRow.value : '',
+                url: urlRow ? urlRow.value : 'https://api.fonnte.com/send',
+                autoSend: autoSendRow ? autoSendRow.value === 'true' : false
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+app.put('/api/admin/whatsapp-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { token, url, autoSend } = req.body;
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_gateway_token', ?)", [token || '']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_gateway_url', ?)", [url || 'https://api.fonnte.com/send']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_auto_send', ?)", [autoSend ? 'true' : 'false']);
+        res.json({ status: true, message: 'Pengaturan WhatsApp Gateway berhasil disimpan!' });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+app.post('/api/admin/whatsapp-test', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { targetPhone } = req.body;
+        if (!targetPhone) return res.status(400).json({ status: false, message: 'Nomor WhatsApp tujuan wajib diisi.' });
+
+        // 1. Coba Baileys bot dulu jika terhubung
+        const baileysStatus = whatsappBaileys.getStatus();
+        if (baileysStatus.isConnected) {
+            const testMsg = `*TES WHATSAPP BOT RY-ITSOLUTIONS* 🚀\n\nHalo! WhatsApp Bot toko Anda telah aktif & siap kirim nota otomatis! ✅`;
+            const result = await whatsappBaileys.sendTextMessage(targetPhone, testMsg);
+            if (result.status) {
+                return res.json({ status: true, message: 'Pesan tes berhasil dikirim via WhatsApp Bot Toko!' });
+            }
+        }
+
+        const tokenRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_gateway_token'");
+        if (!tokenRow?.value) {
+            return res.status(400).json({ status: false, message: 'WhatsApp Bot belum login atau Token Gateway belum diisi.' });
+        }
+
+        const testMsg = `*TES WHATSAPP GATEWAY RY-ITSOLUTIONS* 🚀\n\nHalo! Notifikasi WhatsApp otomatis dari sistem Anda telah berhasil terhubung dan siap digunakan! ✅`;
+        
+        let cleanPhone = targetPhone.replace(/\D/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+        else if (!cleanPhone.startsWith('62')) cleanPhone = '62' + cleanPhone;
+
+        const urlRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_gateway_url'");
+        const url = urlRow?.value || 'https://api.fonnte.com/send';
+
+        const response = await axios.post(url, {
+            target: cleanPhone,
+            message: testMsg
+        }, {
+            headers: {
+                'Authorization': tokenRow.value
+            },
+            timeout: 10000
+        });
+
+        res.json({ status: true, message: 'Pesan tes WhatsApp berhasil terkirim ke ' + cleanPhone });
+    } catch (e) {
+        console.error("[WA_TEST_ERROR]", e.response ? e.response.data : e.message);
+        res.status(400).json({ status: false, message: 'Gagal mengirim: ' + (e.response?.data?.message || e.message) });
+    }
+});
+
+// Helper Kirim Notifikasi WhatsApp Otomatis
+async function sendWhatsAppNotification(targetPhone, message) {
+    try {
+        if (!targetPhone || !message) return false;
+
+        const autoSendRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_auto_send'");
+        if (autoSendRow?.value !== 'true') return false;
+
+        // 1. Prioritaskan Pengiriman via Baileys Bot Langsung (100% Gratis & Unlimited)
+        const baileysStatus = whatsappBaileys.getStatus();
+        if (baileysStatus.isConnected) {
+            const res = await whatsappBaileys.sendTextMessage(targetPhone, message);
+            if (res.status) {
+                console.log(`[WA_BAILEYS_NOTIF_SUCCESS] Pesan terkirim ke ${targetPhone}`);
+                return true;
+            }
+        }
+
+        // 2. Fallback via API Gateway (jika token diisi)
+        let cleanPhone = targetPhone.replace(/\D/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+        else if (!cleanPhone.startsWith('62')) cleanPhone = '62' + cleanPhone;
+
+        const tokenRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_gateway_token'");
+        const urlRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_gateway_url'");
+
+        if (tokenRow?.value) {
+            const url = urlRow?.value || 'https://api.fonnte.com/send';
+            const response = await axios.post(url, {
+                target: cleanPhone,
+                message: message
+            }, {
+                headers: {
+                    'Authorization': tokenRow.value
+                },
+                timeout: 8000
+            });
+
+            console.log("[WA_GATEWAY_SUCCESS]", response.data);
+            return true;
+        }
+
+        return false;
+    } catch (e) {
+        console.error("[WA_GATEWAY_ERROR]", e.message);
+        return false;
+    }
+}
+
+// === SISTEM KUPON PROMO (ADMIN & USER) ===
+app.get('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const coupons = await dbAll("SELECT * FROM coupons ORDER BY datetime(created_at) DESC");
+        res.json({ status: true, data: coupons });
+    } catch (e) {
+        console.error("Error fetching coupons:", e);
+        res.status(500).json({ status: false, message: "Gagal mengambil daftar kupon." });
+    }
+});
+
+app.post('/api/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, start_date, end_date } = req.body;
+        if (!code || !discount_type || !discount_value) {
+            return res.status(400).json({ status: false, message: "Kode, tipe potongan, dan nilai potongan wajib diisi." });
+        }
+        const cleanCode = code.trim().toUpperCase();
+        const existing = await dbGet("SELECT id FROM coupons WHERE UPPER(code) = ?", [cleanCode]);
+        if (existing) {
+            return res.status(400).json({ status: false, message: "Kode kupon ini sudah digunakan." });
+        }
+
+        const id = `cpn_${Date.now()}`;
+        await dbRun(`
+            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, used_count, start_date, end_date, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, ?)
+        `, [id, cleanCode, discount_type, Number(discount_value) || 0, Number(min_order_amount) || 0, Number(max_discount_amount) || 0, parseInt(max_usage_limit) || 100, start_date || null, end_date || null, new Date().toISOString()]);
+
+        res.json({ status: true, message: `Kupon ${cleanCode} berhasil dibuat!` });
+    } catch (e) {
+        console.error("Error creating coupon:", e);
+        res.status(500).json({ status: false, message: "Gagal membuat kupon." });
+    }
+});
+
+app.put('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_active, max_usage_limit, discount_value, min_order_amount, max_discount_amount, start_date, end_date } = req.body;
+        
+        await dbRun(`
+            UPDATE coupons 
+            SET is_active = COALESCE(?, is_active),
+                max_usage_limit = COALESCE(?, max_usage_limit),
+                discount_value = COALESCE(?, discount_value),
+                min_order_amount = COALESCE(?, min_order_amount),
+                max_discount_amount = COALESCE(?, max_discount_amount),
+                start_date = COALESCE(?, start_date),
+                end_date = COALESCE(?, end_date)
+            WHERE id = ?
+        `, [
+            typeof is_active !== 'undefined' ? (is_active ? 1 : 0) : null,
+            typeof max_usage_limit !== 'undefined' ? parseInt(max_usage_limit) : null,
+            typeof discount_value !== 'undefined' ? Number(discount_value) : null,
+            typeof min_order_amount !== 'undefined' ? Number(min_order_amount) : null,
+            typeof max_discount_amount !== 'undefined' ? Number(max_discount_amount) : null,
+            typeof start_date !== 'undefined' ? start_date : null,
+            typeof end_date !== 'undefined' ? end_date : null,
+            id
+        ]);
+
+        res.json({ status: true, message: "Kupon berhasil diperbarui." });
+    } catch (e) {
+        console.error("Error updating coupon:", e);
+        res.status(500).json({ status: false, message: "Gagal memperbarui kupon." });
+    }
+});
+
+app.delete('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await dbRun("DELETE FROM coupons WHERE id = ?", [id]);
+        res.json({ status: true, message: "Kupon berhasil dihapus." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: "Gagal menghapus kupon." });
+    }
+});
+
+// Endpoint validasi kupon untuk checkout
+app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
+    try {
+        const { code, order_amount } = req.body;
+        if (!code) return res.status(400).json({ status: false, message: "Masukkan kode kupon." });
+        const cleanCode = code.trim().toUpperCase();
+        const orderAmt = Number(order_amount) || 0;
+
+        const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [cleanCode]);
+        if (!coupon) return res.status(404).json({ status: false, message: "Kode kupon tidak ditemukan." });
+        if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Kupon ini sedang tidak aktif." });
+
+        const now = new Date();
+        if (coupon.start_date && now < new Date(coupon.start_date)) {
+            return res.status(400).json({ status: false, message: `Kupon promo baru dapat digunakan mulai ${new Date(coupon.start_date).toLocaleDateString('id-ID')}.` });
+        }
+        if (coupon.end_date && now > new Date(coupon.end_date)) {
+            return res.status(400).json({ status: false, message: "Kupon promo telah kedaluwarsa." });
+        }
+        if (coupon.used_count >= coupon.max_usage_limit) {
+            return res.status(400).json({ status: false, message: "Kuota kupon promo ini sudah habis." });
+        }
+        if (orderAmt < coupon.min_order_amount) {
+            return res.status(400).json({ status: false, message: `Minimal pembelian untuk kupon ini adalah Rp ${coupon.min_order_amount.toLocaleString('id-ID')}.` });
+        }
+
+        // Cek apakah user sudah pernah pakai kupon ini
+        const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, req.session.userId]);
+        if (userUsage && userUsage.count > 0) {
+            return res.status(400).json({ status: false, message: "Anda sudah pernah menggunakan kupon promo ini." });
+        }
+
+        let discount = 0;
+        if (coupon.discount_type === 'percent') {
+            discount = (coupon.discount_value / 100) * orderAmt;
+            if (coupon.max_discount_amount > 0 && discount > coupon.max_discount_amount) {
+                discount = coupon.max_discount_amount;
+            }
+        } else {
+            discount = Math.min(coupon.discount_value, orderAmt);
+        }
+
+        const finalDiscount = Math.round(discount);
+        res.json({
+            status: true,
+            data: {
+                couponId: coupon.id,
+                code: coupon.code,
+                discount_type: coupon.discount_type,
+                discount_value: coupon.discount_value,
+                discount_amount: finalDiscount,
+                final_amount: Math.max(0, orderAmt - finalDiscount)
+            }
+        });
+    } catch (e) {
+        console.error("Error validating coupon:", e);
+        res.status(500).json({ status: false, message: "Terjadi kesalahan saat memvalidasi kupon." });
+    }
+});
+
+// === SISTEM REFERRAL (ADMIN & USER) ===
+app.get('/api/admin/referral-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'referral_%'");
+        const settings = rows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {});
+        res.json({ status: true, data: settings });
+    } catch (e) {
+        res.status(500).json({ status: false, message: "Gagal mengambil pengaturan referral." });
+    }
+});
+
+app.post('/api/admin/referral-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { referral_enabled, referral_commission_type, referral_commission_value, referral_new_user_discount } = req.body;
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('referral_enabled', ?)", [referral_enabled ? 'true' : 'false']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('referral_commission_type', ?)", [referral_commission_type || 'fixed']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('referral_commission_value', ?)", [referral_commission_value ? String(referral_commission_value) : '5000']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('referral_new_user_discount', ?)", [referral_new_user_discount ? String(referral_new_user_discount) : '5000']);
+        res.json({ status: true, message: "Pengaturan referral berhasil disimpan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan referral." });
+    }
+});
+
+app.get('/api/user/referral-info', isAuthenticated, async (req, res) => {
+    try {
+        let user = await dbGet("SELECT id, name, referral_code FROM users WHERE id = ?", [req.session.userId]);
+        if (!user) return res.status(404).json({ status: false, message: "User tidak ditemukan." });
+
+        // Jika belum punya kode referral, buatkan otomatis
+        if (!user.referral_code) {
+            const cleanName = (user.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'RYY';
+            const generatedCode = `${cleanName}${Math.floor(1000 + Math.random() * 9000)}`;
+            await dbRun("UPDATE users SET referral_code = ? WHERE id = ?", [generatedCode, user.id]);
+            user.referral_code = generatedCode;
+        }
+
+        // Ambil total komisi yang didapat
+        const rewardSum = await dbGet("SELECT COALESCE(SUM(amount), 0) as total FROM referral_rewards WHERE referrer_id = ?", [user.id]);
+        
+        // Ambil daftar downline / user yang diajak
+        const referees = await dbAll("SELECT id, name, email, createdAt FROM users WHERE referred_by = ? ORDER BY datetime(createdAt) DESC", [user.id]);
+
+        // Ambil setting komisi aktif
+        const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'referral_%'");
+        const refSettings = settingsRows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {});
+
+        res.json({
+            status: true,
+            data: {
+                referralCode: user.referral_code,
+                totalEarned: rewardSum ? rewardSum.total : 0,
+                totalDownlines: referees.length,
+                downlines: referees,
+                settings: refSettings
+            }
+        });
+    } catch (e) {
+        console.error("Error fetching referral info:", e);
+        res.status(500).json({ status: false, message: "Gagal mengambil data referral." });
+    }
 });
 
 app.post('/api/admin/run-reseller-retention', isAuthenticated, isAdmin, async (req, res) => {
@@ -1717,6 +2287,55 @@ app.post('/api/admin/reject-user', isAuthenticated, isAdmin, async (req, res) =>
         await dbRun('DELETE FROM users WHERE id = ?', [userId]);
         res.status(200).json({ status: true, message: `Pengguna ${user.name} berhasil ditolak dan dihapus.` });
     } catch (error) { console.error("Error rejecting user:", error); res.status(500).json({ status: false, message: "Gagal menolak pengguna." }); }
+});
+
+// Broadcast Promo Message to Telegram & In-App Announcement
+app.post('/api/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { title, message, voucherCode, targetTelegram, targetInApp, bgColor } = req.body;
+        if (!message || !message.trim()) {
+            return res.status(400).json({ status: false, message: 'Pesan broadcast tidak boleh kosong.' });
+        }
+
+        let telegramSent = false;
+        let inAppUpdated = false;
+
+        // 1. Send to Telegram Group/Channel if enabled
+        if (targetTelegram) {
+            let teleText = `📢 <b>${(title || 'PENGUMUMAN PROMO').toUpperCase()}</b>\n──────────────────────\n${message.trim()}`;
+            if (voucherCode) {
+                teleText += `\n\n🎟️ <b>Kupon Diskon:</b> <code>${voucherCode.trim().toUpperCase()}</code>\n<i>Gunakan kupon saat checkout untuk klaim potongan harga!</i>`;
+            }
+            teleText += `\n\n👉 <i>Buka Web: https://panel.cloudrystore.com</i>`;
+            await sendTelegramNotification(teleText, 'group');
+            telegramSent = true;
+        }
+
+        // 2. Update In-App Announcement Banner if enabled
+        if (targetInApp) {
+            let fullMsg = message.trim();
+            if (voucherCode) fullMsg += ` (Kupon: ${voucherCode.trim().toUpperCase()})`;
+            const newAnnouncement = {
+                message: fullMsg,
+                bgColor: bgColor || '#0066cc',
+                createdAt: new Date().toISOString()
+            };
+            await dbRun(
+                `INSERT INTO settings (key, value) VALUES ('announcement', ?) 
+                 ON CONFLICT(key) DO UPDATE SET value = ?`,
+                [JSON.stringify(newAnnouncement), JSON.stringify(newAnnouncement)]
+            );
+            inAppUpdated = true;
+        }
+
+        res.json({
+            status: true,
+            message: `Broadcast berhasil dikirim! (${telegramSent ? 'Telegram ✅' : ''} ${inAppUpdated ? 'In-App Banner ✅' : ''})`
+        });
+    } catch (err) {
+        console.error('[BROADCAST_ERROR]', err);
+        res.status(500).json({ status: false, message: 'Gagal mengirim broadcast promo: ' + err.message });
+    }
 });
 
 app.post('/api/admin/delete-user', isAuthenticated, isAdmin, async (req, res) => {
@@ -2855,13 +3474,48 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
 
             const totalPrice = price * imeiCount;
 
-            const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
-            if (user.balance < totalPrice) return res.status(402).json({ status: false, message: `Saldo tidak mencukupi untuk ${imeiCount} IMEI` });
+            // Perhitungan Kupon Diskon Promo jika ada
+            let discountAmount = 0;
+            let appliedCoupon = null;
+            if (req.body.coupon_code) {
+                const cleanCode = req.body.coupon_code.trim().toUpperCase();
+                const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ? AND is_active = 1", [cleanCode]);
+                if (coupon) {
+                    const now = new Date();
+                    const validDate = (!coupon.start_date || now >= new Date(coupon.start_date)) && (!coupon.end_date || now <= new Date(coupon.end_date));
+                    const validQuota = coupon.used_count < coupon.max_usage_limit;
+                    const validMin = totalPrice >= coupon.min_order_amount;
+                    if (validDate && validQuota && validMin) {
+                        if (coupon.discount_type === 'percent') {
+                            discountAmount = (coupon.discount_value / 100) * totalPrice;
+                            if (coupon.max_discount_amount > 0 && discountAmount > coupon.max_discount_amount) {
+                                discountAmount = coupon.max_discount_amount;
+                            }
+                        } else {
+                            discountAmount = Math.min(coupon.discount_value, totalPrice);
+                        }
+                        discountAmount = Math.round(discountAmount);
+                        appliedCoupon = coupon;
+                    }
+                }
+            }
 
-            await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [totalPrice, req.session.userId]);
+            const finalPriceToPay = Math.max(0, totalPrice - discountAmount);
+
+            const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+            if (user.balance < finalPriceToPay) return res.status(402).json({ status: false, message: `Saldo tidak mencukupi untuk pembayaran sebesar Rp ${finalPriceToPay.toLocaleString('id-ID')}` });
+
+            await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [finalPriceToPay, req.session.userId]);
 
             const trxId = `trx_m_${Date.now()}`;
             const packageName = service_type === 'imei' ? `Unblock IMEI (${duration}) x${imeiCount}` : `Cek CEIR (${duration})`;
+
+            if (appliedCoupon) {
+                try {
+                    await dbRun("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [appliedCoupon.id]);
+                    await dbRun("INSERT INTO coupon_usages (id, coupon_id, userId, trxId, discount_amount, used_at) VALUES (?, ?, ?, ?, ?, ?)", [`usg_${Date.now()}`, appliedCoupon.id, req.session.userId, trxId, discountAmount, new Date().toISOString()]);
+                } catch (e) { console.error("Error updating coupon usage:", e); }
+            }
 
             let imagePaths = [];
             if (req.files && req.files['image']) {
@@ -2976,9 +3630,28 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
             }
 
             await dbRun(`
-                INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, status, api_response, admin_note, admin_image, kmspTrxId, createdAt, service_type, imei, user_image, user_image_ceir, speed_option)
-                VALUES (?, ?, (SELECT name FROM users WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, totalPrice, totalPrice, '', 'balance', finalStatus, apiResponse, adminNote, typeof adminImagePath !== 'undefined' ? adminImagePath : null, refId, new Date().toISOString(), service_type, cleanImei, imagePath, ceirImagePath, speed_option]);
+                INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, paymentMethod, status, api_response, admin_note, admin_image, kmspTrxId, createdAt, service_type, imei, user_image, user_image_ceir, speed_option, coupon_code, discount_amount)
+                VALUES (?, ?, (SELECT name FROM users WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [trxId, req.session.userId, req.session.userId, price_key, packageName, finalPriceToPay, totalPrice, '', 'balance', finalStatus, apiResponse, adminNote, typeof adminImagePath !== 'undefined' ? adminImagePath : null, refId, new Date().toISOString(), service_type, cleanImei, imagePath, ceirImagePath, speed_option, appliedCoupon ? appliedCoupon.code : null, discountAmount]);
+
+            // Proses Komisi Referral Otomatis jika akun ini diajak oleh orang lain
+            try {
+                const userRow = await dbGet("SELECT referred_by FROM users WHERE id = ?", [req.session.userId]);
+                if (userRow && userRow.referred_by) {
+                    const refEnabledRow = await dbGet("SELECT value FROM settings WHERE key = 'referral_enabled'");
+                    if (refEnabledRow && refEnabledRow.value === 'true') {
+                        const commissionRow = await dbGet("SELECT value FROM settings WHERE key = 'referral_commission_value'");
+                        const commissionAmount = Number(commissionRow?.value) || 5000;
+                        if (commissionAmount > 0) {
+                            await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [commissionAmount, userRow.referred_by]);
+                            await dbRun(`
+                                INSERT INTO referral_rewards (id, referrer_id, referee_id, trx_id, amount, status, created_at)
+                                VALUES (?, ?, ?, ?, ?, 'completed', ?)
+                            `, [`ref_${Date.now()}`, userRow.referred_by, req.session.userId, trxId, commissionAmount, new Date().toISOString()]);
+                        }
+                    }
+                }
+            } catch (e) { console.error("[REFERRAL_COMMISSION_ERROR]", e); }
 
 
             if (finalStatus !== 'success') {
@@ -3124,6 +3797,27 @@ app.put('/api/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => 
             // Refund if failed and previously was pending/processing
             if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing')) {
                 await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [trx.platformFee, trx.userId]);
+            }
+
+            // Auto WhatsApp Notification if status changed to success/completed
+            if ((status === 'success' || status === 'completed') && trx.status !== 'success' && trx.status !== 'completed') {
+                try {
+                    const userRow = await dbGet("SELECT phone, name FROM users WHERE id = ?", [trx.userId]);
+                    const targetPhone = trx.targetPhone || userRow?.phone;
+                    if (targetPhone) {
+                        const firstImei = (trx.imei || '').split(',')[0].trim();
+                        const verifyLink = `https://panel.cloudrystore.com/cek-garansi?imei=${firstImei}`;
+                        const waMsg = `Halo Kak *${userRow?.name || 'Pelanggan'}*,\nPesanan *${trx.packageName || 'Layanan IMEI'}* Anda telah SELESAI diproses! ✅\n\n` +
+                            `📱 *IMEI:* ${trx.imei || '-'}\n` +
+                            `🛡️ *Status:* Sukses / Aktif\n` +
+                            (admin_note ? `📝 *Catatan:* ${admin_note}\n` : '') +
+                            `\n🔗 *Cek Nota & Garansi Digital:* \n${verifyLink}\n\n` +
+                            `Terima kasih telah menggunakan layanan Ry-ITSolutions! 🙏`;
+                        sendWhatsAppNotification(targetPhone, waMsg);
+                    }
+                } catch (waErr) {
+                    console.error("[WA_NOTIF_ERR]", waErr);
+                }
             }
 
             res.json({ status: true, message: "Pesanan berhasil diupdate" });
@@ -3489,7 +4183,8 @@ app.post('/api/admin/deploy', isAuthenticated, isAdmin, (req, res) => {
         // Kirim rentetan perintah ke stdin bash
         child.stdin.write('cd /www/wwwroot/ry-itsolutions/tembak-paket-app && echo "[LOG] Menyimpan perubahan lokal (stash)..." && git stash\n');
         child.stdin.write('echo "[LOG] Menarik kode terbaru dari GitHub..." && git pull origin main\n');
-        child.stdin.write('cd frontend-v2 && echo "[LOG] Memulai build frontend Next.js..." && npm run build\n');
+        child.stdin.write('cd backend && echo "[LOG] Memperbarui dependensi Backend (npm install)..." && npm install --no-audit --no-fund\n');
+        child.stdin.write('cd ../frontend-v2 && echo "[LOG] Memulai build frontend Next.js..." && npm run build\n');
         child.stdin.write('echo "[LOG] Merestart server PM2..." && pm2 restart all\n');
         child.stdin.end();
 

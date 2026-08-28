@@ -7,17 +7,18 @@ import { useApp } from "@/lib/store";
 import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
+import { analyzeImei } from "@/lib/imeiHelper";
 
 const ceirgoNameMapping: Record<string, string> = {
-  'cek_validity': 'Cek Masa Aktif',
-  'create_barcode_samsung': 'Barcode Samsung',
-  'create_barcode_redmi': 'Barcode Redmi',
-  'create_barcode_ios26': 'Barcode iOS 26',
+  'cek_history_imei': 'Cek Riwayat Database CEIR',
+  'cek_imei_beacukai': 'Cek IMEI Bea Cukai',
+  'cek_icloud': 'Cek iCloud & FMI (Clean / Lost)',
+  'cek_fmi': 'Cek iCloud & FMI (Clean / Lost)',
+  'cek_simlock': 'Cek Carrier Simlock (Operator Asal)',
+  'cek_carrier': 'Cek Carrier Simlock (Operator Asal)',
+  'cek_validity': 'Cek Masa Aktif Sinyal',
   'cek_digi': 'Cek DIGI',
-  'cek_sf': 'Cek SF',
-  'create_barcode': 'Create Barcode',
-  'cek_imei_beacukai': 'Cek IMEI Beacukai',
-  'cek_history_imei': 'Cek Riwayat IMEI',
+  'cek_sf': 'Cek Smartfren',
   'cek_imei': 'Cek Status IMEI'
 };
 
@@ -33,7 +34,7 @@ export default function CekCeirPage() {
   const [imei, setImei] = useState("");
   const [imei2, setImei2] = useState("");
   const [theme, setTheme] = useState("dark");
-  const [option, setOption] = useState("register");
+  const [option, setOption] = useState("cek_history_imei");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -69,6 +70,19 @@ export default function CekCeirPage() {
       if (prcData.status) setPricing(prcData.data);
       if (ceirPrcData.status) setCeirgoPricing(ceirPrcData.data);
       const services = ceirSvcData.status ? normalizeServices(ceirSvcData.data) : [];
+
+      // Ensure core diagnostic services (CEIR & Bea Cukai) are available
+      const coreServices = [
+        { code: 'cek_history_imei', name: 'Cek Riwayat Database CEIR', modalPrice: 5100 },
+        { code: 'cek_imei_beacukai', name: 'Cek IMEI Bea Cukai', modalPrice: 1500 }
+      ];
+
+      coreServices.forEach(cs => {
+        if (!services.some((s: any) => s.code === cs.code)) {
+          services.push(cs);
+        }
+      });
+
       const hasCeirSetting = displayData?.status && displayData.data && Object.prototype.hasOwnProperty.call(displayData.data, 'cekCeir');
       const visibleCodes = hasCeirSetting
         ? new Set(Array.isArray(displayData.data.cekCeir) ? displayData.data.cekCeir : [])
@@ -230,14 +244,33 @@ export default function CekCeirPage() {
           <svg width="20" height="20" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Cek CEIR 🔍</h1>
-          <p className="text-sm text-ink-muted">Kepoin status IMEI (ceir) lo sebelum unblock imei lo.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink flex items-center gap-2">
+            <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            Cek CEIR & Status HP
+          </h1>
+          <p className="text-sm text-ink-muted">Pemeriksaan database CEIR Kemenperin, Bea Cukai, Status iCloud & FMI (Clean/Lost), dan Simlock Operator.</p>
         </div>
       </div>
 
       <Card glass className="p-6 space-y-6">
-        {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100 flex items-center gap-2"><span className="text-lg">⚠️</span>{error}</div>}
-        {success && <div className="p-3 bg-green-50 text-green-700 rounded-xl text-sm border border-green-100 flex items-center gap-2"><span className="text-lg">✅</span>{success}</div>}
+        {error && (
+          <div className="p-3.5 bg-rose-50 text-rose-700 rounded-xl text-xs border border-rose-200 flex items-center gap-2">
+            <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="p-3.5 bg-emerald-50 text-emerald-800 rounded-xl text-xs border border-emerald-200 flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            {success}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -256,14 +289,59 @@ export default function CekCeirPage() {
               Detail Perangkat
             </label>
 
-            <Input
-              label={isBarcodeMode ? "IMEI Utama (SIM 1)" : "Nomor IMEI"}
-              placeholder="Masukkan 15 digit IMEI"
-              value={imei}
-              onChange={e => setImei(e.target.value)}
-              maxLength={15}
-              required
-            />
+            <div>
+              <Input
+                label={isBarcodeMode ? "IMEI Utama (SIM 1)" : "Nomor IMEI"}
+                placeholder="Masukkan 15 digit IMEI"
+                value={imei}
+                onChange={e => setImei(e.target.value.replace(/\D/g, ''))}
+                maxLength={15}
+                required
+              />
+              {imei.length >= 8 && (() => {
+                const analysis = analyzeImei(imei);
+                return (
+                  <div className={`mt-2 flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                    analysis.isValidLength && analysis.isValidLuhn 
+                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900' 
+                      : analysis.isValidLength && !analysis.isValidLuhn
+                      ? 'bg-amber-50/60 border-amber-200 text-amber-900'
+                      : 'bg-canvas border-hairline text-ink-muted'
+                  }`}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-hairline flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-bold text-ink">
+                          {analysis.brand ? `${analysis.brand} ${analysis.model}` : `Perangkat Terdeteksi`}
+                        </p>
+                        <p className="text-[11px] opacity-75 font-mono">
+                          {analysis.clean} ({analysis.clean.length}/15 digit)
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      {analysis.isValidLength && analysis.isValidLuhn ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                          Luhn Valid
+                        </span>
+                      ) : analysis.isValidLength && !analysis.isValidLuhn ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                          Cek Ulang Digit
+                        </span>
+                      ) : (
+                        <span className="text-ink-muted">
+                          {15 - analysis.clean.length} digit lagi
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
 
             {isBarcodeMode && (
               <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-4 mt-2">

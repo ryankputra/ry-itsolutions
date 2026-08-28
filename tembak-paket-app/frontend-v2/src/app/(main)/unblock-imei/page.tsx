@@ -8,6 +8,7 @@ import TelegramPopup from "@/components/ui/TelegramPopup";
 import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
+import { analyzeImei, parseMultipleImeis } from "@/lib/imeiHelper";
 
 export default function UnblockImeiPage() {
   const { user } = useApp();
@@ -30,6 +31,12 @@ export default function UnblockImeiPage() {
   const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: "" });
   const [announcement, setAnnouncement] = useState<any>(null);
+
+  // Coupon Promo State
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponError, setCouponError] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -67,7 +74,49 @@ export default function UnblockImeiPage() {
   const speedPrice = speedPricing[`imei_speed_${selectedSpeed}`] 
     ? parseInt(speedPricing[`imei_speed_${selectedSpeed}`]) || 0 
     : 0;
-  const totalPrice = (basePrice + speedPrice) * imeiCount;
+  const rawTotalPrice = (basePrice + speedPrice) * imeiCount;
+  const discountAmount = appliedCoupon ? Math.min(appliedCoupon.discount_amount, rawTotalPrice) : 0;
+  const totalPrice = Math.max(0, rawTotalPrice - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/coupon/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code: couponCode.trim(), order_amount: rawTotalPrice })
+      });
+      const d = await res.json();
+      if (res.ok && d.status) {
+        setAppliedCoupon(d.data);
+        Swal.fire({
+          icon: "success",
+          title: "Kupon Berhasil Dipasang! 🎉",
+          text: `Hemat Rp ${d.data.discount_amount.toLocaleString('id-ID')} dengan kupon ${d.data.code}`,
+          toast: true,
+          position: "top-end",
+          timer: 3500,
+          showConfirmButton: false
+        });
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(d.message || "Kupon tidak valid atau telah habis.");
+      }
+    } catch (e) {
+      setCouponError("Gagal memvalidasi kupon promo.");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +142,7 @@ export default function UnblockImeiPage() {
 
     const confirm = await Swal.fire({
       title: 'Ready buat checkout? 💸',
-      text: `Yakin mau lanjut bayar untuk ${imeiList.length} IMEI? Saldo kepotong Rp ${totalPrice.toLocaleString('id-ID')} ya.`,
+      text: `Yakin mau lanjut bayar untuk ${imeiList.length} IMEI? ${appliedCoupon ? `(Diskon Kupon: -Rp ${discountAmount.toLocaleString('id-ID')}) ` : ''}Saldo kepotong Rp ${totalPrice.toLocaleString('id-ID')} ya.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -115,6 +164,9 @@ export default function UnblockImeiPage() {
     formData.append("duration", selectedPkg.duration);
     formData.append("price_key", selectedPkg.id);
     formData.append("speed_option", selectedSpeed);
+    if (appliedCoupon) {
+      formData.append("coupon_code", appliedCoupon.code);
+    }
     
     files.forEach(f => formData.append("image", f));
     ceirFiles.forEach(f => formData.append("ceir_image", f));
@@ -188,8 +240,15 @@ export default function UnblockImeiPage() {
 
         {serviceStatus.isOpen ? (
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink/80">Nomor IMEI</label>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-ink/80">Nomor IMEI (15 Digit)</label>
+                {imei.trim().length > 0 && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {parseMultipleImeis(imei).filter(i => i.isValidLength).length} IMEI Valid
+                  </span>
+                )}
+              </div>
               <textarea 
                 placeholder="Masukkan 15 digit IMEI (Bisa banyak sekaligus, pisahkan dengan enter atau koma)" 
                 value={imei} 
@@ -201,7 +260,101 @@ export default function UnblockImeiPage() {
                 className="w-full rounded-xl border border-hairline bg-canvas px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all min-h-[100px] leading-relaxed"
                 required 
               />
-              <p className="text-xs text-ink-muted">Terdeteksi: <b className="text-primary">{imeiList.length}</b> IMEI Valid</p>
+
+              {/* Interactive Multi-IMEI Tag Badges & Live Device Auto-Detect */}
+              {imei.trim().length > 0 && (() => {
+                const parsedList = parseMultipleImeis(imei);
+                const validCount = parsedList.filter(i => i.isValidLength && i.isValidLuhn).length;
+                const warnCount = parsedList.filter(i => i.isValidLength && !i.isValidLuhn).length;
+
+                const removeImeiAtIndex = (indexToRemove: number) => {
+                  const lines = imei.split(/[\n,]+/).map(i => i.trim()).filter(Boolean);
+                  const updated = lines.filter((_, idx) => idx !== indexToRemove).join("\n");
+                  setImei(updated);
+                };
+
+                return (
+                  <div className="space-y-2.5 pt-1">
+                    {/* Summary Stats Header */}
+                    <div className="flex items-center justify-between px-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-ink">Total: {parsedList.length} IMEI</span>
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                          {validCount} Siap Proses
+                        </span>
+                        {warnCount > 0 && (
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                            {warnCount} Cek Ulang
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setImei("")}
+                        className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold transition-colors"
+                      >
+                        Hapus Semua
+                      </button>
+                    </div>
+
+                    {/* Interactive Tag Cards */}
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                      {parsedList.map((analysis, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                            analysis.isValidLength && analysis.isValidLuhn 
+                              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' 
+                              : analysis.isValidLength && !analysis.isValidLuhn
+                              ? 'bg-amber-50/70 border-amber-200 text-amber-950'
+                              : 'bg-canvas border-hairline text-ink-muted'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="w-5 h-5 rounded-full bg-parchment font-bold text-[10px] text-ink-muted flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-black text-ink truncate text-xs">
+                                {analysis.brand ? `${analysis.brand} ${analysis.model}` : `Perangkat #${idx + 1}`}
+                              </p>
+                              <p className="text-[11px] opacity-80 font-mono font-bold tracking-wider truncate">
+                                {analysis.clean || analysis.raw}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {analysis.isValidLength && analysis.isValidLuhn ? (
+                              <span className="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
+                                GSMA Valid
+                              </span>
+                            ) : analysis.isValidLength && !analysis.isValidLuhn ? (
+                              <span className="inline-flex items-center gap-1 font-bold text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200" title="Digit checksum luhn tidak cocok">
+                                Typo Checksum
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-ink-muted">
+                                {analysis.clean.length}/15 digit
+                              </span>
+                            )}
+
+                            {/* Remove Tag Button */}
+                            <button
+                              type="button"
+                              onClick={() => removeImeiAtIndex(idx)}
+                              className="w-5 h-5 rounded-full bg-slate-200/80 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center text-[10px] text-slate-600 transition-colors"
+                              title="Hapus IMEI ini"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -265,14 +418,96 @@ export default function UnblockImeiPage() {
               </div>
             )}
 
-            <div className="pt-4 border-t border-hairline">
+            {/* Kupon Diskon Promo (12.12, 10.10, dll) */}
+            <div className="pt-2 space-y-2">
+              <label className="text-sm font-medium text-ink/80 flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+                Punya Kode Kupon / Voucher Promo?
+              </label>
+
+              {!appliedCoupon ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Contoh: PROMO1212 / FLASHIMEI"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="flex-1 rounded-xl border border-hairline bg-canvas px-4 py-2.5 text-xs font-mono font-bold uppercase focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-4 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    {couponLoading ? "Cek..." : "Gunakan"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-bold text-emerald-950">
+                        Kupon <span className="font-mono">{appliedCoupon.code}</span> Terpasang!
+                      </p>
+                      <p className="text-[11px] text-emerald-700">
+                        Potongan: -Rp {discountAmount.toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2 py-1 bg-rose-50 rounded-lg border border-rose-200/60"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              )}
+
+              {couponError && (
+                <p className="text-xs text-rose-600 font-medium flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                  {couponError}
+                </p>
+              )}
+            </div>
+
+            {/* Price Breakdown Summary */}
+            <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline space-y-2 text-xs">
+              <div className="flex justify-between text-ink-muted">
+                <span>Subtotal ({imeiCount} IMEI)</span>
+                <span className="font-bold text-ink">Rp {rawTotalPrice.toLocaleString('id-ID')}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-700 font-semibold">
+                  <span>Diskon Kupon ({appliedCoupon.code})</span>
+                  <span>- Rp {discountAmount.toLocaleString('id-ID')}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-black text-ink pt-2 border-t border-hairline">
+                <span>Total Bayar</span>
+                <span className="text-primary">Rp {totalPrice.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-hairline">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" className="mt-1 w-5 h-5 rounded border-hairline text-primary" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
                 <span className="text-sm text-ink-muted">Saya menyatakan bahwa HP saya memenuhi seluruh persyaratan di atas dan setuju memproses pesanan ini.</span>
               </label>
             </div>
             
-            <Button className="w-full h-12" type="submit" isLoading={submitting}>
+            <Button className="w-full h-12 text-sm font-bold shadow-lg" type="submit" isLoading={submitting}>
               Bayar Rp {totalPrice.toLocaleString('id-ID')}
             </Button>
           </form>
