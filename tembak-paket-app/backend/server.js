@@ -1591,6 +1591,33 @@ app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
     }
 });
 
+// === DYNAMIC NEURAL AI VOICE TTS ENDPOINT ===
+let msEdgeTTSModule = null;
+try {
+    msEdgeTTSModule = require('msedge-tts');
+} catch (e) {}
+
+app.get('/api/tts', async (req, res) => {
+    try {
+        const text = (req.query.text || '').trim();
+        if (!text) return res.status(400).send("Text is required");
+        if (!msEdgeTTSModule) return res.status(500).send("TTS Module not available");
+
+        const voice = req.query.voice || 'id-ID-GadisNeural';
+        const { MsEdgeTTS, OUTPUT_FORMAT } = msEdgeTTSModule;
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        const { audioStream } = tts.toStream(text);
+
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        audioStream.pipe(res);
+    } catch (err) {
+        console.error("[TTS_ERROR]", err);
+        res.status(500).send("TTS Error: " + err.message);
+    }
+});
+
 // === SISTEM REFERRAL (ADMIN & USER) ===
 app.get('/api/admin/referral-settings', isAuthenticated, isAdmin, async (req, res) => {
     try {
