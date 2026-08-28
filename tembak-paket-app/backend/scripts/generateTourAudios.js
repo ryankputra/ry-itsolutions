@@ -24,6 +24,10 @@ const tourAudios = [
     text: 'Setiap pesanan dilengkapi garansi digital. Di menu Cek Garansi, Anda bisa memantau sisa masa aktif, mengunduh nota resmi, atau mengajukan bantuan teknis kapan saja.'
   },
   {
+    file: 'step_voucher.mp3',
+    text: 'Ini adalah Pusat Klaim Voucher Promo. Anda bisa mengklaim berbagai kupon potongan harga spesial di sini. Setelah diklaim, voucher bisa langsung Anda pasang saat melakukan pemesanan agar mendapat diskon otomatis!'
+  },
+  {
     file: 'step_6.mp3',
     text: 'Dapatkan penghasilan tambahan melalui Program Referral! Bagikan link referral unik Anda ke teman atau pelanggan, dan nikmati komisi saldo otomatis di setiap transaksi mereka.'
   }

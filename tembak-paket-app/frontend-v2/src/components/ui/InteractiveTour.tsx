@@ -111,6 +111,9 @@ export default function InteractiveTour({ isOpen, onClose, steps = DEFAULT_STEPS
 
   // Stop current audio cleanly
   const stopAudio = () => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -119,28 +122,56 @@ export default function InteractiveTour({ isOpen, onClose, steps = DEFAULT_STEPS
     setIsPlaying(false);
   };
 
-  // Play Neural AI voice MP3
-  const playAudio = (audioUrl: string) => {
+  // Play Neural AI voice MP3 (with SpeechSynthesis fallback)
+  const playAudio = (audioUrl: string, fallbackText?: string) => {
     stopAudio();
-    if (!isAudioEnabled || !audioUrl) return;
+    if (!isAudioEnabled) return;
 
-    try {
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.onplay = () => setIsPlaying(true);
-      audio.onended = () => setIsPlaying(false);
-      audio.onerror = () => setIsPlaying(false);
-
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.warn("Audio autoplay prevented or error:", err);
+    if (audioUrl) {
+      try {
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        audio.onplay = () => setIsPlaying(true);
+        audio.onended = () => setIsPlaying(false);
+        audio.onerror = () => {
           setIsPlaying(false);
-        });
+          // Fallback to Web Speech API jika file MP3 gagal dimuat
+          if (fallbackText && typeof window !== "undefined" && window.speechSynthesis) {
+            try {
+              const utter = new SpeechSynthesisUtterance(fallbackText);
+              utter.lang = "id-ID";
+              utter.rate = 1.0;
+              utter.onstart = () => setIsPlaying(true);
+              utter.onend = () => setIsPlaying(false);
+              utter.onerror = () => setIsPlaying(false);
+              window.speechSynthesis.speak(utter);
+            } catch (e) {}
+          }
+        };
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn("Audio autoplay prevented or error:", err);
+            setIsPlaying(false);
+          });
+        }
+        return;
+      } catch (e) {
+        console.warn("Audio playback error:", e);
       }
-    } catch (e) {
-      console.warn("Audio playback error:", e);
-      setIsPlaying(false);
+    }
+
+    if (fallbackText && typeof window !== "undefined" && window.speechSynthesis) {
+      try {
+        const utter = new SpeechSynthesisUtterance(fallbackText);
+        utter.lang = "id-ID";
+        utter.rate = 1.0;
+        utter.onstart = () => setIsPlaying(true);
+        utter.onend = () => setIsPlaying(false);
+        utter.onerror = () => setIsPlaying(false);
+        window.speechSynthesis.speak(utter);
+      } catch (e) {}
     }
   };
 
@@ -193,7 +224,7 @@ export default function InteractiveTour({ isOpen, onClose, steps = DEFAULT_STEPS
     updatePosition();
     const timer = setTimeout(() => {
       updatePosition();
-      playAudio(currentStep.audioUrl);
+      playAudio(currentStep.audioUrl, currentStep.description);
     }, 350);
 
     window.addEventListener("resize", updatePosition);
@@ -311,7 +342,7 @@ export default function InteractiveTour({ isOpen, onClose, steps = DEFAULT_STEPS
                   const nextAudio = !isAudioEnabled;
                   setIsAudioEnabled(nextAudio);
                   if (nextAudio) {
-                    playAudio(currentStep.audioUrl);
+                    playAudio(currentStep.audioUrl, currentStep.description);
                   } else {
                     stopAudio();
                   }
