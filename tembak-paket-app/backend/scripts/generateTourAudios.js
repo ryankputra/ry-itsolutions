@@ -5,31 +5,31 @@ const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
 const tourAudios = [
   {
     file: 'step_1.mp3',
-    text: 'Halo guys! Ini dompet saldo kamu nih. Mau top up? Gak pake ribet, langsung scan QRIS 24 jam dan saldo auto masuk detik itu juga. No drama nunggu admin!'
+    text: 'Halo! Selamat datang di Ry IT Solutions. Ini adalah kartu saldo Anda. Anda bisa melakukan isi saldo secara instan melalui QRIS otomatis dua puluh empat jam. Begitu transfer, saldo langsung masuk dalam hitungan detik tanpa perlu konfirmasi manual.'
   },
   {
     file: 'step_2.mp3',
-    text: 'Nah, ini fitur search sat-set! Tinggal tempel 15 digit IMEI atau ID order kamu, sistem bakal langsung spill status sinyal dan tipe HP kamu dalam sekejap.'
+    text: 'Ini adalah kolom pencarian cerdas. Cukup masukkan 15 digit nomor IMEI atau nomor pesanan Anda di sini, sistem akan langsung menampilkan tipe perangkat, status sinyal, dan riwayat transaksi secara real-time.'
   },
   {
     file: 'step_3.mp3',
-    text: 'Mau unblock sinyal HP inter all operator? Gas di menu ini! Masukkan IMEI, upload foto bintang pagar nol enam pagar, pilih durasi, dan sinyal kamu langsung on lagi.'
+    text: 'Menu Buka Sinyal IMEI adalah layanan utama kami untuk mengaktifkan kembali sinyal HP luar negeri all operator. Masukkan nomor IMEI, lampirkan foto bintang pagar nol enam pagar, pilih durasi yang diinginkan, dan pesanan Anda langsung kami proses.'
   },
   {
     file: 'step_4.mp3',
-    text: 'Sebelum eksekusi, kamu bisa kepoin dulu status IMEI di database CEIR dan Bea Cukai lewat menu ini. Dijamin akurat dan transparan!'
+    text: 'Gunakan menu Cek Database CEIR untuk memeriksa histori registrasi dan database resmi Bea Cukai pada perangkat Anda sebelum aktivasi sinyal.'
   },
   {
     file: 'step_5.mp3',
-    text: 'Tenang aja, semua order di sini ada garansi resminya lho! Kamu bisa cek sisa garansi, download nota PDF, atau chat bantuan teknis kapan aja.'
+    text: 'Setiap transaksi di sini dilengkapi dengan garansi digital resmi. Di menu ini, Anda bisa memantau sisa masa garansi, mengunduh nota PDF, ataupun menghubungi bantuan teknis kapan saja.'
   },
   {
     file: 'step_voucher.mp3',
-    text: 'Ini dia surganya diskon! Klaim semua voucher promo spesial di sini sekarang sebelum kehabisan kuota, terus langsung pasang pas checkout biar makin hemat dan cuan!'
+    text: 'Ini adalah Pusat Klaim Voucher Promo. Anda bisa mengambil berbagai kupon potongan harga spesial di sini. Setelah diklaim, voucher bisa langsung Anda pasang saat checkout agar mendapatkan diskon otomatis.'
   },
   {
     file: 'step_6.mp3',
-    text: 'Mau dapet cuan pasif tiap hari? Share link referral kamu ke temen-temen. Tiap kali mereka order, komisi saldo langsung ngalir ke akun kamu. Auto cuan maksimal!'
+    text: 'Dapatkan penghasilan tambahan melalui Program Referral. Bagikan link referral Anda kepada teman atau pelanggan, dan nikmati komisi saldo otomatis pada setiap transaksi mereka.'
   }
 ];
 
@@ -37,10 +37,10 @@ async function generateSingle(item, outputDir, maxRetries = 3) {
   const destPath = path.join(outputDir, item.file);
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[Attempt ${attempt}] Generating Gen Z voice for ${item.file}...`);
+      console.log(`[Attempt ${attempt}] Generating Studio HD Human Voice for ${item.file}...`);
       const tts = new MsEdgeTTS();
-      await tts.setMetadata('id-ID-ArdiNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-      const { audioStream } = tts.toStream(item.text, { rate: '+8%', pitch: '+3Hz' });
+      await tts.setMetadata('id-ID-GadisNeural', OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+      const { audioStream } = tts.toStream(item.text, { rate: '+0%', pitch: '+0Hz' });
 
       await new Promise((resolve, reject) => {
         const fileStream = fs.createWriteStream(destPath);
@@ -51,7 +51,7 @@ async function generateSingle(item, outputDir, maxRetries = 3) {
       });
 
       const size = fs.statSync(destPath).size;
-      console.log(`✅ [${item.file}] Saved (${size} bytes) with Gen Z ArdiNeural`);
+      console.log(`✅ [${item.file}] Saved Studio HD Human Audio (${size} bytes)`);
       return;
     } catch (err) {
       console.warn(`⚠️ [${item.file}] Attempt ${attempt} failed: ${err.message}`);
@@ -70,13 +70,13 @@ async function generateAll() {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  console.log('⚡ Generating all 7 Gen Z persona tour audios (sat-set & relatable)...');
+  console.log('🎙️ Generating all 7 Realistic Studio HD Tour Audios (96kbps natural cadence)...');
   for (const item of tourAudios) {
     await generateSingle(item, outputDir);
     await new Promise((r) => setTimeout(r, 800));
   }
 
-  console.log('🚀 All 7 Gen Z Tour audio files generated successfully!');
+  console.log('🎉 All 7 Realistic Studio HD Audio files generated successfully!');
 }
 
 generateAll().catch((err) => {
