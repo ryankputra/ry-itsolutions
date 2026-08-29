@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Card } from "./Card";
+import { playTopupSuccessSound } from "@/lib/soundFx";
 
 interface SuccessModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export function SuccessModal({
 }: SuccessModalProps) {
   useEffect(() => {
     if (isOpen) {
+      playTopupSuccessSound();
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";

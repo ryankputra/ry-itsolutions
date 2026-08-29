@@ -249,18 +249,41 @@ export function bindSwalSounds() {
           if (node instanceof HTMLElement) {
             // Check if a SweetAlert container was mounted
             if (node.classList?.contains("swal2-container") || node.querySelector?.(".swal2-popup")) {
-              const popup = node.classList.contains("swal2-popup") ? node : node.querySelector(".swal2-popup");
+              const popup = (node.classList.contains("swal2-popup") ? node : node.querySelector(".swal2-popup")) as HTMLElement;
               if (popup) {
-                if (popup.querySelector(".swal2-icon-success") || popup.classList.contains("swal2-icon-success")) {
-                  playSuccessSound();
-                } else if (popup.querySelector(".swal2-icon-error") || popup.classList.contains("swal2-icon-error")) {
-                  playErrorSound();
-                } else if (popup.querySelector(".swal2-icon-warning") || popup.classList.contains("swal2-icon-warning")) {
-                  playWarningSound();
-                } else if (popup.querySelector(".swal2-icon-question") || popup.querySelector(".swal2-icon-info")) {
-                  playDingSound();
+                if ((popup as any).__soundPlayed) continue;
+                (popup as any).__soundPlayed = true;
+
+                const playAppropriateSound = () => {
+                  if (
+                    popup.querySelector(".swal2-success, [class*='swal2-success'], .swal2-icon-success") ||
+                    popup.classList.contains("swal2-success")
+                  ) {
+                    playSuccessSound();
+                  } else if (
+                    popup.querySelector(".swal2-error, [class*='swal2-error'], .swal2-icon-error") ||
+                    popup.classList.contains("swal2-error")
+                  ) {
+                    playErrorSound();
+                  } else if (
+                    popup.querySelector(".swal2-warning, [class*='swal2-warning'], .swal2-icon-warning") ||
+                    popup.classList.contains("swal2-warning")
+                  ) {
+                    playWarningSound();
+                  } else if (
+                    popup.querySelector(".swal2-info, .swal2-question, [class*='swal2-info'], [class*='swal2-question']")
+                  ) {
+                    playDingSound();
+                  } else {
+                    playPopSound();
+                  }
+                };
+
+                // Check immediately or shortly after icon finishes mounting
+                if (popup.querySelector(".swal2-icon")) {
+                  playAppropriateSound();
                 } else {
-                  playPopSound();
+                  setTimeout(playAppropriateSound, 30);
                 }
               }
             }

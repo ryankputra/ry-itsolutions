@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { analyzeImei } from "@/lib/imeiHelper";
 import Swal from "sweetalert2";
+import { playPopSound } from "@/lib/soundFx";
 
 interface InvoiceData {
   trxId: string;
@@ -53,6 +54,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       }
     };
     if (isOpen) {
+      playPopSound();
       window.addEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "hidden";
     }

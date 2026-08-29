@@ -1,6 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
+import { playPopSound } from "@/lib/soundFx";
 
 interface ShopeeVoucherModalProps {
   isOpen: boolean;
@@ -30,6 +31,21 @@ export function ShopeeVoucherModal({
   const [customCode, setCustomCode] = useState("");
   const [activeTab, setActiveTab] = useState<"available" | "all">("available");
   const [selectedCode, setSelectedCode] = useState<string>(appliedCoupon?.code || "");
+
+  useEffect(() => {
+    if (isOpen) {
+      playPopSound();
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") onClose();
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+        document.body.style.overflow = "";
+      };
+    }
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
