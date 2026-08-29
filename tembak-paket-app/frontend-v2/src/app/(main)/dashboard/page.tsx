@@ -240,68 +240,104 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Top Mini-Wallet Strip (ShopeePay / Tokopedia GoPay Bar) */}
-      <div data-tour="wallet-card" className="rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shadow-xl shadow-blue-950/20 border border-white/10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
-        <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-orange-500/10 blur-2xl rounded-full pointer-events-none"></div>
+      {/* Top Mini-Wallet & Koin Strip (ShopeePay & Shopee Coins Hub) */}
+      <div data-tour="wallet-card" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Box 1: Saldo Utama (2 Cols on Desktop) */}
+        <div className="md:col-span-2 rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shadow-xl shadow-blue-950/20 border border-white/10 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          {/* Saldo Information */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-white/70 text-xs font-medium">
-              <span>💳 Dompet Saldo Anda</span>
-              <button 
-                onClick={toggleShowBalance} 
-                className="hover:text-white transition-colors"
-                title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-white/70 text-xs font-medium">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                </svg>
+                <span>Saldo Dompet Belanja</span>
+                <button
+                  onClick={toggleShowBalance}
+                  className="hover:text-white transition-colors"
+                  title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+                >
+                  {showBalance ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-base font-bold text-white/80">Rp</span>
+                <span className="text-2xl sm:text-3xl font-black tracking-tight">
+                  {showBalance ? (user?.balance?.toLocaleString("id-ID") || "0") : "••••••"}
+                </span>
+              </div>
+              <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                QRIS 24 Jam • Otomatis Masuk Detik Itu Juga
+              </p>
+            </div>
+
+            {/* CTA Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => router.push("/topup")}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-primary hover:from-blue-600 hover:to-primary-hover text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
-                {showBalance ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                  </svg>
-                )}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                <span>Isi Saldo</span>
+              </button>
+
+              <button
+                onClick={() => router.push("/history")}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Riwayat</span>
               </button>
             </div>
+          </div>
+        </div>
 
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-bold text-white/80">Rp</span>
-              <span className="text-3xl sm:text-4xl font-black tracking-tight">
-                {showBalance ? (user?.balance?.toLocaleString('id-ID') || "0") : "••••••"}
-              </span>
+        {/* Box 2: Koin Ry Hub (1 Col on Desktop, Shopee Coins Style) */}
+        <div className="rounded-3xl p-5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-500/30 text-ink shadow-lg flex flex-col justify-between gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                🪙
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-ink-muted block uppercase leading-tight">
+                  Koin Diskon Ry
+                </span>
+                <span className="text-lg font-black text-amber-700 dark:text-amber-400">
+                  {(user?.coins || 0).toLocaleString("id-ID")} Koin
+                </span>
+              </div>
             </div>
-            <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              QRIS Otomatis 24 Jam • Masuk Instan Detik Itu Juga
-            </p>
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
+              1 Koin = Rp 1
+            </span>
           </div>
 
-          {/* Quick Wallet CTA Action Buttons */}
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
-            <button
-              onClick={() => router.push('/topup')}
-              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-500 to-primary hover:from-blue-600 hover:to-primary-hover text-white text-xs font-black shadow-md shadow-primary/30 transition-all flex items-center justify-center gap-2 active:scale-95"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              <span>Isi Saldo</span>
-            </button>
-
-            <button
-              onClick={() => router.push('/history')}
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold backdrop-blur-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Riwayat</span>
-            </button>
-          </div>
+          <button
+            onClick={() => router.push("/games")}
+            className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
+            </svg>
+            <span>Klaim Koin &amp; Putar Roda</span>
+          </button>
         </div>
       </div>
 
@@ -326,7 +362,9 @@ export default function DashboardPage() {
               className="px-4 py-2 rounded-xl bg-white text-ink hover:bg-white/90 text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1.5"
             >
               <span>{heroSlides[currentSlide].ctaText}</span>
-              <span>➔</span>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
             </button>
 
             {/* Slide Indicators */}
@@ -335,15 +373,11 @@ export default function DashboardPage() {
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2 rounded-full transition-all ${currentSlide === idx ? 'w-6 bg-white' : 'w-2 bg-white/40'}`}
+                  className={`h-2 rounded-full transition-all ${currentSlide === idx ? "w-6 bg-white" : "w-2 bg-white/40"}`}
                   aria-label={`Slide ${idx + 1}`}
                 />
               ))}
             </div>
-          </div>
-
-          <div className="absolute right-4 bottom-4 text-7xl opacity-20 select-none pointer-events-none">
-            {heroSlides[currentSlide].icon}
           </div>
         </div>
       </div>
@@ -352,11 +386,11 @@ export default function DashboardPage() {
       <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-canvas border border-hairline shadow-2xs overflow-hidden text-xs">
         <span className="flex items-center gap-1.5 font-bold text-emerald-600 shrink-0">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-          <span>Live Aktivitas:</span>
+          <span>Aktivitas Sistem:</span>
         </span>
         <div className="overflow-hidden whitespace-nowrap w-full">
           <p className="inline-block text-ink/80 text-[11px] sm:text-xs">
-            🟢 <b>Baru saja:</b> Transaksi Buka IMEI 3 Bulan sukses aktif • ⚡ <b>Sistem QRIS 24 Jam:</b> Saldo otomatis bertambah instan • 🛡️ <b>Garansi Resmi:</b> Seluruh order terlindungi garansi digital &amp; nota WhatsApp otomatis.
+            Baru saja: Transaksi Buka IMEI 3 Bulan sukses aktif • Sistem QRIS 24 Jam: Saldo otomatis bertambah instan • Garansi Resmi: Seluruh order terlindungi garansi digital &amp; nota WhatsApp otomatis.
           </p>
         </div>
       </div>
@@ -369,7 +403,7 @@ export default function DashboardPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari cepat: Ketik/Paste IMEI (15 digit) atau ID Transaksi..."
-            className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-canvas border border-hairline shadow-sm text-sm text-ink placeholder:text-ink-muted outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+            className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-canvas border border-hairline shadow-sm text-sm text-ink placeholder:text-ink-muted outline-hidden focus:ring-2 focus:ring-primary focus:border-primary transition-all"
           />
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -433,8 +467,8 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-ink">{trx.packageName || "Unblock IMEI"}</span>
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                          trx.status === 'success' ? 'bg-emerald-100 text-emerald-800' :
-                          trx.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                          trx.status === "success" ? "bg-emerald-100 text-emerald-800" :
+                          trx.status === "pending" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"
                         }`}>
                           {trx.status.toUpperCase()}
                         </span>
@@ -473,96 +507,125 @@ export default function DashboardPage() {
       {announcement && (
         <div
           className="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden"
-          style={{ backgroundColor: announcement.bgColor || '#dc2626' }}
+          style={{ backgroundColor: announcement.bgColor || "#dc2626" }}
         >
           <div className="absolute -right-4 -top-4 text-white/10">
             <svg width="100" height="100" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
           </div>
           <div className="relative z-10">
-            <h3 className="font-bold text-sm mb-1">📢 Info Penting Nih!</h3>
+            <h3 className="font-bold text-sm mb-1">📢 Info Penting Sistem</h3>
             <p className="text-sm opacity-90">{announcement.message}</p>
           </div>
         </div>
       )}
 
-      {/* App Category Grid (E-Commerce Style App Launcher) */}
+      {/* App Category Grid (Tokopedia/Shopee Vector App Launcher) */}
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-base font-black text-ink flex items-center gap-2">
-            <span>⚡ Layanan Utama</span>
+            <span>Kategori Layanan</span>
           </h2>
-          <span className="text-xs text-ink-muted font-medium">Pilih &amp; Eksekusi Cepat</span>
+          <span className="text-xs text-ink-muted font-medium">Navigasi Langsung</span>
         </div>
 
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           {[
-            { 
-              name: "Buka IMEI", 
+            {
+              name: "Buka IMEI",
               desc: "All Operator",
               tourId: "service-unblock",
-              badge: "UTAMA",
-              icon: "📱",
-              href: "/unblock-imei", 
-              color: "bg-blue-50 text-blue-600 border-blue-200/80 hover:bg-blue-100/70" 
+              badge: "POPULER",
+              href: "/unblock-imei",
+              color: "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/15",
+              icon: (
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                </svg>
+              ),
             },
-            { 
-              name: "Cek CEIR", 
+            {
+              name: "Cek CEIR",
               desc: "Database Resmi",
               tourId: "service-ceir",
-              icon: "🏛️",
-              href: "/cek-ceir", 
-              color: "bg-emerald-50 text-emerald-600 border-emerald-200/80 hover:bg-emerald-100/70" 
+              href: "/cek-ceir",
+              color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/15",
+              icon: (
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              ),
             },
-            { 
-              name: "Cek Garansi", 
+            {
+              name: "Cek Garansi",
               desc: "Nota & Sinyal",
               tourId: "service-garansi",
-              icon: "🛡️",
-              href: "/cek-garansi", 
-              color: "bg-teal-50 text-teal-600 border-teal-200/80 hover:bg-teal-100/70" 
+              href: "/cek-garansi",
+              color: "bg-teal-500/10 text-teal-600 border-teal-500/20 hover:bg-teal-500/15",
+              icon: (
+                <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              ),
             },
-            { 
-              name: "Klaim Diskon", 
+            {
+              name: "Game Koin",
+              desc: "Rejeki Harian",
+              tourId: "service-games",
+              badge: "BONUS",
+              href: "/games",
+              color: "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/15",
+              icon: (
+                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
+                </svg>
+              ),
+            },
+            {
+              name: "Klaim Diskon",
               desc: "Voucher Hemat",
               tourId: "service-voucher",
               badge: "PROMO",
-              icon: "🎟️",
-              href: "/vouchers", 
-              color: "bg-amber-50 text-amber-600 border-amber-200/80 hover:bg-amber-100/70" 
+              href: "/vouchers",
+              color: "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/15",
+              icon: (
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+              ),
             },
-            { 
-              name: "Referral Cuan", 
+            {
+              name: "Referral Cuan",
               desc: "Komisi Saldo",
               tourId: "service-referral",
-              icon: "🤝",
-              href: "/referral", 
-              color: "bg-purple-50 text-purple-600 border-purple-200/80 hover:bg-purple-100/70" 
+              href: "/referral",
+              color: "bg-purple-500/10 text-purple-600 border-purple-500/20 hover:bg-purple-500/15",
+              icon: (
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              ),
             },
-            { 
-              name: "Pusat Tiket", 
-              desc: "Bantuan CS",
-              tourId: "service-tickets",
-              icon: "💬",
-              href: "/tickets", 
-              color: "bg-rose-50 text-rose-600 border-rose-200/80 hover:bg-rose-100/70" 
-            }
-          ].map(item => (
-            <a 
-              key={item.name} 
-              href={item.href} 
+          ].map((item) => (
+            <a
+              key={item.name}
+              href={item.href}
               data-tour={item.tourId}
               className="flex flex-col items-center p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/40 transition-all duration-200 group text-center shadow-2xs hover:shadow-sm"
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-transform duration-300 group-hover:scale-110 relative border ${item.color} mb-2 shadow-xs`}>
-                <span>{item.icon}</span>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 relative border ${item.color} mb-2 shadow-xs`}>
+                {item.icon}
                 {item.badge && (
                   <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 rounded-md bg-gradient-to-r from-orange-500 to-rose-500 text-white font-extrabold text-[8px] shadow-xs">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-xs font-bold text-ink group-hover:text-primary transition-colors leading-tight line-clamp-1">{item.name}</span>
-              <span className="text-[10px] text-ink-muted mt-0.5 leading-tight line-clamp-1">{item.desc}</span>
+              <span className="text-xs font-bold text-ink group-hover:text-primary transition-colors leading-tight line-clamp-1">
+                {item.name}
+              </span>
+              <span className="text-[10px] text-ink-muted mt-0.5 leading-tight line-clamp-1">
+                {item.desc}
+              </span>
             </a>
           ))}
         </div>

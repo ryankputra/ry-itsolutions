@@ -11,6 +11,7 @@
   "/(main)/cek-ceir/page": "/cek-ceir",
   "/(main)/cek-garansi/page": "/cek-garansi",
   "/(main)/dashboard/page": "/dashboard",
+  "/(main)/games/page": "/games",
   "/(main)/history/page": "/history",
   "/(main)/referral/page": "/referral",
   "/(main)/tickets/page": "/tickets",

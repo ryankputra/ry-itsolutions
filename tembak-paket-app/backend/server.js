@@ -210,6 +210,17 @@ async function initializeDatabase() {
                 created_at TEXT NOT NULL
             )`);
 
+            // === TABEL & KOLOM SISTEM KOIN RY & SHOPEE GAMES ===
+            try { await dbRun("ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0"); } catch (e) { }
+            await dbRun(`CREATE TABLE IF NOT EXISTS user_coin_claims (
+                id TEXT PRIMARY KEY,
+                userId TEXT NOT NULL,
+                claim_type TEXT NOT NULL,
+                coins_amount INTEGER NOT NULL,
+                streak_count INTEGER DEFAULT 1,
+                claimed_at TEXT NOT NULL
+            )`);
+
             // Default pengaturan referral di tabel settings (100% dinamis)
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_enabled', 'true')`);
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_commission_type', 'fixed')`);
@@ -1818,6 +1829,165 @@ app.get('/api/user/referral-info', isAuthenticated, async (req, res) => {
     } catch (e) {
         console.error("Error fetching referral info:", e);
         res.status(500).json({ status: false, message: "Gagal mengambil data referral." });
+    }
+});
+
+// === SHOPEE GAMES: KOIN RY, DAILY CHECK-IN & LUCKY SPIN ===
+app.get('/api/games/status', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+
+        const user = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
+        const userCoins = user?.coins || 0;
+
+        // Cek apakah sudah check-in hari ini
+        const todayCheckin = await dbGet(`
+            SELECT * FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'daily_checkin' AND substr(claimed_at, 1, 10) = ?
+        `, [userId, todayWIB]);
+
+        // Cek streak terakhir
+        const lastCheckin = await dbGet(`
+            SELECT * FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'daily_checkin'
+            ORDER BY datetime(claimed_at) DESC LIMIT 1
+        `, [userId]);
+
+        let streak = 1;
+        if (lastCheckin) {
+            const lastDate = lastCheckin.claimed_at.split('T')[0];
+            const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const yesterdayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(yesterdayDate);
+
+            if (lastDate === todayWIB) {
+                streak = lastCheckin.streak_count || 1;
+            } else if (lastDate === yesterdayWIB) {
+                streak = ((lastCheckin.streak_count || 1) % 7) + 1;
+            } else {
+                streak = 1;
+            }
+        }
+
+        // Cek apakah sudah lucky spin hari ini
+        const todaySpin = await dbGet(`
+            SELECT * FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'lucky_spin' AND substr(claimed_at, 1, 10) = ?
+        `, [userId, todayWIB]);
+
+        const rewards = [100, 200, 300, 400, 500, 750, 1000];
+
+        res.json({
+            status: true,
+            coins: userCoins,
+            can_checkin: !todayCheckin,
+            current_streak: streak,
+            today_checkin_done: !!todayCheckin,
+            can_spin: !todaySpin,
+            rewards
+        });
+    } catch (e) {
+        console.error("Error in /api/games/status:", e);
+        res.status(500).json({ status: false, message: "Gagal memuat status game." });
+    }
+});
+
+app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+
+        const todayCheckin = await dbGet(`
+            SELECT id FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'daily_checkin' AND substr(claimed_at, 1, 10) = ?
+        `, [userId, todayWIB]);
+
+        if (todayCheckin) {
+            return res.status(400).json({ status: false, message: "Anda sudah melakukan check-in hari ini! Coba lagi besok ya." });
+        }
+
+        const lastCheckin = await dbGet(`
+            SELECT * FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'daily_checkin'
+            ORDER BY datetime(claimed_at) DESC LIMIT 1
+        `, [userId]);
+
+        let streak = 1;
+        if (lastCheckin) {
+            const lastDate = lastCheckin.claimed_at.split('T')[0];
+            const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const yesterdayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(yesterdayDate);
+
+            if (lastDate === yesterdayWIB) {
+                streak = ((lastCheckin.streak_count || 1) % 7) + 1;
+            } else {
+                streak = 1;
+            }
+        }
+
+        const rewards = [100, 200, 300, 400, 500, 750, 1000];
+        const coinBonus = rewards[streak - 1] || 100;
+
+        await dbRun("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?", [coinBonus, userId]);
+        const claimId = `claim_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await dbRun(`
+            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claimed_at)
+            VALUES (?, ?, 'daily_checkin', ?, ?, ?)
+        `, [claimId, userId, coinBonus, streak, new Date().toISOString()]);
+
+        const updatedUser = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
+
+        res.json({
+            status: true,
+            message: `Hore! Anda mendapatkan +${coinBonus} Koin Ry (Hari ke-${streak}) 🎉`,
+            coins_earned: coinBonus,
+            streak,
+            new_coins_balance: updatedUser?.coins || 0
+        });
+    } catch (e) {
+        console.error("Error in daily checkin:", e);
+        res.status(500).json({ status: false, message: "Gagal memproses check-in harian." });
+    }
+});
+
+app.post('/api/games/lucky-spin', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+
+        const todaySpin = await dbGet(`
+            SELECT id FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'lucky_spin' AND substr(claimed_at, 1, 10) = ?
+        `, [userId, todayWIB]);
+
+        if (todaySpin) {
+            return res.status(400).json({ status: false, message: "Tiket putar gratis hari ini sudah terpakai. Coba lagi besok ya!" });
+        }
+
+        // Possible prizes
+        const spinPrizes = [250, 500, 750, 1000, 1500, 2500];
+        const randomIndex = Math.floor(Math.random() * spinPrizes.length);
+        const wonCoins = spinPrizes[randomIndex];
+
+        await dbRun("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?", [wonCoins, userId]);
+        const claimId = `spin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await dbRun(`
+            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claimed_at)
+            VALUES (?, ?, 'lucky_spin', ?, 1, ?)
+        `, [claimId, userId, wonCoins, new Date().toISOString()]);
+
+        const updatedUser = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
+
+        res.json({
+            status: true,
+            prize_index: randomIndex,
+            coins_earned: wonCoins,
+            message: `Selamat! Anda memenangkan +${wonCoins.toLocaleString('id-ID')} Koin Ry dari Roda Hoki! 🎡✨`,
+            new_coins_balance: updatedUser?.coins || 0
+        });
+    } catch (e) {
+        console.error("Error in lucky spin:", e);
+        res.status(500).json({ status: false, message: "Gagal memutar roda hoki." });
     }
 });
 
@@ -3982,12 +4152,34 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                 }
             }
 
-            const finalPriceToPay = Math.max(0, totalPrice - discountAmount);
+            // Perhitungan Potongan Koin Ry jika digunakan
+            let coinsDiscount = 0;
+            let coinsToDeduct = 0;
+            const useCoins = req.body.use_coins === 'true' || req.body.use_coins === true;
+            if (useCoins) {
+                const userObj = await dbGet("SELECT coins FROM users WHERE id = ?", [req.session.userId]);
+                const userCoins = userObj?.coins || 0;
+                const priceAfterCoupon = Math.max(0, totalPrice - discountAmount);
+                // Koin dapat memotong maksimal 50% dari total tagihan
+                const maxCoinDeductible = Math.floor(priceAfterCoupon * 0.5);
+                coinsToDeduct = Math.min(userCoins, maxCoinDeductible, priceAfterCoupon);
+                if (coinsToDeduct > 0) {
+                    coinsDiscount = coinsToDeduct; // 1 Koin = Rp 1
+                }
+            }
+
+            const finalPriceToPay = Math.max(0, totalPrice - discountAmount - coinsDiscount);
 
             const user = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
             if (user.balance < finalPriceToPay) return res.status(402).json({ status: false, message: `Saldo tidak mencukupi untuk pembayaran sebesar Rp ${finalPriceToPay.toLocaleString('id-ID')}` });
 
             await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [finalPriceToPay, req.session.userId]);
+
+            if (coinsToDeduct > 0) {
+                try {
+                    await dbRun("UPDATE users SET coins = coins - ? WHERE id = ?", [coinsToDeduct, req.session.userId]);
+                } catch (e) { console.error("Error deducting coins:", e); }
+            }
 
             const trxId = `trx_m_${Date.now()}`;
             const packageName = service_type === 'imei' ? `Unblock IMEI (${duration}) x${imeiCount}` : `Cek CEIR (${duration})`;

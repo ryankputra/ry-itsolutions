@@ -13,6 +13,7 @@ interface User {
   verifiedPhone?: string;
   role: string;
   balance: number;
+  coins?: number;
   status?: string;
 }
 

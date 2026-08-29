@@ -42,6 +42,7 @@ export default function UnblockImeiPage() {
   const [publicCoupons, setPublicCoupons] = useState<CouponItem[]>([]);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
+  const [useCoins, setUseCoins] = useState(false);
 
   // WhatsApp Recipient Phone State
   const [targetPhone, setTargetPhone] = useState("");
@@ -78,7 +79,11 @@ export default function UnblockImeiPage() {
   const rawTotalPrice = pricePerImei * imeiCount;
 
   const discountAmount = appliedCoupon ? Math.min(appliedCoupon.discount_amount, rawTotalPrice) : 0;
-  const totalPrice = Math.max(0, rawTotalPrice - discountAmount);
+  const priceAfterCoupon = Math.max(0, rawTotalPrice - discountAmount);
+  const userCoins = user?.coins || 0;
+  const maxCoinsAllowed = Math.floor(priceAfterCoupon * 0.5);
+  const coinsDiscount = useCoins ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
+  const totalPrice = Math.max(0, priceAfterCoupon - coinsDiscount);
 
   const handleClaimCoupon = async (coupon: CouponItem) => {
     setClaimingCouponId(coupon.id);
@@ -206,6 +211,9 @@ export default function UnblockImeiPage() {
     formData.append("target_phone", targetPhone);
     if (appliedCoupon) {
       formData.append("coupon_code", appliedCoupon.code);
+    }
+    if (useCoins && coinsDiscount > 0) {
+      formData.append("use_coins", "true");
     }
     
     files.forEach(f => formData.append("image", f));
@@ -609,6 +617,45 @@ export default function UnblockImeiPage() {
               )}
             </div>
 
+            {/* Shopee Style Koin Ry Deduction Bar */}
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                  🪙
+                </div>
+                <div>
+                  <p className="font-bold text-ink text-xs">
+                    Tukarkan Koin Ry ({userCoins.toLocaleString("id-ID")} Koin)
+                  </p>
+                  <p className="text-[10px] text-ink-muted">
+                    {userCoins > 0
+                      ? `Hemat hingga -Rp ${Math.min(userCoins, maxCoinsAllowed).toLocaleString("id-ID")} dari tagihan`
+                      : "Mainkan Game Koin untuk kumpulkan koin diskon"}
+                  </p>
+                </div>
+              </div>
+
+              {userCoins > 0 ? (
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={useCoins}
+                    onChange={(e) => setUseCoins(e.target.checked)}
+                  />
+                  <div className="w-10 h-5.5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => router.push("/games")}
+                  className="text-xs font-bold text-amber-700 hover:underline px-2 py-1"
+                >
+                  Dapatkan Koin
+                </button>
+              )}
+            </div>
+
             {/* Price Breakdown Summary */}
             <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline space-y-2 text-xs">
               <div className="flex justify-between text-ink-muted">
@@ -619,6 +666,12 @@ export default function UnblockImeiPage() {
                 <div className="flex justify-between text-emerald-700 font-semibold">
                   <span>Diskon Kupon ({appliedCoupon.code})</span>
                   <span>- Rp {discountAmount.toLocaleString("id-ID")}</span>
+                </div>
+              )}
+              {useCoins && coinsDiscount > 0 && (
+                <div className="flex justify-between text-amber-700 font-semibold">
+                  <span>Potongan Koin Ry ({coinsDiscount.toLocaleString("id-ID")} Koin)</span>
+                  <span>- Rp {coinsDiscount.toLocaleString("id-ID")}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-black text-ink pt-2 border-t border-hairline">

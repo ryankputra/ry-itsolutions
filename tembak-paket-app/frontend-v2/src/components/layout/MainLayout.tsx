@@ -1,20 +1,21 @@
 "use client";
-import React, { useState } from "react";
-import { Sidebar } from "./Sidebar";
-import { Header } from "./Header";
+import React from "react";
+import { EcommerceHeader } from "./EcommerceHeader";
+import { BottomNav } from "./BottomNav";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
-    <div className="h-full bg-canvas">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="md:pl-64 flex flex-col min-h-screen">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {children}
-        </main>
-      </div>
+    <div className="min-h-screen bg-canvas flex flex-col transition-colors duration-200">
+      {/* 1. Full E-Commerce Header (Top Nav) */}
+      <EcommerceHeader />
+
+      {/* 2. Main Body Content (Full-Width Responsive Container) */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-12">
+        {children}
+      </main>
+
+      {/* 3. Mobile App Bottom Navigation Bar */}
+      <BottomNav />
     </div>
   );
 }
