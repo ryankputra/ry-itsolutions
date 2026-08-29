@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function ProfilePage() {
   const { user, setUser, cartCount } = useApp();

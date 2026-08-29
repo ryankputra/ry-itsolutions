@@ -101,7 +101,7 @@ class GoPayLoginSession:
         self.slave = None
 
         # Wait for phone prompt
-        found, target, out = read_until_any(self.master, ["Masukkan Nomor HP", "Nomor HP"], timeout=6)
+        found, target, out = read_until_any(self.master, ["Masukkan Nomor HP", "Nomor HP", "GoBiz"], timeout=10)
         if not found:
             self.kill_existing()
             return {"status": False, "message": "Gagal memulai sesi login GoPay CLI. Output: " + out.strip()[:200]}

@@ -80,7 +80,17 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify({ forceNew })
       });
-      loadBaileysStatus();
+      await loadBaileysStatus();
+      
+      // Fast polling loop to catch QR generation quickly (every 1.5s for 15s)
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        await loadBaileysStatus();
+        if (attempts >= 10) {
+          clearInterval(interval);
+        }
+      }, 1500);
     } catch (e) {}
     finally { setLoadingBaileys(false); }
   };

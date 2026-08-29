@@ -19,6 +19,9 @@ function ensureDirExists(dir) {
 }
 
 async function initWhatsApp(forceNew = false) {
+    if (forceNew) {
+        isInitializing = false;
+    }
     if (isInitializing) return;
     isInitializing = true;
 
@@ -66,6 +69,7 @@ async function initWhatsApp(forceNew = false) {
                 try {
                     qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
                     connectionState = "qr_ready";
+                    isInitializing = false;
                     console.log("[Baileys] New QR Code generated ready for scan.");
                 } catch (e) {
                     console.error("[Baileys] QR generation error:", e);
@@ -122,6 +126,7 @@ async function logoutWhatsApp() {
         qrCodeDataUrl = null;
         connectedPhone = null;
         connectionState = "disconnected";
+        isInitializing = false;
         console.log("[Baileys] Logged out and session cleared.");
         return true;
     } catch (e) {
