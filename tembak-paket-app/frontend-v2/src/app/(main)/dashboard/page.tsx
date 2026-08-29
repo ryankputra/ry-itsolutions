@@ -18,7 +18,6 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [announcement, setAnnouncement] = useState<any>(null);
-  const [publicInfo, setPublicInfo] = useState<string>("");
   const [recentTrx, setRecentTrx] = useState<any[]>([]);
   const [allTrx, setAllTrx] = useState<any[]>([]);
   const [selectedQris, setSelectedQris] = useState<any>(null);
@@ -31,7 +30,6 @@ export default function DashboardPage() {
 
   // Universal Search State
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
 
   // Tutorial / Onboarding State
@@ -43,32 +41,29 @@ export default function DashboardPage() {
   // Hero Promo Carousel Slides
   const heroSlides = [
     {
-      title: "Buka Sinyal All Operator",
-      subtitle: "Aktivasi IMEI kilat 24 jam dengan garansi digital resmi & nota WhatsApp otomatis.",
-      badge: "⚡ Layanan Unggulan",
-      ctaText: "Buka Sinyal Sekarang",
+      title: "INSTANT DEALS BUKA SINYAL KILAT",
+      subtitle: "Aktivasi IMEI All Operator kilat 24 jam dengan garansi digital resmi & nota WA otomatis.",
+      badge: "⚡ PROMO SPESIAL",
+      ctaText: "BELI SEKARANG >",
       ctaLink: "/unblock-imei",
-      bgGradient: "from-blue-600 via-indigo-600 to-blue-800",
-      icon: "📱"
+      bgGradient: "from-amber-500 via-orange-500 to-rose-500",
     },
     {
-      title: "Promo Voucher Tanggal Tua",
-      subtitle: "Ambil potongan diskon hingga Rp 25.000 untuk setiap order aktivasi IMEI.",
-      badge: "🎟️ Diskon Spesial",
-      ctaText: "Klaim Voucher",
+      title: "VOUCHER MANIA DISKON S.D 25RB",
+      subtitle: "Ambil kupon diskon tambahan sebelum checkout untuk hemat belanja maksimal.",
+      badge: "🎟️ DISKON KILAT",
+      ctaText: "KLAIM SEKARANG >",
       ctaLink: "/vouchers",
-      bgGradient: "from-amber-500 via-orange-500 to-rose-600",
-      icon: "🎁"
+      bgGradient: "from-orange-600 via-rose-600 to-purple-600",
     },
     {
-      title: "Perlindungan Garansi Digital",
-      subtitle: "Pantau sisa masa garansi sinyal perangkat Anda kapan saja secara transparan.",
-      badge: "🛡️ Garansi Resmi",
-      ctaText: "Cek Garansi",
-      ctaLink: "/cek-garansi",
-      bgGradient: "from-emerald-600 via-teal-600 to-cyan-700",
-      icon: "✨"
-    }
+      title: "PUTAR RODA HOKI DAPAT KOIN",
+      subtitle: "Check-in harian dan menangkan hingga 2.500 Koin Ry untuk potongan belanja.",
+      badge: "🎮 GAME KOIN",
+      ctaText: "PUTAR SEKARANG >",
+      ctaLink: "/games",
+      bgGradient: "from-purple-600 via-indigo-600 to-blue-600",
+    },
   ];
 
   // Auto-rotate Hero Carousel
@@ -94,48 +89,11 @@ export default function DashboardPage() {
     };
     window.addEventListener("balance_visibility_changed", handleBalanceVisibility);
 
-    // Meminta Izin Push Notification
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
-        Notification.requestPermission().then((permission) => {
-          if (permission === "granted") {
-            new Notification("Notifikasi Aktif!", {
-              body: "Anda akan menerima update transaksi dan pengumuman di sini.",
-              icon: "/icon-192.png"
-            });
-          }
-        });
+        Notification.requestPermission();
       }
     }
-
-    async function loadDashboardData() {
-      try {
-        const [annRes, trxRes, cpnRes] = await Promise.all([
-          fetch("/api/user/announcement", { credentials: 'include' }).catch(() => null),
-          fetch("/api/user/transactions", { credentials: 'include' }).catch(() => null),
-          fetch("/api/coupons/public", { credentials: 'include' }).catch(() => null)
-        ]);
-
-        if (annRes?.ok) {
-          const data = await safeJson(annRes);
-          if (data?.status && data?.data?.message) setAnnouncement(data.data);
-        }
-        if (trxRes?.ok) {
-          const data = await safeJson(trxRes);
-          if (data?.status && data?.data) {
-            setAllTrx(data.data);
-            setRecentTrx(data.data.slice(0, 3));
-          }
-        }
-        if (cpnRes?.ok) {
-          const data = await safeJson(cpnRes);
-          if (data?.status && Array.isArray(data?.data)) {
-            setVouchers(data.data);
-          }
-        }
-      } catch (err) { console.error(err); }
-    }
-    loadDashboardData();
 
     return () => {
       window.removeEventListener("balance_visibility_changed", handleBalanceVisibility);
@@ -143,228 +101,304 @@ export default function DashboardPage() {
   }, []);
 
   const toggleShowBalance = () => {
-    const next = !showBalance;
-    setShowBalance(next);
+    const nextState = !showBalance;
+    setShowBalance(nextState);
     if (typeof window !== "undefined") {
-      localStorage.setItem("ry_show_balance", next.toString());
-      window.dispatchEvent(new CustomEvent("balance_visibility_changed", { detail: next }));
+      localStorage.setItem("ry_show_balance", String(nextState));
     }
+  };
+
+  const fetchVouchers = async () => {
+    try {
+      const res = await fetch("/api/coupons/public", { credentials: "include" });
+      const data = await safeJson(res);
+      if (data && data.status && Array.isArray(data.data)) {
+        setVouchers(data.data);
+      }
+    } catch (e) {}
   };
 
   const handleClaimCoupon = async (coupon: CouponItem) => {
     setClaimingId(coupon.id);
     try {
-      const res = await fetch('/api/coupons/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ coupon_id: coupon.id })
+      const res = await fetch("/api/user/claim-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code: coupon.code }),
       });
       const data = await safeJson(res);
-      if (res.ok && data?.status) {
+      if (data && data.status) {
         Swal.fire({
-          title: "Voucher Berhasil Diklaim!",
-          text: data.message,
           icon: "success",
+          title: "Voucher Diklaim!",
+          text: `Voucher ${coupon.code} berhasil diklaim.`,
           timer: 2000,
-          showConfirmButton: false
+          showConfirmButton: false,
         });
-        setVouchers(prev =>
-          prev.map(c =>
-            c.id === coupon.id
-              ? { ...c, is_claimed: true, total_claimed_count: (c.total_claimed_count || 0) + 1 }
-              : c
-          )
-        );
+        fetchVouchers();
       } else {
         Swal.fire({
-          title: "Gagal Mengklaim",
-          text: data.message || "Voucher tidak dapat diklaim saat ini.",
-          icon: "error"
+          icon: "info",
+          title: "Informasi",
+          text: data.message || "Gagal mengklaim voucher.",
         });
       }
     } catch (e) {
-      Swal.fire({ title: "Error", text: "Kesalahan jaringan.", icon: "error" });
+      Swal.fire({
+        icon: "error",
+        title: "Gagal",
+        text: "Terjadi kesalahan jaringan saat mengklaim voucher.",
+      });
     } finally {
       setClaimingId(null);
     }
   };
 
+  useEffect(() => {
+    fetch("/api/user/announcement")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status && data.data?.message) {
+          setAnnouncement(data.data);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/user/transactions", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status && data.data) {
+          const sorted = [...data.data].reverse();
+          setAllTrx(sorted);
+          setRecentTrx(sorted.slice(0, 5));
+        }
+      })
+      .catch(() => {});
+
+    fetchVouchers();
+  }, []);
+
   // Universal Search Filter
-  const cleanSearch = searchQuery.trim();
+  const cleanSearch = searchQuery.trim().toLowerCase();
   const detectedDevice = cleanSearch.length >= 8 ? analyzeImei(cleanSearch) : null;
-  const filteredTrx = cleanSearch.length >= 3 
-    ? allTrx.filter(t => 
-        (t.imei && t.imei.includes(cleanSearch)) || 
-        (t.id && t.id.toLowerCase().includes(cleanSearch.toLowerCase())) ||
-        (t.packageName && t.packageName.toLowerCase().includes(cleanSearch.toLowerCase()))
-      ).slice(0, 4)
+  const filteredTrx = cleanSearch.length >= 3
+    ? allTrx.filter((t) => {
+        const matchId = t.id && t.id.toLowerCase().includes(cleanSearch);
+        const matchImei = t.imei && t.imei.toLowerCase().includes(cleanSearch);
+        const matchPhone = t.targetPhone && t.targetPhone.toLowerCase().includes(cleanSearch);
+        return matchId || matchImei || matchPhone;
+      }).slice(0, 5)
     : [];
 
+  const userCoins = user?.coins || 0;
+
   return (
-    <div className="space-y-5 max-w-4xl mx-auto pb-16">
-      <TelegramPopup />
-
-      {/* Header Profile Greeting (E-Commerce Style) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-ink">
-              Halo, {user?.name?.split(' ')[0] || "Pelanggan"} 👋
-            </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-              {user?.role === 'admin' ? '👑 Admin' : '⭐ Member'}
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-ink-muted mt-0.5">
-            Layanan Buka Sinyal IMEI &amp; Jasa Digital Terpercaya 24 Jam
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowGuidedTour(true)}
-            className="px-3.5 py-2 rounded-2xl bg-canvas border border-hairline hover:bg-parchment text-ink text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 active:scale-95"
-            title="Mulai Tur Panduan Audio AI"
+    <div className="space-y-4 max-w-7xl mx-auto pb-16">
+      {/* ============================================================ */}
+      {/* 1. FLOATING SHOPEEPAY & WALLET STRIP (Persis Shopee App)    */}
+      {/* ============================================================ */}
+      <div className="rounded-2xl bg-canvas border border-hairline shadow-md p-3 sm:p-4 -mt-1 sm:mt-0 transition-all">
+        <div className="grid grid-cols-4 divide-x divide-hairline items-center text-center">
+          {/* Section 1: Saldo Dompet (ShopeePay style) */}
+          <div
+            onClick={() => router.push("/topup")}
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <span className="text-sm">🔊</span>
-            <span className="hidden sm:inline">Panduan Audio</span>
-          </button>
-          <button
-            onClick={() => router.push('/vouchers')}
-            className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-xs hover:shadow-orange-500/20 transition-all flex items-center gap-1.5 active:scale-95"
-          >
-            <span className="text-sm">🎟️</span>
-            <span>Voucher Diskon</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Top Mini-Wallet & Koin Strip (ShopeePay & Shopee Coins Hub) */}
-      <div data-tour="wallet-card" className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Box 1: Saldo Utama (2 Cols on Desktop) */}
-        <div className="md:col-span-2 rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shadow-xl shadow-blue-950/20 border border-white/10 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
-
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-white/70 text-xs font-medium">
-                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
-                </svg>
-                <span>Saldo Dompet Belanja</span>
-                <button
-                  onClick={toggleShowBalance}
-                  className="hover:text-white transition-colors"
-                  title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
-                >
-                  {showBalance ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-base font-bold text-white/80">Rp</span>
-                <span className="text-2xl sm:text-3xl font-black tracking-tight">
-                  {showBalance ? (user?.balance?.toLocaleString("id-ID") || "0") : "••••••"}
-                </span>
-              </div>
-              <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                QRIS 24 Jam • Otomatis Masuk Detik Itu Juga
-              </p>
+            <div className="flex items-center gap-1 text-orange-600 font-bold text-xs">
+              <svg className="w-4 h-4 text-orange-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM14.625 3.75h4.5a1.125 1.125 0 011.125 1.125v4.5a1.125 1.125 0 01-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5a1.125 1.125 0 011.125-1.125zM14.625 14.625h4.5a1.125 1.125 0 011.125 1.125v4.5a1.125 1.125 0 01-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5a1.125 1.125 0 011.125-1.125z" />
+              </svg>
+              <span className="font-extrabold text-[11px] sm:text-xs">Saldo Ry</span>
             </div>
-
-            {/* CTA Action Buttons */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => router.push("/topup")}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-primary hover:from-blue-600 hover:to-primary-hover text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                <span>Isi Saldo</span>
-              </button>
-
-              <button
-                onClick={() => router.push("/history")}
-                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Riwayat</span>
-              </button>
+            <div className="mt-0.5 flex items-baseline justify-center gap-0.5">
+              <span className="text-[10px] text-ink-muted">Rp</span>
+              <span className="text-xs sm:text-sm font-black text-ink">
+                {showBalance ? (user?.balance || 0).toLocaleString("id-ID") : "••••"}
+              </span>
             </div>
-          </div>
-        </div>
-
-        {/* Box 2: Koin Ry Hub (1 Col on Desktop, Shopee Coins Style) */}
-        <div className="rounded-3xl p-5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-500/30 text-ink shadow-lg flex flex-col justify-between gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center font-black text-xs shadow-xs">
-                🪙
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-ink-muted block uppercase leading-tight">
-                  Koin Diskon Ry
-                </span>
-                <span className="text-lg font-black text-amber-700 dark:text-amber-400">
-                  {(user?.coins || 0).toLocaleString("id-ID")} Koin
-                </span>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
-              1 Koin = Rp 1
+            <span className="text-[9px] text-orange-600 font-bold mt-0.5 block">
+              + Isi Saldo
             </span>
           </div>
 
-          <button
+          {/* Section 2: Koin Ry (Shopee Coins style) */}
+          <div
             onClick={() => router.push("/games")}
-            className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
-            </svg>
-            <span>Klaim Koin &amp; Putar Roda</span>
-          </button>
+            <div className="flex items-center gap-1 text-amber-600 font-bold text-xs">
+              <span className="text-xs">🪙</span>
+              <span className="font-extrabold text-[11px] sm:text-xs text-amber-700">Koin Ry</span>
+            </div>
+            <span className="text-xs sm:text-sm font-black text-ink mt-0.5">
+              {userCoins.toLocaleString("id-ID")}
+            </span>
+            <span className="text-[9px] text-amber-600 font-bold mt-0.5 block">
+              Cek Bonus Koin
+            </span>
+          </div>
+
+          {/* Section 3: Voucher / SPayLater style */}
+          <div
+            onClick={() => router.push("/vouchers")}
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
+          >
+            <div className="flex items-center gap-1 text-rose-600 font-bold text-xs">
+              <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+              </svg>
+              <span className="font-extrabold text-[11px] sm:text-xs">Voucher</span>
+            </div>
+            <span className="text-xs sm:text-sm font-black text-rose-600 mt-0.5">
+              Diskon 25RB
+            </span>
+            <span className="text-[9px] text-rose-500 font-bold mt-0.5 block">
+              Klaim Kupon
+            </span>
+          </div>
+
+          {/* Section 4: Instant Transfer / Top Up Button (Rp circle button) */}
+          <div
+            onClick={() => router.push("/topup")}
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-rose-500 text-white flex items-center justify-center font-black text-xs shadow-sm group-hover:scale-105 transition-transform">
+              Rp
+            </div>
+            <span className="text-[9px] font-extrabold text-ink mt-1">
+              Top Up Cepat
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Hero Promo Banner Carousel (E-Commerce Style) */}
-      <div className="relative rounded-3xl overflow-hidden shadow-lg border border-hairline group">
-        <div className={`p-6 sm:p-8 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} text-white transition-all duration-700 min-h-[160px] sm:min-h-[180px] flex flex-col justify-between relative`}>
-          <div className="relative z-10 space-y-2 max-w-lg">
-            <div className="inline-block bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20">
+      {/* ============================================================ */}
+      {/* 2. SHOPEE 5-COLUMN FEATURE CIRCULAR LAUNCHER ICONS          */}
+      {/* ============================================================ */}
+      <div className="bg-canvas border border-hairline rounded-2xl p-3 shadow-2xs">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-4 text-center">
+          {[
+            {
+              name: "Buka IMEI",
+              sub: "All Operator",
+              badge: "RP1",
+              badgeBg: "bg-rose-500",
+              href: "/unblock-imei",
+              iconBg: "bg-blue-50 border-blue-200 text-blue-600",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                </svg>
+              ),
+            },
+            {
+              name: "Cek CEIR",
+              sub: "Bea Cukai",
+              badge: "PROMO",
+              badgeBg: "bg-orange-500",
+              href: "/cek-ceir",
+              iconBg: "bg-orange-50 border-orange-200 text-orange-600",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              ),
+            },
+            {
+              name: "Cek Garansi",
+              sub: "Lacak IMEI",
+              badge: "VIP+",
+              badgeBg: "bg-purple-600",
+              href: "/cek-garansi",
+              iconBg: "bg-purple-50 border-purple-200 text-purple-600",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              ),
+            },
+            {
+              name: "Bagi Voucher",
+              sub: "Diskon Belanja",
+              badge: "HEMAT",
+              badgeBg: "bg-rose-500",
+              href: "/vouchers",
+              iconBg: "bg-rose-50 border-rose-200 text-rose-600",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+              ),
+            },
+            {
+              name: "Game Koin",
+              sub: "Putar Hoki",
+              badge: "BONUS",
+              badgeBg: "bg-amber-500",
+              href: "/games",
+              iconBg: "bg-amber-50 border-amber-200 text-amber-600",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
+                </svg>
+              ),
+            },
+          ].map((item, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => router.push(item.href)}
+              className="flex flex-col items-center justify-start group p-1 focus:outline-none"
+            >
+              <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl border flex items-center justify-center relative shadow-2xs group-hover:scale-105 transition-transform ${item.iconBg}`}>
+                {item.icon}
+                {item.badge && (
+                  <span className={`absolute -top-1 -right-1 px-1 py-0.2 rounded-full ${item.badgeBg} text-white font-black text-[7px] tracking-tight uppercase shadow-xs`}>
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] sm:text-xs font-bold text-ink group-hover:text-orange-600 transition-colors mt-1.5 leading-tight line-clamp-1">
+                {item.name}
+              </span>
+              <span className="text-[8px] sm:text-[10px] text-ink-muted leading-none hidden sm:block mt-0.5">
+                {item.sub}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Shopee Pager Pill Dot */}
+        <div className="flex items-center justify-center gap-1 mt-2.5 pt-1">
+          <span className="w-4 h-1 rounded-full bg-orange-500"></span>
+          <span className="w-1.5 h-1 rounded-full bg-slate-300"></span>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* 3. HERO PROMO DEALS BANNER SLIDER (Shopee Hero Deals Style) */}
+      {/* ============================================================ */}
+      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border border-hairline group">
+        <div className={`p-4 sm:p-7 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} text-white transition-all duration-700 min-h-[140px] sm:min-h-[160px] flex flex-col justify-between relative`}>
+          <div className="relative z-10 space-y-1.5 max-w-lg">
+            <div className="inline-block bg-black/25 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider border border-white/20">
               {heroSlides[currentSlide].badge}
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight drop-shadow-sm">
+            <h2 className="text-base sm:text-2xl font-black tracking-tight leading-tight drop-shadow-sm">
               {heroSlides[currentSlide].title}
             </h2>
-            <p className="text-xs sm:text-sm text-white/90 leading-relaxed max-w-md">
+            <p className="text-[11px] sm:text-xs text-white/90 leading-relaxed max-w-md line-clamp-2">
               {heroSlides[currentSlide].subtitle}
             </p>
           </div>
 
-          <div className="relative z-10 pt-4 flex items-center justify-between">
+          <div className="relative z-10 pt-2 flex items-center justify-between">
             <button
               onClick={() => router.push(heroSlides[currentSlide].ctaLink)}
-              className="px-4 py-2 rounded-xl bg-white text-ink hover:bg-white/90 text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 hover:bg-white/90 text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1"
             >
               <span>{heroSlides[currentSlide].ctaText}</span>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
             </button>
 
             {/* Slide Indicators */}
@@ -373,7 +407,7 @@ export default function DashboardPage() {
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2 rounded-full transition-all ${currentSlide === idx ? "w-6 bg-white" : "w-2 bg-white/40"}`}
+                  className={`h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/40"}`}
                   aria-label={`Slide ${idx + 1}`}
                 />
               ))}
@@ -382,20 +416,120 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Live Activity Ticker (Trust Factor) */}
-      <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-canvas border border-hairline shadow-2xs overflow-hidden text-xs">
-        <span className="flex items-center gap-1.5 font-bold text-emerald-600 shrink-0">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-          <span>Aktivitas Sistem:</span>
-        </span>
-        <div className="overflow-hidden whitespace-nowrap w-full">
-          <p className="inline-block text-ink/80 text-[11px] sm:text-xs">
-            Baru saja: Transaksi Buka IMEI 3 Bulan sukses aktif • Sistem QRIS 24 Jam: Saldo otomatis bertambah instan • Garansi Resmi: Seluruh order terlindungi garansi digital &amp; nota WhatsApp otomatis.
-          </p>
+      {/* ============================================================ */}
+      {/* 4. 2-COLUMN DISCOVERY SECTION (Shopee Live & Shopee Video)  */}
+      {/* ============================================================ */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Left Discovery: Live Aktivitas Server */}
+        <div
+          onClick={() => router.push("/unblock-imei")}
+          className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs flex flex-col justify-between cursor-pointer hover:border-orange-500/30 transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-black text-xs text-ink flex items-center gap-1">
+              <span>Sinyal Live</span>
+              <span className="text-orange-500">➔</span>
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-rose-600 text-white font-black text-[8px] uppercase flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+              LIVE
+            </span>
+          </div>
+
+          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-orange-500/10 to-rose-500/10 border border-orange-500/20">
+            <p className="text-[10px] font-bold text-ink truncate">🔥 DISKON BUKA SINYAL</p>
+            <p className="text-[9px] text-ink-muted mt-0.5">Semua Operator 24 Jam</p>
+          </div>
+        </div>
+
+        {/* Right Discovery: Status Server & Uptime */}
+        <div
+          onClick={() => router.push("/cek-garansi")}
+          className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs flex flex-col justify-between cursor-pointer hover:border-emerald-500/30 transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-black text-xs text-ink flex items-center gap-1">
+              <span>Garansi Resmi</span>
+              <span className="text-emerald-500">➔</span>
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white font-black text-[8px] uppercase">
+              ONLINE
+            </span>
+          </div>
+
+          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+            <p className="text-[10px] font-bold text-ink truncate">🛡️ LACAK NOTA &amp; IMEI</p>
+            <p className="text-[9px] text-ink-muted mt-0.5">Uptime 99.9% Bea Cukai</p>
+          </div>
         </div>
       </div>
 
-      {/* Universal Instant Search Bar */}
+      {/* ============================================================ */}
+      {/* 5. VOUCHER MANIA & BEST SELLER PRODUCT GRID (Shopee Style)   */}
+      {/* ============================================================ */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Left Column: VOUCHER MANIA CARD */}
+        <div
+          onClick={() => router.push("/vouchers")}
+          className="rounded-2xl p-3.5 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 text-white shadow-md flex flex-col justify-between relative overflow-hidden cursor-pointer group"
+        >
+          <div className="space-y-1">
+            <span className="inline-block bg-white text-orange-600 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
+              VOUCHER MANIA
+            </span>
+            <h3 className="text-sm sm:text-base font-black leading-tight drop-shadow-xs">
+              PASTI DAPAT VOUCHER
+            </h3>
+            <p className="text-[10px] text-white/90">Diskon s.d Rp 25.000</p>
+          </div>
+
+          <div className="mt-4">
+            <button className="w-full py-1.5 rounded-xl bg-white text-orange-600 font-black text-[10px] sm:text-xs shadow-sm group-hover:bg-amber-100 transition-colors">
+              KLAIM AKU
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: BEST-SELLER PRODUCT CARD */}
+        <div
+          onClick={() => router.push("/unblock-imei")}
+          className="rounded-2xl p-3 bg-canvas border border-hairline shadow-md flex flex-col justify-between cursor-pointer group hover:border-orange-500/40 transition-all relative"
+        >
+          <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-bold text-[8px]">
+            -25%
+          </span>
+
+          <div className="space-y-1">
+            <div className="w-full h-16 sm:h-20 rounded-xl bg-orange-500/10 flex items-center justify-center text-2xl">
+              📱
+            </div>
+            <span className="inline-block bg-amber-400 text-amber-950 text-[7px] font-black px-1 py-0.2 rounded uppercase">
+              PROMO XTRA
+            </span>
+            <p className="text-[11px] sm:text-xs font-bold text-ink line-clamp-1 group-hover:text-orange-600 transition-colors">
+              Paket Buka IMEI All Operator
+            </p>
+            <div className="flex items-center gap-1 text-[9px] text-ink-muted">
+              <span className="text-amber-500 font-bold">⭐ 4.9</span>
+              <span>•</span>
+              <span>1RB+ Terjual</span>
+            </div>
+          </div>
+
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="text-xs sm:text-sm font-black text-orange-600">
+              Rp 155.000
+            </span>
+            <span className="text-[9px] text-ink-muted line-through">
+              Rp 185.000
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* 6. INSTANT SEARCH BAR / IMEI SCANNER                        */}
+      {/* ============================================================ */}
       <div data-tour="search-bar" className="relative z-20">
         <div className="relative">
           <input
@@ -403,17 +537,17 @@ export default function DashboardPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari cepat: Ketik/Paste IMEI (15 digit) atau ID Transaksi..."
-            className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-canvas border border-hairline shadow-sm text-sm text-ink placeholder:text-ink-muted outline-hidden focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+            className="w-full pl-11 pr-10 py-3 rounded-2xl bg-canvas border border-hairline shadow-sm text-xs sm:text-sm text-ink placeholder:text-ink-muted outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
           />
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           </div>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-parchment flex items-center justify-center text-xs text-ink-muted hover:text-ink"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-parchment flex items-center justify-center text-[10px] text-ink-muted hover:text-ink"
             >
               ✕
             </button>
@@ -423,11 +557,10 @@ export default function DashboardPage() {
         {/* Live Search Quick Results Dropdown */}
         {cleanSearch.length >= 3 && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-canvas border border-hairline rounded-2xl shadow-2xl p-3 text-xs space-y-2.5 backdrop-blur-md z-30 max-h-[340px] overflow-y-auto">
-            {/* Live IMEI Detection Card */}
             {detectedDevice?.brand && (
-              <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-2">
+              <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center font-bold">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
                     </svg>
@@ -446,7 +579,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => router.push(`/unblock-imei?imei=${cleanSearch}`)}
-                    className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-bold text-xs hover:bg-orange-600 transition-colors"
                   >
                     Unblock
                   </button>
@@ -454,14 +587,13 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Matched Transactions */}
             {filteredTrx.length > 0 && (
               <div className="space-y-1.5 pt-1">
                 <p className="text-[10px] font-bold text-ink-muted uppercase tracking-wider px-1">Riwayat Transaksi Ditemukan:</p>
                 {filteredTrx.map((trx) => (
                   <div
                     key={trx.id}
-                    className="p-2.5 rounded-xl bg-parchment/60 hover:bg-parchment border border-hairline flex items-center justify-between gap-2 transition-colors"
+                    className="p-2.5 rounded-xl bg-parchment hover:bg-slate-200/60 border border-hairline flex items-center justify-between gap-2 transition-colors"
                   >
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -485,397 +617,43 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-
-            {cleanSearch.length >= 8 && !detectedDevice?.brand && filteredTrx.length === 0 && (
-              <div className="p-3 text-center text-ink-muted">
-                <p>Tidak ada transaksi yang cocok. Tekan untuk cek IMEI langsung:</p>
-                <div className="flex justify-center gap-2 mt-2">
-                  <button
-                    onClick={() => router.push(`/cek-garansi?imei=${cleanSearch}`)}
-                    className="px-3 py-1 rounded-lg bg-primary text-white font-bold text-xs"
-                  >
-                    Cek Garansi IMEI #{cleanSearch}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Announcement Banner */}
-      {announcement && (
-        <div
-          className="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden"
-          style={{ backgroundColor: announcement.bgColor || "#dc2626" }}
-        >
-          <div className="absolute -right-4 -top-4 text-white/10">
-            <svg width="100" height="100" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
-          </div>
-          <div className="relative z-10">
-            <h3 className="font-bold text-sm mb-1">📢 Info Penting Sistem</h3>
-            <p className="text-sm opacity-90">{announcement.message}</p>
-          </div>
-        </div>
-      )}
-
-      {/* App Category Grid (Tokopedia/Shopee Vector App Launcher) */}
-      <div>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h2 className="text-base font-black text-ink flex items-center gap-2">
-            <span>Kategori Layanan</span>
-          </h2>
-          <span className="text-xs text-ink-muted font-medium">Navigasi Langsung</span>
-        </div>
-
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          {[
-            {
-              name: "Buka IMEI",
-              desc: "All Operator",
-              tourId: "service-unblock",
-              badge: "POPULER",
-              href: "/unblock-imei",
-              color: "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/15",
-              icon: (
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                </svg>
-              ),
-            },
-            {
-              name: "Cek CEIR",
-              desc: "Database Resmi",
-              tourId: "service-ceir",
-              href: "/cek-ceir",
-              color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/15",
-              icon: (
-                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                </svg>
-              ),
-            },
-            {
-              name: "Cek Garansi",
-              desc: "Nota & Sinyal",
-              tourId: "service-garansi",
-              href: "/cek-garansi",
-              color: "bg-teal-500/10 text-teal-600 border-teal-500/20 hover:bg-teal-500/15",
-              icon: (
-                <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-              ),
-            },
-            {
-              name: "Game Koin",
-              desc: "Rejeki Harian",
-              tourId: "service-games",
-              badge: "BONUS",
-              href: "/games",
-              color: "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/15",
-              icon: (
-                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
-                </svg>
-              ),
-            },
-            {
-              name: "Klaim Diskon",
-              desc: "Voucher Hemat",
-              tourId: "service-voucher",
-              badge: "PROMO",
-              href: "/vouchers",
-              color: "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/15",
-              icon: (
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
-                </svg>
-              ),
-            },
-            {
-              name: "Referral Cuan",
-              desc: "Komisi Saldo",
-              tourId: "service-referral",
-              href: "/referral",
-              color: "bg-purple-500/10 text-purple-600 border-purple-500/20 hover:bg-purple-500/15",
-              icon: (
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                </svg>
-              ),
-            },
-          ].map((item) => (
-            <a
-              key={item.name}
-              href={item.href}
-              data-tour={item.tourId}
-              className="flex flex-col items-center p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/40 transition-all duration-200 group text-center shadow-2xs hover:shadow-sm"
-            >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 relative border ${item.color} mb-2 shadow-xs`}>
-                {item.icon}
-                {item.badge && (
-                  <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 rounded-md bg-gradient-to-r from-orange-500 to-rose-500 text-white font-extrabold text-[8px] shadow-xs">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className="text-xs font-bold text-ink group-hover:text-primary transition-colors leading-tight line-clamp-1">
-                {item.name}
-              </span>
-              <span className="text-[10px] text-ink-muted mt-0.5 leading-tight line-clamp-1">
-                {item.desc}
-              </span>
-            </a>
-          ))}
-        </div>
-      </div>
-
-      {/* Zona Voucher & Promo Diskon (Shopee Style E-Commerce Experience) */}
-      {vouchers.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex justify-between items-center px-1">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
-              <h2 className="text-base font-bold text-ink flex items-center gap-1.5">
-                Voucher Diskon Spesial
-              </h2>
-              <span className="text-[10px] font-bold text-orange-700 bg-orange-100 border border-orange-200 px-2 py-0.5 rounded-full">
-                Klaim Sekarang
-              </span>
-            </div>
-            <a href="/vouchers" className="text-xs font-bold text-primary hover:underline">Lihat Semua ➔</a>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto pb-2 pt-0.5 no-scrollbar snap-x snap-mandatory">
-            {vouchers.map((coupon) => (
-              <div key={coupon.id} className="snap-start shrink-0">
-                <ShopeeVoucherCard
-                  coupon={coupon}
-                  compact
-                  isClaiming={claimingId === coupon.id}
-                  onClaim={handleClaimCoupon}
-                  onUse={() => router.push("/unblock-imei")}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tutorial & Quick Start Guide Hub (Smooth Animated Expand/Collapse) */}
-      <Card glass className="overflow-hidden border-primary/20 bg-gradient-to-br from-canvas via-canvas to-primary/5 shadow-sm transition-all duration-500">
-        <div className="p-4 sm:p-5">
-          {/* Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div 
-              onClick={() => {
-                const next = !tutorialDismissed;
-                setTutorialDismissed(next);
-                if (typeof window !== "undefined") {
-                  if (next) localStorage.setItem("ry_hide_quick_guide", "true");
-                  else localStorage.removeItem("ry_hide_quick_guide");
-                }
-              }}
-              className="flex items-center gap-3 cursor-pointer select-none group"
-            >
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-primary/20 to-blue-500/20 text-primary flex items-center justify-center font-bold shrink-0 border border-primary/20 group-hover:scale-105 transition-transform duration-300 shadow-xs">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                </svg>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm sm:text-base font-bold text-ink group-hover:text-primary transition-colors">
-                    Panduan Cepat Penggunaan
-                  </h2>
-                  <span className="text-[10px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
-                    5 Langkah
-                  </span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-ink-muted">
-                  {tutorialDismissed ? "Klik untuk membuka alur langkah mudah transaksi" : "Cara mudah & cepat menggunakan layanan Ry-ITSolutions"}
-                </p>
-              </div>
-            </div>
-
-            {/* Actions & Collapse Toggle */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {!tutorialDismissed && (
-                <>
-                  <button
-                    onClick={() => setShowGuidedTour(true)}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-xs hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    title="Mulai Tur Petunjuk Interaktif dengan Suara AI"
-                  >
-                    <svg className="w-3.5 h-3.5 text-white animate-pulse" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
-                    </svg>
-                    <span>Tur Audio</span>
-                  </button>
-                  <button
-                    onClick={() => setShowTutorialModal(true)}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover shadow-xs hover:shadow-primary/20 transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                  >
-                    <span>Detail Panduan</span>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
-                  </button>
-                </>
-              )}
-
-              <button
-                onClick={() => {
-                  const next = !tutorialDismissed;
-                  setTutorialDismissed(next);
-                  if (typeof window !== "undefined") {
-                    if (next) localStorage.setItem("ry_hide_quick_guide", "true");
-                    else localStorage.removeItem("ry_hide_quick_guide");
-                  }
-                }}
-                className={`p-2 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-semibold ${
-                  tutorialDismissed 
-                    ? "bg-primary/10 text-primary border-primary/30 hover:bg-primary/15 shadow-2xs" 
-                    : "bg-canvas border-hairline text-ink-muted hover:text-ink hover:bg-parchment"
-                }`}
-                title={tutorialDismissed ? "Tampilkan Panduan Cepat" : "Sembunyikan Panduan Cepat"}
-              >
-                <span className="text-[11px] sm:inline hidden">{tutorialDismissed ? "Tampilkan" : "Sembunyikan"}</span>
-                <svg 
-                  className={`w-4 h-4 transition-transform duration-300 ${tutorialDismissed ? "" : "rotate-180"}`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth={2.5} 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Collapsible Content Body */}
-          <div
-            className={`grid transition-all duration-500 ease-in-out overflow-hidden ${
-              tutorialDismissed ? "grid-rows-[0fr] opacity-0 mt-0" : "grid-rows-[1fr] opacity-100 mt-4 pt-3 border-t border-hairline/60"
-            }`}
-          >
-            <div className="overflow-hidden">
-              <div className="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x snap-mandatory">
-                {[
-                  { 
-                    step: "1", 
-                    title: "Top Up Saldo", 
-                    desc: "Scan QRIS 24 jam", 
-                    href: "/topup",
-                    svg: (
-                      <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    step: "2", 
-                    title: "Cek Database", 
-                    desc: "Histori CEIR & Bea Cukai", 
-                    href: "/cek-ceir",
-                    svg: (
-                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    step: "3", 
-                    title: "Buka Sinyal", 
-                    desc: "Input IMEI & durasi", 
-                    href: "/unblock-imei",
-                    svg: (
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    step: "4", 
-                    title: "Notif WhatsApp", 
-                    desc: "Nota otomatis ke WA", 
-                    href: "/history",
-                    svg: (
-                      <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.84-.945 4.47 4.47 0 00.743-1.807C3.916 16.71 3 14.473 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    step: "5", 
-                    title: "Garansi Digital", 
-                    desc: "Pantau aktif & klaim", 
-                    href: "/cek-garansi",
-                    svg: (
-                      <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                      </svg>
-                    )
-                  }
-                ].map((s, idx) => (
-                  <a
-                    key={idx}
-                    href={s.href}
-                    className="w-[135px] sm:w-auto shrink-0 snap-start p-3 rounded-2xl bg-canvas border border-hairline hover:border-primary/50 hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center">
-                        {s.step}
-                      </span>
-                      <span className="p-1 rounded-lg bg-parchment/60 group-hover:scale-110 transition-transform flex items-center justify-center">
-                        {s.svg}
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-ink group-hover:text-primary transition-colors line-clamp-1">{s.title}</h4>
-                      <p className="text-[10px] text-ink-muted leading-tight mt-0.5 line-clamp-1">{s.desc}</p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Recent Transactions Summary */}
-      <div>
-        <div className="flex justify-between items-center mb-3 px-1">
-          <h2 className="text-base font-bold text-ink flex items-center gap-2">
+      {/* ============================================================ */}
+      {/* 7. RIWAYAT TRANSAKSI TERAKHIR                               */}
+      {/* ============================================================ */}
+      <div className="space-y-3">
+        <div className="flex justify-between items-center px-1">
+          <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
             <span>📋 Riwayat Transaksi Terakhir</span>
           </h2>
-          <a href="/history" className="text-xs font-bold text-primary hover:underline">Lihat Semua ➔</a>
+          <a href="/history" className="text-xs font-bold text-orange-600 hover:underline">Lihat Semua ➔</a>
         </div>
 
         {recentTrx.length === 0 ? (
-          <div className="text-center py-8 bg-canvas border border-hairline rounded-2xl">
-            <p className="text-sm text-ink-muted">Belum ada pergerakan transaksi.</p>
+          <div className="text-center py-6 bg-canvas border border-hairline rounded-2xl">
+            <p className="text-xs text-ink-muted">Belum ada transaksi.</p>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {recentTrx.map((trx, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3.5 bg-canvas border border-hairline rounded-2xl hover:border-primary/30 transition-all shadow-2xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
+              <div key={idx} className="flex items-center justify-between p-3 bg-canvas border border-hairline rounded-2xl hover:border-orange-500/30 transition-all shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600 font-bold shrink-0">
                     📱
                   </div>
                   <div>
                     <p className="font-bold text-xs text-ink line-clamp-1">{trx.packageName || "Layanan IMEI"}</p>
-                    <p className="text-[11px] text-ink-muted mt-0.5 font-mono">
+                    <p className="text-[10px] text-ink-muted mt-0.5 font-mono">
                       {trx.imei ? (trx.imei.split(',').length > 1 ? `${trx.imei.split(',')[0]} (+${trx.imei.split(',').length - 1})` : trx.imei) : trx.targetPhone}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-xs text-ink">Rp {(trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
-                  <span className={`inline-block mt-0.5 px-2 py-0.5 text-[9px] font-bold rounded-md uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                  <span className={`inline-block mt-0.5 px-2 py-0.5 text-[8px] font-bold rounded-md uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
                     {trx.status === 'completed' ? 'success' : trx.status}
                   </span>
                 </div>
@@ -884,33 +662,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* QRIS Modal */}
-      {selectedQris && (() => {
-        const createdAt = selectedQris.createdAt ? new Date(selectedQris.createdAt).getTime() : Date.now();
-        const expiresAt = Math.floor((createdAt + 15 * 60 * 1000) / 1000);
-
-        return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <Card className="max-w-xs w-full p-6 text-center space-y-4 relative rounded-3xl">
-              <button onClick={() => setSelectedQris(null)} className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-              <h3 className="font-bold text-lg">Bayar Top Up</h3>
-              <p className="text-primary font-black text-2xl">Rp {selectedQris.uniqueAmount?.toLocaleString('id-ID')}</p>
-
-              <div className="relative mx-auto border-2 border-hairline p-2 rounded-xl">
-                <div className="absolute -top-3 -right-3 bg-rose-500 text-white font-bold px-3 py-1.5 rounded-full text-sm shadow-md flex items-center gap-1.5 animate-pulse">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <CountdownTimer expiresAt={expiresAt} onExpire={() => setSelectedQris(null)} />
-                </div>
-                <img src={selectedQris.base64Image || selectedQris.qrisData?.base64Image} alt="QRIS" className="w-full h-auto" />
-              </div>
-              <p className="text-xs text-ink-muted">Scan QRIS ini di aplikasi e-Wallet atau m-Banking Anda sebelum waktu habis.</p>
-            </Card>
-          </div>
-        );
-      })()}
 
       {/* Invoice Modal for Universal Search */}
       <InvoiceModal
@@ -931,225 +682,6 @@ export default function DashboardPage() {
           adminNote: selectedInvoiceTrx.admin_note || selectedInvoiceTrx.adminNote
         } : null}
       />
-
-      {/* Interactive Tutorial & Onboarding Modal */}
-      {showTutorialModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
-          <Card className="w-full max-w-xl bg-canvas border border-hairline p-0 overflow-hidden flex flex-col shadow-2xl rounded-3xl max-h-[90vh]">
-            {/* Header Modal */}
-            <div className="p-5 bg-gradient-to-r from-primary to-blue-700 text-white flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </span>
-                <div>
-                  <h3 className="font-bold text-lg leading-tight">Panduan Lengkap Ry-ITSolutions</h3>
-                  <p className="text-xs text-white/80">Ikuti 5 langkah mudah berikut untuk menggunakan web</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowTutorialModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-sm text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body: Steps Carousel / Tabs */}
-            <div className="p-6 space-y-6 overflow-y-auto">
-              <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar">
-                {[
-                  { label: "1. Top Up", icon: "💳" },
-                  { label: "2. Cek IMEI", icon: "🔍" },
-                  { label: "3. Buka Sinyal", icon: "📱" },
-                  { label: "4. Notif WA", icon: "📲" },
-                  { label: "5. Garansi", icon: "🛡️" },
-                  { label: "6. Klaim Voucher", icon: "🎟️" },
-                ].map((tab, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveTutorialTab(idx)}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                      activeTutorialTab === idx
-                        ? 'bg-primary text-white shadow-sm ring-2 ring-primary/30'
-                        : 'bg-canvas border border-hairline text-ink-muted hover:bg-parchment'
-                    }`}
-                  >
-                    <span>{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Step Content */}
-              {activeTutorialTab === 0 && (
-                <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
-                  <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
-                    <span>Langkah 1: Top Up Saldo Otomatis</span>
-                  </div>
-                  <p className="text-xs text-blue-950 leading-relaxed">
-                    Sistem menggunakan <b>QRIS Dinamis 24 Jam</b>. Masukkan nominal top up yang Anda inginkan di menu Top Up, scan QRIS menggunakan GoPay, OVO, DANA, BCA, atau M-Banking mana pun. Saldo akan otomatis bertambah detik itu juga tanpa perlu konfirmasi admin.
-                  </p>
-                  <div className="pt-2">
-                    <Button size="sm" onClick={() => { setShowTutorialModal(false); router.push('/topup'); }}>
-                      Menuju Menu Top Up ➔
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeTutorialTab === 1 && (
-                <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
-                    <span>Langkah 2: Cek Status Database IMEI</span>
-                  </div>
-                  <p className="text-xs text-emerald-950 leading-relaxed">
-                    Sebelum melakukan order aktivasi sinyal, Anda disarankan mengecek status IMEI perangkat melalui menu <b>Cek Database CEIR</b> atau <b>Cek Bea Cukai</b> untuk mengetahui histori dan status registrasi perangkat sebelumnya.
-                  </p>
-                  <div className="pt-2">
-                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { setShowTutorialModal(false); router.push('/cek-ceir'); }}>
-                      Menuju Menu Cek CEIR ➔
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeTutorialTab === 2 && (
-                <div className="p-5 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-3">
-                  <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
-                    <span>Langkah 3: Order Buka Sinyal IMEI</span>
-                  </div>
-                  <p className="text-xs text-rose-950 leading-relaxed">
-                    Masuk ke menu <b>Buka IMEI</b>, ketik 15 digit nomor IMEI HP Anda (bisa banyak IMEI sekaligus), upload screenshot *#06#, masukkan nomor WhatsApp Anda, lalu pilih paket durasi & kecepatan yang diinginkan.
-                  </p>
-                  <div className="pt-2">
-                    <Button size="sm" className="bg-rose-600 hover:bg-rose-700" onClick={() => { setShowTutorialModal(false); router.push('/unblock-imei'); }}>
-                      Menuju Form Buka IMEI ➔
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeTutorialTab === 3 && (
-                <div className="p-5 rounded-2xl bg-green-50/60 border border-green-200 space-y-3">
-                  <div className="flex items-center gap-2 text-green-900 font-bold text-sm">
-                    <span>Langkah 4: Terima Nota Resmi via WhatsApp</span>
-                  </div>
-                  <p className="text-xs text-green-950 leading-relaxed">
-                    Begitu admin atau server menyelesaikan proses aktivasi (status <b>Sukses</b>), Bot Toko resmi kami akan <b>otomatis mengirimkan nota digital & link garansi</b> langsung ke nomor WhatsApp Anda. Anda juga bisa meneruskan nota ke customer jika Anda adalah Reseller.
-                  </p>
-                  <div className="pt-2">
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => { setShowTutorialModal(false); router.push('/history'); }}>
-                      Lihat Riwayat Transaksi ➔
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeTutorialTab === 4 && (
-                <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
-                  <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                    <span>Langkah 5: Cek & Klaim Garansi Digital</span>
-                  </div>
-                  <p className="text-xs text-amber-950 leading-relaxed">
-                    Setiap transaksi dilengkapi garansi digital. Cukup masukkan nomor IMEI di menu <b>Cek Garansi</b> untuk melihat sisa masa aktif garansi, mengunduh ulang nota PDF, atau mengajukan bantuan teknis secara instan.
-                  </p>
-                  <div className="pt-2">
-                    <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setShowTutorialModal(false); router.push('/cek-garansi'); }}>
-                      Menuju Cek Garansi ➔
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeTutorialTab === 5 && (
-                <div className="p-5 rounded-2xl bg-orange-50/60 border border-orange-200 space-y-3">
-                  <div className="flex items-center gap-2 text-orange-900 font-bold text-sm">
-                    <span>Langkah 6: Klaim & Gunakan Voucher Diskon</span>
-                  </div>
-                  <p className="text-xs text-orange-950 leading-relaxed">
-                    Mau hemat biaya order? Buka menu <b>Klaim Voucher</b> di dashboard atau sidebar, klik tombol <b>Klaim</b> pada voucher diskon yang Anda inginkan. Saat checkout di formulir Buka IMEI, klik <b>Voucher Ry-ITSolutions</b> untuk memasang voucher dan dapatkan potongan harga langsung!
-                  </p>
-                  <div className="pt-2">
-                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white" onClick={() => { setShowTutorialModal(false); router.push('/vouchers'); }}>
-                      Buka Pusat Klaim Voucher ➔
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Navigation Footer */}
-              <div className="flex justify-between items-center pt-2 border-t border-hairline">
-                <button
-                  disabled={activeTutorialTab === 0}
-                  onClick={() => setActiveTutorialTab(prev => Math.max(0, prev - 1))}
-                  className="px-4 py-2 rounded-xl text-xs font-bold border border-hairline disabled:opacity-30 hover:bg-parchment flex items-center gap-1"
-                >
-                  <span>&larr;</span> Sebelumnya
-                </button>
-
-                <div className="flex gap-1.5">
-                  {[0, 1, 2, 3, 4, 5].map(idx => (
-                    <span
-                      key={idx}
-                      onClick={() => setActiveTutorialTab(idx)}
-                      className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-all ${
-                        activeTutorialTab === idx ? 'w-6 bg-primary' : 'bg-slate-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                {activeTutorialTab < 5 ? (
-                  <button
-                    onClick={() => setActiveTutorialTab(prev => Math.min(5, prev + 1))}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-sm flex items-center gap-1"
-                  >
-                    Selanjutnya <span>&rarr;</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowTutorialModal(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
-                  >
-                    Saya Sudah Paham
-                  </button>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Interactive Guided Tour Component */}
-      <InteractiveTour
-        isOpen={showGuidedTour}
-        onClose={() => setShowGuidedTour(false)}
-      />
-
     </div>
   );
-}
-
-function CountdownTimer({ expiresAt, onExpire }: { expiresAt: number, onExpire: () => void }) {
-  const [timeLeft, setTimeLeft] = useState(Math.max(0, expiresAt - Math.floor(Date.now() / 1000)));
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const remaining = Math.max(0, expiresAt - Math.floor(Date.now() / 1000));
-      setTimeLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(timer);
-        onExpire();
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [expiresAt, onExpire]);
-
-  const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-  const s = (timeLeft % 60).toString().padStart(2, '0');
-  return <span>{m}:{s}</span>;
 }
