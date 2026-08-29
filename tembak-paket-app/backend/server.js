@@ -219,8 +219,10 @@ async function initializeDatabase() {
                 claim_type TEXT NOT NULL,
                 coins_amount INTEGER NOT NULL,
                 streak_count INTEGER DEFAULT 1,
+                claim_date TEXT,
                 claimed_at TEXT NOT NULL
             )`);
+            try { await dbRun("ALTER TABLE user_coin_claims ADD COLUMN claim_date TEXT"); } catch (e) { }
 
             // Default pengaturan referral di tabel settings (100% dinamis)
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_enabled', 'true')`);
@@ -1973,19 +1975,24 @@ app.get('/api/user/referral-info', isAuthenticated, async (req, res) => {
 });
 
 // === SHOPEE GAMES: KOIN RY, DAILY CHECK-IN & LUCKY SPIN ===
+function getWIBDate(d = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(d);
+}
+
 app.get('/api/games/status', isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
-        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+        const todayWIB = getWIBDate();
 
         const user = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
         const userCoins = user?.coins || 0;
 
-        // Cek apakah sudah check-in hari ini
+        // Cek apakah sudah check-in hari ini (WIB)
         const todayCheckin = await dbGet(`
             SELECT * FROM user_coin_claims 
-            WHERE userId = ? AND claim_type = 'daily_checkin' AND substr(claimed_at, 1, 10) = ?
-        `, [userId, todayWIB]);
+            WHERE userId = ? AND claim_type = 'daily_checkin' 
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
+        `, [userId, todayWIB, todayWIB, todayWIB]);
 
         // Cek streak terakhir
         const lastCheckin = await dbGet(`
@@ -1996,9 +2003,9 @@ app.get('/api/games/status', isAuthenticated, async (req, res) => {
 
         let streak = 1;
         if (lastCheckin) {
-            const lastDate = lastCheckin.claimed_at.split('T')[0];
+            const lastDate = lastCheckin.claim_date || lastCheckin.claimed_at.split('T')[0];
             const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const yesterdayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(yesterdayDate);
+            const yesterdayWIB = getWIBDate(yesterdayDate);
 
             if (lastDate === todayWIB) {
                 streak = lastCheckin.streak_count || 1;
@@ -2009,11 +2016,12 @@ app.get('/api/games/status', isAuthenticated, async (req, res) => {
             }
         }
 
-        // Cek apakah sudah lucky spin hari ini
+        // Cek apakah sudah lucky spin hari ini (WIB)
         const todaySpin = await dbGet(`
             SELECT * FROM user_coin_claims 
-            WHERE userId = ? AND claim_type = 'lucky_spin' AND substr(claimed_at, 1, 10) = ?
-        `, [userId, todayWIB]);
+            WHERE userId = ? AND claim_type = 'lucky_spin' 
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
+        `, [userId, todayWIB, todayWIB, todayWIB]);
 
         const rewards = [100, 200, 300, 400, 500, 750, 1000];
         const gamePayload = {
@@ -2060,12 +2068,13 @@ app.get('/api/games/history', isAuthenticated, async (req, res) => {
 app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
-        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+        const todayWIB = getWIBDate();
 
         const todayCheckin = await dbGet(`
             SELECT id FROM user_coin_claims 
-            WHERE userId = ? AND claim_type = 'daily_checkin' AND substr(claimed_at, 1, 10) = ?
-        `, [userId, todayWIB]);
+            WHERE userId = ? AND claim_type = 'daily_checkin' 
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
+        `, [userId, todayWIB, todayWIB, todayWIB]);
 
         if (todayCheckin) {
             return res.status(400).json({ status: false, message: "Anda sudah melakukan check-in hari ini! Coba lagi besok ya." });
@@ -2079,9 +2088,9 @@ app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
 
         let streak = 1;
         if (lastCheckin) {
-            const lastDate = lastCheckin.claimed_at.split('T')[0];
+            const lastDate = lastCheckin.claim_date || lastCheckin.claimed_at.split('T')[0];
             const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const yesterdayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(yesterdayDate);
+            const yesterdayWIB = getWIBDate(yesterdayDate);
 
             if (lastDate === yesterdayWIB) {
                 streak = ((lastCheckin.streak_count || 1) % 7) + 1;
@@ -2097,9 +2106,9 @@ app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
         await dbRun("UPDATE users SET coins = MIN(50000, COALESCE(coins, 0) + ?) WHERE id = ?", [coinBonus, userId]);
         const claimId = `claim_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await dbRun(`
-            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claimed_at)
-            VALUES (?, ?, 'daily_checkin', ?, ?, ?)
-        `, [claimId, userId, coinBonus, streak, new Date().toISOString()]);
+            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claim_date, claimed_at)
+            VALUES (?, ?, 'daily_checkin', ?, ?, ?, ?)
+        `, [claimId, userId, coinBonus, streak, todayWIB, new Date().toISOString()]);
 
         const updatedUser = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
 
@@ -2119,12 +2128,13 @@ app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
 app.post('/api/games/lucky-spin', isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
-        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+        const todayWIB = getWIBDate();
 
         const todaySpin = await dbGet(`
             SELECT id FROM user_coin_claims 
-            WHERE userId = ? AND claim_type = 'lucky_spin' AND substr(claimed_at, 1, 10) = ?
-        `, [userId, todayWIB]);
+            WHERE userId = ? AND claim_type = 'lucky_spin' 
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
+        `, [userId, todayWIB, todayWIB, todayWIB]);
 
         if (todaySpin) {
             return res.status(400).json({ status: false, message: "Tiket putar gratis hari ini sudah terpakai. Coba lagi besok ya!" });
@@ -2160,9 +2170,9 @@ app.post('/api/games/lucky-spin', isAuthenticated, async (req, res) => {
         await dbRun("UPDATE users SET coins = MIN(50000, COALESCE(coins, 0) + ?) WHERE id = ?", [wonCoins, userId]);
         const claimId = `spin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await dbRun(`
-            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claimed_at)
-            VALUES (?, ?, 'lucky_spin', ?, 1, ?)
-        `, [claimId, userId, wonCoins, new Date().toISOString()]);
+            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claim_date, claimed_at)
+            VALUES (?, ?, 'lucky_spin', ?, 1, ?, ?)
+        `, [claimId, userId, wonCoins, todayWIB, new Date().toISOString()]);
 
         const updatedUser = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
 
