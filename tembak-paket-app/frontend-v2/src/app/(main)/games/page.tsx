@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
+import { playCoinClaimSound, playWheelTickSound } from "@/lib/soundFx";
 
 export default function GamesPage() {
   const { user, setUser } = useApp();
@@ -138,7 +139,17 @@ export default function GamesPage() {
         const targetAngle = wheelRotation + (360 * 5) + ((6 - prizeIdx) % 6) * 60;
         setWheelRotation(targetAngle);
 
+        // Play realistic wheel ticking sound
+        let tickCount = 0;
+        const tickInterval = setInterval(() => {
+          playWheelTickSound();
+          tickCount++;
+          if (tickCount > 26) clearInterval(tickInterval);
+        }, 110);
+
         setTimeout(() => {
+          clearInterval(tickInterval);
+          playCoinClaimSound();
           Swal.fire({
             icon: "success",
             title: "Selamat! 🎡✨",

@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { API_URL, safeJson } from "./api";
+import { bindSwalSounds, playTopupSuccessSound, playPopSound } from "./soundFx";
 
 const MENU_SETTINGS_STORAGE_KEY = "menu_settings";
 const CART_STORAGE_KEY = "ry_cart_items";
@@ -89,6 +90,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
     const updated = [...cart, { ...newItem, id }];
     saveCart(updated);
+    playPopSound();
   };
 
   const removeFromCart = (id: string) => {
@@ -126,6 +128,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load Session on Mount
   useEffect(() => {
+    bindSwalSounds();
+
     async function loadData() {
       try {
         const [sessionRes, menuRes, ceirgoDisplayRes] = await Promise.all([
@@ -170,6 +174,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const payload = JSON.parse(ev.data);
         if (typeof payload.balance === "number") {
           setUser(prev => prev ? { ...prev, balance: payload.balance } : null);
+          playTopupSuccessSound();
 
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('topup_success'));
