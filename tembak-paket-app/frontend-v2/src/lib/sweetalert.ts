@@ -1,8 +1,24 @@
 "use client";
-import SwalOrigin from "sweetalert2";
+import SwalOrigin, { SweetAlertOptions, SweetAlertResult } from "sweetalert2";
 
-export function createSweetAlert() {
-  const customFire = (...args: any[]) => {
+export interface CustomSweetAlert extends Omit<typeof SwalOrigin, "fire"> {
+  <T = any>(options: SweetAlertOptions): Promise<SweetAlertResult<T>>;
+  <T = any>(
+    title?: string,
+    html?: string,
+    icon?: "success" | "error" | "warning" | "info" | "question"
+  ): Promise<SweetAlertResult<T>>;
+  fire<T = any>(options: SweetAlertOptions): Promise<SweetAlertResult<T>>;
+  fire<T = any>(
+    title?: string,
+    html?: string,
+    icon?: "success" | "error" | "warning" | "info" | "question"
+  ): Promise<SweetAlertResult<T>>;
+  fire<T = any>(...args: any[]): Promise<SweetAlertResult<T>>;
+}
+
+export function createSweetAlert(): CustomSweetAlert {
+  const customFire = (...args: any[]): Promise<SweetAlertResult<any>> => {
     let opts: any = {};
     if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
       opts = { ...args[0] };
@@ -55,8 +71,8 @@ export function createSweetAlert() {
   });
 
   ProxySwal.fire = customFire;
-  return ProxySwal;
+  return ProxySwal as CustomSweetAlert;
 }
 
-export const Swal = createSweetAlert();
+export const Swal: CustomSweetAlert = createSweetAlert();
 export default Swal;

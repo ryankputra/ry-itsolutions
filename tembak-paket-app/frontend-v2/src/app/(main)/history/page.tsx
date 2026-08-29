@@ -53,7 +53,7 @@ function HistoryContent() {
       showCancelButton: true,
       confirmButtonText: "Buka WhatsApp",
       cancelButtonText: "Batal",
-      inputValidator: (val) => {
+      inputValidator: (val: string | null) => {
         if (!val || val.replace(/\D/g, "").length < 9) {
           return "Masukkan nomor WhatsApp yang valid!";
         }

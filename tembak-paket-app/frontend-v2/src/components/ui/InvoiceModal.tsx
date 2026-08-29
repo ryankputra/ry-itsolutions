@@ -104,7 +104,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       showCancelButton: true,
       confirmButtonText: "Buka WhatsApp 🚀",
       cancelButtonText: "Batal",
-      inputValidator: (value) => {
+      inputValidator: (value: string | null) => {
         if (!value || value.replace(/\D/g, '').length < 9) {
           return "Masukkan nomor WhatsApp yang valid!";
         }
