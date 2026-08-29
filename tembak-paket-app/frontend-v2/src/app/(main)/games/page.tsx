@@ -92,6 +92,9 @@ export default function GamesPage() {
           text: data.message,
           confirmButtonColor: "#0066cc",
           confirmButtonText: "Kumpulkan Koin",
+          timer: 3000,
+          timerProgressBar: true,
+          allowOutsideClick: true,
         });
 
         if (user) {
@@ -109,6 +112,9 @@ export default function GamesPage() {
           icon: "info",
           title: "Perhatian",
           text: data.message,
+          timer: 3000,
+          timerProgressBar: true,
+          allowOutsideClick: true,
         });
       }
     } catch (e) {
@@ -116,6 +122,9 @@ export default function GamesPage() {
         icon: "error",
         title: "Gagal",
         text: "Terjadi kesalahan koneksi saat klaim koin.",
+        timer: 3000,
+        timerProgressBar: true,
+        allowOutsideClick: true,
       });
     } finally {
       setClaimingCheckin(false);
@@ -165,6 +174,9 @@ export default function GamesPage() {
             text: data.message,
             confirmButtonColor: "#0066cc",
             confirmButtonText: "Kumpulkan Koin",
+            timer: 3000,
+            timerProgressBar: true,
+            allowOutsideClick: true,
           });
 
           if (user) {
@@ -183,6 +195,9 @@ export default function GamesPage() {
           icon: "info",
           title: "Tiket Habis",
           text: data.message,
+          timer: 3000,
+          timerProgressBar: true,
+          allowOutsideClick: true,
         });
       }
     } catch (e) {
@@ -191,6 +206,9 @@ export default function GamesPage() {
         icon: "error",
         title: "Gagal",
         text: "Terjadi kesalahan saat memutar roda.",
+        timer: 3000,
+        timerProgressBar: true,
+        allowOutsideClick: true,
       });
     }
   };
