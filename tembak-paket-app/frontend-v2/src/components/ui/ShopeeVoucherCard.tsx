@@ -64,7 +64,7 @@ export function ShopeeVoucherCard({
       } ${compact ? "min-w-[280px] max-w-[320px]" : "w-full"}`}
     >
       {/* Sisi Kiri: Badge Diskon Khas Voucher E-Commerce */}
-      <div className="w-[100px] sm:w-[115px] bg-gradient-to-br from-amber-500 via-primary to-orange-600 text-white flex flex-col items-center justify-center p-3 text-center shrink-0 relative overflow-hidden">
+      <div className="w-[100px] sm:w-[115px] bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white flex flex-col items-center justify-center p-3 text-center shrink-0 relative overflow-hidden">
         {/* Notch Potongan Tiket Kiri */}
         <div className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-canvas border border-hairline z-10"></div>
         <div className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-canvas border border-hairline z-10"></div>
@@ -148,7 +148,7 @@ export function ShopeeVoucherCard({
               type="button"
               disabled={isClaiming}
               onClick={() => onClaim && onClaim(coupon)}
-              className="px-3.5 py-1 rounded-xl text-[11px] font-bold bg-gradient-to-r from-primary to-orange-500 hover:from-primary-hover hover:to-orange-600 text-white shadow-xs transition-all active:scale-95 shrink-0 flex items-center gap-1"
+              className="px-3.5 py-1 rounded-xl text-[11px] font-bold bg-primary hover:bg-primary-focus text-white shadow-xs transition-all active:scale-95 shrink-0 flex items-center gap-1"
             >
               {isClaiming ? "..." : "Klaim"}
             </button>

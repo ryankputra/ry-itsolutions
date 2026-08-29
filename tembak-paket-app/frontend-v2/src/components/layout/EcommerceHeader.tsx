@@ -114,7 +114,7 @@ export function EcommerceHeader() {
     { label: "Cek CEIR", href: "/cek-ceir" },
     { label: "Cek Garansi", href: "/cek-garansi" },
     { label: "Klaim Voucher", href: "/vouchers" },
-    { label: "Game Koin 🎡", href: "/games", badge: "Bonus" },
+    { label: "Game Koin", href: "/games" },
     { label: "Riwayat Order", href: "/history" },
     { label: "Bantuan & Tiket", href: "/tickets" },
   ];
@@ -183,7 +183,7 @@ export function EcommerceHeader() {
           )}
         </div>
 
-        {/* Cart / Orders Icon with Badge */}
+        {/* Cart / Orders Icon */}
         <Link
           href="/history"
           className="relative p-1.5 text-white hover:opacity-80 transition-opacity"
@@ -192,9 +192,11 @@ export function EcommerceHeader() {
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
           </svg>
-          <span className="absolute -top-0.5 -right-0.5 bg-white text-primary rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
-            1
-          </span>
+          {pendingOrders > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
+              {pendingOrders}
+            </span>
+          )}
         </Link>
 
         {/* Chat / CS WhatsApp Icon */}
@@ -387,11 +389,6 @@ export function EcommerceHeader() {
                   }`}
                 >
                   <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[8px] font-black uppercase">
-                      {item.badge}
-                    </span>
-                  )}
                   {isActive && (
                     <span className="absolute bottom-[-9px] left-0 right-0 h-0.5 bg-primary rounded-full"></span>
                   )}

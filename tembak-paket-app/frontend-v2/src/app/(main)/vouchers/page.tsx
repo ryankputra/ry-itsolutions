@@ -75,10 +75,10 @@ export default function VouchersPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-14">
-      {/* Header Banner Ala Shopee Voucher Center */}
-      <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-amber-500 via-primary to-orange-600 text-white shadow-xl shadow-primary/20 overflow-hidden">
+      {/* Header Banner Voucher Center */}
+      <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 text-white shadow-xl shadow-primary/20 overflow-hidden">
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 blur-2xl rounded-full"></div>
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-orange-400/20 blur-xl rounded-full"></div>
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-400/20 blur-xl rounded-full"></div>
 
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
