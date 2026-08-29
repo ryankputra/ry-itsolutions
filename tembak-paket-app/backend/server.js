@@ -1915,16 +1915,19 @@ app.get('/api/games/status', isAuthenticated, async (req, res) => {
             WHERE userId = ? AND claim_type = 'lucky_spin' AND substr(claimed_at, 1, 10) = ?
         `, [userId, todayWIB]);
 
-        const rewards = [100, 200, 300, 400, 500, 750, 1000];
-
-        res.json({
-            status: true,
+        const gamePayload = {
             coins: userCoins,
             can_checkin: !todayCheckin,
             current_streak: streak,
             today_checkin_done: !!todayCheckin,
             can_spin: !todaySpin,
             rewards
+        };
+
+        res.json({
+            status: true,
+            data: gamePayload,
+            ...gamePayload
         });
     } catch (e) {
         console.error("Error in /api/games/status:", e);

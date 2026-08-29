@@ -41,7 +41,14 @@ export default function GamesPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.status) {
-            setGameData(data.data);
+            const payload = data.data || data;
+            setGameData({
+              coins: payload.coins ?? 0,
+              can_checkin: payload.can_checkin ?? true,
+              today_checkin_done: payload.today_checkin_done ?? false,
+              current_streak: Number(payload.current_streak) || 1,
+              can_spin: payload.can_spin ?? true,
+            });
           }
         }
       } catch (e) {
@@ -267,15 +274,16 @@ export default function GamesPage() {
           <div className="grid grid-cols-7 gap-1 text-center pt-2 pb-3">
             {rewards.map((rewardAmount, idx) => {
               const dayNum = idx + 1;
-              const isToday = dayNum === gameData.current_streak;
-              const isPastClaimed = dayNum < gameData.current_streak || (isToday && gameData.today_checkin_done);
+              const currentStreak = gameData?.current_streak || 1;
+              const isToday = dayNum === currentStreak;
+              const isPastClaimed = dayNum < currentStreak || (isToday && !!gameData?.today_checkin_done);
               const isDay7 = dayNum === 7;
 
               return (
                 <div
                   key={idx}
                   className={`flex flex-col items-center justify-between p-1 rounded-xl transition-all ${
-                    isToday && !gameData.today_checkin_done
+                    isToday && !gameData?.today_checkin_done
                       ? "border-2 border-primary bg-blue-50/60 shadow-2xs"
                       : "bg-slate-50/80 border border-slate-200/60"
                   }`}
@@ -324,17 +332,17 @@ export default function GamesPage() {
           {/* Primary Action Button */}
           <Button
             onClick={handleDailyCheckin}
-            disabled={!gameData.can_checkin || claimingCheckin}
+            disabled={!gameData?.can_checkin || claimingCheckin}
             isLoading={claimingCheckin}
             className={`w-full h-11 text-xs sm:text-sm font-black shadow-md rounded-xl ${
-              gameData.can_checkin
+              gameData?.can_checkin
                 ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:opacity-90 text-white"
                 : "bg-slate-200 text-slate-500 cursor-not-allowed"
             }`}
           >
-            {gameData.today_checkin_done
+            {gameData?.today_checkin_done
               ? "Sudah Check-In Hari Ini"
-              : `Dapatkan ekstra ${rewards[gameData.current_streak - 1] || 100} Koin sekarang`}
+              : `Dapatkan ekstra ${rewards[(gameData?.current_streak || 1) - 1] || 100} Koin sekarang`}
           </Button>
 
           {/* Sub Task Bar: Ajak Teman */}
