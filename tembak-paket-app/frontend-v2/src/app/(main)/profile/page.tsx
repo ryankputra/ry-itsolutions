@@ -161,7 +161,7 @@ export default function ProfilePage() {
           {[
             {
               label: "Belum Bayar",
-              href: "/history",
+              href: "/history?tab=unpaid",
               badge: orderCounts.pending > 0 ? orderCounts.pending : null,
               icon: (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -171,7 +171,7 @@ export default function ProfilePage() {
             },
             {
               label: "Diproses",
-              href: "/history",
+              href: "/history?tab=processing",
               badge: orderCounts.processing > 0 ? orderCounts.processing : null,
               icon: (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -181,7 +181,7 @@ export default function ProfilePage() {
             },
             {
               label: "Selesai",
-              href: "/history",
+              href: "/history?tab=completed",
               badge: null,
               icon: (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
