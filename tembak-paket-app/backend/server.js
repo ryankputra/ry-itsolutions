@@ -1659,7 +1659,7 @@ app.delete('/api/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) 
 });
 
 // Endpoint validasi kupon untuk checkout (Shopee Style: Cek Status Klaim User)
-app.post('/api/coupon/validate', isAuthenticated, async (req, res) => {
+app.post(['/api/coupon/validate', '/api/coupons/validate'], isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
         const { code, order_amount } = req.body;

@@ -26,7 +26,7 @@ export default function CartPage() {
   const handleApplyCoupon = async (code: string) => {
     setCouponLoading(true);
     try {
-      const res = await fetch("/api/coupons/validate", {
+      const res = await fetch("/api/coupon/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -36,8 +36,50 @@ export default function CartPage() {
       if (data?.status && data.data) {
         setAppliedCoupon(data.data);
         setShowVoucherModal(false);
+        Swal.fire({
+          icon: "success",
+          title: "Voucher Terpasang! 🎟️",
+          text: `Voucher ${data.data.code} berhasil digunakan. Hemat Rp ${(data.data.discount_amount || 0).toLocaleString("id-ID")}`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      } else if (data?.require_claim) {
+        // Auto-claim and re-apply for seamless e-commerce UX
+        const claimRes = await fetch("/api/coupons/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code }),
+        });
+        const claimData = await safeJson(claimRes);
+        if (claimData?.status) {
+          const retryRes = await fetch("/api/coupon/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ code, order_amount: subtotal }),
+          });
+          const retryData = await safeJson(retryRes);
+          if (retryData?.status && retryData.data) {
+            setAppliedCoupon(retryData.data);
+            setShowVoucherModal(false);
+            Swal.fire({
+              icon: "success",
+              title: "Voucher Terpasang! 🎟️",
+              text: `Voucher ${retryData.data.code} berhasil diklaim & dipasang. Hemat Rp ${(retryData.data.discount_amount || 0).toLocaleString("id-ID")}`,
+              timer: 1800,
+              showConfirmButton: false,
+            });
+            return;
+          }
+        }
+        Swal.fire({ icon: "warning", title: "Klaim Voucher", text: data.message });
       } else {
-        Swal.fire({ icon: "error", title: "Voucher Tidak Valid", text: data?.message || "Kupon tidak dapat digunakan." });
+        Swal.fire({
+          icon: "error",
+          title: "Gagal Menggunakan Voucher",
+          text: data?.message || "Kupon tidak dapat digunakan untuk pesanan ini.",
+        });
       }
     } catch (e) {
       Swal.fire({ icon: "error", title: "Gagal", text: "Terjadi kesalahan saat memvalidasi voucher." });
