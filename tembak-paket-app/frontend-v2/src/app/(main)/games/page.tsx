@@ -80,7 +80,7 @@ export default function GamesPage() {
           icon: "success",
           title: "Klaim Berhasil! 🎉",
           text: data.message,
-          confirmButtonColor: "#f97316",
+          confirmButtonColor: "#0066cc",
           confirmButtonText: "Kumpulkan Koin",
         });
 
@@ -114,11 +114,11 @@ export default function GamesPage() {
 
   // 2. Handle Lucky Spin Wheel
   const prizes = [
-    { amount: 250, label: "250", color: "#f97316" },
-    { amount: 500, label: "500", color: "#2563eb" },
+    { amount: 250, label: "250", color: "#0066cc" },
+    { amount: 500, label: "500", color: "#4f46e5" },
     { amount: 750, label: "750", color: "#059669" },
     { amount: 1000, label: "1.000", color: "#7c3aed" },
-    { amount: 1500, label: "1.500", color: "#db2777" },
+    { amount: 1500, label: "1.500", color: "#0891b2" },
     { amount: 2500, label: "2.500", color: "#d97706" },
   ];
 
@@ -143,7 +143,7 @@ export default function GamesPage() {
             icon: "success",
             title: "Selamat! 🎡✨",
             text: data.message,
-            confirmButtonColor: "#f97316",
+            confirmButtonColor: "#0066cc",
             confirmButtonText: "Kumpulkan Koin",
           });
 
@@ -181,9 +181,9 @@ export default function GamesPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-4 pb-20">
       {/* ============================================================ */}
-      {/* 1. SHOPEE "KOIN SAYA" HERO TOP BAR                          */}
+      {/* 1. "KOIN SAYA" HERO TOP BAR (Signature Ry Sapphire Blue)     */}
       {/* ============================================================ */}
-      <div className="rounded-3xl bg-gradient-to-b from-amber-500 to-amber-600 text-white p-5 sm:p-6 shadow-xl relative overflow-hidden">
+      <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 sm:p-6 shadow-xl relative overflow-hidden">
         {/* Top Mini Navigation */}
         <div className="flex items-center justify-between mb-4">
           <button
@@ -212,14 +212,14 @@ export default function GamesPage() {
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-yellow-300 text-amber-950 flex items-center justify-center font-black text-xl shadow-md">
+              <div className="w-9 h-9 rounded-full bg-yellow-400 text-amber-950 flex items-center justify-center font-black text-xl shadow-md">
                 🪙
               </div>
               <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white drop-shadow-xs">
                 {userCoins.toLocaleString("id-ID")}
               </span>
             </div>
-            <p className="text-[11px] text-amber-100 font-medium">
+            <p className="text-[11px] text-blue-100 font-medium">
               {userCoins.toLocaleString("id-ID")} Koin kedaluwarsa pada 30-11-2026
             </p>
           </div>
@@ -238,11 +238,11 @@ export default function GamesPage() {
         </div>
 
         {/* ============================================================ */}
-        {/* 2. FLOATING "KOIN CEK-IN" CARD (Persis Sesuai Screenshot)   */}
+        {/* 2. FLOATING "KOIN CEK-IN" CARD                               */}
         {/* ============================================================ */}
         <div className="mt-5 rounded-2xl bg-white text-slate-900 p-4 shadow-xl border border-slate-100 relative">
           {/* Centered Top Header Tag */}
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-100 border border-amber-200 text-amber-800 text-[11px] font-black px-4 py-0.5 rounded-full shadow-2xs">
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-100 border border-blue-200 text-blue-900 text-[11px] font-black px-4 py-0.5 rounded-full shadow-2xs">
             Koin Cek-In
           </div>
 
@@ -259,13 +259,13 @@ export default function GamesPage() {
                   key={idx}
                   className={`flex flex-col items-center justify-between p-1 rounded-xl transition-all ${
                     isToday && !gameData.today_checkin_done
-                      ? "border-2 border-orange-500 bg-orange-50/50 shadow-2xs"
+                      ? "border-2 border-primary bg-blue-50/60 shadow-2xs"
                       : "bg-slate-50/80 border border-slate-200/60"
                   }`}
                 >
                   {/* Top Tag: Amount */}
                   <span className={`text-[9px] font-black leading-tight ${
-                    isPastClaimed ? "text-emerald-600" : isToday ? "text-orange-600" : "text-slate-500"
+                    isPastClaimed ? "text-emerald-600" : isToday ? "text-primary" : "text-slate-500"
                   }`}>
                     +{rewardAmount}
                   </span>
@@ -289,7 +289,7 @@ export default function GamesPage() {
 
                   {/* Day Label */}
                   <span className={`text-[8px] sm:text-[9px] font-bold ${
-                    isToday ? "text-orange-600" : "text-slate-500"
+                    isToday ? "text-primary font-black" : "text-slate-500"
                   }`}>
                     {dayNum === 1 ? "Hari ini" : `Hari ${dayNum}`}
                   </span>
@@ -305,7 +305,7 @@ export default function GamesPage() {
             isLoading={claimingCheckin}
             className={`w-full h-11 text-xs sm:text-sm font-black shadow-md rounded-xl ${
               gameData.can_checkin
-                ? "bg-gradient-to-r from-orange-500 via-rose-500 to-orange-600 hover:opacity-90 text-white"
+                ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:opacity-90 text-white"
                 : "bg-slate-200 text-slate-500 cursor-not-allowed"
             }`}
           >
@@ -317,17 +317,17 @@ export default function GamesPage() {
           {/* Sub Task Bar: Ajak Teman */}
           <div
             onClick={() => router.push("/referral")}
-            className="mt-3 p-2.5 rounded-xl bg-orange-50 border border-orange-200/80 flex items-center justify-between cursor-pointer hover:bg-orange-100/60 transition-colors"
+            className="mt-3 p-2.5 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-between cursor-pointer hover:bg-blue-100/60 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-orange-500 text-white font-black text-[10px] flex items-center justify-center">
+              <span className="w-5 h-5 rounded bg-primary text-white font-black text-[10px] flex items-center justify-center">
                 Ry
               </span>
               <span className="text-[11px] font-bold text-slate-800">
                 Ajak Teman Reseller, Dapat 🪙 500
               </span>
             </div>
-            <span className="px-2.5 py-1 rounded-lg bg-orange-600 text-white text-[10px] font-black uppercase">
+            <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[10px] font-black uppercase">
               Ajak Sekarang
             </span>
           </div>
@@ -338,7 +338,7 @@ export default function GamesPage() {
       {/* 3. "DAPATKAN KOIN RY TAMBAHAN" SECTION                     */}
       {/* ============================================================ */}
       <div className="space-y-3 px-1">
-        <h2 className="text-sm sm:text-base font-black text-rose-600 flex items-center gap-1.5">
+        <h2 className="text-sm sm:text-base font-black text-primary flex items-center gap-1.5">
           <span>Dapatkan Koin Ry Tambahan</span>
         </h2>
 
@@ -370,7 +370,7 @@ export default function GamesPage() {
             {
               name: "Roda Hoki",
               href: "#lucky-spin-section",
-              bg: "bg-rose-500 text-white",
+              bg: "bg-indigo-600 text-white",
               icon: "🎡",
               onClick: () => {
                 const el = document.getElementById("lucky-spin-section");
@@ -380,7 +380,7 @@ export default function GamesPage() {
             {
               name: "Voucher",
               href: "/vouchers",
-              bg: "bg-orange-500 text-white",
+              bg: "bg-cyan-600 text-white",
               icon: "🎟️",
               onClick: () => router.push("/vouchers"),
             },
@@ -430,7 +430,7 @@ export default function GamesPage() {
         <Card className="p-5 space-y-4 border border-hairline bg-canvas shadow-xl rounded-3xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold text-sm">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
                 🎡
               </div>
               <div>
@@ -442,7 +442,7 @@ export default function GamesPage() {
             </div>
             <span className={`px-2.5 py-1 rounded-full text-xs font-black ${
               gameData.can_spin
-                ? "bg-purple-100 text-purple-800 border border-purple-300"
+                ? "bg-primary/10 text-primary border border-primary/30"
                 : "bg-parchment text-ink-muted border border-hairline"
             }`}>
               {gameData.can_spin ? "1 Tiket Tersedia" : "Sudah Diputar"}
@@ -537,7 +537,7 @@ export default function GamesPage() {
             isLoading={spinningWheel}
             className={`w-full h-11 text-xs sm:text-sm font-bold shadow-lg rounded-2xl ${
               gameData.can_spin
-                ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white"
+                ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:opacity-90 text-white"
                 : "bg-slate-200 text-slate-500 cursor-not-allowed"
             }`}
           >
@@ -592,7 +592,7 @@ export default function GamesPage() {
               <button
                 type="button"
                 onClick={task.onClick}
-                className="px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-[11px] shrink-0 shadow-xs"
+                className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-[11px] shrink-0 shadow-xs"
               >
                 {task.action}
               </button>

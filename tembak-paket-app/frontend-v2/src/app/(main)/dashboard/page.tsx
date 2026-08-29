@@ -38,15 +38,15 @@ export default function DashboardPage() {
   const [activeTutorialTab, setActiveTutorialTab] = useState<number>(0);
   const [tutorialDismissed, setTutorialDismissed] = useState<boolean>(false);
 
-  // Hero Promo Carousel Slides
+  // Hero Promo Carousel Slides (Signature Ry-ITSolutions Blue Identity)
   const heroSlides = [
     {
       title: "INSTANT DEALS BUKA SINYAL KILAT",
       subtitle: "Aktivasi IMEI All Operator kilat 24 jam dengan garansi digital resmi & nota WA otomatis.",
-      badge: "⚡ PROMO SPESIAL",
+      badge: "⚡ LAYANAN UTAMA",
       ctaText: "BELI SEKARANG >",
       ctaLink: "/unblock-imei",
-      bgGradient: "from-amber-500 via-orange-500 to-rose-500",
+      bgGradient: "from-blue-600 via-indigo-600 to-blue-800",
     },
     {
       title: "VOUCHER MANIA DISKON S.D 25RB",
@@ -54,7 +54,7 @@ export default function DashboardPage() {
       badge: "🎟️ DISKON KILAT",
       ctaText: "KLAIM SEKARANG >",
       ctaLink: "/vouchers",
-      bgGradient: "from-orange-600 via-rose-600 to-purple-600",
+      bgGradient: "from-indigo-700 via-purple-700 to-blue-700",
     },
     {
       title: "PUTAR RODA HOKI DAPAT KOIN",
@@ -62,7 +62,7 @@ export default function DashboardPage() {
       badge: "🎮 GAME KOIN",
       ctaText: "PUTAR SEKARANG >",
       ctaLink: "/games",
-      bgGradient: "from-purple-600 via-indigo-600 to-blue-600",
+      bgGradient: "from-cyan-700 via-blue-700 to-indigo-800",
     },
   ];
 
@@ -196,17 +196,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-16">
       {/* ============================================================ */}
-      {/* 1. FLOATING SHOPEEPAY & WALLET STRIP (Persis Shopee App)    */}
+      {/* 1. FLOATING WALLET STRIP (Signature Ry-ITSolutions Blue)     */}
       {/* ============================================================ */}
       <div className="rounded-2xl bg-canvas border border-hairline shadow-md p-3 sm:p-4 -mt-1 sm:mt-0 transition-all">
         <div className="grid grid-cols-4 divide-x divide-hairline items-center text-center">
-          {/* Section 1: Saldo Dompet (ShopeePay style) */}
+          {/* Section 1: Saldo Dompet */}
           <div
             onClick={() => router.push("/topup")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1 text-orange-600 font-bold text-xs">
-              <svg className="w-4 h-4 text-orange-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+            <div className="flex items-center gap-1 text-primary font-bold text-xs">
+              <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM14.625 3.75h4.5a1.125 1.125 0 011.125 1.125v4.5a1.125 1.125 0 01-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5a1.125 1.125 0 011.125-1.125zM14.625 14.625h4.5a1.125 1.125 0 011.125 1.125v4.5a1.125 1.125 0 01-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5a1.125 1.125 0 011.125-1.125z" />
               </svg>
               <span className="font-extrabold text-[11px] sm:text-xs">Saldo Ry</span>
@@ -217,12 +217,12 @@ export default function DashboardPage() {
                 {showBalance ? (user?.balance || 0).toLocaleString("id-ID") : "••••"}
               </span>
             </div>
-            <span className="text-[9px] text-orange-600 font-bold mt-0.5 block">
+            <span className="text-[9px] text-primary font-bold mt-0.5 block">
               + Isi Saldo
             </span>
           </div>
 
-          {/* Section 2: Koin Ry (Shopee Coins style) */}
+          {/* Section 2: Koin Ry */}
           <div
             onClick={() => router.push("/games")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
@@ -239,31 +239,31 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Section 3: Voucher / SPayLater style */}
+          {/* Section 3: Voucher Promo */}
           <div
             onClick={() => router.push("/vouchers")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1 text-rose-600 font-bold text-xs">
-              <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <div className="flex items-center gap-1 text-indigo-600 font-bold text-xs">
+              <svg className="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
               </svg>
               <span className="font-extrabold text-[11px] sm:text-xs">Voucher</span>
             </div>
-            <span className="text-xs sm:text-sm font-black text-rose-600 mt-0.5">
+            <span className="text-xs sm:text-sm font-black text-indigo-600 mt-0.5">
               Diskon 25RB
             </span>
-            <span className="text-[9px] text-rose-500 font-bold mt-0.5 block">
+            <span className="text-[9px] text-indigo-500 font-bold mt-0.5 block">
               Klaim Kupon
             </span>
           </div>
 
-          {/* Section 4: Instant Transfer / Top Up Button (Rp circle button) */}
+          {/* Section 4: Instant Transfer / Top Up Button */}
           <div
             onClick={() => router.push("/topup")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-rose-500 text-white flex items-center justify-center font-black text-xs shadow-sm group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-sm group-hover:scale-105 transition-transform">
               Rp
             </div>
             <span className="text-[9px] font-extrabold text-ink mt-1">
@@ -274,7 +274,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* 2. SHOPEE 5-COLUMN FEATURE CIRCULAR LAUNCHER ICONS          */}
+      {/* 2. 5-COLUMN FEATURE CIRCULAR LAUNCHER ICONS                 */}
       {/* ============================================================ */}
       <div className="bg-canvas border border-hairline rounded-2xl p-3 shadow-2xs">
         <div className="grid grid-cols-5 gap-1.5 sm:gap-4 text-center">
@@ -283,9 +283,9 @@ export default function DashboardPage() {
               name: "Buka IMEI",
               sub: "All Operator",
               badge: "RP1",
-              badgeBg: "bg-rose-500",
+              badgeBg: "bg-blue-600",
               href: "/unblock-imei",
-              iconBg: "bg-blue-50 border-blue-200 text-blue-600",
+              iconBg: "bg-blue-50 border-blue-200 text-primary",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -295,10 +295,10 @@ export default function DashboardPage() {
             {
               name: "Cek CEIR",
               sub: "Bea Cukai",
-              badge: "PROMO",
-              badgeBg: "bg-orange-500",
+              badge: "RESMI",
+              badgeBg: "bg-emerald-600",
               href: "/cek-ceir",
-              iconBg: "bg-orange-50 border-orange-200 text-orange-600",
+              iconBg: "bg-emerald-50 border-emerald-200 text-emerald-600",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -309,9 +309,9 @@ export default function DashboardPage() {
               name: "Cek Garansi",
               sub: "Lacak IMEI",
               badge: "VIP+",
-              badgeBg: "bg-purple-600",
+              badgeBg: "bg-indigo-600",
               href: "/cek-garansi",
-              iconBg: "bg-purple-50 border-purple-200 text-purple-600",
+              iconBg: "bg-indigo-50 border-indigo-200 text-indigo-600",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -322,9 +322,9 @@ export default function DashboardPage() {
               name: "Bagi Voucher",
               sub: "Diskon Belanja",
               badge: "HEMAT",
-              badgeBg: "bg-rose-500",
+              badgeBg: "bg-cyan-600",
               href: "/vouchers",
-              iconBg: "bg-rose-50 border-rose-200 text-rose-600",
+              iconBg: "bg-cyan-50 border-cyan-200 text-cyan-600",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
@@ -359,7 +359,7 @@ export default function DashboardPage() {
                   </span>
                 )}
               </div>
-              <span className="text-[10px] sm:text-xs font-bold text-ink group-hover:text-orange-600 transition-colors mt-1.5 leading-tight line-clamp-1">
+              <span className="text-[10px] sm:text-xs font-bold text-ink group-hover:text-primary transition-colors mt-1.5 leading-tight line-clamp-1">
                 {item.name}
               </span>
               <span className="text-[8px] sm:text-[10px] text-ink-muted leading-none hidden sm:block mt-0.5">
@@ -369,15 +369,15 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Shopee Pager Pill Dot */}
+        {/* Pager Pill Dot */}
         <div className="flex items-center justify-center gap-1 mt-2.5 pt-1">
-          <span className="w-4 h-1 rounded-full bg-orange-500"></span>
+          <span className="w-4 h-1 rounded-full bg-primary"></span>
           <span className="w-1.5 h-1 rounded-full bg-slate-300"></span>
         </div>
       </div>
 
       {/* ============================================================ */}
-      {/* 3. HERO PROMO DEALS BANNER SLIDER (Shopee Hero Deals Style) */}
+      {/* 3. HERO PROMO DEALS BANNER SLIDER (Sapphire Blue)           */}
       {/* ============================================================ */}
       <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border border-hairline group">
         <div className={`p-4 sm:p-7 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} text-white transition-all duration-700 min-h-[140px] sm:min-h-[160px] flex flex-col justify-between relative`}>
@@ -396,7 +396,7 @@ export default function DashboardPage() {
           <div className="relative z-10 pt-2 flex items-center justify-between">
             <button
               onClick={() => router.push(heroSlides[currentSlide].ctaLink)}
-              className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 hover:bg-white/90 text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1"
+              className="px-3.5 py-1.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1"
             >
               <span>{heroSlides[currentSlide].ctaText}</span>
             </button>
@@ -417,18 +417,18 @@ export default function DashboardPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* 4. 2-COLUMN DISCOVERY SECTION (Shopee Live & Shopee Video)  */}
+      {/* 4. 2-COLUMN DISCOVERY SECTION                               */}
       {/* ============================================================ */}
       <div className="grid grid-cols-2 gap-3">
         {/* Left Discovery: Live Aktivitas Server */}
         <div
           onClick={() => router.push("/unblock-imei")}
-          className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs flex flex-col justify-between cursor-pointer hover:border-orange-500/30 transition-all"
+          className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs flex flex-col justify-between cursor-pointer hover:border-primary/30 transition-all"
         >
           <div className="flex items-center justify-between">
             <span className="font-black text-xs text-ink flex items-center gap-1">
               <span>Sinyal Live</span>
-              <span className="text-orange-500">➔</span>
+              <span className="text-primary">➔</span>
             </span>
             <span className="px-1.5 py-0.2 rounded bg-rose-600 text-white font-black text-[8px] uppercase flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
@@ -436,7 +436,7 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-orange-500/10 to-rose-500/10 border border-orange-500/20">
+          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-primary/20">
             <p className="text-[10px] font-bold text-ink truncate">🔥 DISKON BUKA SINYAL</p>
             <p className="text-[9px] text-ink-muted mt-0.5">Semua Operator 24 Jam</p>
           </div>
@@ -465,16 +465,16 @@ export default function DashboardPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* 5. VOUCHER MANIA & BEST SELLER PRODUCT GRID (Shopee Style)   */}
+      {/* 5. VOUCHER MANIA & BEST SELLER PRODUCT GRID                 */}
       {/* ============================================================ */}
       <div className="grid grid-cols-2 gap-3">
         {/* Left Column: VOUCHER MANIA CARD */}
         <div
           onClick={() => router.push("/vouchers")}
-          className="rounded-2xl p-3.5 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 text-white shadow-md flex flex-col justify-between relative overflow-hidden cursor-pointer group"
+          className="rounded-2xl p-3.5 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white shadow-md flex flex-col justify-between relative overflow-hidden cursor-pointer group"
         >
           <div className="space-y-1">
-            <span className="inline-block bg-white text-orange-600 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
+            <span className="inline-block bg-white text-primary text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
               VOUCHER MANIA
             </span>
             <h3 className="text-sm sm:text-base font-black leading-tight drop-shadow-xs">
@@ -484,7 +484,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-4">
-            <button className="w-full py-1.5 rounded-xl bg-white text-orange-600 font-black text-[10px] sm:text-xs shadow-sm group-hover:bg-amber-100 transition-colors">
+            <button className="w-full py-1.5 rounded-xl bg-white text-primary font-black text-[10px] sm:text-xs shadow-sm group-hover:bg-blue-50 transition-colors">
               KLAIM AKU
             </button>
           </div>
@@ -493,20 +493,20 @@ export default function DashboardPage() {
         {/* Right Column: BEST-SELLER PRODUCT CARD */}
         <div
           onClick={() => router.push("/unblock-imei")}
-          className="rounded-2xl p-3 bg-canvas border border-hairline shadow-md flex flex-col justify-between cursor-pointer group hover:border-orange-500/40 transition-all relative"
+          className="rounded-2xl p-3 bg-canvas border border-hairline shadow-md flex flex-col justify-between cursor-pointer group hover:border-primary/40 transition-all relative"
         >
           <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-bold text-[8px]">
             -25%
           </span>
 
           <div className="space-y-1">
-            <div className="w-full h-16 sm:h-20 rounded-xl bg-orange-500/10 flex items-center justify-center text-2xl">
+            <div className="w-full h-16 sm:h-20 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">
               📱
             </div>
-            <span className="inline-block bg-amber-400 text-amber-950 text-[7px] font-black px-1 py-0.2 rounded uppercase">
-              PROMO XTRA
+            <span className="inline-block bg-blue-600 text-white text-[7px] font-black px-1 py-0.2 rounded uppercase">
+              PROMO RESMI
             </span>
-            <p className="text-[11px] sm:text-xs font-bold text-ink line-clamp-1 group-hover:text-orange-600 transition-colors">
+            <p className="text-[11px] sm:text-xs font-bold text-ink line-clamp-1 group-hover:text-primary transition-colors">
               Paket Buka IMEI All Operator
             </p>
             <div className="flex items-center gap-1 text-[9px] text-ink-muted">
@@ -517,7 +517,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-xs sm:text-sm font-black text-orange-600">
+            <span className="text-xs sm:text-sm font-black text-primary">
               Rp 155.000
             </span>
             <span className="text-[9px] text-ink-muted line-through">
@@ -537,7 +537,7 @@ export default function DashboardPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari cepat: Ketik/Paste IMEI (15 digit) atau ID Transaksi..."
-            className="w-full pl-11 pr-10 py-3 rounded-2xl bg-canvas border border-hairline shadow-sm text-xs sm:text-sm text-ink placeholder:text-ink-muted outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+            className="w-full pl-11 pr-10 py-3 rounded-2xl bg-canvas border border-hairline shadow-sm text-xs sm:text-sm text-ink placeholder:text-ink-muted outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
           />
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -558,9 +558,9 @@ export default function DashboardPage() {
         {cleanSearch.length >= 3 && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-canvas border border-hairline rounded-2xl shadow-2xl p-3 text-xs space-y-2.5 backdrop-blur-md z-30 max-h-[340px] overflow-y-auto">
             {detectedDevice?.brand && (
-              <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-between gap-2">
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
                     </svg>
@@ -579,7 +579,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => router.push(`/unblock-imei?imei=${cleanSearch}`)}
-                    className="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-bold text-xs hover:bg-orange-600 transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors"
                   >
                     Unblock
                   </button>
@@ -629,7 +629,7 @@ export default function DashboardPage() {
           <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
             <span>📋 Riwayat Transaksi Terakhir</span>
           </h2>
-          <a href="/history" className="text-xs font-bold text-orange-600 hover:underline">Lihat Semua ➔</a>
+          <a href="/history" className="text-xs font-bold text-primary hover:underline">Lihat Semua ➔</a>
         </div>
 
         {recentTrx.length === 0 ? (
@@ -639,9 +639,9 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-2">
             {recentTrx.map((trx, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-canvas border border-hairline rounded-2xl hover:border-orange-500/30 transition-all shadow-2xs">
+              <div key={idx} className="flex items-center justify-between p-3 bg-canvas border border-hairline rounded-2xl hover:border-primary/30 transition-all shadow-2xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600 font-bold shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-primary font-bold shrink-0">
                     📱
                   </div>
                   <div>
