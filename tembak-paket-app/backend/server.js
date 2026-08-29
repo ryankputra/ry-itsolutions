@@ -2130,10 +2130,31 @@ app.post('/api/games/lucky-spin', isAuthenticated, async (req, res) => {
             return res.status(400).json({ status: false, message: "Tiket putar gratis hari ini sudah terpakai. Coba lagi besok ya!" });
         }
 
-        // Possible prizes
-        const spinPrizes = [250, 500, 750, 1000, 1500, 2500];
-        const randomIndex = Math.floor(Math.random() * spinPrizes.length);
-        const wonCoins = spinPrizes[randomIndex];
+        // Weighted Probability: Hadiah besar dibuat langka & susah didapat
+        // 250 Koin (50%), 500 Koin (28%), 750 Koin (12%), 1.000 Koin (6%), 1.500 Koin (3%), 2.500 Koin Jackpot (1%)
+        const prizeOptions = [
+            { index: 0, amount: 250, weight: 50 },
+            { index: 1, amount: 500, weight: 28 },
+            { index: 2, amount: 750, weight: 12 },
+            { index: 3, amount: 1000, weight: 6 },
+            { index: 4, amount: 1500, weight: 3 },
+            { index: 5, amount: 2500, weight: 1 },
+        ];
+
+        const totalWeight = prizeOptions.reduce((acc, p) => acc + p.weight, 0);
+        let randomNum = Math.random() * totalWeight;
+        let selectedPrize = prizeOptions[0];
+
+        for (const prize of prizeOptions) {
+            if (randomNum < prize.weight) {
+                selectedPrize = prize;
+                break;
+            }
+            randomNum -= prize.weight;
+        }
+
+        const randomIndex = selectedPrize.index;
+        const wonCoins = selectedPrize.amount;
 
         // Security Cap: Maksimal saldo koin 50.000 Koin
         await dbRun("UPDATE users SET coins = MIN(50000, COALESCE(coins, 0) + ?) WHERE id = ?", [wonCoins, userId]);
