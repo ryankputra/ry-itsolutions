@@ -55,7 +55,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-canvas/95 backdrop-blur-lg border-t border-hairline px-2 py-1 shadow-2xl safe-area-pb">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-canvas/95 backdrop-blur-xl border-t border-hairline px-2 py-1 shadow-2xl safe-area-pb select-none">
       <div className="flex items-center justify-around">
         {navItems.map((item, idx) => {
           const isActive = pathname === item.href || (item.href === "/saya" && pathname === "/profile");
@@ -63,14 +63,18 @@ export function BottomNav() {
             <Link
               key={idx}
               href={item.href}
-              className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-150 relative ${
+              className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-150 relative touch-manipulation select-none active:scale-90 active:opacity-70 ${
                 isActive
                   ? "text-primary font-black scale-105"
                   : "text-ink-muted hover:text-ink font-medium"
               }`}
             >
+              {/* Active Ambient Pill Indicator */}
+              {isActive && (
+                <span className="absolute inset-0 bg-primary/10 rounded-2xl -z-10 animate-fade-in" />
+              )}
               {/* Icon */}
-              <div className="relative flex items-center justify-center">
+              <div className="relative flex items-center justify-center transition-transform duration-150">
                 {item.icon(isActive)}
               </div>
               {/* Label */}

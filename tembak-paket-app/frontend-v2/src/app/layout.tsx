@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AppProvider } from "@/lib/store";
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import TelegramPopup from "@/components/ui/TelegramPopup";
+import { NavigationProgressBar } from "@/components/ui/NavigationProgressBar";
 import "./globals.css";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "GANTI_DENGAN_GOOGLE_CLIENT_ID_ANDA";
@@ -32,6 +32,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { Suspense } from "react";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,6 +45,9 @@ export default function RootLayout({
       className={`${inter.variable} antialiased`}
     >
       <body className="min-h-screen bg-canvas text-ink font-sans" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <NavigationProgressBar />
+        </Suspense>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
           <AppProvider>
             {children}
