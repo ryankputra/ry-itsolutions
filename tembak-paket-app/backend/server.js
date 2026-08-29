@@ -4152,7 +4152,7 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                 }
             }
 
-            // Perhitungan Potongan Koin Ry jika digunakan
+            // Perhitungan Potongan Koin Ry jika digunakan (Dengan 3 Lapis Pengaman Toko)
             let coinsDiscount = 0;
             let coinsToDeduct = 0;
             const useCoins = req.body.use_coins === 'true' || req.body.use_coins === true;
@@ -4160,11 +4160,16 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
                 const userObj = await dbGet("SELECT coins FROM users WHERE id = ?", [req.session.userId]);
                 const userCoins = userObj?.coins || 0;
                 const priceAfterCoupon = Math.max(0, totalPrice - discountAmount);
-                // Koin dapat memotong maksimal 50% dari total tagihan
-                const maxCoinDeductible = Math.floor(priceAfterCoupon * 0.5);
-                coinsToDeduct = Math.min(userCoins, maxCoinDeductible, priceAfterCoupon);
-                if (coinsToDeduct > 0) {
-                    coinsDiscount = coinsToDeduct; // 1 Koin = Rp 1
+                
+                // Guardrails: Minimal order Rp 50.000, Maksimal 10%, dan Maksimal Rp 5.000 per transaksi
+                if (priceAfterCoupon >= 50000 && userCoins > 0) {
+                    const maxCoinByPercent = Math.floor(priceAfterCoupon * 0.1); // Maks 10%
+                    const maxCoinHardCap = 5000; // Maks Rp 5.000
+                    const maxCoinDeductible = Math.min(maxCoinByPercent, maxCoinHardCap);
+                    coinsToDeduct = Math.min(userCoins, maxCoinDeductible, priceAfterCoupon);
+                    if (coinsToDeduct > 0) {
+                        coinsDiscount = coinsToDeduct; // 1 Koin = Rp 1
+                    }
                 }
             }
 

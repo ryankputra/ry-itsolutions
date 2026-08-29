@@ -81,8 +81,9 @@ export default function UnblockImeiPage() {
   const discountAmount = appliedCoupon ? Math.min(appliedCoupon.discount_amount, rawTotalPrice) : 0;
   const priceAfterCoupon = Math.max(0, rawTotalPrice - discountAmount);
   const userCoins = user?.coins || 0;
-  const maxCoinsAllowed = Math.floor(priceAfterCoupon * 0.5);
-  const coinsDiscount = useCoins ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
+  // Guardrails: Minimal order Rp 50.000, Maks 10%, dan Maksimal Rp 5.000 cap
+  const maxCoinsAllowed = priceAfterCoupon >= 50000 ? Math.min(Math.floor(priceAfterCoupon * 0.1), 5000) : 0;
+  const coinsDiscount = useCoins && maxCoinsAllowed > 0 ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
   const totalPrice = Math.max(0, priceAfterCoupon - coinsDiscount);
 
   const handleClaimCoupon = async (coupon: CouponItem) => {
@@ -628,14 +629,16 @@ export default function UnblockImeiPage() {
                     Tukarkan Koin Ry ({userCoins.toLocaleString("id-ID")} Koin)
                   </p>
                   <p className="text-[10px] text-ink-muted">
-                    {userCoins > 0
-                      ? `Hemat hingga -Rp ${Math.min(userCoins, maxCoinsAllowed).toLocaleString("id-ID")} dari tagihan`
+                    {priceAfterCoupon < 50000
+                      ? "Minimal transaksi Rp 50.000 untuk menggunakan koin"
+                      : userCoins > 0
+                      ? `Hemat -Rp ${Math.min(userCoins, maxCoinsAllowed).toLocaleString("id-ID")} (Maks. 10% / Rp 5.000 per order)`
                       : "Mainkan Game Koin untuk kumpulkan koin diskon"}
                   </p>
                 </div>
               </div>
 
-              {userCoins > 0 ? (
+              {userCoins > 0 && maxCoinsAllowed > 0 ? (
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"

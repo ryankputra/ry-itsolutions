@@ -78,7 +78,7 @@ export function BottomNav() {
               <div className="relative">
                 {item.icon(isActive)}
                 {item.badge && (
-                  <span className="absolute -top-1.5 -right-3 px-1 py-0.2 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[7px] font-black uppercase">
+                  <span className="absolute -top-1.5 -right-2.5 px-1 py-0.2 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[7px] font-black uppercase leading-tight shadow-xs">
                     {item.badge}
                   </span>
                 )}

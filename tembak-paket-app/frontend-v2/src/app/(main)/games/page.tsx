@@ -104,7 +104,14 @@ export default function GamesPage() {
   };
 
   // 2. Handle Lucky Spin Wheel
-  const prizes = [250, 500, 750, 1000, 1500, 2500];
+  const prizes = [
+    { amount: 250, label: "250", color: "#f97316" },
+    { amount: 500, label: "500", color: "#2563eb" },
+    { amount: 750, label: "750", color: "#059669" },
+    { amount: 1000, label: "1.000", color: "#7c3aed" },
+    { amount: 1500, label: "1.500", color: "#db2777" },
+    { amount: 2500, label: "2.500", color: "#d97706" },
+  ];
 
   const handleLuckySpin = async () => {
     if (!gameData.can_spin || spinningWheel) return;
@@ -119,8 +126,8 @@ export default function GamesPage() {
 
       if (data.status) {
         const prizeIdx = data.prize_index !== undefined ? data.prize_index : 0;
-        // Each segment is 60 degrees (360 / 6)
-        const targetAngle = 360 * 5 + (prizeIdx * 60 + 30);
+        // Calculate clockwise spin to land target sector under 12 o'clock needle
+        const targetAngle = wheelRotation + (360 * 5) + ((6 - prizeIdx) % 6) * 60;
         setWheelRotation(targetAngle);
 
         setTimeout(() => {
@@ -296,22 +303,93 @@ export default function GamesPage() {
 
             {/* Lucky Wheel Visual Display */}
             <div className="py-4 flex flex-col items-center justify-center">
-              <div className="relative w-48 h-48 sm:w-52 sm:h-52">
-                {/* Center Pointer Arrow */}
-                <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 z-20 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[18px] border-t-rose-600 filter drop-shadow-md"></div>
+              <div className="relative w-56 h-56 sm:w-64 sm:h-64">
+                {/* Center Pointer Needle (12 o'clock) */}
+                <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 z-30 filter drop-shadow-md">
+                  <svg width="26" height="30" viewBox="0 0 24 28" fill="none">
+                    <path
+                      d="M12 28L3 4C2 2 3.5 0 5.5 0H18.5C20.5 0 22 2 21 4L12 28Z"
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                    />
+                    <circle cx="12" cy="7" r="3.5" fill="#ffffff" />
+                  </svg>
+                </div>
 
-                {/* Rotating Wheel Disc */}
+                {/* Rotating SVG Wheel Disc */}
                 <div
-                  className="w-full h-full rounded-full border-4 border-slate-900 shadow-2xl relative overflow-hidden transition-transform duration-3000 ease-out flex items-center justify-center"
+                  className="w-full h-full rounded-full shadow-2xl relative overflow-hidden transition-transform duration-3000 ease-out"
                   style={{
                     transform: `rotate(${wheelRotation}deg)`,
-                    background: "conic-gradient(#f97316 0deg 60deg, #3b82f6 60deg 120deg, #10b981 120deg 180deg, #8b5cf6 180deg 240deg, #ec4899 240deg 300deg, #eab308 300deg 360deg)",
                   }}
                 >
-                  {/* Wheel Center Button */}
-                  <div className="w-14 h-14 rounded-full bg-white dark:bg-zinc-900 border-2 border-slate-900 shadow-inner flex items-center justify-center font-black text-xs text-ink z-10">
-                    SPIN
-                  </div>
+                  <svg viewBox="0 0 200 200" className="w-full h-full">
+                    {/* Outer Gold Border Ring */}
+                    <circle cx="100" cy="100" r="98" fill="#1e293b" stroke="#f59e0b" strokeWidth="4" />
+
+                    {/* 6 Pie Slices with Numbers */}
+                    {prizes.map((item, i) => (
+                      <g key={i} transform={`rotate(${i * 60} 100 100)`}>
+                        <path
+                          d="M 100 100 L 55 22.06 A 90 90 0 0 1 145 22.06 Z"
+                          fill={item.color}
+                          stroke="#ffffff"
+                          strokeWidth="1.5"
+                        />
+                        {/* Coin Amount Text on Slice */}
+                        <g transform="translate(100, 48)">
+                          <text
+                            textAnchor="middle"
+                            fill="#ffffff"
+                            fontSize="11"
+                            fontWeight="900"
+                            fontFamily="system-ui, sans-serif"
+                            style={{ filter: "drop-shadow(0px 1px 2px rgba(0,0,0,0.8))" }}
+                          >
+                            {item.label}
+                          </text>
+                          <text
+                            y="10"
+                            textAnchor="middle"
+                            fill="#fef08a"
+                            fontSize="7.5"
+                            fontWeight="800"
+                            fontFamily="system-ui, sans-serif"
+                          >
+                            KOIN
+                          </text>
+                        </g>
+                      </g>
+                    ))}
+
+                    {/* Outer Rim Light Bulbs */}
+                    {[...Array(12)].map((_, i) => (
+                      <circle
+                        key={i}
+                        cx={100 + 94 * Math.sin((i * 30 * Math.PI) / 180)}
+                        cy={100 - 94 * Math.cos((i * 30 * Math.PI) / 180)}
+                        r="2.2"
+                        fill="#ffffff"
+                      />
+                    ))}
+
+                    {/* Center Cap Button */}
+                    <circle cx="100" cy="100" r="25" fill="#0f172a" stroke="#f59e0b" strokeWidth="3" />
+                    <text
+                      x="100"
+                      y="103.5"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#ffffff"
+                      fontSize="9.5"
+                      fontWeight="900"
+                      fontFamily="system-ui, sans-serif"
+                      letterSpacing="1px"
+                    >
+                      SPIN
+                    </text>
+                  </svg>
                 </div>
               </div>
 
@@ -319,7 +397,7 @@ export default function GamesPage() {
               <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4 text-[10px] font-bold">
                 {prizes.map((p, idx) => (
                   <span key={idx} className="px-2 py-0.5 rounded-md bg-parchment border border-hairline text-ink">
-                    🪙 {p.toLocaleString("id-ID")}
+                    🪙 {p.label}
                   </span>
                 ))}
               </div>
