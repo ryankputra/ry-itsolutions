@@ -5,7 +5,7 @@ import { useApp } from "@/lib/store";
 import { logout } from "@/lib/api";
 import { useRouter, usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 
 interface SidebarProps {
   isOpen?: boolean;

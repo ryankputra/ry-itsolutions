@@ -9,7 +9,7 @@ import { SuccessModal } from "@/components/ui/SuccessModal";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { PaymentLogosGrid } from "@/components/ui/PaymentLogos";
 import { safeJson } from "@/lib/api";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 
 const QUICK_AMOUNTS = [
   { amount: 20000, label: "Rp 20.000", tag: "Pemula", badge: null },

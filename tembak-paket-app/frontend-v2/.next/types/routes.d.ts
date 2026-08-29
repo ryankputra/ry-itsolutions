@@ -5,7 +5,7 @@ type AppRoutes = "/" | "/admin" | "/barcode" | "/beli-paket" | "/cart" | "/cek-c
 type PageRoutes = never
 type LayoutRoutes = "/"
 type RedirectRoutes = never
-type RewriteRoutes = "/api/[[...path]]" | "/public/uploads/[[...path]]"
+type RewriteRoutes = "/api/[[...path]]" | "/public/uploads/[[...path]]" | "/uploads/[[...path]]"
 type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes
 
 
@@ -31,6 +31,7 @@ interface ParamMap {
   "/tickets": {}
   "/topup": {}
   "/unblock-imei": {}
+  "/uploads/[[...path]]": { "path"?: string[]; }
   "/vouchers": {}
 }
 

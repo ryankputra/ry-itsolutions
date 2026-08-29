@@ -314,6 +314,10 @@ self.__SERVER_FILES_MANIFEST={
           "destination": "http://localhost:3001/api/:path*"
         },
         {
+          "source": "/uploads/:path*",
+          "destination": "http://localhost:3001/uploads/:path*"
+        },
+        {
           "source": "/public/uploads/:path*",
           "destination": "http://localhost:3001/public/uploads/:path*"
         }

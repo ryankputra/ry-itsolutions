@@ -7,7 +7,7 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import { CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { safeJson } from "@/lib/api";
 import Link from "next/link";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 
 export default function DashboardPage() {
   const { user } = useApp();

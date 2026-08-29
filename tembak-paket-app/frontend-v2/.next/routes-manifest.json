@@ -44,6 +44,11 @@
         "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       },
       {
+        "source": "/uploads/:path*",
+        "destination": "http://localhost:3001/uploads/:path*",
+        "regex": "^/uploads(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
         "source": "/public/uploads/:path*",
         "destination": "http://localhost:3001/public/uploads/:path*",
         "regex": "^/public/uploads(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"

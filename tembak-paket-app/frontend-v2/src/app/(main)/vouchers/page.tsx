@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { useRouter } from "next/navigation";
 import { safeJson } from "@/lib/api";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 
 export default function VouchersPage() {
   const router = useRouter();

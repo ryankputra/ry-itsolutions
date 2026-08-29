@@ -41,7 +41,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 currentVersion = data.version;
               } else if (currentVersion !== data.version) {
                 // Version mismatch! Trigger refresh
-                const Swal = (await import("sweetalert2")).default;
+                const Swal = (await import("@/lib/sweetalert")).default;
                 await Swal.fire({
                   title: 'Update Sistem',
                   text: 'Ada pembaruan web terbaru. Halaman akan dimuat ulang otomatis.',

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 import { useApp } from "@/lib/store";
 
 export default function UserTicketsPage() {

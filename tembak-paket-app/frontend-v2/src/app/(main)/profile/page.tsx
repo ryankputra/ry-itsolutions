@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 
 export default function ProfilePage() {

@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
         destination: 'http://localhost:3001/api/:path*' // Proxy to Backend
       },
       {
+        source: '/uploads/:path*',
+        destination: 'http://localhost:3001/uploads/:path*' // Proxy uploaded avatars to Backend
+      },
+      {
         source: '/public/uploads/:path*',
         destination: 'http://localhost:3001/public/uploads/:path*' // Proxy uploaded images to Backend
       }

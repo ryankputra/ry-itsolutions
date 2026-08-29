@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();

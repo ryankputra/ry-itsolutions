@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Link from "next/link";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 import { Button } from "@/components/ui/Button";
 
 function HistoryContent() {

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "@/lib/store";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [showNotif, setShowNotif] = useState(false);

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 import { playCoinClaimSound, playWheelTickSound } from "@/lib/soundFx";
 
 export default function GamesPage() {

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { analyzeImei } from "@/lib/imeiHelper";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 import { playPopSound } from "@/lib/soundFx";
 
 interface InvoiceData {

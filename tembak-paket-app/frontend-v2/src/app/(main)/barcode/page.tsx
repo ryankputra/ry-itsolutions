@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 import { useRouter } from "next/navigation";
 
 

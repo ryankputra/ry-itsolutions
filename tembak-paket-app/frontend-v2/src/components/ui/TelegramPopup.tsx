@@ -1,6 +1,6 @@
 'use client';  
 import { useEffect } from 'react';  
-import Swal from 'sweetalert2';  
+import Swal from '@/lib/sweetalert';  
   
 export default function TelegramPopup() {  
   useEffect(() => {

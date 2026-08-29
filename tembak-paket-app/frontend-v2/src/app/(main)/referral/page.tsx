@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import Swal from "sweetalert2";
+import Swal from "@/lib/sweetalert";
 
 export default function ReferralPage() {
   const [loading, setLoading] = useState(true);
