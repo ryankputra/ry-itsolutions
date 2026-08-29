@@ -341,8 +341,16 @@ export function EcommerceHeader() {
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                   className="flex items-center gap-2 p-1.5 pl-2 rounded-xl bg-parchment/60 hover:bg-parchment border border-hairline transition-colors"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-slate-900 text-white font-black text-xs flex items-center justify-center uppercase">
-                    {user.name ? user.name[0] : "U"}
+                  <div className="w-7 h-7 rounded-lg bg-slate-900 text-white font-black text-xs flex items-center justify-center uppercase overflow-hidden">
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar.startsWith("http") || user.avatar.startsWith("data:") ? user.avatar : `${user.avatar}`}
+                        alt={user.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      user.name ? user.name[0] : "U"
+                    )}
                   </div>
                   <span className="font-bold text-xs text-ink max-w-[90px] truncate">
                     {user.name}

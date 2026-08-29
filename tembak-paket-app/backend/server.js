@@ -200,6 +200,7 @@ async function initializeDatabase() {
             // === TABEL & KOLOM SISTEM REFERRAL ===
             try { await dbRun("ALTER TABLE users ADD COLUMN referral_code TEXT"); } catch (e) { }
             try { await dbRun("ALTER TABLE users ADD COLUMN referred_by TEXT"); } catch (e) { }
+            try { await dbRun("ALTER TABLE users ADD COLUMN avatar TEXT"); } catch (e) { }
             await dbRun(`CREATE TABLE IF NOT EXISTS referral_rewards (
                 id TEXT PRIMARY KEY,
                 referrer_id TEXT NOT NULL,
@@ -262,6 +263,7 @@ app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: 
 const fileStoreOptions = { path: path.join(__dirname, 'sessions'), ttl: 86400, retries: 0 };
 app.use(session({ store: new FileStore(fileStoreOptions), secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true, sameSite: 'lax', path: '/', maxAge: 24 * 60 * 60 * 1000 } }));
 app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use((req, res, next) => { console.log(`[REQ] ${req.method} ${req.originalUrl}`); next(); });
 
 const brevoApiClient = SibApiV3Sdk.ApiClient.instance;
@@ -269,6 +271,22 @@ brevoApiClient.authentications['api-key'].apiKey = BREVO_API_KEY;
 
 // --- PENGATURAN MULTER ---
 const dbBackupUpload = multer({ dest: path.join(__dirname, 'temp_uploads/') });
+
+const avatarStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = path.join(__dirname, 'public', 'uploads', 'avatars');
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+        cb(null, `avatar_${req.session.userId}_${Date.now()}${ext}`);
+    }
+});
+const avatarUpload = multer({
+    storage: avatarStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 // --- MIDDLEWARE AUTENTIKASI ---
 const isAuthenticated = (req, res, next) => { if (req.session.userId) return next(); res.status(401).json({ status: false, message: 'Unauthorized: Anda harus login.' }); };
@@ -593,6 +611,28 @@ app.get('/api/auth/token-list', isAuthenticated, async (req, res) => {
         const filteredTokens = data.data.filter(token => token.msisdn === user.verifiedPhone);
         res.status(200).json({ status: true, message: "Daftar token berhasil diambil.", data: filteredTokens });
     } catch (error) { console.error("Error fetching token list:", error); res.status(500).json({ status: false, message: error.message }); }
+});
+
+// Endpoint Upload / Update Foto Profil User
+app.post('/api/user/avatar', isAuthenticated, avatarUpload.single('avatar'), async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        let avatarUrl = '';
+        if (req.file) {
+            avatarUrl = `/uploads/avatars/${req.file.filename}`;
+        } else if (req.body.avatarBase64) {
+            avatarUrl = req.body.avatarBase64;
+        } else {
+            return res.status(400).json({ status: false, message: "File foto tidak ditemukan." });
+        }
+
+        await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [avatarUrl, userId]);
+        const updatedUser = await dbGet("SELECT id, name, email, role, balance, coins, avatar FROM users WHERE id = ?", [userId]);
+        res.json({ status: true, message: "Foto profil berhasil diperbarui!", avatar: avatarUrl, user: updatedUser });
+    } catch (e) {
+        console.error("Error updating avatar:", e);
+        res.status(500).json({ status: false, message: "Gagal memperbarui foto profil." });
+    }
 });
 
 // =======================================================

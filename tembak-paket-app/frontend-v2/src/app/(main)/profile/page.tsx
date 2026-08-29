@@ -43,6 +43,51 @@ export default function ProfilePage() {
       .catch(() => {});
   }, []);
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      Swal.fire({ icon: "error", title: "Format Salah", text: "Pilih file gambar (JPG, PNG, WEBP)." });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({ icon: "error", title: "Ukuran Terlalu Besar", text: "Ukuran maksimal foto adalah 5MB." });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    setUploadingAvatar(true);
+    try {
+      const res = await fetch("/api/user/avatar", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const data = await safeJson(res);
+      if (data?.status && data.avatar) {
+        setUser(user ? { ...user, avatar: data.avatar } : null);
+        Swal.fire({
+          icon: "success",
+          title: "Foto Profil Diperbarui! 📸",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({ icon: "error", title: "Gagal Mengunggah", text: data?.message || "Terjadi kesalahan." });
+      }
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Gagal", text: "Gagal mengunggah foto profil." });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleLogout = async () => {
     const { isConfirmed } = await Swal.fire({
       title: "Konfirmasi Keluar",
@@ -73,7 +118,7 @@ export default function ProfilePage() {
       {/* 1. TOP PROFILE HEADER BAR (Signature Sapphire Blue)         */}
       {/* ============================================================ */}
       <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 shadow-xl relative overflow-hidden">
-        {/* Top Mini Icons (Settings, Cart, Chat) */}
+        {/* Top Mini Icons (Cart, Chat) */}
         <div className="flex items-center justify-end gap-3 mb-3">
           <Link
             href="/cart"
@@ -103,9 +148,43 @@ export default function ProfilePage() {
 
         {/* User Info Row */}
         <div className="flex items-center gap-3.5">
-          <div className="w-14 h-14 rounded-full bg-white text-blue-900 flex items-center justify-center font-black text-2xl shadow-lg uppercase shrink-0">
-            {username[0]}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="w-16 h-16 rounded-full bg-white text-blue-900 flex items-center justify-center font-black text-2xl shadow-lg uppercase shrink-0 relative cursor-pointer group border-2 border-white/40 overflow-hidden"
+            title="Klik untuk ubah foto profil"
+          >
+            {user?.avatar ? (
+              <img
+                src={user.avatar.startsWith("http") || user.avatar.startsWith("data:") ? user.avatar : `${user.avatar}`}
+                alt={username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              username[0]
+            )}
+
+            {/* Hover overlay with Camera Icon */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+              </svg>
+            </div>
+
+            {uploadingAvatar && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
 
           <div className="space-y-0.5 flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -113,28 +192,35 @@ export default function ProfilePage() {
                 {username}
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider backdrop-blur-md shrink-0">
-                {user?.role === "admin" ? "Admin" : "Member VIP"} ➔
+                {user?.role === "admin" ? "ADMIN ➔" : "MEMBER ➔"}
               </span>
             </div>
             <p className="text-[11px] text-blue-100 font-mono truncate">
               {user?.email || user?.phone || "ID: #" + (user?.id ? user.id.substring(0, 10) : "user")}
             </p>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[10px] text-blue-200 hover:text-white font-bold inline-flex items-center gap-1 mt-0.5"
+            >
+              <span>📷 Ganti Foto Profil</span>
+            </button>
           </div>
         </div>
 
         {/* ============================================================ */}
-        {/* VIP Strip Card                                              */}
+        {/* Program Referral Reseller Strip                              */}
         {/* ============================================================ */}
         <div
           onClick={() => router.push("/referral")}
           className="mt-4 p-2.5 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-amber-950 flex items-center justify-between cursor-pointer shadow-md hover:opacity-95 transition-opacity"
         >
           <div className="flex items-center gap-2">
-            <span className="px-1.5 py-0.5 rounded bg-black text-amber-400 font-black text-[9px] uppercase">
-              VIP+
+            <span className="px-2 py-0.5 rounded-md bg-black text-amber-300 font-black text-[9px] uppercase tracking-wider">
+              REFERRAL
             </span>
             <span className="text-[11px] font-black">
-              Dapatkan Extra Diskon &amp; Prioritas Server
+              Ajak Teman Reseller &amp; Dapatkan Komisi Saldo
             </span>
           </div>
           <span className="text-xs font-black">➔</span>

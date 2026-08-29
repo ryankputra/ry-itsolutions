@@ -29,6 +29,7 @@ interface User {
   role: string;
   balance: number;
   coins?: number;
+  avatar?: string;
   status?: string;
   createdAt?: string;
 }
