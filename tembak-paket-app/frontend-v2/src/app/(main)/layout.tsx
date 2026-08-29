@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useApp } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import { ModernAppLoader } from "@/components/ui/ModernAppLoader";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useApp();
@@ -67,11 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-canvas text-ink">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
-      </div>
-    );
+    return <ModernAppLoader text="Memuat Sistem & Layanan..." />;
   }
 
   if (!user) return null;

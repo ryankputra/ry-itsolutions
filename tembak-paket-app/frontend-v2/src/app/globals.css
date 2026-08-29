@@ -84,7 +84,14 @@
   padding: 2.25rem 1.75rem 1.75rem !important;
   width: 90% !important;
   max-width: 420px !important;
-  animation: swalLuxuryPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+.swal2-popup.swal2-show {
+  animation: swalLuxuryPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+.swal2-popup.swal2-hide {
+  animation: swalLuxuryHide 0.2s cubic-bezier(0.4, 0, 1, 1) forwards !important;
 }
 
 .dark .swal2-popup {
@@ -102,6 +109,17 @@
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes swalLuxuryHide {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.88) translateY(10px);
   }
 }
 

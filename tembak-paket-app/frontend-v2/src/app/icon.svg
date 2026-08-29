@@ -1,19 +1,104 @@
-<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="50,5 90,28 90,72 50,95 10,72 10,28" fill="url(#hex-grad)" />
-  <path d="M50 5V30 M10 28H35 M90 28H65 M10 72H35 M90 72H65 M50 95V70" stroke="rgba(255, 255, 255, 0.2)" stroke-width="2" stroke-linecap="round" />
-  <path d="M55 20L30 55H50L45 80L70 45H50L55 20Z" fill="url(#bolt-grad)" filter="url(#glow)" />
+<svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="hex-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2563eb" />
-      <stop offset="100%" stop-color="#0891b2" />
+    <!-- Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="50%" stop-color="#070a14" />
+      <stop offset="100%" stop-color="#02040a" />
     </linearGradient>
-    <linearGradient id="bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#facc15" />
-      <stop offset="100%" stop-color="#f97316" />
+
+    <!-- Outer Border Glow Gradient -->
+    <linearGradient id="border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="35%" stop-color="#38bdf8" />
+      <stop offset="70%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+
+    <!-- Core Bolt / Emblem Gradient -->
+    <linearGradient id="core-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="40%" stop-color="#00f2fe" />
+      <stop offset="70%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#fb923c" />
+    </linearGradient>
+
+    <!-- Inner Shield Gradient -->
+    <linearGradient id="inner-shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Dynamic Neon Glow Filter -->
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur1" />
+      <feGaussianBlur stdDeviation="6" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="badge-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#00f2fe" flood-opacity="0.25" />
     </filter>
   </defs>
+
+  <!-- Ambient Outer Glow -->
+  <circle cx="256" cy="256" r="210" fill="url(#border-grad)" opacity="0.15" filter="url(#neon-glow)" />
+
+  <!-- Base Rounded Hexagon / Cyber Shield -->
+  <path
+    d="M256 32 L448 116 V324 L256 480 L64 324 V116 Z"
+    fill="url(#bg-grad)"
+    stroke="url(#border-grad)"
+    stroke-width="12"
+    stroke-linejoin="round"
+    filter="url(#badge-shadow)"
+  />
+
+  <!-- High-Tech Circuit Traces -->
+  <path
+    d="M256 64 V140 M114 140 H180 L210 170 M398 140 H332 L302 170 M114 300 H180 L210 270 M398 300 H332 L302 270 M256 448 V380"
+    stroke="#00f2fe"
+    stroke-width="4"
+    stroke-linecap="round"
+    opacity="0.4"
+  />
+
+  <!-- Circuit Micro Nodes -->
+  <circle cx="256" cy="140" r="6" fill="#00f2fe" filter="url(#neon-glow)" />
+  <circle cx="210" cy="170" r="5" fill="#38bdf8" />
+  <circle cx="302" cy="170" r="5" fill="#38bdf8" />
+  <circle cx="210" cy="270" r="5" fill="#8b5cf6" />
+  <circle cx="302" cy="270" r="5" fill="#8b5cf6" />
+  <circle cx="256" cy="380" r="6" fill="#8b5cf6" filter="url(#neon-glow)" />
+
+  <!-- Inner Glass Panel -->
+  <path
+    d="M256 96 L392 156 V292 L256 404 L120 292 V156 Z"
+    fill="url(#inner-shield)"
+    stroke="rgba(255, 255, 255, 0.15)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  />
+
+  <!-- Futuristic Stylized 'R' + Quantum Lightning Core -->
+  <!-- Upper Loop of R -->
+  <path
+    d="M196 160 H272 C302 160 324 176 324 204 C324 228 308 244 284 248 L334 324 H286 L242 254 H236 V324 H196 V160 Z M236 194 V222 H268 C280 222 288 214 288 208 C288 200 280 194 268 194 H236 Z"
+    fill="url(#border-grad)"
+    opacity="0.9"
+  />
+
+  <!-- Superimposed Precision Lightning Energy Bolt -->
+  <path
+    d="M276 144 L204 260 H260 L236 348 L320 228 H264 L276 144 Z"
+    fill="url(#core-grad)"
+    filter="url(#neon-glow)"
+  />
+
+  <!-- Core Light Spark Flare -->
+  <circle cx="260" cy="260" r="4" fill="#ffffff" filter="url(#neon-glow)" />
 </svg>

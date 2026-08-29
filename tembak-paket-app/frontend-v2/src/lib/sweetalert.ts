@@ -31,7 +31,24 @@ export const Swal = {
     if (!isConfirm) {
       if (opts.timer === undefined) opts.timer = 2500;
       if (opts.timerProgressBar === undefined) opts.timerProgressBar = true;
+
+      // Double-safety: ensure popup automatically dismisses after timer
+      const originalDidOpen = opts.didOpen;
+      opts.didOpen = (popup: HTMLElement) => {
+        if (typeof originalDidOpen === "function") {
+          originalDidOpen(popup);
+        }
+        const dismissTime = Number(opts.timer) || 2500;
+        setTimeout(() => {
+          try {
+            if (SwalOrigin.isVisible()) {
+              SwalOrigin.close();
+            }
+          } catch {}
+        }, dismissTime + 100);
+      };
     }
+
     if (opts.allowOutsideClick === undefined) opts.allowOutsideClick = true;
     if (opts.allowEscapeKey === undefined) opts.allowEscapeKey = true;
 
