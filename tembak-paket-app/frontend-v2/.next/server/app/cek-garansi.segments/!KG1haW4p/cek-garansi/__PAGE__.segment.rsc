@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
 2:I[1304,[],"ClientPageRoot"]
-3:I[2309,["320","static/chunks/41ade5dc-f679e2ae3b025ad1.js","23","static/chunks/23-d9beeb130f28f9cf.js","385","static/chunks/app/(main)/cek-garansi/page-cf086c3fa37c268c.js"],"default"]
+3:I[2309,["320","static/chunks/41ade5dc-f679e2ae3b025ad1.js","23","static/chunks/23-789b77e94ced5863.js","385","static/chunks/app/(main)/cek-garansi/page-9882c90b03fba5a5.js"],"default"]
 6:I[484,[],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"k_VWV026DBCbPQPaiIOB3"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"fovwu3eZm2DnXG3oDvtUe"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

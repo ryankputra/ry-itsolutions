@@ -17,6 +17,8 @@ export interface CustomSweetAlert extends Omit<typeof SwalOrigin, "fire"> {
   fire<T = any>(...args: any[]): Promise<SweetAlertResult<T>>;
 }
 
+const originalFire = SwalOrigin.fire.bind(SwalOrigin);
+
 export function createSweetAlert(): CustomSweetAlert {
   const customFire = (...args: any[]): Promise<SweetAlertResult<any>> => {
     let opts: any = {};
@@ -33,7 +35,7 @@ export function createSweetAlert(): CustomSweetAlert {
         title: args[0],
       };
     } else {
-      return SwalOrigin.fire(...args);
+      return originalFire(...args);
     }
 
     // Check if popup is an active decision/confirmation prompt
@@ -55,7 +57,7 @@ export function createSweetAlert(): CustomSweetAlert {
       if (opts.allowEscapeKey === undefined) opts.allowEscapeKey = true;
     }
 
-    return SwalOrigin.fire(opts);
+    return originalFire(opts);
   };
 
   const ProxySwal: any = new Proxy(SwalOrigin, {

@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST='{"app/(main)/layout.tsx -> @/lib/sweetalert":{"id":8637,"files":["static/chunks/637.148fddfcff62f750.js"]}}';
+self.__REACT_LOADABLE_MANIFEST='{"app/(main)/layout.tsx -> @/lib/sweetalert":{"id":8637,"files":["static/chunks/637.75334c3cf4be44da.js"]}}';
