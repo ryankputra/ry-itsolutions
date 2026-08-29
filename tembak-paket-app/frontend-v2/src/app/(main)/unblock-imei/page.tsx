@@ -447,36 +447,89 @@ export default function UnblockImeiPage() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink/80">Pilih Masa Aktif</label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-ink">Pilih Paket Masa Aktif</label>
+                <span className="text-[11px] text-primary font-semibold">100% Bergaransi Resmi</span>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {loading ? <p className="text-sm text-ink-muted col-span-3">Memuat paket...</p> : packages.length === 0 ? <p className="text-sm text-ink-muted col-span-3">Belum ada pilihan paket.</p> : packages.map(opt => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setSelectedPkgId(opt.id)}
-                    className={`p-3 rounded-xl border text-center transition-all ${selectedPkgId === opt.id ? 'border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
-                  >
-                    <div className="font-bold text-sm">{opt.duration}</div>
-                    <div className="text-xs mt-1">Rp {opt.price.toLocaleString('id-ID')}</div>
-                  </button>
-                ))}
+                {loading ? (
+                  <p className="text-xs text-ink-muted col-span-3">Memuat paket...</p>
+                ) : packages.length === 0 ? (
+                  <p className="text-xs text-ink-muted col-span-3">Belum ada pilihan paket.</p>
+                ) : (
+                  packages.map((opt, idx) => {
+                    const isSelected = selectedPkgId === opt.id;
+                    const isBestSeller = opt.duration.toLowerCase().includes("3 bulan") || idx === 0;
+                    const isPermanent = opt.duration.toLowerCase().includes("permanen");
+
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setSelectedPkgId(opt.id)}
+                        className={`relative p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between gap-2.5 ${
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-md shadow-primary/10 ring-2 ring-primary"
+                            : "border-hairline bg-canvas hover:border-primary/40 hover:bg-parchment/60"
+                        }`}
+                      >
+                        {/* Top Badge */}
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-xs text-ink">{opt.duration}</span>
+                          {isBestSeller ? (
+                            <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold text-[8px] uppercase tracking-wider">
+                              ⭐ Terlaris
+                            </span>
+                          ) : isPermanent ? (
+                            <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-[8px] uppercase tracking-wider">
+                              👑 Permanen
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {/* Pricing */}
+                        <div>
+                          <p className="text-[10px] text-ink-muted line-through">
+                            Rp {(opt.price + 20000).toLocaleString("id-ID")}
+                          </p>
+                          <p className="font-black text-sm text-primary">
+                            Rp {opt.price.toLocaleString("id-ID")}
+                          </p>
+                        </div>
+
+                        {/* Guarantee tag */}
+                        <div className="pt-1.5 border-t border-hairline/60 flex items-center gap-1 text-[10px] text-emerald-700 font-medium">
+                          <span>🛡️</span>
+                          <span>Garansi {opt.duration}</span>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
 
             {speedOptions.length > 0 && (
               <div className="space-y-1.5 pt-2">
-                <label className="text-sm font-medium text-ink/80">Pilih Kecepatan Proses</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {speedOptions.map(opt => (
+                <label className="text-xs font-bold text-ink">Pilih Kecepatan Proses Server</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {speedOptions.map((opt) => (
                     <button
                       key={opt.id}
                       type="button"
                       onClick={() => setSelectedSpeed(opt.id)}
-                      className={`p-3 rounded-xl border text-center transition-all ${selectedSpeed === opt.id ? 'border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
+                      className={`p-3 rounded-2xl border text-center transition-all ${
+                        selectedSpeed === opt.id
+                          ? "border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary"
+                          : "border-hairline bg-canvas hover:bg-parchment"
+                      }`}
                     >
-                      <div className="font-bold text-sm capitalize">{opt.label}</div>
-                      <div className="text-xs mt-1">{opt.price === 0 ? 'Gratis' : `+ Rp ${opt.price.toLocaleString('id-ID')}`}</div>
+                      <div className="font-bold text-xs capitalize">{opt.label}</div>
+                      <div className="text-[11px] font-semibold mt-0.5 text-ink-muted">
+                        {opt.price === 0 ? "Gratis" : `+ Rp ${opt.price.toLocaleString("id-ID")}`}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -486,7 +539,7 @@ export default function UnblockImeiPage() {
             {/* Voucher Diskon Checkout Bar (Shopee Style) */}
             <div className="pt-1 space-y-2">
               <label className="text-xs font-bold text-ink flex items-center justify-between">
-                <span>Voucher Diskon & Promo</span>
+                <span>Voucher Diskon &amp; Promo</span>
                 <span className="text-[10px] text-ink-muted">Bisa hemat biaya order</span>
               </label>
 
@@ -501,7 +554,7 @@ export default function UnblockImeiPage() {
                         Voucher <span className="font-mono">{appliedCoupon.code}</span> Terpasang
                       </p>
                       <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-                        Potongan Diskon: -Rp {discountAmount.toLocaleString('id-ID')}
+                        Potongan Diskon: -Rp {discountAmount.toLocaleString("id-ID")}
                       </p>
                     </div>
                   </div>
@@ -560,29 +613,36 @@ export default function UnblockImeiPage() {
             <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline space-y-2 text-xs">
               <div className="flex justify-between text-ink-muted">
                 <span>Subtotal ({imeiCount} IMEI)</span>
-                <span className="font-bold text-ink">Rp {rawTotalPrice.toLocaleString('id-ID')}</span>
+                <span className="font-bold text-ink">Rp {rawTotalPrice.toLocaleString("id-ID")}</span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-emerald-700 font-semibold">
                   <span>Diskon Kupon ({appliedCoupon.code})</span>
-                  <span>- Rp {discountAmount.toLocaleString('id-ID')}</span>
+                  <span>- Rp {discountAmount.toLocaleString("id-ID")}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-black text-ink pt-2 border-t border-hairline">
                 <span>Total Bayar</span>
-                <span className="text-primary">Rp {totalPrice.toLocaleString('id-ID')}</span>
+                <span className="text-primary">Rp {totalPrice.toLocaleString("id-ID")}</span>
               </div>
             </div>
 
             <div className="pt-2 border-t border-hairline">
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" className="mt-1 w-5 h-5 rounded border-hairline text-primary" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
-                <span className="text-sm text-ink-muted">Saya menyatakan bahwa HP saya memenuhi seluruh persyaratan di atas dan setuju memproses pesanan ini.</span>
+                <input
+                  type="checkbox"
+                  className="mt-1 w-5 h-5 rounded border-hairline text-primary"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                />
+                <span className="text-xs text-ink-muted">
+                  Saya menyatakan bahwa HP saya memenuhi seluruh persyaratan di atas dan setuju memproses pesanan ini.
+                </span>
               </label>
             </div>
-            
-            <Button className="w-full h-12 text-sm font-bold shadow-lg" type="submit" isLoading={submitting}>
-              Bayar Rp {totalPrice.toLocaleString('id-ID')}
+
+            <Button className="w-full h-12 text-sm font-bold shadow-lg rounded-2xl" type="submit" isLoading={submitting}>
+              Bayar Sekarang • Rp {totalPrice.toLocaleString("id-ID")}
             </Button>
           </form>
         ) : (
