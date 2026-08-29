@@ -148,7 +148,7 @@ function generateDynamicQRIS(staticTemplate, amount) {
 
 // Middleware Proteksi API Key
 const apiKeyAuth = (req, res, next) => {
-    const apiKey = req.headers['x-api-key'] || req.query.api_key || req.query.apikey;
+    const apiKey = req.headers['x-api-key'] || req.query.api_key || req.query.apikey || req.body?.api_key || req.body?.apikey;
     if (!apiKey || apiKey !== process.env.API_KEY) {
         return res.status(401).json({ success: false, message: 'Autentikasi Gagal: API Key tidak valid' });
     }
