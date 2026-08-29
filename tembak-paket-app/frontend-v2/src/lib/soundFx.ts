@@ -288,22 +288,7 @@ export function bindSwalSounds() {
                   setTimeout(playAppropriateSound, 30);
                 }
 
-                // Automatic 3s Auto-Dismiss Fallback & Outside-Click Dismiss for non-confirm popups
-                const isConfirmOrPrompt = popup.querySelector(
-                  '.swal2-cancel:not([style*="display: none"]), .swal2-input, .swal2-textarea, .swal2-deny:not([style*="display: none"])'
-                );
-
-                if (!isConfirmOrPrompt && !(popup as any).__timerStarted) {
-                  (popup as any).__timerStarted = true;
-                  setTimeout(() => {
-                    try {
-                      if (typeof window !== "undefined" && Swal.isVisible && Swal.isVisible()) {
-                        Swal.close();
-                      }
-                    } catch {}
-                  }, 3000);
-                }
-
+                // Handle backdrop tap to dismiss
                 const container = (node.classList.contains("swal2-container") ? node : popup.closest(".swal2-container")) as HTMLElement;
                 if (container && !(container as any).__clickDismissBound) {
                   (container as any).__clickDismissBound = true;

@@ -1,26 +1,9 @@
 "use client";
-import SwalOrigin, { SweetAlertOptions, SweetAlertResult } from "sweetalert2";
+import SwalOrigin from "sweetalert2";
 
-export interface CustomSweetAlert extends Omit<typeof SwalOrigin, "fire"> {
-  <T = any>(options: SweetAlertOptions): Promise<SweetAlertResult<T>>;
-  <T = any>(
-    title?: string,
-    html?: string,
-    icon?: "success" | "error" | "warning" | "info" | "question"
-  ): Promise<SweetAlertResult<T>>;
-  fire<T = any>(options: SweetAlertOptions): Promise<SweetAlertResult<T>>;
-  fire<T = any>(
-    title?: string,
-    html?: string,
-    icon?: "success" | "error" | "warning" | "info" | "question"
-  ): Promise<SweetAlertResult<T>>;
-  fire<T = any>(...args: any[]): Promise<SweetAlertResult<T>>;
-}
-
-const originalFire = SwalOrigin.fire.bind(SwalOrigin);
-
-export function createSweetAlert(): CustomSweetAlert {
-  const customFire = (...args: any[]): Promise<SweetAlertResult<any>> => {
+export const Swal = {
+  ...SwalOrigin,
+  fire: ((...args: any[]) => {
     let opts: any = {};
     if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
       opts = { ...args[0] };
@@ -35,10 +18,9 @@ export function createSweetAlert(): CustomSweetAlert {
         title: args[0],
       };
     } else {
-      return originalFire(...args);
+      return (SwalOrigin.fire as any)(...args);
     }
 
-    // Check if popup is an active decision/confirmation prompt
     const isConfirm = Boolean(
       opts.showCancelButton ||
       opts.showDenyButton ||
@@ -47,34 +29,30 @@ export function createSweetAlert(): CustomSweetAlert {
     );
 
     if (!isConfirm) {
-      // Automatically dismiss within 2.5 seconds for all informational alerts
       if (opts.timer === undefined) opts.timer = 2500;
       if (opts.timerProgressBar === undefined) opts.timerProgressBar = true;
-      if (opts.allowOutsideClick === undefined) opts.allowOutsideClick = true;
-      if (opts.allowEscapeKey === undefined) opts.allowEscapeKey = true;
-    } else {
-      if (opts.allowOutsideClick === undefined) opts.allowOutsideClick = true;
-      if (opts.allowEscapeKey === undefined) opts.allowEscapeKey = true;
     }
+    if (opts.allowOutsideClick === undefined) opts.allowOutsideClick = true;
+    if (opts.allowEscapeKey === undefined) opts.allowEscapeKey = true;
 
-    return originalFire(opts);
-  };
+    return SwalOrigin.fire(opts);
+  }) as typeof SwalOrigin.fire,
+  close: (...args: any[]) => SwalOrigin.close(...args),
+  isVisible: () => SwalOrigin.isVisible(),
+  getPopup: () => SwalOrigin.getPopup(),
+  getContainer: () => SwalOrigin.getContainer(),
+  getTitle: () => SwalOrigin.getTitle(),
+  getHtmlContainer: () => SwalOrigin.getHtmlContainer(),
+  getImage: () => SwalOrigin.getImage(),
+  getIcon: () => SwalOrigin.getIcon(),
+  getConfirmButton: () => SwalOrigin.getConfirmButton(),
+  getDenyButton: () => SwalOrigin.getDenyButton(),
+  getCancelButton: () => SwalOrigin.getCancelButton(),
+  showLoading: (...args: any[]) => (SwalOrigin as any).showLoading(...args),
+  hideLoading: () => SwalOrigin.hideLoading(),
+  isLoading: () => SwalOrigin.isLoading(),
+  mixin: (...args: any[]) => (SwalOrigin as any).mixin(...args),
+};
 
-  const ProxySwal: any = new Proxy(SwalOrigin, {
-    get(target, prop, receiver) {
-      if (prop === "fire") {
-        return customFire;
-      }
-      return Reflect.get(target, prop, receiver);
-    },
-    apply(target, thisArg, argumentsList) {
-      return customFire(...argumentsList);
-    }
-  });
-
-  ProxySwal.fire = customFire;
-  return ProxySwal as CustomSweetAlert;
-}
-
-export const Swal: CustomSweetAlert = createSweetAlert();
 export default Swal;
+
