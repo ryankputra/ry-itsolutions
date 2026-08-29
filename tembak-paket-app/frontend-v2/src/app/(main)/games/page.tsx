@@ -13,60 +13,61 @@ export default function GamesPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  const [gameData, setGameData] = useState<{
+    coins: number;
+    can_checkin: boolean;
+    today_checkin_done: boolean;
+    current_streak: number;
+    can_spin: boolean;
+  }>({
+    coins: 0,
+    can_checkin: true,
+    today_checkin_done: false,
+    current_streak: 1,
+    can_spin: true,
+  });
+
   const [claimingCheckin, setClaimingCheckin] = useState(false);
   const [spinningWheel, setSpinningWheel] = useState(false);
   const [wheelRotation, setWheelRotation] = useState(0);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [coinHistory, setCoinHistory] = useState<any[]>([]);
 
-  const [gameData, setGameData] = useState<{
-    coins: number;
-    can_checkin: boolean;
-    current_streak: number;
-    today_checkin_done: boolean;
-    can_spin: boolean;
-    rewards: number[];
-  }>({
-    coins: 0,
-    can_checkin: false,
-    current_streak: 1,
-    today_checkin_done: false,
-    can_spin: false,
-    rewards: [100, 200, 300, 400, 500, 750, 1000],
-  });
-
-  const fetchGameStatus = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/games/status", { credentials: "include" });
-      const data = await res.json();
-      if (data.status) {
-        setGameData(data);
+  // Fetch initial game state
+  useEffect(() => {
+    async function fetchGameState() {
+      try {
+        const res = await fetch("/api/games/status", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status) {
+            setGameData(data.data);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading games:", e);
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      console.error("Gagal mengambil status game:", e);
-    } finally {
-      setLoading(false);
     }
-  };
+    fetchGameState();
+  }, []);
 
   const fetchCoinHistory = async () => {
     try {
       const res = await fetch("/api/games/history", { credentials: "include" });
-      const data = await res.json();
-      if (data.status && data.data) {
-        setCoinHistory(data.data);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status) {
+          setCoinHistory(data.data || []);
+        }
       }
     } catch (e) {}
   };
 
-  useEffect(() => {
-    fetchGameStatus();
-  }, []);
-
-  // 1. Handle Daily Checkin
+  // 1. Handle Daily Check-In
   const handleDailyCheckin = async () => {
-    if (!gameData.can_checkin) return;
+    if (!gameData.can_checkin || claimingCheckin) return;
     setClaimingCheckin(true);
 
     try {
@@ -77,9 +78,10 @@ export default function GamesPage() {
       const data = await res.json();
 
       if (data.status) {
+        playCoinClaimSound();
         Swal.fire({
           icon: "success",
-          title: "Klaim Berhasil! 🎉",
+          title: "Klaim Berhasil!",
           text: data.message,
           confirmButtonColor: "#0066cc",
           confirmButtonText: "Kumpulkan Koin",
@@ -152,7 +154,7 @@ export default function GamesPage() {
           playCoinClaimSound();
           Swal.fire({
             icon: "success",
-            title: "Selamat! 🎡✨",
+            title: "Selamat!",
             text: data.message,
             confirmButtonColor: "#0066cc",
             confirmButtonText: "Kumpulkan Koin",
@@ -181,37 +183,37 @@ export default function GamesPage() {
       Swal.fire({
         icon: "error",
         title: "Gagal",
-        text: "Terjadi kesalahan saat memutar roda hoki.",
+        text: "Terjadi kesalahan saat memutar roda.",
       });
     }
   };
 
-  const userCoins = user?.coins !== undefined ? user.coins : gameData.coins;
-  const rewards = gameData.rewards || [100, 200, 300, 400, 500, 750, 1000];
+  const userCoins = user?.coins || gameData.coins || 0;
+  const rewards = [100, 150, 200, 250, 350, 500, 1000];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 pb-20">
+    <div className="max-w-2xl mx-auto space-y-4 pb-24">
       {/* ============================================================ */}
-      {/* 1. "KOIN SAYA" HERO TOP BAR (Signature Ry Sapphire Blue)     */}
+      {/* 1. TOP HEADER & COIN STATS HERO (Shopee Style Deep Blue)     */}
       {/* ============================================================ */}
-      <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 sm:p-6 shadow-xl relative overflow-hidden">
-        {/* Top Mini Navigation */}
+      <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 shadow-xl relative overflow-hidden">
+        {/* Navigation Bar */}
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
-            onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-1 text-white font-bold text-sm hover:opacity-80 transition-opacity"
+            onClick={() => router.back()}
+            className="flex items-center gap-2 font-bold text-sm text-white/90 hover:text-white transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
-            <span className="text-base font-black">Koin Saya</span>
+            <span className="text-base font-black">Shopee Koin Rewards</span>
           </button>
 
           <Link
             href="/vouchers"
-            className="text-white hover:opacity-80 transition-opacity p-1"
-            title="Klaim Voucher Diskon"
+            className="p-1 text-white/90 hover:text-white transition-colors"
+            title="Voucher Saya"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
@@ -223,8 +225,10 @@ export default function GamesPage() {
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-yellow-400 text-amber-950 flex items-center justify-center font-black text-xl shadow-md">
-                🪙
+              <div className="w-9 h-9 rounded-full bg-yellow-400 text-amber-950 flex items-center justify-center font-black shadow-md">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
               <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white drop-shadow-xs">
                 {userCoins.toLocaleString("id-ID")}
@@ -244,7 +248,9 @@ export default function GamesPage() {
             className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold text-xs transition-colors flex items-center gap-1 shrink-0"
           >
             <span>Riwayat</span>
-            <span>➔</span>
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
           </button>
         </div>
 
@@ -285,15 +291,21 @@ export default function GamesPage() {
                   <div className="my-1 flex items-center justify-center">
                     {isPastClaimed ? (
                       <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-black shadow-xs">
-                        ✓
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
                       </div>
                     ) : isDay7 ? (
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center text-xs shadow-xs">
-                        🎁
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-400 to-yellow-300 text-amber-950 flex items-center justify-center shadow-xs">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        </svg>
                       </div>
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 text-amber-950 flex items-center justify-center text-[10px] font-black shadow-xs">
-                        🪙
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 text-amber-950 flex items-center justify-center shadow-xs">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                       </div>
                     )}
                   </div>
@@ -321,8 +333,8 @@ export default function GamesPage() {
             }`}
           >
             {gameData.today_checkin_done
-              ? "✓ Sudah Check-In Hari Ini"
-              : `Dapatkan ekstra 🪙 ${rewards[gameData.current_streak - 1] || 100} sekarang`}
+              ? "Sudah Check-In Hari Ini"
+              : `Dapatkan ekstra ${rewards[gameData.current_streak - 1] || 100} Koin sekarang`}
           </Button>
 
           {/* Sub Task Bar: Ajak Teman */}
@@ -335,7 +347,7 @@ export default function GamesPage() {
                 Ry
               </span>
               <span className="text-[11px] font-bold text-slate-800">
-                Ajak Teman Reseller, Dapat 🪙 500
+                Ajak Teman Reseller, Dapat 500 Koin
               </span>
             </div>
             <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[10px] font-black uppercase">
@@ -382,7 +394,11 @@ export default function GamesPage() {
               name: "Roda Hoki",
               href: "#lucky-spin-section",
               bg: "bg-indigo-600 text-white",
-              icon: "🎡",
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+              ),
               onClick: () => {
                 const el = document.getElementById("lucky-spin-section");
                 if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -392,28 +408,44 @@ export default function GamesPage() {
               name: "Voucher",
               href: "/vouchers",
               bg: "bg-cyan-600 text-white",
-              icon: "🎟️",
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+              ),
               onClick: () => router.push("/vouchers"),
             },
             {
               name: "Buka IMEI",
               href: "/unblock-imei",
               bg: "bg-blue-600 text-white",
-              icon: "📱",
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                </svg>
+              ),
               onClick: () => router.push("/unblock-imei"),
             },
             {
               name: "Ajak Teman",
               href: "/referral",
               bg: "bg-emerald-600 text-white",
-              icon: "👥",
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              ),
               onClick: () => router.push("/referral"),
             },
             {
               name: "Cek Garansi",
               href: "/cek-garansi",
               bg: "bg-purple-600 text-white",
-              icon: "🛡️",
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              ),
               onClick: () => router.push("/cek-garansi"),
             },
           ].map((item, idx) => (
@@ -442,7 +474,9 @@ export default function GamesPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                🎡
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
               </div>
               <div>
                 <h2 className="font-bold text-sm sm:text-base text-ink">Roda Hoki Koin</h2>
@@ -451,92 +485,74 @@ export default function GamesPage() {
                 </p>
               </div>
             </div>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-black ${
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
               gameData.can_spin
-                ? "bg-primary/10 text-primary border border-primary/30"
-                : "bg-parchment text-ink-muted border border-hairline"
+                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                : "bg-slate-100 text-slate-500"
             }`}>
-              {gameData.can_spin ? "1 Tiket Tersedia" : "Sudah Diputar"}
+              {gameData.can_spin ? "1 Tiket Tersedia" : "Tiket Habis"}
             </span>
           </div>
 
-          {/* Lucky Wheel SVG Display */}
-          <div className="py-2 flex flex-col items-center justify-center">
-            <div className="relative w-56 h-56 sm:w-64 sm:h-64">
-              {/* Pointer Needle */}
-              <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 z-30 filter drop-shadow-md">
-                <svg width="26" height="30" viewBox="0 0 24 28" fill="none">
-                  <path
-                    d="M12 28L3 4C2 2 3.5 0 5.5 0H18.5C20.5 0 22 2 21 4L12 28Z"
-                    fill="#ef4444"
-                    stroke="#ffffff"
-                    strokeWidth={2}
-                  />
-                  <circle cx="12" cy="7" r="3.5" fill="#ffffff" />
-                </svg>
+          {/* Interactive Wheel Graphic */}
+          <div className="flex flex-col items-center justify-center py-6 relative">
+            {/* Top Indicator Arrow Pin */}
+            <div className="absolute top-2 z-20 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-amber-400 drop-shadow-md"></div>
+
+            {/* Rotating SVG Wheel Container */}
+            <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
+              <div
+                className="w-full h-full rounded-full border-4 border-amber-400 shadow-2xl overflow-hidden relative"
+                style={{
+                  transform: `rotate(${wheelRotation}deg)`,
+                  transition: spinningWheel ? "transform 3.2s cubic-bezier(0.15, 0.9, 0.25, 1)" : "none",
+                }}
+              >
+                {/* 6 Wheel Slices rendered as conic gradient & labels */}
+                <div
+                  className="w-full h-full rounded-full"
+                  style={{
+                    background: `conic-gradient(
+                      #0066cc 0deg 60deg,
+                      #4f46e5 60deg 120deg,
+                      #059669 120deg 180deg,
+                      #7c3aed 180deg 240deg,
+                      #0891b2 240deg 300deg,
+                      #d97706 300deg 360deg
+                    )`,
+                  }}
+                >
+                  {/* Overlay text numbers on slices */}
+                  {prizes.map((prize, idx) => {
+                    const angle = idx * 60 + 30;
+                    return (
+                      <div
+                        key={idx}
+                        className="absolute w-full h-full top-0 left-0 flex items-start justify-center pt-4"
+                        style={{
+                          transform: `rotate(${angle}deg)`,
+                          transformOrigin: "50% 50%",
+                        }}
+                      >
+                        <span className="text-white font-black text-xs sm:text-sm tracking-wider drop-shadow-md">
+                          +{prize.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Rotating SVG Disc */}
+              {/* Center Hub Button */}
               <div
-                className="w-full h-full rounded-full shadow-2xl relative overflow-hidden transition-transform duration-3000 ease-out"
-                style={{ transform: `rotate(${wheelRotation}deg)` }}
+                onClick={handleLuckySpin}
+                className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white text-blue-900 border-4 border-amber-400 shadow-xl flex flex-col items-center justify-center z-10 cursor-pointer hover:scale-105 active:scale-95 transition-transform select-none"
               >
-                <svg viewBox="0 0 200 200" className="w-full h-full">
-                  <circle cx="100" cy="100" r="98" fill="#1e293b" stroke="#f59e0b" strokeWidth="4" />
-                  {prizes.map((item, i) => (
-                    <g key={i} transform={`rotate(${i * 60} 100 100)`}>
-                      <path
-                        d="M 100 100 L 55 22.06 A 90 90 0 0 1 145 22.06 Z"
-                        fill={item.color}
-                        stroke="#ffffff"
-                        strokeWidth="1.5"
-                      />
-                      <g transform="translate(100, 48)">
-                        <text
-                          textAnchor="middle"
-                          fill="#ffffff"
-                          fontSize="11"
-                          fontWeight="900"
-                          fontFamily="system-ui, sans-serif"
-                          style={{ filter: "drop-shadow(0px 1px 2px rgba(0,0,0,0.8))" }}
-                        >
-                          {item.label}
-                        </text>
-                        <text
-                          y="10"
-                          textAnchor="middle"
-                          fill="#fef08a"
-                          fontSize="7.5"
-                          fontWeight="800"
-                          fontFamily="system-ui, sans-serif"
-                        >
-                          KOIN
-                        </text>
-                      </g>
-                    </g>
-                  ))}
-                  {[...Array(12)].map((_, i) => (
-                    <circle
-                      key={i}
-                      cx={100 + 94 * Math.sin((i * 30 * Math.PI) / 180)}
-                      cy={100 - 94 * Math.cos((i * 30 * Math.PI) / 180)}
-                      r="2.2"
-                      fill="#ffffff"
-                    />
-                  ))}
-                  <circle cx="100" cy="100" r="25" fill="#0f172a" stroke="#f59e0b" strokeWidth="3" />
-                  <text
-                    x="100"
-                    y="103.5"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="#ffffff"
-                    fontSize="9.5"
-                    fontWeight="900"
-                    fontFamily="system-ui, sans-serif"
-                  >
-                    SPIN
-                  </text>
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-900">
+                  {spinningWheel ? "..." : "PUTAR"}
+                </span>
+                <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
@@ -552,7 +568,7 @@ export default function GamesPage() {
                 : "bg-slate-200 text-slate-500 cursor-not-allowed"
             }`}
           >
-            {gameData.can_spin ? "🎡 Putar Roda Keberuntungan Sekarang" : "Tiket Habis • Kembali Besok"}
+            {gameData.can_spin ? "Putar Roda Keberuntungan Sekarang" : "Tiket Habis • Kembali Besok"}
           </Button>
         </Card>
       </div>
@@ -620,15 +636,21 @@ export default function GamesPage() {
           <Card className="max-w-md w-full bg-canvas border border-hairline p-5 rounded-3xl shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-hairline pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🪙</span>
+                <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
                 <h3 className="font-black text-base text-ink">Riwayat Koin Ry</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowHistoryModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-600"
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-xs text-slate-600"
               >
-                ✕
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 

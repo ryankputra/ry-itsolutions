@@ -5,7 +5,6 @@ import { API_URL } from "@/lib/api";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 function HistoryContent() {
@@ -52,7 +51,7 @@ function HistoryContent() {
       inputLabel: "Nomor WhatsApp Pelanggan (misal: 08123456789):",
       inputPlaceholder: "08xxxxxxxxxx",
       showCancelButton: true,
-      confirmButtonText: "Buka WhatsApp 🚀",
+      confirmButtonText: "Buka WhatsApp",
       cancelButtonText: "Batal",
       inputValidator: (val) => {
         if (!val || val.replace(/\D/g, "").length < 9) {
@@ -72,13 +71,13 @@ function HistoryContent() {
 
     const text =
       `Halo Kak, berikut bukti transaksi dari *Ry-ITSolutions*:\n\n` +
-      `🧾 *ID Transaksi:* #${trx.id.substring(0, 14)}\n` +
-      `📱 *IMEI:* ${trx.imei || "-"}\n` +
-      `📦 *Layanan:* ${trx.package_name || trx.service_type || "Aktivasi IMEI"}\n` +
-      `🛡️ *Status:* ${trx.status.toUpperCase()}\n` +
-      `📅 *Tanggal:* ${new Date(trx.createdAt).toLocaleDateString("id-ID")}\n\n` +
-      `🔗 *Cek Nota & Garansi Digital:* \n${verifyUrl}\n\n` +
-      `Terima kasih atas kepercayaannya! 🙏`;
+      `*ID Transaksi:* #${trx.id.substring(0, 14)}\n` +
+      `*IMEI:* ${trx.imei || "-"}\n` +
+      `*Layanan:* ${trx.package_name || trx.service_type || "Aktivasi IMEI"}\n` +
+      `*Status:* ${trx.status.toUpperCase()}\n` +
+      `*Tanggal:* ${new Date(trx.createdAt).toLocaleDateString("id-ID")}\n\n` +
+      `*Cek Nota & Garansi Digital:* \n${verifyUrl}\n\n` +
+      `Terima kasih atas kepercayaannya!`;
 
     window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`, "_blank");
   };
@@ -140,11 +139,27 @@ function HistoryContent() {
     };
   };
 
-  const getServiceIcon = (serviceType: string, packageName: string) => {
+  const renderServiceSvg = (serviceType: string, packageName: string) => {
     const text = `${serviceType} ${packageName}`.toLowerCase();
-    if (text.includes("ceir") || text.includes("cek")) return "🔍";
-    if (text.includes("topup") || text.includes("saldo")) return "💳";
-    return "📱";
+    if (text.includes("ceir") || text.includes("cek")) {
+      return (
+        <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+        </svg>
+      );
+    }
+    if (text.includes("topup") || text.includes("saldo")) {
+      return (
+        <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+      </svg>
+    );
   };
 
   return (
@@ -215,11 +230,13 @@ function HistoryContent() {
         </div>
       ) : filteredHistory.length === 0 ? (
         /* ============================================================ */
-        /* EMPTY STATE (Persis Screenshot Clipboard)                   */
+        /* EMPTY STATE                                                  */
         /* ============================================================ */
         <div className="py-16 px-6 text-center space-y-4 max-w-sm mx-auto">
-          <div className="w-24 h-24 rounded-full bg-slate-100/80 border border-slate-200 flex items-center justify-center text-4xl mx-auto shadow-inner">
-            📋
+          <div className="w-20 h-20 rounded-3xl bg-slate-100/80 border border-slate-200 flex items-center justify-center text-slate-400 mx-auto shadow-inner">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+            </svg>
           </div>
           <div>
             <h3 className="font-bold text-base text-ink">Belum ada pesanan</h3>
@@ -229,16 +246,18 @@ function HistoryContent() {
           </div>
           <Button
             onClick={() => router.push("/unblock-imei")}
-            className="bg-primary hover:bg-primary-focus text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md"
+            className="bg-primary hover:bg-primary-focus text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 mx-auto"
           >
-            Order Layanan Sekarang ➔
+            <span>Order Layanan Sekarang</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
           </Button>
         </div>
       ) : (
         <div className="space-y-3 pt-1">
           {filteredHistory.map((trx) => {
             const badge = getStatusBadge(trx.status);
-            const icon = getServiceIcon(trx.service_type || trx.serviceType, trx.package_name || trx.packageName);
             const primaryImei = trx.imei ? trx.imei.split(/[\n,]+/)[0].trim().replace(/\D/g, "") : "";
             const isCompleted = trx.status === "success" || trx.status === "completed";
             const isProcessing = trx.status === "processing" || trx.status === "in_progress";
@@ -253,7 +272,9 @@ function HistoryContent() {
                 {/* Shop / Header Bar */}
                 <div className="flex items-center justify-between border-b border-hairline/70 pb-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm">🏬</span>
+                    <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009 9.35c.694 0 1.343-.238 1.86-.639.517.401 1.166.639 1.86.639.694 0 1.343-.238 1.86-.639.517.401 1.166.639 1.86.639.694 0 1.343-.238 1.86-.639a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.15c0 .414.336.75.75.75z" />
+                    </svg>
                     <span className="font-black text-xs text-ink">Ry-ITSolutions Official</span>
                   </div>
                   <span className={`text-[11px] ${badge.textColor}`}>
@@ -263,8 +284,8 @@ function HistoryContent() {
 
                 {/* Product / Service Item Row */}
                 <div className="flex items-start gap-3">
-                  <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-2xl shrink-0">
-                    {icon}
+                  <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                    {renderServiceSvg(trx.service_type || trx.serviceType, trx.package_name || trx.packageName)}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -356,9 +377,11 @@ function HistoryContent() {
                         <button
                           type="button"
                           onClick={() => handleQuickShareWhatsApp(trx)}
-                          className="px-3 py-1.5 rounded-xl border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors flex items-center gap-1.5"
                         >
-                          <span>💬</span>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                          </svg>
                           <span>Kirim WA</span>
                         </button>
 

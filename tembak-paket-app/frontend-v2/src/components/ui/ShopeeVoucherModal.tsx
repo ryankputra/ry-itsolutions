@@ -58,12 +58,14 @@ export function ShopeeVoucherModal({
         className="bg-canvas border border-hairline w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Ala Shopee */}
+        {/* Header */}
         <div className="p-4 sm:p-5 border-b border-hairline flex items-center justify-between bg-parchment/40">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold text-sm">
-              🎟️
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+              </svg>
+            </div>
             <div>
               <h3 className="font-bold text-base text-ink">Voucher Ry-ITSolutions</h3>
               <p className="text-xs text-ink-muted">Pilih atau klaim voucher untuk hemat lebih banyak</p>
@@ -74,7 +76,9 @@ export function ShopeeVoucherModal({
             onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center text-ink-muted hover:text-ink hover:bg-canvas transition-colors"
           >
-            ✕
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
@@ -93,7 +97,7 @@ export function ShopeeVoucherModal({
               type="button"
               onClick={handleApplyCustom}
               disabled={loading || !customCode.trim()}
-              className="px-4 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-hover disabled:opacity-50 transition-colors shrink-0 shadow-xs"
+              className="px-4 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-focus disabled:opacity-50 transition-colors shrink-0 shadow-xs"
             >
               {loading ? "..." : "Pakai"}
             </button>
@@ -133,7 +137,11 @@ export function ShopeeVoucherModal({
           {activeTab === "available" ? (
             claimedCoupons.length === 0 ? (
               <div className="text-center py-10 space-y-2">
-                <p className="text-3xl">🎫</p>
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                  </svg>
+                </div>
                 <p className="text-sm font-bold text-ink">Belum Ada Voucher yang Diklaim</p>
                 <p className="text-xs text-ink-muted max-w-xs mx-auto">
                   Silakan buka tab <b>Klaim Voucher Promo</b> untuk mengklaim voucher potongan harga.
@@ -141,9 +149,12 @@ export function ShopeeVoucherModal({
                 <button
                   type="button"
                   onClick={() => setActiveTab("all")}
-                  className="mt-2 text-xs font-bold text-primary hover:underline"
+                  className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1 mx-auto"
                 >
-                  Lihat Voucher Tersedia ➔
+                  <span>Lihat Voucher Tersedia</span>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
                 </button>
               </div>
             ) : (
@@ -175,8 +186,11 @@ export function ShopeeVoucherModal({
                       </div>
                     </div>
                     {!isMinMet && (
-                      <p className="text-[10px] text-amber-600 font-semibold pl-6 mt-1">
-                        ⚠️ Belum memenuhi minimal belanja Rp {Number(c.min_order_amount).toLocaleString("id-ID")}
+                      <p className="text-[10px] text-amber-600 font-semibold pl-6 mt-1 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        <span>Belum memenuhi minimal belanja Rp {Number(c.min_order_amount).toLocaleString("id-ID")}</span>
                       </p>
                     )}
                   </div>
@@ -185,7 +199,11 @@ export function ShopeeVoucherModal({
             )
           ) : unclimedCoupons.length === 0 ? (
             <div className="text-center py-10 space-y-2">
-              <p className="text-3xl">✨</p>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               <p className="text-sm font-bold text-ink">Semua Voucher Sudah Diklaim</p>
               <p className="text-xs text-ink-muted">Anda sudah mengklaim semua promo yang tersedia saat ini.</p>
             </div>
@@ -235,7 +253,7 @@ export function ShopeeVoucherModal({
               type="button"
               disabled={!selectedCode || loading}
               onClick={handleConfirmSelected}
-              className="px-5 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-hover disabled:opacity-50 shadow-md shadow-primary/20 transition-all"
+              className="px-5 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-focus disabled:opacity-50 shadow-md shadow-primary/20 transition-all"
             >
               Pakai Voucher
             </button>

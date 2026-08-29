@@ -453,7 +453,10 @@ export default function UnblockImeiPage() {
             <div className="space-y-1.5 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-200/70">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-ink flex items-center gap-1.5">
-                  <span className="text-emerald-600">📲</span> Nomor WhatsApp Penerima Nota
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                  </svg>
+                  <span>Nomor WhatsApp Penerima Nota</span>
                 </label>
                 <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded-full">
                   Auto Kirim Nota via WA
@@ -518,22 +521,22 @@ export default function UnblockImeiPage() {
                         key={opt.id}
                         type="button"
                         onClick={() => setSelectedPkgId(opt.id)}
-                        className={`relative p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between gap-2.5 ${
+                        className={`relative p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all ${
                           isSelected
-                            ? "border-primary bg-primary/5 shadow-md shadow-primary/10 ring-2 ring-primary"
-                            : "border-hairline bg-canvas hover:border-primary/40 hover:bg-parchment/60"
+                            ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.02]"
+                            : "border-hairline bg-canvas hover:border-primary/40 hover:bg-parchment"
                         }`}
                       >
-                        {/* Top Badge */}
-                        <div className="flex items-center justify-between gap-1">
+                        {/* Top tag */}
+                        <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-xs text-ink">{opt.duration}</span>
                           {isBestSeller ? (
-                            <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold text-[8px] uppercase tracking-wider">
-                              ⭐ Terlaris
+                            <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-wider">
+                              TERLARIS
                             </span>
                           ) : isLongWarranty ? (
-                            <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-[8px] uppercase tracking-wider">
-                              🛡️ Garansi Panjang
+                            <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-black uppercase tracking-wider">
+                              GARANSI PANJANG
                             </span>
                           ) : null}
                         </div>
@@ -550,7 +553,9 @@ export default function UnblockImeiPage() {
 
                         {/* Guarantee tag */}
                         <div className="pt-1.5 border-t border-hairline/60 flex items-center gap-1 text-[10px] text-emerald-700 font-medium">
-                          <span>🛡️</span>
+                          <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                          </svg>
                           <span>Garansi {opt.duration}</span>
                         </div>
                       </button>
@@ -585,7 +590,7 @@ export default function UnblockImeiPage() {
               </div>
             )}
 
-            {/* Voucher Diskon Checkout Bar (Shopee Style) */}
+            {/* Voucher Diskon Checkout Bar */}
             <div className="pt-1 space-y-2">
               <label className="text-xs font-bold text-ink flex items-center justify-between">
                 <span>Voucher Diskon &amp; Promo</span>
@@ -595,9 +600,11 @@ export default function UnblockImeiPage() {
               {appliedCoupon ? (
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs shadow-2xs">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
-                      🎟️
-                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                      </svg>
+                    </div>
                     <div>
                       <p className="font-bold text-emerald-950 text-xs">
                         Voucher <span className="font-mono">{appliedCoupon.code}</span> Terpasang
@@ -631,9 +638,11 @@ export default function UnblockImeiPage() {
                   className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-canvas border border-dashed border-primary/40 hover:border-primary hover:bg-primary/5 transition-all text-xs font-bold shadow-2xs group"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform shrink-0">
-                      🎟️
-                    </span>
+                    <div className="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold text-sm group-hover:scale-110 transition-transform shrink-0">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                      </svg>
+                    </div>
                     <div className="text-left">
                       <p className="text-ink font-bold text-xs">Voucher Ry-ITSolutions</p>
                       <p className="text-[10px] text-ink-muted">Pilih atau klaim voucher untuk hemat lebih banyak</p>
@@ -658,11 +667,13 @@ export default function UnblockImeiPage() {
               )}
             </div>
 
-            {/* Shopee Style Koin Ry Deduction Bar */}
+            {/* Koin Ry Deduction Bar */}
             <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
-                  🪙
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
                 <div>
                   <p className="font-bold text-ink text-xs">
@@ -760,7 +771,11 @@ export default function UnblockImeiPage() {
           </form>
         ) : (
           <div className="bg-rose-500/10 border border-rose-200/50 p-6 rounded-2xl text-center space-y-3">
-            <span className="text-4xl block">🔒</span>
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
             <h3 className="font-black text-rose-700 text-lg">Server IMEI Sedang Tutup</h3>
             <p className="text-sm text-rose-600 font-semibold max-w-md mx-auto leading-relaxed">
               {serviceStatus.note || "Layanan unblock IMEI sedang tidak menerima pesanan baru. Silakan pantau terus notifikasi dari kami ya!"}

@@ -43,8 +43,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 // Version mismatch! Trigger refresh
                 const Swal = (await import("sweetalert2")).default;
                 await Swal.fire({
-                  title: 'Update Sistem 🚀',
-                  text: 'Ada pembaruan web terbaru nih. Halaman bakal di-refresh otomatis biar lancar!',
+                  title: 'Update Sistem',
+                  text: 'Ada pembaruan web terbaru. Halaman akan dimuat ulang otomatis.',
                   icon: 'info',
                   showConfirmButton: false,
                   timer: 3000,
@@ -81,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MainLayout>{children}</MainLayout>
       {showWaMenu && (
         <div className="fixed bottom-[145px] right-5 sm:bottom-24 sm:right-8 z-[100] bg-zinc-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 min-w-[210px]">
-          <p className="text-[10px] font-black tracking-wider text-white/50 uppercase px-2 mb-1">Pilih Chat CS Admin 💬</p>
+          <p className="text-[10px] font-black tracking-wider text-white/50 uppercase px-2 mb-1">Pilih Chat CS Admin</p>
           <a
             href="https://wa.me/6288706611370"
             target="_blank"
@@ -89,7 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-green-500 hover:text-white text-white text-xs font-bold transition-all"
             onClick={() => setShowWaMenu(false)}
           >
-            <span className="text-base">🟢</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></span>
             <div className="text-left">
               <p className="font-bold">Admin 1</p>
               <p className="text-[10px] text-white/60 font-normal">6288706611370</p>
@@ -102,7 +102,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-green-500 hover:text-white text-white text-xs font-bold transition-all"
             onClick={() => setShowWaMenu(false)}
           >
-            <span className="text-base">🔵</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0"></span>
             <div className="text-left">
               <p className="font-bold">Admin 2</p>
               <p className="text-[10px] text-white/60 font-normal">6287767287284</p>

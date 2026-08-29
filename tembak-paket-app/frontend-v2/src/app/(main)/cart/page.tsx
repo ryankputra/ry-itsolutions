@@ -38,7 +38,7 @@ export default function CartPage() {
         setShowVoucherModal(false);
         Swal.fire({
           icon: "success",
-          title: "Voucher Terpasang! 🎟️",
+          title: "Voucher Terpasang!",
           text: `Voucher ${data.data.code} berhasil digunakan. Hemat Rp ${(data.data.discount_amount || 0).toLocaleString("id-ID")}`,
           timer: 1800,
           showConfirmButton: false,
@@ -65,7 +65,7 @@ export default function CartPage() {
             setShowVoucherModal(false);
             Swal.fire({
               icon: "success",
-              title: "Voucher Terpasang! 🎟️",
+              title: "Voucher Terpasang!",
               text: `Voucher ${retryData.data.code} berhasil diklaim & dipasang. Hemat Rp ${(retryData.data.discount_amount || 0).toLocaleString("id-ID")}`,
               timer: 1800,
               showConfirmButton: false,
@@ -187,7 +187,7 @@ export default function CartPage() {
         title: "Saldo Kurang",
         text: `Saldo Anda (Rp ${(user?.balance || 0).toLocaleString("id-ID")}) tidak mencukupi untuk pembayaran Rp ${grandTotal.toLocaleString("id-ID")}. Mau isi saldo sekarang?`,
         showCancelButton: true,
-        confirmButtonText: "Top Up Saldo 💳",
+        confirmButtonText: "Top Up Saldo",
         cancelButtonText: "Batal",
         confirmButtonColor: "#0066cc",
       });
@@ -199,16 +199,16 @@ export default function CartPage() {
       icon: "question",
       title: "Konfirmasi Pembayaran",
       html: `
-        <div class="text-left text-xs space-y-2 p-2 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="text-left text-xs space-y-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
           <div class="flex justify-between"><span>Jumlah Item:</span><b>${activeCartItems.length} Layanan</b></div>
           <div class="flex justify-between"><span>Subtotal:</span><b>Rp ${subtotal.toLocaleString("id-ID")}</b></div>
           ${discountAmount > 0 ? `<div class="flex justify-between text-emerald-600"><span>Diskon Voucher:</span><b>-Rp ${discountAmount.toLocaleString("id-ID")}</b></div>` : ""}
           ${coinsDiscount > 0 ? `<div class="flex justify-between text-amber-600"><span>Diskon Koin:</span><b>-Rp ${coinsDiscount.toLocaleString("id-ID")}</b></div>` : ""}
-          <div class="flex justify-between border-t pt-1 font-bold text-sm text-slate-900"><span>Total Bayar:</span><b class="text-blue-600">Rp ${grandTotal.toLocaleString("id-ID")}</b></div>
+          <div class="flex justify-between border-t border-slate-200 dark:border-slate-800 pt-2 font-bold text-sm text-slate-900 dark:text-white"><span>Total Bayar:</span><b class="text-blue-600">Rp ${grandTotal.toLocaleString("id-ID")}</b></div>
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: "Bayar Sekarang 🚀",
+      confirmButtonText: "Bayar Sekarang",
       cancelButtonText: "Batal",
       confirmButtonColor: "#0066cc",
     });
@@ -293,8 +293,10 @@ export default function CartPage() {
 
       {cart.length === 0 ? (
         <Card glass className="p-10 text-center space-y-4 rounded-3xl border border-hairline">
-          <div className="w-16 h-16 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center text-3xl">
-            🛒
+          <div className="w-16 h-16 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+            </svg>
           </div>
           <div>
             <h3 className="font-bold text-base text-ink">Keranjang Anda Masih Kosong</h3>
@@ -304,9 +306,12 @@ export default function CartPage() {
           </div>
           <Button
             onClick={() => router.push("/unblock-imei")}
-            className="bg-primary hover:bg-primary-focus text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md"
+            className="bg-primary hover:bg-primary-focus text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 mx-auto"
           >
-            Mulai Belanja Sekarang ➔
+            <span>Mulai Belanja Sekarang</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
           </Button>
         </Card>
       ) : (
@@ -347,8 +352,10 @@ export default function CartPage() {
                   />
 
                   {/* Icon */}
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl shrink-0">
-                    📱
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 text-primary flex items-center justify-center shrink-0">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                    </svg>
                   </div>
 
                   {/* Info */}
@@ -417,8 +424,12 @@ export default function CartPage() {
             onClick={() => setShowVoucherModal(true)}
             className="p-3.5 rounded-2xl bg-canvas border border-hairline shadow-2xs flex items-center justify-between cursor-pointer hover:border-primary/40 transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎟️</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+              </div>
               <div>
                 <span className="font-bold text-xs text-ink block">Voucher Diskon Belanja</span>
                 <span className="text-[10px] text-ink-muted">
@@ -426,15 +437,22 @@ export default function CartPage() {
                 </span>
               </div>
             </div>
-            <span className="text-xs font-bold text-primary">
-              {appliedCoupon ? "Ganti >" : "Pilih >"}
+            <span className="text-xs font-bold text-primary flex items-center gap-0.5">
+              <span>{appliedCoupon ? "Ganti" : "Pilih"}</span>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
             </span>
           </div>
 
           {/* Koin Deduction Bar */}
           <div className="p-3.5 rounded-2xl bg-canvas border border-hairline shadow-2xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🪙</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               <div>
                 <div className="flex items-center gap-1">
                   <span className="font-bold text-xs text-ink">Tukarkan Koin Ry</span>

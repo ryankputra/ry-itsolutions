@@ -30,7 +30,7 @@ export default function DashboardPage() {
     {
       title: "INSTANT DEALS BUKA SINYAL KILAT",
       subtitle: "Aktivasi IMEI All Operator kilat 24 jam dengan garansi digital resmi & nota transaksi.",
-      badge: "⚡ LAYANAN UTAMA",
+      badge: "LAYANAN UTAMA",
       ctaText: "BELI SEKARANG >",
       ctaLink: "/unblock-imei",
       bgGradient: "from-blue-600 via-indigo-600 to-blue-800",
@@ -38,7 +38,7 @@ export default function DashboardPage() {
     {
       title: "VOUCHER DISKON TRANSAKSI",
       subtitle: "Klaim kupon diskon tambahan sebelum checkout untuk hemat belanja maksimal.",
-      badge: "🎟️ PROMO SPESIAL",
+      badge: "PROMO SPESIAL",
       ctaText: "KLAIM VOUCHER >",
       ctaLink: "/vouchers",
       bgGradient: "from-indigo-700 via-purple-700 to-blue-700",
@@ -46,7 +46,7 @@ export default function DashboardPage() {
     {
       title: "CHECK-IN HARIAN & PUTAR RODA HOKI",
       subtitle: "Kumpulkan Koin Ry gratis setiap hari untuk potongan harga saat order.",
-      badge: "🎮 REWARD KOIN",
+      badge: "REWARD KOIN",
       ctaText: "MAIN SEKARANG >",
       ctaLink: "/games",
       bgGradient: "from-cyan-700 via-blue-700 to-indigo-800",
@@ -179,7 +179,9 @@ export default function DashboardPage() {
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group hover:opacity-85 transition-opacity"
           >
             <div className="flex items-center gap-1 text-amber-600 font-bold text-xs">
-              <span className="text-xs">🪙</span>
+              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span className="font-bold text-[11px] sm:text-xs text-amber-700">Koin Ry</span>
             </div>
             <span className="text-xs sm:text-sm font-black text-ink mt-0.5">
@@ -350,7 +352,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-ink flex items-center gap-1">
               <span>Sinyal Live</span>
-              <span className="text-primary">➔</span>
+              <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
             </span>
             <span className="px-1.5 py-0.2 rounded bg-rose-600 text-white font-bold text-[8px] uppercase flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
@@ -358,9 +362,16 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-primary/20">
-            <p className="text-[10px] font-bold text-ink truncate">📱 BUKA SINYAL IMEI</p>
-            <p className="text-[9px] text-ink-muted mt-0.5">Semua Operator Indonesia</p>
+          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-primary/20 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-ink truncate">BUKA SINYAL IMEI</p>
+              <p className="text-[9px] text-ink-muted truncate">Semua Operator</p>
+            </div>
           </div>
         </div>
 
@@ -372,16 +383,25 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-ink flex items-center gap-1">
               <span>Garansi &amp; Nota</span>
-              <span className="text-emerald-500">➔</span>
+              <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
             </span>
             <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white font-bold text-[8px] uppercase">
               RESMI
             </span>
           </div>
 
-          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
-            <p className="text-[10px] font-bold text-ink truncate">🛡️ LACAK MASA AKTIF</p>
-            <p className="text-[9px] text-ink-muted mt-0.5">Cetak Nota Digital Otomatis</p>
+          <div className="mt-2.5 p-2 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-ink truncate">LACAK MASA AKTIF</p>
+              <p className="text-[9px] text-ink-muted truncate">Cetak Nota Digital</p>
+            </div>
           </div>
         </div>
       </div>
@@ -406,8 +426,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-3">
-            <button className="w-full py-1.5 rounded-xl bg-white text-primary font-bold text-[10px] sm:text-xs shadow-xs group-hover:bg-blue-50 transition-colors">
-              LIHAT KUPON ➔
+            <button className="w-full py-1.5 rounded-xl bg-white text-primary font-bold text-[10px] sm:text-xs shadow-xs group-hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
+              <span>LIHAT KUPON</span>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
             </button>
           </div>
         </div>
@@ -418,8 +441,10 @@ export default function DashboardPage() {
           className="rounded-2xl p-3 bg-canvas border border-hairline shadow-sm flex flex-col justify-between cursor-pointer group hover:border-primary/40 transition-all"
         >
           <div className="space-y-1">
-            <div className="w-full h-14 sm:h-16 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">
-              📱
+            <div className="w-full h-14 sm:h-16 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+              </svg>
             </div>
             <span className="inline-block bg-blue-600 text-white text-[7px] font-bold px-1.5 py-0.2 rounded uppercase">
               POPULER
@@ -428,7 +453,7 @@ export default function DashboardPage() {
               Paket Buka IMEI All Operator
             </p>
             <div className="flex items-center gap-1 text-[9px] text-ink-muted">
-              <span className="text-amber-500 font-bold">⭐ 4.9</span>
+              <span className="text-amber-500 font-bold">4.9/5.0</span>
               <span>•</span>
               <span>1 Bulan / Garansi Resmi</span>
             </div>
@@ -542,10 +567,16 @@ export default function DashboardPage() {
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
           <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
-            <span>📋 Riwayat Transaksi Terakhir</span>
+            <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+            </svg>
+            <span>Riwayat Transaksi Terakhir</span>
           </h2>
-          <Link href="/history" className="text-xs font-bold text-primary hover:underline">
-            Lihat Semua ➔
+          <Link href="/history" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+            <span>Lihat Semua</span>
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
           </Link>
         </div>
 
@@ -559,7 +590,9 @@ export default function DashboardPage() {
               <div key={idx} className="flex items-center justify-between p-3 bg-canvas border border-hairline rounded-2xl hover:border-primary/30 transition-all shadow-2xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-primary font-bold shrink-0">
-                    📱
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                    </svg>
                   </div>
                   <div>
                     <p className="font-bold text-xs text-ink line-clamp-1">{trx.packageName || "Layanan IMEI"}</p>
