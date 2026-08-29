@@ -1892,6 +1892,27 @@ app.get('/api/games/status', isAuthenticated, async (req, res) => {
     }
 });
 
+app.get('/api/games/history', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const history = await dbAll(`
+            SELECT id, claim_type, coins_amount, streak_count, claimed_at
+            FROM user_coin_claims
+            WHERE userId = ?
+            ORDER BY datetime(claimed_at) DESC
+            LIMIT 50
+        `, [userId]);
+
+        res.json({
+            status: true,
+            data: history
+        });
+    } catch (e) {
+        console.error("Error in /api/games/history:", e);
+        res.status(500).json({ status: false, message: "Gagal mengambil riwayat koin." });
+    }
+});
+
 app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
@@ -1928,7 +1949,8 @@ app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
         const rewards = [100, 200, 300, 400, 500, 750, 1000];
         const coinBonus = rewards[streak - 1] || 100;
 
-        await dbRun("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?", [coinBonus, userId]);
+        // Security Cap: Maksimal saldo koin 50.000 Koin (Rp 50.000)
+        await dbRun("UPDATE users SET coins = MIN(50000, COALESCE(coins, 0) + ?) WHERE id = ?", [coinBonus, userId]);
         const claimId = `claim_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await dbRun(`
             INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claimed_at)
@@ -1969,7 +1991,8 @@ app.post('/api/games/lucky-spin', isAuthenticated, async (req, res) => {
         const randomIndex = Math.floor(Math.random() * spinPrizes.length);
         const wonCoins = spinPrizes[randomIndex];
 
-        await dbRun("UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?", [wonCoins, userId]);
+        // Security Cap: Maksimal saldo koin 50.000 Koin
+        await dbRun("UPDATE users SET coins = MIN(50000, COALESCE(coins, 0) + ?) WHERE id = ?", [wonCoins, userId]);
         const claimId = `spin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await dbRun(`
             INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claimed_at)
