@@ -81,7 +81,7 @@ export function EcommerceHeader() {
   };
 
   const services = [
-    { title: "Buka Blokir IMEI (All Operator)", desc: "1 Bulan, 3 Bulan, Permanen", href: "/unblock-imei", tag: "Populer" },
+    { title: "Buka Blokir IMEI (All Operator)", desc: "1 Bulan, 3 Bulan, Garansi Resmi", href: "/unblock-imei", tag: "Populer" },
     { title: "Cek Status CEIR Bea Cukai", desc: "Verifikasi pendaftaran database resmi", href: "/cek-ceir", tag: "Instan" },
     { title: "Cek Garansi & Lacak IMEI", desc: "Pantau masa aktif dan cetak nota digital", href: "/cek-garansi", tag: "Garansi" },
     { title: "Klaim Voucher Diskon", desc: "Kupon promo cashback & potongan harga", href: "/vouchers", tag: "Hemat" },
@@ -127,7 +127,7 @@ export function EcommerceHeader() {
       {/* MOBILE TOP HEADER (Signature Ry-ITSolutions Blue)            */}
       {/* ============================================================ */}
       <div className="lg:hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 py-2 shadow-md flex items-center gap-2.5">
-        {/* Search Bar (Clean White Input with Camera icon) */}
+        {/* Search Bar (Clean White Input without Camera icon) */}
         <div ref={searchRef} className="flex-1 relative">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <div className="w-full h-9 rounded-xl bg-white flex items-center px-2.5 shadow-xs">
@@ -140,19 +140,8 @@ export function EcommerceHeader() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowSearchDropdown(true)}
                 placeholder="Cari layanan, ketik IMEI..."
-                className="w-full h-full pl-2 pr-6 text-xs text-slate-900 placeholder:text-slate-400 bg-transparent outline-none"
+                className="w-full h-full pl-2 pr-2 text-xs text-slate-900 placeholder:text-slate-400 bg-transparent outline-none"
               />
-              <button
-                type="button"
-                onClick={() => router.push("/barcode")}
-                className="text-slate-400 hover:text-primary transition-colors shrink-0"
-                title="Scan Barcode IMEI"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                </svg>
-              </button>
             </div>
           </form>
 
@@ -299,6 +288,22 @@ export function EcommerceHeader() {
 
           {/* Desktop Right Action Hub */}
           <div className="flex items-center gap-3 shrink-0">
+            {/* Desktop Cart Icon */}
+            <Link
+              href="/cart"
+              className="relative p-2 text-ink hover:text-primary transition-colors"
+              title="Keranjang Belanja"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+              </svg>
+              {cartCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
             <Link
               href="/games"
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 font-bold text-xs transition-all shadow-2xs group"
@@ -328,6 +333,7 @@ export function EcommerceHeader() {
                 </span>
               </div>
             </Link>
+
             {user ? (
               <div ref={userRef} className="relative">
                 <button
@@ -350,6 +356,12 @@ export function EcommerceHeader() {
                       <p className="text-[10px] text-ink-muted truncate">{user.email}</p>
                     </div>
                     <div className="space-y-0.5 text-xs">
+                      <Link href="/saya" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
+                        <span>👤 Akun Saya</span>
+                      </Link>
+                      <Link href="/cart" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
+                        <span>🛒 Keranjang Belanja</span>
+                      </Link>
                       <Link href="/topup" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <span>💳 Isi Saldo</span>
                       </Link>

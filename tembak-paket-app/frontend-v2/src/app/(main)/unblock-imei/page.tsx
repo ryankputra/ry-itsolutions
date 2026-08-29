@@ -511,7 +511,7 @@ export default function UnblockImeiPage() {
                   packages.map((opt, idx) => {
                     const isSelected = selectedPkgId === opt.id;
                     const isBestSeller = opt.duration.toLowerCase().includes("3 bulan") || idx === 0;
-                    const isPermanent = opt.duration.toLowerCase().includes("permanen");
+                    const isLongWarranty = opt.duration.toLowerCase().includes("1 tahun") || opt.duration.toLowerCase().includes("tahun");
 
                     return (
                       <button
@@ -531,9 +531,9 @@ export default function UnblockImeiPage() {
                             <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold text-[8px] uppercase tracking-wider">
                               ⭐ Terlaris
                             </span>
-                          ) : isPermanent ? (
+                          ) : isLongWarranty ? (
                             <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-[8px] uppercase tracking-wider">
-                              👑 Permanen
+                              🛡️ Garansi Panjang
                             </span>
                           ) : null}
                         </div>

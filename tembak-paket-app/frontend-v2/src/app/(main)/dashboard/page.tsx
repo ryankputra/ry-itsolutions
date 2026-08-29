@@ -430,7 +430,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-1 text-[9px] text-ink-muted">
               <span className="text-amber-500 font-bold">⭐ 4.9</span>
               <span>•</span>
-              <span>1 Bulan / Permanen</span>
+              <span>1 Bulan / Garansi Resmi</span>
             </div>
           </div>
 
