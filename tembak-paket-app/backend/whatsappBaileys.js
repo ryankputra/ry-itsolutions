@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const QRCode = require("qrcode");
 const path = require("path");
@@ -45,15 +45,26 @@ async function initWhatsApp(forceNew = false) {
             }
         }
 
+        let waVersion = [2, 3000, 1043857760];
+        try {
+            const v = await fetchLatestBaileysVersion();
+            if (v && v.version) {
+                waVersion = v.version;
+            }
+        } catch (e) {
+            console.warn("[Baileys] Using default version fallback:", e.message);
+        }
+
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
 
         connectionState = "connecting";
 
         sock = makeWASocket({
+            version: waVersion,
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: "silent" }),
-            browser: ["Ry-ITSolutions Bot", "Chrome", "1.0.0"],
+            browser: ["Mac OS", "Chrome", "121.0.0"],
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             keepAliveIntervalMs: 25000,

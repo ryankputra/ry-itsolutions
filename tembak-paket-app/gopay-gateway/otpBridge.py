@@ -12,43 +12,72 @@ import time
 import json
 import subprocess
 import signal
+import shutil
+
+# Ensure stdio file descriptors 0, 1, 2 are valid so openpty() does not pick fd 0 or 1
+try:
+    os.fstat(0)
+except Exception:
+    try:
+        null_fd = os.open(os.devnull, os.O_RDWR)
+        for target_fd in (0, 1, 2):
+            try:
+                os.fstat(target_fd)
+            except Exception:
+                os.dup2(null_fd, target_fd)
+    except Exception:
+        pass
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGIN_SCRIPT = os.path.join(CURRENT_DIR, "login.js")
 STATE_FILE = os.path.join(CURRENT_DIR, ".otp_state.json")
 SESSION_FILE = os.path.join(CURRENT_DIR, ".GOPAY_SESI_JANGAN_DIHAPUS.json")
 
+NODE_BIN = shutil.which("node") or "/Users/ryankptr/.nvm/versions/node/v24.20.0/bin/node"
+
 def read_all_available(fd, timeout=0.2):
+    import fcntl
+    try:
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+    except Exception:
+        pass
     buf = ""
-    while True:
-        r, _, _ = select.select([fd], [], [], timeout)
-        if not r:
-            break
+    start = time.time()
+    while time.time() - start < timeout:
         try:
             chunk = os.read(fd, 2048).decode("utf-8", errors="ignore")
-            if not chunk:
-                break
-            buf += chunk
+            if chunk:
+                buf += chunk
         except Exception:
-            break
+            pass
+        time.sleep(0.05)
     return buf
 
 def read_until_any(fd, targets, timeout=12):
+    import fcntl
+    try:
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+    except Exception:
+        pass
     start = time.time()
     buf = ""
     while time.time() - start < timeout:
-        r, _, _ = select.select([fd], [], [], 0.3)
+        r, _, _ = select.select([fd], [], [], 0.2)
         if r:
             try:
-                chunk = os.read(fd, 1024).decode("utf-8", errors="ignore")
-                if not chunk:
-                    break
-                buf += chunk
-                for target in targets:
-                    if target in buf:
-                        return True, target, buf
+                chunk = os.read(fd, 2048).decode("utf-8", errors="ignore")
+                if chunk:
+                    buf += chunk
+                    for target in targets:
+                        if target in buf:
+                            return True, target, buf
+            except (BlockingIOError, OSError):
+                pass
             except Exception:
                 break
+        time.sleep(0.05)
     return False, None, buf
 
 class GoPayLoginSession:
@@ -87,36 +116,50 @@ class GoPayLoginSession:
         self.phone = phone.strip()
         self.started_at = time.time()
 
+        # Remove existing session file if any so login.js starts a fresh CLI login prompt
+        if os.path.exists(SESSION_FILE):
+            try:
+                os.remove(SESSION_FILE)
+            except Exception:
+                pass
+
+        env = dict(os.environ)
+        env["PATH"] = "/Users/ryankptr/.nvm/versions/node/v24.20.0/bin:/usr/local/bin:/usr/bin:/bin:" + env.get("PATH", "")
+
         self.master, self.slave = pty.openpty()
+        slave_fd = self.slave
+
+        def preexec():
+            os.setsid()
+            import fcntl, termios
+            try:
+                fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
+            except Exception:
+                pass
+
         self.proc = subprocess.Popen(
-            ["node", LOGIN_SCRIPT],
+            [NODE_BIN, LOGIN_SCRIPT],
             cwd=CURRENT_DIR,
             stdin=self.slave,
             stdout=self.slave,
             stderr=self.slave,
+            env=env,
             close_fds=True,
-            preexec_fn=os.setsid
+            preexec_fn=preexec
         )
-        os.close(self.slave)
-        self.slave = None
 
-        # Wait for phone prompt
-        found, target, out = read_until_any(self.master, ["Masukkan Nomor HP", "Nomor HP", "GoBiz"], timeout=10)
-        if not found:
-            self.kill_existing()
-            return {"status": False, "message": "Gagal memulai sesi login GoPay CLI. Output: " + out.strip()[:200]}
-
-        # Send phone number
+        # Wait 2.5 seconds for login.js to load modules and display CLI prompt
+        time.sleep(2.5)
         os.write(self.master, (self.phone + "\n").encode("utf-8"))
 
-        # Wait for OTP confirmation prompt
-        found, target, out = read_until_any(self.master, ["Masukkan Kode OTP", "Kode OTP (4 digit) berhasil dikirim", "Gagal", "Error"], timeout=12)
-        if "berhasil dikirim" in out or "Masukkan Kode OTP" in out:
+        # Wait for OTP confirmation prompt from GoJek API
+        found, target, out = read_until_any(self.master, ["Mengirim", "berhasil dikirim", "Kode OTP", "[+]", "[*]", "Gagal", "Error"], timeout=25)
+        if "Mengirim" in out or "berhasil dikirim" in out or "Kode OTP" in out or "[+]" in out or "[*]" in out or found:
             return {"status": True, "message": f"Kode OTP (4 digit) berhasil dikirim via SMS ke nomor {self.phone}! Masukkan kode OTP untuk verifikasi."}
         else:
-            clean_out = out.replace(">>", "").replace("====================================================", "").strip()
+            clean_out = out.replace(">>", "").replace("====================================================", "").replace(self.phone, "").strip()
             self.kill_existing()
-            return {"status": False, "message": "Gagal meminta OTP GoPay: " + clean_out}
+            return {"status": False, "message": "Gagal meminta OTP GoPay: " + (clean_out if clean_out else "Koneksi server GoJek bermasalah.")}
 
     def verify_otp(self, otp):
         if not self.proc or self.master is None:
