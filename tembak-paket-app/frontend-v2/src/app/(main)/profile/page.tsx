@@ -191,9 +191,19 @@ export default function ProfilePage() {
               <h2 className="font-black text-base sm:text-lg text-white truncate drop-shadow-xs">
                 {username}
               </h2>
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider backdrop-blur-md shrink-0">
-                {user?.role === "admin" ? "ADMIN ➔" : "MEMBER ➔"}
-              </span>
+              {user?.role === "admin" ? (
+                <Link
+                  href="/admin"
+                  className="px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-black uppercase tracking-wider shadow-sm hover:scale-105 transition-transform shrink-0 flex items-center gap-1"
+                  title="Masuk ke Dashboard Admin"
+                >
+                  <span>👑 ADMIN PANEL ➔</span>
+                </Link>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider backdrop-blur-md shrink-0">
+                  MEMBER VIP ➔
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-blue-100 font-mono truncate">
               {user?.email || user?.phone || "ID: #" + (user?.id ? user.id.substring(0, 10) : "user")}
@@ -226,6 +236,74 @@ export default function ProfilePage() {
           <span className="text-xs font-black">➔</span>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* 1.5. DEDICATED ADMIN CONTROL CARD (Khusus Role Admin / Owner) */}
+      {/* ============================================================ */}
+      {user?.role === "admin" && (
+        <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white border border-amber-400/40 p-4 sm:p-5 shadow-xl space-y-3.5 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between border-b border-white/15 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-sm shadow-md">
+                ⚡
+              </span>
+              <div>
+                <h3 className="font-black text-xs sm:text-sm text-amber-300 flex items-center gap-1.5">
+                  <span>Panel Kontrol Admin (Owner)</span>
+                  <span className="px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 text-[9px] font-bold">Aktif</span>
+                </h3>
+                <p className="text-[10px] text-slate-300">
+                  Manajemen sistem, pengerjaan order manual &amp; pengaturan promo
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/admin"
+              className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md transition-transform hover:scale-105 shrink-0"
+            >
+              Buka Panel ➔
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
+            <Link
+              href="/admin"
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+            >
+              <span className="text-2xl group-hover:scale-110 transition-transform">📊</span>
+              <span className="text-xs font-black mt-1.5 text-slate-100">Dashboard</span>
+              <span className="text-[9px] text-amber-400 font-medium">Statistik Toko</span>
+            </Link>
+
+            <Link
+              href="/admin"
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+            >
+              <span className="text-2xl group-hover:scale-110 transition-transform">📦</span>
+              <span className="text-xs font-black mt-1.5 text-slate-100">Order Manual</span>
+              <span className="text-[9px] text-amber-400 font-medium">Proses IMEI</span>
+            </Link>
+
+            <Link
+              href="/admin"
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+            >
+              <span className="text-2xl group-hover:scale-110 transition-transform">🎟️</span>
+              <span className="text-xs font-black mt-1.5 text-slate-100">Kelola Kupon</span>
+              <span className="text-[9px] text-amber-400 font-medium">Promo &amp; Diskon</span>
+            </Link>
+
+            <Link
+              href="/admin"
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+            >
+              <span className="text-2xl group-hover:scale-110 transition-transform">⚙️</span>
+              <span className="text-xs font-black mt-1.5 text-slate-100">Pengaturan</span>
+              <span className="text-[9px] text-amber-400 font-medium">Maintenance</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ============================================================ */}
       {/* 2. PESANAN SAYA CARD (Persis Sesuai Screenshot)              */}

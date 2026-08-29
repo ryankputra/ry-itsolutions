@@ -334,6 +334,17 @@ export function EcommerceHeader() {
               </div>
             </Link>
 
+            {user?.role === "admin" && (
+              <Link
+                href="/admin"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shadow-md hover:bg-amber-300 transition-all hover:scale-105"
+                title="Buka Panel Admin (Owner)"
+              >
+                <span>👑</span>
+                <span>ADMIN PANEL</span>
+              </Link>
+            )}
+
             {user ? (
               <div ref={userRef} className="relative">
                 <button
@@ -358,12 +369,27 @@ export function EcommerceHeader() {
                 </button>
 
                 {showUserDropdown && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-canvas rounded-2xl border border-hairline shadow-2xl p-2 z-50">
-                    <div className="p-2.5 border-b border-hairline mb-1">
-                      <p className="font-black text-xs text-ink truncate">{user.name}</p>
-                      <p className="text-[10px] text-ink-muted truncate">{user.email}</p>
+                  <div className="absolute right-0 top-full mt-2 w-60 bg-canvas rounded-2xl border border-hairline shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="p-2.5 border-b border-hairline mb-1 flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-black text-xs text-ink truncate">{user.name}</p>
+                        <p className="text-[10px] text-ink-muted truncate">{user.email}</p>
+                      </div>
+                      {user.role === "admin" && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[9px] uppercase shrink-0">
+                          ADMIN
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-0.5 text-xs">
+                      {user.role === "admin" && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-amber-400/15 border border-amber-400/40 text-amber-900 dark:text-amber-300 font-bold hover:bg-amber-400/25 transition-colors mb-1"
+                        >
+                          <span>👑 Panel Kontrol Admin</span>
+                        </Link>
+                      )}
                       <Link href="/saya" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <span>👤 Akun Saya</span>
                       </Link>
