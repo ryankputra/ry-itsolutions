@@ -172,14 +172,89 @@ app.get('/api/health', (req, res) => {
 });
 
 
+const net = require('net');
+const { spawn } = require('child_process');
+
+let otpBridgeProcess = null;
+
+function ensureOtpBridgeRunning() {
+    return new Promise((resolve) => {
+        const testClient = net.createConnection({ port: 3009, host: '127.0.0.1' }, () => {
+            testClient.end();
+            resolve(true);
+        });
+        testClient.on('error', () => {
+            if (!otpBridgeProcess) {
+                console.log('[OTP Bridge] Memulai proses python3 otpBridge.py...');
+                otpBridgeProcess = spawn('python3', ['otpBridge.py'], {
+                    cwd: __dirname,
+                    stdio: 'ignore',
+                    detached: true
+                });
+                otpBridgeProcess.unref();
+                setTimeout(() => resolve(true), 1200);
+            } else {
+                resolve(false);
+            }
+        });
+    });
+}
+
+function sendToOtpBridge(payload, timeoutMs = 25000) {
+    return new Promise(async (resolve, reject) => {
+        await ensureOtpBridgeRunning();
+        const client = net.createConnection({ port: 3009, host: '127.0.0.1' }, () => {
+            client.write(JSON.stringify(payload));
+        });
+
+        let responseData = '';
+        const timer = setTimeout(() => {
+            client.destroy();
+            reject(new Error('Koneksi ke OTP Bridge timeout.'));
+        }, timeoutMs);
+
+        client.on('data', (chunk) => {
+            responseData += chunk.toString();
+        });
+
+        client.on('end', () => {
+            clearTimeout(timer);
+            try {
+                const parsed = JSON.parse(responseData);
+                resolve(parsed);
+            } catch (e) {
+                resolve({ status: false, message: responseData || 'Gagal memproses respon dari OTP bridge.' });
+            }
+        });
+
+        client.on('error', (err) => {
+            clearTimeout(timer);
+            reject(err);
+        });
+    });
+}
+
 // Cek Status Sesi Token
 app.get('/token-status', apiKeyAuth, async (req, res) => {
+    const sessionPath = path.join(__dirname, '.GOPAY_SESI_JANGAN_DIHAPUS.json');
+    let sessionData = null;
+    if (fs.existsSync(sessionPath)) {
+        try { sessionData = JSON.parse(fs.readFileSync(sessionPath, 'utf8')); } catch {}
+    }
+
     const activeHeaders = await sessionManager.getValidHeaders(req.headers['user-agent']);
     if (!activeHeaders) {
-        return res.json({ success: false, data: { token_status: 'invalid', message: 'Sesi belum dikonfigurasi. Jalankan `node login.js` di terminal.' } });
+        return res.json({ 
+            success: false, 
+            data: { 
+                token_status: 'invalid', 
+                message: 'Sesi belum dikonfigurasi. Silakan login GoPay melalui Admin Web atau `node login.js`.',
+                session_info: sessionData
+            } 
+        });
     }
     try {
-        const merchantId = process.env.GOPAY_MERCHANT_ID || '';
+        const merchantId = process.env.GOPAY_MERCHANT_ID || sessionData?.merchant_id || '';
         const now = new Date();
         const oneHourAgo = new Date(now.getTime() - 3600 * 1000).toISOString();
 
@@ -197,10 +272,123 @@ app.get('/token-status', apiKeyAuth, async (req, res) => {
             timeout: 5000
         });
 
-        res.json({ success: true, data: { token_status: 'valid', message: 'Token dan Sesi GoPay Merchant Aktif' } });
+        res.json({ 
+            success: true, 
+            data: { 
+                token_status: 'valid', 
+                message: 'Token dan Sesi GoPay Merchant Aktif',
+                session_info: {
+                    merchant_id: sessionData?.merchant_id || merchantId,
+                    outlet_name: sessionData?.outlet_name || null,
+                    phone_number: sessionData?.phone_number || null,
+                    expires_at: sessionData?.expires_at || null,
+                    updated_at: sessionData?.updated_at || null
+                }
+            } 
+        });
     } catch (err) {
-        res.json({ success: false, data: { token_status: 'invalid', message: err.message } });
+        res.json({ 
+            success: false, 
+            data: { 
+                token_status: 'invalid', 
+                message: err.message,
+                session_info: sessionData
+            } 
+        });
     }
+});
+
+// --- GOPAY OTP WEB LOGIN API ---
+app.post('/api/otp/request', apiKeyAuth, async (req, res) => {
+    const phone = req.body?.phone || req.body?.phone_number || req.query?.phone;
+    if (!phone) {
+        return res.status(400).json({ success: false, message: 'Nomor HP GoBiz wajib diisi.' });
+    }
+    try {
+        const result = await sendToOtpBridge({ action: 'request_otp', phone });
+        res.json({ success: result.status, message: result.message });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Gagal meminta OTP: ' + e.message });
+    }
+});
+
+app.post('/api/otp/verify', apiKeyAuth, async (req, res) => {
+    const otp = req.body?.otp || req.body?.code || req.query?.otp;
+    if (!otp) {
+        return res.status(400).json({ success: false, message: 'Kode OTP 4 digit wajib diisi.' });
+    }
+    try {
+        const result = await sendToOtpBridge({ action: 'verify_otp', otp });
+        if (result.status) {
+            logActivity('INFO', 'Login GoPay Merchant berhasil via Web OTP!');
+        }
+        res.json({ success: result.status, message: result.message, data: result.data });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Gagal verifikasi OTP: ' + e.message });
+    }
+});
+
+app.post('/api/otp/cancel', apiKeyAuth, async (req, res) => {
+    try {
+        const result = await sendToOtpBridge({ action: 'cancel' });
+        res.json({ success: result.status, message: result.message });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+app.post('/api/otp/logout', apiKeyAuth, async (req, res) => {
+    try {
+        const sessionPath = path.join(__dirname, '.GOPAY_SESI_JANGAN_DIHAPUS.json');
+        if (fs.existsSync(sessionPath)) {
+            fs.unlinkSync(sessionPath);
+        }
+        await sendToOtpBridge({ action: 'cancel' }).catch(() => {});
+        logActivity('WARNING', 'Sesi GoPay Merchant diputus (Logout via Admin Web).');
+        res.json({ success: true, message: 'Sesi GoPay Merchant berhasil dikeluarkan (Logout).' });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Gagal logout sesi GoPay: ' + e.message });
+    }
+});
+
+app.get('/api/session-info', apiKeyAuth, async (req, res) => {
+    const sessionPath = path.join(__dirname, '.GOPAY_SESI_JANGAN_DIHAPUS.json');
+    let sessionData = null;
+    let isConfigured = false;
+    if (fs.existsSync(sessionPath)) {
+        try {
+            sessionData = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+            isConfigured = true;
+        } catch {}
+    }
+
+    let tokenStatus = 'invalid';
+    let tokenMessage = 'Belum login atau file sesi belum ada';
+    if (isConfigured) {
+        try {
+            const activeHeaders = await sessionManager.getValidHeaders(req.headers['user-agent']);
+            if (activeHeaders) {
+                tokenStatus = 'valid';
+                tokenMessage = 'Token aktif dan terhubung ke GoPay Merchant';
+            }
+        } catch (e) {
+            tokenMessage = e.message;
+        }
+    }
+
+    res.json({
+        success: true,
+        data: {
+            is_configured: isConfigured,
+            token_status: tokenStatus,
+            message: tokenMessage,
+            merchant_id: sessionData?.merchant_id || process.env.GOPAY_MERCHANT_ID || null,
+            outlet_name: sessionData?.outlet_name || null,
+            phone_number: sessionData?.phone_number || null,
+            updated_at: sessionData?.updated_at || null,
+            expires_at: sessionData?.expires_at || null
+        }
+    });
 });
 
 // Buat QRIS Dinamis (Support GET query & POST body)

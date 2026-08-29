@@ -1292,6 +1292,106 @@ app.put('/api/admin/payment-gateway', isAuthenticated, isAdmin, async (req, res)
     } catch (e) { res.status(500).json({ status: false, message: 'Gagal menyimpan setting gateway.' }); }
 });
 
+// === GOPAY MERCHANT PARTNER GATEWAY (WEB OTP & STATUS) ===
+app.get('/api/admin/gopay/status', isAuthenticated, isAdmin, async (req, res) => {
+    const URL = process.env.GOPAY_GATEWAY_URL;
+    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+    if (!URL || !API_KEY) {
+        return res.json({
+            status: true,
+            data: {
+                is_configured: false,
+                token_status: 'invalid',
+                message: 'GOPAY_GATEWAY_URL / API_KEY belum dikonfigurasi di file .env backend.'
+            }
+        });
+    }
+    try {
+        const response = await axios.get(`${URL}/api/session-info`, {
+            headers: { 'x-api-key': API_KEY },
+            timeout: 6000
+        });
+        if (response.data?.success) {
+            res.json({ status: true, data: response.data.data });
+        } else {
+            res.json({ status: true, data: { is_configured: false, token_status: 'invalid', message: response.data?.message || 'Gagal mengambil info sesi GoPay' } });
+        }
+    } catch (e) {
+        res.json({
+            status: true,
+            data: {
+                is_configured: false,
+                token_status: 'offline',
+                message: `GoPay Gateway tidak dapat dijangkau: ${e.message}`
+            }
+        });
+    }
+});
+
+app.post('/api/admin/gopay/request-otp', isAuthenticated, isAdmin, async (req, res) => {
+    const URL = process.env.GOPAY_GATEWAY_URL;
+    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ status: false, message: 'Nomor HP GoBiz wajib diisi.' });
+    if (!URL || !API_KEY) return res.status(500).json({ status: false, message: 'GoPay Gateway belum dikonfigurasi di backend.' });
+
+    try {
+        const response = await axios.post(`${URL}/api/otp/request`, { phone }, {
+            headers: { 'x-api-key': API_KEY },
+            timeout: 25000
+        });
+        res.json({ status: response.data?.success, message: response.data?.message });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.response?.data?.message || e.message });
+    }
+});
+
+app.post('/api/admin/gopay/verify-otp', isAuthenticated, isAdmin, async (req, res) => {
+    const URL = process.env.GOPAY_GATEWAY_URL;
+    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+    const { otp } = req.body;
+    if (!otp) return res.status(400).json({ status: false, message: 'Kode OTP 4 digit wajib diisi.' });
+    if (!URL || !API_KEY) return res.status(500).json({ status: false, message: 'GoPay Gateway belum dikonfigurasi di backend.' });
+
+    try {
+        const response = await axios.post(`${URL}/api/otp/verify`, { otp }, {
+            headers: { 'x-api-key': API_KEY },
+            timeout: 25000
+        });
+        res.json({ status: response.data?.success, message: response.data?.message, data: response.data?.data });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.response?.data?.message || e.message });
+    }
+});
+
+app.post('/api/admin/gopay/cancel-otp', isAuthenticated, isAdmin, async (req, res) => {
+    const URL = process.env.GOPAY_GATEWAY_URL;
+    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+    try {
+        const response = await axios.post(`${URL}/api/otp/cancel`, {}, {
+            headers: { 'x-api-key': API_KEY },
+            timeout: 5000
+        });
+        res.json({ status: response.data?.success, message: response.data?.message });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+app.post('/api/admin/gopay/logout', isAuthenticated, isAdmin, async (req, res) => {
+    const URL = process.env.GOPAY_GATEWAY_URL;
+    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+    try {
+        const response = await axios.post(`${URL}/api/otp/logout`, {}, {
+            headers: { 'x-api-key': API_KEY },
+            timeout: 5000
+        });
+        res.json({ status: response.data?.success, message: response.data?.message });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // === BAILEYS WHATSAPP BOT (100% GRATIS & UNLIMITED) ===
 app.get('/api/admin/baileys/status', isAuthenticated, isAdmin, (req, res) => {
     try {
@@ -2742,8 +2842,67 @@ app.post('/api/topup/simulate-pay', isAuthenticated, isAdmin, async (req, res) =
     }
 });
 
-// Ganti seluruh rute /api/topup/request-qris dengan versi final ini
+// Endpoint Cek Kesiapan & Status Gateway Pembayaran untuk Halaman Top-Up
+app.get('/api/topup/gateway-info', isAuthenticated, async (req, res) => {
+    try {
+        const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+        const activeGateway = gwRow ? gwRow.value : 'orkut';
 
+        if (activeGateway === 'gopay') {
+            const URL = process.env.GOPAY_GATEWAY_URL;
+            const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
+            if (!URL || !API_KEY) {
+                return res.json({
+                    status: true,
+                    data: {
+                        active_gateway: 'gopay',
+                        is_ready: false,
+                        message: 'Sistem pembayaran otomatis GoPay belum dikonfigurasi di backend.'
+                    }
+                });
+            }
+            try {
+                const gopayRes = await axios.get(`${URL}/token-status`, {
+                    headers: { 'x-api-key': API_KEY },
+                    timeout: 5000
+                });
+                const isValid = gopayRes.data?.success && gopayRes.data.data?.token_status === 'valid';
+                return res.json({
+                    status: true,
+                    data: {
+                        active_gateway: 'gopay',
+                        is_ready: isValid,
+                        message: isValid
+                            ? 'Layanan QRIS GoPay Otomatis Aktif'
+                            : 'Sistem pembayaran otomatis GoPay sedang tidak aktif (sesi admin kadaluarsa setelah server reboot). Silakan hubungi CS Admin untuk deposit manual.'
+                    }
+                });
+            } catch (e) {
+                return res.json({
+                    status: true,
+                    data: {
+                        active_gateway: 'gopay',
+                        is_ready: false,
+                        message: 'Gateway pembayaran GoPay sedang offline. Silakan hubungi CS Admin.'
+                    }
+                });
+            }
+        } else {
+            return res.json({
+                status: true,
+                data: {
+                    active_gateway: 'orkut',
+                    is_ready: true,
+                    message: 'Layanan QRIS Otomatis Aktif'
+                }
+            });
+        }
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// Ganti seluruh rute /api/topup/request-qris dengan versi final ini
 app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
     const { amount } = req.body;
     const userId = req.session.userId;
@@ -2771,10 +2930,36 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
         // Baca gateway aktif dari setting admin
         const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
         const activeGateway = gwRow ? gwRow.value : 'orkut';
-        const useGopayGw = activeGateway === 'gopay' && process.env.GOPAY_GATEWAY_URL && process.env.GOPAY_GATEWAY_API_KEY;
+        const useGopayGw = activeGateway === 'gopay';
 
         if (useGopayGw) {
             // === GOPAY GATEWAY MODE ===
+            if (!process.env.GOPAY_GATEWAY_URL || !process.env.GOPAY_GATEWAY_API_KEY) {
+                return res.status(503).json({
+                    status: false,
+                    message: 'Layanan pembayaran GoPay Gateway belum disiapkan oleh admin.'
+                });
+            }
+
+            // Validasi kesiapan sesi GoPay sebelum generate QRIS
+            try {
+                const statusCheck = await axios.get(`${process.env.GOPAY_GATEWAY_URL}/token-status`, {
+                    headers: { 'x-api-key': process.env.GOPAY_GATEWAY_API_KEY },
+                    timeout: 5000
+                });
+                if (!statusCheck.data?.success || statusCheck.data.data?.token_status !== 'valid') {
+                    return res.status(503).json({
+                        status: false,
+                        message: 'Top-up otomatis GoPay sedang tidak dapat digunakan karena sesi GoPay admin belum ter-setup / kadaluarsa. Silakan hubungi admin untuk top-up manual.'
+                    });
+                }
+            } catch (e) {
+                return res.status(503).json({
+                    status: false,
+                    message: 'Gateway pembayaran GoPay sedang offline atau tidak dapat dijangkau. Silakan hubungi admin.'
+                });
+            }
+
             const gopayData = await generateGopayQris(baseAmount);
             const qrisBase64Image = await qrcode.toDataURL(gopayData.qris_code);
 

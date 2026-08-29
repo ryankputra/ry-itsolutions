@@ -54,6 +54,9 @@ export default function TopUpPage() {
     }, 3500);
   };
 
+  // Gateway readiness state
+  const [gatewayInfo, setGatewayInfo] = useState<{ active_gateway: string; is_ready: boolean; message: string } | null>(null);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("ry_show_balance");
@@ -72,6 +75,14 @@ export default function TopUpPage() {
       .then((r) => safeJson(r))
       .then((d) => {
         if (d && d.status && Array.isArray(d.data)) setVouchers(d.data);
+      })
+      .catch(() => {});
+
+    // Check payment gateway status and readiness
+    fetch("/api/topup/gateway-info", { credentials: "include" })
+      .then((r) => safeJson(r))
+      .then((d) => {
+        if (d && d.status && d.data) setGatewayInfo(d.data);
       })
       .catch(() => {});
 
@@ -424,6 +435,29 @@ export default function TopUpPage() {
               </div>
             )}
 
+            {/* Warning Banner jika Gateway Sedang Offline / Belum Ter-setup */}
+            {gatewayInfo && !gatewayInfo.is_ready && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+                  <svg className="w-5 h-5 shrink-0 text-amber-600 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>Pembayaran QRIS Otomatis Sedang Dalam Pemeliharaan</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300/80">
+                  {gatewayInfo.message || "Sesi pembayaran otomatis GoPay sedang tidak aktif / belum disiapkan admin. Silakan hubungi CS Admin untuk deposit saldo manual via WhatsApp / Telegram."}
+                </p>
+                <div className="pt-1 flex gap-2">
+                  <a href="https://t.me/ryannkptr" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] transition-colors shadow-xs">
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.19-.08-.05-.19-.02-.27 0-.12.03-1.99 1.27-5.62 3.72-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.06-.49-.83-.27-1.49-.42-1.43-.88.03-.24.38-.49 1.04-.75 4.07-1.77 6.78-2.94 8.14-3.51 3.87-1.62 4.67-1.9 5.2-1.91.12 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.37z"/>
+                    </svg>
+                    Hubungi CS Telegram
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* Pilihan Nominal Cepat (Shopee Style Grid) */}
             <div className="space-y-2.5">
               <div className="flex justify-between items-center">
@@ -491,9 +525,12 @@ export default function TopUpPage() {
             <Button
               type="submit"
               isLoading={loading}
-              className="w-full h-12 text-sm font-bold shadow-md shadow-primary/20"
+              disabled={gatewayInfo ? !gatewayInfo.is_ready : false}
+              className={`w-full h-12 text-sm font-bold shadow-md ${gatewayInfo && !gatewayInfo.is_ready ? 'opacity-60 cursor-not-allowed bg-gray-500 hover:bg-gray-500' : 'shadow-primary/20'}`}
             >
-              Lanjut Bayar (Rp {selectedNum.toLocaleString("id-ID")}) ➔
+              {gatewayInfo && !gatewayInfo.is_ready
+                ? "Pembayaran Otomatis Offline (Hubungi Admin)"
+                : `Lanjut Bayar (Rp ${selectedNum.toLocaleString("id-ID")}) ➔`}
             </Button>
           </form>
         ) : (

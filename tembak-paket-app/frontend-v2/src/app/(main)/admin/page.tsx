@@ -108,6 +108,131 @@ export default function AdminPage() {
     finally { setLoadingBaileys(false); }
   };
 
+  // GoPay Gateway & Web OTP State
+  const [gopayStatus, setGopayStatus] = useState<{
+    is_configured: boolean;
+    token_status: string;
+    message: string;
+    merchant_id?: string;
+    outlet_name?: string;
+    phone_number?: string;
+    expires_at?: string;
+  } | null>(null);
+  const [loadingGopay, setLoadingGopay] = useState(false);
+  const [gopayPhone, setGopayPhone] = useState("082342392781");
+  const [gopayOtp, setGopayOtp] = useState("");
+  const [gopayOtpSent, setGopayOtpSent] = useState(false);
+  const [gopayRequestingOtp, setGopayRequestingOtp] = useState(false);
+  const [gopayVerifyingOtp, setGopayVerifyingOtp] = useState(false);
+  const [gopayLoggingOut, setGopayLoggingOut] = useState(false);
+
+  const loadGopayStatus = async () => {
+    setLoadingGopay(true);
+    try {
+      const res = await fetch('/api/admin/gopay/status', { credentials: 'include' });
+      const d = await res.json();
+      if (d.status && d.data) {
+        setGopayStatus(d.data);
+      }
+    } catch (e) {}
+    finally { setLoadingGopay(false); }
+  };
+
+  const handleRequestGopayOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gopayPhone.trim()) {
+      return Swal.fire("Peringatan", "Nomor HP GoBiz/GoFood Merchant wajib diisi!", "warning");
+    }
+    setGopayRequestingOtp(true);
+    try {
+      const res = await fetch('/api/admin/gopay/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phone: gopayPhone })
+      });
+      const d = await res.json();
+      if (d.status) {
+        setGopayOtpSent(true);
+        Swal.fire({
+          title: "OTP Berhasil Dikirim!",
+          text: d.message || "Kode OTP 4 digit telah dikirim via SMS ke nomor HP Anda.",
+          icon: "success"
+        });
+      } else {
+        Swal.fire("Gagal", d.message || "Gagal meminta OTP GoPay.", "error");
+      }
+    } catch (e: any) {
+      Swal.fire("Error", e.message || "Terjadi kesalahan koneksi.", "error");
+    } finally {
+      setGopayRequestingOtp(false);
+    }
+  };
+
+  const handleVerifyGopayOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gopayOtp.trim() || gopayOtp.trim().length !== 4) {
+      return Swal.fire("Peringatan", "Masukkan 4 digit kode OTP yang diterima!", "warning");
+    }
+    setGopayVerifyingOtp(true);
+    try {
+      const res = await fetch('/api/admin/gopay/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ otp: gopayOtp.trim() })
+      });
+      const d = await res.json();
+      if (d.status) {
+        setGopayOtpSent(false);
+        setGopayOtp("");
+        Swal.fire({
+          title: "Login GoPay Berhasil!",
+          text: d.message || "Sesi GoPay Merchant telah aktif dan tersimpan.",
+          icon: "success"
+        });
+        loadGopayStatus();
+      } else {
+        Swal.fire("Verifikasi Gagal", d.message || "Kode OTP salah atau kadaluarsa.", "error");
+      }
+    } catch (e: any) {
+      Swal.fire("Error", e.message || "Terjadi kesalahan saat verifikasi OTP.", "error");
+    } finally {
+      setGopayVerifyingOtp(false);
+    }
+  };
+
+  const handleCancelGopayOtp = async () => {
+    setGopayOtpSent(false);
+    setGopayOtp("");
+    try {
+      await fetch('/api/admin/gopay/cancel-otp', { method: 'POST', credentials: 'include' });
+    } catch (e) {}
+  };
+
+  const handleLogoutGopay = async () => {
+    const confirm = await Swal.fire({
+      title: "Putus Sesi GoPay Merchant?",
+      text: "Setelah logout, top-up otomatis QRIS GoPay tidak akan berfungsi sampai Anda login OTP ulang.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Putus Sesi",
+      cancelButtonText: "Batal"
+    });
+    if (!confirm.isConfirmed) return;
+
+    setGopayLoggingOut(true);
+    try {
+      const res = await fetch('/api/admin/gopay/logout', { method: 'POST', credentials: 'include' });
+      const d = await res.json();
+      if (d.status) {
+        Swal.fire("Sesi Diputus", "Sesi GoPay telah berhasil logout.", "info");
+        loadGopayStatus();
+      }
+    } catch (e) {}
+    finally { setGopayLoggingOut(false); }
+  };
+
   // Server Pusat Deposit / Top Up Modal State
   const [showCeirgoTopUp, setShowCeirgoTopUp] = useState(false);
   const [ceirgoProviders, setCeirgoProviders] = useState<any[]>([]);
@@ -562,6 +687,8 @@ export default function AdminPage() {
         .then(r => r.json())
         .then(d => { if (d.status) setCeirgoDepositProviders(d.data); })
         .catch(() => { });
+
+      loadGopayStatus();
     }
   }, [user]);
 
@@ -2755,6 +2882,182 @@ export default function AdminPage() {
               >
                 Simpan Gateway Aktif
               </Button>
+            </Card>
+
+            {/* Card Manajemen GoPay Merchant Gateway & Web OTP Login */}
+            <Card glass className="p-5 space-y-4 border border-hairline relative overflow-hidden">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0 border border-sky-500/20">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+                      GoPay Merchant Partner (GoBiz)
+                      {gopayStatus?.token_status === 'valid' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Terhubung
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                          Belum Login
+                        </span>
+                      )}
+                    </h2>
+                    <p className="text-[11px] text-ink-muted mt-0.5">Kelola sesi login merchant & mutasi QRIS GoPay langsung dari web.</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={loadGopayStatus}
+                  disabled={loadingGopay}
+                  className="p-2 rounded-xl bg-canvas hover:bg-parchment border border-hairline text-ink-muted hover:text-ink transition-all"
+                  title="Refresh Status GoPay"
+                >
+                  <svg className={`w-4 h-4 ${loadingGopay ? 'animate-spin text-primary' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Warning jika Gateway Aktif GoPay tapi Sesi Belum Valid */}
+              {paymentGateway === 'gopay' && gopayStatus?.token_status !== 'valid' && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+                    <svg className="w-4 h-4 shrink-0 text-amber-600 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>Perhatian: Sesi GoPay Belum Aktif / Server Habis Reboot</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300/80">
+                    Pelanggan <b>tidak bisa melakukan top-up otomatis</b> saat ini karena sesi GoPay belum login. Silakan masukkan nomor HP GoBiz Anda di bawah untuk login OTP instan via web.
+                  </p>
+                </div>
+              )}
+
+              {/* Status Details jika Sesi Valid */}
+              {gopayStatus?.token_status === 'valid' ? (
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-2xl bg-canvas border border-hairline space-y-2 text-xs">
+                    <div className="flex justify-between items-center py-1 border-b border-hairline/60">
+                      <span className="text-ink-muted">Nama Outlet</span>
+                      <span className="font-bold text-ink text-right">{gopayStatus.outlet_name || 'RyyStore IT Solutions'}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-hairline/60">
+                      <span className="text-ink-muted">Merchant ID</span>
+                      <span className="font-mono font-bold text-primary">{gopayStatus.merchant_id || 'G213710526'}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-hairline/60">
+                      <span className="text-ink-muted">No. HP Merchant</span>
+                      <span className="font-bold text-ink">{gopayStatus.phone_number || '-'}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-ink-muted">Masa Berlaku Sesi</span>
+                      <span className="text-[11px] font-semibold text-emerald-600">
+                        {gopayStatus.expires_at ? new Date(gopayStatus.expires_at).toLocaleString('id-ID') : 'Aktif (Auto-Refresh)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={loadGopayStatus}
+                      isLoading={loadingGopay}
+                      className="flex-1 text-xs font-bold border border-hairline"
+                    >
+                      Periksa Sesi Live
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogoutGopay}
+                      isLoading={gopayLoggingOut}
+                      className="text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200"
+                    >
+                      Putus Sesi (Logout)
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Form Web Login GoPay via OTP */
+                <div className="space-y-3">
+                  {!gopayOtpSent ? (
+                    <form onSubmit={handleRequestGopayOtp} className="space-y-3">
+                      <div>
+                        <label className="text-xs font-bold text-ink block mb-1">
+                          Nomor HP GoBiz/GoFood Merchant
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Contoh: 082342392781"
+                            value={gopayPhone}
+                            onChange={(e) => setGopayPhone(e.target.value)}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-hairline bg-canvas text-xs font-bold text-ink focus:outline-none focus:ring-1 focus:ring-primary"
+                            required
+                          />
+                        </div>
+                        <p className="text-[10px] text-ink-muted mt-1">Kode OTP 4 digit akan dikirim via SMS resmi dari Gojek/GoBiz.</p>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        isLoading={gopayRequestingOtp}
+                        className="w-full text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
+                      >
+                        Kirim Kode OTP via SMS ➔
+                      </Button>
+                    </form>
+                  ) : (
+                    /* Step 2: Input 4-Digit OTP */
+                    <form onSubmit={handleVerifyGopayOtp} className="space-y-3 p-3.5 rounded-2xl bg-sky-500/5 border border-sky-500/20">
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="text-xs font-bold text-ink">
+                            Masukkan 4-Digit Kode OTP SMS
+                          </label>
+                          <span className="text-[10px] font-semibold text-sky-600">SMS ke {gopayPhone}</span>
+                        </div>
+                        <input
+                          type="text"
+                          maxLength={4}
+                          placeholder="Contoh: 2875"
+                          value={gopayOtp}
+                          onChange={(e) => setGopayOtp(e.target.value.replace(/\D/g, ''))}
+                          className="w-full px-4 py-2.5 rounded-xl border-2 border-sky-400 bg-canvas text-center text-lg font-black tracking-widest text-ink focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          autoFocus
+                          required
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          isLoading={gopayVerifyingOtp}
+                          className="flex-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                        >
+                          Verifikasi & Aktifkan Sesi ✓
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={handleCancelGopayOtp}
+                          className="text-xs font-bold text-ink-muted hover:text-ink border border-hairline"
+                        >
+                          Batal
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
 
