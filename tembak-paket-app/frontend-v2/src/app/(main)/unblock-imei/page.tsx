@@ -13,7 +13,7 @@ import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard
 import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
 
 export default function UnblockImeiPage() {
-  const { user } = useApp();
+  const { user, addToCart } = useApp();
   const router = useRouter();
   const [packages, setPackages] = useState<any[]>([]);
   const [speedPricing, setSpeedPricing] = useState<any>({});
@@ -85,6 +85,46 @@ export default function UnblockImeiPage() {
   const maxCoinsAllowed = priceAfterCoupon >= 50000 ? Math.min(Math.floor(priceAfterCoupon * 0.1), 5000) : 0;
   const coinsDiscount = useCoins && maxCoinsAllowed > 0 ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
   const totalPrice = Math.max(0, priceAfterCoupon - coinsDiscount);
+
+  const handleAddToCart = () => {
+    if (!imei.trim()) {
+      setError("Silakan masukkan minimal 1 nomor IMEI terlebih dahulu.");
+      return;
+    }
+    if (!selectedPkgId) {
+      setError("Pilih paket masa aktif terlebih dahulu.");
+      return;
+    }
+    const pkg = packages.find((p) => p.id === selectedPkgId);
+    if (!pkg) return;
+
+    addToCart({
+      packageId: pkg.id,
+      packageName: pkg.name,
+      serviceType: "manual_imei",
+      price: pkg.price,
+      duration: pkg.duration,
+      imei: imei.trim(),
+      targetPhone: targetPhone || user?.phone || "",
+      quantity: imeiCount,
+      speed: selectedSpeed || "regular",
+      speedPrice: speedCost,
+    });
+
+    Swal.fire({
+      icon: "success",
+      title: "Masuk Keranjang! 🛒",
+      text: `${pkg.name} berhasil ditambahkan ke keranjang belanja.`,
+      showCancelButton: true,
+      confirmButtonText: "Lihat Keranjang ➔",
+      cancelButtonText: "Lanjut Belanja",
+      confirmButtonColor: "#0066cc",
+    }).then((res) => {
+      if (res.isConfirmed) {
+        router.push("/cart");
+      }
+    });
+  };
 
   const handleClaimCoupon = async (coupon: CouponItem) => {
     setClaimingCouponId(coupon.id);
@@ -697,9 +737,26 @@ export default function UnblockImeiPage() {
               </label>
             </div>
 
-            <Button className="w-full h-12 text-sm font-bold shadow-lg rounded-2xl" type="submit" isLoading={submitting}>
-              Bayar Sekarang • Rp {totalPrice.toLocaleString("id-ID")}
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <Button
+                type="button"
+                onClick={handleAddToCart}
+                className="w-full h-12 text-xs sm:text-sm font-bold bg-canvas border-2 border-primary text-primary hover:bg-primary/5 rounded-2xl shadow-xs flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                </svg>
+                <span>+ Masukkan Keranjang</span>
+              </Button>
+
+              <Button
+                className="w-full h-12 text-xs sm:text-sm font-bold shadow-lg rounded-2xl bg-primary hover:bg-primary-focus text-white"
+                type="submit"
+                isLoading={submitting}
+              >
+                Bayar Sekarang • Rp {totalPrice.toLocaleString("id-ID")}
+              </Button>
+            </div>
           </form>
         ) : (
           <div className="bg-rose-500/10 border border-rose-200/50 p-6 rounded-2xl text-center space-y-3">

@@ -3,7 +3,22 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { API_URL, safeJson } from "./api";
 
 const MENU_SETTINGS_STORAGE_KEY = "menu_settings";
+const CART_STORAGE_KEY = "ry_cart_items";
 const DEFAULT_MENU_SETTINGS = { showBeliPaket: false };
+
+export interface CartItem {
+  id: string;
+  packageId?: string;
+  packageName: string;
+  serviceType: string;
+  price: number;
+  duration?: string;
+  imei?: string;
+  targetPhone?: string;
+  quantity: number;
+  speed?: string;
+  speedPrice?: number;
+}
 
 interface User {
   id: string;
@@ -15,17 +30,24 @@ interface User {
   balance: number;
   coins?: number;
   status?: string;
+  createdAt?: string;
 }
 
 interface AppContextType {
   user: User | null;
   loading: boolean;
+  cart: CartItem[];
+  cartCount: number;
   menuSettings: { showBeliPaket: boolean };
   ceirgoDisplaySettings: { cekCeir: string[]; barcode: string[] };
   setUser: (user: User | null) => void;
   updateBalance: (balance: number) => void;
   updateMenuSettings: (settings: { showBeliPaket: boolean }) => void;
   updateCeirgoDisplaySettings: (settings: { cekCeir: string[]; barcode: string[] }) => void;
+  addToCart: (item: Omit<CartItem, "id">) => void;
+  removeFromCart: (id: string) => void;
+  updateCartQty: (id: string, qty: number) => void;
+  clearCart: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -33,6 +55,16 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = window.localStorage.getItem(CART_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [menuSettings, setMenuSettings] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_MENU_SETTINGS;
     try {
@@ -43,6 +75,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   });
   const [ceirgoDisplaySettings, setCeirgoDisplaySettings] = useState({ cekCeir: [] as string[], barcode: [] as string[] });
+
+  // Persist cart
+  const saveCart = (items: CartItem[]) => {
+    setCart(items);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    }
+  };
+
+  const addToCart = (newItem: Omit<CartItem, "id">) => {
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
+    const updated = [...cart, { ...newItem, id }];
+    saveCart(updated);
+  };
+
+  const removeFromCart = (id: string) => {
+    const updated = cart.filter((item) => item.id !== id);
+    saveCart(updated);
+  };
+
+  const updateCartQty = (id: string, qty: number) => {
+    if (qty <= 0) {
+      removeFromCart(id);
+      return;
+    }
+    const updated = cart.map((item) => (item.id === id ? { ...item, quantity: qty } : item));
+    saveCart(updated);
+  };
+
+  const clearCart = () => {
+    saveCart([]);
+  };
+
+  const cartCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
   // Update setMenuSettings di Context agar bisa dipanggil dari mana saja
   const updateMenuSettings = (settings: { showBeliPaket: boolean }) => {
@@ -104,7 +170,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (typeof payload.balance === "number") {
           setUser(prev => prev ? { ...prev, balance: payload.balance } : null);
 
-          // Dispatch event global agar komponen lain (seperti halaman TopUp) bisa tahu
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('topup_success'));
           }
@@ -120,7 +185,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppContext.Provider value={{ user, loading, menuSettings, ceirgoDisplaySettings, setUser, updateBalance, updateMenuSettings, updateCeirgoDisplaySettings }}>
+    <AppContext.Provider
+      value={{
+        user,
+        loading,
+        cart,
+        cartCount,
+        menuSettings,
+        ceirgoDisplaySettings,
+        setUser,
+        updateBalance,
+        updateMenuSettings,
+        updateCeirgoDisplaySettings,
+        addToCart,
+        removeFromCart,
+        updateCartQty,
+        clearCart,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

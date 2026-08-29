@@ -90,6 +90,12 @@
       "namedRegex": "^/beli\\-paket(?:/)?$"
     },
     {
+      "page": "/cart",
+      "regex": "^/cart(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cart(?:/)?$"
+    },
+    {
       "page": "/cek-ceir",
       "regex": "^/cek\\-ceir(?:/)?$",
       "routeKeys": {},
@@ -132,6 +138,18 @@
       "namedRegex": "^/login(?:/)?$"
     },
     {
+      "page": "/notifications",
+      "regex": "^/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/notifications(?:/)?$"
+    },
+    {
+      "page": "/profile",
+      "regex": "^/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/profile(?:/)?$"
+    },
+    {
       "page": "/referral",
       "regex": "^/referral(?:/)?$",
       "routeKeys": {},
@@ -142,6 +160,12 @@
       "regex": "^/register(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/register(?:/)?$"
+    },
+    {
+      "page": "/saya",
+      "regex": "^/saya(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/saya(?:/)?$"
     },
     {
       "page": "/tickets",

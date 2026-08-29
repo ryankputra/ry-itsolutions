@@ -7,7 +7,7 @@ import { useApp } from "@/lib/store";
 export function EcommerceHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, setUser } = useApp();
+  const { user, setUser, cartCount } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -49,6 +49,10 @@ export function EcommerceHeader() {
       .then((data) => {
         if (data.status && data.data?.message) {
           setAnnouncement(data.data);
+          const lastSeen = localStorage.getItem("last_announcement");
+          if (!lastSeen || lastSeen !== data.data.message) {
+            setUnread(true);
+          }
         }
       })
       .catch(() => {});
@@ -70,12 +74,10 @@ export function EcommerceHeader() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      setUser(null);
-      router.push("/login");
-    } catch (e) {
-      router.push("/login");
-    }
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch (e) {}
+    setUser(null);
+    router.push("/login");
   };
 
   const services = [
@@ -183,18 +185,18 @@ export function EcommerceHeader() {
           )}
         </div>
 
-        {/* Cart / Orders Icon */}
+        {/* Cart Icon with real Cart Count */}
         <Link
-          href="/history"
+          href="/cart"
           className="relative p-1.5 text-white hover:opacity-80 transition-opacity"
-          title="Pesanan / Riwayat"
+          title="Keranjang Belanja"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
           </svg>
-          {pendingOrders > 0 && (
+          {cartCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
-              {pendingOrders}
+              {cartCount}
             </span>
           )}
         </Link>
