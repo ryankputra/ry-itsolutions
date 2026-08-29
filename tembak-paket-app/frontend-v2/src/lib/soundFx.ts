@@ -227,8 +227,46 @@ export function playWheelTickSound() {
 }
 
 // =======================================================================
-// Global SweetAlert2 Automatic Sound Binding
+// Global SweetAlert2 Automatic Sound & Auto-Dismiss Timer Binding
 // =======================================================================
+import Swal from "sweetalert2";
+
+// Configure default auto-dismiss timer on informational / notification popups
+if (typeof window !== "undefined") {
+  const originalFire = Swal.fire.bind(Swal);
+  Swal.fire = function (...args: any[]) {
+    if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
+      const opts = { ...args[0] };
+      // If it's a notification/success/info popup (not a confirmation prompt)
+      if (
+        !opts.showCancelButton &&
+        !opts.showDenyButton &&
+        !opts.input &&
+        opts.timer === undefined
+      ) {
+        opts.timer = 3000;
+        opts.timerProgressBar = true;
+      }
+      if (opts.allowOutsideClick === undefined) {
+        opts.allowOutsideClick = true;
+      }
+      return originalFire(opts);
+    }
+    if (args.length >= 2 && typeof args[0] === "string") {
+      const opts: any = {
+        title: args[0],
+        text: args[1],
+        icon: args[2] || "info",
+        timer: 3000,
+        timerProgressBar: true,
+        allowOutsideClick: true,
+      };
+      return originalFire(opts);
+    }
+    return originalFire(...args);
+  } as any;
+}
+
 export function bindSwalSounds() {
   if (typeof window === "undefined") return;
 

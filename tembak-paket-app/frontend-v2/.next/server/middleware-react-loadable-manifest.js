@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST='{"app/(main)/layout.tsx -> sweetalert2":{"id":7042,"files":["static/chunks/41ade5dc-f679e2ae3b025ad1.js"]}}';
+self.__REACT_LOADABLE_MANIFEST='{"app/(main)/layout.tsx -> sweetalert2":{"id":7042,"files":[]}}';

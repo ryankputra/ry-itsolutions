@@ -1915,6 +1915,7 @@ app.get('/api/games/status', isAuthenticated, async (req, res) => {
             WHERE userId = ? AND claim_type = 'lucky_spin' AND substr(claimed_at, 1, 10) = ?
         `, [userId, todayWIB]);
 
+        const rewards = [100, 200, 300, 400, 500, 750, 1000];
         const gamePayload = {
             coins: userCoins,
             can_checkin: !todayCheckin,
@@ -2004,7 +2005,7 @@ app.post('/api/games/daily-checkin', isAuthenticated, async (req, res) => {
 
         res.json({
             status: true,
-            message: `Hore! Anda mendapatkan +${coinBonus} Koin Ry (Hari ke-${streak}) 🎉`,
+            message: `Hore! Anda mendapatkan +${coinBonus} Koin Ry (Hari ke-${streak})!`,
             coins_earned: coinBonus,
             streak,
             new_coins_balance: updatedUser?.coins || 0
@@ -2048,7 +2049,7 @@ app.post('/api/games/lucky-spin', isAuthenticated, async (req, res) => {
             status: true,
             prize_index: randomIndex,
             coins_earned: wonCoins,
-            message: `Selamat! Anda memenangkan +${wonCoins.toLocaleString('id-ID')} Koin Ry dari Roda Hoki! 🎡✨`,
+            message: `Selamat! Anda memenangkan +${wonCoins.toLocaleString('id-ID')} Koin Ry dari Roda Hoki!`,
             new_coins_balance: updatedUser?.coins || 0
         });
     } catch (e) {
