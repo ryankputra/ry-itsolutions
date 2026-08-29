@@ -2538,6 +2538,11 @@ app.get('/api/topup/latest-status', isAuthenticated, async (req, res) => {
                         const result = await dbRun("UPDATE topups SET status = 'completed' WHERE id = ? AND status = 'pending'", [topUp.id]);
                         if (result.changes > 0) {
                             await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, userId]);
+                            const userObj = await dbGet("SELECT id, name, email, role FROM users WHERE id = ?", [userId]);
+                            if (userObj && userObj.role !== 'reseller' && topUp.baseAmount >= 50000) {
+                                await dbRun("UPDATE users SET role = 'reseller', upgradedToResellerAt = ? WHERE id = ?", [new Date().toISOString(), userId]);
+                                sseSend(userId, 'role_change', { newRole: 'reseller', reason: 'Upgrade otomatis ke Reseller.' });
+                            }
                             await dbRun("COMMIT");
                             const u = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
                             sseSend(userId, 'balance_update', { balance: u.balance, source: 'gopay_topup' });
@@ -2624,6 +2629,11 @@ app.get('/api/topup/status/:topUpId', isAuthenticated, async (req, res) => {
                         const result = await dbRun("UPDATE topups SET status = 'completed' WHERE id = ? AND status = 'pending'", [topUpId]);
                         if (result.changes > 0) {
                             await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, req.session.userId]);
+                            const userObj = await dbGet("SELECT id, name, email, role FROM users WHERE id = ?", [req.session.userId]);
+                            if (userObj && userObj.role !== 'reseller' && topUp.baseAmount >= 50000) {
+                                await dbRun("UPDATE users SET role = 'reseller', upgradedToResellerAt = ? WHERE id = ?", [new Date().toISOString(), req.session.userId]);
+                                sseSend(req.session.userId, 'role_change', { newRole: 'reseller', reason: 'Upgrade otomatis ke Reseller.' });
+                            }
                             await dbRun("COMMIT");
                             const u = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
                             sseSend(req.session.userId, 'balance_update', { balance: u.balance, source: 'gopay_topup' });

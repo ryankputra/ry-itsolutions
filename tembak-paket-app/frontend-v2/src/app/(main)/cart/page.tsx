@@ -216,38 +216,64 @@ export default function CartPage() {
     if (!isConfirmed) return;
 
     setCheckingOut(true);
+    let successCount = 0;
+    const processedItemIds: string[] = [];
+
     try {
-      // Process orders sequentially or in batch
-      for (const item of activeCartItems) {
-        await fetch("/api/order/manual", {
+      // Process orders sequentially with proper payload structure
+      for (let idx = 0; idx < activeCartItems.length; idx++) {
+        const item = activeCartItems[idx];
+        const formData = new FormData();
+        formData.append("service_type", item.serviceType === "ceir" ? "ceir" : "imei");
+        formData.append("imei", item.imei || "111111111111111");
+        formData.append("duration", item.duration || "1 Bulan");
+        formData.append("price_key", String(item.packageId || item.id));
+        formData.append("speed_option", item.speed || "regular");
+        formData.append("target_phone", item.targetPhone || user?.phone || "");
+
+        // Apply coupon & coins on first applicable item to prevent duplicate coupon reuse error
+        if (idx === 0 && appliedCoupon) {
+          formData.append("coupon_code", appliedCoupon.code);
+        }
+        if (idx === 0 && useCoins && coinsDiscount > 0) {
+          formData.append("use_coins", "true");
+        }
+
+        const res = await fetch("/api/order/manual", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({
-            imei: item.imei || "111111111111111",
-            package_id: item.packageId || item.id,
-            speed: item.speed || "regular",
-            targetPhone: item.targetPhone || user?.phone || "",
-            coupon_code: appliedCoupon?.code,
-            use_coins: useCoins,
-          }),
+          body: formData,
         });
+
+        const data = await safeJson(res);
+        if (res.ok && data?.status) {
+          successCount++;
+          processedItemIds.push(item.id);
+        } else {
+          throw new Error(data?.message || `Gagal memproses item: ${item.packageName}`);
+        }
       }
 
-      // Remove checked out items from cart
-      activeCartItems.forEach((item) => removeFromCart(item.id));
+      // Remove only successfully checked out items from cart
+      processedItemIds.forEach((id) => removeFromCart(id));
 
       Swal.fire({
         icon: "success",
         title: "Pesanan Berhasil!",
-        text: "Semua item di keranjang berhasil diproses server.",
+        text: `${successCount} layanan di keranjang berhasil diproses server.`,
         confirmButtonColor: "#0066cc",
         confirmButtonText: "Lihat Riwayat Pesanan",
       }).then(() => {
         router.push("/history");
       });
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Gagal", text: "Terjadi kesalahan saat memproses checkout." });
+    } catch (e: any) {
+      // Remove any items that succeeded before failure
+      processedItemIds.forEach((id) => removeFromCart(id));
+      Swal.fire({
+        icon: "error",
+        title: "Checkout Terkendala",
+        text: e?.message || "Terjadi kesalahan saat memproses checkout.",
+      });
     } finally {
       setCheckingOut(false);
     }

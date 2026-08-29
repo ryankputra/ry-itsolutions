@@ -113,14 +113,14 @@ export default function UnblockImeiPage() {
 
     Swal.fire({
       icon: "success",
-      title: "Masuk Keranjang! 🛒",
+      title: "Masuk Keranjang!",
       text: `${pkg.name} berhasil ditambahkan ke keranjang belanja.`,
       showCancelButton: true,
-      confirmButtonText: "Lihat Keranjang ➔",
+      confirmButtonText: "Lihat Keranjang",
       cancelButtonText: "Lanjut Belanja",
       confirmButtonColor: "#0066cc",
-    }).then((res) => {
-      if (res.isConfirmed) {
+    }).then((result) => {
+      if (result.isConfirmed) {
         router.push("/cart");
       }
     });
@@ -226,14 +226,14 @@ export default function UnblockImeiPage() {
     }
 
     const confirm = await Swal.fire({
-      title: 'Ready buat checkout? 💸',
-      text: `Yakin mau lanjut bayar untuk ${imeiList.length} IMEI? ${appliedCoupon ? `(Diskon Kupon: -Rp ${discountAmount.toLocaleString('id-ID')}) ` : ''}Saldo kepotong Rp ${totalPrice.toLocaleString('id-ID')} ya.`,
+      title: 'Konfirmasi Checkout',
+      text: `Yakin mau lanjut bayar untuk ${imeiList.length} IMEI? ${appliedCoupon ? `(Diskon Kupon: -Rp ${discountAmount.toLocaleString('id-ID')}) ` : ''}Saldo terpotong Rp ${totalPrice.toLocaleString('id-ID')}.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Gass!',
-      cancelButtonText: 'Ntar Dulu'
+      confirmButtonText: 'Lanjutkan',
+      cancelButtonText: 'Batal'
     });
 
     if (!confirm.isConfirmed) {
@@ -280,9 +280,9 @@ export default function UnblockImeiPage() {
   };
 
   const speedOptions = [
-    { id: 'fast', key: 'imei_speed_fast', label: '⚡ Fast' },
-    { id: 'semi', key: 'imei_speed_semi', label: '🚀 Semi Fast' },
-    { id: 'slow', key: 'imei_speed_slow', label: '🐌 Slow' }
+    { id: 'fast', key: 'imei_speed_fast', label: 'Fast' },
+    { id: 'semi', key: 'imei_speed_semi', label: 'Semi Fast' },
+    { id: 'slow', key: 'imei_speed_slow', label: 'Slow' }
   ]
     .filter(opt => {
       const status = speedPricing[`${opt.key}_status`];
@@ -302,22 +302,30 @@ export default function UnblockImeiPage() {
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Buka Gembok IMEI 🔓</h1>
-          <p className="text-sm text-ink-muted">Bikin sinyal HP Inter lo auto on terus.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Buka Gembok IMEI</h1>
+          <p className="text-sm text-ink-muted">Aktivasi sinyal HP All Operator resmi dan bergaransi.</p>
         </div>
       </div>
 
       <Card glass className="p-6 space-y-6">
         {announcement && (
           <div
-            className="rounded-2xl p-4 text-white text-sm font-medium"
+            className="rounded-2xl p-4 text-white text-sm font-medium flex items-center gap-2"
             style={{ backgroundColor: announcement.bgColor || '#0066cc' }}
           >
-            📢 {announcement.message}
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.455a20.89 20.89 0 01-1.503-3.819m3.165-.4c.594-.05 1.189-.125 1.78-.226a11.956 11.956 0 004.832-2.016m-6.612 2.642a12.02 12.02 0 01-1.78-.226m10.172-4.432A11.96 11.96 0 0013.91 5.34m0 0a11.97 11.97 0 00-3.57-1.22m3.57 1.22c.594.05 1.189.125 1.78.226m-1.78-.226c-1.19.1-2.38.25-3.57.446" />
+            </svg>
+            <span>{announcement.message}</span>
           </div>
         )}
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
-          <h3 className="font-bold flex items-center gap-1.5 text-base">⚠️ Rules (Wajib Baca Dulu Ngab!)</h3>
+          <h3 className="font-bold flex items-center gap-1.5 text-base">
+            <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <span>Ketentuan Layanan</span>
+          </h3>
           <ul className="list-decimal pl-5 space-y-2 leading-relaxed">
             <li>Cuma buat <b>HP Inter (Internasional)</b> ya.</li>
             <li>Buat user iPhone, <i>wajib banget</i> pastiin HP lo <b>bukan barang bypass-an</b>!</li>
