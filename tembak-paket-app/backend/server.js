@@ -1040,7 +1040,7 @@ app.get('/api/system-version', (req, res) => {
 // === PUBLIC WARRANTY & IMEI STATUS CHECKER ===
 app.get('/api/public/check-warranty', async (req, res) => {
     try {
-        const queryImei = (req.query.imei || '').trim().replace(/\D/g, '');
+        const queryImei = (req.query.imei || req.query.query || req.query.q || '').trim().replace(/\D/g, '');
         if (!queryImei || queryImei.length < 8) {
             return res.status(400).json({ status: false, message: 'Nomor IMEI minimal 8 digit valid.' });
         }
