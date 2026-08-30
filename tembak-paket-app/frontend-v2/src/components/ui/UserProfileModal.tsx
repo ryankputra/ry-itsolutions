@@ -21,19 +21,19 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     ? new Date(user.userJoinedAt).toLocaleDateString("id-ID", {
         day: "numeric",
         month: "long",
-        year: "numeric",
+        year: "2026",
       })
-    : "15 Januari 2025";
+    : "15 Januari 2026";
 
   const formattedTrxDate = user.transactionDate
     ? new Date(user.transactionDate).toLocaleDateString("id-ID", {
         day: "numeric",
         month: "long",
-        year: "numeric",
+        year: "2026",
         hour: "2-digit",
         minute: "2-digit",
       }) + " WIB"
-    : "2 hari yang lalu";
+    : "28 Agt 2026, 14:20 WIB";
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -54,7 +54,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={user.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.userName}`}
+                src={user.userAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.userName}`}
                 alt={user.userName || "User Profile"}
                 className="w-20 h-20 rounded-2xl object-cover border-4 border-canvas shadow-lg"
               />
@@ -80,23 +80,17 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
           {/* Stats List */}
           <div className="p-3.5 rounded-2xl bg-parchment border border-hairline space-y-2.5 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-ink-muted font-medium flex items-center gap-1.5">
-                <span>🗓️</span> Bergabung Sejak:
-              </span>
+              <span className="text-ink-muted font-medium">Bergabung Sejak:</span>
               <span className="font-bold text-ink">{formattedJoinedDate}</span>
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-hairline">
-              <span className="text-ink-muted font-medium flex items-center gap-1.5">
-                <span>🛒</span> Total Transaksi Sukses:
-              </span>
+              <span className="text-ink-muted font-medium">Total Transaksi Sukses:</span>
               <span className="font-extrabold text-primary">{user.userTotalOrders || 14} Pesanan</span>
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-hairline">
-              <span className="text-ink-muted font-medium flex items-center gap-1.5">
-                <span>🕒</span> Waktu Transaksi Layanan Ini:
-              </span>
+              <span className="text-ink-muted font-medium">Waktu Transaksi Layanan Ini:</span>
               <span className="font-bold text-emerald-600">{formattedTrxDate}</span>
             </div>
           </div>

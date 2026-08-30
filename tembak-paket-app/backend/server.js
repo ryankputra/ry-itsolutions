@@ -267,118 +267,108 @@ async function initializeDatabase() {
 
             // Seed Ulasan Realistis
             try {
-                const imeiReviewCount = await dbGet("SELECT COUNT(*) as count FROM reviews WHERE productId = 'unblock-imei' OR serviceType = 'imei'");
-                if (!imeiReviewCount || imeiReviewCount.count < 3) {
-                    const sampleReviews = [
-                        {
-                            id: "rev_1",
-                            userId: "usr_seed1",
-                            userName: "Rahul Pramudia",
-                            userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop",
-                            orderId: "trx_sample1",
-                            productId: "unblock-imei",
-                            serviceType: "imei",
-                            variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
-                            rating: 5,
-                            comment: "Proses kilat gak nyampe 3 jam sinyal 4G & 5G di iPhone 13 Pro Inter saya langsung keluar Telkomsel & XL lancar jaya! Respon CS WA juga ramah banget, garansi resmi terpampang rapi.",
-                            images: JSON.stringify([
-                                "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
-                                "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop"
-                            ]),
-                            likesCount: 382,
-                            transactionDate: new Date(Date.now() - 86400000 * 2).toISOString(),
-                            userJoinedAt: "2024-11-12T08:30:00.000Z",
-                            userTotalOrders: 14,
-                            userRole: "Buyer Verified",
-                            createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-                        },
-                        {
-                            id: "rev_2",
-                            userId: "usr_seed2",
-                            userName: "Dika Store Official",
-                            userAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&h=100&fit=crop",
-                            orderId: "trx_sample2",
-                            productId: "unblock-imei",
-                            serviceType: "imei",
-                            variation: "GARANSI 2 BULAN (MASA AKTIF SINYAL)",
-                            rating: 5,
-                            comment: "Luar biasa Ry-ITSolutions! Saya reseller HP bekas udah langganan 20+ IMEI di sini selalu sukses tanpa ada yang retur. Pokoknya rekomendasi teratas buat konter HP!",
-                            images: JSON.stringify([
-                                "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=400&h=400&fit=crop"
-                            ]),
-                            likesCount: 215,
-                            transactionDate: new Date(Date.now() - 86400000 * 5).toISOString(),
-                            userJoinedAt: "2024-08-05T10:15:00.000Z",
-                            userTotalOrders: 28,
-                            userRole: "Reseller VIP",
-                            createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
-                        },
-                        {
-                            id: "rev_3",
-                            userId: "usr_seed3",
-                            userName: "Nurus Syafiqah",
-                            userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-                            orderId: "trx_sample3",
-                            productId: "cek-ceir",
-                            serviceType: "ceir",
-                            variation: "CEK STATUS BEACUKAI / CEIR",
-                            rating: 5,
-                            comment: "Awalnya ragu tapi ternyata hasilnya valid banget langsung dapet screenshot & PDF resmi Kemenperin/Bea Cukai. Mantul mas Ryan!",
-                            images: JSON.stringify([]),
-                            likesCount: 94,
-                            transactionDate: new Date(Date.now() - 86400000 * 7).toISOString(),
-                            userJoinedAt: "2025-01-20T14:22:00.000Z",
-                            userTotalOrders: 6,
-                            userRole: "Buyer Verified",
-                            createdAt: new Date(Date.now() - 86400000 * 7).toISOString()
-                        },
-                        {
-                            id: "rev_4",
-                            userId: "usr_seed4",
-                            userName: "Bintang Cellular Surabaya",
-                            userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-                            orderId: "trx_sample4",
-                            productId: "unblock-imei",
-                            serviceType: "imei",
-                            variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
-                            rating: 5,
-                            comment: "Mantap koin bonusnya dapet 500 koin lagi abis kirim ulasan, potongan diskon voucher juga aktif terus. Makasih seller terpercaya!",
-                            images: JSON.stringify([
-                                "https://images.unsplash.com/photo-1580910051074-3eb694886505?w=400&h=400&fit=crop"
-                            ]),
-                            likesCount: 142,
-                            transactionDate: new Date(Date.now() - 86400000 * 10).toISOString(),
-                            userJoinedAt: "2024-06-18T16:00:00.000Z",
-                            userTotalOrders: 35,
-                            userRole: "Konter Mitra",
-                            createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
-                        },
-                        {
-                            id: "rev_5",
-                            userId: "usr_seed5",
-                            userName: "Hendra Wijaya",
-                            userAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-                            orderId: "trx_sample5",
-                            productId: "unblock-imei",
-                            serviceType: "imei",
-                            variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
-                            rating: 5,
-                            comment: "iPhone 14 Pro Max Garansi All Operator 3 bulan terpasang lancar jaya! Sinyal 5G Telkomsel langsung auto terdeteksi tanpa perlu setting APN.",
-                            images: JSON.stringify([]),
-                            likesCount: 89,
-                            transactionDate: new Date(Date.now() - 86400000 * 3).toISOString(),
-                            userJoinedAt: "2024-10-01T12:00:00.000Z",
-                            userTotalOrders: 9,
-                            userRole: "Buyer Verified",
-                            createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
-                        }
-                    ];
-                    for (const r of sampleReviews) {
-                        await dbRun(
-                            `INSERT OR REPLACE INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            [r.id, r.userId, r.userName, r.userAvatar, r.orderId, r.productId, r.serviceType, r.variation, r.rating, r.comment, r.images, r.likesCount, r.transactionDate, r.userJoinedAt, r.userTotalOrders, r.userRole, r.createdAt]
-                        );
+                const sampleReviews = [
+                    {
+                        id: "rev_1",
+                        userId: "usr_seed1",
+                        userName: "Rahul Pramudia",
+                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Rahul+Pramudia&backgroundColor=0066cc&textColor=ffffff",
+                        orderId: "trx_sample1",
+                        productId: "unblock-imei",
+                        serviceType: "imei",
+                        variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
+                        rating: 5,
+                        comment: "Proses kilat gak nyampe 3 jam sinyal 4G & 5G di iPhone 13 Pro Inter saya langsung keluar Telkomsel & XL lancar jaya! Respon CS WA juga ramah banget, garansi resmi terpampang rapi.",
+                        images: JSON.stringify([]),
+                        likesCount: 8,
+                        transactionDate: new Date(Date.now() - 86400000 * 2).toISOString(),
+                        userJoinedAt: "2026-01-15T08:30:00.000Z",
+                        userTotalOrders: 14,
+                        userRole: "Buyer Verified",
+                        createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
+                    },
+                    {
+                        id: "rev_2",
+                        userId: "usr_seed2",
+                        userName: "Dika Store Official",
+                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Dika+Store&backgroundColor=059669&textColor=ffffff",
+                        orderId: "trx_sample2",
+                        productId: "unblock-imei",
+                        serviceType: "imei",
+                        variation: "GARANSI 2 BULAN (MASA AKTIF SINYAL)",
+                        rating: 5,
+                        comment: "Luar biasa Ry-ITSolutions! Saya reseller HP bekas udah langganan 20+ IMEI di sini selalu sukses tanpa ada yang retur. Pokoknya rekomendasi teratas buat konter HP!",
+                        images: JSON.stringify([]),
+                        likesCount: 5,
+                        transactionDate: new Date(Date.now() - 86400000 * 5).toISOString(),
+                        userJoinedAt: "2026-02-01T10:15:00.000Z",
+                        userTotalOrders: 28,
+                        userRole: "Reseller VIP",
+                        createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
+                    },
+                    {
+                        id: "rev_3",
+                        userId: "usr_seed3",
+                        userName: "Nurus Syafiqah",
+                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Nurus+Syafiqah&backgroundColor=ec4899&textColor=ffffff",
+                        orderId: "trx_sample3",
+                        productId: "cek-ceir",
+                        serviceType: "ceir",
+                        variation: "CEK STATUS BEACUKAI / CEIR",
+                        rating: 5,
+                        comment: "Awalnya ragu tapi ternyata hasilnya valid banget langsung dapet screenshot & PDF resmi Kemenperin/Bea Cukai. Mantul mas Ryan!",
+                        images: JSON.stringify([]),
+                        likesCount: 4,
+                        transactionDate: new Date(Date.now() - 86400000 * 7).toISOString(),
+                        userJoinedAt: "2026-01-20T14:22:00.000Z",
+                        userTotalOrders: 6,
+                        userRole: "Buyer Verified",
+                        createdAt: new Date(Date.now() - 86400000 * 7).toISOString()
+                    },
+                    {
+                        id: "rev_4",
+                        userId: "usr_seed4",
+                        userName: "Bintang Cellular Surabaya",
+                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Bintang+Cellular&backgroundColor=d97706&textColor=ffffff",
+                        orderId: "trx_sample4",
+                        productId: "unblock-imei",
+                        serviceType: "imei",
+                        variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
+                        rating: 5,
+                        comment: "Mantap koin bonusnya dapet 500 koin lagi abis kirim ulasan, potongan diskon voucher juga aktif terus. Makasih seller terpercaya!",
+                        images: JSON.stringify([]),
+                        likesCount: 12,
+                        transactionDate: new Date(Date.now() - 86400000 * 10).toISOString(),
+                        userJoinedAt: "2026-03-10T16:00:00.000Z",
+                        userTotalOrders: 35,
+                        userRole: "Konter Mitra",
+                        createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
+                    },
+                    {
+                        id: "rev_5",
+                        userId: "usr_seed5",
+                        userName: "Hendra Wijaya",
+                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Hendra+Wijaya&backgroundColor=2563eb&textColor=ffffff",
+                        orderId: "trx_sample5",
+                        productId: "unblock-imei",
+                        serviceType: "imei",
+                        variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
+                        rating: 5,
+                        comment: "iPhone 14 Pro Max Garansi All Operator 3 bulan terpasang lancar jaya! Sinyal 5G Telkomsel langsung auto terdeteksi tanpa perlu setting APN.",
+                        images: JSON.stringify([]),
+                        likesCount: 3,
+                        transactionDate: new Date(Date.now() - 86400000 * 3).toISOString(),
+                        userJoinedAt: "2026-04-05T12:00:00.000Z",
+                        userTotalOrders: 9,
+                        userRole: "Buyer Verified",
+                        createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
                     }
+                ];
+                for (const r of sampleReviews) {
+                    await dbRun(
+                        `INSERT OR REPLACE INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [r.id, r.userId, r.userName, r.userAvatar, r.orderId, r.productId, r.serviceType, r.variation, r.rating, r.comment, r.images, r.likesCount, r.transactionDate, r.userJoinedAt, r.userTotalOrders, r.userRole, r.createdAt]
+                    );
                 }
             } catch (e) { console.error("Error seeding reviews:", e); }
 
