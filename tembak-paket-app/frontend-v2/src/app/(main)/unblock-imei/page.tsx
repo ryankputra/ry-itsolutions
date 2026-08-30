@@ -517,27 +517,27 @@ export default function UnblockImeiPage() {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink/80">Upload Screenshot *#06# <span className="text-rose-500">*</span></label>
+                <label className="text-xs font-medium text-ink/80">Upload Screenshot *#06# <span className="text-rose-500">*</span></label>
                 <input 
                   type="file" 
                   accept="image/*" 
                   multiple
                   onChange={e => setFiles(Array.from(e.target.files || []))}
-                  className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                  className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink/80">Upload Hasil Cek CEIR <span className="text-ink-muted text-xs">(Opsional)</span></label>
+                <label className="text-xs font-medium text-ink/80">Upload Cek CEIR <span className="text-ink-muted text-[10px]">(Opsional)</span></label>
                 <input 
                   type="file" 
                   accept="image/*" 
                   multiple
                   onChange={e => setCeirFiles(Array.from(e.target.files || []))}
-                  className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                  className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                 />
               </div>
             </div>
@@ -548,7 +548,7 @@ export default function UnblockImeiPage() {
                 <span className="text-[11px] text-primary font-semibold">100% Bergaransi Resmi</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {loading ? (
                   <p className="text-xs text-ink-muted col-span-3">Memuat paket...</p>
                 ) : packages.length === 0 ? (
@@ -557,49 +557,44 @@ export default function UnblockImeiPage() {
                   packages.map((opt, idx) => {
                     const isSelected = selectedPkgId === opt.id;
                     const isBestSeller = opt.duration.toLowerCase().includes("3 bulan") || idx === 0;
-                    const isLongWarranty = opt.duration.toLowerCase().includes("1 tahun") || opt.duration.toLowerCase().includes("tahun");
 
                     return (
                       <button
                         key={opt.id}
                         type="button"
                         onClick={() => setSelectedPkgId(opt.id)}
-                        className={`relative p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                        className={`relative p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
                           isSelected
-                            ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.02]"
+                            ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.01]"
                             : "border-hairline bg-canvas hover:border-primary/40 hover:bg-parchment"
                         }`}
                       >
                         {/* Top tag */}
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-bold text-xs text-ink">{opt.duration}</span>
-                          {isBestSeller ? (
-                            <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-wider">
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className="font-bold text-xs text-ink truncate">{opt.duration}</span>
+                          {isBestSeller && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider shrink-0">
                               TERLARIS
                             </span>
-                          ) : isLongWarranty ? (
-                            <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-black uppercase tracking-wider">
-                              GARANSI PANJANG
-                            </span>
-                          ) : null}
+                          )}
                         </div>
 
                         {/* Pricing */}
                         <div>
-                          <p className="text-[10px] text-ink-muted line-through">
+                          <p className="text-[9px] text-ink-muted line-through">
                             Rp {(opt.price + 20000).toLocaleString("id-ID")}
                           </p>
-                          <p className="font-black text-sm text-primary">
+                          <p className="font-black text-xs sm:text-sm text-primary">
                             Rp {opt.price.toLocaleString("id-ID")}
                           </p>
                         </div>
 
                         {/* Guarantee tag */}
-                        <div className="pt-1.5 border-t border-hairline/60 flex items-center gap-1 text-[10px] text-emerald-700 font-medium">
-                          <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <div className="pt-1.5 border-t border-hairline/60 flex items-center gap-1 text-[9px] text-emerald-700 font-medium">
+                          <svg className="w-3 h-3 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                           </svg>
-                          <span>Garansi {opt.duration}</span>
+                          <span className="truncate">Garansi Sinyal</span>
                         </div>
                       </button>
                     );
@@ -611,26 +606,26 @@ export default function UnblockImeiPage() {
             {speedOptions.length > 0 && (
               <div className="space-y-1.5 pt-2">
                 <label className="text-xs font-bold text-ink">Pilih Kecepatan Proses Server</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-3 gap-2">
                   {speedOptions.map((opt) => (
                     <button
                       key={opt.id}
                       type="button"
                       onClick={() => setSelectedSpeed(opt.id)}
-                      className={`p-3 rounded-2xl border text-center transition-all ${
+                      className={`p-2.5 rounded-2xl border text-center transition-all ${
                         selectedSpeed === opt.id
-                          ? "border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary"
+                          ? "border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary font-bold"
                           : "border-hairline bg-canvas hover:bg-parchment"
                       }`}
                     >
-                      <div className="font-bold text-xs capitalize">{opt.label}</div>
+                      <div className="font-bold text-xs capitalize truncate">{opt.label}</div>
                       {opt.rangeText && (
-                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                        <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2">
                           ⏱️ {opt.rangeText}
                         </div>
                       )}
-                      <div className="text-[11px] font-semibold mt-0.5 text-ink-muted">
-                        {opt.price === 0 ? "Gratis" : `+ Rp ${opt.price.toLocaleString("id-ID")}`}
+                      <div className="text-[10px] font-semibold mt-0.5 text-ink-muted">
+                        {opt.price === 0 ? "Gratis" : `+Rp ${opt.price.toLocaleString("id-ID")}`}
                       </div>
                     </button>
                   ))}

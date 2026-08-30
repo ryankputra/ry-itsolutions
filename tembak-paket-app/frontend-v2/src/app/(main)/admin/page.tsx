@@ -1648,7 +1648,7 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                 {/* Fast */}
-                <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
+                <div className="bg-canvas border border-hairline p-2.5 rounded-xl space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-xs text-ink">Fast</span>
                     <button
@@ -1663,7 +1663,7 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <Input
-                    placeholder="Harga Tambahan Rp"
+                    placeholder="Biaya Rp"
                     type="number"
                     value={pricing.imei_speed_fast || ''}
                     onChange={e => {
@@ -1673,7 +1673,7 @@ export default function AdminPage() {
                     }}
                   />
                   <Input
-                    placeholder="Range Waktu (misal: 1-3 Jam)"
+                    placeholder="Estimasi Range (e.g. 1-3 Jam)"
                     type="text"
                     value={pricing.imei_speed_fast_range || ''}
                     onChange={e => {
@@ -1685,7 +1685,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Semi Fast */}
-                <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
+                <div className="bg-canvas border border-hairline p-2.5 rounded-xl space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-xs text-ink">Semi Fast</span>
                     <button
@@ -1700,7 +1700,7 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <Input
-                    placeholder="Harga Tambahan Rp"
+                    placeholder="Biaya Rp"
                     type="number"
                     value={pricing.imei_speed_semi || ''}
                     onChange={e => {
@@ -1710,7 +1710,7 @@ export default function AdminPage() {
                     }}
                   />
                   <Input
-                    placeholder="Range Waktu (misal: 1-12 Jam)"
+                    placeholder="Estimasi Range (e.g. 1-12 Jam)"
                     type="text"
                     value={pricing.imei_speed_semi_range || ''}
                     onChange={e => {
@@ -1722,7 +1722,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Slow */}
-                <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
+                <div className="bg-canvas border border-hairline p-2.5 rounded-xl space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-xs text-ink">Slow</span>
                     <button
@@ -1737,7 +1737,7 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <Input
-                    placeholder="Harga Tambahan Rp"
+                    placeholder="Biaya Rp"
                     type="number"
                     value={pricing.imei_speed_slow || ''}
                     onChange={e => {
@@ -1747,7 +1747,7 @@ export default function AdminPage() {
                     }}
                   />
                   <Input
-                    placeholder="Range Waktu (misal: Max kirim 14:00, Selesai 00:00)"
+                    placeholder="Estimasi Range (e.g. Max kirim 14:00, Selesai 00:00)"
                     type="text"
                     value={pricing.imei_speed_slow_range || ''}
                     onChange={e => {
@@ -1767,7 +1767,7 @@ export default function AdminPage() {
                 <p className="text-xs text-ink-muted">Kelola pilihan paket garansi durasi aktivasi sinyal.</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
                 {imeiPackages.map(pkg => (
                   <div key={pkg.id} className="p-3 border border-hairline rounded-xl flex justify-between items-center bg-canvas">
                     <div>

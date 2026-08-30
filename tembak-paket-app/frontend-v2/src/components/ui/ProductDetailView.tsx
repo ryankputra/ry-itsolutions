@@ -125,8 +125,9 @@ export function ProductDetailView({
   const handleAddToCartClick = () => {
     try { playPopSound(); } catch {}
     addToCart({
-      id: `${id}-${selectedVar.id}-${Date.now()}`,
-      serviceType: serviceType as any,
+      packageId: selectedVar.id,
+      packageName: selectedVar.name,
+      serviceType: serviceType || "manual_imei",
       duration: selectedVar.name,
       price: selectedVar.price,
       quantity: 1,
