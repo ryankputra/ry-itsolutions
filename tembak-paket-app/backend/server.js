@@ -2283,10 +2283,13 @@ app.get('/api/user/transactions', isAuthenticated, async (req, res) => {
             // Untuk tipe 'purchase'
             let parsedDetails = {};
             try {
-                if (item.paymentDetails) parsedDetails = typeof item.paymentDetails === 'string' ? JSON.parse(item.paymentDetails) : item.paymentDetails;
+                if (item.paymentDetails) {
+                    const res = typeof item.paymentDetails === 'string' ? JSON.parse(item.paymentDetails) : item.paymentDetails;
+                    if (res && typeof res === 'object') parsedDetails = res;
+                }
             } catch(e) {}
 
-            const purchaseVal = Number(item.originalPrice || item.amount || item.price || parsedDetails.price || parsedDetails.amount || parsedDetails.totalPrice || 0);
+            const purchaseVal = Number(item.originalPrice || item.amount || item.price || parsedDetails?.price || parsedDetails?.amount || parsedDetails?.totalPrice || 0);
 
             return {
                 ...item,
