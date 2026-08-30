@@ -258,6 +258,27 @@ export default function ProfilePage() {
 
         {/* Install Application Card */}
         <InstallAppButton variant="profile" className="mt-2.5" />
+
+        {/* Panduan Interaktif Aplikasi Card */}
+        <div
+          onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
+          className="mt-2.5 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-between cursor-pointer hover:bg-white/15 transition-all shadow-sm"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center font-black shrink-0 shadow-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-xs text-white">Panduan Interaktif Aplikasi</h4>
+              <p className="text-[10px] text-blue-100 font-medium">Tur panduan fitur utama dengan suara AI</p>
+            </div>
+          </div>
+          <span className="px-2 py-1 rounded-lg bg-white/20 text-white font-bold text-[10px] uppercase tracking-wider shrink-0 border border-white/20">
+            Mulai &gt;
+          </span>
+        </div>
       </div>
 
       {/* ============================================================ */}

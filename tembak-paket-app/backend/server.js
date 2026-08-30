@@ -2260,7 +2260,9 @@ app.get('/api/user/transactions', isAuthenticated, async (req, res) => {
 
                 const base = Number(item.baseAmount) || Number(item.amount) || 0;
                 const unique = Number(item.uniqueAmount) || 0;
-                const totalVal = (base + unique) > 0 ? (base + unique) : (Number(item.amount) || 0);
+                // FIX: uniqueAmount is either equal to baseAmount (e.g. 20000) or includes baseAmount + uniqueCode (e.g. 20145).
+                // Do NOT sum base + unique because uniqueAmount already contains baseAmount! Summing caused Rp 20.000 + Rp 20.000 = Rp 40.000!
+                const totalVal = (unique >= base && unique > 0) ? unique : (base > 0 ? base : (Number(item.amount) || 0));
 
                 return {
                     id: item.id,
@@ -2273,9 +2275,9 @@ app.get('/api/user/transactions', isAuthenticated, async (req, res) => {
                     baseAmount: base > 0 ? base : totalVal,
                     originalPrice: totalVal,
                     price: totalVal,
-                    uniqueAmount: unique,
+                    uniqueAmount: (unique > base) ? (unique - base) : 0,
                     packageName: topupDescription,
-                    qrisData: item.qrisBase64Image ? { base64Image: item.qrisBase64Image, uniqueAmount: unique } : undefined,
+                    qrisData: item.qrisBase64Image ? { base64Image: item.qrisBase64Image, uniqueAmount: totalVal } : undefined,
                     api_response: `Top up ${item.status}`
                 };
             }
