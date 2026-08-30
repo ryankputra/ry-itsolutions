@@ -200,7 +200,7 @@ function ensureOtpBridgeRunning() {
     });
 }
 
-function sendToOtpBridge(payload, timeoutMs = 25000) {
+function sendToOtpBridge(payload, timeoutMs = 60000) {
     return new Promise(async (resolve, reject) => {
         await ensureOtpBridgeRunning();
         const client = net.createConnection({ port: 3009, host: '127.0.0.1' }, () => {

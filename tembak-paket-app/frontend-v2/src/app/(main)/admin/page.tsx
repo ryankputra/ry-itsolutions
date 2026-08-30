@@ -2768,6 +2768,16 @@ export default function AdminPage() {
                     </Button>
                   </div>
                 </div>
+              ) : (baileysStatus.state === 'connecting' || loadingBaileys) ? (
+                <div className="p-5 bg-canvas border border-emerald-500/30 rounded-xl flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div>
+                    <h3 className="font-bold text-xs text-ink">Menyiapkan Kode QR WhatsApp...</h3>
+                    <p className="text-[11px] text-ink-muted mt-1">
+                      Engine WhatsApp sedang menginisialisasi jabat tangan server. Kode QR akan muncul dalam beberapa detik.
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="p-4 bg-parchment/60 border border-hairline rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                   <div>

@@ -1341,7 +1341,7 @@ app.post('/api/admin/gopay/request-otp', isAuthenticated, isAdmin, async (req, r
     try {
         const response = await axios.post(`${URL}/api/otp/request`, { phone }, {
             headers: { 'x-api-key': API_KEY },
-            timeout: 25000
+            timeout: 60000
         });
         res.json({ status: response.data?.success, message: response.data?.message });
     } catch (e) {
@@ -1359,7 +1359,7 @@ app.post('/api/admin/gopay/verify-otp', isAuthenticated, isAdmin, async (req, re
     try {
         const response = await axios.post(`${URL}/api/otp/verify`, { otp }, {
             headers: { 'x-api-key': API_KEY },
-            timeout: 25000
+            timeout: 60000
         });
         res.json({ status: response.data?.success, message: response.data?.message, data: response.data?.data });
     } catch (e) {
