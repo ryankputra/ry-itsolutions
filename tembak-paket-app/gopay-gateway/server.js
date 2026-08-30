@@ -256,21 +256,18 @@ app.get('/token-status', apiKeyAuth, async (req, res) => {
     try {
         const merchantId = process.env.GOPAY_MERCHANT_ID || sessionData?.merchant_id || '';
         const now = new Date();
-        const oneHourAgo = new Date(now.getTime() - 3600 * 1000).toISOString();
+        const expiresAt = sessionData?.expires_at ? new Date(sessionData.expires_at) : null;
 
-        await axios.get(GOJEK_TRANSACTIONS_URL, {
-            headers: activeHeaders,
-            params: {
-                from: 0,
-                size: 1,
-                statuses: 'SETTLEMENT,CAPTURE',
-                payment_types: 'QRIS,GOPAY',
-                start_time: oneHourAgo,
-                end_time: now.toISOString(),
-                merchant_ids: merchantId
-            },
-            timeout: 5000
-        });
+        if (expiresAt && expiresAt.getTime() <= now.getTime()) {
+            return res.json({ 
+                success: false, 
+                data: { 
+                    token_status: 'invalid', 
+                    message: 'Sesi GoPay telah kadaluarsa. Silakan login ulang via Admin Web.',
+                    session_info: sessionData
+                } 
+            });
+        }
 
         res.json({ 
             success: true, 

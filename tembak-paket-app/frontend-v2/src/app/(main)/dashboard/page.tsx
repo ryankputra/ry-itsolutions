@@ -236,9 +236,8 @@ export default function DashboardPage() {
 
       {/* ============================================================ */}
       {/* 2. 5-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
-      {/* ============================================================ */}
-      <div className="bg-canvas border border-hairline rounded-2xl p-3 sm:p-4 shadow-2xs">
-        <div className="grid grid-cols-5 gap-2 text-center">
+      {/* =====================================================      <div className="bg-canvas border border-hairline rounded-2xl p-3 sm:p-4 shadow-2xs">
+        <div className="grid grid-cols-6 gap-1.5 sm:gap-2 text-center">
           {[
             {
               name: "Buka IMEI",
@@ -290,23 +289,33 @@ export default function DashboardPage() {
                 </svg>
               ),
             },
+            {
+              name: "Panduan",
+              onClick: () => window.dispatchEvent(new Event("open_app_tour")),
+              iconBg: "bg-amber-100 border-amber-300 text-amber-700 shadow-xs",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+            },
           ].map((item, idx) => (
             <button
               key={idx}
               type="button"
-              onClick={() => router.push(item.href)}
-              className="flex flex-col items-center justify-start group p-1 focus:outline-none"
+              onClick={item.onClick || (() => router.push(item.href!))}
+              className="flex flex-col items-center justify-start group p-0.5 focus:outline-none"
             >
-              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform ${item.iconBg}`}>
+              <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform ${item.iconBg}`}>
                 {item.icon}
               </div>
-              <span className="text-[11px] sm:text-xs font-bold text-ink group-hover:text-primary transition-colors mt-1.5 leading-tight line-clamp-1">
+              <span className="text-[10px] sm:text-xs font-bold text-ink group-hover:text-primary transition-colors mt-1 leading-tight line-clamp-1">
                 {item.name}
               </span>
             </button>
           ))}
         </div>
-      </div>
+      </div>      </div>
 
       {/* ============================================================ */}
       {/* 3. HERO PROMO DEALS BANNER SLIDER                           */}
