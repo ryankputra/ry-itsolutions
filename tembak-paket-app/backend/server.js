@@ -2253,28 +2253,48 @@ app.get('/api/user/transactions', isAuthenticated, async (req, res) => {
         const allActivities = [...purchases, ...topups].map(item => {
             // Logika untuk Top Up
             if (item.type === 'topup') {
-                // Beri deskripsi yang lebih baik untuk top up dari admin
-                let topupDescription = 'Top Up via QRIS'; // Default
-                if (item.id.startsWith('TU-ADMIN-')) {
+                let topupDescription = 'Top Up via QRIS';
+                if (item.id && item.id.startsWith('TU-ADMIN-')) {
                     topupDescription = 'Top Up Saldo oleh Admin';
                 }
+
+                const base = Number(item.baseAmount) || Number(item.amount) || 0;
+                const unique = Number(item.uniqueAmount) || 0;
+                const totalVal = (base + unique) > 0 ? (base + unique) : (Number(item.amount) || 0);
 
                 return {
                     id: item.id,
                     userId: item.userId,
                     type: 'topup',
+                    serviceType: 'topup_qris',
                     status: item.status,
                     createdAt: item.createdAt,
-                    baseAmount: item.baseAmount,
-                    uniqueAmount: item.uniqueAmount,
-                    // Kita "pinjam" field packageName untuk deskripsi agar mudah di frontend
+                    amount: totalVal,
+                    baseAmount: base > 0 ? base : totalVal,
+                    originalPrice: totalVal,
+                    price: totalVal,
+                    uniqueAmount: unique,
                     packageName: topupDescription,
-                    qrisData: item.qrisBase64Image ? { base64Image: item.qrisBase64Image, uniqueAmount: item.uniqueAmount } : undefined,
+                    qrisData: item.qrisBase64Image ? { base64Image: item.qrisBase64Image, uniqueAmount: unique } : undefined,
                     api_response: `Top up ${item.status}`
                 };
             }
-            // Untuk tipe 'purchase', kembalikan apa adanya
-            return item;
+
+            // Untuk tipe 'purchase'
+            let parsedDetails = {};
+            try {
+                if (item.paymentDetails) parsedDetails = typeof item.paymentDetails === 'string' ? JSON.parse(item.paymentDetails) : item.paymentDetails;
+            } catch(e) {}
+
+            const purchaseVal = Number(item.originalPrice || item.amount || item.price || parsedDetails.price || parsedDetails.amount || parsedDetails.totalPrice || 0);
+
+            return {
+                ...item,
+                amount: purchaseVal,
+                originalPrice: purchaseVal,
+                baseAmount: purchaseVal,
+                price: purchaseVal
+            };
         }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         res.status(200).json({ status: true, data: allActivities });
