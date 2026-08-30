@@ -133,7 +133,7 @@ export function EcommerceHeader() {
       <div className="lg:hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 py-2 shadow-md flex items-center gap-2.5 relative overflow-hidden">
         <BatikPatternOverlay opacity={0.2} />
         {/* Search Bar (Clean White Input without Camera icon) */}
-        <div ref={searchRef} className="flex-1 relative">
+        <div ref={searchRef} data-tour="search-bar" className="flex-1 relative">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <div className="w-full h-9 rounded-xl bg-white flex items-center px-2.5 shadow-xs">
               <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -181,6 +181,18 @@ export function EcommerceHeader() {
 
         {/* Install App Button (Mobile) */}
         <InstallAppButton variant="header" />
+
+        {/* Panduan Tour Button (Mobile) */}
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
+          className="p-1 text-amber-300 hover:text-amber-200 transition-colors shrink-0 flex items-center gap-1 font-bold text-[11px]"
+          title="Panduan Aplikasi Interaktif"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
 
         {/* Cart Icon with real Cart Count */}
         <Link

@@ -249,16 +249,18 @@ export default function InteractiveTour({ isOpen, onClose, steps = DEFAULT_STEPS
     };
 
     updatePosition();
-    const timer = setTimeout(() => {
+    const timer1 = setTimeout(updatePosition, 150);
+    const timer2 = setTimeout(() => {
       updatePosition();
       playAudio(currentStep.audioUrl, currentStep.description);
-    }, 350);
+    }, 450);
 
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition);
       stopAudio();
