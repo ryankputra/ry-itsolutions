@@ -255,88 +255,6 @@ async function initializeDatabase() {
                 FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
             )`);
 
-            // Seed Ulasan Awal Jika Kosong
-            try {
-                const reviewCount = await dbGet("SELECT COUNT(*) as count FROM reviews");
-                if (!reviewCount || reviewCount.count === 0) {
-                    const sampleReviews = [
-                        {
-                            id: "rev_1",
-                            userId: "usr_seed1",
-                            userName: "rahulpramudia970",
-                            userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop",
-                            orderId: "trx_sample1",
-                            productId: "unblock-imei",
-                            serviceType: "imei",
-                            variation: "GARANSI 1 TAHUN, ALL OPERATOR",
-                            rating: 5,
-                            comment: "Proses kilat gak nyampe 3 jam sinyal 4G & 5G di iPhone 13 Pro Inter saya langsung keluar Telkomsel & XL lancar jaya! Respon CS WA juga ramah banget, garansi resmi terpampang rapi.",
-                            images: JSON.stringify([
-                                "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
-                                "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop"
-                            ]),
-                            likesCount: 382,
-                            createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-                        },
-                        {
-                            id: "rev_2",
-                            userId: "usr_seed2",
-                            userName: "dika_store_official",
-                            userAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&h=100&fit=crop",
-                            orderId: "trx_sample2",
-                            productId: "unblock-imei",
-                            serviceType: "imei",
-                            variation: "GARANSI 3 BULAN, PROSES SUPER SPEED",
-                            rating: 5,
-                            comment: "Luar biasa Ry-ITSolutions! Saya reseller HP bekas udah langganan 20+ IMEI di sini selalu sukses tanpa ada yang retur. Pokoknya rekomendasi teratas buat konter HP!",
-                            images: JSON.stringify([
-                                "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=400&h=400&fit=crop"
-                            ]),
-                            likesCount: 215,
-                            createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
-                        },
-                        {
-                            id: "rev_3",
-                            userId: "usr_seed3",
-                            userName: "nuruss96",
-                            userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-                            orderId: "trx_sample3",
-                            productId: "cek-ceir",
-                            serviceType: "ceir",
-                            variation: "CEK CEIR PERMANENT REGISTRY",
-                            rating: 5,
-                            comment: "Awalnya ragu tapi ternyata hasilnya valid banget langsung dapet screenshot & PDF resmi Kemenperin/Bea Cukai. Mantul mas Ryan!",
-                            images: JSON.stringify([]),
-                            likesCount: 94,
-                            createdAt: new Date(Date.now() - 86400000 * 7).toISOString()
-                        },
-                        {
-                            id: "rev_4",
-                            userId: "usr_seed4",
-                            userName: "bintang_cellular",
-                            userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-                            orderId: "trx_sample4",
-                            productId: "unblock-imei",
-                            serviceType: "imei",
-                            variation: "GARANSI 1 TAHUN",
-                            rating: 5,
-                            comment: "Mantap koin bonusnya dapet 500 koin lagi abis kirim ulasan, potongan diskon voucher juga aktif terus. Makasih seller terpercaya!",
-                            images: JSON.stringify([
-                                "https://images.unsplash.com/photo-1580910051074-3eb694886505?w=400&h=400&fit=crop"
-                            ]),
-                            likesCount: 142,
-                            createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
-                        }
-                    ];
-                    for (const r of sampleReviews) {
-                        await dbRun(
-                            `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            [r.id, r.userId, r.userName, r.userAvatar, r.orderId, r.productId, r.serviceType, r.variation, r.rating, r.comment, r.images, r.likesCount, r.createdAt]
-                        );
-                    }
-                }
-            } catch (e) { console.error("Error seeding reviews:", e); }
-
             console.log("✅ Database schema initialized successfully.");
         } catch (error) {
             console.error("Database initialization failed:", error);
@@ -4403,27 +4321,46 @@ app.get('/api/reviews', async (req, res) => {
         });
 
         const total = reviewsList.length;
-        const avgRating = total > 0 ? (sumRating / total).toFixed(1) : "4.9";
+        const avgRating = total > 0 ? (sumRating / total).toFixed(1) : "0.0";
 
         res.json({
             status: true,
             summary: {
                 averageRating: Number(avgRating),
-                totalReviews: Math.max(total, 1420),
+                totalReviews: total,
                 ratingCounts: {
-                    5: ratingCounts[5] + 1350,
-                    4: ratingCounts[4] + 55,
-                    3: ratingCounts[3] + 10,
-                    2: ratingCounts[2] + 3,
-                    1: ratingCounts[1] + 2,
+                    5: ratingCounts[5] || 0,
+                    4: ratingCounts[4] || 0,
+                    3: ratingCounts[3] || 0,
+                    2: ratingCounts[2] || 0,
+                    1: ratingCounts[1] || 0,
                 },
-                withPhotosCount: withPhotosCount + 845
+                withPhotosCount
             },
             reviews: formattedReviews
         });
     } catch (err) {
         console.error("Error fetching reviews:", err);
         res.status(500).json({ status: false, message: "Gagal memuat ulasan." });
+    }
+});
+
+// Check if user is eligible to write a review (Must have at least 1 completed order)
+app.get('/api/reviews/check-eligibility', isAuthenticated, async (req, res) => {
+    try {
+        const completedOrders = await dbAll(
+            `SELECT id, packageName, service_type, createdAt FROM transactions WHERE userId = ? AND status = 'completed' ORDER BY createdAt DESC`,
+            [req.session.userId]
+        );
+
+        const canReview = completedOrders && completedOrders.length > 0;
+        res.json({
+            status: true,
+            canReview,
+            completedOrders: completedOrders || []
+        });
+    } catch (err) {
+        res.status(500).json({ status: false, canReview: false });
     }
 });
 
@@ -4437,16 +4374,28 @@ app.post('/api/reviews', isAuthenticated, async (req, res) => {
             return res.status(400).json({ status: false, message: "Tulis ulasan minimal 4 karakter." });
         }
 
+        // Verifikasi ketat bahwa pengguna benar-benar memiliki minimal 1 transaksi sukses
+        const completedTrx = await dbGet(
+            `SELECT id, packageName FROM transactions WHERE userId = ? AND status = 'completed'`,
+            [req.session.userId]
+        );
+        if (!completedTrx) {
+            return res.status(403).json({
+                status: false,
+                message: "Hanya pengguna yang sudah menyelesaikan transaksi sukses yang dapat memberikan ulasan."
+            });
+        }
+
         const userObj = await dbGet("SELECT name, email, avatar FROM users WHERE id = ?", [req.session.userId]);
         const userName = userObj?.name || req.session.userEmail?.split('@')[0] || 'Pembeli Terverifikasi';
-        const userAvatar = userObj?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.session.userId}`;
+        const userAvatar = userObj?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`;
 
         const reviewId = `rev_${Date.now()}`;
         const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
 
         await dbRun(
             `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-            [reviewId, req.session.userId, userName, userAvatar, orderId || 'manual', productId || 'unblock-imei', productId || 'imei', variation || 'Layanan Official', Number(rating), comment.trim(), imagesJson, new Date().toISOString()]
+            [reviewId, req.session.userId, userName, userAvatar, orderId || completedTrx.id, productId || 'unblock-imei', productId || 'imei', variation || completedTrx.packageName || 'Layanan Official', Number(rating), comment.trim(), imagesJson, new Date().toISOString()]
         );
 
         // Bonus Reward +500 Koin Ry
