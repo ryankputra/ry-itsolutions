@@ -110,11 +110,11 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
       <button
         type="button"
         onClick={handleInstallClick}
-        className={`px-2.5 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-md hover:scale-105 transition-transform flex items-center gap-1 shrink-0 ${className}`}
+        className={`px-2.5 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-md hover:scale-105 transition-transform flex items-center gap-1.5 shrink-0 ${className}`}
         title="Install Aplikasi Ry-ITSolutions di HP / Laptop"
       >
-        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        <svg className="w-3.5 h-3.5 shrink-0 text-amber-950" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-5.45 8-12V6l-8-4zm-1 6h2v5h3l-4 4-4-4h3V8z" />
         </svg>
         <span>Install App</span>
       </button>
@@ -128,17 +128,17 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
         className={`p-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-amber-950 flex items-center justify-between cursor-pointer shadow-md hover:opacity-95 transition-opacity ${className}`}
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-black text-amber-400 flex items-center justify-center font-black shrink-0">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          <div className="w-9 h-9 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center font-black shrink-0 border border-amber-400/30 shadow-xs">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-5.45 8-12V6l-8-4zm-1 6h2v5h3l-4 4-4-4h3V8z" />
             </svg>
           </div>
           <div>
-            <h4 className="font-black text-xs">Install Aplikasi Official</h4>
+            <h4 className="font-black text-xs text-amber-950">Install Aplikasi Official</h4>
             <p className="text-[10px] text-amber-950/80 font-medium">Akses transaksi 2x lebih cepat langsung dari layar HP Anda</p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-lg bg-black text-amber-300 font-bold text-[10px] uppercase tracking-wider shrink-0">
+        <span className="px-2.5 py-1 rounded-lg bg-slate-950 text-amber-300 font-bold text-[10px] uppercase tracking-wider shrink-0 border border-amber-400/20">
           Install &gt;
         </span>
       </div>
@@ -149,10 +149,10 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
     <button
       type="button"
       onClick={handleInstallClick}
-      className={`px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 ${className}`}
+      className={`px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-black shadow-md transition-all flex items-center justify-center gap-2 ${className}`}
     >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      <svg className="w-4 h-4 shrink-0 text-amber-950" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-5.45 8-12V6l-8-4zm-1 6h2v5h3l-4 4-4-4h3V8z" />
       </svg>
       <span>Install Aplikasi Sekarang</span>
     </button>

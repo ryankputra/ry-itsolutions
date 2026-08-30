@@ -11,6 +11,7 @@ import { SuccessModal } from "@/components/ui/SuccessModal";
 import { analyzeImei, parseMultipleImeis } from "@/lib/imeiHelper";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
+import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 
 export default function UnblockImeiPage() {
   const { user, addToCart } = useApp();
@@ -43,6 +44,8 @@ export default function UnblockImeiPage() {
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
   const [useCoins, setUseCoins] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"qris" | "balance">("qris");
+  const [showInstantQris, setShowInstantQris] = useState(false);
 
   // WhatsApp Recipient Phone State
   const [targetPhone, setTargetPhone] = useState("");
@@ -209,20 +212,9 @@ export default function UnblockImeiPage() {
     if (files.length === 0) return setError("Screenshot *#06# wajib diupload.");
     if (imeiList.length === 0) return setError("Tidak ada IMEI yang valid (harus 15 digit angka).");
     if (!selectedPkg) return setError("Silakan pilih paket durasi.");
-    if (user && user.balance < totalPrice) {
-      Swal.fire({
-      title: 'Saldo Tidak Mencukupi',
-      text: 'Saldo Anda tidak mencukupi. Silakan Top Up terlebih dahulu.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Top Up Sekarang',
-      cancelButtonText: 'Batal'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        router.push('/topup');
-      }
-    });
-    return setError('Saldo tidak mencukupi.');
+    if (paymentMethod === "qris" || (user && user.balance < totalPrice)) {
+      setShowInstantQris(true);
+      return;
     }
 
     const confirm = await Swal.fire({
@@ -239,6 +231,13 @@ export default function UnblockImeiPage() {
     if (!confirm.isConfirmed) {
       return;
     }
+
+    executeOrderSubmission();
+  };
+
+  const executeOrderSubmission = async () => {
+    const selectedPkg = packages.find(p => p.id === selectedPkgId);
+    if (!selectedPkg) return;
 
     setError("");
     setSubmitting(true);
@@ -742,6 +741,56 @@ export default function UnblockImeiPage() {
               </div>
             </div>
 
+            {/* Opsi Metode Pembayaran Direct */}
+            <div className="space-y-2 pt-2 border-t border-hairline">
+              <label className="text-xs font-bold text-ink block">Metode Pembayaran</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div
+                  onClick={() => setPaymentMethod("qris")}
+                  className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${
+                    paymentMethod === "qris"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-hairline bg-canvas hover:border-primary/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                      <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-xs text-ink">QRIS Instant 24 Jam</h5>
+                      <p className="text-[10px] text-emerald-700 font-bold">Langsung bayar tanpa top up</p>
+                    </div>
+                  </div>
+                  <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-primary" />
+                </div>
+
+                <div
+                  onClick={() => setPaymentMethod("balance")}
+                  className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${
+                    paymentMethod === "balance"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-hairline bg-canvas hover:border-primary/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 text-primary flex items-center justify-center font-bold shrink-0">
+                      <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-xs text-ink">Saldo Ry</h5>
+                      <p className="text-[10px] text-ink-muted">Rp {(user?.balance || 0).toLocaleString("id-ID")}</p>
+                    </div>
+                  </div>
+                  <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-primary" />
+                </div>
+              </div>
+            </div>
+
             <div className="pt-2 border-t border-hairline">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -804,6 +853,17 @@ export default function UnblockImeiPage() {
         claimingId={claimingCouponId}
         loading={couponLoading}
         rawTotalPrice={rawTotalPrice}
+      />
+
+      <InstantQrisPaymentModal
+        isOpen={showInstantQris}
+        onClose={() => setShowInstantQris(false)}
+        amount={totalPrice}
+        orderTitle="Pembayaran Instant Buka Sinyal IMEI"
+        onSuccess={() => {
+          setShowInstantQris(false);
+          executeOrderSubmission();
+        }}
       />
 
       <SuccessModal 

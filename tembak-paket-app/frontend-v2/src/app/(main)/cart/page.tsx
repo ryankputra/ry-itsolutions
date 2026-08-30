@@ -8,6 +8,7 @@ import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
 import { CouponItem } from "@/components/ui/ShopeeVoucherCard";
+import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { safeJson } from "@/lib/api";
 
 export default function CartPage() {
@@ -22,6 +23,8 @@ export default function CartPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
   const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"qris" | "balance">("qris");
+  const [showInstantQris, setShowInstantQris] = useState(false);
 
   const handleApplyCoupon = async (code: string) => {
     setCouponLoading(true);
@@ -180,18 +183,8 @@ export default function CartPage() {
       return;
     }
 
-    // Check balance
-    if ((user?.balance || 0) < grandTotal) {
-      const { isConfirmed } = await Swal.fire({
-        icon: "warning",
-        title: "Saldo Kurang",
-        text: `Saldo Anda (Rp ${(user?.balance || 0).toLocaleString("id-ID")}) tidak mencukupi untuk pembayaran Rp ${grandTotal.toLocaleString("id-ID")}. Mau isi saldo sekarang?`,
-        showCancelButton: true,
-        confirmButtonText: "Top Up Saldo",
-        cancelButtonText: "Batal",
-        confirmButtonColor: "#0066cc",
-      });
-      if (isConfirmed) router.push("/topup");
+    if (paymentMethod === "qris" || (user?.balance || 0) < grandTotal) {
+      setShowInstantQris(true);
       return;
     }
 
@@ -215,6 +208,10 @@ export default function CartPage() {
 
     if (!isConfirmed) return;
 
+    executeCartCheckout();
+  };
+
+  const executeCartCheckout = async () => {
     setCheckingOut(true);
     let successCount = 0;
     const processedItemIds: string[] = [];
@@ -500,6 +497,55 @@ export default function CartPage() {
               />
               <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
             </label>
+            {/* Opsi Metode Pembayaran Direct */}
+            <div className="p-3.5 rounded-2xl bg-canvas border border-hairline shadow-2xs space-y-2">
+              <label className="text-xs font-bold text-ink block">Metode Pembayaran</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div
+                  onClick={() => setPaymentMethod("qris")}
+                  className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${
+                    paymentMethod === "qris"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-hairline bg-canvas hover:border-primary/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                      <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-xs text-ink">QRIS Instant 24 Jam</h5>
+                      <p className="text-[10px] text-emerald-700 font-bold">Bayar langsung tanpa top up</p>
+                    </div>
+                  </div>
+                  <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-primary" />
+                </div>
+
+                <div
+                  onClick={() => setPaymentMethod("balance")}
+                  className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${
+                    paymentMethod === "balance"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-hairline bg-canvas hover:border-primary/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 text-primary flex items-center justify-center font-bold shrink-0">
+                      <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-xs text-ink">Saldo Ry</h5>
+                      <p className="text-[10px] text-ink-muted">Rp {(user?.balance || 0).toLocaleString("id-ID")}</p>
+                    </div>
+                  </div>
+                  <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-primary" />
+                </div>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -542,6 +588,17 @@ export default function CartPage() {
         claimingId={claimingCouponId}
         loading={couponLoading}
         rawTotalPrice={subtotal}
+      />
+
+      <InstantQrisPaymentModal
+        isOpen={showInstantQris}
+        onClose={() => setShowInstantQris(false)}
+        amount={grandTotal}
+        orderTitle={`Pembayaran Direct Keranjang (${activeCartItems.length} Layanan)`}
+        onSuccess={() => {
+          setShowInstantQris(false);
+          executeCartCheckout();
+        }}
       />
     </div>
   );
