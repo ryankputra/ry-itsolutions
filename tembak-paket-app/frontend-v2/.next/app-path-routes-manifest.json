@@ -15,6 +15,7 @@
   "/(main)/games/page": "/games",
   "/(main)/history/page": "/history",
   "/(main)/notifications/page": "/notifications",
+  "/(main)/produk/[id]/page": "/produk/[id]",
   "/(main)/profile/page": "/profile",
   "/(main)/referral/page": "/referral",
   "/(main)/saya/page": "/saya",

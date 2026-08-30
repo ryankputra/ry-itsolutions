@@ -15,6 +15,7 @@
   "/(main)/games/page": "app/(main)/games/page.js",
   "/(main)/history/page": "app/(main)/history/page.js",
   "/(main)/notifications/page": "app/(main)/notifications/page.js",
+  "/(main)/produk/[id]/page": "app/(main)/produk/[id]/page.js",
   "/(main)/profile/page": "app/(main)/profile/page.js",
   "/(main)/referral/page": "app/(main)/referral/page.js",
   "/(main)/saya/page": "app/(main)/saya/page.js",

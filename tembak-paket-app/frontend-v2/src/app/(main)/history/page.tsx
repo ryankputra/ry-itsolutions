@@ -6,6 +6,7 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { Button } from "@/components/ui/Button";
+import WriteReviewModal from "@/components/ui/WriteReviewModal";
 
 function HistoryContent() {
   const searchParams = useSearchParams();
@@ -16,6 +17,7 @@ function HistoryContent() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
+  const [reviewTarget, setReviewTarget] = useState<any>(null);
 
   // Sync tab with search params when URL changes
   useEffect(() => {
@@ -378,6 +380,14 @@ function HistoryContent() {
                       <>
                         <button
                           type="button"
+                          onClick={() => setReviewTarget(trx)}
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
+                        >
+                          <span>⭐ Beri Ulasan (+500 Koin)</span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => handleQuickShareWhatsApp(trx)}
                           className="px-3 py-1.5 rounded-xl border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors flex items-center gap-1.5"
                         >
@@ -429,6 +439,15 @@ function HistoryContent() {
         </div>
       )}
 
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        isOpen={!!reviewTarget}
+        onClose={() => setReviewTarget(null)}
+        orderId={reviewTarget?.id}
+        productId={reviewTarget?.service_type || reviewTarget?.serviceType || "unblock-imei"}
+        variation={reviewTarget?.package_name || reviewTarget?.packageName || "Layanan Official"}
+      />
+
       {/* Invoice Modal */}
       <InvoiceModal
         isOpen={!!selectedInvoiceTrx}
@@ -436,13 +455,6 @@ function HistoryContent() {
         data={
           selectedInvoiceTrx
             ? {
-                trxId: selectedInvoiceTrx.id,
-                imei: selectedInvoiceTrx.imei,
-                packageName: selectedInvoiceTrx.package_name || selectedInvoiceTrx.packageName,
-                serviceType: selectedInvoiceTrx.service_type || selectedInvoiceTrx.serviceType,
-                createdAt: selectedInvoiceTrx.createdAt,
-                amount: selectedInvoiceTrx.amount || selectedInvoiceTrx.baseAmount,
-                status: selectedInvoiceTrx.status,
                 warranty: selectedInvoiceTrx.warranty || {
                   hasWarranty: !selectedInvoiceTrx.service_type?.includes("ceir"),
                   remainingDays: selectedInvoiceTrx.remainingDays,

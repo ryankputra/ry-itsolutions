@@ -12,6 +12,7 @@ import { analyzeImei, parseMultipleImeis } from "@/lib/imeiHelper";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
 import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
+import ProductDetailView from "@/components/ui/ProductDetailView";
 
 export default function UnblockImeiPage() {
   const { user, addToCart } = useApp();
@@ -46,6 +47,7 @@ export default function UnblockImeiPage() {
   const [useCoins, setUseCoins] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"qris" | "balance">("qris");
   const [showInstantQris, setShowInstantQris] = useState(false);
+  const [viewMode, setViewMode] = useState<"product" | "form">("product");
 
   // WhatsApp Recipient Phone State
   const [targetPhone, setTargetPhone] = useState("");
@@ -293,17 +295,51 @@ export default function UnblockImeiPage() {
       price: parseInt(speedPricing[opt.key]) || 0
     }));
 
-  return (
-    <div className="space-y-6 max-w-2xl mx-auto pb-12">
-      <TelegramPopup />
-      <div className="flex items-center gap-4 mb-4">
-        <button onClick={() => router.push('/dashboard')} className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Buka Gembok IMEI</h1>
-          <p className="text-sm text-ink-muted">Aktivasi sinyal HP All Operator resmi dan bergaransi.</p>
+  if (viewMode === "product") {
+    return (
+      <div className="relative">
+        <div className="bg-canvas border-b border-hairline px-4 py-2 flex items-center justify-between text-xs sticky top-[53px] z-30 shadow-xs">
+          <span className="font-extrabold text-primary flex items-center gap-1.5">
+            <span>⭐ Shopee-Style Product Overview &amp; Ulasan Pelanggan</span>
+          </span>
+          <button
+            onClick={() => setViewMode("form")}
+            className="px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary-focus text-white font-black transition-colors shadow-xs flex items-center gap-1"
+          >
+            <span>Lanjut Isi IMEI</span>
+            <span>&gt;</span>
+          </button>
         </div>
+        <ProductDetailView
+          id="unblock-imei"
+          title="Unblock IMEI Inter Buka Sinyal Permanent All Operator 3 Bulan / 1 Tahun"
+          subtitle="Proses Kilat 1-24 Jam • 100% Bergaransi Resmi Ry-ITSolutions"
+          price={150000}
+          onCheckoutSubmit={() => setViewMode("form")}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      <TelegramPopup />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push('/dashboard')} className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-ink">Buka Gembok IMEI</h1>
+            <p className="text-sm text-ink-muted">Aktivasi sinyal HP All Operator resmi dan bergaransi.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setViewMode("product")}
+          className="px-3 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 text-xs font-bold border border-amber-500/20 flex items-center gap-1 transition-colors"
+        >
+          <span>⭐ Lihat Produk &amp; Ulasan</span>
+        </button>
       </div>
 
       <Card glass className="p-6 space-y-6">
