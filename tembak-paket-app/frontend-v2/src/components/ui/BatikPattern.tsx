@@ -6,11 +6,11 @@ interface BatikPatternProps {
   opacity?: number;
 }
 
-export function BatikPatternOverlay({ className = "", opacity = 0.2 }: BatikPatternProps) {
+export function BatikPatternOverlay({ className = "", opacity = 0.35 }: BatikPatternProps) {
   return (
     <div className={`absolute inset-0 pointer-events-none overflow-hidden select-none z-0 ${className}`}>
       <svg
-        className="w-full h-full text-white/40"
+        className="w-full h-full text-white/60"
         xmlns="http://www.w3.org/2000/svg"
         width="100%"
         height="100%"

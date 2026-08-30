@@ -7,6 +7,7 @@ import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
+import { InstallAppButton } from "@/components/ui/InstallAppButton";
 
 export default function ProfilePage() {
   const { user, setUser, cartCount } = useApp();
@@ -254,6 +255,9 @@ export default function ProfilePage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </div>
+
+        {/* Install Application Card */}
+        <InstallAppButton variant="profile" className="mt-2.5" />
       </div>
 
       {/* ============================================================ */}

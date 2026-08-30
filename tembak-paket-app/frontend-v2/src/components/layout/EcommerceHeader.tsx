@@ -6,6 +6,7 @@ import { useApp } from "@/lib/store";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
+import { InstallAppButton } from "@/components/ui/InstallAppButton";
 
 export function EcommerceHeader() {
   const pathname = usePathname();
@@ -177,6 +178,9 @@ export function EcommerceHeader() {
             </div>
           )}
         </div>
+
+        {/* Install App Button (Mobile) */}
+        <InstallAppButton variant="header" />
 
         {/* Cart Icon with real Cart Count */}
         <Link

@@ -8,6 +8,7 @@ import { CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { safeJson } from "@/lib/api";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
+import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
 
 export default function DashboardPage() {
   const { user } = useApp();
@@ -434,7 +435,8 @@ export default function DashboardPage() {
           onClick={() => router.push("/vouchers")}
           className="rounded-2xl p-3.5 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white shadow-md flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:opacity-95 transition-opacity"
         >
-          <div className="space-y-1">
+          <BatikPatternOverlay opacity={0.35} />
+          <div className="space-y-1 relative z-10">
             <span className="inline-block bg-white text-primary text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">
               VOUCHER DISKON
             </span>
