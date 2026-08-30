@@ -255,7 +255,7 @@ export function ProductReviewsSection({
                   {r.variation && (
                     <span><b>Variasi:</b> {r.variation}</span>
                   )}
-                  <span><b>Waktu Transaksi:</b> {r.transactionDate ? new Date(r.transactionDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "2026", hour: "2-digit", minute: "2-digit" }) + " WIB" : "28 Agt 2026, 14:20 WIB"}</span>
+                  <span><b>Waktu Transaksi:</b> {r.transactionDate ? new Date(r.transactionDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " WIB" : "28 Agt 2026, 14:20 WIB"}</span>
                 </div>
 
                 <p className="text-ink leading-relaxed">{r.comment}</p>

@@ -21,7 +21,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     ? new Date(user.userJoinedAt).toLocaleDateString("id-ID", {
         day: "numeric",
         month: "long",
-        year: "2026",
+        year: "numeric",
       })
     : "15 Januari 2026";
 
@@ -29,7 +29,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     ? new Date(user.transactionDate).toLocaleDateString("id-ID", {
         day: "numeric",
         month: "long",
-        year: "2026",
+        year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       }) + " WIB"
