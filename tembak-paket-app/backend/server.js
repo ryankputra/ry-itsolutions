@@ -251,9 +251,117 @@ async function initializeDatabase() {
                 comment TEXT,
                 images TEXT,
                 likesCount INTEGER DEFAULT 0,
+                transactionDate TEXT,
+                userJoinedAt TEXT,
+                userTotalOrders INTEGER DEFAULT 1,
+                userRole TEXT DEFAULT 'buyer',
                 createdAt TEXT NOT NULL,
                 FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
             )`);
+
+            // Safe ALTER TABLE for older databases
+            try { await dbRun("ALTER TABLE reviews ADD COLUMN transactionDate TEXT"); } catch(e){}
+            try { await dbRun("ALTER TABLE reviews ADD COLUMN userJoinedAt TEXT"); } catch(e){}
+            try { await dbRun("ALTER TABLE reviews ADD COLUMN userTotalOrders INTEGER DEFAULT 1"); } catch(e){}
+            try { await dbRun("ALTER TABLE reviews ADD COLUMN userRole TEXT DEFAULT 'buyer'"); } catch(e){}
+
+            // Seed Ulasan Realistis Jika Kosong
+            try {
+                const reviewCount = await dbGet("SELECT COUNT(*) as count FROM reviews");
+                if (!reviewCount || reviewCount.count === 0) {
+                    const sampleReviews = [
+                        {
+                            id: "rev_1",
+                            userId: "usr_seed1",
+                            userName: "Rahul Pramudia",
+                            userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop",
+                            orderId: "trx_sample1",
+                            productId: "unblock-imei",
+                            serviceType: "imei",
+                            variation: "GARANSI 1 TAHUN, ALL OPERATOR",
+                            rating: 5,
+                            comment: "Proses kilat gak nyampe 3 jam sinyal 4G & 5G di iPhone 13 Pro Inter saya langsung keluar Telkomsel & XL lancar jaya! Respon CS WA juga ramah banget, garansi resmi terpampang rapi.",
+                            images: JSON.stringify([
+                                "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
+                                "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop"
+                            ]),
+                            likesCount: 382,
+                            transactionDate: new Date(Date.now() - 86400000 * 2).toISOString(),
+                            userJoinedAt: "2024-11-12T08:30:00.000Z",
+                            userTotalOrders: 14,
+                            userRole: "Buyer Verified",
+                            createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
+                        },
+                        {
+                            id: "rev_2",
+                            userId: "usr_seed2",
+                            userName: "Dika Store Official",
+                            userAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&h=100&fit=crop",
+                            orderId: "trx_sample2",
+                            productId: "unblock-imei",
+                            serviceType: "imei",
+                            variation: "GARANSI 3 BULAN, PROSES FAST",
+                            rating: 5,
+                            comment: "Luar biasa Ry-ITSolutions! Saya reseller HP bekas udah langganan 20+ IMEI di sini selalu sukses tanpa ada yang retur. Pokoknya rekomendasi teratas buat konter HP!",
+                            images: JSON.stringify([
+                                "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=400&h=400&fit=crop"
+                            ]),
+                            likesCount: 215,
+                            transactionDate: new Date(Date.now() - 86400000 * 5).toISOString(),
+                            userJoinedAt: "2024-08-05T10:15:00.000Z",
+                            userTotalOrders: 28,
+                            userRole: "Reseller VIP",
+                            createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
+                        },
+                        {
+                            id: "rev_3",
+                            userId: "usr_seed3",
+                            userName: "Nurus Syafiqah",
+                            userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+                            orderId: "trx_sample3",
+                            productId: "cek-ceir",
+                            serviceType: "ceir",
+                            variation: "CEK CEIR PERMANENT REGISTRY",
+                            rating: 5,
+                            comment: "Awalnya ragu tapi ternyata hasilnya valid banget langsung dapet screenshot & PDF resmi Kemenperin/Bea Cukai. Mantul mas Ryan!",
+                            images: JSON.stringify([]),
+                            likesCount: 94,
+                            transactionDate: new Date(Date.now() - 86400000 * 7).toISOString(),
+                            userJoinedAt: "2025-01-20T14:22:00.000Z",
+                            userTotalOrders: 6,
+                            userRole: "Buyer Verified",
+                            createdAt: new Date(Date.now() - 86400000 * 7).toISOString()
+                        },
+                        {
+                            id: "rev_4",
+                            userId: "usr_seed4",
+                            userName: "Bintang Cellular Surabaya",
+                            userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+                            orderId: "trx_sample4",
+                            productId: "unblock-imei",
+                            serviceType: "imei",
+                            variation: "GARANSI 1 TAHUN",
+                            rating: 5,
+                            comment: "Mantap koin bonusnya dapet 500 koin lagi abis kirim ulasan, potongan diskon voucher juga aktif terus. Makasih seller terpercaya!",
+                            images: JSON.stringify([
+                                "https://images.unsplash.com/photo-1580910051074-3eb694886505?w=400&h=400&fit=crop"
+                            ]),
+                            likesCount: 142,
+                            transactionDate: new Date(Date.now() - 86400000 * 10).toISOString(),
+                            userJoinedAt: "2024-06-18T16:00:00.000Z",
+                            userTotalOrders: 35,
+                            userRole: "Konter Mitra",
+                            createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
+                        }
+                    ];
+                    for (const r of sampleReviews) {
+                        await dbRun(
+                            `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [r.id, r.userId, r.userName, r.userAvatar, r.orderId, r.productId, r.serviceType, r.variation, r.rating, r.comment, r.images, r.likesCount, r.transactionDate, r.userJoinedAt, r.userTotalOrders, r.userRole, r.createdAt]
+                        );
+                    }
+                }
+            } catch (e) { console.error("Error seeding reviews:", e); }
 
             console.log("✅ Database schema initialized successfully.");
         } catch (error) {
@@ -4434,12 +4542,15 @@ app.get('/api/manual-services-pricing', async (req, res) => {
         const defaults = {
             imei_speed_fast_status: 'hidden',
             imei_speed_semi_status: 'hidden',
-            imei_speed_slow_status: 'hidden'
+            imei_speed_slow_status: 'visible',
+            imei_speed_fast_range: '1-3 Jam',
+            imei_speed_semi_range: '1-12 Jam',
+            imei_speed_slow_range: 'Max kirim jam 14:00, selesai jam 00:00 WIB'
         };
         for (const [key, value] of Object.entries(defaults)) {
             await dbRun("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
         }
-        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status')");
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range')");
         const pricing = rows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
         for (const [key, value] of Object.entries(defaults)) {
             if (!(key in pricing)) pricing[key] = value;

@@ -91,15 +91,45 @@ export default function UnblockImeiPage() {
   const coinsDiscount = useCoins && maxCoinsAllowed > 0 ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
   const totalPrice = Math.max(0, priceAfterCoupon - coinsDiscount);
 
-  const handleAddToCart = () => {
-    if (!imei.trim()) {
-      setError("Silakan masukkan minimal 1 nomor IMEI terlebih dahulu.");
-      return;
+  const validateFormInputs = () => {
+    const missing: string[] = [];
+
+    if (imeiList.length === 0) {
+      missing.push("Nomor IMEI target belum diisi atau kurang dari 15 digit angka.");
     }
     if (!selectedPkgId) {
-      setError("Pilih paket masa aktif terlebih dahulu.");
-      return;
+      missing.push("Pilih Paket Masa Aktif / Garansi (3 Bulan, 1 Tahun, atau Permanent).");
     }
+    if (files.length === 0) {
+      missing.push("Unggah Bukti Screenshot *#06# HP target.");
+    }
+    if (!agreed) {
+      missing.push("Centang persetujuan Syarat & Ketentuan Layanan.");
+    }
+
+    if (missing.length > 0) {
+      Swal.fire({
+        title: "Mohon Lengkapi Data Pesanan ⚠️",
+        html: `
+          <div class="text-left text-xs space-y-2 py-1">
+            <p class="font-bold text-slate-700 dark:text-slate-200">Pesanan belum dapat diproses karena ada data yang belum lengkap:</p>
+            <ul class="list-disc pl-5 text-rose-600 dark:text-rose-400 space-y-1.5 font-medium">
+              ${missing.map((item) => `<li>${item}</li>`).join("")}
+            </ul>
+          </div>
+        `,
+        icon: "warning",
+        confirmButtonText: "Siap, Lengkapi Sekarang 👍",
+        confirmButtonColor: "#0066cc",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleAddToCart = () => {
+    if (!validateFormInputs()) return;
+
     const pkg = packages.find((p) => p.id === selectedPkgId);
     if (!pkg) return;
 
@@ -118,7 +148,7 @@ export default function UnblockImeiPage() {
 
     Swal.fire({
       icon: "success",
-      title: "Masuk Keranjang!",
+      title: "Masuk Keranjang! 🛒",
       text: `${pkg.name} berhasil ditambahkan ke keranjang belanja.`,
       showCancelButton: true,
       confirmButtonText: "Lihat Keranjang",
@@ -139,14 +169,14 @@ export default function UnblockImeiPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ coupon_id: coupon.id })
+        body: JSON.stringify({ couponId: coupon.id })
       });
       const data = await res.json();
       if (res.ok && data.status) {
         Swal.fire({
-          title: "Voucher Berhasil Diklaim!",
-          text: "Sekarang Anda dapat menggunakannya.",
           icon: "success",
+          title: "Voucher Diklaim!",
+          text: `Kode ${coupon.code} berhasil diklaim.`,
           timer: 1800,
           showConfirmButton: false
         });
@@ -210,10 +240,8 @@ export default function UnblockImeiPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreed) return setError("Anda harus menyetujui Syarat & Ketentuan.");
-    if (files.length === 0) return setError("Screenshot *#06# wajib diupload.");
-    if (imeiList.length === 0) return setError("Tidak ada IMEI yang valid (harus 15 digit angka).");
-    if (!selectedPkg) return setError("Silakan pilih paket durasi.");
+    if (!validateFormInputs()) return;
+
     if (paymentMethod === "qris" || (user && user.balance < totalPrice)) {
       setShowInstantQris(true);
       return;
@@ -248,25 +276,27 @@ export default function UnblockImeiPage() {
     formData.append("service_type", "imei");
     formData.append("imei", imei);
     formData.append("duration", selectedPkg.duration);
-    formData.append("price_key", selectedPkg.id);
-    formData.append("speed_option", selectedSpeed);
-    formData.append("target_phone", targetPhone);
-    if (appliedCoupon) {
-      formData.append("coupon_code", appliedCoupon.code);
+    formData.append("amount", totalPrice.toString());
+    formData.append("package_id", selectedPkg.id);
+    formData.append("speed", selectedSpeed || "regular");
+    formData.append("speedPrice", speedCost.toString());
+    if (appliedCoupon) formData.append("couponCode", appliedCoupon.code);
+
+    if (targetPhone) {
+      formData.append("targetPhone", targetPhone);
+      formData.append("target_phone", targetPhone);
     }
-    if (useCoins && coinsDiscount > 0) {
-      formData.append("use_coins", "true");
-    }
-    
-    files.forEach(f => formData.append("image", f));
-    ceirFiles.forEach(f => formData.append("ceir_image", f));
+
+    files.forEach(f => formData.append("screenshot", f));
+    ceirFiles.forEach(f => formData.append("ceir_screenshot", f));
 
     try {
-      const res = await fetch("/api/order/manual", {
+      const res = await fetch("/api/transactions/manual", {
         method: "POST",
-        credentials: 'include',
-        body: formData
+        credentials: "include",
+        body: formData,
       });
+
       const data = await res.json();
       if (res.ok && data.status) {
         setShowSuccessPop(true);
@@ -281,9 +311,9 @@ export default function UnblockImeiPage() {
   };
 
   const speedOptions = [
-    { id: 'fast', key: 'imei_speed_fast', label: 'Fast' },
-    { id: 'semi', key: 'imei_speed_semi', label: 'Semi Fast' },
-    { id: 'slow', key: 'imei_speed_slow', label: 'Slow' }
+    { id: 'fast', key: 'imei_speed_fast', label: 'Fast', defaultRange: '1-3 Jam' },
+    { id: 'semi', key: 'imei_speed_semi', label: 'Semi Fast', defaultRange: '1-12 Jam' },
+    { id: 'slow', key: 'imei_speed_slow', label: 'Slow', defaultRange: 'Max kirim 14:00, Selesai 00:00 WIB' }
   ]
     .filter(opt => {
       const status = speedPricing[`${opt.key}_status`];
@@ -292,6 +322,7 @@ export default function UnblockImeiPage() {
     .map(opt => ({
       id: opt.id,
       label: opt.label,
+      rangeText: speedPricing[`${opt.key}_range`] || opt.defaultRange,
       price: parseInt(speedPricing[opt.key]) || 0
     }));
 
@@ -593,6 +624,11 @@ export default function UnblockImeiPage() {
                       }`}
                     >
                       <div className="font-bold text-xs capitalize">{opt.label}</div>
+                      {opt.rangeText && (
+                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                          ⏱️ {opt.rangeText}
+                        </div>
+                      )}
                       <div className="text-[11px] font-semibold mt-0.5 text-ink-muted">
                         {opt.price === 0 ? "Gratis" : `+ Rp ${opt.price.toLocaleString("id-ID")}`}
                       </div>

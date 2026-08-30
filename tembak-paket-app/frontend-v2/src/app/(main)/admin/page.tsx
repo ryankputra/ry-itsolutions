@@ -1650,7 +1650,7 @@ export default function AdminPage() {
                 {/* Fast */}
                 <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs text-ink">Fast (1-3 Jam)</span>
+                    <span className="font-bold text-xs text-ink">Fast</span>
                     <button
                       onClick={() => {
                         const updated = { ...pricing, imei_speed_fast_status: pricing.imei_speed_fast_status === 'hidden' ? 'active' : 'hidden' };
@@ -1663,11 +1663,21 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <Input
-                    placeholder="Harga Rp"
+                    placeholder="Harga Tambahan Rp"
                     type="number"
                     value={pricing.imei_speed_fast || ''}
                     onChange={e => {
                       const updated = { ...pricing, imei_speed_fast: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                  <Input
+                    placeholder="Range Waktu (misal: 1-3 Jam)"
+                    type="text"
+                    value={pricing.imei_speed_fast_range || ''}
+                    onChange={e => {
+                      const updated = { ...pricing, imei_speed_fast_range: e.target.value };
                       setPricing(updated);
                       autoSavePricing(updated);
                     }}
@@ -1677,7 +1687,7 @@ export default function AdminPage() {
                 {/* Semi Fast */}
                 <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs text-ink">Semi Fast (1-12 Jam)</span>
+                    <span className="font-bold text-xs text-ink">Semi Fast</span>
                     <button
                       onClick={() => {
                         const updated = { ...pricing, imei_speed_semi_status: pricing.imei_speed_semi_status === 'hidden' ? 'active' : 'hidden' };
@@ -1690,11 +1700,21 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <Input
-                    placeholder="Harga Rp"
+                    placeholder="Harga Tambahan Rp"
                     type="number"
                     value={pricing.imei_speed_semi || ''}
                     onChange={e => {
                       const updated = { ...pricing, imei_speed_semi: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                  <Input
+                    placeholder="Range Waktu (misal: 1-12 Jam)"
+                    type="text"
+                    value={pricing.imei_speed_semi_range || ''}
+                    onChange={e => {
+                      const updated = { ...pricing, imei_speed_semi_range: e.target.value };
                       setPricing(updated);
                       autoSavePricing(updated);
                     }}
@@ -1704,7 +1724,7 @@ export default function AdminPage() {
                 {/* Slow */}
                 <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs text-ink">Standar (1-3 Hari)</span>
+                    <span className="font-bold text-xs text-ink">Slow</span>
                     <button
                       onClick={() => {
                         const updated = { ...pricing, imei_speed_slow_status: pricing.imei_speed_slow_status === 'hidden' ? 'active' : 'hidden' };
@@ -1717,11 +1737,21 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <Input
-                    placeholder="Harga Rp"
+                    placeholder="Harga Tambahan Rp"
                     type="number"
                     value={pricing.imei_speed_slow || ''}
                     onChange={e => {
                       const updated = { ...pricing, imei_speed_slow: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                  <Input
+                    placeholder="Range Waktu (misal: Max kirim 14:00, Selesai 00:00)"
+                    type="text"
+                    value={pricing.imei_speed_slow_range || ''}
+                    onChange={e => {
+                      const updated = { ...pricing, imei_speed_slow_range: e.target.value };
                       setPricing(updated);
                       autoSavePricing(updated);
                     }}
