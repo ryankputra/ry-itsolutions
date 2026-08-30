@@ -33,7 +33,7 @@ export interface ProductDetailViewProps {
 
 export function ProductDetailView({
   id = "unblock-imei",
-  title = "Unblock IMEI Inter Buka Sinyal Permanent All Operator 3 Bulan / 1 Tahun",
+  title = "Unblock IMEI Inter Buka Sinyal All Operator (Garansi Masa Aktif Sinyal Max 3 Bulan)",
   subtitle = "Proses Kilat 1-24 Jam • 100% Bergaransi Resmi Ry-ITSolutions",
   originalPrice = 170000,
   price = 150000,
@@ -45,14 +45,14 @@ export function ProductDetailView({
     "https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800&h=600&fit=crop",
   ],
   variations = [
-    { id: "v1", name: "GARANSI 3 BULAN", price: 150000, badge: "TERLARIS" },
-    { id: "v2", name: "GARANSI 1 TAHUN", price: 250000, badge: "REKOMENDASI" },
-    { id: "v3", name: "PERMANENT ALL OPERATOR", price: 350000, badge: "LIMITED" },
+    { id: "v1", name: "GARANSI 3 BULAN (MASA AKTIF SINYAL)", price: 150000, badge: "TERLARIS" },
+    { id: "v2", name: "GARANSI 2 BULAN (MASA AKTIF SINYAL)", price: 110000, badge: "REKOMENDASI" },
+    { id: "v3", name: "GARANSI 1 BULAN (MASA AKTIF SINYAL)", price: 75000, badge: "EKONOMIS" },
   ],
   specifications = [
     { key: "Stok", value: "838 Tersedia" },
     { key: "Merek / Server", value: "Official Ry-ITSolutions" },
-    { key: "Masa Garansi", value: "3 Bulan s/d 1 Tahun (Refund 100%)" },
+    { key: "Masa Garansi", value: "Masa Aktif Sinyal (Max 3 Bulan - Refund 100%)" },
     { key: "Kompatibilitas", value: "All iPhone & Android Inter (Global / US / JP)" },
     { key: "Estimasi Waktu", value: "1 - 24 Jam Kerja (Auto-Processing)" },
   ],

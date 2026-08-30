@@ -7,13 +7,13 @@ export default function DynamicProductPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const router = useRouter();
 
-  let title = "Unblock IMEI Inter Buka Sinyal Permanent All Operator 3 Bulan / 1 Tahun";
+  let title = "Unblock IMEI Inter Buka Sinyal All Operator (Garansi Masa Aktif Sinyal Max 3 Bulan)";
   let serviceType = "imei";
   let price = 150000;
   let variations = [
-    { id: "v1", name: "GARANSI 3 BULAN", price: 150000, badge: "TERLARIS" },
-    { id: "v2", name: "GARANSI 1 TAHUN", price: 250000, badge: "REKOMENDASI" },
-    { id: "v3", name: "PERMANENT ALL OPERATOR", price: 350000, badge: "LIMITED" },
+    { id: "v1", name: "GARANSI 3 BULAN (MASA AKTIF SINYAL)", price: 150000, badge: "TERLARIS" },
+    { id: "v2", name: "GARANSI 2 BULAN (MASA AKTIF SINYAL)", price: 110000, badge: "REKOMENDASI" },
+    { id: "v3", name: "GARANSI 1 BULAN (MASA AKTIF SINYAL)", price: 75000, badge: "EKONOMIS" },
   ];
 
   if (id === "cek-ceir") {

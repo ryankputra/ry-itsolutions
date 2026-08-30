@@ -1,3 +1,6 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { safeJson } from "@/lib/api";
 import Swal from "@/lib/sweetalert";
 import WriteReviewModal from "./WriteReviewModal";
 import UserProfileModal from "./UserProfileModal";

@@ -278,7 +278,7 @@ async function initializeDatabase() {
                             orderId: "trx_sample1",
                             productId: "unblock-imei",
                             serviceType: "imei",
-                            variation: "GARANSI 1 TAHUN, ALL OPERATOR",
+                            variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
                             rating: 5,
                             comment: "Proses kilat gak nyampe 3 jam sinyal 4G & 5G di iPhone 13 Pro Inter saya langsung keluar Telkomsel & XL lancar jaya! Respon CS WA juga ramah banget, garansi resmi terpampang rapi.",
                             images: JSON.stringify([
@@ -300,7 +300,7 @@ async function initializeDatabase() {
                             orderId: "trx_sample2",
                             productId: "unblock-imei",
                             serviceType: "imei",
-                            variation: "GARANSI 3 BULAN, PROSES FAST",
+                            variation: "GARANSI 2 BULAN (MASA AKTIF SINYAL)",
                             rating: 5,
                             comment: "Luar biasa Ry-ITSolutions! Saya reseller HP bekas udah langganan 20+ IMEI di sini selalu sukses tanpa ada yang retur. Pokoknya rekomendasi teratas buat konter HP!",
                             images: JSON.stringify([
@@ -321,7 +321,7 @@ async function initializeDatabase() {
                             orderId: "trx_sample3",
                             productId: "cek-ceir",
                             serviceType: "ceir",
-                            variation: "CEK CEIR PERMANENT REGISTRY",
+                            variation: "CEK STATUS BEACUKAI / CEIR",
                             rating: 5,
                             comment: "Awalnya ragu tapi ternyata hasilnya valid banget langsung dapet screenshot & PDF resmi Kemenperin/Bea Cukai. Mantul mas Ryan!",
                             images: JSON.stringify([]),
@@ -340,7 +340,7 @@ async function initializeDatabase() {
                             orderId: "trx_sample4",
                             productId: "unblock-imei",
                             serviceType: "imei",
-                            variation: "GARANSI 1 TAHUN",
+                            variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
                             rating: 5,
                             comment: "Mantap koin bonusnya dapet 500 koin lagi abis kirim ulasan, potongan diskon voucher juga aktif terus. Makasih seller terpercaya!",
                             images: JSON.stringify([
