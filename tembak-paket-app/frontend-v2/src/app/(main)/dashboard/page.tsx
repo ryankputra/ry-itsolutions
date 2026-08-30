@@ -602,7 +602,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-xs text-ink">Rp {(trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
+                  <p className="font-bold text-xs text-ink">Rp {(trx.amount || trx.price || trx.totalAmount || trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
                   <span className={`inline-block mt-0.5 px-2 py-0.5 text-[8px] font-bold rounded-md uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
                     {trx.status === 'completed' ? 'success' : trx.status}
                   </span>

@@ -109,11 +109,13 @@ function HistoryContent() {
     return true;
   });
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, serviceType?: string, packageName?: string) => {
     const s = status?.toLowerCase() || "";
+    const isTopUp = serviceType === "topup" || serviceType === "topup_qris" || (packageName || "").toLowerCase().includes("top up") || (packageName || "").toLowerCase().includes("topup");
+
     if (s === "success" || s === "completed") {
       return {
-        label: "Selesai (Garansi Aktif)",
+        label: isTopUp ? "Selesai (Saldo Masuk)" : "Selesai (Garansi Aktif)",
         textColor: "text-emerald-600 font-bold",
         badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
       };
@@ -257,7 +259,7 @@ function HistoryContent() {
       ) : (
         <div className="space-y-3 pt-1">
           {filteredHistory.map((trx) => {
-            const badge = getStatusBadge(trx.status);
+            const badge = getStatusBadge(trx.status, trx.serviceType || trx.service_type, trx.packageName);
             const primaryImei = trx.imei ? trx.imei.split(/[\n,]+/)[0].trim().replace(/\D/g, "") : "";
             const isCompleted = trx.status === "success" || trx.status === "completed";
             const isProcessing = trx.status === "processing" || trx.status === "in_progress";

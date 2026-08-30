@@ -70,7 +70,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   const warranty = data.warranty;
   const isPermanent = warranty?.isPermanent;
   const isSuccess = data.status === 'success' || data.status === 'completed';
-  const isCeirService = data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || warranty?.hasWarranty === false;
+  const isTopUp = data.serviceType === 'topup' || data.serviceType === 'topup_qris' || (data.packageName || '').toLowerCase().includes('top up') || (data.packageName || '').toLowerCase().includes('topup');
+  const isCeirService = !isTopUp && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || warranty?.hasWarranty === false);
 
   const handlePrint = () => {
     window.print();
@@ -224,7 +225,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
               Kembali
             </button>
             <span className="text-xs font-bold text-ink hidden sm:inline-block">
-              {isCeirService ? "Nota Verifikasi CEIR" : "Nota & Garansi IMEI"}
+              {isTopUp ? "Nota Top Up Saldo" : isCeirService ? "Nota Verifikasi CEIR" : "Nota & Garansi IMEI"}
             </span>
           </div>
 
@@ -317,7 +318,9 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   {customStoreName || "Ry-ITSolutions"}
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  {isCeirService 
+                  {isTopUp
+                    ? "Official Deposit / Top Up Digital Receipt"
+                    : isCeirService 
                     ? "Official CEIR Status & IMEI Verification Report" 
                     : "Official IMEI Unblock & Warranty Certificate"}
                 </p>
@@ -333,7 +336,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   data.status === 'pending' || data.status === 'processing' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                   'bg-rose-100 text-rose-800 border border-rose-200'
                 }`}>
-                  {isSuccess ? (isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : data.status.toUpperCase()}
+                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : data.status.toUpperCase()}
                 </span>
                 <p className="text-[10px] text-slate-400 font-mono mt-1">
                   TRX: #{data.trxId ? data.trxId.substring(0, 16) : 'N/A'}
@@ -344,27 +347,40 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
             {/* Device & IMEI Highlights */}
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Target Perangkat</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  {isTopUp ? "Jenis Transaksi" : "Target Perangkat"}
+                </p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-sm shrink-0">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                    </svg>
+                    {isTopUp ? (
+                      <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                      </svg>
+                    )}
                   </div>
                   <div>
                     <h3 className="font-black text-sm text-slate-900">
-                      {imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : "Smartphone Device"}
+                      {isTopUp ? (data.packageName || "Top Up via QRIS") : (imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : "Smartphone Device")}
                     </h3>
                     <p className="text-xs font-mono font-bold text-slate-700 tracking-wider">
-                      IMEI: {data.imei}
+                      {isTopUp ? "Metode: Top Up Deposit Digital" : `IMEI: ${data.imei}`}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {imeiAnalysis?.isValidLuhn && (
+              {!isTopUp && imeiAnalysis?.isValidLuhn && (
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-200">
                   GSMA Verified
+                </span>
+              )}
+              {isTopUp && (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-200">
+                  Saldo Akun
                 </span>
               )}
             </div>
@@ -446,7 +462,14 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                 </span>
               </div>
 
-              {!isCeirService ? (
+              {isTopUp ? (
+                <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
+                  <span className="text-slate-500 font-medium">Status Pengisian Saldo</span>
+                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                    Saldo Berhasil Ditambahkan
+                  </span>
+                </div>
+              ) : !isCeirService ? (
                 <>
                   {warranty?.expiryDate && !isPermanent && (
                     <div className="flex justify-between py-1.5 border-b border-slate-100">
