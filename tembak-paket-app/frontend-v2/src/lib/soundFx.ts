@@ -157,6 +157,32 @@ export function playTopupSuccessSound() {
   });
 }
 
+// 5.1. Loading Sound (Soft Ambient Swelling Rising Chime)
+export function playLoadingSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  const notes = [349.23, 440.0, 523.25, 698.46]; // F4, A4, C5, F5
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+
+    gain.gain.setValueAtTime(0.0001, now + idx * 0.09);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + idx * 0.09 + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.55);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now + idx * 0.09);
+    osc.stop(now + idx * 0.09 + 0.6);
+  });
+}
+
 // 6. Pop Bubble Sound (For Button Clicks & Modal Opens)
 export function playPopSound() {
   const ctx = getAudioContext();
