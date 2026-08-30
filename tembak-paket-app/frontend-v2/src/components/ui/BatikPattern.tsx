@@ -1,98 +1,115 @@
 "use client";
-import React from "react";
+import React, { useId } from "react";
 
 interface BatikPatternProps {
   className?: string;
   opacity?: number;
 }
 
-export function BatikPatternOverlay({ className = "", opacity = 0.35 }: BatikPatternProps) {
+export function BatikPatternOverlay({ className = "", opacity = 0.45 }: BatikPatternProps) {
+  const patternId = useId().replace(/:/g, "_");
+
   return (
     <div className={`absolute inset-0 pointer-events-none overflow-hidden select-none z-0 ${className}`}>
       <svg
-        className="w-full h-full text-white/60"
+        className="w-full h-full text-white"
         xmlns="http://www.w3.org/2000/svg"
         width="100%"
         height="100%"
         style={{ opacity }}
       >
         <defs>
-          {/* Authentic Indonesian Batik Kawung & Parang Motif */}
+          {/* Authentic Shopee-Style Indonesian Batik Kawung & Parang Motif */}
           <pattern
-            id="shopee-batik-motif"
-            width="70"
-            height="70"
+            id={patternId}
+            width="64"
+            height="64"
             patternUnits="userSpaceOnUse"
           >
-            {/* Background Fine Grid Lines */}
+            {/* Background Diamond Lattice */}
             <path
-              d="M0 35 L70 35 M35 0 L35 70"
+              d="M32 0 L64 32 L32 64 L0 32 Z"
+              fill="none"
               stroke="currentColor"
-              strokeWidth="0.4"
-              strokeDasharray="2 2"
+              strokeWidth="1.2"
               opacity="0.3"
             />
-
-            {/* Diagonal Parang Waves */}
             <path
-              d="M-20 17.5 Q 0 0, 17.5 17.5 T 52.5 17.5 T 87.5 17.5"
-              fill="none"
+              d="M32 8 L56 32 L32 56 L8 32 Z"
+              fill="currentColor"
+              fillOpacity="0.1"
               stroke="currentColor"
-              strokeWidth="1"
-              opacity="0.35"
-            />
-            <path
-              d="M-20 52.5 Q 0 35, 17.5 52.5 T 52.5 52.5 T 87.5 52.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1"
-              opacity="0.35"
+              strokeWidth="0.8"
+              opacity="0.25"
             />
 
-            {/* Kawung Petals (Four-leaf clover geometry) */}
-            <g transform="translate(35,35)">
-              {/* Petal 1 - Top */}
-              <ellipse cx="0" cy="-12" rx="8" ry="12" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.6" />
-              <ellipse cx="0" cy="-12" rx="3.5" ry="7" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.4" />
-              
-              {/* Petal 2 - Bottom */}
-              <ellipse cx="0" cy="12" rx="8" ry="12" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.6" />
-              <ellipse cx="0" cy="12" rx="3.5" ry="7" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.4" />
-              
-              {/* Petal 3 - Left */}
-              <ellipse cx="-12" cy="0" rx="12" ry="8" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.6" />
-              <ellipse cx="-12" cy="0" rx="7" ry="3.5" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.4" />
-              
-              {/* Petal 4 - Right */}
-              <ellipse cx="12" cy="0" rx="12" ry="8" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.6" />
-              <ellipse cx="12" cy="0" rx="7" ry="3.5" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.4" />
+            {/* Shopee Style Batik Kawung 4-Petal Flower (Filled Shape) */}
+            <g transform="translate(32,32)">
+              {/* Petal Top */}
+              <path
+                d="M 0,0 C -12,-18 -10,-28 0,-28 C 10,-28 12,-18 0,0 Z"
+                fill="currentColor"
+                fillOpacity="0.25"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              {/* Petal Bottom */}
+              <path
+                d="M 0,0 C -12,18 -10,28 0,28 C 10,28 12,18 0,0 Z"
+                fill="currentColor"
+                fillOpacity="0.25"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              {/* Petal Left */}
+              <path
+                d="M 0,0 C -18,-12 -28,-10 -28,0 C -28,10 -18,12 0,0 Z"
+                fill="currentColor"
+                fillOpacity="0.25"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              {/* Petal Right */}
+              <path
+                d="M 0,0 C 18,-12 28,-10 28,0 C 28,10 18,12 0,0 Z"
+                fill="currentColor"
+                fillOpacity="0.25"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
 
-              {/* Center Diamond & Gold Accent Dot */}
-              <polygon points="0,-4 4,0 0,4 -4,0" fill="currentColor" opacity="0.5" />
-              <circle cx="0" cy="0" r="1.5" fill="#fbbf24" opacity="0.9" />
+              {/* Inner Petal Decorative Dots */}
+              <circle cx="0" cy="-15" r="3.5" fill="currentColor" fillOpacity="0.4" />
+              <circle cx="0" cy="15" r="3.5" fill="currentColor" fillOpacity="0.4" />
+              <circle cx="-15" cy="0" r="3.5" fill="currentColor" fillOpacity="0.4" />
+              <circle cx="15" cy="0" r="3.5" fill="currentColor" fillOpacity="0.4" />
+
+              {/* Center Gold Batik Rhombus & White Eye */}
+              <polygon points="0,-7 7,0 0,7 -7,0" fill="#f59e0b" opacity="0.95" />
+              <circle cx="0" cy="0" r="2.5" fill="#ffffff" opacity="1" />
             </g>
 
-            {/* Corner Decorative Ornaments */}
+            {/* Corner Kawung Interlocking Ornaments */}
             <g transform="translate(0,0)">
-              <circle cx="0" cy="0" r="7" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.5" />
-              <circle cx="0" cy="0" r="2.5" fill="currentColor" opacity="0.4" />
+              <circle cx="0" cy="0" r="10" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+              <polygon points="0,-4 4,0 0,4 -4,0" fill="#f59e0b" opacity="0.85" />
             </g>
-            <g transform="translate(70,0)">
-              <circle cx="0" cy="0" r="7" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.5" />
-              <circle cx="0" cy="0" r="2.5" fill="currentColor" opacity="0.4" />
+            <g transform="translate(64,0)">
+              <circle cx="0" cy="0" r="10" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+              <polygon points="0,-4 4,0 0,4 -4,0" fill="#f59e0b" opacity="0.85" />
             </g>
-            <g transform="translate(0,70)">
-              <circle cx="0" cy="0" r="7" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.5" />
-              <circle cx="0" cy="0" r="2.5" fill="currentColor" opacity="0.4" />
+            <g transform="translate(0,64)">
+              <circle cx="0" cy="0" r="10" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+              <polygon points="0,-4 4,0 0,4 -4,0" fill="#f59e0b" opacity="0.85" />
             </g>
-            <g transform="translate(70,70)">
-              <circle cx="0" cy="0" r="7" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.5" />
-              <circle cx="0" cy="0" r="2.5" fill="currentColor" opacity="0.4" />
+            <g transform="translate(64,64)">
+              <circle cx="0" cy="0" r="10" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+              <polygon points="0,-4 4,0 0,4 -4,0" fill="#f59e0b" opacity="0.85" />
             </g>
           </pattern>
         </defs>
 
-        <rect width="100%" height="100%" fill="url(#shopee-batik-motif)" />
+        <rect width="100%" height="100%" fill={`url(#${patternId})`} />
       </svg>
     </div>
   );
