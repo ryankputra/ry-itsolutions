@@ -1646,7 +1646,7 @@ export default function AdminPage() {
                 <p className="text-xs text-ink-muted">Biaya tambahan opsi express saat pelanggan melakukan checkout IMEI.</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 pt-1">
                 {/* Fast */}
                 <div className="bg-canvas border border-hairline p-2.5 rounded-xl space-y-1.5">
                   <div className="flex justify-between items-center">
