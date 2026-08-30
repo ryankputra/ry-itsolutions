@@ -623,8 +623,8 @@ export default function TopUpPage() {
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-bold text-ink flex items-center gap-1.5">
               <span>Voucher Diskon Siap Klaim</span>
-              <span className="text-[9px] font-extrabold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                Shopee Style
+              <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                Promo Spesial
               </span>
             </h3>
             <span className="text-[11px] text-ink-muted">Klaim untuk order layanan</span>

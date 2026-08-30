@@ -211,7 +211,7 @@ async function initializeDatabase() {
                 created_at TEXT NOT NULL
             )`);
 
-            // === TABEL & KOLOM SISTEM KOIN RY & SHOPEE GAMES ===
+            // === TABEL & KOLOM SISTEM KOIN RY & GAMES REWARDS ===
             try { await dbRun("ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0"); } catch (e) { }
             await dbRun(`CREATE TABLE IF NOT EXISTS user_coin_claims (
                 id TEXT PRIMARY KEY,

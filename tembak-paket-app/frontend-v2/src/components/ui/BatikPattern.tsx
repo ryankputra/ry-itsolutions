@@ -19,7 +19,7 @@ export function BatikPatternOverlay({ className = "", opacity = 0.45 }: BatikPat
         style={{ opacity }}
       >
         <defs>
-          {/* Authentic Shopee-Style Indonesian Batik Kawung & Parang Motif */}
+          {/* Authentic Indonesian Batik Kawung & Parang Motif */}
           <pattern
             id={patternId}
             width="64"
