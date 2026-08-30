@@ -1640,122 +1640,173 @@ export default function AdminPage() {
             </Card>
 
             {/* Kecepatan Pengerjaan */}
-            <Card glass className="p-5 space-y-3.5">
+            <Card glass className="p-4 space-y-3">
               <div>
-                <h2 className="text-base font-bold text-ink">Kecepatan Pengerjaan IMEI (Biaya Tambahan)</h2>
-                <p className="text-xs text-ink-muted">Biaya tambahan opsi express saat pelanggan melakukan checkout IMEI.</p>
+                <h2 className="text-sm font-bold text-ink flex items-center gap-1.5">
+                  <span>Kecepatan Pengerjaan IMEI</span>
+                  <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full font-semibold">Biaya &amp; Estimasi</span>
+                </h2>
+                <p className="text-[11px] text-ink-muted mt-0.5">Atur biaya tambahan express &amp; estimasi range waktu pengerjaan server.</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 pt-1">
-                {/* Fast */}
-                <div className="bg-canvas border border-hairline p-2.5 rounded-xl space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs text-ink">Fast</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                {/* Fast Option */}
+                <div className="bg-canvas border border-hairline/80 p-3 rounded-2xl space-y-2 shadow-2xs">
+                  <div className="flex justify-between items-center pb-1 border-b border-hairline/50">
+                    <span className="font-extrabold text-xs text-ink">Fast</span>
                     <button
+                      type="button"
                       onClick={() => {
                         const updated = { ...pricing, imei_speed_fast_status: pricing.imei_speed_fast_status === 'hidden' ? 'active' : 'hidden' };
                         setPricing(updated);
                         autoSavePricing(updated, true);
                       }}
-                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${pricing.imei_speed_fast_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full transition-all ${
+                        pricing.imei_speed_fast_status !== 'hidden'
+                          ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-300/60'
+                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                      }`}
                     >
-                      {pricing.imei_speed_fast_status !== 'hidden' ? 'Aktif' : 'Hidden'}
+                      {pricing.imei_speed_fast_status !== 'hidden' ? '✓ Aktif' : 'Hidden'}
                     </button>
                   </div>
-                  <Input
-                    placeholder="Biaya Rp"
-                    type="number"
-                    value={pricing.imei_speed_fast || ''}
-                    onChange={e => {
-                      const updated = { ...pricing, imei_speed_fast: e.target.value };
-                      setPricing(updated);
-                      autoSavePricing(updated);
-                    }}
-                  />
-                  <Input
-                    placeholder="Estimasi Range (e.g. 1-3 Jam)"
-                    type="text"
-                    value={pricing.imei_speed_fast_range || ''}
-                    onChange={e => {
-                      const updated = { ...pricing, imei_speed_fast_range: e.target.value };
-                      setPricing(updated);
-                      autoSavePricing(updated);
-                    }}
-                  />
+
+                  <div className="space-y-1.5">
+                    <div>
+                      <label className="text-[10px] font-semibold text-ink-muted block mb-0.5">Biaya Tambahan (Rp)</label>
+                      <input
+                        type="number"
+                        placeholder="50000"
+                        value={pricing.imei_speed_fast || ''}
+                        onChange={e => {
+                          const updated = { ...pricing, imei_speed_fast: e.target.value };
+                          setPricing(updated);
+                          autoSavePricing(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-hairline bg-parchment/30 text-xs font-bold text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-ink-muted block mb-0.5">Estimasi Range Waktu</label>
+                      <input
+                        type="text"
+                        placeholder="1-3 Jam"
+                        value={pricing.imei_speed_fast_range || ''}
+                        onChange={e => {
+                          const updated = { ...pricing, imei_speed_fast_range: e.target.value };
+                          setPricing(updated);
+                          autoSavePricing(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-hairline bg-parchment/30 text-[11px] font-medium text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Semi Fast */}
-                <div className="bg-canvas border border-hairline p-2.5 rounded-xl space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs text-ink">Semi Fast</span>
+                {/* Semi Fast Option */}
+                <div className="bg-canvas border border-hairline/80 p-3 rounded-2xl space-y-2 shadow-2xs">
+                  <div className="flex justify-between items-center pb-1 border-b border-hairline/50">
+                    <span className="font-extrabold text-xs text-ink">Semi Fast</span>
                     <button
+                      type="button"
                       onClick={() => {
                         const updated = { ...pricing, imei_speed_semi_status: pricing.imei_speed_semi_status === 'hidden' ? 'active' : 'hidden' };
                         setPricing(updated);
                         autoSavePricing(updated, true);
                       }}
-                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${pricing.imei_speed_semi_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full transition-all ${
+                        pricing.imei_speed_semi_status !== 'hidden'
+                          ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-300/60'
+                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                      }`}
                     >
-                      {pricing.imei_speed_semi_status !== 'hidden' ? 'Aktif' : 'Hidden'}
+                      {pricing.imei_speed_semi_status !== 'hidden' ? '✓ Aktif' : 'Hidden'}
                     </button>
                   </div>
-                  <Input
-                    placeholder="Biaya Rp"
-                    type="number"
-                    value={pricing.imei_speed_semi || ''}
-                    onChange={e => {
-                      const updated = { ...pricing, imei_speed_semi: e.target.value };
-                      setPricing(updated);
-                      autoSavePricing(updated);
-                    }}
-                  />
-                  <Input
-                    placeholder="Estimasi Range (e.g. 1-12 Jam)"
-                    type="text"
-                    value={pricing.imei_speed_semi_range || ''}
-                    onChange={e => {
-                      const updated = { ...pricing, imei_speed_semi_range: e.target.value };
-                      setPricing(updated);
-                      autoSavePricing(updated);
-                    }}
-                  />
+
+                  <div className="space-y-1.5">
+                    <div>
+                      <label className="text-[10px] font-semibold text-ink-muted block mb-0.5">Biaya Tambahan (Rp)</label>
+                      <input
+                        type="number"
+                        placeholder="20000"
+                        value={pricing.imei_speed_semi || ''}
+                        onChange={e => {
+                          const updated = { ...pricing, imei_speed_semi: e.target.value };
+                          setPricing(updated);
+                          autoSavePricing(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-hairline bg-parchment/30 text-xs font-bold text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-ink-muted block mb-0.5">Estimasi Range Waktu</label>
+                      <input
+                        type="text"
+                        placeholder="1-12 Jam"
+                        value={pricing.imei_speed_semi_range || ''}
+                        onChange={e => {
+                          const updated = { ...pricing, imei_speed_semi_range: e.target.value };
+                          setPricing(updated);
+                          autoSavePricing(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-hairline bg-parchment/30 text-[11px] font-medium text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Slow */}
-                <div className="bg-canvas border border-hairline p-2.5 rounded-xl space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs text-ink">Slow</span>
+                {/* Slow Option */}
+                <div className="bg-canvas border border-hairline/80 p-3 rounded-2xl space-y-2 shadow-2xs">
+                  <div className="flex justify-between items-center pb-1 border-b border-hairline/50">
+                    <span className="font-extrabold text-xs text-ink">Slow</span>
                     <button
+                      type="button"
                       onClick={() => {
                         const updated = { ...pricing, imei_speed_slow_status: pricing.imei_speed_slow_status === 'hidden' ? 'active' : 'hidden' };
                         setPricing(updated);
                         autoSavePricing(updated, true);
                       }}
-                      className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${pricing.imei_speed_slow_status !== 'hidden' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full transition-all ${
+                        pricing.imei_speed_slow_status !== 'hidden'
+                          ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-300/60'
+                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                      }`}
                     >
-                      {pricing.imei_speed_slow_status !== 'hidden' ? 'Aktif' : 'Hidden'}
+                      {pricing.imei_speed_slow_status !== 'hidden' ? '✓ Aktif' : 'Hidden'}
                     </button>
                   </div>
-                  <Input
-                    placeholder="Biaya Rp"
-                    type="number"
-                    value={pricing.imei_speed_slow || ''}
-                    onChange={e => {
-                      const updated = { ...pricing, imei_speed_slow: e.target.value };
-                      setPricing(updated);
-                      autoSavePricing(updated);
-                    }}
-                  />
-                  <Input
-                    placeholder="Estimasi Range (e.g. Max kirim 14:00, Selesai 00:00)"
-                    type="text"
-                    value={pricing.imei_speed_slow_range || ''}
-                    onChange={e => {
-                      const updated = { ...pricing, imei_speed_slow_range: e.target.value };
-                      setPricing(updated);
-                      autoSavePricing(updated);
-                    }}
-                  />
+
+                  <div className="space-y-1.5">
+                    <div>
+                      <label className="text-[10px] font-semibold text-ink-muted block mb-0.5">Biaya Tambahan (Rp)</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={pricing.imei_speed_slow || ''}
+                        onChange={e => {
+                          const updated = { ...pricing, imei_speed_slow: e.target.value };
+                          setPricing(updated);
+                          autoSavePricing(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-hairline bg-parchment/30 text-xs font-bold text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-ink-muted block mb-0.5">Estimasi Range Waktu</label>
+                      <input
+                        type="text"
+                        placeholder="Max kirim 14:00, Selesai 00:00"
+                        value={pricing.imei_speed_slow_range || ''}
+                        onChange={e => {
+                          const updated = { ...pricing, imei_speed_slow_range: e.target.value };
+                          setPricing(updated);
+                          autoSavePricing(updated);
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-hairline bg-parchment/30 text-[11px] font-medium text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>
