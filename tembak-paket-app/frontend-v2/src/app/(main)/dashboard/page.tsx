@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
 
-  // Hero Promo Carousel Slides (Signature Ry-ITSolutions Blue Identity)
+  // Hero Promo Carousel Slides (Signature Ry-ITSolutions Blue Identity & Talent Posters)
   const heroSlides = [
     {
       title: "INSTANT DEALS BUKA SINYAL KILAT",
@@ -33,7 +33,8 @@ export default function DashboardPage() {
       badge: "LAYANAN UTAMA",
       ctaText: "BELI SEKARANG >",
       ctaLink: "/unblock-imei",
-      bgGradient: "from-blue-600 via-indigo-600 to-blue-800",
+      bgGradient: "from-blue-950/90 via-blue-900/80 to-transparent",
+      image: "/banners/banner_imei.jpg",
     },
     {
       title: "VOUCHER DISKON TRANSAKSI",
@@ -41,7 +42,8 @@ export default function DashboardPage() {
       badge: "PROMO SPESIAL",
       ctaText: "KLAIM VOUCHER >",
       ctaLink: "/vouchers",
-      bgGradient: "from-indigo-700 via-purple-700 to-blue-700",
+      bgGradient: "from-indigo-950/90 via-purple-900/80 to-transparent",
+      image: "/banners/banner_voucher.jpg",
     },
     {
       title: "CHECK-IN HARIAN & PUTAR RODA HOKI",
@@ -49,7 +51,8 @@ export default function DashboardPage() {
       badge: "REWARD KOIN",
       ctaText: "MAIN SEKARANG >",
       ctaLink: "/games",
-      bgGradient: "from-cyan-700 via-blue-700 to-indigo-800",
+      bgGradient: "from-cyan-950/90 via-blue-950/80 to-transparent",
+      image: "/banners/banner_rewards.jpg",
     },
   ];
 
@@ -307,35 +310,47 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 3. HERO PROMO DEALS BANNER SLIDER                           */}
       {/* ============================================================ */}
-      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border border-hairline group">
-        <div className={`p-4 sm:p-6 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} text-white transition-all duration-700 min-h-[135px] sm:min-h-[155px] flex flex-col justify-between relative`}>
-          <div className="relative z-10 space-y-1 max-w-lg">
-            <div className="inline-block bg-black/25 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-white/20">
+      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-hairline group">
+        <div className="relative min-h-[165px] sm:min-h-[195px] flex flex-col justify-between p-4 sm:p-6 text-white transition-all duration-700">
+          {/* Background Talent Poster Image */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={heroSlides[currentSlide].image}
+            alt={heroSlides[currentSlide].title}
+            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 transform group-hover:scale-105"
+          />
+
+          {/* Gradient Overlay for Text Legibility */}
+          <div className={`absolute inset-0 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} transition-all duration-700`} />
+
+          {/* Banner Content */}
+          <div className="relative z-10 space-y-1.5 max-w-sm sm:max-w-md">
+            <div className="inline-block bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-white/20">
               {heroSlides[currentSlide].badge}
             </div>
-            <h2 className="text-base sm:text-xl font-black tracking-tight leading-tight drop-shadow-xs">
+            <h2 className="text-base sm:text-xl font-black tracking-tight leading-tight drop-shadow-md text-white">
               {heroSlides[currentSlide].title}
             </h2>
-            <p className="text-[11px] sm:text-xs text-white/90 leading-relaxed max-w-md line-clamp-2">
+            <p className="text-[11px] sm:text-xs text-white/95 leading-relaxed line-clamp-2 drop-shadow-sm font-medium">
               {heroSlides[currentSlide].subtitle}
             </p>
           </div>
 
-          <div className="relative z-10 pt-2 flex items-center justify-between">
+          <div className="relative z-10 pt-3 flex items-center justify-between">
             <button
               onClick={() => router.push(heroSlides[currentSlide].ctaLink)}
-              className="px-3.5 py-1.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-bold shadow-md transition-all active:scale-95 flex items-center gap-1"
+              className="px-4 py-1.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1 border border-white/40"
             >
               <span>{heroSlides[currentSlide].ctaText}</span>
             </button>
 
             {/* Slide Indicators */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
               {heroSlides.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/40"}`}
+                  className={`h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
                   aria-label={`Slide ${idx + 1}`}
                 />
               ))}
