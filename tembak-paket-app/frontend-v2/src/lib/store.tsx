@@ -78,6 +78,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
   const [ceirgoDisplaySettings, setCeirgoDisplaySettings] = useState({ cekCeir: [] as string[], barcode: [] as string[] });
 
+  // Auto recovery for ChunkLoadError (stale Next.js build cache in browser tab)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleChunkError = (event: ErrorEvent) => {
+      if (
+        event.error?.name === "ChunkLoadError" ||
+        (event.message && (event.message.includes("Loading chunk") || event.message.includes("ChunkLoadError")))
+      ) {
+        console.warn("ChunkLoadError detected, reloading page to fetch fresh bundle...");
+        window.location.reload();
+      }
+    };
+    window.addEventListener("error", handleChunkError);
+    return () => window.removeEventListener("error", handleChunkError);
+  }, []);
+
   // Persist cart
   const saveCart = (items: CartItem[]) => {
     setCart(items);
