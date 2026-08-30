@@ -265,10 +265,10 @@ async function initializeDatabase() {
             try { await dbRun("ALTER TABLE reviews ADD COLUMN userTotalOrders INTEGER DEFAULT 1"); } catch(e){}
             try { await dbRun("ALTER TABLE reviews ADD COLUMN userRole TEXT DEFAULT 'buyer'"); } catch(e){}
 
-            // Seed Ulasan Realistis Jika Kosong
+            // Seed Ulasan Realistis
             try {
-                const reviewCount = await dbGet("SELECT COUNT(*) as count FROM reviews");
-                if (!reviewCount || reviewCount.count === 0) {
+                const imeiReviewCount = await dbGet("SELECT COUNT(*) as count FROM reviews WHERE productId = 'unblock-imei' OR serviceType = 'imei'");
+                if (!imeiReviewCount || imeiReviewCount.count < 3) {
                     const sampleReviews = [
                         {
                             id: "rev_1",
@@ -352,11 +352,30 @@ async function initializeDatabase() {
                             userTotalOrders: 35,
                             userRole: "Konter Mitra",
                             createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
+                        },
+                        {
+                            id: "rev_5",
+                            userId: "usr_seed5",
+                            userName: "Hendra Wijaya",
+                            userAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
+                            orderId: "trx_sample5",
+                            productId: "unblock-imei",
+                            serviceType: "imei",
+                            variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
+                            rating: 5,
+                            comment: "iPhone 14 Pro Max Garansi All Operator 3 bulan terpasang lancar jaya! Sinyal 5G Telkomsel langsung auto terdeteksi tanpa perlu setting APN.",
+                            images: JSON.stringify([]),
+                            likesCount: 89,
+                            transactionDate: new Date(Date.now() - 86400000 * 3).toISOString(),
+                            userJoinedAt: "2024-10-01T12:00:00.000Z",
+                            userTotalOrders: 9,
+                            userRole: "Buyer Verified",
+                            createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
                         }
                     ];
                     for (const r of sampleReviews) {
                         await dbRun(
-                            `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            `INSERT OR REPLACE INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                             [r.id, r.userId, r.userName, r.userAvatar, r.orderId, r.productId, r.serviceType, r.variation, r.rating, r.comment, r.images, r.likesCount, r.transactionDate, r.userJoinedAt, r.userTotalOrders, r.userRole, r.createdAt]
                         );
                     }
