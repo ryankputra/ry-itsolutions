@@ -226,7 +226,7 @@ export function InstantQrisPaymentModal({
               {/* Instructions */}
               <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-left text-[11px] space-y-1 text-slate-700">
                 <p className="font-bold text-slate-900">Cara Bayar Instant:</p>
-                <ol class="list-decimal pl-4 space-y-0.5 font-medium">
+                <ol className="list-decimal pl-4 space-y-0.5 font-medium">
                   <li>Buka aplikasi m-Banking (BCA, BNI, BRI, Mandiri) atau E-Wallet (GoPay, DANA, OVO, ShopeePay).</li>
                   <li>Pilih menu <b>Scan QRIS</b> dan arahkan kamera ke kode QR di atas.</li>
                   <li>Konfirmasi nominal <b>Rp {qrisData.unique_amount.toLocaleString("id-ID")}</b> lalu bayar.</li>
