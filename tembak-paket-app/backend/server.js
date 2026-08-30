@@ -268,7 +268,7 @@ async function initializeDatabase() {
             // Seed Ulasan Realistis
             try {
                 const seedReviews = [
-                    ["Rahul Pramudia", 14, "Pembeli Terverifikasi", 5, "Proses kurang dari 3 jam, sinyal Telkomsel 4G langsung aktif di iPhone 13 Pro Inter. CS juga responsif.", 8, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
+                    ["Rahul Pramudia", 14, "Reseller VIP", 5, "Proses kurang dari 3 jam, sinyal Telkomsel 4G langsung aktif di iPhone 13 Pro Inter. CS juga responsif.", 8, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
                     ["Dika Store Official", 28, "Reseller VIP", 5, "Sudah beberapa unit untuk stok konter, semua masuk jaringan dengan aman. Prosesnya jelas dan mudah dipantau.", 5, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
                     ["Bintang Cellular Surabaya", 35, "Konter Mitra", 5, "Unit pelanggan kembali dapat sinyal 5G tanpa pengaturan tambahan. Cocok untuk kebutuhan konter.", 12, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
                     ["Hendra Wijaya", 9, "Pembeli Terverifikasi", 5, "iPhone 14 Pro Max saya langsung mendeteksi Telkomsel 5G. Detail garansi juga diterima dengan rapi.", 3, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],

@@ -10,3 +10,4 @@ tembak-paket-app/backend/backups/*
 **/.next/types/**
 *.pack.gz
 *.pack
+.DS_Store

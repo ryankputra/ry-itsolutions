@@ -455,6 +455,13 @@ function HistoryContent() {
         data={
           selectedInvoiceTrx
             ? {
+                trxId: selectedInvoiceTrx.id || selectedInvoiceTrx.trxId || "-",
+                imei: selectedInvoiceTrx.imei || selectedInvoiceTrx.imeiNumber || "-",
+                packageName: selectedInvoiceTrx.package_name || selectedInvoiceTrx.packageName || "Layanan Ry-ITSolutions",
+                serviceType: selectedInvoiceTrx.service_type || selectedInvoiceTrx.serviceType,
+                createdAt: selectedInvoiceTrx.createdAt || new Date().toISOString(),
+                amount: selectedInvoiceTrx.amount || selectedInvoiceTrx.totalAmount,
+                status: selectedInvoiceTrx.status || "completed",
                 warranty: selectedInvoiceTrx.warranty || {
                   hasWarranty: !selectedInvoiceTrx.service_type?.includes("ceir"),
                   remainingDays: selectedInvoiceTrx.remainingDays,

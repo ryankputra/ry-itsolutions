@@ -68,7 +68,6 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   const imeiAnalysis = data.imei ? analyzeImei(data.imei) : null;
   const warranty = data.warranty;
-  const isPermanent = warranty?.isPermanent;
   const isSuccess = data.status === 'success' || data.status === 'completed';
   const isTopUp = data.serviceType === 'topup' || data.serviceType === 'topup_qris' || (data.packageName || '').toLowerCase().includes('top up') || (data.packageName || '').toLowerCase().includes('topup');
   const isCeirService = !isTopUp && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || warranty?.hasWarranty === false);
@@ -471,7 +470,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                 </div>
               ) : !isCeirService ? (
                 <>
-                  {warranty?.expiryDate && !isPermanent && (
+                  {warranty?.expiryDate && (
                     <div className="flex justify-between py-1.5 border-b border-slate-100">
                       <span className="text-slate-500 font-medium">Garansi Sinyal Hingga</span>
                       <span className="font-bold text-blue-700">
@@ -483,7 +482,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
                     <span className="text-slate-500 font-medium">Status Garansi Sinyal</span>
                     <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
-                      {isPermanent ? 'Garansi Permanen' : `Sisa ${warranty?.remainingDays || 0} Hari`}
+                      {`Sisa ${warranty?.remainingDays || 0} Hari`}
                     </span>
                   </div>
                 </>
