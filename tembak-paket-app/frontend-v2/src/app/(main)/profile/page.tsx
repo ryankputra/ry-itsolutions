@@ -6,6 +6,7 @@ import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
 
 export default function ProfilePage() {
   const { user, setUser, cartCount } = useApp();
@@ -116,9 +117,11 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-3 pb-24">
       {/* ============================================================ */}
-      {/* 1. TOP PROFILE HEADER BAR (Signature Sapphire Blue)         */}
+      {/* 1. TOP PROFILE HEADER BAR (Signature Sapphire Blue with Batik Motif) */}
       {/* ============================================================ */}
       <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 shadow-xl relative overflow-hidden">
+        {/* Batik Motif Background Overlay */}
+        <BatikPatternOverlay opacity={0.25} />
         {/* Top Mini Icons (Cart, Chat) */}
         <div className="flex items-center justify-end gap-3 mb-3">
           <Link

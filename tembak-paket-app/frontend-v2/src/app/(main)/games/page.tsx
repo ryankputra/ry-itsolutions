@@ -8,6 +8,8 @@ import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { playCoinClaimSound, playWheelTickSound } from "@/lib/soundFx";
 
+import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
+
 export default function GamesPage() {
   const { user, setUser } = useApp();
   const router = useRouter();
@@ -222,6 +224,7 @@ export default function GamesPage() {
       {/* 1. TOP HEADER & COIN STATS HERO (Shopee Style Deep Blue)     */}
       {/* ============================================================ */}
       <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 shadow-xl relative overflow-hidden">
+        <BatikPatternOverlay opacity={0.25} />
         {/* Navigation Bar */}
         <div className="flex items-center justify-between mb-4">
           <button

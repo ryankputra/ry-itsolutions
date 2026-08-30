@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
+import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
+
 export function EcommerceHeader() {
   const pathname = usePathname();
   const router = useRouter();
@@ -127,7 +129,8 @@ export function EcommerceHeader() {
       {/* ============================================================ */}
       {/* MOBILE TOP HEADER (Signature Ry-ITSolutions Blue)            */}
       {/* ============================================================ */}
-      <div className="lg:hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 py-2 shadow-md flex items-center gap-2.5">
+      <div className="lg:hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 py-2 shadow-md flex items-center gap-2.5 relative overflow-hidden">
+        <BatikPatternOverlay opacity={0.2} />
         {/* Search Bar (Clean White Input without Camera icon) */}
         <div ref={searchRef} className="flex-1 relative">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
