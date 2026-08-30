@@ -1807,7 +1807,7 @@ export default function AdminPage() {
               </div>
 
               {/* Tambah Paket Baru */}
-              <div className="flex gap-2 items-end pt-2 border-t border-hairline">
+              <div className="grid grid-cols-3 gap-2 items-end pt-2 border-t border-hairline">
                 <Input
                   label="Durasi Baru (Misal: 6 Bulan)"
                   value={newImeiPkg.duration}
@@ -2854,37 +2854,7 @@ export default function AdminPage() {
               </div>
             </Card>
 
-            {/* Fallback REST API */}
-            <Card glass className="p-5 space-y-3">
-              <div>
-                <h2 className="text-base font-bold text-ink">Fallback REST API Gateway (Opsional)</h2>
-                <p className="text-xs text-ink-muted mt-0.5">Cadangan token pihak ketiga (Fonnte / Wablas).</p>
-              </div>
 
-              <div className="space-y-2.5">
-                <Input
-                  label="API Token / Key"
-                  placeholder="Contoh: 1a2b3c4d5e6f..."
-                  value={waToken}
-                  onChange={(e) => setWaToken(e.target.value)}
-                />
-                <Input
-                  label="API URL Endpoint"
-                  placeholder="https://api.fonnte.com/send"
-                  value={waUrl}
-                  onChange={(e) => setWaUrl(e.target.value)}
-                />
-              </div>
-
-              <Button
-                className="w-full text-xs"
-                variant="outline"
-                isLoading={savingWhatsApp}
-                onClick={handleSaveWhatsAppSettings}
-              >
-                Simpan Fallback Gateway
-              </Button>
-            </Card>
 
             {/* Payment Gateway Selector */}
             <Card glass className="p-5 space-y-3.5">
