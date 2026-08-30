@@ -1220,7 +1220,7 @@ export default function AdminPage() {
       {/* 3. Re-organized Categorized Navigation System (Clean, No Emojis) */}
       <div className="bg-canvas border border-hairline p-2 rounded-2xl shadow-xs space-y-2">
         {/* Category Selector Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-parchment/60 rounded-xl border border-hairline">
+        <div className="grid grid-cols-4 gap-1 p-1 bg-parchment/60 rounded-xl border border-hairline">
           {menuCategories.map(cat => {
             const isCatActive = currentCategory === cat.id;
             return (
@@ -1232,7 +1232,7 @@ export default function AdminPage() {
                     setActiveTab(cat.tabs[0].id);
                   }
                 }}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center ${isCatActive
+                className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all text-center ${isCatActive
                   ? 'bg-canvas text-primary shadow-xs border border-hairline'
                   : 'text-ink-muted hover:text-ink hover:bg-canvas/50'}`}
               >
@@ -1851,7 +1851,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="space-y-3.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {ceirgoServices.map((svc) => (
                       <div key={svc.code} className={`bg-canvas border p-3 rounded-xl flex flex-col gap-2.5 ${ceirgoDisplayCodes.has(svc.code) ? 'border-primary ring-1 ring-primary/30' : 'border-hairline opacity-75'}`}>
                         <div className="flex justify-between items-start">
@@ -2314,7 +2314,7 @@ export default function AdminPage() {
             </div>
 
             <form onSubmit={handleSendBroadcast} className="space-y-3.5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-xs font-bold text-ink block mb-1">Judul Promo / Event</label>
                   <input
@@ -2354,7 +2354,7 @@ export default function AdminPage() {
               {/* Target Channel Switches */}
               <div className="p-3 rounded-xl bg-parchment/60 border border-hairline space-y-2">
                 <p className="text-xs font-bold text-ink">Saluran Tujuan Broadcast:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-3 gap-2">
                   <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
                     <input
                       type="checkbox"
@@ -2421,7 +2421,7 @@ export default function AdminPage() {
               </div>
 
               <form onSubmit={handleCreateCoupon} className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <Input
                     label="Kode Kupon"
                     placeholder="Misal: PROMO1212"
@@ -2442,7 +2442,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-ink/80">Tipe Potongan</label>
                     <select
@@ -2464,7 +2464,7 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <Input
                     label="Min. Order (Rp)"
                     type="number"
@@ -2489,7 +2489,7 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <Input
                     label="Maksimal User yang Klaim"
                     type="number"
@@ -2508,7 +2508,7 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="text-[11px] font-semibold text-ink/80 block mb-1">Mulai (Opsional)</label>
                     <input
