@@ -103,8 +103,12 @@ export default function DashboardPage() {
     fetch("/api/user/transactions", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
-        if (data.status && data.data) {
-          const sorted = [...data.data].reverse();
+        if (data.status && data.data && Array.isArray(data.data)) {
+          const sorted = [...data.data].sort((a, b) => {
+            const timeA = new Date(a.createdAt || 0).getTime() || 0;
+            const timeB = new Date(b.createdAt || 0).getTime() || 0;
+            return timeB - timeA;
+          });
           setAllTrx(sorted);
           setRecentTrx(sorted.slice(0, 5));
         }

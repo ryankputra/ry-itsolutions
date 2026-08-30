@@ -2295,7 +2295,11 @@ app.get('/api/user/transactions', isAuthenticated, async (req, res) => {
                 baseAmount: purchaseVal,
                 price: purchaseVal
             };
-        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }).sort((a, b) => {
+            const timeA = new Date(a.createdAt || 0).getTime() || 0;
+            const timeB = new Date(b.createdAt || 0).getTime() || 0;
+            return timeB - timeA;
+        });
 
         res.status(200).json({ status: true, data: allActivities });
     } catch (error) {
