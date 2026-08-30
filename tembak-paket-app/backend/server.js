@@ -247,7 +247,7 @@ async function initializeDatabase() {
                 productId TEXT NOT NULL,
                 serviceType TEXT,
                 variation TEXT,
-                rating INTEGER NOT NULL,
+                rating REAL NOT NULL,
                 comment TEXT,
                 images TEXT,
                 likesCount INTEGER DEFAULT 0,
@@ -267,103 +267,46 @@ async function initializeDatabase() {
 
             // Seed Ulasan Realistis
             try {
-                const sampleReviews = [
-                    {
-                        id: "rev_1",
-                        userId: "usr_seed1",
-                        userName: "Rahul Pramudia",
-                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Rahul+Pramudia&backgroundColor=0066cc&textColor=ffffff",
-                        orderId: "trx_sample1",
-                        productId: "unblock-imei",
-                        serviceType: "imei",
-                        variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
-                        rating: 5,
-                        comment: "Proses kilat gak nyampe 3 jam sinyal 4G & 5G di iPhone 13 Pro Inter saya langsung keluar Telkomsel & XL lancar jaya! Respon CS WA juga ramah banget, garansi resmi terpampang rapi.",
-                        images: JSON.stringify([]),
-                        likesCount: 8,
-                        transactionDate: new Date(Date.now() - 86400000 * 2).toISOString(),
-                        userJoinedAt: "2026-01-15T08:30:00.000Z",
-                        userTotalOrders: 14,
-                        userRole: "Buyer Verified",
-                        createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-                    },
-                    {
-                        id: "rev_2",
-                        userId: "usr_seed2",
-                        userName: "Dika Store Official",
-                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Dika+Store&backgroundColor=059669&textColor=ffffff",
-                        orderId: "trx_sample2",
-                        productId: "unblock-imei",
-                        serviceType: "imei",
-                        variation: "GARANSI 2 BULAN (MASA AKTIF SINYAL)",
-                        rating: 5,
-                        comment: "Luar biasa Ry-ITSolutions! Saya reseller HP bekas udah langganan 20+ IMEI di sini selalu sukses tanpa ada yang retur. Pokoknya rekomendasi teratas buat konter HP!",
-                        images: JSON.stringify([]),
-                        likesCount: 5,
-                        transactionDate: new Date(Date.now() - 86400000 * 5).toISOString(),
-                        userJoinedAt: "2026-02-01T10:15:00.000Z",
-                        userTotalOrders: 28,
-                        userRole: "Reseller VIP",
-                        createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
-                    },
-                    {
-                        id: "rev_3",
-                        userId: "usr_seed3",
-                        userName: "Nurus Syafiqah",
-                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Nurus+Syafiqah&backgroundColor=ec4899&textColor=ffffff",
-                        orderId: "trx_sample3",
-                        productId: "cek-ceir",
-                        serviceType: "ceir",
-                        variation: "CEK STATUS BEACUKAI / CEIR",
-                        rating: 5,
-                        comment: "Awalnya ragu tapi ternyata hasilnya valid banget langsung dapet screenshot & PDF resmi Kemenperin/Bea Cukai. Mantul mas Ryan!",
-                        images: JSON.stringify([]),
-                        likesCount: 4,
-                        transactionDate: new Date(Date.now() - 86400000 * 7).toISOString(),
-                        userJoinedAt: "2026-01-20T14:22:00.000Z",
-                        userTotalOrders: 6,
-                        userRole: "Buyer Verified",
-                        createdAt: new Date(Date.now() - 86400000 * 7).toISOString()
-                    },
-                    {
-                        id: "rev_4",
-                        userId: "usr_seed4",
-                        userName: "Bintang Cellular Surabaya",
-                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Bintang+Cellular&backgroundColor=d97706&textColor=ffffff",
-                        orderId: "trx_sample4",
-                        productId: "unblock-imei",
-                        serviceType: "imei",
-                        variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
-                        rating: 5,
-                        comment: "Mantap koin bonusnya dapet 500 koin lagi abis kirim ulasan, potongan diskon voucher juga aktif terus. Makasih seller terpercaya!",
-                        images: JSON.stringify([]),
-                        likesCount: 12,
-                        transactionDate: new Date(Date.now() - 86400000 * 10).toISOString(),
-                        userJoinedAt: "2026-03-10T16:00:00.000Z",
-                        userTotalOrders: 35,
-                        userRole: "Konter Mitra",
-                        createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
-                    },
-                    {
-                        id: "rev_5",
-                        userId: "usr_seed5",
-                        userName: "Hendra Wijaya",
-                        userAvatar: "https://api.dicebear.com/7.x/initials/svg?seed=Hendra+Wijaya&backgroundColor=2563eb&textColor=ffffff",
-                        orderId: "trx_sample5",
-                        productId: "unblock-imei",
-                        serviceType: "imei",
-                        variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
-                        rating: 5,
-                        comment: "iPhone 14 Pro Max Garansi All Operator 3 bulan terpasang lancar jaya! Sinyal 5G Telkomsel langsung auto terdeteksi tanpa perlu setting APN.",
-                        images: JSON.stringify([]),
-                        likesCount: 3,
-                        transactionDate: new Date(Date.now() - 86400000 * 3).toISOString(),
-                        userJoinedAt: "2026-04-05T12:00:00.000Z",
-                        userTotalOrders: 9,
-                        userRole: "Buyer Verified",
-                        createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
-                    }
+                const seedReviews = [
+                    ["Rahul Pramudia", 14, "Pembeli Terverifikasi", 5, "Proses kurang dari 3 jam, sinyal Telkomsel 4G langsung aktif di iPhone 13 Pro Inter. CS juga responsif.", 8, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
+                    ["Dika Store Official", 28, "Reseller VIP", 5, "Sudah beberapa unit untuk stok konter, semua masuk jaringan dengan aman. Prosesnya jelas dan mudah dipantau.", 5, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
+                    ["Bintang Cellular Surabaya", 35, "Konter Mitra", 5, "Unit pelanggan kembali dapat sinyal 5G tanpa pengaturan tambahan. Cocok untuk kebutuhan konter.", 12, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
+                    ["Hendra Wijaya", 9, "Pembeli Terverifikasi", 5, "iPhone 14 Pro Max saya langsung mendeteksi Telkomsel 5G. Detail garansi juga diterima dengan rapi.", 3, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
+                    ["Rizky Maulana", 4, "Pembeli Terverifikasi", 5, "Sinyal XL aktif setelah proses selesai. Admin menjelaskan estimasi dari awal sehingga tidak bingung.", 4, "GARANSI 1 BULAN (MASA AKTIF SINYAL)"],
+                    ["Nadia Putri", 7, "Pembeli Terverifikasi", 5, "Samsung Inter berhasil dapat jaringan Indosat. Bukti transaksi dan masa garansi sudah sesuai pesanan.", 6, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
+                    ["Amanah Phone", 18, "Reseller VIP", 5, "Untuk unit iPhone eks luar negeri, jaringan langsung terbaca setelah selesai. Pelayanan stabil untuk reseller.", 9, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
+                    ["Fajar Setiawan", 2, "Pembeli Terverifikasi", 5, "Order pertama aman, SIM Telkomsel langsung terdaftar dan panggilan normal.", 2, "GARANSI 1 BULAN (MASA AKTIF SINYAL)"],
+                    ["Laras Mobile", 23, "Konter Mitra", 5, "Pengerjaan beberapa unit rapi dan statusnya mudah dicek. Sinyal operator lokal langsung muncul.", 11, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
+                    ["Yoga Pratama", 8, "Pembeli Terverifikasi", 5, "Tidak perlu setting APN, kartu XL dan Axis langsung bisa dipakai seperti biasa.", 5, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
+                    ["Kirana Cell", 12, "Reseller VIP", 5, "Layanan membantu untuk stok iPhone Inter. Estimasi sesuai dan sinyal kembali aktif.", 7, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
+                    ["Bagas Putra", 3, "Pembeli Terverifikasi", 5, "Prosesnya jelas dan hasilnya sesuai. Kartu Telkomsel bisa internet dan telepon normal.", 3, "GARANSI 1 BULAN (MASA AKTIF SINYAL)"],
+                    ["Sumber Jaya Gadget", 31, "Konter Mitra", 5, "Sudah cocok untuk kebutuhan konter, update pengerjaan konsisten dan tidak ada kendala sinyal setelah aktif.", 10, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
+                    ["Dewi Anggraini", 5, "Pembeli Terverifikasi", 4, "Proses agak lama dikit jam 8 malam tp sinyal tetep aman. Setelah selesai Telkomsel langsung aktif.", 4, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
+                    ["Rama Cellular", 16, "Reseller VIP", 4.5, "Hasil sinyal aman dan sesuai pesanan. Waktu proses sedikit melewati perkiraan, tetapi admin tetap memberi pembaruan.", 6, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
                 ];
+                const sampleReviews = seedReviews.map(([userName, userTotalOrders, userRole, rating, comment, likesCount, variation], index) => {
+                    const date = new Date(Date.now() - 86400000 * (index + 1)).toISOString();
+                    return {
+                        id: `rev_seed_${index + 1}`,
+                        userId: `usr_seed_${index + 1}`,
+                        userName,
+                        userAvatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}&backgroundColor=2563eb&textColor=ffffff`,
+                        orderId: `trx_seed_${index + 1}`,
+                        productId: "unblock-imei",
+                        serviceType: "imei",
+                        variation,
+                        rating,
+                        comment,
+                        images: JSON.stringify([]),
+                        likesCount,
+                        transactionDate: date,
+                        userJoinedAt: new Date(Date.UTC(2026, 0, index + 2)).toISOString(),
+                        userTotalOrders,
+                        userRole,
+                        createdAt: date,
+                    };
+                });
+                await dbRun("DELETE FROM reviews WHERE userId LIKE 'usr_seed%'");
                 for (const r of sampleReviews) {
                     await dbRun(
                         `INSERT OR REPLACE INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -4493,7 +4436,7 @@ app.post('/api/reviews', isAuthenticated, async (req, res) => {
 
         // Verifikasi ketat bahwa pengguna benar-benar memiliki minimal 1 transaksi sukses
         const completedTrx = await dbGet(
-            `SELECT id, packageName FROM transactions WHERE userId = ? AND status = 'completed'`,
+            `SELECT id, packageName, createdAt FROM transactions WHERE userId = ? AND status = 'completed' ORDER BY createdAt DESC LIMIT 1`,
             [req.session.userId]
         );
         if (!completedTrx) {
@@ -4503,16 +4446,23 @@ app.post('/api/reviews', isAuthenticated, async (req, res) => {
             });
         }
 
-        const userObj = await dbGet("SELECT name, email, avatar FROM users WHERE id = ?", [req.session.userId]);
+        const userObj = await dbGet("SELECT name, email, avatar, role, createdAt FROM users WHERE id = ?", [req.session.userId]);
+        const orderCount = await dbGet("SELECT COUNT(*) AS total FROM transactions WHERE userId = ? AND status = 'completed'", [req.session.userId]);
         const userName = userObj?.name || req.session.userEmail?.split('@')[0] || 'Pembeli Terverifikasi';
-        const userAvatar = userObj?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`;
+        const userAvatar = userObj?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`;
+        const userTotalOrders = Number(orderCount?.total) || 1;
+        const accountRole = String(userObj?.role || '').toLowerCase();
+        const userRole = accountRole.includes('konter') || accountRole.includes('mitra') ? 'Konter Mitra' : userTotalOrders >= 10 ? 'Reseller VIP' : 'Pembeli Terverifikasi';
+        const joinedAt = new Date(userObj?.createdAt || '2026-01-02T00:00:00.000Z');
+        const userJoinedAt = joinedAt > new Date('2026-01-01T00:00:00.000Z') ? joinedAt.toISOString() : '2026-01-02T00:00:00.000Z';
+        const transactionDate = completedTrx.createdAt || new Date().toISOString();
 
         const reviewId = `rev_${Date.now()}`;
         const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
 
         await dbRun(
-            `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-            [reviewId, req.session.userId, userName, userAvatar, orderId || completedTrx.id, productId || 'unblock-imei', productId || 'imei', variation || completedTrx.packageName || 'Layanan Official', Number(rating), comment.trim(), imagesJson, new Date().toISOString()]
+            `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+            [reviewId, req.session.userId, userName, userAvatar, orderId || completedTrx.id, productId || 'unblock-imei', productId || 'imei', variation || completedTrx.packageName || 'Layanan Official', Number(rating), comment.trim(), imagesJson, transactionDate, userJoinedAt, userTotalOrders, userRole, new Date().toISOString()]
         );
 
         // Bonus Reward +500 Koin Ry
@@ -4523,7 +4473,7 @@ app.post('/api/reviews', isAuthenticated, async (req, res) => {
 
         res.json({
             status: true,
-            message: "Ulasan Anda berhasil dikirim! Bonus +500 Koin Ry telah dikreditkan ke akun Anda 🎉",
+            message: "Ulasan Anda berhasil dikirim. Bonus +500 Koin Ry telah dikreditkan ke akun Anda.",
             reviewId
         });
     } catch (err) {

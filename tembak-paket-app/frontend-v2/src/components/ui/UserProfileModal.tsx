@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { getReviewRole, getReviewRoleClass } from "@/lib/reviews";
 
 export interface UserProfileModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export interface UserProfileModalProps {
 
 export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProps) {
   if (!isOpen || !user) return null;
+  const role = getReviewRole(user);
 
   const formattedJoinedDate = user.userJoinedAt
     ? new Date(user.userJoinedAt).toLocaleDateString("id-ID", {
@@ -44,7 +46,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             onClick={onClose}
             className="absolute top-3 right-3 w-7 h-7 rounded-full bg-slate-950/20 hover:bg-slate-950/40 text-white flex items-center justify-center text-xs font-bold transition-colors"
           >
-            ✕
+            <svg aria-label="Tutup" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
         </div>
 
@@ -54,16 +56,16 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={user.userAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.userName}`}
+                src={user.userAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.userName || "Pelanggan")}`}
                 alt={user.userName || "User Profile"}
                 className="w-20 h-20 rounded-2xl object-cover border-4 border-canvas shadow-lg"
               />
-              <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-emerald-500 border-2 border-canvas flex items-center justify-center text-[10px] text-white font-bold" title="Online / Aktif">
-                ✓
+              <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-canvas bg-emerald-500 text-white" title="Terverifikasi">
+                <svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m5 12 4 4L19 6" /></svg>
               </span>
             </div>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] font-black uppercase">
-              {user.userRole || "Pembeli Terverifikasi"}
+            <span className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase ${getReviewRoleClass(role)}`}>
+              {role}
             </span>
           </div>
 
@@ -86,7 +88,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
 
             <div className="flex items-center justify-between pt-2 border-t border-hairline">
               <span className="text-ink-muted font-medium">Total Transaksi Sukses:</span>
-              <span className="font-extrabold text-primary">{user.userTotalOrders || 14} Pesanan</span>
+              <span className="font-extrabold text-primary">{user.userTotalOrders || 1} Pesanan</span>
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-hairline">

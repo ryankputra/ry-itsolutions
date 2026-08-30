@@ -1,12 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useApp } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import Swal from "@/lib/sweetalert";
-import { safeJson } from "@/lib/api";
-import WriteReviewModal from "./WriteReviewModal";
 import InstantQrisPaymentModal from "./InstantQrisPaymentModal";
 import { playPopSound } from "@/lib/soundFx";
+import ProductReviewsSection from "./ProductReviewsSection";
 
 export interface VariationOption {
   id: string;
@@ -78,49 +77,11 @@ export function ProductDetailView({
   const [showVariationDrawer, setShowVariationDrawer] = useState(false);
   const [drawerAction, setDrawerAction] = useState<"cart" | "buy">("buy");
 
-  // Reviews state
-  const [reviewsData, setReviewsData] = useState<any>({
-    summary: { averageRating: 4.9, totalReviews: 1420, ratingCounts: { 5: 1350, 4: 55, 3: 10, 2: 3, 1: 2 }, withPhotosCount: 845 },
-    reviews: [],
-  });
-  const [reviewFilter, setReviewFilter] = useState<"all" | "photos" | "5star">("all");
-  const [searchReview, setSearchReview] = useState("");
-
-  // Write review modal state
-  const [showWriteReviewModal, setShowWriteReviewModal] = useState(false);
-
   // Instant QRIS modal state
   const [showInstantQris, setShowInstantQris] = useState(false);
 
-  // Fetch product reviews from backend
-  const fetchReviews = () => {
-    fetch(`/api/reviews?productId=${id}`, { credentials: "include" })
-      .then((res) => safeJson(res))
-      .then((data) => {
-        if (data?.status && data?.summary) {
-          setReviewsData(data);
-        }
-      })
-      .catch(() => {});
-  };
-
-  useEffect(() => {
-    fetchReviews();
-  }, [id]);
-
   const selectedVar = variations.find((v) => v.id === selectedVarId) || variations[0];
   const currentPrice = selectedVar ? selectedVar.price : price;
-
-  const handleLikeReview = async (reviewId: string) => {
-    try { playPopSound(); } catch {}
-    try {
-      await fetch(`/api/reviews/${reviewId}/like`, { method: "POST", credentials: "include" });
-      setReviewsData((prev: any) => ({
-        ...prev,
-        reviews: prev.reviews.map((r: any) => (r.id === reviewId ? { ...r, likesCount: (r.likesCount || 0) + 1 } : r)),
-      }));
-    } catch (e) {}
-  };
 
   const handleAddToCartClick = () => {
     try { playPopSound(); } catch {}
@@ -153,17 +114,6 @@ export function ProductDetailView({
     }
   };
 
-  // Filter reviews
-  const filteredReviews = (reviewsData.reviews || []).filter((r: any) => {
-    if (reviewFilter === "photos" && (!r.images || r.images.length === 0)) return false;
-    if (reviewFilter === "5star" && r.rating !== 5) return false;
-    if (searchReview.trim()) {
-      const q = searchReview.toLowerCase();
-      return r.comment.toLowerCase().includes(q) || r.userName.toLowerCase().includes(q) || r.variation?.toLowerCase().includes(q);
-    }
-    return true;
-  });
-
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-20 select-none">
       {/* Top Header Navigation Bar (Shopee Style) */}
@@ -185,8 +135,6 @@ export function ProductDetailView({
           <input
             type="text"
             placeholder="Cari layanan di Ry-ITSolutions..."
-            value={searchReview}
-            onChange={(e) => setSearchReview(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-primary border border-transparent"
           />
         </div>
@@ -352,131 +300,7 @@ export function ProductDetailView({
           </div>
         </div>
 
-        {/* 4. Product Reviews / Rating Section (Screenshot 2) */}
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 sm:rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
-          {/* Rating Summary Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-black text-slate-900 dark:text-white">
-                {reviewsData.summary.averageRating}
-              </span>
-              <span className="text-amber-400 text-lg">★</span>
-              <span className="font-bold text-xs text-slate-700 dark:text-slate-300">
-                Penilaian Produk ({reviewsData.summary.totalReviews.toLocaleString("id-ID")})
-              </span>
-            </div>
-            <button
-              onClick={() => setShowWriteReviewModal(true)}
-              className="px-3 py-1 rounded-full bg-amber-500 text-amber-950 text-[11px] font-black hover:bg-amber-400 transition-colors flex items-center gap-1 shadow-xs"
-            >
-              <span>+ Beri Ulasan</span>
-            </button>
-          </div>
-
-          {/* AI Rating Highlights Box (Screenshot 2) */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-2 text-xs">
-            <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-              <span>Rangkuman Penilaian ✨</span>
-              <span className="text-slate-400 text-[10px]">ℹ️</span>
-            </div>
-            <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-slate-300 font-medium">
-              <li>Kecocokan: 100% Pas sinyal 4G/5G All Operator terbukti aktif lancar jaya.</li>
-              <li>Layanan: Respon kilat, garansi resmi terpampang &amp; nota dikirim via WhatsApp.</li>
-            </ul>
-          </div>
-
-          {/* Customer Reviews Photo Gallery Strip (Screenshot 2) */}
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-bold text-slate-500">Foto &amp; Video dari Pembeli ({reviewsData.summary.withPhotosCount}):</p>
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {filteredReviews.flatMap((r: any) => r.images || []).slice(0, 10).map((imgUrl: string, idx: number) => (
-                <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imgUrl} alt="Review attachment" className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Review Filter Pills */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
-            <button
-              onClick={() => setReviewFilter("all")}
-              className={`px-3 py-1 rounded-full font-bold transition-colors ${reviewFilter === "all" ? "bg-rose-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"}`}
-            >
-              Semua ({reviewsData.summary.totalReviews})
-            </button>
-            <button
-              onClick={() => setReviewFilter("photos")}
-              className={`px-3 py-1 rounded-full font-bold transition-colors ${reviewFilter === "photos" ? "bg-rose-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"}`}
-            >
-              Dengan Foto &amp; Video ({reviewsData.summary.withPhotosCount})
-            </button>
-            <button
-              onClick={() => setReviewFilter("5star")}
-              className={`px-3 py-1 rounded-full font-bold transition-colors ${reviewFilter === "5star" ? "bg-rose-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"}`}
-            >
-              5 Bintang ({reviewsData.summary.ratingCounts[5]})
-            </button>
-          </div>
-
-          {/* Verified Customer Reviews List */}
-          <div className="space-y-4 pt-2 divide-y divide-slate-100 dark:divide-slate-800">
-            {filteredReviews.map((rev: any) => (
-              <div key={rev.id} className="pt-4 first:pt-0 space-y-2 text-xs">
-                {/* User avatar & name */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={rev.userAvatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + rev.id}
-                      alt={rev.userName}
-                      className="w-7 h-7 rounded-full object-cover border border-slate-200"
-                    />
-                    <div>
-                      <span className="font-bold text-slate-900 dark:text-white block">
-                        {rev.userName}
-                      </span>
-                      <div className="flex items-center gap-1 text-amber-400 text-[10px]">
-                        {"★".repeat(rev.rating)}
-                        <span className="text-emerald-600 font-bold ml-1">● Pembeli Terverifikasi</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleLikeReview(rev.id)}
-                    className="text-[11px] text-slate-500 hover:text-rose-500 flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold"
-                  >
-                    <span>Membantu ({rev.likesCount || 0})</span>
-                    <span>👍</span>
-                  </button>
-                </div>
-
-                {/* Purchased variation badge */}
-                <p className="text-[10px] text-slate-400 font-medium">
-                  Variasi: {rev.variation || "GARANSI 1 TAHUN, ALL OPERATOR"}
-                </p>
-
-                {/* Review comment text */}
-                <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
-                  {rev.comment}
-                </p>
-
-                {/* Review Photos grid */}
-                {rev.images && rev.images.length > 0 && (
-                  <div className="flex gap-2 pt-1">
-                    {rev.images.map((img: string, i: number) => (
-                      <div key={i} className="w-20 h-20 rounded-xl overflow-hidden border border-slate-200 shadow-xs">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img} alt="Bukti review" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <ProductReviewsSection productId={id} title="Ulasan Pelanggan" />
 
         {/* 5. Specifications & Detailed Summary (Screenshot 3) */}
         <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 sm:rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
@@ -616,15 +440,6 @@ export function ProductDetailView({
           </div>
         </div>
       )}
-
-      {/* Write Review Modal */}
-      <WriteReviewModal
-        isOpen={showWriteReviewModal}
-        onClose={() => setShowWriteReviewModal(false)}
-        productId={id}
-        variation={selectedVar.name}
-        onReviewSubmitted={fetchReviews}
-      />
 
       {/* Instant QRIS Modal */}
       <InstantQrisPaymentModal
