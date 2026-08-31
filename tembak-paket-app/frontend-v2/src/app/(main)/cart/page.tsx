@@ -220,16 +220,23 @@ export default function CartPage() {
       // Process orders sequentially with proper payload structure
       for (let idx = 0; idx < activeCartItems.length; idx++) {
         const item = activeCartItems[idx];
+        const itemPrice = item.price || item.totalPrice || 0;
+        const pkgKey = String(item.packageId || item.id);
+
         const formData = new FormData();
         formData.append("service_type", item.serviceType === "ceir" ? "ceir" : "imei");
         formData.append("imei", item.imei || "111111111111111");
         formData.append("duration", item.duration || "1 Bulan");
-        formData.append("price_key", String(item.packageId || item.id));
+        formData.append("amount", itemPrice.toString());
+        formData.append("package_id", pkgKey);
+        formData.append("price_key", pkgKey);
+        formData.append("speed", item.speed || "regular");
         formData.append("speed_option", item.speed || "regular");
         formData.append("target_phone", item.targetPhone || user?.phone || "");
 
         // Apply coupon & coins on first applicable item to prevent duplicate coupon reuse error
         if (idx === 0 && appliedCoupon) {
+          formData.append("couponCode", appliedCoupon.code);
           formData.append("coupon_code", appliedCoupon.code);
         }
         if (idx === 0 && useCoins && coinsDiscount > 0) {

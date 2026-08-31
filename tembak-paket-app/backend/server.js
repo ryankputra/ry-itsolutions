@@ -2535,12 +2535,16 @@ app.post('/api/user/change-password', isAuthenticated, async (req, res) => {
 });
 
 app.post('/api/user/update-profile', isAuthenticated, async (req, res) => {
-    const { name } = req.body;
+    const { name, phone } = req.body;
     if (!name || name.trim() === '') return res.status(400).json({ status: false, message: 'Nama tidak boleh kosong.' });
     try {
-        await dbRun('UPDATE users SET name = ? WHERE id = ?', [name.trim(), req.session.userId]);
-        const updatedUser = await dbGet('SELECT id, name, email, balance, role, status FROM users WHERE id = ?', [req.session.userId]);
-        res.status(200).json({ status: true, message: 'Nama berhasil diperbarui.', user: updatedUser });
+        if (phone && phone.trim()) {
+            await dbRun('UPDATE users SET name = ?, phone = ? WHERE id = ?', [name.trim(), phone.trim(), req.session.userId]);
+        } else {
+            await dbRun('UPDATE users SET name = ? WHERE id = ?', [name.trim(), req.session.userId]);
+        }
+        const updatedUser = await dbGet('SELECT id, name, email, phone, balance, role, status FROM users WHERE id = ?', [req.session.userId]);
+        res.status(200).json({ status: true, message: 'Profil berhasil diperbarui.', user: updatedUser });
     } catch (error) { console.error("Update profile error:", error); res.status(500).json({ status: false, message: 'Terjadi kesalahan pada server.' }); }
 });
 
@@ -5119,7 +5123,11 @@ app.put('/api/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => 
             if (!trx) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan" });
 
             let adminImagePath = trx.admin_image;
-            if (req.files && req.files['image']) adminImagePath = `/public/uploads/manual_orders/${req.files['image'][0].filename}`;
+            const adminFiles = [
+                ...(req.files && req.files['image'] ? req.files['image'] : []),
+                ...(req.files && req.files['screenshot'] ? req.files['screenshot'] : [])
+            ];
+            if (adminFiles.length > 0) adminImagePath = `/public/uploads/manual_orders/${adminFiles[0].filename}`;
 
             await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ?, api_response = ? WHERE id = ?",
                 [status, admin_note, adminImagePath, status === 'failed' ? 'Gagal / Ditolak Admin' : 'Selesai / Sedang Diproses Admin', trxId]);
