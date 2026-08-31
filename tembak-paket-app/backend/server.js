@@ -1726,6 +1726,13 @@ app.post('/api/coupons/claim', isAuthenticated, async (req, res) => {
             }
         }
 
+        // Cek apakah user sudah pernah menggunakan voucher ini sampai batas maksimal
+        const maxPerUser = coupon.max_per_user || 1;
+        const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
+        if (userUsage && userUsage.count >= maxPerUser) {
+            return res.status(400).json({ status: false, message: "Voucher promo ini sudah pernah Anda gunakan dan tidak dapat diklaim lagi." });
+        }
+
         // Cek apakah user sudah mengklaim voucher ini
         const alreadyClaimed = await dbGet("SELECT id FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
         if (alreadyClaimed) {
@@ -4833,6 +4840,7 @@ app.post(['/api/transactions/manual', '/api/order/ceir', '/api/order/manual'], i
                 try {
                     await dbRun("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [appliedCoupon.id]);
                     await dbRun("INSERT INTO coupon_usages (id, coupon_id, userId, trxId, discount_amount, used_at) VALUES (?, ?, ?, ?, ?, ?)", [`usg_${Date.now()}`, appliedCoupon.id, req.session.userId, trxId, discountAmount, new Date().toISOString()]);
+                    await dbRun("DELETE FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [appliedCoupon.id, req.session.userId]);
                 } catch (e) { console.error("Error updating coupon usage:", e); }
             }
 

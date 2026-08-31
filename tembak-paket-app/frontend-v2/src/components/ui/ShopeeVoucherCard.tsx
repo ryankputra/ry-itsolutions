@@ -41,6 +41,11 @@ export function ShopeeVoucherCard({
   const isOutOfStock = claimedCount >= maxClaims && !isClaimed;
   const percentage = Math.min(100, Math.round((claimedCount / maxClaims) * 100));
 
+  const isUsed = Boolean(
+    coupon.is_used ||
+    (typeof coupon.user_used_count === "number" && coupon.user_used_count >= (coupon.max_per_user || 1))
+  );
+
   const formattedDiscount =
     coupon.discount_type === "percent"
       ? `Diskon ${coupon.discount_value}%`
@@ -106,19 +111,23 @@ export function ShopeeVoucherCard({
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-hairline/60">
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-center text-[9px] text-ink-muted mb-0.5">
-              <span>{isOutOfStock ? "Kuota Habis" : `${percentage}% Diklaim`}</span>
+              <span>{isUsed ? "Sudah Terpakai" : isOutOfStock ? "Kuota Habis" : `${percentage}% Diklaim`}</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-hairline">
               <div
                 className={`h-full rounded-full transition-all ${
-                  isOutOfStock ? "bg-slate-400" : percentage > 80 ? "bg-rose-500" : "bg-primary"
+                  isUsed || isOutOfStock ? "bg-slate-400" : percentage > 80 ? "bg-rose-500" : "bg-primary"
                 }`}
                 style={{ width: `${percentage}%` }}
               />
             </div>
           </div>
 
-          {isClaimed ? (
+          {isUsed ? (
+            <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shrink-0">
+              Sudah Digunakan
+            </span>
+          ) : isClaimed ? (
             onUse ? (
               <button
                 type="button"
