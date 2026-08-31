@@ -5238,15 +5238,51 @@ async function pollTelegramUpdates() {
     setTimeout(pollTelegramUpdates, 2000);
 }
 
-// Function to handle incoming Telegram message for reviews
+// Helper function to send Telegram message with Inline Keyboard Buttons
+async function sendTelegramButtons(chatId, text, inlineKeyboard) {
+    if (!TELEGRAM_BOT_TOKEN) return;
+    try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text,
+                parse_mode: 'HTML',
+                reply_markup: { inline_keyboard: inlineKeyboard }
+            })
+        });
+    } catch (e) { console.error('sendTelegramButtons error:', e); }
+}
+
+const telegramReviewMainMenu = [
+    [
+        { text: "➕ Tambah Ulasan Cepat", callback_data: "tg_rev_add_guide" },
+        { text: "📸 Petunjuk Foto + Caption", callback_data: "tg_rev_photo_guide" }
+    ],
+    [
+        { text: "📋 Lihat 5 Ulasan Terbaru", callback_data: "tg_rev_list" },
+        { text: "🗑️ Hapus Ulasan Terakhir", callback_data: "tg_rev_delete_latest" }
+    ]
+];
+
+// Function to handle incoming Telegram message for reviews & commands
 async function handleTelegramMessage(msg) {
     if (!msg || !msg.chat) return;
     const chatId = String(msg.chat.id);
+    const text = (msg.text || msg.caption || '').trim();
 
-    const text = msg.text || msg.caption || '';
-    if (!text && (!msg.photo || msg.photo.length === 0)) return;
+    // Trigger main menu on /start, /ulasan, /menu, /review
+    if (text === '/start' || text === '/menu' || text === '/ulasan' || text === '/review') {
+        await sendTelegramButtons(
+            chatId,
+            `⭐ <b>MENU MANAJEMEN ULASAN DUMMY TELKOMSEL / IMEI</b> ⭐\n\nSelamat datang di Bot Panel Ulasan Ry-ITSolutions. Silakan pilih tombol aksi di bawah ini:`,
+            telegramReviewMainMenu
+        );
+        return;
+    }
 
-    if (text.startsWith('/ulasan') || text.includes('|') || msg.photo) {
+    if (text.startsWith('/ulasan') || text.includes('|') || (msg.photo && msg.photo.length > 0)) {
         let cleanText = text.replace(/^\/ulasan\s*/i, '').trim();
         if (!cleanText && (!msg.photo || msg.photo.length === 0)) return;
 
@@ -5283,7 +5319,21 @@ async function handleTelegramMessage(msg) {
             [reviewId, `usr_tg_${Date.now()}`, nameClean, avatarClean, `trx_tg_${Date.now()}`, 'unblock-imei', 'imei', variation, ratingNum, comment, imagesJson, 5, new Date().toISOString(), '2026-01-15T08:30:00.000Z', 14, 'Pembeli Terverifikasi', new Date().toISOString()]
         );
 
-        await sendTelegramText(chatId, `✅ <b>Ulasan Dummy Berhasil Dibuat via Telegram!</b>\n\n👤 <b>Nama:</b> ${nameClean}\n⭐ <b>Rating:</b> ${ratingNum} Bintang\n💬 <b>Ulasan:</b> ${comment}\n🖼️ <b>Foto Bukti:</b> ${imageUrls.length > 0 ? 'Lampiran Foto Berhasil' : 'Tanpa Foto'}\n\nUlasan langsung aktif di website Ry-ITSolutions.`);
+        const successButtons = [
+            [
+                { text: "🗑️ Hapus Ulasan Ini", callback_data: `tg_rev_del_${reviewId}` },
+                { text: "📋 Lihat Semua Ulasan", callback_data: "tg_rev_list" }
+            ],
+            [
+                { text: "🔙 Kembali ke Menu Utama", callback_data: "tg_rev_main_menu" }
+            ]
+        ];
+
+        await sendTelegramButtons(
+            chatId,
+            `✅ <b>Ulasan Dummy Berhasil Ditambahkan!</b>\n\n👤 <b>Nama:</b> ${nameClean}\n⭐ <b>Rating:</b> ${ratingNum} Bintang\n💬 <b>Komentar:</b> ${comment}\n🛡️ <b>Variasi:</b> ${variation}\n🖼️ <b>Foto Bukti:</b> ${imageUrls.length > 0 ? 'Lampiran Foto Berhasil' : 'Tanpa Foto'}\n\n<i>Ulasan sudah aktif secara otomatis di website Ry-ITSolutions.</i>`,
+            successButtons
+        );
     }
 }
 
@@ -5303,6 +5353,8 @@ app.post('/api/telegram/webhook', async (req, res) => {
         const update = req.body;
         if (update && update.message) {
             await handleTelegramMessage(update.message);
+        } else if (update && update.callback_query) {
+            await handleTelegramCallbackQuery(update.callback_query);
         }
         res.json({ ok: true });
     } catch (e) {
@@ -5315,6 +5367,99 @@ async function handleTelegramCallbackQuery(cb) {
     const chatId = cb.message.chat.id;
     const messageId = cb.message.message_id;
     const cbId = cb.id;
+
+    // Handle Review Callback Buttons
+    if (data.startsWith('tg_rev_')) {
+        if (data === 'tg_rev_main_menu') {
+            await answerCallback(cbId, "Menu Utama Ulasan");
+            await sendTelegramButtons(
+                chatId,
+                `⭐ <b>MENU MANAJEMEN ULASAN DUMMY TELKOMSEL / IMEI</b> ⭐\n\nSilakan pilih tombol aksi di bawah:`,
+                telegramReviewMainMenu
+            );
+            return;
+        }
+
+        if (data === 'tg_rev_add_guide') {
+            await answerCallback(cbId, "Format Ulasan Cepat");
+            await sendTelegramText(
+                chatId,
+                `📝 <b>CARA TAMBAH ULASAN TEKS CEPAT:</b>\n\nKetik dan kirim pesan format berikut:\n<code>Nama Pengguna | Rating Bintang (1-5) | Komentar Ulasan | Variasi Garansi</code>\n\n<b>Contoh:</b>\n<code>Rian Pratama | 5 | iPhone 13 Pro sinyal Telkomsel 5G aktif kilat 2 jam! | GARANSI 3 BULAN (MASA AKTIF SINYAL)</code>`
+            );
+            return;
+        }
+
+        if (data === 'tg_rev_photo_guide') {
+            await answerCallback(cbId, "Format Foto + Caption");
+            await sendTelegramText(
+                chatId,
+                `📸 <b>CARA TAMBAH ULASAN + FOTO BUKTI:</b>\n\n1. Lampirkan/Pilih <b>Foto Sinyal</b> di Telegram.\n2. Di kolom <b>Caption</b>, tulis format berikut:\n<code>Nama Pengguna | Rating | Komentar | Variasi</code>\n\n<b>Contoh Caption:</b>\n<code>Rahul | 5 | All Operator terpasang lancar jaya garansi resmi!</code>`
+            );
+            return;
+        }
+
+        if (data === 'tg_rev_list') {
+            await answerCallback(cbId, "Memuat 5 Ulasan Terbaru...");
+            try {
+                const reviews = await dbAll("SELECT * FROM reviews ORDER BY createdAt DESC LIMIT 5");
+                if (!reviews || reviews.length === 0) {
+                    await sendTelegramText(chatId, "📭 <b>Belum ada ulasan terdaftar di database.</b>");
+                    return;
+                }
+
+                let listMsg = `📋 <b>5 ULASAN TERBARU DI DATABASE:</b>\n\n`;
+                const listButtons = [];
+
+                reviews.forEach((r, idx) => {
+                    listMsg += `${idx + 1}. 👤 <b>${r.userName}</b> (★ ${r.rating})\n💬 "${r.comment}"\n🏷️ ${r.variation}\n\n`;
+                    listButtons.push([
+                        { text: `🗑️ Hapus #${idx + 1} (${r.userName})`, callback_data: `tg_rev_del_${r.id}` }
+                    ]);
+                });
+
+                listButtons.push([{ text: "🔙 Kembali ke Menu", callback_data: "tg_rev_main_menu" }]);
+
+                await sendTelegramButtons(chatId, listMsg, listButtons);
+            } catch (e) {
+                await answerCallback(cbId, "Gagal memuat ulasan.");
+            }
+            return;
+        }
+
+        if (data === 'tg_rev_delete_latest') {
+            try {
+                const latest = await dbGet("SELECT * FROM reviews ORDER BY createdAt DESC LIMIT 1");
+                if (!latest) {
+                    await answerCallback(cbId, "Tidak ada ulasan untuk dihapus.");
+                    return;
+                }
+
+                await dbRun("DELETE FROM reviews WHERE id = ?", [latest.id]);
+                await answerCallback(cbId, "Ulasan terbaru berhasil dihapus!");
+                await sendTelegramButtons(
+                    chatId,
+                    `🗑️ <b>Ulasan Terbaru Berhasil Dihapus!</b>\n\n👤 <b>Nama:</b> ${latest.userName}\n💬 "${latest.comment}"`,
+                    telegramReviewMainMenu
+                );
+            } catch (e) {
+                await answerCallback(cbId, "Gagal menghapus ulasan.");
+            }
+            return;
+        }
+
+        if (data.startsWith('tg_rev_del_')) {
+            const revId = data.replace('tg_rev_del_', '');
+            try {
+                const revObj = await dbGet("SELECT userName FROM reviews WHERE id = ?", [revId]);
+                await dbRun("DELETE FROM reviews WHERE id = ?", [revId]);
+                await answerCallback(cbId, "Ulasan berhasil dihapus!");
+                await sendTelegramText(chatId, `🗑️ <b>Ulasan milik "${revObj?.userName || revId}" berhasil dihapus dari website.</b>`);
+            } catch (e) {
+                await answerCallback(cbId, "Gagal menghapus ulasan.");
+            }
+            return;
+        }
+    }
 
     if (data.startsWith('manual_')) {
         const parts = data.split('_');
