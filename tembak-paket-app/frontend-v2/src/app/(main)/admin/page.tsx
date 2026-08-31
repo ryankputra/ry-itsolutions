@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
+import { safeJson } from "@/lib/api";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();

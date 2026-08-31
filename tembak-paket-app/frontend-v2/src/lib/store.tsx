@@ -13,6 +13,7 @@ export interface CartItem {
   packageName: string;
   serviceType: string;
   price: number;
+  totalPrice?: number;
   duration?: string;
   imei?: string;
   targetPhone?: string;

@@ -10,9 +10,12 @@ export interface CouponItem {
   max_discount_amount?: number;
   max_usage_limit?: number;
   max_claim_limit?: number;
+  max_per_user?: number;
+  user_used_count?: number;
   used_count?: number;
   total_claimed_count?: number;
   is_claimed?: boolean | number;
+  is_used?: boolean | number;
   start_date?: string;
   end_date?: string;
   is_public?: number | boolean;
