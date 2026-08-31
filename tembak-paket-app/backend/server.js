@@ -4771,7 +4771,8 @@ app.post(['/api/transactions/manual', '/api/order/ceir', '/api/order/manual'], i
                     const validEnd = !coupon.end_date || !coupon.end_date.trim() || coupon.end_date.trim().split('T')[0] >= todayWIB;
                     const validDate = validStart && validEnd;
                     const validQuota = coupon.used_count < coupon.max_usage_limit;
-                    const validMin = totalPrice >= coupon.min_order_amount;
+                    const effectiveOrderAmount = Math.max(totalPrice, Number(req.body.cart_subtotal) || 0);
+                    const validMin = effectiveOrderAmount >= coupon.min_order_amount;
                     const maxPerUser = coupon.max_per_user || 1;
                     const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, req.session.userId]);
                     const validUserUsage = !userUsage || userUsage.count < maxPerUser;

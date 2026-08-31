@@ -238,6 +238,7 @@ export default function CartPage() {
         if (idx === 0 && appliedCoupon) {
           formData.append("couponCode", appliedCoupon.code);
           formData.append("coupon_code", appliedCoupon.code);
+          formData.append("cart_subtotal", subtotal.toString());
         }
         if (idx === 0 && useCoins && coinsDiscount > 0) {
           formData.append("use_coins", "true");

@@ -554,6 +554,13 @@ function HistoryContent() {
           onSuccess={() => {
             setResumeQrisModal(null);
             fetchHistory();
+            Swal.fire({
+              title: "Pembayaran Berhasil! 🎉",
+              text: "Pembayaran QRIS Anda telah terverifikasi oleh sistem.",
+              icon: "success",
+              timer: 2500,
+              showConfirmButton: false
+            });
           }}
         />
       )}
