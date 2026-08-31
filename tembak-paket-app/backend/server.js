@@ -4268,7 +4268,12 @@ const manualOrderStorage = multer.diskStorage({
         cb(null, `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`);
     }
 });
-const manualOrderUpload = multer({ storage: manualOrderStorage, limits: { fileSize: 10 * 1024 * 1024 } }).fields([{ name: 'image', maxCount: 20 }, { name: 'ceir_image', maxCount: 20 }]);
+const manualOrderUpload = multer({ storage: manualOrderStorage, limits: { fileSize: 10 * 1024 * 1024 } }).fields([
+    { name: 'image', maxCount: 20 },
+    { name: 'screenshot', maxCount: 20 },
+    { name: 'ceir_image', maxCount: 20 },
+    { name: 'ceir_screenshot', maxCount: 20 }
+]);
 
 app.get('/api/admin/ceirgo-services', isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -4827,14 +4832,22 @@ app.post(['/api/transactions/manual', '/api/order/ceir', '/api/order/manual'], i
             }
 
             let imagePaths = [];
-            if (req.files && req.files['image']) {
-                imagePaths = req.files['image'].map(f => `/public/uploads/manual_orders/${f.filename}`);
+            const imgFiles = [
+                ...(req.files && req.files['image'] ? req.files['image'] : []),
+                ...(req.files && req.files['screenshot'] ? req.files['screenshot'] : [])
+            ];
+            if (imgFiles.length > 0) {
+                imagePaths = imgFiles.map(f => `/public/uploads/manual_orders/${f.filename}`);
             }
             const imagePath = imagePaths.length > 0 ? imagePaths.join(',') : null;
 
             let ceirImagePaths = [];
-            if (req.files && req.files['ceir_image']) {
-                ceirImagePaths = req.files['ceir_image'].map(f => `/public/uploads/manual_orders/${f.filename}`);
+            const ceirFilesList = [
+                ...(req.files && req.files['ceir_image'] ? req.files['ceir_image'] : []),
+                ...(req.files && req.files['ceir_screenshot'] ? req.files['ceir_screenshot'] : [])
+            ];
+            if (ceirFilesList.length > 0) {
+                ceirImagePaths = ceirFilesList.map(f => `/public/uploads/manual_orders/${f.filename}`);
             }
             const ceirImagePath = ceirImagePaths.length > 0 ? ceirImagePaths.join(',') : null;
 
