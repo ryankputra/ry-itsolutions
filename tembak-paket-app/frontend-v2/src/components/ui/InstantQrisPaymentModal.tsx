@@ -222,16 +222,36 @@ export function InstantQrisPaymentModal({
                   alt="QRIS Pembayaran Direct"
                   className="w-48 h-48 sm:w-56 sm:h-56 object-contain mx-auto"
                 />
-                <div className="mt-2 flex justify-center">
+                <div className="mt-2.5 flex flex-col sm:flex-row items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!qrisData.qris_image) return;
+                      const a = document.createElement("a");
+                      a.href = qrisData.qris_image;
+                      a.download = `QRIS-${qrisData.unique_amount}.png`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      try { playPopSound(); } catch {}
+                    }}
+                    className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span>Unduh Gambar QRIS</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => copyString(qrisData.qris_code)}
-                    className="text-[10px] font-bold text-slate-700 hover:text-primary transition-colors flex items-center gap-1"
+                    className="text-[10px] font-bold text-slate-700 hover:text-primary transition-colors flex items-center gap-1 px-2 py-1"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
                     </svg>
-                    <span>{copied ? "Kode QRIS Terpatri!" : "Salin String QRIS"}</span>
+                    <span>{copied ? "Kode Terpatri!" : "Salin String"}</span>
                   </button>
                 </div>
               </div>

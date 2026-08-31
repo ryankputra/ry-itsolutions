@@ -562,6 +562,25 @@ export default function TopUpPage() {
               <img src={qrisData.base64Image} alt="QRIS Code" className="w-full h-full object-contain" />
             </div>
 
+            <button
+              type="button"
+              onClick={() => {
+                if (!qrisData.base64Image) return;
+                const a = document.createElement("a");
+                a.href = qrisData.base64Image;
+                a.download = `QRIS-Topup-${qrisData.uniqueAmount}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm mx-auto"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              <span>Unduh Gambar QRIS</span>
+            </button>
+
             <div className="space-y-3 max-w-sm">
               <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex gap-2.5 text-left">
                 <svg className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
