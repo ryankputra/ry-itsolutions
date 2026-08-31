@@ -4491,6 +4491,64 @@ app.post('/api/reviews/:id/like', async (req, res) => {
     }
 });
 
+// === ADMIN REVIEWS MANAGEMENT ===
+app.post('/api/admin/reviews', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const {
+            userName,
+            userAvatar,
+            productId,
+            serviceType,
+            variation,
+            rating,
+            comment,
+            images,
+            likesCount,
+            transactionDate,
+            userJoinedAt,
+            userTotalOrders,
+            userRole
+        } = req.body;
+
+        if (!userName || !comment) {
+            return res.status(400).json({ status: false, message: "Nama dan ulasan wajib diisi." });
+        }
+
+        const reviewId = `rev_dummy_${Date.now()}`;
+        const nameClean = userName.trim();
+        const avatarClean = userAvatar?.trim() || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nameClean)}&backgroundColor=0066cc&textColor=ffffff`;
+        const pId = productId || 'unblock-imei';
+        const sType = serviceType || 'imei';
+        const varClean = variation || 'GARANSI 3 BULAN (MASA AKTIF SINYAL)';
+        const ratingNum = Math.min(5, Math.max(1, Number(rating) || 5));
+        const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
+        const likes = Number(likesCount) || 5;
+        const trxDate = transactionDate || new Date().toISOString();
+        const joinedAt = userJoinedAt || '2026-01-15T08:30:00.000Z';
+        const totalOrders = Number(userTotalOrders) || 12;
+        const roleClean = userRole || 'Pembeli Terverifikasi';
+
+        await dbRun(
+            `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [reviewId, `usr_dummy_${Date.now()}`, nameClean, avatarClean, `trx_dummy_${Date.now()}`, pId, sType, varClean, ratingNum, comment.trim(), imagesJson, likes, trxDate, joinedAt, totalOrders, roleClean, new Date().toISOString()]
+        );
+
+        res.json({ status: true, message: "Ulasan dummy berhasil ditambahkan!", reviewId });
+    } catch (err) {
+        console.error("Error creating admin dummy review:", err);
+        res.status(500).json({ status: false, message: "Gagal menyimpan ulasan dummy." });
+    }
+});
+
+app.delete('/api/admin/reviews/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("DELETE FROM reviews WHERE id = ?", [req.params.id]);
+        res.json({ status: true, message: "Ulasan berhasil dihapus." });
+    } catch (err) {
+        res.status(500).json({ status: false, message: "Gagal menghapus ulasan." });
+    }
+});
+
 app.get('/api/speed-pricing', async (req, res) => {
     req.url = '/api/manual-services-pricing';
     app.handle(req, res);

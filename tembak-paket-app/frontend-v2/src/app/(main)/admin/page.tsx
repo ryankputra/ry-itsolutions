@@ -541,6 +541,103 @@ export default function AdminPage() {
     }
   };
 
+  // Admin Reviews Management State
+  const [adminReviewsList, setAdminReviewsList] = useState<any[]>([]);
+  const [loadingAdminReviews, setLoadingAdminReviews] = useState(false);
+  const [dummyReviewForm, setDummyReviewForm] = useState({
+    userName: "",
+    userAvatar: "",
+    productId: "unblock-imei",
+    serviceType: "imei",
+    variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
+    rating: 5,
+    comment: "",
+    likesCount: 5,
+    userRole: "Pembeli Terverifikasi",
+    userTotalOrders: 12,
+    userJoinedAt: "2026-01-15T08:30:00.000Z",
+    transactionDate: new Date().toISOString().substring(0, 10),
+  });
+
+  const loadAdminReviews = () => {
+    setLoadingAdminReviews(true);
+    fetch("/api/reviews?productId=all", { credentials: "include" })
+      .then((r) => safeJson(r))
+      .then((data) => {
+        if (data?.status && data?.reviews) {
+          setAdminReviewsList(data.reviews);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAdminReviews(false));
+  };
+
+  const handleCreateDummyReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dummyReviewForm.userName.trim() || !dummyReviewForm.comment.trim()) {
+      Swal.fire({ title: "Form Kurang Lengkap", text: "Nama Pengguna dan Komentar Ulasan wajib diisi.", icon: "warning" });
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(dummyReviewForm),
+      });
+      const data = await safeJson(res);
+      if (res.ok && data.status) {
+        Swal.fire({ title: "Berhasil!", text: "Ulasan dummy baru berhasil ditambahkan ke web.", icon: "success", timer: 1500, showConfirmButton: false });
+        setDummyReviewForm({
+          userName: "",
+          userAvatar: "",
+          productId: "unblock-imei",
+          serviceType: "imei",
+          variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
+          rating: 5,
+          comment: "",
+          likesCount: 5,
+          userRole: "Pembeli Terverifikasi",
+          userTotalOrders: 12,
+          userJoinedAt: "2026-01-15T08:30:00.000Z",
+          transactionDate: new Date().toISOString().substring(0, 10),
+        });
+        loadAdminReviews();
+      } else {
+        Swal.fire({ title: "Gagal", text: data?.message || "Gagal menyimpan ulasan dummy.", icon: "error" });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error Jaringan", text: "Gagal menghubungi server.", icon: "error" });
+    }
+  };
+
+  const handleDeleteAdminReview = async (reviewId: string) => {
+    const confirm = await Swal.fire({
+      title: "Hapus Ulasan Ini?",
+      text: "Ulasan akan dihapus permanen dari sistem.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/reviews/${reviewId}`, { method: "DELETE", credentials: "include" });
+      const data = await safeJson(res);
+      if (res.ok && data.status) {
+        Swal.fire({ title: "Dihapus!", text: "Ulasan berhasil dihapus.", icon: "success", timer: 1200, showConfirmButton: false });
+        loadAdminReviews();
+      } else {
+        Swal.fire({ title: "Gagal", text: data?.message || "Gagal menghapus ulasan.", icon: "error" });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error Jaringan", text: "Gagal menghapus ulasan.", icon: "error" });
+    }
+  };
+
   // Realtime Polling for Orders
   useEffect(() => {
     if (activeTab === 'pesanan-manual') {
@@ -711,6 +808,7 @@ export default function AdminPage() {
       if (activeTab === "tiket-bantuan") loadAdminTickets();
       if (activeTab === "kupon-promo") loadCoupons();
       if (activeTab === "referral") loadRefSettings();
+      if (activeTab === "ulasan-dummy") loadAdminReviews();
       if (activeTab === "pengaturan") {
         loadBaileysStatus();
       }
@@ -1064,11 +1162,12 @@ export default function AdminPage() {
     {
       id: "marketing",
       name: "Promosi & Marketing",
-      description: "Broadcast, Kupon, & Referral",
+      description: "Broadcast, Kupon, Referral, & Ulasan",
       tabs: [
         { id: "broadcast-promo", label: "Broadcast Promo", badge: null },
         { id: "kupon-promo", label: "Kupon Diskon", badge: null },
         { id: "referral", label: "Program Referral", badge: null },
+        { id: "ulasan-dummy", label: "Ulasan Dummy Pelanggan", badge: null },
       ]
     },
     {
@@ -2711,6 +2810,177 @@ export default function AdminPage() {
                 Simpan Pengaturan Referral
               </Button>
             </form>
+          </Card>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 8.5: MANAJEMEN ULASAN DUMMY PELANGGAN                                 */}
+      {/* ========================================================================= */}
+      {activeTab === 'ulasan-dummy' && (
+        <div className="space-y-5">
+          {/* Header Card */}
+          <Card glass className="p-5 border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-canvas">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-ink flex items-center gap-2">
+                  <span>Manajemen Ulasan Dummy Pelanggan</span>
+                </h2>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Tambah ulasan riil & terverifikasi untuk meningkatkan kepercayaan calon pembeli layanan Unblock IMEI / Produk.
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={loadAdminReviews}>
+                Segarkan List
+              </Button>
+            </div>
+          </Card>
+
+          {/* Form Tambah Ulasan Dummy */}
+          <Card glass className="p-5 space-y-4">
+            <h3 className="font-bold text-sm text-ink">Tambah Ulasan Dummy Baru</h3>
+            <form onSubmit={handleCreateDummyReview} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <Input
+                  label="Nama Pengguna"
+                  placeholder="Contoh: Rian Pratama"
+                  value={dummyReviewForm.userName}
+                  onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, userName: e.target.value })}
+                  required
+                />
+                <Input
+                  label="URL Avatar (Opsional)"
+                  placeholder="Kosongkan untuk avatar inisial otomatis"
+                  value={dummyReviewForm.userAvatar}
+                  onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, userAvatar: e.target.value })}
+                />
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink">Produk / Layanan Target</label>
+                  <select
+                    value={dummyReviewForm.productId}
+                    onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, productId: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="unblock-imei">Buka Gembok IMEI (unblock-imei)</option>
+                    <option value="cek-ceir">Cek CEIR / Bea Cukai (cek-ceir)</option>
+                    <option value="paket-data">Paket Kuota Data (paket-data)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink">Variasi Garansi / Paket</label>
+                  <select
+                    value={dummyReviewForm.variation}
+                    onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, variation: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="GARANSI 3 BULAN (MASA AKTIF SINYAL)">GARANSI 3 BULAN (MASA AKTIF SINYAL)</option>
+                    <option value="GARANSI 2 BULAN (MASA AKTIF SINYAL)">GARANSI 2 BULAN (MASA AKTIF SINYAL)</option>
+                    <option value="GARANSI 1 BULAN (MASA AKTIF SINYAL)">GARANSI 1 BULAN (MASA AKTIF SINYAL)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink">Rating Bintang (1-5)</label>
+                  <select
+                    value={dummyReviewForm.rating}
+                    onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, rating: Number(e.target.value) })}
+                    className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value={5}>5 Bintang (Sangat Puas)</option>
+                    <option value={4}>4 Bintang (Puas)</option>
+                    <option value={3}>3 Bintang (Cukup)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink">Badge Status Pengguna</label>
+                  <select
+                    value={dummyReviewForm.userRole}
+                    onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, userRole: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="Pembeli Terverifikasi">Pembeli Terverifikasi</option>
+                    <option value="Reseller VIP">Reseller VIP</option>
+                    <option value="Konter Mitra">Konter Mitra</option>
+                  </select>
+                </div>
+
+                <Input
+                  label="Jumlah Terbantu / Likes"
+                  type="number"
+                  placeholder="5"
+                  value={dummyReviewForm.likesCount}
+                  onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, likesCount: Number(e.target.value) })}
+                />
+                <Input
+                  label="Total Pesanan Sukses"
+                  type="number"
+                  placeholder="12"
+                  value={dummyReviewForm.userTotalOrders}
+                  onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, userTotalOrders: Number(e.target.value) })}
+                />
+                <Input
+                  label="Tanggal Transaksi (YYYY-MM-DD)"
+                  type="date"
+                  value={dummyReviewForm.transactionDate}
+                  onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, transactionDate: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-ink">Komentar Ulasan Pelanggan</label>
+                <textarea
+                  placeholder="Contoh: iPhone 13 Pro Inter garansi 3 bulan sinyal 4G & 5G Telkomsel langsung keluar kilat dalam 2 jam! CS WA ramah banget."
+                  value={dummyReviewForm.comment}
+                  onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, comment: e.target.value })}
+                  className="w-full h-24 p-3 rounded-xl border border-hairline bg-canvas text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none leading-relaxed"
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full text-xs font-bold h-10 bg-amber-500 hover:bg-amber-400 text-amber-950">
+                + Simpan Ulasan Dummy Baru
+              </Button>
+            </form>
+          </Card>
+
+          {/* List Ulasan Aktif di Sistem */}
+          <Card glass className="p-5 space-y-4">
+            <h3 className="font-bold text-sm text-ink">Daftar Ulasan di Database ({adminReviewsList.length})</h3>
+            {loadingAdminReviews ? (
+              <div className="py-6 text-center text-xs text-ink-muted">Memuat ulasan...</div>
+            ) : adminReviewsList.length === 0 ? (
+              <div className="py-6 text-center text-xs text-ink-muted">Belum ada ulasan terdaftar.</div>
+            ) : (
+              <div className="space-y-3">
+                {adminReviewsList.map((r: any) => (
+                  <div key={r.id} className="p-3.5 rounded-2xl bg-parchment/40 border border-hairline flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={r.userAvatar} alt={r.userName} className="w-6 h-6 rounded-full border border-hairline object-cover" />
+                        <span className="font-bold text-ink">{r.userName}</span>
+                        <span className="text-amber-500 font-bold">★ {r.rating}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">{r.userRole}</span>
+                      </div>
+                      <p className="text-ink-muted leading-snug">{r.comment}</p>
+                      <div className="text-[10px] text-ink-muted">
+                        <span>Variasi: {r.variation}</span> &bull; <span>Terbantu: {r.likesCount}</span> &bull; <span>Produk: {r.productId}</span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-rose-600 border-rose-200 hover:bg-rose-50 text-[11px] shrink-0"
+                      onClick={() => handleDeleteAdminReview(r.id)}
+                    >
+                      Hapus
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       )}
