@@ -552,12 +552,29 @@ export default function AdminPage() {
     variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
     rating: 5,
     comment: "",
+    images: [] as string[],
     likesCount: 5,
     userRole: "Pembeli Terverifikasi",
     userTotalOrders: 12,
     userJoinedAt: "2026-01-15T08:30:00.000Z",
     transactionDate: new Date().toISOString().substring(0, 10),
   });
+
+  const handleDummyImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setDummyReviewForm((prev) => ({
+            ...prev,
+            images: [...(prev.images || []), event.target!.result as string].slice(0, 3),
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const loadAdminReviews = () => {
     setLoadingAdminReviews(true);
@@ -596,6 +613,7 @@ export default function AdminPage() {
           variation: "GARANSI 3 BULAN (MASA AKTIF SINYAL)",
           rating: 5,
           comment: "",
+          images: [],
           likesCount: 5,
           userRole: "Pembeli Terverifikasi",
           userTotalOrders: 12,
@@ -2939,10 +2957,66 @@ export default function AdminPage() {
                 />
               </div>
 
+              {/* Photo Upload Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-ink flex items-center justify-between">
+                  <span>Lampirkan Foto Bukti Sinyal (Maks 3 Foto)</span>
+                  <span className="text-[10px] text-ink-muted">{(dummyReviewForm.images || []).length}/3 Foto</span>
+                </label>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {(dummyReviewForm.images || []).map((img, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded-xl border border-hairline overflow-hidden group shadow-xs">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDummyReviewForm((prev) => ({
+                            ...prev,
+                            images: prev.images.filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  {(dummyReviewForm.images || []).length < 3 && (
+                    <label className="w-16 h-16 rounded-xl border-2 border-dashed border-hairline hover:border-primary/50 bg-parchment/40 flex flex-col items-center justify-center cursor-pointer text-ink-muted hover:text-primary transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      </svg>
+                      <span className="text-[9px] font-bold mt-0.5">Unggah</span>
+                      <input type="file" accept="image/*" multiple onChange={handleDummyImageAdd} className="hidden" />
+                    </label>
+                  )}
+                </div>
+              </div>
+
               <Button type="submit" className="w-full text-xs font-bold h-10 bg-amber-500 hover:bg-amber-400 text-amber-950">
                 + Simpan Ulasan Dummy Baru
               </Button>
             </form>
+          </Card>
+
+          {/* Telegram Bot Review Integration Info Card */}
+          <Card glass className="p-5 space-y-2 border-blue-500/20 bg-blue-50/30 dark:bg-blue-950/20">
+            <h3 className="font-bold text-sm text-ink flex items-center gap-2">
+              <span>Kirim Ulasan Dummy Langsung via Telegram Bot</span>
+            </h3>
+            <p className="text-xs text-ink-muted leading-relaxed">
+              Anda juga bisa menambah ulasan dummy secara cepat dari Telegram! Cukup kirim pesan atau kirim <b>Foto Bukti Sinyal</b> ke Bot Telegram Admin Anda dengan format caption:
+            </p>
+            <div className="p-3 rounded-xl bg-slate-900 text-slate-100 font-mono text-[11px] space-y-1">
+              <p className="text-emerald-400 font-bold">// Format Kirim Pesan / Caption Foto:</p>
+              <p className="select-all">Nama Pengguna | Bintang (1-5) | Komentar Ulasan | Variasi Garansi</p>
+              <p className="text-slate-400 text-[10px] mt-1">// Contoh:</p>
+              <p className="text-amber-300 select-all">Rahul Pramudia | 5 | iPhone 13 Pro sinyal Telkomsel 5G aktif kilat garansi 3 bulan! | GARANSI 3 BULAN (MASA AKTIF SINYAL)</p>
+            </div>
+            <p className="text-[11px] text-ink-muted">
+              Bot Telegram akan otomatis menyimpan ulasan dan melampirkan foto bukti sinyal secara langsung ke website.
+            </p>
           </Card>
 
           {/* List Ulasan Aktif di Sistem */}

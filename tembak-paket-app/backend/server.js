@@ -5228,12 +5228,87 @@ async function pollTelegramUpdates() {
                     if (update.callback_query) {
                         await handleTelegramCallbackQuery(update.callback_query);
                     }
+                    if (update.message) {
+                        await handleTelegramMessage(update.message);
+                    }
                 }
             }
         }
     } catch (e) { }
     setTimeout(pollTelegramUpdates, 2000);
 }
+
+// Function to handle incoming Telegram message for reviews
+async function handleTelegramMessage(msg) {
+    if (!msg || !msg.chat) return;
+    const chatId = String(msg.chat.id);
+
+    const text = msg.text || msg.caption || '';
+    if (!text && (!msg.photo || msg.photo.length === 0)) return;
+
+    if (text.startsWith('/ulasan') || text.includes('|') || msg.photo) {
+        let cleanText = text.replace(/^\/ulasan\s*/i, '').trim();
+        if (!cleanText && (!msg.photo || msg.photo.length === 0)) return;
+
+        const parts = cleanText.split('|').map(s => s.trim());
+        const userName = parts[0] || 'Rahul Pramudia';
+        const ratingNum = Math.min(5, Math.max(1, Number(parts[1]) || 5));
+        const comment = parts[2] || parts[0] || 'Layanan sinyal terbukti aktif kilat garansi resmi terpampang rapi!';
+        const variation = parts[3] || 'GARANSI 3 BULAN (MASA AKTIF SINYAL)';
+
+        let imageUrls = [];
+
+        // Handle Telegram Photo Attachment
+        if (msg.photo && msg.photo.length > 0) {
+            try {
+                const largestPhoto = msg.photo[msg.photo.length - 1];
+                const fileRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${largestPhoto.file_id}`);
+                if (fileRes.ok) {
+                    const fileData = await fileRes.json();
+                    if (fileData.ok && fileData.result.file_path) {
+                        const imgUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileData.result.file_path}`;
+                        imageUrls.push(imgUrl);
+                    }
+                }
+            } catch (e) { console.error('Telegram photo download error:', e); }
+        }
+
+        const reviewId = `rev_tg_${Date.now()}`;
+        const nameClean = userName;
+        const avatarClean = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nameClean)}&backgroundColor=0066cc&textColor=ffffff`;
+        const imagesJson = JSON.stringify(imageUrls);
+
+        await dbRun(
+            `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [reviewId, `usr_tg_${Date.now()}`, nameClean, avatarClean, `trx_tg_${Date.now()}`, 'unblock-imei', 'imei', variation, ratingNum, comment, imagesJson, 5, new Date().toISOString(), '2026-01-15T08:30:00.000Z', 14, 'Pembeli Terverifikasi', new Date().toISOString()]
+        );
+
+        await sendTelegramText(chatId, `✅ <b>Ulasan Dummy Berhasil Dibuat via Telegram!</b>\n\n👤 <b>Nama:</b> ${nameClean}\n⭐ <b>Rating:</b> ${ratingNum} Bintang\n💬 <b>Ulasan:</b> ${comment}\n🖼️ <b>Foto Bukti:</b> ${imageUrls.length > 0 ? 'Lampiran Foto Berhasil' : 'Tanpa Foto'}\n\nUlasan langsung aktif di website Ry-ITSolutions.`);
+    }
+}
+
+async function sendTelegramText(chatId, text) {
+    if (!TELEGRAM_BOT_TOKEN) return;
+    try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
+        });
+    } catch (e) {}
+}
+
+app.post('/api/telegram/webhook', async (req, res) => {
+    try {
+        const update = req.body;
+        if (update && update.message) {
+            await handleTelegramMessage(update.message);
+        }
+        res.json({ ok: true });
+    } catch (e) {
+        res.json({ ok: false });
+    }
+});
 
 async function handleTelegramCallbackQuery(cb) {
     const data = cb.data;
