@@ -169,7 +169,7 @@ export default function UnblockImeiPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ couponId: coupon.id })
+        body: JSON.stringify({ couponId: coupon.id, coupon_id: coupon.id, code: coupon.code })
       });
       const data = await res.json();
       if (res.ok && data.status) {

@@ -1698,13 +1698,15 @@ app.get('/api/coupons/public', async (req, res) => {
 app.post('/api/coupons/claim', isAuthenticated, async (req, res) => {
     try {
         const userId = req.session.userId;
-        const { coupon_id, code } = req.body;
+        const targetId = req.body.coupon_id || req.body.couponId || req.body.id;
+        const targetCode = req.body.code || req.body.couponCode;
 
         let coupon = null;
-        if (coupon_id) {
-            coupon = await dbGet("SELECT * FROM coupons WHERE id = ?", [coupon_id]);
-        } else if (code) {
-            coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [code.trim().toUpperCase()]);
+        if (targetId) {
+            coupon = await dbGet("SELECT * FROM coupons WHERE id = ?", [targetId]);
+        }
+        if (!coupon && targetCode) {
+            coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [String(targetCode).trim().toUpperCase()]);
         }
 
         if (!coupon) return res.status(404).json({ status: false, message: "Voucher promo tidak ditemukan." });
@@ -1906,15 +1908,16 @@ app.post(['/api/coupon/validate', '/api/coupons/validate'], isAuthenticated, asy
             return res.status(400).json({ status: false, message: `Minimal pembelian untuk kupon ini adalah Rp ${coupon.min_order_amount.toLocaleString('id-ID')}.` });
         }
 
-        // Auto-claim kupon publik jika user belum mengklaim sebelumnya
+        // Cek apakah kupon publik wajib diklaim terlebih dahulu oleh pengguna
         if (coupon.is_public === 1 || coupon.is_public === '1') {
             const isClaimed = await dbGet("SELECT id FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
             if (!isClaimed) {
-                try {
-                    await dbRun("INSERT OR IGNORE INTO user_claimed_coupons (id, coupon_id, userId, claimed_at) VALUES (?, ?, ?, ?)",
-                        [`clm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`, coupon.id, userId, new Date().toISOString()]);
-                    await dbRun("UPDATE coupons SET total_claimed_count = total_claimed_count + 1 WHERE id = ?", [coupon.id]);
-                } catch (e) { }
+                return res.status(400).json({ 
+                    status: false, 
+                    require_claim: true,
+                    coupon_id: coupon.id,
+                    message: `Voucher ${coupon.code} wajib diklaim terlebih dahulu sebelum digunakan! Silakan klik Klaim pada Voucher.` 
+                });
             }
         }
 
