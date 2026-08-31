@@ -11,6 +11,12 @@ interface InstantQrisPaymentModalProps {
   amount: number;
   orderTitle?: string;
   onSuccess: () => void;
+  existingQrisData?: {
+    qris_image: string;
+    qris_code: string;
+    unique_amount: number;
+    topup_id: string;
+  } | null;
 }
 
 export function InstantQrisPaymentModal({
@@ -19,6 +25,7 @@ export function InstantQrisPaymentModal({
   amount,
   orderTitle = "Pembayaran Pesanan Direct QRIS",
   onSuccess,
+  existingQrisData,
 }: InstantQrisPaymentModalProps) {
   const [loading, setLoading] = useState(false);
   const [qrisData, setQrisData] = useState<{
@@ -31,18 +38,27 @@ export function InstantQrisPaymentModal({
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Generate Direct QRIS saat modal dibuka
+  // Generate atau tampilkan Direct QRIS eksisting saat modal dibuka
   useEffect(() => {
-    if (!isOpen || amount <= 0) {
+    if (!isOpen) {
       setQrisData(null);
       return;
     }
+
+    if (existingQrisData) {
+      setQrisData(existingQrisData);
+      setTimeLeft(900);
+      setLoading(false);
+      return;
+    }
+
+    if (amount <= 0) return;
 
     let isMounted = true;
     setLoading(true);
     setTimeLeft(900);
 
-    fetch("/api/topup/qris", {
+    fetch("/api/topup/request-qris", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -51,12 +67,14 @@ export function InstantQrisPaymentModal({
       .then((res) => safeJson(res))
       .then((data) => {
         if (!isMounted) return;
-        if (data?.status && data?.data) {
+        if (data?.status && (data?.data || data?.qrisData)) {
+          const qData = data.data || {};
+          const qInfo = data.qrisData || {};
           setQrisData({
-            qris_image: data.data.qris_image,
-            qris_code: data.data.qris_code,
-            unique_amount: data.data.unique_amount || amount,
-            topup_id: data.data.topup_id || `TU-${Date.now()}`,
+            qris_image: qData.qris_image || qInfo.base64Image || "",
+            qris_code: qData.qris_code || qInfo.base64Image || "",
+            unique_amount: qData.unique_amount || qInfo.uniqueAmount || amount,
+            topup_id: qData.topup_id || data.topUpId || `TU-${Date.now()}`,
           });
         } else {
           Swal.fire({
@@ -83,7 +101,7 @@ export function InstantQrisPaymentModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, amount]);
+  }, [isOpen, amount, existingQrisData]);
 
   // Realtime Polling & Listener Pemasukan Pembayaran SSE
   useEffect(() => {

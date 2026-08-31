@@ -1906,16 +1906,15 @@ app.post(['/api/coupon/validate', '/api/coupons/validate'], isAuthenticated, asy
             return res.status(400).json({ status: false, message: `Minimal pembelian untuk kupon ini adalah Rp ${coupon.min_order_amount.toLocaleString('id-ID')}.` });
         }
 
-        // Cek apakah kupon publik wajib diklaim terlebih dahulu
+        // Auto-claim kupon publik jika user belum mengklaim sebelumnya
         if (coupon.is_public === 1 || coupon.is_public === '1') {
             const isClaimed = await dbGet("SELECT id FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
             if (!isClaimed) {
-                return res.status(400).json({ 
-                    status: false, 
-                    require_claim: true,
-                    coupon_id: coupon.id,
-                    message: `Voucher ${coupon.code} wajib diklaim terlebih dahulu sebelum digunakan! Silakan klaim di menu Voucher.` 
-                });
+                try {
+                    await dbRun("INSERT OR IGNORE INTO user_claimed_coupons (id, coupon_id, userId, claimed_at) VALUES (?, ?, ?, ?)",
+                        [`clm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`, coupon.id, userId, new Date().toISOString()]);
+                    await dbRun("UPDATE coupons SET total_claimed_count = total_claimed_count + 1 WHERE id = ?", [coupon.id]);
+                } catch (e) { }
             }
         }
 
@@ -3035,8 +3034,8 @@ app.get('/api/topup/gateway-info', isAuthenticated, async (req, res) => {
     }
 });
 
-// Ganti seluruh rute /api/topup/request-qris dengan versi final ini
-app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
+// Ganti seluruh rute /api/topup/request-qris dan alias /api/topup/qris
+app.post(['/api/topup/request-qris', '/api/topup/qris'], isAuthenticated, async (req, res) => {
     const { amount } = req.body;
     const userId = req.session.userId;
     const baseAmount = parseInt(amount, 10);
@@ -3060,13 +3059,11 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
         await dbRun("UPDATE topups SET status = 'canceled' WHERE userId = ? AND status = 'pending'", [userId]);
 
         const topUpId = `TU-${Date.now()}`;
-        // Baca gateway aktif dari setting admin
         const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
         const activeGateway = gwRow ? gwRow.value : 'orkut';
         const useGopayGw = activeGateway === 'gopay';
 
         if (useGopayGw) {
-            // === GOPAY GATEWAY MODE ===
             if (!process.env.GOPAY_GATEWAY_URL || !process.env.GOPAY_GATEWAY_API_KEY) {
                 return res.status(503).json({
                     status: false,
@@ -3074,7 +3071,6 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
                 });
             }
 
-            // Validasi kesiapan sesi GoPay sebelum generate QRIS
             try {
                 const statusCheck = await axios.get(`${process.env.GOPAY_GATEWAY_URL}/token-status`, {
                     headers: { 'x-api-key': process.env.GOPAY_GATEWAY_API_KEY },
@@ -3095,8 +3091,6 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
 
             const gopayData = await generateGopayQris(baseAmount);
             const qrisBase64Image = await qrcode.toDataURL(gopayData.qris_code);
-
-            // Kirim start_time (ISO string) saat topup dibuat agar gateway hanya cek mutasi baru
             const topUpStartTime = new Date().toISOString();
 
             await dbRun(
@@ -3106,15 +3100,23 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
 
             checkGopayPaymentStatus(topUpId, baseAmount, gopayData.trx_id, topUpStartTime);
 
+            const expiresAtSec = Math.floor(new Date(gopayData.expires_at).getTime() / 1000);
             res.status(200).json({
                 status: true,
                 message: 'Silakan scan QRIS GoPay dan bayar sesuai nominal.',
                 topUpId,
+                data: {
+                    qris_image: qrisBase64Image,
+                    qris_code: gopayData.qris_code,
+                    unique_amount: baseAmount,
+                    topup_id: topUpId,
+                    expires_at: expiresAtSec
+                },
                 qrisData: {
                     base64Image: qrisBase64Image,
                     uniqueAmount: baseAmount,
                     qrisUrl: gopayData.qris_url,
-                    expiresAt: Math.floor(new Date(gopayData.expires_at).getTime() / 1000)
+                    expiresAt: expiresAtSec
                 }
             });
         } else {
@@ -3122,6 +3124,7 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
             const uniqueCode = Math.floor(Math.random() * 900) + 100;
             const uniqueAmount = baseAmount + uniqueCode;
             const qrisBase64Image = await generateDynamicQris(uniqueAmount);
+            const expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
 
             await dbRun(
                 "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -3134,7 +3137,14 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
                 status: true,
                 message: 'Silakan scan QRIS dan transfer sesuai jumlah unik.',
                 topUpId,
-                qrisData: { base64Image: qrisBase64Image, uniqueAmount, expiresAt: Math.floor((Date.now() + 15 * 60 * 1000) / 1000) }
+                data: {
+                    qris_image: qrisBase64Image,
+                    qris_code: qrisBase64Image,
+                    unique_amount: uniqueAmount,
+                    topup_id: topUpId,
+                    expires_at: expiresAtSec
+                },
+                qrisData: { base64Image: qrisBase64Image, uniqueAmount, expiresAt: expiresAtSec }
             });
         }
 
@@ -3146,13 +3156,42 @@ app.post('/api/topup/request-qris', isAuthenticated, async (req, res) => {
 
 app.post('/api/topup/cancel', isAuthenticated, async (req, res) => {
     try {
-        const pendingTopUp = await dbGet("SELECT id FROM topups WHERE userId = ? AND status = 'pending'", [req.session.userId]);
-        if (!pendingTopUp) return res.status(404).json({ status: false, message: 'Tidak ada transaksi top-up aktif untuk dibatalkan.' });
+        const topupId = req.body?.topupId || req.body?.topup_id;
+        let pendingTopUp = null;
+        if (topupId) {
+            pendingTopUp = await dbGet("SELECT id FROM topups WHERE id = ? AND userId = ? AND status = 'pending'", [topupId, req.session.userId]);
+        } else {
+            pendingTopUp = await dbGet("SELECT id FROM topups WHERE userId = ? AND status = 'pending' ORDER BY createdAt DESC LIMIT 1", [req.session.userId]);
+        }
+
+        if (!pendingTopUp) {
+            await dbRun("UPDATE topups SET status = 'canceled' WHERE userId = ? AND status = 'pending'", [req.session.userId]);
+            return res.status(200).json({ status: true, message: 'Permintaan top-up berhasil dibatalkan.' });
+        }
+
         const timeoutId = qrisPollingTimeouts.get(pendingTopUp.id);
         if (timeoutId) { clearTimeout(timeoutId); qrisPollingTimeouts.delete(pendingTopUp.id); }
         await dbRun("UPDATE topups SET status = 'canceled' WHERE id = ?", [pendingTopUp.id]);
         res.status(200).json({ status: true, message: 'Permintaan top-up berhasil dibatalkan.' });
-    } catch (error) { console.error("[CANCEL_QRIS_ERROR]", error); res.status(500).json({ status: false, message: 'Gagal membatalkan transaksi.' }); }
+    } catch (error) {
+        console.error("[CANCEL_QRIS_ERROR]", error);
+        res.status(500).json({ status: false, message: 'Gagal membatalkan transaksi.' });
+    }
+});
+
+app.post('/api/user/transactions/:id/cancel', isAuthenticated, async (req, res) => {
+    try {
+        const trxId = req.params.id;
+        const trx = await dbGet("SELECT * FROM transactions WHERE id = ? AND userId = ?", [trxId, req.session.userId]);
+        if (!trx) return res.status(404).json({ status: false, message: 'Transaksi tidak ditemukan.' });
+        if (trx.status === 'success' || trx.status === 'completed') {
+            return res.status(400).json({ status: false, message: 'Transaksi yang sudah sukses tidak dapat dibatalkan.' });
+        }
+        await dbRun("UPDATE transactions SET status = 'cancelled', admin_note = 'Dibatalkan oleh pengguna' WHERE id = ?", [trxId]);
+        res.json({ status: true, message: 'Transaksi berhasil dibatalkan.' });
+    } catch (err) {
+        res.status(500).json({ status: false, message: 'Gagal membatalkan transaksi.' });
+    }
 });
 
 // =======================================================

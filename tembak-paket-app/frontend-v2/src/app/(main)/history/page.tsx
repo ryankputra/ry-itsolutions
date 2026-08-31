@@ -7,6 +7,7 @@ import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { Button } from "@/components/ui/Button";
 import WriteReviewModal from "@/components/ui/WriteReviewModal";
+import { InstantQrisPaymentModal } from "@/components/ui/InstantQrisPaymentModal";
 
 function HistoryContent() {
   const searchParams = useSearchParams();
@@ -18,6 +19,12 @@ function HistoryContent() {
   const [loading, setLoading] = useState(true);
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
   const [reviewTarget, setReviewTarget] = useState<any>(null);
+  const [resumeQrisModal, setResumeQrisModal] = useState<{
+    isOpen: boolean;
+    amount: number;
+    orderTitle: string;
+    existingQrisData: any;
+  } | null>(null);
 
   // Sync tab with search params when URL changes
   useEffect(() => {
@@ -27,24 +34,87 @@ function HistoryContent() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    async function fetchHistory() {
-      try {
-        const res = await fetch(`${API_URL}/user/transactions`, { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status && Array.isArray(data.data)) {
-            setHistory(data.data);
-          }
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`${API_URL}/user/transactions`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status && Array.isArray(data.data)) {
+          setHistory(data.data);
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
       }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchHistory();
   }, []);
+
+  const handleCancelTransaction = async (trx: any) => {
+    const confirm = await Swal.fire({
+      title: "Batalkan Transaksi?",
+      text: `Apakah Anda yakin ingin membatalkan transaksi ${trx.package_name || trx.packageName || trx.id}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Batalkan",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const isTopup = String(trx.id || '').startsWith("TU-");
+      const url = isTopup ? "/api/topup/cancel" : `/api/user/transactions/${trx.id}/cancel`;
+      const body = isTopup ? JSON.stringify({ topup_id: trx.id }) : undefined;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body,
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        Swal.fire({
+          title: "Dibatalkan!",
+          text: "Transaksi telah dibatalkan dan dipindahkan ke tab Dibatalkan.",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        setHistory((prev) =>
+          prev.map((t) => (t.id === trx.id ? { ...t, status: "cancelled" } : t))
+        );
+      } else {
+        Swal.fire({ title: "Gagal", text: data?.message || "Gagal membatalkan transaksi.", icon: "error" });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error", text: "Kesalahan jaringan.", icon: "error" });
+    }
+  };
+
+  const handlePayNow = (trx: any) => {
+    const amt = trx.amount || trx.baseAmount || trx.price || 0;
+    const existingData = (trx.qrisBase64Image || trx.qris_image)
+      ? {
+          qris_image: trx.qrisBase64Image || trx.qris_image,
+          qris_code: trx.qrisBase64Image || trx.qris_image,
+          unique_amount: trx.uniqueAmount || trx.unique_amount || amt,
+          topup_id: trx.id,
+        }
+      : null;
+
+    setResumeQrisModal({
+      isOpen: true,
+      amount: amt,
+      orderTitle: `Bayar ${trx.package_name || trx.packageName || "Pesanan QRIS"}`,
+      existingQrisData: existingData,
+    });
+  };
 
   const handleQuickShareWhatsApp = async (trx: any) => {
     const { value: phone } = await Swal.fire({
@@ -340,18 +410,20 @@ function HistoryContent() {
                     {/* Belum Bayar */}
                     {isPending && (
                       <>
-                        <Link
-                          href="/tickets"
-                          className="px-3 py-1.5 rounded-xl border border-hairline text-xs font-bold text-ink hover:bg-parchment transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => handleCancelTransaction(trx)}
+                          className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors"
                         >
-                          Hubungi CS
-                        </Link>
-                        <Link
-                          href="/topup"
+                          Batalkan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePayNow(trx)}
                           className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-focus text-white text-xs font-bold shadow-xs transition-colors"
                         >
                           Bayar Sekarang
-                        </Link>
+                        </button>
                       </>
                     )}
 
@@ -471,6 +543,20 @@ function HistoryContent() {
             : null
         }
       />
+
+      {resumeQrisModal?.isOpen && (
+        <InstantQrisPaymentModal
+          isOpen={resumeQrisModal.isOpen}
+          onClose={() => setResumeQrisModal(null)}
+          amount={resumeQrisModal.amount}
+          orderTitle={resumeQrisModal.orderTitle}
+          existingQrisData={resumeQrisModal.existingQrisData}
+          onSuccess={() => {
+            setResumeQrisModal(null);
+            fetchHistory();
+          }}
+        />
+      )}
     </div>
   );
 }

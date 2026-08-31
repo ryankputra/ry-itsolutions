@@ -608,11 +608,40 @@ export default function TopUpPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-xs text-ink-muted hover:text-ink"
-                onClick={() => {
-                  setQrisData(null);
-                  setTopUpId(null);
-                  setInitialBalance(null);
+                className="w-full text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                onClick={async () => {
+                  const confirm = await Swal.fire({
+                    title: "Batalkan Top Up?",
+                    text: "Apakah Anda yakin ingin membatalkan transaksi top up ini?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Ya, Batalkan",
+                    cancelButtonText: "Batal",
+                    confirmButtonColor: "#ef4444",
+                  });
+
+                  if (!confirm.isConfirmed) return;
+
+                  try {
+                    await fetch("/api/topup/cancel", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "include",
+                      body: JSON.stringify({ topup_id: topUpId }),
+                    });
+                    Swal.fire({
+                      title: "Dibatalkan",
+                      text: "Transaksi top up telah dibatalkan.",
+                      icon: "info",
+                      timer: 1500,
+                      showConfirmButton: false,
+                    });
+                  } catch (e) {}
+                  finally {
+                    setQrisData(null);
+                    setTopUpId(null);
+                    setInitialBalance(null);
+                  }
                 }}
               >
                 Batalkan & Ganti Nominal
