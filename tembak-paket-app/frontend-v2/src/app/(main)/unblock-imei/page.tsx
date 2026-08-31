@@ -278,17 +278,28 @@ export default function UnblockImeiPage() {
     formData.append("duration", selectedPkg.duration);
     formData.append("amount", totalPrice.toString());
     formData.append("package_id", selectedPkg.id);
+    formData.append("price_key", selectedPkg.id);
     formData.append("speed", selectedSpeed || "regular");
+    formData.append("speed_option", selectedSpeed || "regular");
     formData.append("speedPrice", speedCost.toString());
-    if (appliedCoupon) formData.append("couponCode", appliedCoupon.code);
+    if (appliedCoupon) {
+      formData.append("couponCode", appliedCoupon.code);
+      formData.append("coupon_code", appliedCoupon.code);
+    }
 
     if (targetPhone) {
       formData.append("targetPhone", targetPhone);
       formData.append("target_phone", targetPhone);
     }
 
-    files.forEach(f => formData.append("screenshot", f));
-    ceirFiles.forEach(f => formData.append("ceir_screenshot", f));
+    files.forEach(f => {
+      formData.append("screenshot", f);
+      formData.append("image", f);
+    });
+    ceirFiles.forEach(f => {
+      formData.append("ceir_screenshot", f);
+      formData.append("ceir_image", f);
+    });
 
     try {
       const res = await fetch("/api/transactions/manual", {
@@ -299,11 +310,31 @@ export default function UnblockImeiPage() {
 
       const data = await res.json();
       if (res.ok && data.status) {
-        setShowSuccessPop(true);
+        setShowInstantQris(false);
+        Swal.fire({
+          title: "Pembayaran & Pesanan Berhasil! 🚀",
+          text: "Pembayaran QRIS terverifikasi! Pesanan Buka Gembok IMEI Anda telah terbuat dan diteruskan ke Admin untuk diproses.",
+          icon: "success",
+          confirmButtonText: "Lihat Riwayat Pesanan",
+          confirmButtonColor: "#2563eb",
+          allowOutsideClick: false
+        }).then(() => {
+          router.push("/history");
+        });
       } else {
+        Swal.fire({
+          title: "Gagal Membuat Pesanan",
+          text: data.message || "Terjadi kesalahan saat memproses pesanan.",
+          icon: "error"
+        });
         setError(data.message || "Gagal membuat pesanan.");
       }
     } catch (err) {
+      Swal.fire({
+        title: "Error Jaringan",
+        text: "Kesalahan jaringan saat memproses pesanan. Silakan periksa koneksi Anda.",
+        icon: "error"
+      });
       setError("Kesalahan jaringan.");
     } finally {
       setSubmitting(false);

@@ -4695,14 +4695,8 @@ app.put('/api/admin/imei-packages/:id/toggle', isAuthenticated, isAdmin, async (
     } catch (error) { res.status(500).json({ status: false, message: error.message }); }
 });
 
-// Alias: frontend cek-ceir & barcode submit to /api/order/ceir
-app.post('/api/order/ceir', isAuthenticated, (req, res) => {
-    // Rewrite path and re-dispatch through Express router
-    req.url = '/api/order/manual';
-    app.handle(req, res);
-});
-
-app.post('/api/order/manual', isAuthenticated, (req, res) => {
+// Alias: frontend cek-ceir, barcode & unblock-imei submit routes
+app.post(['/api/transactions/manual', '/api/order/ceir', '/api/order/manual'], isAuthenticated, (req, res) => {
     manualOrderUpload(req, res, async (err) => {
         if (err) return res.status(400).json({ status: false, message: err.message });
         try {
@@ -4722,16 +4716,21 @@ app.post('/api/order/manual', isAuthenticated, (req, res) => {
 
             let price = 0;
             if (service_type === 'imei') {
-                const pkg = await dbGet("SELECT price FROM imei_packages WHERE id = ?", [price_key]);
-                if (!pkg) return res.status(400).json({ status: false, message: "Paket IMEI tidak ditemukan" });
-                price = pkg.price;
-
-                // Tambah harga speed jika ada
-                if (speed_option) {
-                    const speedPriceRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${speed_option}`]);
-                    if (speedPriceRow && speedPriceRow.value !== 'disabled') {
-                        price += parseInt(speedPriceRow.value) || 0;
+                const targetPkgId = price_key || req.body.package_id || req.body.packageId;
+                let pkg = targetPkgId ? await dbGet("SELECT price FROM imei_packages WHERE id = ?", [targetPkgId]) : null;
+                if (pkg) {
+                    price = pkg.price;
+                    const spOpt = speed_option || req.body.speed;
+                    if (spOpt) {
+                        const speedPriceRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${spOpt}`]);
+                        if (speedPriceRow && speedPriceRow.value !== 'disabled') {
+                            price += parseInt(speedPriceRow.value) || 0;
+                        }
                     }
+                } else if (req.body.amount) {
+                    price = Math.round(Number(req.body.amount) / imeiCount);
+                } else {
+                    return res.status(400).json({ status: false, message: "Paket IMEI tidak ditemukan" });
                 }
             } else {
                 const canonicalKey = price_key.replace(/^ceirgo_price_/, '');
