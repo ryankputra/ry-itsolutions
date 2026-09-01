@@ -94,7 +94,7 @@ export default function UnblockImeiPage() {
   const pricePerImei = basePrice + speedCost;
   const rawTotalPrice = pricePerImei * imeiCount;
 
-  const discountAmount = appliedCoupon ? Math.min(appliedCoupon.discount_amount, rawTotalPrice) : 0;
+  const discountAmount = appliedCoupon ? Math.min(Number(appliedCoupon.discount_amount || 0), rawTotalPrice) : 0;
   const priceAfterCoupon = Math.max(0, rawTotalPrice - discountAmount);
   const userCoins = user?.coins || 0;
   // Guardrails: Minimal order Rp 50.000, Maks 10%, dan Maksimal Rp 5.000 cap

@@ -10,9 +10,11 @@ const express = require('express');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const cors = require('cors');
+const helmet = require('helmet');
 
 const { db, dbAll, initializeDatabase } = require('./config/db');
 const { isAuthenticated, isAdmin, isReseller, handleSseStream } = require('./middleware/auth');
+const { inputSanitizer, globalRateLimiter, sensitiveRateLimiter } = require('./middleware/security');
 const { initSchedulers } = require('./cron/schedulers');
 const { pollTelegramUpdates } = require('./routes/telegram');
 const { ceirgoRoutes, initCeirgoRoutes, setDependencies } = require('./ceirgoRoutes');
@@ -43,7 +45,15 @@ uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// 2. Core Middlewares
+// 2. Security Headers (Helmet)
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    frameguard: { action: 'deny' }
+}));
+
+// 3. Strict CORS Enforcement
 const allowedOrigins = [
     'http://localhost:3005',
     'http://localhost:3000',
@@ -52,26 +62,39 @@ const allowedOrigins = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
     'http://localhost:5173',
-    'http://127.0.0.1:5173'
+    'http://127.0.0.1:5173',
+    'https://ry-itsolutions.web.id'
 ];
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://192.168.') || origin.includes('telegram.org')) {
+        if (
+            allowedOrigins.includes(origin) ||
+            origin.startsWith('http://localhost:') ||
+            origin.startsWith('http://127.0.0.1:') ||
+            origin.startsWith('http://192.168.') ||
+            origin.includes('telegram.org') ||
+            origin.endsWith('.web.id')
+        ) {
             return callback(null, true);
         }
-        return callback(null, true);
+        return callback(new Error('Blocked by CORS policy: Origin unauthorized'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data', 'x-telegram-bot-api-secret-token', 'X-Requested-With', 'Accept', 'Cache-Control'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data', 'x-telegram-bot-api-secret-token', 'X-Requested-With', 'Accept', 'Cache-Control', 'x-internal-test-key'],
     exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 app.options('*', cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-// 3. Session Store Configuration
+// 4. Rate Limiting & Input Sanitization
+app.use('/api', globalRateLimiter);
+app.use(inputSanitizer);
+app.use(['/api/auth/login', '/api/auth/register', '/api/coupons/claim'], sensitiveRateLimiter);
+
+// 5. Session Store Configuration
 const sessionConfig = {
     store: new FileStore({
         path: path.join(__dirname, 'sessions'),

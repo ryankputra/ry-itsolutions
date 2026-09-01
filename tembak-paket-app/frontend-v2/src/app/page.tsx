@@ -372,20 +372,20 @@ export default function LandingPage() {
                     Paket Utama ⭐
                   </div>
                   <div className="space-y-3.5">
-                    <span className="text-[11px] font-bold text-primary uppercase">Durasi {pkg.duration}</span>
+                    <span className="text-[11px] font-bold text-primary uppercase">Durasi {pkg?.duration || "1 Bulan"}</span>
                     <h3 className="text-xl font-bold text-ink">Buka Gembok IMEI</h3>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-black text-primary">
-                        Rp {pkg.price.toLocaleString('id-ID')}
+                        Rp {Number(pkg?.price || 0).toLocaleString('id-ID')}
                       </span>
                       <span className="text-xs text-ink-muted">/ unit</span>
                     </div>
                     <p className="text-xs text-ink-muted leading-relaxed">
-                      Aktivasi sinyal seluler iPhone & Android semua operator dengan masa garansi aktif {pkg.duration}.
+                      Aktivasi sinyal seluler iPhone & Android semua operator dengan masa garansi aktif {pkg?.duration || "Garansi Aktif"}.
                     </p>
                     <ul className="text-xs space-y-2 text-ink-muted pt-1">
                       <li className="flex items-center gap-2">✓ Sinyal All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)</li>
-                      <li className="flex items-center gap-2 font-bold text-emerald-600">✓ Masa Garansi Sinyal {pkg.duration}</li>
+                      <li className="flex items-center gap-2 font-bold text-emerald-600">✓ Masa Garansi Sinyal {pkg?.duration || "Sinyal Aktif"}</li>
                       <li className="flex items-center gap-2">✓ Surat Garansi Digital + QR Verifikasi</li>
                     </ul>
                   </div>
@@ -393,7 +393,7 @@ export default function LandingPage() {
                     href={`/unblock-imei`}
                     className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs text-center shadow-md shadow-primary/20 transition-all block"
                   >
-                    Buka Gembok ({pkg.duration})
+                    Buka Gembok ({pkg?.duration || "Pilih Paket"})
                   </Link>
                 </div>
               ))
