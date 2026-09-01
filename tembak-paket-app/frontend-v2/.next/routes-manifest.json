@@ -40,17 +40,17 @@
     "afterFiles": [
       {
         "source": "/api/:path*",
-        "destination": "http://localhost:3001/api/:path*",
+        "destination": "http://127.0.0.1:3001/api/:path*",
         "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       },
       {
         "source": "/uploads/:path*",
-        "destination": "http://localhost:3001/uploads/:path*",
+        "destination": "http://127.0.0.1:3001/uploads/:path*",
         "regex": "^/uploads(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       },
       {
         "source": "/public/uploads/:path*",
-        "destination": "http://localhost:3001/public/uploads/:path*",
+        "destination": "http://127.0.0.1:3001/public/uploads/:path*",
         "regex": "^/public/uploads(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       }
     ],

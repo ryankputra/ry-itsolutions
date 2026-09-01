@@ -21,20 +21,21 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
 
   async rewrites() {
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:3001';
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*' // Proxy to Backend
+        destination: `${backendUrl}/api/:path*`
       },
       {
         source: '/uploads/:path*',
-        destination: 'http://localhost:3001/uploads/:path*' // Proxy uploaded avatars to Backend
+        destination: `${backendUrl}/uploads/:path*`
       },
       {
         source: '/public/uploads/:path*',
-        destination: 'http://localhost:3001/public/uploads/:path*' // Proxy uploaded images to Backend
+        destination: `${backendUrl}/public/uploads/:path*`
       }
-    ]
+    ];
   },
   async headers() {
     return [

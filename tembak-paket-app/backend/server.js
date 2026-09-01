@@ -44,10 +44,30 @@ uploadDirs.forEach(dir => {
 });
 
 // 2. Core Middlewares
+const allowedOrigins = [
+    'http://localhost:3005',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3005',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+];
 app.use(cors({
-    origin: (origin, callback) => callback(null, true),
-    credentials: true
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://192.168.') || origin.includes('telegram.org')) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data', 'x-telegram-bot-api-secret-token', 'X-Requested-With', 'Accept', 'Cache-Control'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
+app.options('*', cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 

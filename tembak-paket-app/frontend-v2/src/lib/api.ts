@@ -1,4 +1,13 @@
-export const API_URL = '/api';
+/**
+ * Centralized API Client & Network Helper (Next.js 16)
+ * Handles transparent payload normalization, proxy routing, TMA headers, and global error logging.
+ */
+
+export const API_BASE = typeof window !== 'undefined'
+  ? (process.env.NEXT_PUBLIC_API_URL || '')
+  : (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:3001');
+
+export const API_URL = API_BASE ? `${API_BASE.replace(/\/$/, '')}/api` : '/api';
 
 export function getTelegramInitData(): string {
   if (typeof window !== 'undefined') {
@@ -10,25 +19,76 @@ export function getTelegramInitData(): string {
   return '';
 }
 
+/**
+ * Normalizes backend response payloads to ensure seamless compatibility across components
+ * (syncs status/success flags, arrays, and error structures).
+ */
+export function normalizeResponsePayload(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+
+  // Unify boolean status and success indicators
+  const isSuccess = data.status === true || data.success === true;
+  const isFailure = data.status === false || data.success === false;
+
+  if (isSuccess) {
+    data.status = true;
+    data.success = true;
+  } else if (isFailure) {
+    data.status = false;
+    data.success = false;
+  }
+
+  return data;
+}
+
+/**
+ * Safe JSON parser with content-type verification, payload normalization, and network diagnostics.
+ */
 export async function safeJson(res: Response | Promise<Response>): Promise<any> {
   try {
     const resolvedRes = await res;
     if (!resolvedRes) return null;
+
     const contentType = resolvedRes.headers?.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
+      if (!resolvedRes.ok) {
+        console.warn(`[API Warning] Received non-JSON response with HTTP ${resolvedRes.status} from ${resolvedRes.url}`);
+      }
       return null;
     }
-    return await resolvedRes.json();
+
+    const json = await resolvedRes.json();
+    const normalized = normalizeResponsePayload(json);
+
+    if (!resolvedRes.ok) {
+      console.error(`[API Error ${resolvedRes.status}] ${resolvedRes.url}:`, normalized?.message || normalized);
+    }
+
+    return normalized;
   } catch (e) {
+    console.error("[API JSON Parse Error]:", e);
     return null;
   }
 }
 
+/**
+ * Core API fetch wrapper:
+ * - Automatically injects Telegram Mini App authentication
+ * - Handles credentials inclusion for sessions
+ * - Transparently normalizes response data
+ * - Emits detailed console error diagnostics on failures
+ */
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : endpoint.startsWith('/api')
+      ? `${API_BASE ? API_BASE.replace(/\/$/, '') : ''}${endpoint}`
+      : `${API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+
   const tgInitData = getTelegramInitData();
 
   const headers: Record<string, string> = {
+    'Accept': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
 
@@ -36,59 +96,75 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     headers['x-telegram-init-data'] = tgInitData;
   }
 
-  const response = await fetch(url, {
-    credentials: 'include',
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers,
+    });
 
-  const data = await safeJson(response);
+    const data = await safeJson(response);
 
-  if (!response.ok) {
-    const errorMsg = data?.message || `Request failed with status ${response.status}`;
-    const err: any = new Error(errorMsg);
-    err.status = response.status;
-    err.data = data;
+    if (!response.ok) {
+      const errorMsg = data?.message || `Request failed with HTTP status ${response.status}`;
+      console.error(`[API Network Error] ${response.status} ${url}:`, errorMsg);
+      const err: any = new Error(errorMsg);
+      err.status = response.status;
+      err.data = data;
+      throw err;
+    }
+
+    return data;
+  } catch (err: any) {
+    if (!err.status) {
+      console.error(`[API Connection Failed] ${url}:`, err.message || err);
+    }
     throw err;
   }
-
-  return data;
 }
 
-export async function fetchUserBalance() {
-  const res = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
-  if (!res.ok) throw new Error("Gagal mengambil session");
-  const data = await safeJson(res);
-  return data?.user?.balance ?? 0;
-}
+// ----------------------------------------------------------------------
+// Dedicated High-Level Domain Services
+// ----------------------------------------------------------------------
 
 export async function fetchSession() {
-  const res = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
-  if (!res.ok) throw new Error("Gagal mengambil session");
-  return await safeJson(res);
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
+    const data = await safeJson(res);
+    return data;
+  } catch (e) {
+    console.error("[API] fetchSession failed:", e);
+    return null;
+  }
+}
+
+export async function fetchUserBalance(): Promise<number> {
+  try {
+    const data = await fetchSession();
+    return data?.user?.balance ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 export async function login(email: string, password: string) {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  return await apiFetch('/auth/login', {
     method: 'POST',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
-  const data = await safeJson(res);
-  if (!res.ok) throw new Error(data?.message || "Gagal login");
-  return data;
 }
 
 export async function logout() {
-  const res = await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
-  if (!res.ok) throw new Error("Gagal logout");
-  return await safeJson(res);
+  return await apiFetch('/auth/logout', { method: 'POST' });
 }
 
 export async function fetchPackages() {
-  const res = await fetch(`${API_URL}/user/packages?t=${Date.now()}`, { cache: 'no-store', credentials: 'include' });
-  if (!res.ok) throw new Error("Gagal mengambil daftar paket");
-  const data = await safeJson(res);
-  return data?.data || [];
+  try {
+    const data = await apiFetch(`/user/packages?t=${Date.now()}`, { cache: 'no-store' });
+    return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+  } catch (e) {
+    console.error("[API] fetchPackages failed:", e);
+    return [];
+  }
 }
