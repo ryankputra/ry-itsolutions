@@ -5333,7 +5333,7 @@ async function sendTelegramText(chatId, text) {
 // Telegram Official Webhook Handler with Secret Token & Immediate Response
 app.post('/api/telegram/webhook', async (req, res) => {
     const secret = req.headers['x-telegram-bot-api-secret-token'];
-    if (secret && secret !== TELEGRAM_WEBHOOK_SECRET && process.env.NODE_ENV === 'production') {
+    if (!secret || secret !== TELEGRAM_WEBHOOK_SECRET) {
         return res.status(403).json({ ok: false, error: 'Unauthorized secret token' });
     }
 

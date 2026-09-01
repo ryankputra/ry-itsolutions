@@ -89,13 +89,24 @@ function sendTelegramNotification(message, target = 'group') {
     });
 }
 
-// --- 4. TELEGRAM WEBAPP INITDATA HMAC VALIDATION ---
-function validateTelegramInitData(initData) {
+// --- 4. TELEGRAM WEBAPP INITDATA HMAC & EXPIRATION VALIDATION ---
+function validateTelegramInitData(initData, maxAgeSeconds = 86400) {
     if (!TELEGRAM_BOT_TOKEN || !initData) return false;
     try {
         const urlParams = new URLSearchParams(initData);
         const hash = urlParams.get('hash');
         if (!hash) return false;
+
+        // Check auth_date expiration if present
+        const authDate = urlParams.get('auth_date');
+        if (authDate) {
+            const authTimestamp = parseInt(authDate, 10);
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            if ((nowSeconds - authTimestamp) > maxAgeSeconds || authTimestamp > (nowSeconds + 300)) {
+                return false; // Expired or future timestamp
+            }
+        }
+
         urlParams.delete('hash');
 
         const params = [];
