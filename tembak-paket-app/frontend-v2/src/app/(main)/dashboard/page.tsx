@@ -105,9 +105,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch("/api/user/transactions", { credentials: "include" })
-      .then((res) => res.json())
+      .then((res) => safeJson(res))
       .then((data) => {
-        if (data.status && data.data && Array.isArray(data.data)) {
+        if (data?.status && data?.data && Array.isArray(data.data)) {
           const sorted = [...data.data].sort((a, b) => {
             const timeA = new Date(a.createdAt || 0).getTime() || 0;
             const timeB = new Date(b.createdAt || 0).getTime() || 0;

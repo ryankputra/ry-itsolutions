@@ -8,8 +8,10 @@ import Swal from "@/lib/sweetalert";
 import { Button } from "@/components/ui/Button";
 import WriteReviewModal from "@/components/ui/WriteReviewModal";
 import { InstantQrisPaymentModal } from "@/components/ui/InstantQrisPaymentModal";
+import { useApp } from "@/lib/store";
 
 function HistoryContent() {
+  const { updateBalance } = useApp();
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialTab = searchParams.get("tab") || "all";
@@ -79,9 +81,12 @@ function HistoryContent() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
+        if (typeof data.newBalance === "number") {
+          updateBalance(data.newBalance);
+        }
         Swal.fire({
           title: "Dibatalkan!",
-          text: "Transaksi telah dibatalkan dan dipindahkan ke tab Dibatalkan.",
+          text: data.message || "Transaksi telah dibatalkan dan dipindahkan ke tab Dibatalkan.",
           icon: "success",
           timer: 1500,
           showConfirmButton: false,

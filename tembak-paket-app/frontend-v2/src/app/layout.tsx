@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import { AppProvider } from "@/lib/store";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { NavigationProgressBar } from "@/components/ui/NavigationProgressBar";
+import { Suspense } from "react";
+import Script from "next/script";
 import "./globals.css";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "GANTI_DENGAN_GOOGLE_CLIENT_ID_ANDA";
@@ -37,8 +39,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { Suspense } from "react";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,7 +49,13 @@ export default function RootLayout({
       lang="id"
       className={`${inter.variable} antialiased`}
     >
-      <body className="min-h-screen bg-canvas text-ink font-sans" suppressHydrationWarning>
+      <head>
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
+      </head>
+      <body className="min-h-screen bg-canvas text-ink font-sans pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" suppressHydrationWarning>
         <Suspense fallback={null}>
           <NavigationProgressBar />
         </Suspense>

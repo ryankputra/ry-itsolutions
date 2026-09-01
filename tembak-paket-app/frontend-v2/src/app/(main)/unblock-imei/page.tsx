@@ -15,7 +15,7 @@ import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import ProductReviewsSection from "@/components/ui/ProductReviewsSection";
 
 export default function UnblockImeiPage() {
-  const { user, addToCart } = useApp();
+  const { user, addToCart, updateBalance } = useApp();
   const router = useRouter();
   const [packages, setPackages] = useState<any[]>([]);
   const [speedPricing, setSpeedPricing] = useState<any>({});
@@ -310,10 +310,13 @@ export default function UnblockImeiPage() {
 
       const data = await res.json();
       if (res.ok && data.status) {
+        if (typeof data.newBalance === "number") {
+          updateBalance(data.newBalance);
+        }
         setShowInstantQris(false);
         Swal.fire({
           title: "Pembayaran & Pesanan Berhasil! 🚀",
-          text: "Pembayaran QRIS terverifikasi! Pesanan Buka Gembok IMEI Anda telah terbuat dan diteruskan ke Admin untuk diproses.",
+          text: "Pesanan Buka Gembok IMEI Anda telah terbuat dan diteruskan ke Admin untuk diproses.",
           icon: "success",
           confirmButtonText: "Lihat Riwayat Pesanan",
           confirmButtonColor: "#2563eb",

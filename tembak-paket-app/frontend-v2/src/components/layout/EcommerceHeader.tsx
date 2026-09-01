@@ -33,7 +33,7 @@ export function EcommerceHeader() {
           const res = await fetch("/api/admin/manual-orders", { credentials: "include" });
           if (res.ok) {
             const d = await res.json();
-            if (d.status) {
+            if (d?.status && Array.isArray(d?.data)) {
               const pending = d.data.filter((o: any) => o.status === "pending");
               setPendingOrders(pending.length);
             }

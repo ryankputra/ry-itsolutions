@@ -23,7 +23,7 @@ const ceirgoNameMapping: Record<string, string> = {
 };
 
 export default function CekCeirPage() {
-  const { user } = useApp();
+  const { user, updateBalance } = useApp();
   const router = useRouter();
 
   const [pricing, setPricing] = useState<any>({});
@@ -181,14 +181,27 @@ export default function CekCeirPage() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
+        if (typeof data.newBalance === 'number') {
+          updateBalance(data.newBalance);
+        }
         if (data.data?.adminNote || data.data?.adminImage) {
           setCeirResult({ note: data.data.adminNote, image: data.data.adminImage });
         }
         setShowSuccessPop(true);
       } else {
+        Swal.fire({
+          title: "Gagal Membuat Pesanan",
+          text: data.message || "Gagal membuat pesanan.",
+          icon: "error"
+        });
         setError(data.message || "Gagal membuat pesanan.");
       }
     } catch (err) {
+      Swal.fire({
+        title: "Error Jaringan",
+        text: "Kesalahan jaringan saat memproses pesanan.",
+        icon: "error"
+      });
       setError("Kesalahan jaringan.");
     } finally {
       setSubmitting(false);

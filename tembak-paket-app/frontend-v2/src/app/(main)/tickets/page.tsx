@@ -15,6 +15,8 @@ export default function UserTicketsPage() {
   const [newMessage, setNewMessage] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [newSubject, setNewSubject] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [replying, setReplying] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadTickets = async () => {
@@ -22,7 +24,7 @@ export default function UserTicketsPage() {
     try {
       const res = await fetch("/api/user/tickets", { credentials: "include" });
       const data = await res.json();
-      if (data.status) setTickets(data.data);
+      if (data.status && Array.isArray(data.data)) setTickets(data.data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -38,9 +40,9 @@ export default function UserTicketsPage() {
     try {
       const res = await fetch(`/api/tickets/${id}`, { credentials: "include" });
       const data = await res.json();
-      if (data.status) {
+      if (data.status && data.data) {
         setActiveTicket(data.data.ticket);
-        setMessages(data.data.messages);
+        setMessages(Array.isArray(data.data.messages) ? data.data.messages : []);
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
       }
     } catch (e) {
@@ -50,13 +52,14 @@ export default function UserTicketsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubject || !newMessage) return Swal.fire("Error", "Semua kolom wajib diisi", "error");
+    if (!newSubject.trim() || !newMessage.trim()) return Swal.fire("Error", "Semua kolom wajib diisi", "error");
+    setSubmitting(true);
     try {
       const res = await fetch("/api/user/tickets", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject: newSubject, message: newMessage }),
+        body: JSON.stringify({ subject: newSubject.trim(), message: newMessage.trim() }),
       });
       const data = await res.json();
       if (data.status) {
@@ -66,22 +69,25 @@ export default function UserTicketsPage() {
         loadTickets();
         Swal.fire("Berhasil", "Tiket berhasil dibuat", "success");
       } else {
-        Swal.fire("Gagal", data.message, "error");
+        Swal.fire("Gagal", data.message || "Gagal membuat tiket.", "error");
       }
     } catch (e) {
-      Swal.fire("Error", "Kesalahan jaringan", "error");
+      Swal.fire("Error", "Kesalahan jaringan saat membuat tiket.", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage) return;
+    if (!newMessage.trim() || !activeTicket) return;
+    setReplying(true);
     try {
       const res = await fetch(`/api/tickets/${activeTicket.id}/messages`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: newMessage }),
+        body: JSON.stringify({ message: newMessage.trim() }),
       });
       const data = await res.json();
       if (data.status) {
@@ -89,10 +95,12 @@ export default function UserTicketsPage() {
         loadTicketDetail(activeTicket.id);
         loadTickets(); // Refresh list to update status/time
       } else {
-        Swal.fire("Gagal", data.message, "error");
+        Swal.fire("Gagal", data.message || "Gagal membalas tiket.", "error");
       }
     } catch (e) {
-      Swal.fire("Error", "Kesalahan jaringan", "error");
+      Swal.fire("Error", "Kesalahan jaringan saat membalas tiket.", "error");
+    } finally {
+      setReplying(false);
     }
   };
 
@@ -126,7 +134,9 @@ export default function UserTicketsPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">Kirim Tiket</Button>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Mengirim..." : "Kirim Tiket"}
+            </Button>
           </form>
         </Card>
       ) : activeTicket ? (
@@ -174,7 +184,9 @@ export default function UserTicketsPage() {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                 />
-                <Button type="submit" className="rounded-full px-6 h-12 shrink-0">Kirim</Button>
+                <Button type="submit" className="rounded-full px-6 h-12 shrink-0" disabled={replying || !newMessage.trim()}>
+                  {replying ? "Mengirim..." : "Kirim"}
+                </Button>
               </form>
             )}
           </div>

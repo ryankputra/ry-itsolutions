@@ -143,9 +143,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCeirgoDisplaySettings(settings);
   };
 
-  // Load Session on Mount
+  // Load Session on Mount & Initialize Telegram Mini App
   useEffect(() => {
     bindSwalSounds();
+
+    // Initialize Telegram WebApp if running as TMA
+    if (typeof window !== "undefined") {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+        } catch (e) {}
+      }
+    }
 
     async function loadData() {
       try {
@@ -181,7 +192,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadData();
   }, []);
 
-  // Setup SSE for Realtime Updates
+  // Setup SSE for Realtime Updates & Focus Sync
   useEffect(() => {
     if (!user) return;
     const sse = new EventSource(`${API_URL}/stream`, { withCredentials: true });
@@ -190,17 +201,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const payload = JSON.parse(ev.data);
         if (typeof payload.balance === "number") {
-          setUser(prev => prev ? { ...prev, balance: payload.balance } : null);
+          setUser(prev => prev ? {
+            ...prev,
+            balance: payload.balance,
+            ...(typeof payload.coins === "number" ? { coins: payload.coins } : {})
+          } : null);
           playTopupSuccessSound();
 
           if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('topup_success'));
+            window.dispatchEvent(new CustomEvent('topup_success', { detail: payload }));
           }
         }
       } catch (err) { }
     });
 
-    return () => sse.close();
+    sse.addEventListener("role_change", (ev) => {
+      try {
+        const payload = JSON.parse(ev.data);
+        if (payload.newRole) {
+          setUser(prev => prev ? { ...prev, role: payload.newRole } : null);
+        }
+      } catch (err) { }
+    });
+
+    sse.addEventListener("transaction_status", (ev) => {
+      try {
+        const payload = JSON.parse(ev.data);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('transaction_status_update', { detail: payload }));
+        }
+      } catch (err) { }
+    });
+
+    // Sync balance on window focus
+    const handleFocus = async () => {
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await safeJson(res);
+          if (data?.status && data?.user) {
+            setUser(data.user);
+          }
+        }
+      } catch (e) {}
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      sse.close();
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [user?.id]);
 
   const updateBalance = (balance: number) => {
