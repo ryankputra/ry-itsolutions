@@ -33,14 +33,23 @@ function normalizeServices(payload) {
     return payload?.data?.page?.items || payload?.data || [];
 }
 
-function initCeirgoRoutes() {
-    // ponytail: /manual-services-pricing moved to server.js (returns all keys including imei_speed_*)
+const DEFAULT_FALLBACK_SERVICES = [
+    { code: 'cek_history_imei', name: 'Cek Riwayat Database CEIR', modalPrice: 5100 },
+    { code: 'cek_imei_beacukai', name: 'Cek IMEI Bea Cukai', modalPrice: 1500 },
+    { code: 'cek_validity', name: 'Cek Masa Aktif Sinyal', modalPrice: 1000 },
+    { code: 'cek_icloud', name: 'Cek iCloud & FMI (Clean / Lost)', modalPrice: 1500 },
+    { code: 'cek_simlock', name: 'Cek Carrier Simlock (Operator Asal)', modalPrice: 2000 },
+    { code: 'cek_digi', name: 'Cek DIGI', modalPrice: 1000 },
+    { code: 'cek_sf', name: 'Cek Smartfren', modalPrice: 1000 },
+    { code: 'cek_imei', name: 'Cek Status IMEI', modalPrice: 2000 }
+];
 
+function initCeirgoRoutes() {
     // Public list for user pages (filtered client-side by display settings)
     ceirgoRoutes.get('/ceirgo-services', async (req, res) => {
         try {
             if (!CEIRGO_API_KEY) {
-                return res.status(500).json({ status: false, message: 'CEIRGO_API_KEY tidak dikonfigurasi.' });
+                return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
             }
 
             const ceirgoRes = await fetch(`${CEIRGO_BASE_URL}/api/services?limit=50`, {
@@ -48,7 +57,7 @@ function initCeirgoRoutes() {
                     'Authorization': `Bearer ${CEIRGO_API_KEY}`,
                     'Accept': 'application/json'
                 },
-                timeout: 8000
+                timeout: 5000
             });
 
             if (!ceirgoRes.ok) {
@@ -58,11 +67,12 @@ function initCeirgoRoutes() {
 
             const servicesPayload = await ceirgoRes.json();
             const services = normalizeServices(servicesPayload);
+            const finalServices = Array.isArray(services) && services.length > 0 ? services : DEFAULT_FALLBACK_SERVICES;
 
-            res.json({ status: true, data: services });
+            res.json({ status: true, data: finalServices });
         } catch (error) {
-            console.error("[API] Error fetching public CeirGO services:", error.message);
-            res.status(500).json({ status: false, message: 'Gagal mengambil daftar layanan CeirGO.' });
+            console.warn("[API Warning] CeirGO live server offline/timed out. Using fallback diagnostic catalog:", error.message);
+            res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
         }
     });
 
@@ -85,7 +95,7 @@ function initCeirgoRoutes() {
     ceirgoRoutes.get('/admin/ceirgo-services', isAuthenticated, isAdmin, async (req, res) => {
         try {
             if (!CEIRGO_API_KEY) {
-                return res.status(500).json({ status: false, message: 'CEIRGO_API_KEY tidak dikonfigurasi.' });
+                return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
             }
 
             const ceirgoRes = await fetch(`${CEIRGO_BASE_URL}/api/services?limit=50`, {
@@ -93,7 +103,7 @@ function initCeirgoRoutes() {
                     'Authorization': `Bearer ${CEIRGO_API_KEY}`,
                     'Accept': 'application/json'
                 },
-                timeout: 8000
+                timeout: 5000
             });
 
             if (!ceirgoRes.ok) {
@@ -103,6 +113,11 @@ function initCeirgoRoutes() {
 
             const servicesPayload = await ceirgoRes.json();
             const services = normalizeServices(servicesPayload);
+            
+            if (!Array.isArray(services) || services.length === 0) {
+                return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
+            }
+
             const detailedServices = await Promise.all(
                 services.map(async (svc) => {
                     if (!svc?.code) return null;
@@ -112,7 +127,7 @@ function initCeirgoRoutes() {
                                 'Authorization': `Bearer ${CEIRGO_API_KEY}`,
                                 'Accept': 'application/json'
                             },
-                            timeout: 8000
+                            timeout: 5000
                         });
 
                         let detail = null;
@@ -136,8 +151,8 @@ function initCeirgoRoutes() {
 
             res.json({ status: true, data: detailedServices.filter(Boolean) });
         } catch (error) {
-            console.error("[API] Error fetching admin CeirGO services:", error.message);
-            res.status(500).json({ status: false, message: 'Gagal mengambil daftar layanan CeirGO untuk admin.' });
+            console.warn("[API Warning] CeirGO admin server offline/timed out. Serving fallback catalog:", error.message);
+            res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
         }
     });
 }

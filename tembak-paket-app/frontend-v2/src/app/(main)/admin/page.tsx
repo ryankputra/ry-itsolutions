@@ -703,55 +703,75 @@ export default function AdminPage() {
   const loadManualData = async () => {
     setLoadingManual(true);
     try {
+      const defaultDiagnosticServices = [
+        { code: 'cek_history_imei', name: 'Cek Riwayat Database CEIR', modalPrice: 5100 },
+        { code: 'cek_imei_beacukai', name: 'Cek IMEI Bea Cukai', modalPrice: 1500 },
+        { code: 'cek_validity', name: 'Cek Masa Aktif Sinyal', modalPrice: 1000 },
+        { code: 'cek_icloud', name: 'Cek iCloud & FMI (Clean / Lost)', modalPrice: 1500 },
+        { code: 'cek_simlock', name: 'Cek Carrier Simlock (Operator Asal)', modalPrice: 2000 },
+        { code: 'cek_digi', name: 'Cek DIGI', modalPrice: 1000 },
+        { code: 'cek_sf', name: 'Cek Smartfren', modalPrice: 1000 },
+        { code: 'cek_imei', name: 'Cek Status IMEI', modalPrice: 2000 }
+      ];
+
       const [ordRes, prcRes, imeiRes, ceirSvcRes, ceirPrcRes, statusRes, displayRes] = await Promise.all([
-        fetch('/api/admin/manual-orders', { credentials: 'include' }),
-        fetch('/api/manual-services-pricing'),
-        fetch('/api/imei-packages?all=true'),
-        fetch('/api/admin/ceirgo-services', { credentials: 'include' }),
-        fetch('/api/ceirgo-pricing'),
-        fetch('/api/imei-service-status', { cache: 'no-store' }),
-        fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' })
+        fetch('/api/admin/manual-orders', { credentials: 'include' }).catch(() => null),
+        fetch('/api/manual-services-pricing').catch(() => null),
+        fetch('/api/imei-packages?all=true').catch(() => null),
+        fetch('/api/admin/ceirgo-services', { credentials: 'include' }).catch(() => null),
+        fetch('/api/ceirgo-pricing').catch(() => null),
+        fetch('/api/imei-service-status', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).catch(() => null)
       ]);
-      if (ordRes.ok) {
-        const d = await ordRes.json();
-        if (d.status) setManualOrders(d.data);
+
+      if (ordRes) {
+        const d = await safeJson(ordRes);
+        if (d?.status && Array.isArray(d.data)) setManualOrders(d.data);
       }
-      if (prcRes.ok) {
-        const d = await prcRes.json();
-        if (d.status) setPricing(d.data);
+      if (prcRes) {
+        const d = await safeJson(prcRes);
+        if (d?.status && d.data) setPricing(d.data);
       }
-      if (imeiRes.ok) {
-        const d = await imeiRes.json();
-        if (d.status) setImeiPackages(d.data);
+      if (imeiRes) {
+        const d = await safeJson(imeiRes);
+        if (d?.status && Array.isArray(d.data)) setImeiPackages(d.data);
       }
-      let loadedServices: any[] = [];
-      if (ceirSvcRes?.ok) {
-        const d = await ceirSvcRes.json();
-        if (d.status) {
-          setCeirgoServices(d.data);
+
+      let loadedServices = defaultDiagnosticServices;
+      if (ceirSvcRes) {
+        const d = await safeJson(ceirSvcRes);
+        if (d?.status && Array.isArray(d.data) && d.data.length > 0) {
           loadedServices = d.data;
         }
       }
-      if (ceirPrcRes?.ok) {
-        const d = await ceirPrcRes.json();
-        if (d.status) setCeirgoPricing(d.data);
+      setCeirgoServices(loadedServices);
+
+      if (ceirPrcRes) {
+        const d = await safeJson(ceirPrcRes);
+        if (d?.status && d.data) setCeirgoPricing(d.data);
       }
-      if (statusRes.ok) {
-        const d = await statusRes.json();
-        if (d.status) {
+
+      if (statusRes) {
+        const d = await safeJson(statusRes);
+        if (d?.status) {
           setImeiServiceOpen(d.isOpen);
           setImeiServiceNote(d.note || "");
         }
       }
-      if (displayRes?.ok) {
-        const d = await displayRes.json();
-        if (d.status && d.data && Array.isArray(d.data.cekCeir)) {
+
+      if (displayRes) {
+        const d = await safeJson(displayRes);
+        if (d?.status && d.data && Array.isArray(d.data.cekCeir) && d.data.cekCeir.length > 0) {
           setCeirgoDisplayCodes(new Set(d.data.cekCeir));
-        } else if (loadedServices.length > 0) {
+        } else {
           setCeirgoDisplayCodes(new Set(loadedServices.map(s => s.code)));
         }
       }
-    } finally { setLoadingManual(false); }
+    } catch (e) {
+      console.error("Error in loadManualData:", e);
+    } finally {
+      setLoadingManual(false);
+    }
   };
 
   const loadPackages = async () => {
@@ -2011,12 +2031,19 @@ export default function AdminPage() {
                   <h2 className="text-base font-bold text-ink">Layanan Diagnostik & Server Pusat</h2>
                   <p className="text-xs text-ink-muted mt-0.5">Atur harga jual untuk Cek Database CEIR, Bea Cukai, dan Barcode.</p>
                 </div>
-                <Button size="sm" variant="outline" className="text-xs" onClick={loadManualData}>Muat Ulang</Button>
+                <Button size="sm" variant="outline" className="text-xs" disabled={loadingManual} onClick={loadManualData}>
+                  {loadingManual ? "Memuat..." : "Muat Ulang"}
+                </Button>
               </div>
 
-              {ceirgoServices.length === 0 ? (
+              {loadingManual ? (
+                <div className="text-center text-ink-muted text-xs py-8 border rounded-2xl border-dashed flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                  <span>Memuat Layanan Diagnostik & Server Pusat...</span>
+                </div>
+              ) : ceirgoServices.length === 0 ? (
                 <div className="text-center text-ink-muted text-xs py-8 border rounded-2xl border-dashed">
-                  Layanan Server Pusat sedang dimuat atau belum terhubung.
+                  Layanan Server Pusat belum terhubung. Silakan klik tombol "Muat Ulang".
                 </div>
               ) : (
                 <div className="space-y-3.5">
