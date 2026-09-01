@@ -14,11 +14,11 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_ADMIN_CHAT_ID = String(process.env.TELEGRAM_ADMIN_CHAT_ID || '');
-const TELEGRAM_GROUP_CHAT_ID = String(process.env.TELEGRAM_GROUP_CHAT_ID || '');
-const TELEGRAM_CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || '');
-const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || 'ry-secret-tg-token-2026';
+const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const TELEGRAM_ADMIN_CHAT_ID = String(process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim();
+const TELEGRAM_GROUP_CHAT_ID = String(process.env.TELEGRAM_GROUP_CHAT_ID || '').trim();
+const TELEGRAM_CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+const TELEGRAM_WEBHOOK_SECRET = (process.env.TELEGRAM_WEBHOOK_SECRET || 'ry-secret-tg-token-2026').trim();
 
 // --- 1. HTML SANITIZATION ---
 function escapeHtml(text) {
