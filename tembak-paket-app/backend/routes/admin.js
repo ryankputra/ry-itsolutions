@@ -432,7 +432,45 @@ router.put('/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req, 
     }
 });
 
-// 12. Manual Services Pricing Settings
+// 12. Manual Services Pricing Settings & IMEI Service Status
+router.get('/admin/imei-service-status', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_status'");
+        const noteRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_note'");
+        const statusVal = row && row.value ? row.value : 'open';
+        const isOpen = statusVal === 'open' || statusVal === 'true' || statusVal === '1';
+        const note = noteRow && noteRow.value ? noteRow.value : '';
+        res.json({
+            status: true,
+            isOpen: isOpen,
+            service_status: statusVal,
+            note: note
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/imei-service-status', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { isOpen, service_status, note } = req.body;
+        const statusVal = (typeof isOpen !== 'undefined') ? (isOpen ? 'open' : 'closed') : (service_status || 'open');
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_status', ?)", [statusVal]);
+        if (typeof note !== 'undefined') {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_note', ?)", [note]);
+        }
+        res.json({
+            status: true,
+            message: `Status layanan IMEI berhasil diperbarui menjadi ${statusVal}.`,
+            isOpen: statusVal === 'open',
+            service_status: statusVal,
+            note: note || ''
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 router.post('/admin/manual-services-pricing', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const pricing = req.body;

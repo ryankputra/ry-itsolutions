@@ -13,6 +13,7 @@ import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard
 import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
 import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import ProductReviewsSection from "@/components/ui/ProductReviewsSection";
+import { safeJson } from "@/lib/api";
 
 export default function UnblockImeiPage() {
   const { user, addToCart, updateBalance } = useApp();
@@ -23,7 +24,7 @@ export default function UnblockImeiPage() {
 
   const [imei, setImei] = useState("");
   const [selectedPkgId, setSelectedPkgId] = useState("");
-  const [selectedSpeed, setSelectedSpeed] = useState("");
+  const [selectedSpeed, setSelectedSpeed] = useState<string>("slow");
   
   const [files, setFiles] = useState<File[]>([]);
   const [ceirFiles, setCeirFiles] = useState<File[]>([]);
@@ -34,7 +35,7 @@ export default function UnblockImeiPage() {
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: "" });
-  const [announcement, setAnnouncement] = useState<any>(null);
+  const [announcement, setAnnouncement] = useState<{ message: string, bgColor?: string } | null>(null);
 
   // Coupon Promo & Voucher Modal State (Shopee Style)
   const [couponCode, setCouponCode] = useState("");
@@ -42,12 +43,19 @@ export default function UnblockImeiPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
   const [publicCoupons, setPublicCoupons] = useState<CouponItem[]>([]);
-  const [showVoucherModal, setShowVoucherModal] = useState(false);
-  const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [useCoins, setUseCoins] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"qris" | "balance">("qris");
   const [showInstantQris, setShowInstantQris] = useState(false);
   const [viewMode, setViewMode] = useState<"product" | "form">("product");
+
+  const [orderCreated, setOrderCreated] = useState<any>(null);
+  const [showDirectPayModal, setShowDirectPayModal] = useState(false);
+  const [directPayData, setDirectPayData] = useState<{
+    amount: number;
+    orderTitle: string;
+    existingQrisData: any;
+  } | null>(null);
 
   // WhatsApp Recipient Phone State
   const [targetPhone, setTargetPhone] = useState("");
@@ -60,17 +68,20 @@ export default function UnblockImeiPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/imei-packages', { credentials: 'include' }).then(res => res.json()).catch(() => null),
-      fetch('/api/manual-services-pricing', { credentials: 'include' }).then(res => res.json()).catch(() => null),
-      fetch('/api/imei-service-status', { credentials: 'include' }).then(res => res.json()).catch(() => null),
-      fetch('/api/user/announcement', { credentials: 'include' }).then(res => res.json()).catch(() => null),
-      fetch('/api/coupons/public', { credentials: 'include' }).then(res => res.json()).catch(() => null)
+      fetch('/api/imei-packages', { credentials: 'include' }).then(res => safeJson(res)).catch(() => null),
+      fetch('/api/manual-services-pricing', { credentials: 'include' }).then(res => safeJson(res)).catch(() => null),
+      fetch('/api/imei-service-status', { credentials: 'include' }).then(res => safeJson(res)).catch(() => null),
+      fetch('/api/user/announcement', { credentials: 'include' }).then(res => safeJson(res)).catch(() => null),
+      fetch('/api/coupons/public', { credentials: 'include' }).then(res => safeJson(res)).catch(() => null)
     ]).then(([pkgData, prcData, statusData, annData, couponData]) => {
-      if (pkgData?.status && pkgData?.data) setPackages(pkgData.data.filter((p: any) => p.isVisible));
-      if (prcData?.status && prcData?.data) setSpeedPricing(prcData.data);
-      if (statusData?.status) setServiceStatus({ isOpen: statusData.isOpen, note: statusData.note });
+      if (pkgData?.status && Array.isArray(pkgData.data)) setPackages(pkgData.data.filter((p: any) => p.isVisible));
+      if (prcData?.status && prcData.data) setSpeedPricing(prcData.data);
+      if (statusData?.status) {
+        const isOpen = (typeof statusData.isOpen === 'boolean') ? statusData.isOpen : (statusData.service_status !== 'closed');
+        setServiceStatus({ isOpen, note: statusData.note || "" });
+      }
       if (annData?.status && annData?.data?.message) setAnnouncement(annData.data);
-      if (couponData?.status && couponData?.data) setPublicCoupons(couponData.data);
+      if (couponData?.status && Array.isArray(couponData.data)) setPublicCoupons(couponData.data);
       setLoading(false);
     });
   }, []);

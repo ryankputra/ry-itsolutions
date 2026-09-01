@@ -63,8 +63,16 @@ router.get('/imei-packages', async (req, res) => {
 router.get('/imei-service-status', async (req, res) => {
     try {
         const row = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_status'");
-        const status = row && row.value ? row.value : 'open';
-        res.json({ status: true, service_status: status });
+        const noteRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_note'");
+        const statusVal = row && row.value ? row.value : 'open';
+        const isOpen = statusVal === 'open' || statusVal === 'true' || statusVal === '1';
+        const note = noteRow && noteRow.value ? noteRow.value : '';
+        res.json({
+            status: true,
+            isOpen: isOpen,
+            service_status: statusVal,
+            note: note
+        });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
