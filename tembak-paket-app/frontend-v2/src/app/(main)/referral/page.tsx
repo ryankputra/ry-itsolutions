@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Swal from "@/lib/sweetalert";
+import { safeJson } from "@/lib/api";
 
 export default function ReferralPage() {
   const [loading, setLoading] = useState(true);
@@ -12,9 +13,9 @@ export default function ReferralPage() {
 
   useEffect(() => {
     fetch('/api/user/referral-info', { credentials: 'include' })
-      .then(res => res.json())
+      .then(res => safeJson(res))
       .then(data => {
-        if (data.status) {
+        if (data?.status && data.data) {
           setReferralData(data.data);
         }
       })

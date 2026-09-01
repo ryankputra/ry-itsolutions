@@ -107,7 +107,7 @@ router.get('/speed-pricing', async (req, res) => {
     res.redirect('/api/manual-services-pricing');
 });
 
-// 7. GET /api/user/announcement
+// 7. GET /api/user/announcement & /api/admin/config/public
 router.get('/user/announcement', async (req, res) => {
     try {
         const announcement = await dbGet('SELECT * FROM announcements ORDER BY datetime(createdAt) DESC LIMIT 1');
@@ -118,6 +118,23 @@ router.get('/user/announcement', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ status: false, message: "Gagal mengambil pengumuman." });
+    }
+});
+
+router.get(['/admin/config/public', '/config/public'], async (req, res) => {
+    try {
+        const announcement = await dbGet('SELECT * FROM announcements ORDER BY datetime(createdAt) DESC LIMIT 1');
+        const bgRow = await dbGet("SELECT value FROM settings WHERE key = 'announcementBgColor'");
+        const maintenanceRow = await dbGet("SELECT value FROM settings WHERE key = 'maintenanceMode'");
+        res.status(200).json({
+            status: true,
+            data: {
+                announcement: announcement ? { message: announcement.message, bgColor: bgRow ? bgRow.value : '#dc2626' } : null,
+                maintenance: maintenanceRow ? maintenanceRow.value === 'true' : false
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ status: false, message: error.message });
     }
 });
 
@@ -138,7 +155,7 @@ router.get('/public/check-warranty', async (req, res) => {
         `, [`%${queryImei}%`]);
 
         if (!trx) {
-            return res.status(404).json({
+            return res.status(200).json({
                 status: false,
                 message: `Tidak ditemukan data garansi untuk IMEI ${queryImei}.`
             });
@@ -216,8 +233,8 @@ router.get('/coupons/public', async (req, res) => {
     }
 });
 
-// 11. POST /api/coupons/claim
-router.post('/coupons/claim', isAuthenticated, async (req, res) => {
+// 11. POST /api/coupons/claim & /api/coupon/claim
+router.post(['/coupons/claim', '/coupon/claim'], isAuthenticated, async (req, res) => {
     try {
         const { coupon_id } = req.body;
         const userId = req.session.userId;
@@ -225,7 +242,7 @@ router.post('/coupons/claim', isAuthenticated, async (req, res) => {
         if (!coupon_id) return res.status(400).json({ status: false, message: "Coupon ID diperlukan." });
 
         const coupon = await dbGet("SELECT * FROM coupons WHERE id = ? OR code = ?", [coupon_id, coupon_id]);
-        if (!coupon) return res.status(404).json({ status: false, message: "Voucher promo tidak ditemukan." });
+        if (!coupon) return res.status(400).json({ status: false, message: "Voucher promo tidak ditemukan." });
         if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Voucher promo ini sedang tidak aktif." });
 
         const existingClaim = await dbGet("SELECT id FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
@@ -246,8 +263,8 @@ router.post('/coupons/claim', isAuthenticated, async (req, res) => {
     }
 });
 
-// 12. POST /api/coupon/validate
-router.post('/coupon/validate', isAuthenticated, async (req, res) => {
+// 12. POST /api/coupon/validate & /api/coupons/validate
+router.post(['/coupon/validate', '/coupons/validate'], isAuthenticated, async (req, res) => {
     try {
         const { code, order_amount } = req.body;
         const userId = req.session.userId;
@@ -257,7 +274,7 @@ router.post('/coupon/validate', isAuthenticated, async (req, res) => {
         const orderAmt = Number(order_amount) || 0;
 
         const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [cleanCode]);
-        if (!coupon) return res.status(404).json({ status: false, message: "Kode kupon tidak ditemukan atau salah." });
+        if (!coupon) return res.status(400).json({ status: false, message: "Kode kupon tidak ditemukan atau salah." });
         if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Kupon ini sedang tidak aktif." });
 
         const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());

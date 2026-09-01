@@ -220,10 +220,11 @@ function checkOrkutPaymentStatus(topUpId, uniqueAmount) {
     }
 }
 
-// 1. POST /api/purchase
-router.post('/purchase', isAuthenticated, async (req, res) => {
-    const { packageId, phone, access_token, paymentMethod, ewallet_number, purchaseContext = 'paket-satuan' } = req.body;
-    if (!packageId || !phone || !access_token || !paymentMethod) {
+// 1. POST /api/purchase & /api/purchase/non-otp
+router.post(['/purchase', '/purchase/non-otp'], isAuthenticated, async (req, res) => {
+    const { packageId, phone, paymentMethod, ewallet_number, purchaseContext = 'paket-satuan' } = req.body;
+    let access_token = req.body.access_token || 'non_otp';
+    if (!packageId || !phone || !paymentMethod) {
         return res.status(400).json({ status: false, message: "Parameter tidak lengkap." });
     }
 
@@ -600,6 +601,30 @@ router.post('/user/transactions/:id/cancel', isAuthenticated, async (req, res) =
     } catch (err) {
         await dbRun("ROLLBACK");
         res.status(500).json({ status: false, message: 'Gagal membatalkan transaksi.' });
+    }
+});
+
+// 4.5 GET /api/topup/gateway-info
+router.get('/topup/gateway-info', async (req, res) => {
+    try {
+        const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+        const activeGateway = gwRow ? gwRow.value : 'orkut';
+        const isReady = activeGateway === 'orkut'
+            ? !!(process.env.ORKUT_MERCHANT_ID && process.env.ORKUT_TOKEN)
+            : !!(process.env.GOPAY_GATEWAY_URL && process.env.GOPAY_GATEWAY_API_KEY);
+
+        res.json({
+            status: true,
+            data: {
+                active_gateway: activeGateway,
+                is_ready: isReady,
+                message: isReady
+                    ? `Gateway ${activeGateway.toUpperCase()} aktif & siap menerima transaksi.`
+                    : `Gateway ${activeGateway.toUpperCase()} sedang dalam konfigurasi.`
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
     }
 });
 

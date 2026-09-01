@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
+import { safeJson } from "@/lib/api";
 import { analyzeImei } from "@/lib/imeiHelper";
 
 export default function LandingPage() {
@@ -16,8 +17,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/imei-packages').then(r => r.json()).catch(() => null),
-      fetch('/api/ceirgo-pricing').then(r => r.json()).catch(() => null)
+      fetch('/api/imei-packages').then(r => safeJson(r)).catch(() => null),
+      fetch('/api/ceirgo-pricing').then(r => safeJson(r)).catch(() => null)
     ]).then(([pkgRes, ceirRes]) => {
       if (pkgRes?.status && Array.isArray(pkgRes.data)) {
         setImeiPackages(pkgRes.data.filter((p: any) => p.isVisible !== 0));

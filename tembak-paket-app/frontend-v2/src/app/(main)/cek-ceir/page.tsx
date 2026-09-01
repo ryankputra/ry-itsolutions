@@ -8,6 +8,7 @@ import Swal from "@/lib/sweetalert";
 import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { analyzeImei } from "@/lib/imeiHelper";
+import { safeJson } from "@/lib/api";
 
 const ceirgoNameMapping: Record<string, string> = {
   'cek_history_imei': 'Cek Riwayat Database CEIR',
@@ -62,14 +63,14 @@ export default function CekCeirPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/manual-services-pricing').then(res => res.json()),
-      fetch('/api/ceirgo-pricing').then(res => res.json()),
-      fetch('/api/ceirgo-services').then(res => res.json()).catch(() => ({ status: false })),
-      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
+      fetch('/api/manual-services-pricing').then(res => safeJson(res)).catch(() => null),
+      fetch('/api/ceirgo-pricing').then(res => safeJson(res)).catch(() => null),
+      fetch('/api/ceirgo-services').then(res => safeJson(res)).catch(() => ({ status: false })),
+      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false }))
     ]).then(([prcData, ceirPrcData, ceirSvcData, displayData]) => {
-      if (prcData.status) setPricing(prcData.data);
-      if (ceirPrcData.status) setCeirgoPricing(ceirPrcData.data);
-      const services = ceirSvcData.status ? normalizeServices(ceirSvcData.data) : [];
+      if (prcData?.status && prcData.data) setPricing(prcData.data);
+      if (ceirPrcData?.status && ceirPrcData.data) setCeirgoPricing(ceirPrcData.data);
+      const services = ceirSvcData?.status ? normalizeServices(ceirSvcData.data) : [];
 
       // Ensure core diagnostic services (CEIR & Bea Cukai) are available
       const coreServices = [

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { playCoinClaimSound, playWheelTickSound } from "@/lib/soundFx";
-
+import { safeJson } from "@/lib/api";
 import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
 
 export default function GamesPage() {
@@ -40,18 +40,16 @@ export default function GamesPage() {
     async function fetchGameState() {
       try {
         const res = await fetch("/api/games/status", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status) {
-            const payload = data.data || data;
-            setGameData({
-              coins: payload.coins ?? 0,
-              can_checkin: payload.can_checkin ?? true,
-              today_checkin_done: payload.today_checkin_done ?? false,
-              current_streak: Number(payload.current_streak) || 1,
-              can_spin: payload.can_spin ?? true,
-            });
-          }
+        const data = await safeJson(res);
+        if (data?.status) {
+          const payload = data.data || data;
+          setGameData({
+            coins: payload.coins ?? 0,
+            can_checkin: payload.can_checkin ?? true,
+            today_checkin_done: payload.today_checkin_done ?? false,
+            current_streak: Number(payload.current_streak) || 1,
+            can_spin: payload.can_spin ?? true,
+          });
         }
       } catch (e) {
         console.error("Error loading games:", e);
@@ -65,11 +63,9 @@ export default function GamesPage() {
   const fetchCoinHistory = async () => {
     try {
       const res = await fetch("/api/games/history", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status) {
-          setCoinHistory(data.data || []);
-        }
+      const data = await safeJson(res);
+      if (data?.status) {
+        setCoinHistory(Array.isArray(data.data) ? data.data : []);
       }
     } catch (e) {}
   };
@@ -84,9 +80,9 @@ export default function GamesPage() {
         method: "POST",
         credentials: "include",
       });
-      const data = await res.json();
+      const data = await safeJson(res);
 
-      if (data.status) {
+      if (data?.status) {
         playCoinClaimSound();
         Swal.fire({
           icon: "success",

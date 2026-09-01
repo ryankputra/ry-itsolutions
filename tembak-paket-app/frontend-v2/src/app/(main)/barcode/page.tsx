@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
 import Swal from "@/lib/sweetalert";
 import { useRouter } from "next/navigation";
+import { safeJson } from "@/lib/api";
 
 
 const ceirgoNameMapping: Record<string, string> = {
@@ -18,11 +19,13 @@ const ceirgoNameMapping: Record<string, string> = {
   'create_barcode': 'Create Barcode',
   'cek_imei_beacukai': 'Cek IMEI Beacukai',
   'cek_history_imei': 'Cek Riwayat IMEI',
-  'cek_imei': 'Cek Status IMEI'
+  'cek_imei': 'Cek Status IMEI',
+  'cek_icloud': 'Cek iCloud',
+  'cek_simlock': 'Cek Carrier / Simlock'
 };
 
 export default function BarcodePage() {
-  const { user } = useApp();
+  const { user, updateBalance } = useApp();
   const router = useRouter();
   
   const [ceirgoPricing, setCeirgoPricing] = useState<any>({});
@@ -39,6 +42,7 @@ export default function BarcodePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [barcodeResult, setBarcodeResult] = useState<{ note: string | null, image: string | null } | null>(null);
 
   const normalizeServices = (payload: any) => {
     const services = Array.isArray(payload)
@@ -60,11 +64,11 @@ export default function BarcodePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/ceirgo-pricing').then(res => res.json()),
-      fetch('/api/ceirgo-services').then(res => res.json()).catch(() => ({ status: false })),
-      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => res.json()).catch(() => ({ status: false }))
+      fetch('/api/ceirgo-pricing').then(res => safeJson(res)).catch(() => null),
+      fetch('/api/ceirgo-services').then(res => safeJson(res)).catch(() => ({ status: false })),
+      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false }))
     ]).then(([ceirPrcData, ceirSvcData, displayData]) => {
-      if (ceirPrcData.status) {
+      if (ceirPrcData?.status && ceirPrcData.data) {
         const normalizedPricing = Object.fromEntries(
           Object.entries(ceirPrcData.data || {}).map(([key, value]) => [
             key.replace(/^ceirgo_price_/, ''),
@@ -73,7 +77,7 @@ export default function BarcodePage() {
         );
         setCeirgoPricing(normalizedPricing);
       }
-      const services = ceirSvcData.status ? normalizeServices(ceirSvcData.data) : [];
+      const services = ceirSvcData?.status ? normalizeServices(ceirSvcData.data) : [];
       const hasBarcodeSetting = displayData?.status && displayData.data && Object.prototype.hasOwnProperty.call(displayData.data, 'barcode');
       const visibleCodes = hasBarcodeSetting
         ? new Set(Array.isArray(displayData.data.barcode) ? displayData.data.barcode : [])
