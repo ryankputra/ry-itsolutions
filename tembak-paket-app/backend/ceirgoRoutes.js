@@ -47,7 +47,8 @@ function initCeirgoRoutes() {
                 headers: {
                     'Authorization': `Bearer ${CEIRGO_API_KEY}`,
                     'Accept': 'application/json'
-                }
+                },
+                timeout: 8000
             });
 
             if (!ceirgoRes.ok) {
@@ -91,7 +92,8 @@ function initCeirgoRoutes() {
                 headers: {
                     'Authorization': `Bearer ${CEIRGO_API_KEY}`,
                     'Accept': 'application/json'
-                }
+                },
+                timeout: 8000
             });
 
             if (!ceirgoRes.ok) {

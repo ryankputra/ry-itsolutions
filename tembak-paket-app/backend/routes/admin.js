@@ -1,5 +1,5 @@
 /**
- * Admin Panel Management, Settings, Orders, and Support Tickets
+ * Admin Panel Management, Settings, Orders, CeirGO & KMSP Integration, Support Tickets
  */
 
 const express = require('express');
@@ -16,6 +16,7 @@ const { isAuthenticated, isAdmin, sseSend, sseBroadcast } = require('../middlewa
 const { sendTelegramNotification } = require('../telegramService');
 const { getKmspAdminBalance } = require('./transactions');
 
+const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
 const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
 const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
@@ -190,7 +191,6 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
                 adminImagePath = `/uploads/manual_orders/${req.files['admin_image'][0].filename}`;
             }
 
-            await dbRun("BEGIN TRANSACTION");
             await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ? WHERE id = ?",
                 [status || existingTrx.status, admin_note !== undefined ? admin_note : existingTrx.admin_note, adminImagePath, trxId]);
 
@@ -200,17 +200,239 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
                     await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, existingTrx.userId]);
                 }
             }
-            await dbRun("COMMIT");
 
             res.json({ status: true, message: "Pesanan berhasil diperbarui" });
         } catch (e) {
-            await dbRun("ROLLBACK");
             res.status(500).json({ status: false, message: e.message });
         }
     });
 });
 
-// 7. GET & POST /api/admin/menu-settings
+// 7. POST /api/admin/manual-orders/:id/recheck (CeirGO Re-check Order Status)
+router.post('/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const trxId = req.params.id;
+        const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
+        if (!trx) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
+
+        if (!CEIRGO_API_KEY) {
+            return res.status(500).json({ status: false, message: "CEIRGO_API_KEY tidak dikonfigurasi." });
+        }
+
+        const ceirRef = trx.accessToken || trx.id;
+        const ceirRes = await fetch(`${CEIRGO_BASE_URL}/api/order?trx_id=${encodeURIComponent(ceirRef)}`, {
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}`, 'Accept': 'application/json' },
+            timeout: 15000
+        });
+
+        if (!ceirRes.ok) {
+            return res.status(502).json({ status: false, message: `CeirGO API error: ${ceirRes.status}` });
+        }
+
+        const ceirData = await ceirRes.json();
+        let newStatus = trx.status;
+        let note = trx.admin_note || '';
+
+        if (ceirData.status === 'success' || ceirData.data?.status === 'success') {
+            newStatus = 'success';
+            note = ceirData.data?.result || 'Sukses diverifikasi dari CeirGO';
+        } else if (ceirData.status === 'failed' || ceirData.data?.status === 'failed') {
+            newStatus = 'failed';
+            note = ceirData.data?.reason || 'Gagal dari CeirGO';
+        }
+
+        await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ? WHERE id = ?",
+            [newStatus, note, JSON.stringify(ceirData.data || ceirData), trxId]);
+
+        res.json({ status: true, message: "Status pesanan berhasil disinkronkan dengan CeirGO.", data: { status: newStatus, note } });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message || "Gagal melakukan recheck CeirGO." });
+    }
+});
+
+// 8. CeirGO Display Settings (GET, PUT, POST)
+router.get('/admin/ceirgo-display-settings', async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_display_settings'");
+        if (row && row.value) {
+            res.json({ status: true, data: JSON.parse(row.value) });
+        } else {
+            res.json({ status: true, data: { cekCeir: [], barcode: [] } });
+        }
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.put('/admin/ceirgo-display-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { cekCeir, barcode } = req.body;
+        const val = JSON.stringify({
+            cekCeir: Array.isArray(cekCeir) ? cekCeir : [],
+            barcode: Array.isArray(barcode) ? barcode : []
+        });
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ceirgo_display_settings', ?)", [val]);
+        res.json({ status: true, message: "Pengaturan tampilan CeirGO berhasil disimpan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/ceirgo-display-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { cekCeir, barcode } = req.body;
+        const val = JSON.stringify({
+            cekCeir: Array.isArray(cekCeir) ? cekCeir : [],
+            barcode: Array.isArray(barcode) ? barcode : []
+        });
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ceirgo_display_settings', ?)", [val]);
+        res.json({ status: true, message: "Pengaturan tampilan CeirGO berhasil disimpan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 9. CeirGO Pricing Configuration (POST & PUT)
+router.post('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const pricing = req.body;
+        for (const [key, value] of Object.entries(pricing)) {
+            const normalizedKey = key.startsWith('ceirgo_price_') ? key : `ceirgo_price_${key}`;
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, String(value)]);
+        }
+        res.json({ status: true, message: "Harga layanan CeirGO berhasil diperbarui." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.put('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const pricing = req.body;
+        for (const [key, value] of Object.entries(pricing)) {
+            const normalizedKey = key.startsWith('ceirgo_price_') ? key : `ceirgo_price_${key}`;
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, String(value)]);
+        }
+        res.json({ status: true, message: "Harga layanan CeirGO berhasil diperbarui." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 10. CeirGO Deposit & Providers
+router.get('/admin/ceirgo-deposit-providers', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        if (!CEIRGO_API_KEY) return res.status(200).json({ status: false, message: 'CEIRGO_API_KEY belum dikonfigurasi' });
+        const resp = await fetch(`${CEIRGO_BASE_URL}/api/deposit/providers`, {
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` }
+        });
+        const data = await resp.json();
+        res.json({ status: true, data: data.data || [] });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message || 'Gagal memuat provider deposit CeirGO' });
+    }
+});
+
+router.post('/admin/ceirgo-deposit', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        if (!CEIRGO_API_KEY) return res.status(400).json({ status: false, message: 'CEIRGO_API_KEY belum dikonfigurasi' });
+        const resp = await fetch(`${CEIRGO_BASE_URL}/api/deposit`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(req.body)
+        });
+        const data = await resp.json();
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 11. KMSP Packages Management & Sync
+router.post('/admin/sync-packages', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        if (!KMSP_API_KEY) return res.status(400).json({ status: false, message: "KMSP_API_KEY belum dikonfigurasi." });
+
+        const response = await fetch(`https://golang-openapi-packagelist-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}`, { timeout: 15000 });
+        const kmspData = await response.json();
+
+        if (!kmspData.status || !Array.isArray(kmspData.data)) {
+            throw new Error(kmspData.message || "Gagal mengambil data dari KMSP.");
+        }
+
+        const kmspPackages = new Map(kmspData.data.map(p => [p.package_code, p]));
+        const localPackages = await dbAll('SELECT package_code FROM packages');
+        const localPackageCodes = new Set(localPackages.map(p => p.package_code));
+        let added = 0, updated = 0;
+
+        for (const [code, pkg] of kmspPackages.entries()) {
+            const price = (parseInt(String(pkg.package_harga).replace(/\D/g, '')) || 0) / 100;
+            const methods = JSON.stringify(pkg.available_payment_methods || []);
+            if (localPackageCodes.has(code)) {
+                await dbRun('UPDATE packages SET name = ?, description = ?, original_price = ?, payment_methods = ? WHERE package_code = ?',
+                    [pkg.package_name, pkg.package_description || '', price, methods, code]);
+                updated++;
+            } else {
+                await dbRun(`
+                    INSERT INTO packages (package_code, name, description, original_price, platform_fee, reseller_fee, isVisible, category, isMultiPurchase, payment_methods, position) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [code, pkg.package_name, pkg.package_description || '', price, 0, 0, 0, 'reguler', 0, methods, 0]);
+                added++;
+            }
+        }
+
+        res.json({ status: true, message: `Sinkronisasi selesai. Ditambahkan: ${added}, Diperbarui: ${updated}.` });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.get('/admin/packages', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const packages = await dbAll('SELECT * FROM packages ORDER BY position ASC, rowid ASC');
+        res.json({ status: true, data: packages });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.put('/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { packages } = req.body;
+        if (!Array.isArray(packages)) return res.status(400).json({ status: false, message: "Invalid packages array" });
+
+        for (const pkg of packages) {
+            await dbRun(`
+                UPDATE packages SET 
+                    platform_fee = ?,
+                    reseller_fee = ?,
+                    isVisible = ?,
+                    category = ?,
+                    isMultiPurchase = ?,
+                    position = ?
+                WHERE package_code = ?
+            `, [pkg.platform_fee, pkg.reseller_fee, pkg.isVisible, pkg.category, pkg.isMultiPurchase, pkg.position, pkg.package_code]);
+        }
+        res.json({ status: true, message: "Paket berhasil diperbarui." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 12. Manual Services Pricing Settings
+router.post('/admin/manual-services-pricing', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const pricing = req.body;
+        for (const [key, value] of Object.entries(pricing)) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, String(value)]);
+        }
+        res.json({ status: true, message: "Pengaturan harga layanan manual berhasil disimpan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 13. Menu & Announcement Settings
 router.get('/admin/menu-settings', async (req, res) => {
     try {
         const row = await dbGet("SELECT value FROM settings WHERE key = 'show_beli_paket'");
@@ -220,7 +442,32 @@ router.get('/admin/menu-settings', async (req, res) => {
     }
 });
 
-// 8. Admin Balances
+router.put('/admin/menu-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { showBeliPaket } = req.body;
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('show_beli_paket', ?)", [String(showBeliPaket)]);
+        res.json({ status: true, message: "Pengaturan menu berhasil disimpan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/announcement', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { message, bgColor, isEnabled } = req.body;
+        if (message !== undefined) {
+            await dbRun("INSERT INTO announcements (message, createdAt) VALUES (?, ?)", [message, new Date().toISOString()]);
+        }
+        if (bgColor) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [bgColor]);
+        }
+        res.json({ status: true, message: "Pengumuman berhasil diperbarui." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 14. Admin Balances
 router.get('/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const balance = await getKmspAdminBalance();
@@ -246,7 +493,183 @@ router.get('/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) =
     }
 });
 
-// 9. Admin Support Tickets
+// 15. Broadcast System
+router.post('/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { title, message, voucherCode, targetTelegram, targetInApp, bgColor } = req.body;
+        if (!message) return res.status(400).json({ status: false, message: "Pesan broadcast wajib diisi." });
+
+        if (targetInApp) {
+            await dbRun("INSERT INTO announcements (message, createdAt) VALUES (?, ?)", [message, new Date().toISOString()]);
+            if (bgColor) await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [bgColor]);
+            sseBroadcast('announcement', { message, bgColor });
+        }
+
+        if (targetTelegram) {
+            let tgMsg = `<b>📢 ${title || 'INFORMASI TERBARU'}</b>\n──────────────────────\n${message}`;
+            if (voucherCode) tgMsg += `\n\n🎟️ <b>KODE VOUCHER:</b> <code>${voucherCode}</code>`;
+            sendTelegramNotification(tgMsg, 'group');
+        }
+
+        res.json({ status: true, message: "Pesan broadcast berhasil dikirimkan!" });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 16. Coupons Management (GET, POST, PUT, DELETE)
+router.get('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const coupons = await dbAll("SELECT * FROM coupons ORDER BY created_at DESC");
+        res.json({ status: true, data: coupons });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, is_public, start_date, end_date, max_per_user } = req.body;
+        if (!code || !discount_value) return res.status(400).json({ status: false, message: "Kode dan nilai diskon wajib diisi." });
+
+        const couponId = `cpn_${Date.now()}`;
+        await dbRun(`
+            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, used_count, is_active, is_public, start_date, end_date, max_per_user, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, ?, ?, ?)
+        `, [couponId, code.trim().toUpperCase(), discount_type || 'fixed', Number(discount_value), Number(min_order_amount) || 0, Number(max_discount_amount) || 0, Number(max_usage_limit) || 100, is_public !== undefined ? Number(is_public) : 1, start_date || null, end_date || null, Number(max_per_user) || 1, new Date().toISOString()]);
+
+        res.json({ status: true, message: "Kupon promo berhasil dibuat." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.put('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { is_active } = req.body;
+        await dbRun("UPDATE coupons SET is_active = ? WHERE id = ?", [is_active, req.params.id]);
+        res.json({ status: true, message: "Status kupon berhasil diubah." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.delete('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("DELETE FROM coupons WHERE id = ?", [req.params.id]);
+        res.json({ status: true, message: "Kupon berhasil dihapus." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 17. Referral Settings (GET & POST)
+router.get('/admin/referral-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'referral_%'");
+        const data = rows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {});
+        res.json({ status: true, data });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/referral-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const settings = req.body;
+        for (const [key, value] of Object.entries(settings)) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, String(value)]);
+        }
+        res.json({ status: true, message: "Pengaturan referral berhasil disimpan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 18. Admin Reviews Management (POST & DELETE)
+router.post('/admin/reviews', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { userName, userAvatar, productId, serviceType, variation, rating, comment, images, likesCount, userRole, userTotalOrders, userJoinedAt, transactionDate } = req.body;
+        const reviewId = `rev_adm_${Date.now()}`;
+        const dummyUserId = `usr_adm_${Date.now()}`;
+        const avatarClean = userAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName || 'User')}&backgroundColor=0066cc&textColor=ffffff`;
+
+        await dbRun(`
+            INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            reviewId, dummyUserId, userName, avatarClean, `trx_adm_${Date.now()}`, productId || 'unblock-imei', serviceType || 'imei',
+            variation || 'GARANSI 3 BULAN', Number(rating) || 5, comment, JSON.stringify(images || []), Number(likesCount) || 5,
+            transactionDate || new Date().toISOString().substring(0, 10), userJoinedAt || '2026-01-15T08:30:00.000Z', Number(userTotalOrders) || 12, userRole || 'Pembeli Terverifikasi', new Date().toISOString()
+        ]);
+
+        res.json({ status: true, message: "Ulasan dummy berhasil ditambahkan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.delete('/admin/reviews/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("DELETE FROM reviews WHERE id = ?", [req.params.id]);
+        res.json({ status: true, message: "Ulasan berhasil dihapus." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 19. Payment Gateway Configuration
+router.get('/admin/payment-gateway', async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'payment_gateway'");
+        res.json({ status: true, data: { gateway: row ? row.value : 'orkut' } });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.put('/admin/payment-gateway', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { gateway } = req.body;
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_gateway', ?)", [gateway || 'orkut']);
+        res.json({ status: true, message: "Gateway pembayaran berhasil diubah." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 20. WhatsApp & Fonnte Settings
+router.get('/admin/whatsapp-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const tokenRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_token'");
+        const urlRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_url'");
+        const autoRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_auto_send'");
+        res.json({
+            status: true,
+            data: {
+                token: tokenRow ? tokenRow.value : '',
+                url: urlRow ? urlRow.value : 'https://api.fonnte.com/send',
+                autoSend: autoRow ? autoRow.value === 'true' : false
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.put('/admin/whatsapp-settings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { token, url, autoSend } = req.body;
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_token', ?)", [token || '']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_url', ?)", [url || 'https://api.fonnte.com/send']);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_auto_send', ?)", [String(autoSend)]);
+        res.json({ status: true, message: "Pengaturan WhatsApp berhasil disimpan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 21. Admin Support Tickets
 router.get('/user/tickets', isAuthenticated, async (req, res) => {
     try {
         const tickets = await dbAll("SELECT * FROM tickets WHERE userId = ? ORDER BY updatedAt DESC", [req.session.userId]);
@@ -265,17 +688,14 @@ router.post('/user/tickets', isAuthenticated, async (req, res) => {
         const messageId = `MSG-${Date.now()}`;
         const now = new Date().toISOString();
 
-        await dbRun("BEGIN TRANSACTION");
         await dbRun("INSERT INTO tickets (id, userId, subject, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)", [ticketId, req.session.userId, subject, 'open', now, now]);
         await dbRun("INSERT INTO ticket_messages (id, ticketId, senderId, senderRole, message, createdAt) VALUES (?, ?, ?, ?, ?, ?)", [messageId, ticketId, req.session.userId, 'user', message, now]);
-        await dbRun("COMMIT");
 
         const user = await dbGet("SELECT name FROM users WHERE id = ?", [req.session.userId]);
         sendTelegramNotification(`<b>💬 TIKET BANTUAN BARU</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Subjek:</b> ${subject}\n<b>Pesan:</b>\n<i>${message}</i>`, 'admin');
 
         res.json({ status: true, message: 'Tiket berhasil dibuat.' });
     } catch (e) {
-        await dbRun("ROLLBACK");
         res.status(500).json({ status: false, message: 'Gagal membuat tiket.' });
     }
 });
@@ -316,10 +736,8 @@ router.post('/tickets/:id/messages', isAuthenticated, async (req, res) => {
         const now = new Date().toISOString();
         const newStatus = isAdminUser ? 'answered' : 'open';
 
-        await dbRun("BEGIN TRANSACTION");
         await dbRun("INSERT INTO ticket_messages (id, ticketId, senderId, senderRole, message, createdAt) VALUES (?, ?, ?, ?, ?, ?)", [messageId, req.params.id, req.session.userId, isAdminUser ? 'admin' : 'user', message, now]);
         await dbRun("UPDATE tickets SET status = ?, updatedAt = ? WHERE id = ?", [newStatus, now, req.params.id]);
-        await dbRun("COMMIT");
 
         if (isAdminUser) {
             sseSend(ticket.userId, 'announcement', { title: 'Balasan Tiket', message: `Admin telah membalas tiket Anda: ${ticket.subject}` });
@@ -329,7 +747,6 @@ router.post('/tickets/:id/messages', isAuthenticated, async (req, res) => {
 
         res.json({ status: true, message: 'Balasan terkirim.' });
     } catch (e) {
-        await dbRun("ROLLBACK");
         res.status(500).json({ status: false, message: 'Gagal membalas tiket.' });
     }
 });
@@ -343,7 +760,28 @@ router.get('/admin/tickets', isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-// 10. Admin Auto Deploy Log
+router.put(['/admin/tickets/:id/status', '/admin/tickets/:id/close'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const finalStatus = status || 'closed';
+        await dbRun("UPDATE tickets SET status = ?, updatedAt = ? WHERE id = ?", [finalStatus, new Date().toISOString(), req.params.id]);
+        res.json({ status: true, message: `Tiket berhasil diubah menjadi ${finalStatus}.` });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal mengubah status tiket.' });
+    }
+});
+
+router.delete('/admin/tickets/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("DELETE FROM ticket_messages WHERE ticketId = ?", [req.params.id]);
+        await dbRun("DELETE FROM tickets WHERE id = ?", [req.params.id]);
+        res.json({ status: true, message: "Tiket berhasil dihapus." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: "Gagal menghapus tiket." });
+    }
+});
+
+// 22. Admin Auto Deploy Log
 router.get('/admin/deploy-status', isAuthenticated, isAdmin, (req, res) => {
     const logPath = path.join(__dirname, '..', 'deploy.log');
     if (!fs.existsSync(logPath)) {

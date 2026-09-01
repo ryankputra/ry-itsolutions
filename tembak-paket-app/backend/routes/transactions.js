@@ -56,7 +56,7 @@ async function getKmspAdminBalance() {
         return kmspBalanceCache.balance;
     }
     try {
-        const response = await fetch(`https://golang-openapi-profiledetails-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}`, { timeout: 8000 });
+        const response = await fetch(`https://golang-openapi-panelaccountbalance-xltembakservice.kmsp-store.com/v1?api_key=${KMSP_API_KEY}`, { timeout: 8000 });
         if (!response.ok) return kmspBalanceCache.balance !== null ? kmspBalanceCache.balance : 0;
         const data = await response.json();
         if (data.status && typeof data.data?.balance !== 'undefined') {
