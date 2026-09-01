@@ -318,6 +318,8 @@ async function initializeDatabase() {
                 });
                 await dbRun("DELETE FROM reviews WHERE userId LIKE 'usr_seed%'");
                 for (const r of sampleReviews) {
+                    await dbRun("INSERT OR IGNORE INTO users (id, name, email, password, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
+                        [r.userId, r.userName, `${r.userId}@customer.local`, 'seed_pass', 'user', r.userJoinedAt]);
                     await dbRun(
                         `INSERT OR REPLACE INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [r.id, r.userId, r.userName, r.userAvatar, r.orderId, r.productId, r.serviceType, r.variation, r.rating, r.comment, r.images, r.likesCount, r.transactionDate, r.userJoinedAt, r.userTotalOrders, r.userRole, r.createdAt]
@@ -5260,16 +5262,142 @@ async function handleTelegramMessage(msg) {
         return; // Ignore unauthorized messages to prevent spam injection
     }
 
-    // Trigger main menu on /start, /ulasan, /menu, /review
-    if (text === '/start' || text === '/menu' || text === '/ulasan' || text === '/review') {
+    // 1. Command /start, /menu
+    if (text === '/start' || text === '/menu') {
         await sendTelegramButtons(
             chatId,
-            `⭐ <b>MENU MANAJEMEN ULASAN DUMMY TELKOMSEL / IMEI</b> ⭐\n\nSelamat datang di Bot Panel Ulasan Ry-ITSolutions. Silakan pilih tombol aksi di bawah ini:`,
+            `⭐ <b>PANEL KONTROL BOT RY-ITSOLUTIONS</b> ⭐\n\nSelamat datang di Bot Admin Ry-ITSolutions. Silakan pilih menu di bawah atau ketik <code>/help</code> untuk panduan lengkap:`,
             telegramReviewMainMenu
         );
         return;
     }
 
+    // 2. Command /help, /bantuan
+    if (text === '/help' || text === '/bantuan') {
+        const helpText = `📖 <b>PANDUAN PERINTAH BOT TELEGRAM RY-ITSOLUTIONS</b>\n\n` +
+            `🔹 <code>/status</code> : Cek status server, database, dan transaksi aktif\n` +
+            `🔹 <code>/balance</code> atau <code>/saldo</code> : Cek saldo KMSP & ringkasan saldo pengguna\n` +
+            `🔹 <code>/profile</code> atau <code>/me</code> : Informasi akun Telegram & otorisasi\n` +
+            `🔹 <code>/cek [TRX_ID]</code> : Cek detail transaksi berdasarkan ID\n` +
+            `🔹 <code>/broadcast [Pesan]</code> : Kirim pesan broadcast ke grup notifikasi\n` +
+            `🔹 <code>/ulasan [Nama|Rating|Komentar|Variasi]</code> : Tambah ulasan dummy cepat\n` +
+            `🔹 <code>/menu</code> : Buka panel tombol ulasan & navigasi`;
+        await sendTelegramText(chatId, helpText);
+        return;
+    }
+
+    // 3. Command /status
+    if (text === '/status') {
+        try {
+            const pendingTrx = await dbGet("SELECT COUNT(*) as total FROM transactions WHERE status IN ('pending', 'processing', 'menunggu_saldo_provider')");
+            const successTrx = await dbGet("SELECT COUNT(*) as total FROM transactions WHERE status IN ('success', 'completed')");
+            const totalUsers = await dbGet("SELECT COUNT(*) as total FROM users");
+            const uptimeMinutes = Math.floor((Date.now() - APP_START_TIME) / 60000);
+
+            const statusText = `🖥️ <b>STATUS SISTEM RY-ITSOLUTIONS</b>\n\n` +
+                `🟢 <b>Server:</b> Online (Uptime: ${uptimeMinutes} menit)\n` +
+                `🗄️ <b>Database:</b> SQLite3 (Terhubung & Terverifikasi)\n` +
+                `👥 <b>Total Pengguna:</b> ${totalUsers?.total || 0} akun\n` +
+                `⏳ <b>Transaksi Antrean:</b> ${pendingTrx?.total || 0} pesanan\n` +
+                `✅ <b>Transaksi Sukses:</b> ${successTrx?.total || 0} pesanan\n` +
+                `🛡️ <b>Webhook Mode:</b> Aktif (Secret Token Protected)`;
+            await sendTelegramText(chatId, statusText);
+        } catch (e) {
+            await sendTelegramText(chatId, `❌ Gagal mengambil status sistem: ${escapeHtml(e.message)}`);
+        }
+        return;
+    }
+
+    // 4. Command /balance, /saldo
+    if (text === '/balance' || text === '/saldo') {
+        try {
+            let kmspBalance = 'Tidak tersedia';
+            try {
+                const bal = await getKmspAdminBalance();
+                kmspBalance = typeof bal === 'number' ? `Rp ${bal.toLocaleString('id-ID')}` : String(bal);
+            } catch (e) {
+                kmspBalance = 'Error / Offline';
+            }
+
+            const userTotalBalance = await dbGet("SELECT SUM(balance) as total FROM users");
+            const totalBalanceFormatted = Number(userTotalBalance?.total || 0).toLocaleString('id-ID');
+
+            const balanceText = `💰 <b>INFORMASI SALDO SISTEM</b>\n\n` +
+                `💳 <b>Saldo Provider KMSP:</b> ${kmspBalance}\n` +
+                `👥 <b>Total Saldo Seluruh Pengguna:</b> Rp ${totalBalanceFormatted}\n` +
+                `⏰ <b>Diperbarui:</b> ${new Date().toLocaleTimeString('id-ID')}`;
+            await sendTelegramText(chatId, balanceText);
+        } catch (e) {
+            await sendTelegramText(chatId, `❌ Gagal mengambil info saldo: ${escapeHtml(e.message)}`);
+        }
+        return;
+    }
+
+    // 5. Command /profile, /me
+    if (text === '/profile' || text === '/me') {
+        const profileText = `👤 <b>PROFIL TELEGRAM ANDA</b>\n\n` +
+            `🆔 <b>Chat ID:</b> <code>${chatId}</code>\n` +
+            `👤 <b>Sender ID:</b> <code>${fromId || chatId}</code>\n` +
+            `🔰 <b>Status Role:</b> 🛡️ <b>ADMIN TERVERIFIKASI</b>\n` +
+            `✅ <b>Akses:</b> Kontrol Transaksi, Ulasan & Notifikasi Penuh`;
+        await sendTelegramText(chatId, profileText);
+        return;
+    }
+
+    // 6. Command /cek [TRX_ID] or /trx [TRX_ID]
+    if (text.startsWith('/cek') || text.startsWith('/trx')) {
+        const parts = text.split(/\s+/);
+        const queryTrxId = parts[1]?.trim();
+        if (!queryTrxId) {
+            await sendTelegramText(chatId, `⚠️ <b>Format salah.</b>\nContoh penggunaan: <code>/cek TRX123456</code>`);
+            return;
+        }
+
+        try {
+            const trx = await dbGet("SELECT * FROM transactions WHERE id = ? OR id LIKE ?", [queryTrxId, `%${queryTrxId}%`]);
+            if (!trx) {
+                await sendTelegramText(chatId, `🔍 Transaksi dengan ID <code>${escapeHtml(queryTrxId)}</code> tidak ditemukan di database.`);
+                return;
+            }
+
+            const fee = Number(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID');
+            const trxDetailText = `📦 <b>DETAIL TRANSAKSI</b>\n\n` +
+                `🆔 <b>ID:</b> <code>${escapeHtml(trx.id)}</code>\n` +
+                `👤 <b>User:</b> ${escapeHtml(trx.userName || trx.userId || '-')}\n` +
+                `🏷️ <b>Layanan/Paket:</b> ${escapeHtml(trx.packageName || trx.service_type || '-')}\n` +
+                `💵 <b>Nominal:</b> Rp ${fee}\n` +
+                `⚡ <b>Status:</b> <b>${escapeHtml(String(trx.status).toUpperCase())}</b>\n` +
+                `📅 <b>Waktu:</b> ${escapeHtml(trx.createdAt || '-')}\n` +
+                `📝 <b>Catatan:</b> ${escapeHtml(trx.admin_note || trx.api_response || '-')}`;
+
+            const buttons = [
+                [
+                    { text: "✅ Set Sukses", callback_data: `manual_success_${trx.id}` },
+                    { text: "❌ Set Gagal (Refund)", callback_data: `manual_failed_${trx.id}` }
+                ]
+            ];
+            await sendTelegramButtons(chatId, trxDetailText, buttons);
+        } catch (e) {
+            await sendTelegramText(chatId, `❌ Gagal mengecek transaksi: ${escapeHtml(e.message)}`);
+        }
+        return;
+    }
+
+    // 7. Command /broadcast [Pesan]
+    if (text.startsWith('/broadcast')) {
+        const broadcastMsg = text.replace(/^\/broadcast\s*/i, '').trim();
+        if (!broadcastMsg) {
+            await sendTelegramText(chatId, `⚠️ <b>Pesan broadcast kosong.</b>\nContoh: <code>/broadcast Server sedang dalam pemeliharaan berkala selama 10 menit.</code>`);
+            return;
+        }
+
+        const formattedBroadcast = `📢 <b>PENGUMUMAN / BROADCAST RY-ITSOLUTIONS</b>\n──────────────────────\n${escapeHtml(broadcastMsg)}\n──────────────────────\n<i>Dikirim oleh Admin</i>`;
+        sendTelegramNotification(formattedBroadcast, 'group');
+        await sendTelegramText(chatId, `✅ <b>Broadcast berhasil dikirim ke grup/saluran notifikasi!</b>`);
+        return;
+    }
+
+    // 8. Command /ulasan or review photo
     if (text.startsWith('/ulasan') || text.includes('|') || (msg.photo && msg.photo.length > 0)) {
         let cleanText = text.replace(/^\/ulasan\s*/i, '').trim();
         if (!cleanText && (!msg.photo || msg.photo.length === 0)) return;
@@ -5295,12 +5423,19 @@ async function handleTelegramMessage(msg) {
 
         const reviewId = `rev_tg_${Date.now()}`;
         const nameClean = userName;
+        const dummyUserId = `usr_tg_${Date.now()}`;
         const avatarClean = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nameClean)}&backgroundColor=0066cc&textColor=ffffff`;
         const imagesJson = JSON.stringify(imageUrls);
 
+        // Ensure user row exists to satisfy foreign key constraint
+        await dbRun(
+            `INSERT OR IGNORE INTO users (id, name, email, password, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
+            [dummyUserId, nameClean, `${dummyUserId}@buyer.local`, 'bot_gen_user', 'user', '2026-01-15T08:30:00.000Z']
+        );
+
         await dbRun(
             `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [reviewId, `usr_tg_${Date.now()}`, nameClean, avatarClean, `trx_tg_${Date.now()}`, 'unblock-imei', 'imei', variation, ratingNum, comment, imagesJson, 5, new Date().toISOString(), '2026-01-15T08:30:00.000Z', 14, 'Pembeli Terverifikasi', new Date().toISOString()]
+            [reviewId, dummyUserId, nameClean, avatarClean, `trx_tg_${Date.now()}`, 'unblock-imei', 'imei', variation, ratingNum, comment, imagesJson, 5, new Date().toISOString(), '2026-01-15T08:30:00.000Z', 14, 'Pembeli Terverifikasi', new Date().toISOString()]
         );
 
         const successButtons = [
