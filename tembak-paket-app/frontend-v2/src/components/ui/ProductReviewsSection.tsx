@@ -42,10 +42,11 @@ function VerifiedIcon() {
   return <svg aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1.5a3.1 3.1 0 0 0 2.25.96 3.1 3.1 0 0 1 2.93 2.93A3.1 3.1 0 0 0 16.14 7.7a3.1 3.1 0 0 1 0 4.6 3.1 3.1 0 0 0-.96 2.25 3.1 3.1 0 0 1-2.93 2.93 3.1 3.1 0 0 0-2.25.96 3.1 3.1 0 0 1-4.6 0 3.1 3.1 0 0 0-2.25-.96 3.1 3.1 0 0 1-2.93-2.93 3.1 3.1 0 0 0-.96-2.25 3.1 3.1 0 0 1 0-4.6 3.1 3.1 0 0 0 .96-2.25A3.1 3.1 0 0 1 3.15 2.46 3.1 3.1 0 0 0 5.4 1.5a3.1 3.1 0 0 1 4.6 0Zm2.7 5.54a.9.9 0 0 0-1.27 0L8.75 9.72 7.57 8.54A.9.9 0 1 0 6.3 9.81l1.82 1.82a.9.9 0 0 0 1.27 0l3.3-3.3a.9.9 0 0 0 0-1.29Z" clipRule="evenodd" /></svg>;
 }
 
-function StarRating({ rating }: { rating: number }) {
-  return <div className="flex items-center gap-0.5 text-amber-400" aria-label={`Rating ${rating} dari 5`}>
-    {Array.from({ length: 5 }, (_, index) => <svg key={index} className={`h-3 w-3 ${index < Math.ceil(rating) ? "fill-current" : "fill-none"}`} viewBox="0 0 20 20" stroke="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z" /></svg>)}
-    <span className="ml-1 font-bold text-ink-muted">{rating.toFixed(1)}</span>
+function StarRating({ rating = 0 }: { rating?: number }) {
+  const safeRating = Number(rating || 0);
+  return <div className="flex items-center gap-0.5 text-amber-400" aria-label={`Rating ${safeRating} dari 5`}>
+    {Array.from({ length: 5 }, (_, index) => <svg key={index} className={`h-3 w-3 ${index < Math.ceil(safeRating) ? "fill-current" : "fill-none"}`} viewBox="0 0 20 20" stroke="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z" /></svg>)}
+    <span className="ml-1 font-bold text-ink-muted">{safeRating.toFixed(1)}</span>
   </div>;
 }
 
@@ -60,7 +61,16 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
     setLoading(true);
     fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`, { credentials: "include" })
       .then(safeJson)
-      .then((data) => setReviewsData(data?.status && Array.isArray(data.reviews) ? data : EMPTY_REVIEWS))
+      .then((data) => {
+        if (data?.status && Array.isArray(data.reviews)) {
+          setReviewsData({
+            summary: data.summary || { averageRating: 0, totalReviews: data.reviews.length },
+            reviews: data.reviews
+          });
+        } else {
+          setReviewsData(EMPTY_REVIEWS);
+        }
+      })
       .catch(() => setReviewsData(EMPTY_REVIEWS))
       .finally(() => setLoading(false));
   };
@@ -86,15 +96,29 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
     if (likedReviewIds.includes(id)) return;
     const nextIds = [...likedReviewIds, id];
     setLikedReviewIds(nextIds);
-    localStorage.setItem("liked_reviews_ids", JSON.stringify(nextIds));
-    setReviewsData((current) => ({ ...current, reviews: current.reviews.map((review) => review.id === id ? { ...review, likesCount: review.likesCount + 1 } : review) }));
+    try { localStorage.setItem("liked_reviews_ids", JSON.stringify(nextIds)); } catch {}
+    setReviewsData((current) => ({
+      ...current,
+      reviews: (current?.reviews || []).map((review) =>
+        review.id === id ? { ...review, likesCount: (review.likesCount || 0) + 1 } : review
+      )
+    }));
     try { playPopSound(); await fetch(`/api/reviews/${id}/like`, { method: "POST", credentials: "include" }); } catch {}
   };
 
-  const { summary, reviews } = reviewsData;
+  const summary = reviewsData?.summary || { averageRating: 0, totalReviews: 0 };
+  const reviews = Array.isArray(reviewsData?.reviews) ? reviewsData.reviews : [];
+
   return <section className="space-y-4 rounded-3xl border border-hairline bg-canvas p-5 shadow-sm">
     <div className="flex items-center justify-between border-b border-hairline pb-3">
-      <div><h3 className="text-sm font-extrabold text-ink">{title}</h3><p className="text-[11px] text-ink-muted">{reviews.length ? `${summary.averageRating.toFixed(1)} dari 5.0 (${summary.totalReviews} ulasan)` : "Belum ada ulasan"}</p></div>
+      <div>
+        <h3 className="text-sm font-extrabold text-ink">{title}</h3>
+        <p className="text-[11px] text-ink-muted">
+          {reviews.length
+            ? `${(Number(summary?.averageRating) || 0).toFixed(1)} dari 5.0 (${summary?.totalReviews || reviews.length} ulasan)`
+            : "Belum ada ulasan"}
+        </p>
+      </div>
       <button onClick={handleWriteReviewClick} className="rounded-full bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 shadow-xs transition-colors hover:bg-amber-400">Beri Ulasan (+500 Koin)</button>
     </div>
     {loading ? <div className="py-6 text-center text-xs text-ink-muted">Memuat ulasan...</div> : !reviews.length ? <div className="rounded-2xl border border-dashed border-hairline bg-parchment/40 p-4 py-8 text-center"><h4 className="text-xs font-bold text-ink">Belum Ada Ulasan Pelanggan</h4></div> : <div className="divide-y divide-hairline">

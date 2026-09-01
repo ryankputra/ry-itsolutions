@@ -1,23 +1,25 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
 import TelegramPopup from "@/components/ui/TelegramPopup";
 import Swal from "@/lib/sweetalert";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
-import { analyzeImei, parseMultipleImeis } from "@/lib/imeiHelper";
-import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
+import { parseMultipleImeis } from "@/lib/imeiHelper";
+import { CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
 import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
-import ProductReviewsSection from "@/components/ui/ProductReviewsSection";
+import { ProductReviewsSection } from "@/components/ui/ProductReviewsSection";
 import { safeJson } from "@/lib/api";
 
-export default function UnblockImeiPage() {
+function UnblockImeiContent() {
   const { user, addToCart, updateBalance } = useApp();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [mounted, setMounted] = useState(false);
   const [packages, setPackages] = useState<any[]>([]);
   const [speedPricing, setSpeedPricing] = useState<any>({});
   const [loading, setLoading] = useState(true);
@@ -43,28 +45,33 @@ export default function UnblockImeiPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
   const [publicCoupons, setPublicCoupons] = useState<CouponItem[]>([]);
-  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
   const [useCoins, setUseCoins] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"qris" | "balance">("qris");
   const [showInstantQris, setShowInstantQris] = useState(false);
-  const [viewMode, setViewMode] = useState<"product" | "form">("product");
-
-  const [orderCreated, setOrderCreated] = useState<any>(null);
-  const [showDirectPayModal, setShowDirectPayModal] = useState(false);
-  const [directPayData, setDirectPayData] = useState<{
-    amount: number;
-    orderTitle: string;
-    existingQrisData: any;
-  } | null>(null);
 
   // WhatsApp Recipient Phone State
   const [targetPhone, setTargetPhone] = useState("");
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams) {
+      const paramImei = searchParams.get("imei") || searchParams.get("q") || "";
+      if (paramImei) {
+        setImei(paramImei);
+      }
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (user?.phone && !targetPhone) {
       setTargetPhone(user.phone);
     }
-  }, [user]);
+  }, [user, targetPhone]);
 
   useEffect(() => {
     Promise.all([
@@ -74,7 +81,13 @@ export default function UnblockImeiPage() {
       fetch('/api/user/announcement', { credentials: 'include' }).then(res => safeJson(res)).catch(() => null),
       fetch('/api/coupons/public', { credentials: 'include' }).then(res => safeJson(res)).catch(() => null)
     ]).then(([pkgData, prcData, statusData, annData, couponData]) => {
-      if (pkgData?.status && Array.isArray(pkgData.data)) setPackages(pkgData.data.filter((p: any) => p.isVisible));
+      if (pkgData?.status && Array.isArray(pkgData.data)) {
+        const visiblePkgs = pkgData.data.filter((p: any) => p && p.isVisible !== false);
+        setPackages(visiblePkgs);
+        if (visiblePkgs.length > 0 && !selectedPkgId) {
+          setSelectedPkgId(visiblePkgs[0].id);
+        }
+      }
       if (prcData?.status && prcData.data) setSpeedPricing(prcData.data);
       if (statusData?.status) {
         const isOpen = (typeof statusData.isOpen === 'boolean') ? statusData.isOpen : (statusData.service_status !== 'closed');
@@ -86,17 +99,20 @@ export default function UnblockImeiPage() {
     });
   }, []);
 
+  const safePackages = Array.isArray(packages) ? packages : [];
   const imeiList = parseMultipleImeis(imei);
   const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
-  const selectedPkg = packages.find(p => p.id === selectedPkgId);
-  const basePrice = selectedPkg ? selectedPkg.price : 0;
-  const speedCost = selectedSpeed && speedPricing[selectedSpeed] ? speedPricing[selectedSpeed] : 0;
+  const selectedPkg = safePackages.find(p => p && p.id === selectedPkgId);
+  const basePrice = selectedPkg ? Number(selectedPkg.price || 0) : 0;
+  const speedCost = selectedSpeed && speedPricing && speedPricing[selectedSpeed] ? Number(speedPricing[selectedSpeed] || 0) : 0;
   const pricePerImei = basePrice + speedCost;
   const rawTotalPrice = pricePerImei * imeiCount;
 
   const discountAmount = appliedCoupon ? Math.min(Number(appliedCoupon.discount_amount || 0), rawTotalPrice) : 0;
   const priceAfterCoupon = Math.max(0, rawTotalPrice - discountAmount);
-  const userCoins = user?.coins || 0;
+  const userCoins = Number(user?.coins || 0);
+  const userBalance = Number(user?.balance || 0);
+
   // Guardrails: Minimal order Rp 50.000, Maks 10%, dan Maksimal Rp 5.000 cap
   const maxCoinsAllowed = priceAfterCoupon >= 50000 ? Math.min(Math.floor(priceAfterCoupon * 0.1), 5000) : 0;
   const coinsDiscount = useCoins && maxCoinsAllowed > 0 ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
@@ -141,14 +157,14 @@ export default function UnblockImeiPage() {
   const handleAddToCart = () => {
     if (!validateFormInputs()) return;
 
-    const pkg = packages.find((p) => p.id === selectedPkgId);
+    const pkg = safePackages.find((p) => p && p.id === selectedPkgId);
     if (!pkg) return;
 
     addToCart({
       packageId: pkg.id,
-      packageName: pkg.name,
+      packageName: pkg.name || `Unblock IMEI ${pkg.duration}`,
       serviceType: "manual_imei",
-      price: pkg.price,
+      price: Number(pkg.price || 0),
       duration: pkg.duration,
       imei: imei.trim(),
       targetPhone: targetPhone || user?.phone || "",
@@ -160,7 +176,7 @@ export default function UnblockImeiPage() {
     Swal.fire({
       icon: "success",
       title: "Masuk Keranjang! 🛒",
-      text: `${pkg.name} berhasil ditambahkan ke keranjang belanja.`,
+      text: `${pkg.name || "Paket Buka IMEI"} berhasil ditambahkan ke keranjang belanja.`,
       showCancelButton: true,
       confirmButtonText: "Lihat Keranjang",
       cancelButtonText: "Lanjut Belanja",
@@ -182,8 +198,8 @@ export default function UnblockImeiPage() {
         credentials: "include",
         body: JSON.stringify({ couponId: coupon.id, coupon_id: coupon.id, code: coupon.code })
       });
-      const data = await res.json();
-      if (res.ok && data.status) {
+      const data = await safeJson(res);
+      if (res.ok && data?.status) {
         Swal.fire({
           icon: "success",
           title: "Voucher Diklaim!",
@@ -192,7 +208,7 @@ export default function UnblockImeiPage() {
           showConfirmButton: false
         });
         setPublicCoupons(prev =>
-          prev.map(c =>
+          (Array.isArray(prev) ? prev : []).map(c =>
             c.id === coupon.id
               ? { ...c, is_claimed: true, total_claimed_count: (c.total_claimed_count || 0) + 1 }
               : c
@@ -200,7 +216,7 @@ export default function UnblockImeiPage() {
         );
         handleApplyCoupon(coupon.code);
       } else {
-        setCouponError(data.message || "Gagal mengklaim voucher.");
+        setCouponError(data?.message || "Gagal mengklaim voucher.");
       }
     } catch (e) {
       setCouponError("Terjadi kesalahan jaringan.");
@@ -221,20 +237,20 @@ export default function UnblockImeiPage() {
         credentials: "include",
         body: JSON.stringify({ code: targetCode, order_amount: rawTotalPrice })
       });
-      const d = await res.json();
-      if (res.ok && d.status && d.data) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status && d?.data) {
         setAppliedCoupon(d.data);
         setCouponCode(d.data.code);
         Swal.fire({
           title: "Voucher Terpasang!",
-          text: `Hemat Rp ${Number(d.data.discount_amount).toLocaleString('id-ID')} dengan kode ${d.data.code}`,
+          text: `Hemat Rp ${Number(d.data.discount_amount || 0).toLocaleString('id-ID')} dengan kode ${d.data.code}`,
           icon: "success",
           timer: 2000,
           showConfirmButton: false
         });
       } else {
         setAppliedCoupon(null);
-        setCouponError(d.message || "Gagal menerapkan kupon promo.");
+        setCouponError(d?.message || "Gagal menerapkan kupon promo.");
       }
     } catch (e) {
       setCouponError("Terjadi kendala saat memeriksa kupon.");
@@ -253,7 +269,7 @@ export default function UnblockImeiPage() {
     e.preventDefault();
     if (!validateFormInputs()) return;
 
-    if (paymentMethod === "qris" || (user && user.balance < totalPrice)) {
+    if (paymentMethod === "qris" || userBalance < totalPrice) {
       setShowInstantQris(true);
       return;
     }
@@ -277,8 +293,8 @@ export default function UnblockImeiPage() {
   };
 
   const executeOrderSubmission = async () => {
-    const selectedPkg = packages.find(p => p.id === selectedPkgId);
-    if (!selectedPkg) return;
+    const pkg = safePackages.find(p => p && p.id === selectedPkgId);
+    if (!pkg) return;
 
     setError("");
     setSubmitting(true);
@@ -286,10 +302,10 @@ export default function UnblockImeiPage() {
     const formData = new FormData();
     formData.append("service_type", "imei");
     formData.append("imei", imei);
-    formData.append("duration", selectedPkg.duration);
+    formData.append("duration", pkg.duration || "1 Bulan");
     formData.append("amount", totalPrice.toString());
-    formData.append("package_id", selectedPkg.id);
-    formData.append("price_key", selectedPkg.id);
+    formData.append("package_id", pkg.id);
+    formData.append("price_key", pkg.id);
     formData.append("speed", selectedSpeed || "regular");
     formData.append("speed_option", selectedSpeed || "regular");
     formData.append("speedPrice", speedCost.toString());
@@ -303,11 +319,11 @@ export default function UnblockImeiPage() {
       formData.append("target_phone", targetPhone);
     }
 
-    files.forEach(f => {
+    (files || []).forEach(f => {
       formData.append("screenshot", f);
       formData.append("image", f);
     });
-    ceirFiles.forEach(f => {
+    (ceirFiles || []).forEach(f => {
       formData.append("ceir_screenshot", f);
       formData.append("ceir_image", f);
     });
@@ -319,8 +335,8 @@ export default function UnblockImeiPage() {
         body: formData,
       });
 
-      const data = await res.json();
-      if (res.ok && data.status) {
+      const data = await safeJson(res);
+      if (res.ok && data?.status) {
         if (typeof data.newBalance === "number") {
           updateBalance(data.newBalance);
         }
@@ -338,10 +354,10 @@ export default function UnblockImeiPage() {
       } else {
         Swal.fire({
           title: "Gagal Membuat Pesanan",
-          text: data.message || "Terjadi kesalahan saat memproses pesanan.",
+          text: data?.message || "Terjadi kesalahan saat memproses pesanan.",
           icon: "error"
         });
-        setError(data.message || "Gagal membuat pesanan.");
+        setError(data?.message || "Gagal membuat pesanan.");
       }
     } catch (err) {
       Swal.fire({
@@ -361,15 +377,26 @@ export default function UnblockImeiPage() {
     { id: 'slow', key: 'imei_speed_slow', label: 'Slow', defaultRange: 'Max kirim 14:00, Selesai 00:00 WIB' }
   ]
     .filter(opt => {
-      const status = speedPricing[`${opt.key}_status`];
+      const status = speedPricing ? speedPricing[`${opt.key}_status`] : null;
       return status === 'visible' || status === 'active';
     })
     .map(opt => ({
       id: opt.id,
       label: opt.label,
-      rangeText: speedPricing[`${opt.key}_range`] || opt.defaultRange,
-      price: parseInt(speedPricing[opt.key]) || 0
+      rangeText: (speedPricing && speedPricing[`${opt.key}_range`]) || opt.defaultRange,
+      price: (speedPricing && parseInt(speedPricing[opt.key])) || 0
     }));
+
+  if (!mounted) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="p-8 rounded-3xl bg-canvas border border-hairline text-center animate-pulse">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-sm font-bold text-ink">Memuat Layanan Buka IMEI...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
@@ -596,16 +623,17 @@ export default function UnblockImeiPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {loading ? (
                   <p className="text-xs text-ink-muted col-span-3">Memuat paket...</p>
-                ) : packages.length === 0 ? (
+                ) : safePackages.length === 0 ? (
                   <p className="text-xs text-ink-muted col-span-3">Belum ada pilihan paket.</p>
                 ) : (
-                  packages.map((opt, idx) => {
+                  safePackages.map((opt, idx) => {
                     const isSelected = selectedPkgId === opt.id;
-                    const isBestSeller = opt.duration.toLowerCase().includes("3 bulan") || idx === 0;
+                    const isBestSeller = (opt.duration || "").toLowerCase().includes("3 bulan") || idx === 0;
+                    const optPrice = Number(opt.price || 0);
 
                     return (
                       <button
-                        key={opt.id}
+                        key={opt.id || idx}
                         type="button"
                         onClick={() => setSelectedPkgId(opt.id)}
                         className={`relative p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
@@ -627,10 +655,10 @@ export default function UnblockImeiPage() {
                         {/* Pricing */}
                         <div>
                           <p className="text-[9px] text-ink-muted line-through">
-                            Rp {(opt.price + 20000).toLocaleString("id-ID")}
+                            Rp {(optPrice + 20000).toLocaleString("id-ID")}
                           </p>
                           <p className="font-black text-xs sm:text-sm text-primary">
-                            Rp {opt.price.toLocaleString("id-ID")}
+                            Rp {optPrice.toLocaleString("id-ID")}
                           </p>
                         </div>
 
@@ -670,7 +698,7 @@ export default function UnblockImeiPage() {
                         </div>
                       )}
                       <div className="text-[10px] font-semibold mt-0.5 text-ink-muted">
-                        {opt.price === 0 ? "Gratis" : `+Rp ${opt.price.toLocaleString("id-ID")}`}
+                        {opt.price === 0 ? "Gratis" : `+Rp ${Number(opt.price).toLocaleString("id-ID")}`}
                       </div>
                     </button>
                   ))}
@@ -864,7 +892,7 @@ export default function UnblockImeiPage() {
                     </div>
                     <div>
                       <h5 className="font-extrabold text-xs text-ink">Saldo Ry</h5>
-                      <p className="text-[10px] text-ink-muted">Rp {(user?.balance || 0).toLocaleString("id-ID")}</p>
+                      <p className="text-[10px] text-ink-muted">Rp {userBalance.toLocaleString("id-ID")}</p>
                     </div>
                   </div>
                   <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-primary" />
@@ -960,5 +988,22 @@ export default function UnblockImeiPage() {
         recipientValue={imei}
       />
     </div>
+  );
+}
+
+export default function UnblockImeiPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto p-6 space-y-6">
+          <div className="p-8 rounded-3xl bg-canvas border border-hairline text-center animate-pulse">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <p className="text-sm font-bold text-ink">Memuat Layanan Buka IMEI...</p>
+          </div>
+        </div>
+      }
+    >
+      <UnblockImeiContent />
+    </Suspense>
   );
 }
