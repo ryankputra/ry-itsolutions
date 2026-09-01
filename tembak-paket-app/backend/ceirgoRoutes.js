@@ -101,42 +101,38 @@ function initCeirgoRoutes() {
 
             const servicesPayload = await ceirgoRes.json();
             const services = normalizeServices(servicesPayload);
-            const detailedServices = [];
+            const detailedServices = await Promise.all(
+                services.map(async (svc) => {
+                    if (!svc?.code) return null;
+                    try {
+                        const detailRes = await fetch(`${CEIRGO_BASE_URL}/api/services/${svc.code}`, {
+                            headers: {
+                                'Authorization': `Bearer ${CEIRGO_API_KEY}`,
+                                'Accept': 'application/json'
+                            },
+                            timeout: 8000
+                        });
 
-            for (const svc of services) {
-                if (!svc?.code) continue;
-                try {
-                    const detailRes = await fetch(`${CEIRGO_BASE_URL}/api/services/${svc.code}`, {
-                        headers: {
-                            'Authorization': `Bearer ${CEIRGO_API_KEY}`,
-                            'Accept': 'application/json'
+                        let detail = null;
+                        if (detailRes.ok) {
+                            detail = await detailRes.json();
                         }
-                    });
-
-                    let detail = null;
-                    if (detailRes.ok) {
-                        detail = await detailRes.json();
-                    } else {
-                        const detailText = await detailRes.text();
-                        console.warn(`[CeirGO admin services] detail fetch failed for ${svc.code}: ${detailRes.status} ${detailText}`);
+                        return {
+                            code: svc.code,
+                            name: svc.name,
+                            modalPrice: readModalPrice(detail, svc),
+                        };
+                    } catch (e) {
+                        return {
+                            code: svc.code,
+                            name: svc.name,
+                            modalPrice: readModalPrice(null, svc),
+                        };
                     }
+                })
+            );
 
-                    detailedServices.push({
-                        code: svc.code,
-                        name: svc.name,
-                        modalPrice: readModalPrice(detail, svc),
-                    });
-                } catch (e) {
-                    detailedServices.push({
-                        code: svc.code,
-                        name: svc.name,
-                        modalPrice: readModalPrice(null, svc),
-                    });
-                    console.warn(`[CeirGO admin services] error for ${svc.code}:`, e.message);
-                }
-            }
-
-            res.json({ status: true, data: detailedServices });
+            res.json({ status: true, data: detailedServices.filter(Boolean) });
         } catch (error) {
             console.error("[API] Error fetching admin CeirGO services:", error.message);
             res.status(500).json({ status: false, message: 'Gagal mengambil daftar layanan CeirGO untuk admin.' });

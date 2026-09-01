@@ -201,7 +201,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => sse.close();
-  }, [user]);
+  }, [user?.id]);
 
   const updateBalance = (balance: number) => {
     setUser(prev => prev ? { ...prev, balance } : null);

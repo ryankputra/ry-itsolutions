@@ -1,5 +1,15 @@
 export const API_URL = '/api';
 
+export function getTelegramInitData(): string {
+  if (typeof window !== 'undefined') {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg && typeof tg.initData === 'string') {
+      return tg.initData;
+    }
+  }
+  return '';
+}
+
 export async function safeJson(res: Response | Promise<Response>): Promise<any> {
   try {
     const resolvedRes = await res;
@@ -12,6 +22,37 @@ export async function safeJson(res: Response | Promise<Response>): Promise<any> 
   } catch (e) {
     return null;
   }
+}
+
+export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  const tgInitData = getTelegramInitData();
+
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  if (tgInitData) {
+    headers['x-telegram-init-data'] = tgInitData;
+  }
+
+  const response = await fetch(url, {
+    credentials: 'include',
+    ...options,
+    headers,
+  });
+
+  const data = await safeJson(response);
+
+  if (!response.ok) {
+    const errorMsg = data?.message || `Request failed with status ${response.status}`;
+    const err: any = new Error(errorMsg);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
 }
 
 export async function fetchUserBalance() {

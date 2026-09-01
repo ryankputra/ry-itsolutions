@@ -25,8 +25,16 @@ const FormData = require('form-data');
 const https = require('https');
 const { ceirgoRoutes, setDependencies, initCeirgoRoutes } = require('./ceirgoRoutes');
 const whatsappBaileys = require('./whatsappBaileys');
+const {
+    escapeHtml,
+    sendTelegramNotification,
+    queueTelegramRequest,
+    validateTelegramInitData,
+    downloadTelegramPhoto,
+    isTelegramAdmin,
+    TELEGRAM_WEBHOOK_SECRET
+} = require('./telegramService');
 const APP_START_TIME = Date.now();
-https.globalAgent.options.rejectUnauthorized = false;
 
 
 // --- TAMBAHKAN KODE DI BAWAH INI ---
@@ -223,6 +231,8 @@ async function initializeDatabase() {
                 claimed_at TEXT NOT NULL
             )`);
             try { await dbRun("ALTER TABLE user_coin_claims ADD COLUMN claim_date TEXT"); } catch (e) { }
+            try { await dbRun("CREATE UNIQUE INDEX IF NOT EXISTS idx_coin_claims_daily ON user_coin_claims(userId, claim_type, claim_date)"); } catch (e) { }
+            try { await dbRun("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_coupon_unique ON user_claimed_coupons(coupon_id, userId)"); } catch (e) { }
 
             // Default pengaturan referral di tabel settings (100% dinamis)
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_enabled', 'true')`);
@@ -425,29 +435,6 @@ async function getEffectiveMaintenanceStatus() {
     } catch (error) {
         console.error("Error getting effective maintenance status:", error);
         return false; // Anggap tidak maintenance jika ada error sistem
-    }
-}
-// --- FUNGSI HELPER ---
-async function sendTelegramNotification(message, target = 'group') {
-    let targetChatId;
-    if (target === 'admin') targetChatId = TELEGRAM_ADMIN_CHAT_ID || TELEGRAM_CHAT_ID || TELEGRAM_GROUP_CHAT_ID;
-    else if (target === 'group') targetChatId = TELEGRAM_GROUP_CHAT_ID || TELEGRAM_CHAT_ID || TELEGRAM_ADMIN_CHAT_ID;
-    else targetChatId = TELEGRAM_CHAT_ID || TELEGRAM_ADMIN_CHAT_ID || TELEGRAM_GROUP_CHAT_ID;
-
-    if (!TELEGRAM_BOT_TOKEN || !targetChatId) {
-        console.warn(`[Telegram] Missing bot token or target chat id for target='${target}'. Skipping send.`);
-        return;
-    }
-
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    try {
-        await fetch(url, {
-            method: 'POST',
-            body: JSON.stringify({ chat_id: targetChatId, text: message, parse_mode: 'HTML' }),
-            headers: { 'Content-Type': 'application/json' }
-        });
-    } catch (error) {
-        console.error(`Error mengirim notifikasi Telegram ke target='${target}' (chat_id=${targetChatId}):`, error.message);
     }
 }
 // MODIFIKASI: Menggunakan sistem cache untuk mengurangi panggilan API
@@ -942,86 +929,6 @@ app.post('/api/purchase/non-otp', isAuthenticated, async (req, res) => {
         res.status(500).json({ status: false, message: 'Terjadi kesalahan internal.' });
     }
 });
-
-
-async function handleMultiPulsaPurchase(e) {
-    const button = e.currentTarget;
-    const feedbackContainer = document.getElementById('multi-pulsa-feedback');
-    if (!button || !feedbackContainer) return;
-
-    if (!phoneAuth.accessToken) {
-        showToast("Silakan verifikasi nomor Anda terlebih dahulu.", true);
-        return;
-    }
-
-    const selectedCheckboxes = document.querySelectorAll('.pulsa-checkbox:checked');
-    const packagesToProcess = Array.from(selectedCheckboxes).map(cb => {
-        const label = cb.nextElementSibling;
-        return { id: cb.dataset.packageId, name: label.querySelector('strong').textContent };
-    });
-
-    if (packagesToProcess.length === 0) {
-        showToast("Pilih minimal satu paket untuk dieksekusi.", true);
-        return;
-    }
-
-    if (!confirm(`Anda akan mengeksekusi ${packagesToProcess.length} paket. Lanjutkan?`)) return;
-
-    button.disabled = true;
-    feedbackContainer.innerHTML = `<h4>Memproses ${packagesToProcess.length} paket...</h4><ul id="realtime-log-list" class="realtime-log"></ul>`;
-    const logList = document.getElementById('realtime-log-list');
-
-    const KMSP_API_DELAY_MS = 16000;
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-    for (const [index, pkg] of packagesToProcess.entries()) {
-        const logItem = document.createElement('li');
-        logItem.className = 'log-item-pending';
-        logItem.innerHTML = `<div class="log-entry-header"><span class="log-icon">⏳</span><span>(${index + 1}/${packagesToProcess.length}) <strong>${pkg.name}</strong></span></div><div class="log-message">Mengirim...</div>`;
-        logList.appendChild(logItem);
-        logItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
-
-        try {
-            // Frontend hanya meminta pembelian dan menunggu hasilnya dari backend
-            const { data } = await apiFetch('/purchase', {
-                method: 'POST',
-                body: { packageId: pkg.id, phone: phoneAuth.phone, access_token: phoneAuth.accessToken, paymentMethod: 'balance' }
-            });
-
-            if (currentUser && typeof data.newBalance === 'number') {
-                currentUser.balance = data.newBalance;
-                updateBalanceUI(currentUser.balance);
-            }
-
-            // Tampilkan pesan sukses dari backend apa adanya
-            logItem.className = 'log-item-success';
-            logItem.querySelector('.log-icon').innerHTML = '✔';
-            logItem.querySelector('.log-message').textContent = data.message;
-            logItem.querySelector('.log-message').className = 'log-message success';
-
-        } catch (error) {
-            // Tangkap pesan error dari backend
-            logItem.className = 'log-item-error';
-            logItem.querySelector('.log-icon').innerHTML = '❌';
-            logItem.querySelector('.log-message').textContent = error.message; // Pesan error dari backend akan berisi "Gagal (Dor Ulang)..."
-            logItem.querySelector('.log-message').className = 'log-message error';
-        }
-
-        if (index < packagesToProcess.length - 1) {
-            const delayMessageDiv = document.createElement('div');
-            delayMessageDiv.className = 'delay-message';
-            delayMessageDiv.textContent = `Menunggu jeda ${KMSP_API_DELAY_MS / 1000} detik...`;
-            logItem.appendChild(delayMessageDiv);
-            logItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            await delay(KMSP_API_DELAY_MS);
-        }
-    }
-
-    feedbackContainer.querySelector('h4').textContent = '✅ Semua Proses Selesai.';
-    showToast('Eksekusi multi paket selesai.', false);
-    button.disabled = false;
-    selectedCheckboxes.forEach(cb => cb.checked = false);
-}
 
 // =======================================================
 // RUTE PENGGUNA
@@ -3198,12 +3105,24 @@ app.post('/api/user/transactions/:id/cancel', isAuthenticated, async (req, res) 
         const trxId = req.params.id;
         const trx = await dbGet("SELECT * FROM transactions WHERE id = ? AND userId = ?", [trxId, req.session.userId]);
         if (!trx) return res.status(404).json({ status: false, message: 'Transaksi tidak ditemukan.' });
-        if (trx.status === 'success' || trx.status === 'completed') {
-            return res.status(400).json({ status: false, message: 'Transaksi yang sudah sukses tidak dapat dibatalkan.' });
+        if (['success', 'completed', 'failed', 'cancelled'].includes(trx.status)) {
+            return res.status(400).json({ status: false, message: `Transaksi sudah berstatus ${trx.status} dan tidak dapat dibatalkan.` });
         }
+
+        const refundAmount = Number(trx.platformFee || trx.originalPrice || 0);
+        await dbRun("BEGIN TRANSACTION");
         await dbRun("UPDATE transactions SET status = 'cancelled', admin_note = 'Dibatalkan oleh pengguna' WHERE id = ?", [trxId]);
-        res.json({ status: true, message: 'Transaksi berhasil dibatalkan.' });
+        if (refundAmount > 0) {
+            await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, req.session.userId]);
+        }
+        await dbRun("COMMIT");
+
+        const updatedUser = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+        sseSend(req.session.userId, 'balance_update', { balance: updatedUser.balance, source: 'transaction_cancelled' });
+
+        res.json({ status: true, message: 'Transaksi berhasil dibatalkan dan saldo telah dikembalikan.', newBalance: updatedUser.balance });
     } catch (err) {
+        await dbRun("ROLLBACK");
         res.status(500).json({ status: false, message: 'Gagal membatalkan transaksi.' });
     }
 });
@@ -4463,11 +4382,11 @@ app.get('/api/reviews', async (req, res) => {
     }
 });
 
-// Check if user is eligible to write a review (Must have at least 1 completed order)
+// Check if user is eligible to write a review (Must have at least 1 completed/success order)
 app.get('/api/reviews/check-eligibility', isAuthenticated, async (req, res) => {
     try {
         const completedOrders = await dbAll(
-            `SELECT id, packageName, service_type, createdAt FROM transactions WHERE userId = ? AND status = 'completed' ORDER BY createdAt DESC`,
+            `SELECT id, packageName, service_type, createdAt FROM transactions WHERE userId = ? AND status IN ('success', 'completed') ORDER BY createdAt DESC`,
             [req.session.userId]
         );
 
@@ -4494,7 +4413,7 @@ app.post('/api/reviews', isAuthenticated, async (req, res) => {
 
         // Verifikasi ketat bahwa pengguna benar-benar memiliki minimal 1 transaksi sukses
         const completedTrx = await dbGet(
-            `SELECT id, packageName, createdAt FROM transactions WHERE userId = ? AND status = 'completed' ORDER BY createdAt DESC LIMIT 1`,
+            `SELECT id, packageName, createdAt FROM transactions WHERE userId = ? AND status IN ('success', 'completed') ORDER BY createdAt DESC LIMIT 1`,
             [req.session.userId]
         );
         if (!completedTrx) {
@@ -4505,7 +4424,7 @@ app.post('/api/reviews', isAuthenticated, async (req, res) => {
         }
 
         const userObj = await dbGet("SELECT name, email, avatar, role, createdAt FROM users WHERE id = ?", [req.session.userId]);
-        const orderCount = await dbGet("SELECT COUNT(*) AS total FROM transactions WHERE userId = ? AND status = 'completed'", [req.session.userId]);
+        const orderCount = await dbGet("SELECT COUNT(*) AS total FROM transactions WHERE userId = ? AND status IN ('success', 'completed')", [req.session.userId]);
         const userName = userObj?.name || req.session.userEmail?.split('@')[0] || 'Pembeli Terverifikasi';
         const userAvatar = userObj?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`;
         const userTotalOrders = Number(orderCount?.total) || 1;
@@ -5261,7 +5180,6 @@ async function sendManualOrderNotification(message, trxId, imageLocalPath) {
 
     try {
         if (imageLocalPath && fs.existsSync(imageLocalPath)) {
-            const FormData = require('form-data');
             const form = new FormData();
             form.append('chat_id', TELEGRAM_ADMIN_CHAT_ID);
             form.append('photo', fs.createReadStream(imageLocalPath));
@@ -5271,17 +5189,16 @@ async function sendManualOrderNotification(message, trxId, imageLocalPath) {
 
             await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
                 method: 'POST',
-                body: form
+                body: form,
+                timeout: 15000
             });
         } else {
-            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-            const body = {
+            queueTelegramRequest('sendMessage', {
                 chat_id: TELEGRAM_ADMIN_CHAT_ID,
                 text: message,
                 parse_mode: 'HTML',
                 reply_markup: getInlineKeyboard(trxId)
-            };
-            await fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+            });
         }
     } catch (e) { console.error('Error sendManualOrderNotification', e); }
 }
@@ -5289,11 +5206,11 @@ async function sendManualOrderNotification(message, trxId, imageLocalPath) {
 async function pollTelegramUpdates() {
     if (!TELEGRAM_BOT_TOKEN) return;
     try {
-        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${tgLastUpdateId + 1}&timeout=30`;
-        const res = await fetch(url);
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${tgLastUpdateId + 1}&timeout=25`;
+        const res = await fetch(url, { timeout: 35000 });
         if (res.ok) {
             const data = await res.json();
-            if (data.ok && data.result.length > 0) {
+            if (data.ok && Array.isArray(data.result) && data.result.length > 0) {
                 for (const update of data.result) {
                     tgLastUpdateId = update.update_id;
                     if (update.callback_query) {
@@ -5306,24 +5223,18 @@ async function pollTelegramUpdates() {
             }
         }
     } catch (e) { }
-    setTimeout(pollTelegramUpdates, 2000);
+    setTimeout(pollTelegramUpdates, 3000);
 }
 
 // Helper function to send Telegram message with Inline Keyboard Buttons
 async function sendTelegramButtons(chatId, text, inlineKeyboard) {
     if (!TELEGRAM_BOT_TOKEN) return;
-    try {
-        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text,
-                parse_mode: 'HTML',
-                reply_markup: { inline_keyboard: inlineKeyboard }
-            })
-        });
-    } catch (e) { console.error('sendTelegramButtons error:', e); }
+    queueTelegramRequest('sendMessage', {
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: inlineKeyboard }
+    });
 }
 
 const telegramReviewMainMenu = [
@@ -5341,7 +5252,13 @@ const telegramReviewMainMenu = [
 async function handleTelegramMessage(msg) {
     if (!msg || !msg.chat) return;
     const chatId = String(msg.chat.id);
+    const fromId = String(msg.from?.id || '');
     const text = (msg.text || msg.caption || '').trim();
+
+    // Verify Admin Authorization for Admin Commands
+    if (!isTelegramAdmin(chatId, fromId)) {
+        return; // Ignore unauthorized messages to prevent spam injection
+    }
 
     // Trigger main menu on /start, /ulasan, /menu, /review
     if (text === '/start' || text === '/menu' || text === '/ulasan' || text === '/review') {
@@ -5365,17 +5282,13 @@ async function handleTelegramMessage(msg) {
 
         let imageUrls = [];
 
-        // Handle Telegram Photo Attachment
+        // Handle Telegram Photo Attachment safely (Downloads to server to prevent bot token leak)
         if (msg.photo && msg.photo.length > 0) {
             try {
                 const largestPhoto = msg.photo[msg.photo.length - 1];
-                const fileRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${largestPhoto.file_id}`);
-                if (fileRes.ok) {
-                    const fileData = await fileRes.json();
-                    if (fileData.ok && fileData.result.file_path) {
-                        const imgUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileData.result.file_path}`;
-                        imageUrls.push(imgUrl);
-                    }
+                const localImgPath = await downloadTelegramPhoto(largestPhoto.file_id);
+                if (localImgPath) {
+                    imageUrls.push(localImgPath);
                 }
             } catch (e) { console.error('Telegram photo download error:', e); }
         }
@@ -5402,7 +5315,7 @@ async function handleTelegramMessage(msg) {
 
         await sendTelegramButtons(
             chatId,
-            `✅ <b>Ulasan Dummy Berhasil Ditambahkan!</b>\n\n👤 <b>Nama:</b> ${nameClean}\n⭐ <b>Rating:</b> ${ratingNum} Bintang\n💬 <b>Komentar:</b> ${comment}\n🛡️ <b>Variasi:</b> ${variation}\n🖼️ <b>Foto Bukti:</b> ${imageUrls.length > 0 ? 'Lampiran Foto Berhasil' : 'Tanpa Foto'}\n\n<i>Ulasan sudah aktif secara otomatis di website Ry-ITSolutions.</i>`,
+            `✅ <b>Ulasan Dummy Berhasil Ditambahkan!</b>\n\n👤 <b>Nama:</b> ${escapeHtml(nameClean)}\n⭐ <b>Rating:</b> ${ratingNum} Bintang\n💬 <b>Komentar:</b> ${escapeHtml(comment)}\n🛡️ <b>Variasi:</b> ${escapeHtml(variation)}\n🖼️ <b>Foto Bukti:</b> ${imageUrls.length > 0 ? 'Foto Disimpan Aman di Server' : 'Tanpa Foto'}\n\n<i>Ulasan sudah aktif secara otomatis di website Ry-ITSolutions.</i>`,
             successButtons
         );
     }
@@ -5410,16 +5323,23 @@ async function handleTelegramMessage(msg) {
 
 async function sendTelegramText(chatId, text) {
     if (!TELEGRAM_BOT_TOKEN) return;
-    try {
-        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
-        });
-    } catch (e) {}
+    queueTelegramRequest('sendMessage', {
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML'
+    });
 }
 
+// Telegram Official Webhook Handler with Secret Token & Immediate Response
 app.post('/api/telegram/webhook', async (req, res) => {
+    const secret = req.headers['x-telegram-bot-api-secret-token'];
+    if (secret && secret !== TELEGRAM_WEBHOOK_SECRET && process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ ok: false, error: 'Unauthorized secret token' });
+    }
+
+    // Acknowledge Telegram immediately to prevent timeout/retries
+    res.json({ ok: true });
+
     try {
         const update = req.body;
         if (update && update.message) {
@@ -5427,17 +5347,24 @@ app.post('/api/telegram/webhook', async (req, res) => {
         } else if (update && update.callback_query) {
             await handleTelegramCallbackQuery(update.callback_query);
         }
-        res.json({ ok: true });
     } catch (e) {
-        res.json({ ok: false });
+        console.error('[Telegram Webhook Async Error]', e);
     }
 });
 
 async function handleTelegramCallbackQuery(cb) {
+    if (!cb || !cb.message) return;
     const data = cb.data;
-    const chatId = cb.message.chat.id;
+    const chatId = String(cb.message.chat?.id || '');
+    const fromId = String(cb.from?.id || '');
     const messageId = cb.message.message_id;
     const cbId = cb.id;
+
+    // Check Admin Authorization
+    if (!isTelegramAdmin(chatId, fromId)) {
+        await answerCallback(cbId, "⛔ Akses Ditolak: Anda bukan Admin.");
+        return;
+    }
 
     // Handle Review Callback Buttons
     if (data.startsWith('tg_rev_')) {
@@ -5482,7 +5409,7 @@ async function handleTelegramCallbackQuery(cb) {
                 const listButtons = [];
 
                 reviews.forEach((r, idx) => {
-                    listMsg += `${idx + 1}. 👤 <b>${r.userName}</b> (★ ${r.rating})\n💬 "${r.comment}"\n🏷️ ${r.variation}\n\n`;
+                    listMsg += `${idx + 1}. 👤 <b>${escapeHtml(r.userName)}</b> (★ ${r.rating})\n💬 "${escapeHtml(r.comment)}"\n🏷️ ${escapeHtml(r.variation)}\n\n`;
                     listButtons.push([
                         { text: `🗑️ Hapus #${idx + 1} (${r.userName})`, callback_data: `tg_rev_del_${r.id}` }
                     ]);
@@ -5509,7 +5436,7 @@ async function handleTelegramCallbackQuery(cb) {
                 await answerCallback(cbId, "Ulasan terbaru berhasil dihapus!");
                 await sendTelegramButtons(
                     chatId,
-                    `🗑️ <b>Ulasan Terbaru Berhasil Dihapus!</b>\n\n👤 <b>Nama:</b> ${latest.userName}\n💬 "${latest.comment}"`,
+                    `🗑️ <b>Ulasan Terbaru Berhasil Dihapus!</b>\n\n👤 <b>Nama:</b> ${escapeHtml(latest.userName)}\n💬 "${escapeHtml(latest.comment)}"`,
                     telegramReviewMainMenu
                 );
             } catch (e) {
@@ -5524,7 +5451,7 @@ async function handleTelegramCallbackQuery(cb) {
                 const revObj = await dbGet("SELECT userName FROM reviews WHERE id = ?", [revId]);
                 await dbRun("DELETE FROM reviews WHERE id = ?", [revId]);
                 await answerCallback(cbId, "Ulasan berhasil dihapus!");
-                await sendTelegramText(chatId, `🗑️ <b>Ulasan milik "${revObj?.userName || revId}" berhasil dihapus dari website.</b>`);
+                await sendTelegramText(chatId, `🗑️ <b>Ulasan milik "${escapeHtml(revObj?.userName || revId)}" berhasil dihapus dari website.</b>`);
             } catch (e) {
                 await answerCallback(cbId, "Gagal menghapus ulasan.");
             }
@@ -5543,10 +5470,9 @@ async function handleTelegramCallbackQuery(cb) {
                 await answerCallback(cbId, "Transaksi tidak ditemukan.");
                 return;
             }
-            if (trx.status === 'success' || trx.status === 'failed') {
-                // If it's already final, prevent changes to prevent double refund bugs
+            if (['success', 'failed'].includes(trx.status)) {
                 if (trx.status !== status) {
-                    await answerCallback(cbId, `Transaksi sudah final (${trx.status}). Tidak bisa diubah lagi via bot.`);
+                    await answerCallback(cbId, `Transaksi sudah final (${trx.status}). Tidak bisa diubah lagi.`);
                     return;
                 }
             }
@@ -5557,32 +5483,33 @@ async function handleTelegramCallbackQuery(cb) {
             if (status === 'pending') apiRes = 'Menunggu Proses';
             if (status === 'processing') apiRes = 'Sedang diproses';
 
+            await dbRun("BEGIN TRANSACTION");
             await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ? WHERE id = ?",
-                [status, `Status diperbarui menjadi ${status.toUpperCase()}`, apiRes, trxId]);
+                [status, `Status diperbarui menjadi ${status.toUpperCase()} via Telegram`, apiRes, trxId]);
 
-            // Only refund if it is transitioning to failed from pending/processing
-            if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing')) {
-                await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [trx.platformFee, trx.userId]);
+            // Refund atomically if failed and previously was pending/processing
+            if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing' || trx.status === 'menunggu_saldo_provider')) {
+                const refundAmount = Number(trx.platformFee || trx.originalPrice || 0);
+                if (refundAmount > 0) {
+                    await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, trx.userId]);
+                }
             }
+            await dbRun("COMMIT");
 
             await answerCallback(cbId, `Pesanan ${trxId} diubah menjadi ${status}!`);
 
-            const originalText = cb.message.text.split('\n\n<b>Status Diupdate:')[0];
+            const originalText = (cb.message.text || '').split('\n\n<b>Status Diupdate:')[0];
             const isFinal = (status === 'success' || status === 'failed');
-            const editUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`;
-            await fetch(editUrl, {
-                method: 'POST',
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    message_id: messageId,
-                    text: originalText + `\n\n<b>Status Diupdate: ${status.toUpperCase()}</b>`,
-                    parse_mode: 'HTML',
-                    reply_markup: isFinal ? { inline_keyboard: [] } : getInlineKeyboard(trxId)
-                }),
-                headers: { 'Content-Type': 'application/json' }
+            queueTelegramRequest('editMessageText', {
+                chat_id: chatId,
+                message_id: messageId,
+                text: originalText + `\n\n<b>Status Diupdate: ${status.toUpperCase()}</b>`,
+                parse_mode: 'HTML',
+                reply_markup: isFinal ? { inline_keyboard: [] } : getInlineKeyboard(trxId)
             });
 
         } catch (e) {
+            await dbRun("ROLLBACK");
             console.error('Callback error', e);
             await answerCallback(cbId, "Terjadi kesalahan server.");
         }
@@ -5590,11 +5517,9 @@ async function handleTelegramCallbackQuery(cb) {
 }
 
 async function answerCallback(callbackQueryId, text) {
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
-    await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
-        headers: { 'Content-Type': 'application/json' }
+    queueTelegramRequest('answerCallbackQuery', {
+        callback_query_id: callbackQueryId,
+        text
     });
 }
 // =======================================================
@@ -5784,6 +5709,11 @@ app.get('/api/admin/deploy-status', isAuthenticated, isAdmin, (req, res) => {
 });
 
 app.listen(PORT, () => {
-    pollTelegramUpdates();
+    if (process.env.TELEGRAM_USE_POLLING === 'true') {
+        pollTelegramUpdates();
+        console.log(`[Telegram] Polling updates mode active.`);
+    } else {
+        console.log(`[Telegram] Webhook mode active on /api/telegram/webhook (Polling disabled to avoid conflict).`);
+    }
     console.log(`🚀 Server 100% Lengkap dengan SQLite3 berjalan di http://localhost:${PORT}`);
 });
