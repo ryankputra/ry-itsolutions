@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/Input";
 import Swal from "@/lib/sweetalert";
 import { useApp } from "@/lib/store";
 
+import { safeJson } from "@/lib/api";
+
 export default function UserTicketsPage() {
   const { user } = useApp();
   const [tickets, setTickets] = useState<any[]>([]);
@@ -23,10 +25,15 @@ export default function UserTicketsPage() {
     setLoading(true);
     try {
       const res = await fetch("/api/user/tickets", { credentials: "include" });
-      const data = await res.json();
-      if (data.status && Array.isArray(data.data)) setTickets(data.data);
+      const data = await safeJson(res);
+      if (data?.status && Array.isArray(data.data)) {
+        setTickets(data.data);
+      } else {
+        setTickets([]);
+      }
     } catch (e) {
       console.error(e);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -39,8 +46,8 @@ export default function UserTicketsPage() {
   const loadTicketDetail = async (id: string) => {
     try {
       const res = await fetch(`/api/tickets/${id}`, { credentials: "include" });
-      const data = await res.json();
-      if (data.status && data.data) {
+      const data = await safeJson(res);
+      if (data?.status && data.data) {
         setActiveTicket(data.data.ticket);
         setMessages(Array.isArray(data.data.messages) ? data.data.messages : []);
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);

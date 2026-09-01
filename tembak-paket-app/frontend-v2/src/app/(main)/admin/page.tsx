@@ -421,11 +421,17 @@ export default function AdminPage() {
     setLoadingCoupons(true);
     try {
       const res = await fetch('/api/admin/coupons', { credentials: 'include' });
-      if (res.ok) {
-        const d = await res.json();
-        if (d.status) setCoupons(d.data || []);
+      const d = await safeJson(res);
+      if (d?.status && Array.isArray(d.data)) {
+        setCoupons(d.data);
+      } else {
+        setCoupons([]);
       }
-    } catch (e) { } finally { setLoadingCoupons(false); }
+    } catch (e) {
+      setCoupons([]);
+    } finally {
+      setLoadingCoupons(false);
+    }
   };
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
@@ -507,9 +513,9 @@ export default function AdminPage() {
     setLoadingRefSettings(true);
     try {
       const res = await fetch('/api/admin/referral-settings', { credentials: 'include' });
-      if (res.ok) {
-        const d = await res.json();
-        if (d.status) setRefSettings(d.data || {});
+      const d = await safeJson(res);
+      if (d?.status && d.data) {
+        setRefSettings(d.data);
       }
     } catch (e) { } finally { setLoadingRefSettings(false); }
   };
@@ -778,22 +784,34 @@ export default function AdminPage() {
     setLoadingPkgs(true);
     try {
       const res = await fetch('/api/admin/packages', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status) setPackages(data.data);
+      const data = await safeJson(res);
+      if (data?.status && Array.isArray(data.data)) {
+        setPackages(data.data);
+      } else {
+        setPackages([]);
       }
-    } finally { setLoadingPkgs(false); }
+    } catch (e) {
+      setPackages([]);
+    } finally {
+      setLoadingPkgs(false);
+    }
   };
 
   const loadUsers = async () => {
     setLoadingUsers(true);
     try {
       const res = await fetch('/api/admin/users', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status) setUsers(data.data);
+      const data = await safeJson(res);
+      if (data?.status && Array.isArray(data.data)) {
+        setUsers(data.data);
+      } else {
+        setUsers([]);
       }
-    } finally { setLoadingUsers(false); }
+    } catch (e) {
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
   // Initial Load Metrics & Data
@@ -804,34 +822,50 @@ export default function AdminPage() {
       loadAdminTickets();
 
       fetch('/api/admin/kmsp-balance', { credentials: 'include' })
-        .then(r => r.json())
-        .then(d => setProviderBalances(prev => ({ ...prev, kmsp: d.data?.balance != null ? Number(d.data.balance) : null })))
+        .then(r => safeJson(r))
+        .then(d => {
+          const b = d?.data?.balance ?? d?.balance;
+          if (b != null) setProviderBalances(prev => ({ ...prev, kmsp: Number(b) }));
+        })
         .catch(() => { });
 
       fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
-        .then(r => r.json())
-        .then(d => setProviderBalances(prev => ({ ...prev, ceirgo: d.data?.balance != null ? Number(d.data.balance) : null })))
+        .then(r => safeJson(r))
+        .then(d => {
+          const b = d?.data?.balance ?? d?.balance;
+          if (b != null) setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
+        })
         .catch(() => { });
 
-      fetch('/api/admin/payment-gateway').then(r => r.json()).then(d => {
-        if (d.status) setPaymentGateway(d.data.gateway);
-      }).catch(() => { });
+      fetch('/api/admin/payment-gateway')
+        .then(r => safeJson(r))
+        .then(d => {
+          if (d?.status && d.data?.gateway) setPaymentGateway(d.data.gateway);
+        }).catch(() => { });
 
-      fetch('/api/admin/menu-settings').then(r => r.json()).then(d => {
-        if (d.status) setShowBeliPaket(d.data.showBeliPaket);
-      }).catch(() => { });
+      fetch('/api/admin/menu-settings')
+        .then(r => safeJson(r))
+        .then(d => {
+          if (d?.status && d.data) setShowBeliPaket(Boolean(d.data.showBeliPaket));
+        }).catch(() => { });
 
-      fetch('/api/admin/whatsapp-settings', { credentials: 'include' }).then(r => r.json()).then(d => {
-        if (d.status && d.data) {
-          setWaToken(d.data.token || '');
-          setWaUrl(d.data.url || 'https://api.fonnte.com/send');
-          setWaAutoSend(Boolean(d.data.autoSend));
-        }
-      }).catch(() => { });
+      fetch('/api/admin/whatsapp-settings', { credentials: 'include' })
+        .then(r => safeJson(r))
+        .then(d => {
+          if (d?.status && d.data) {
+            setWaToken(d.data.token || '');
+            setWaUrl(d.data.url || 'https://api.fonnte.com/send');
+            setWaAutoSend(Boolean(d.data.autoSend));
+          }
+        }).catch(() => { });
 
       fetch('/api/admin/ceirgo-deposit-providers', { credentials: 'include' })
-        .then(r => r.json())
-        .then(d => { if (d.status) setCeirgoDepositProviders(d.data); })
+        .then(r => safeJson(r))
+        .then(d => {
+          if (d?.status && Array.isArray(d.data)) {
+            setCeirgoDepositProviders(d.data);
+          }
+        })
         .catch(() => { });
 
       loadGopayStatus();

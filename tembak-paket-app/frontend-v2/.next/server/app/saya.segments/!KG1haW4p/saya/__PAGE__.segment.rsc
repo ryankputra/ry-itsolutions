@@ -3,7 +3,7 @@
 3:I[969,["320","static/chunks/41ade5dc-f679e2ae3b025ad1.js","500","static/chunks/500-c99b8dfd3de17c86.js","822","static/chunks/822-f57dbe0d3ac85465.js","217","static/chunks/217-ed29a8b90fc8a063.js","398","static/chunks/app/(main)/saya/page-0b5e6a8ba5023aee.js"],"default"]
 6:I[484,[],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"-3rtTj0q6RgafcnnvNfym"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"Azzd0KeyGI44DBpxYPnnO"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

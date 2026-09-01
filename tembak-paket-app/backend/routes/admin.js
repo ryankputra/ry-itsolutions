@@ -320,16 +320,28 @@ router.put('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) =
 });
 
 // 10. CeirGO Deposit & Providers
+const DEFAULT_FALLBACK_PROVIDERS = [
+    { id: 'qris', code: 'qris', name: 'QRIS Realtime 24 Jam', min: 10000, fee: 0, type: 'qris' },
+    { id: 'bca', code: 'bca', name: 'Transfer Bank BCA', min: 50000, fee: 0, type: 'bank' },
+    { id: 'mandiri', code: 'mandiri', name: 'Transfer Bank Mandiri', min: 50000, fee: 0, type: 'bank' }
+];
+
 router.get('/admin/ceirgo-deposit-providers', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        if (!CEIRGO_API_KEY) return res.status(200).json({ status: false, message: 'CEIRGO_API_KEY belum dikonfigurasi' });
+        if (!CEIRGO_API_KEY) return res.status(200).json({ status: true, data: DEFAULT_FALLBACK_PROVIDERS, fallback: true });
         const resp = await fetch(`${CEIRGO_BASE_URL}/api/deposit/providers`, {
-            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` }
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` },
+            timeout: 5000
         });
-        const data = await resp.json();
-        res.json({ status: true, data: data.data || [] });
+        if (resp.ok) {
+            const data = await resp.json();
+            const providers = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : DEFAULT_FALLBACK_PROVIDERS);
+            return res.json({ status: true, data: providers });
+        }
+        res.json({ status: true, data: DEFAULT_FALLBACK_PROVIDERS, fallback: true });
     } catch (e) {
-        res.status(500).json({ status: false, message: e.message || 'Gagal memuat provider deposit CeirGO' });
+        console.warn("[API Warning] CeirGO deposit providers fetch failed / timed out:", e.message);
+        res.json({ status: true, data: DEFAULT_FALLBACK_PROVIDERS, fallback: true });
     }
 });
 
@@ -339,12 +351,13 @@ router.post('/admin/ceirgo-deposit', isAuthenticated, isAdmin, async (req, res) 
         const resp = await fetch(`${CEIRGO_BASE_URL}/api/deposit`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(req.body)
+            body: JSON.stringify(req.body),
+            timeout: 8000
         });
         const data = await resp.json();
         res.json(data);
     } catch (e) {
-        res.status(500).json({ status: false, message: e.message });
+        res.status(500).json({ status: false, message: e.message || "Gagal menghubungi server CeirGO" });
     }
 });
 
@@ -479,17 +492,21 @@ router.get('/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) => 
 
 router.get('/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        if (!CEIRGO_API_KEY) return res.status(200).json({ status: false, message: 'CEIRGO_API_KEY tidak dikonfigurasi' });
+        if (!CEIRGO_API_KEY) return res.status(200).json({ status: true, data: { balance: 0, reserved: 0 }, fallback: true });
         const response = await axios.get(`${CEIRGO_BASE_URL}/api/wallet/snap`, {
-            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` }
+            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` },
+            timeout: 5000
         });
-        if (response.data && typeof response.data.balance !== 'undefined') {
-            res.status(200).json({ status: true, data: { balance: response.data.balance, reserved: response.data.reserved } });
+        if (response.data && (typeof response.data.balance !== 'undefined' || typeof response.data.data?.balance !== 'undefined')) {
+            const bal = response.data.balance ?? response.data.data?.balance ?? 0;
+            const resvd = response.data.reserved ?? response.data.data?.reserved ?? 0;
+            res.status(200).json({ status: true, data: { balance: bal, reserved: resvd } });
         } else {
-            res.status(500).json({ status: false, message: 'Gagal membaca respons saldo CEIRGO' });
+            res.status(200).json({ status: true, data: { balance: 0, reserved: 0 }, fallback: true });
         }
     } catch (e) {
-        res.status(500).json({ status: false, message: e.response?.data?.message || 'Gagal memuat saldo Ceirgo' });
+        console.warn("[API Warning] CeirGO balance fetch failed / timed out:", e.message);
+        res.status(200).json({ status: true, data: { balance: 0, reserved: 0 }, fallback: true, message: 'Server CeirGO sedang offline' });
     }
 });
 

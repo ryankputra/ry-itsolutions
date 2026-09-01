@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, safeJson } from "@/lib/api";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
@@ -38,15 +38,18 @@ function HistoryContent() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch(`${API_URL}/user/transactions`, { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status && Array.isArray(data.data)) {
-          setHistory(data.data);
-        }
+      const res = await fetch("/api/user/transactions", { credentials: "include" });
+      const data = await safeJson(res);
+      if (data?.status && Array.isArray(data.data)) {
+        setHistory(data.data);
+      } else if (data?.status && Array.isArray(data.transactions)) {
+        setHistory(data.transactions);
+      } else {
+        setHistory([]);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching transactions:", err);
+      setHistory([]);
     } finally {
       setLoading(false);
     }
