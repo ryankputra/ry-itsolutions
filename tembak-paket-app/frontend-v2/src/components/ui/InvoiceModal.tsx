@@ -236,7 +236,9 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         index: r.no,
         date: r.tanggal,
         action: r.action,
-        note: r.note
+        note: r.note,
+        imsi: r.imsi,
+        imei: r.imei
       })),
       rawNote: parsed.rawText || "Data IMEI telah berhasil diverifikasi oleh server CEIR.",
       operators: "Semua Operator Seluler (Telkomsel, Indosat, XL, Smartfren, Tri)"
@@ -504,7 +506,16 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                             <td className="py-1.5 px-2.5 font-bold text-slate-500">{log.index}</td>
                             <td className="py-1.5 px-2.5 font-mono text-[10px] text-slate-600">{log.date}</td>
                             <td className="py-1.5 px-2.5 font-mono font-bold text-[10px] text-emerald-800">{log.action}</td>
-                            <td className="py-1.5 px-2.5 text-slate-700">{log.note}</td>
+                            <td className="py-1.5 px-2.5 text-slate-700">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span>{log.note}</span>
+                                {log.imsi && (
+                                  <span className="font-mono text-[9px] text-emerald-900 bg-emerald-100/80 px-1 py-0.5 rounded border border-emerald-300">
+                                    IMSI: {log.imsi}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>

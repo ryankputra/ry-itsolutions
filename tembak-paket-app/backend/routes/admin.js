@@ -15,6 +15,7 @@ const { db, dbGet, dbAll, dbRun } = require('../config/db');
 const { isAuthenticated, isAdmin, sseSend, sseBroadcast } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
 const { getKmspAdminBalance } = require('./transactions');
+const ceirgoClient = require('../ceirgoClient');
 
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
@@ -220,31 +221,31 @@ router.post('/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async 
         }
 
         const ceirRef = trx.accessToken || trx.id;
-        const ceirRes = await fetch(`${CEIRGO_BASE_URL}/api/order?trx_id=${encodeURIComponent(ceirRef)}`, {
-            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}`, 'Accept': 'application/json' },
-            timeout: 15000
-        });
+        const ceirRes = await ceirgoClient.getOrderDetail(ceirRef);
 
-        if (!ceirRes.ok) {
-            return res.status(502).json({ status: false, message: `CeirGO API error: ${ceirRes.status}` });
+        if (!ceirRes.status) {
+            return res.status(502).json({ status: false, message: `CeirGO API error: ${ceirRes.message || 'Gagal mengecek order'}` });
         }
 
-        const ceirData = await ceirRes.json();
+        const ceirData = ceirRes.data || ceirRes.fullResponse || {};
         let newStatus = trx.status;
         let note = trx.admin_note || '';
 
-        if (ceirData.status === 'success' || ceirData.data?.status === 'success') {
+        const remoteStatus = (ceirData.status || ceirData.order_status || '').toLowerCase();
+        if (remoteStatus === 'success' || remoteStatus === 'completed' || remoteStatus === 'succeeded') {
             newStatus = 'success';
-            note = ceirData.data?.result || 'Sukses diverifikasi dari CeirGO';
-        } else if (ceirData.status === 'failed' || ceirData.data?.status === 'failed') {
+            note = ceirData.result || ceirData.note || 'Sukses diverifikasi dari CeirGO';
+        } else if (remoteStatus === 'failed' || remoteStatus === 'cancelled' || remoteStatus === 'rejected') {
             newStatus = 'failed';
-            note = ceirData.data?.reason || 'Gagal dari CeirGO';
+            note = ceirData.reason || ceirData.error || 'Gagal dari CeirGO';
+        } else if (remoteStatus === 'processing' || remoteStatus === 'paid') {
+            newStatus = 'processing';
         }
 
         await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ? WHERE id = ?",
-            [newStatus, note, JSON.stringify(ceirData.data || ceirData), trxId]);
+            [newStatus, note, JSON.stringify(ceirData), trxId]);
 
-        res.json({ status: true, message: "Status pesanan berhasil disinkronkan dengan CeirGO.", data: { status: newStatus, note } });
+        res.json({ status: true, message: "Status pesanan berhasil disinkronkan dengan CeirGO.", data: { status: newStatus, note, ceirData } });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message || "Gagal melakukan recheck CeirGO." });
     }
@@ -328,36 +329,59 @@ const DEFAULT_FALLBACK_PROVIDERS = [
 
 router.get('/admin/ceirgo-deposit-providers', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        if (!CEIRGO_API_KEY) return res.status(200).json({ status: true, data: DEFAULT_FALLBACK_PROVIDERS, fallback: true });
-        const resp = await fetch(`${CEIRGO_BASE_URL}/api/deposit/providers`, {
-            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}` },
-            timeout: 5000
-        });
-        if (resp.ok) {
-            const data = await resp.json();
-            const providers = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : DEFAULT_FALLBACK_PROVIDERS);
-            return res.json({ status: true, data: providers });
+        const resp = await ceirgoClient.getDepositProviders();
+        if (resp.status && Array.isArray(resp.data)) {
+            return res.json({ status: true, data: resp.data });
         }
         res.json({ status: true, data: DEFAULT_FALLBACK_PROVIDERS, fallback: true });
     } catch (e) {
-        console.warn("[API Warning] CeirGO deposit providers fetch failed / timed out:", e.message);
+        console.warn("[API Warning] CeirGO deposit providers fetch failed:", e.message);
         res.json({ status: true, data: DEFAULT_FALLBACK_PROVIDERS, fallback: true });
+    }
+});
+
+router.get('/admin/ceirgo-deposit-provider/:code', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const resp = await ceirgoClient.getDepositProviderDetail(req.params.code);
+        res.json(resp);
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
     }
 });
 
 router.post('/admin/ceirgo-deposit', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        if (!CEIRGO_API_KEY) return res.status(400).json({ status: false, message: 'CEIRGO_API_KEY belum dikonfigurasi' });
-        const resp = await fetch(`${CEIRGO_BASE_URL}/api/deposit`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${CEIRGO_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(req.body),
-            timeout: 8000
-        });
-        const data = await resp.json();
-        res.json(data);
+        const resp = await ceirgoClient.createDeposit(req.body);
+        res.json(resp);
     } catch (e) {
         res.status(500).json({ status: false, message: e.message || "Gagal menghubungi server CeirGO" });
+    }
+});
+
+router.get('/admin/ceirgo-deposits', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const resp = await ceirgoClient.getDeposits(req.query);
+        res.json(resp);
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.get('/admin/ceirgo-deposit/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const resp = await ceirgoClient.getDepositDetail(req.params.id);
+        res.json(resp);
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.get('/admin/ceirgo-orders', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const resp = await ceirgoClient.getOrders(req.query);
+        res.json(resp);
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
     }
 });
 
@@ -518,49 +542,16 @@ router.post('/admin/announcement', isAuthenticated, isAdmin, async (req, res) =>
     }
 });
 
-// Helper function to fetch live CeirGO balance
+// Helper function to fetch live CeirGO profile and balance via GET /api/me
 async function getCeirgoAdminBalance() {
     try {
-        const apiKey = process.env.CEIRGO_API_KEY || CEIRGO_API_KEY;
-        const baseUrl = process.env.CEIRGO_BASE_URL || CEIRGO_BASE_URL || 'https://ceirgo.my.id';
-        const accountId = process.env.CEIRGO_ACCOUNT_ID || '';
-
-        if (!apiKey) return 0;
-
-        const headers = {
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'application/json'
-        };
-        if (accountId) headers['x-account-id'] = accountId;
-
-        // Try /api/wallet/snap
-        try {
-            const resp = await axios.get(`${baseUrl}/api/wallet/snap`, { headers, timeout: 5000 });
-            if (resp.data) {
-                const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
-                if (b != null) return Number(b);
-            }
-        } catch (e1) {
-            // fallback to /api/balance
-            try {
-                const resp = await axios.get(`${baseUrl}/api/balance`, { headers, timeout: 5000 });
-                if (resp.data) {
-                    const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
-                    if (b != null) return Number(b);
-                }
-            } catch (e2) {
-                // fallback to /api/wallet
-                try {
-                    const resp = await axios.get(`${baseUrl}/api/wallet`, { headers, timeout: 5000 });
-                    if (resp.data) {
-                        const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
-                        if (b != null) return Number(b);
-                    }
-                } catch (e3) {}
-            }
+        const profileRes = await ceirgoClient.getProfile();
+        if (profileRes.status && typeof profileRes.balance === 'number') {
+            return profileRes.balance;
         }
         return 0;
     } catch (e) {
+        console.warn("[API Warning] getCeirgoAdminBalance failed:", e.message);
         return 0;
     }
 }
@@ -577,8 +568,21 @@ router.get('/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) => 
 
 router.get('/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const bal = await getCeirgoAdminBalance();
-        res.status(200).json({ status: true, data: { balance: bal, ceirgoBalance: bal, reserved: 0 }, ceirgoBalance: bal, balance: bal });
+        const profileRes = await ceirgoClient.getProfile();
+        const bal = profileRes.status ? profileRes.balance : 0;
+        res.status(200).json({
+            status: true,
+            data: {
+                balance: bal,
+                ceirgoBalance: bal,
+                reserved: 0,
+                profile: profileRes.profile || null,
+                role: profileRes.role || null,
+                permissions: profileRes.permissions || []
+            },
+            ceirgoBalance: bal,
+            balance: bal
+        });
     } catch (e) {
         console.warn("[API Warning] CeirGO balance fetch failed:", e.message);
         res.status(200).json({ status: true, data: { balance: 0, ceirgoBalance: 0, reserved: 0 }, ceirgoBalance: 0, balance: 0, fallback: true });
@@ -588,7 +592,8 @@ router.get('/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) =
 router.get('/admin/provider-balances', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const kmspBal = await getKmspAdminBalance();
-        const ceirgoBal = await getCeirgoAdminBalance();
+        const profileRes = await ceirgoClient.getProfile();
+        const ceirgoBal = profileRes.status ? profileRes.balance : 0;
         res.status(200).json({
             status: true,
             data: {
@@ -596,7 +601,10 @@ router.get('/admin/provider-balances', isAuthenticated, isAdmin, async (req, res
                 ceirgoBalance: ceirgoBal,
                 kmsp: kmspBal,
                 ceirgo: ceirgoBal,
-                balance: ceirgoBal
+                balance: ceirgoBal,
+                profile: profileRes.profile || null,
+                role: profileRes.role || null,
+                permissions: profileRes.permissions || []
             },
             kmspBalance: kmspBal,
             ceirgoBalance: ceirgoBal

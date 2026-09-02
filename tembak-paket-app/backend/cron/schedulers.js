@@ -13,6 +13,7 @@ const { sseSend } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
 const { getKmspAdminBalance } = require('../routes/transactions');
 const { getEffectiveMaintenanceStatus } = require('../routes/auth');
+const ceirgoClient = require('../ceirgoClient');
 
 const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -138,27 +139,25 @@ function initSchedulers() {
     cron.schedule('*/2 * * * *', async () => {
         try {
             const apiKey = process.env.CEIRGO_API_KEY;
-            const baseUrl = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
             if (!apiKey) return;
 
             const processingOrders = await dbAll("SELECT * FROM transactions WHERE service_type = 'ceir' AND status = 'processing' AND accessToken IS NOT NULL LIMIT 10");
             for (const order of processingOrders) {
                 try {
-                    const ceirRes = await fetch(`${baseUrl}/api/order?trx_id=${encodeURIComponent(order.accessToken)}`, {
-                        headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
-                        timeout: 10000
-                    });
-                    if (ceirRes.ok) {
-                        const ceirData = await ceirRes.json();
-                        if (ceirData.status === 'success' || ceirData.data?.status === 'success') {
-                            const note = ceirData.data?.result || 'Sukses diverifikasi dari CeirGO';
+                    const ceirRes = await ceirgoClient.getOrderDetail(order.accessToken || order.id);
+                    if (ceirRes.status && ceirRes.data) {
+                        const ceirData = ceirRes.data;
+                        const remoteStatus = (ceirData.status || ceirData.order_status || '').toLowerCase();
+
+                        if (remoteStatus === 'success' || remoteStatus === 'completed' || remoteStatus === 'succeeded') {
+                            const note = typeof ceirData.result === 'string' ? ceirData.result : (ceirData.note || 'Sukses diverifikasi dari CeirGO');
                             await dbRun("UPDATE transactions SET status = 'success', admin_note = ?, api_response = ? WHERE id = ?",
-                                [note, JSON.stringify(ceirData.data || ceirData), order.id]);
+                                [note, JSON.stringify(ceirData.result || ceirData), order.id]);
                             sseSend(order.userId, 'transaction_update', { id: order.id, status: 'success', note });
-                        } else if (ceirData.status === 'failed' || ceirData.data?.status === 'failed') {
-                            const reason = ceirData.data?.reason || 'Gagal dari server CeirGO';
+                        } else if (remoteStatus === 'failed' || remoteStatus === 'cancelled' || remoteStatus === 'rejected') {
+                            const reason = ceirData.reason || ceirData.error || 'Gagal dari server CeirGO';
                             await dbRun("UPDATE transactions SET status = 'failed', admin_note = ?, api_response = ? WHERE id = ?",
-                                [reason, JSON.stringify(ceirData.data || ceirData), order.id]);
+                                [reason, JSON.stringify(ceirData.result || ceirData), order.id]);
                             // Auto-refund user balance
                             const refundAmount = Number(order.platformFee || order.originalPrice || 0);
                             if (refundAmount > 0) {

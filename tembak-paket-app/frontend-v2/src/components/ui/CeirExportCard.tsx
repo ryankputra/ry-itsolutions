@@ -255,7 +255,19 @@ export function CeirExportCard({
                       </span>
                     </td>
                     <td className="py-2.5 px-3 text-slate-800 text-[11px] font-medium leading-relaxed">
-                      {row.note}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span>{row.note}</span>
+                        {row.imsi && (
+                          <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                            IMSI: {row.imsi}
+                          </span>
+                        )}
+                        {row.imei && row.imei !== imei && (
+                          <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                            IMEI: {row.imei}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

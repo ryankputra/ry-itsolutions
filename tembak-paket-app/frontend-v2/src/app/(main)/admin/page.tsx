@@ -3727,22 +3727,40 @@ export default function AdminPage() {
               </>
             ) : (
               <div className="space-y-4 text-center">
-                <div className="p-4 bg-green-50 text-green-800 rounded-xl border border-green-200">
-                  <p className="text-sm font-semibold mb-1">Total yang harus dibayar:</p>
-                  <p className="text-2xl font-black text-green-600">Rp {ceirgoPaymentData.total_pay?.toLocaleString('id-ID')}</p>
+                <div className="p-4 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200">
+                  <p className="text-xs font-semibold mb-1 text-emerald-700">Total Tagihan Bayar Mutlak:</p>
+                  <p className="text-2xl font-black text-emerald-700 font-mono">
+                    Rp {(ceirgoPaymentData.total_pay ?? ceirgoPaymentData.amounts?.total_pay ?? ceirgoPaymentData.amount ?? 0).toLocaleString('id-ID')}
+                  </p>
+                  {ceirgoPaymentData.id && (
+                    <p className="text-[11px] text-emerald-600 mt-1 font-mono">ID: {ceirgoPaymentData.id}</p>
+                  )}
                 </div>
                 
-                {ceirgoPaymentData.qr ? (
+                {(ceirgoPaymentData.qr_url || ceirgoPaymentData.qr || ceirgoPaymentData.qr_string) ? (
                   <div className="flex flex-col items-center gap-3">
-                    <p className="text-sm font-medium">Scan QRIS di bawah ini:</p>
+                    <p className="text-xs font-semibold text-slate-700">Pindai QRIS Realtime di bawah ini:</p>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ceirgoPaymentData.qr} alt="QRIS" className="w-48 h-48 border border-gray-200 rounded-lg p-2 bg-white" />
+                    <img 
+                      src={
+                        ceirgoPaymentData.qr_url || 
+                        ceirgoPaymentData.qr || 
+                        (ceirgoPaymentData.qr_string ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(ceirgoPaymentData.qr_string)}` : '')
+                      } 
+                      alt="QRIS Deposit CeirGO" 
+                      className="w-48 h-48 border border-slate-200 rounded-xl p-2 bg-white shadow-xs mx-auto" 
+                    />
+                    {ceirgoPaymentData.qr_string && (
+                      <p className="text-[10px] font-mono text-slate-400 break-all max-w-xs line-clamp-2">
+                        {ceirgoPaymentData.qr_string}
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-2 text-sm text-left bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p><b>Provider:</b> {ceirgoPaymentData.provider}</p>
+                  <div className="space-y-2 text-xs text-left bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <p><b>Provider:</b> {ceirgoPaymentData.provider || ceirgoPaymentData.provider_code}</p>
                     {ceirgoPaymentData.account_number && (
-                      <p><b>No Rekening/VA:</b> {ceirgoPaymentData.account_number}</p>
+                      <p><b>No Rekening / VA:</b> <span className="font-mono font-bold text-slate-900">{ceirgoPaymentData.account_number}</span></p>
                     )}
                     {ceirgoPaymentData.account_holder && (
                       <p><b>Atas Nama:</b> {ceirgoPaymentData.account_holder}</p>

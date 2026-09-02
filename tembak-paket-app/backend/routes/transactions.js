@@ -15,6 +15,7 @@ const { dbGet, dbAll, dbRun } = require('../config/db');
 const { isAuthenticated, sseSend } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
 const { sendManualOrderNotification } = require('./telegram');
+const ceirgoClient = require('../ceirgoClient');
 
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
@@ -128,49 +129,40 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
 
     if (isCeirgo) {
         const canonicalServiceCode = (trx.packageId || 'cek_history_imei').replace(/^ceirgo_price_/, '');
-        const apiKey = process.env.CEIRGO_API_KEY || CEIRGO_API_KEY;
-        const baseUrl = process.env.CEIRGO_BASE_URL || CEIRGO_BASE_URL || 'https://ceirgo.my.id';
-        const accountId = process.env.CEIRGO_ACCOUNT_ID || '';
+        const targetImei = (trx.imei || '').split(/[\n,]+/)[0].trim().replace(/\D/g, '');
 
         let finalStatus = 'processing';
         let refId = null;
         let adminNote = 'Pembayaran QRIS Berhasil. Sedang diproses otomatis oleh server CeirGO.';
         let apiResponse = 'Processing';
 
-        if (apiKey) {
-            try {
-                const headers = { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Accept': 'application/json' };
-                if (accountId) headers['x-account-id'] = accountId;
-
-                const resp = await fetch(`${baseUrl}/api/order`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({
-                        service: canonicalServiceCode,
-                        service_code: canonicalServiceCode,
-                        imei: trx.imei,
-                        phone: trx.targetPhone || '',
-                        target_phone: trx.targetPhone || '',
-                        custom_ref: trx.id
-                    }),
-                    timeout: 10000
-                });
-                const ceirData = await resp.json().catch(() => null);
-                if (resp.ok && ceirData && (ceirData.status === true || ceirData.status === 'success' || ceirData.success === true || ceirData.data)) {
-                    refId = ceirData?.data?.order_id || ceirData?.data?.trx_id || ceirData?.order_id || ceirData?.trx_id || `CRG_${Date.now()}`;
-                    const ceirStatus = ceirData?.data?.status || ceirData?.status || 'processing';
-                    finalStatus = ceirStatus === 'success' ? 'success' : 'processing';
-                    adminNote = ceirData?.data?.result || ceirData?.result || ceirData?.message || 'Pesanan otomatis CeirGO berhasil diterima server.';
-                    apiResponse = JSON.stringify(ceirData);
-                } else {
-                    const err = ceirData?.message || ceirData?.error || `HTTP ${resp.status}`;
-                    finalStatus = 'pending';
-                    adminNote = `CeirGO Auto-Submit: ${err}. Menunggu verifikasi admin.`;
+        try {
+            const orderRes = await ceirgoClient.createOrder({
+                code: canonicalServiceCode,
+                data: {
+                    imeis: [targetImei || trx.imei]
                 }
-            } catch (ceirErr) {
+            });
+
+            if (orderRes.status && orderRes.data) {
+                const ceirData = orderRes.data;
+                refId = ceirData.reference_id || ceirData.order_id || ceirData.trx_id || `CRG_${Date.now()}`;
+                const ceirStatus = (ceirData.status || ceirData.order_status || 'processing').toLowerCase();
+                finalStatus = (ceirStatus === 'success' || ceirStatus === 'completed') ? 'success' : 'processing';
+                adminNote = typeof ceirData.result === 'string' ? ceirData.result : (ceirData.message || 'Pesanan otomatis CeirGO berhasil diterima server.');
+                apiResponse = JSON.stringify(ceirData.result || ceirData);
+                console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
+            } else {
+                const err = orderRes.message || orderRes.error || 'Respon gagal dari CeirGO';
                 finalStatus = 'pending';
-                adminNote = `CeirGO Timeout: ${ceirErr.message}. Menunggu verifikasi admin.`;
+                adminNote = `CeirGO Auto-Submit: ${err}. Menunggu verifikasi admin.`;
+                apiResponse = JSON.stringify(orderRes);
             }
+        } catch (ceirErr) {
+            console.error(`[CeirGO Auto-Order Error]`, ceirErr.message);
+            finalStatus = 'pending';
+            adminNote = `CeirGO Timeout: ${ceirErr.message}. Menunggu verifikasi admin.`;
+            apiResponse = ceirErr.message;
         }
 
         await dbRun("UPDATE transactions SET status = ?, accessToken = ?, admin_note = ?, api_response = ? WHERE id = ?",
@@ -725,58 +717,36 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
 
             if (isCeirgoService) {
                 const canonicalServiceCode = (price_key || 'cek_history_imei').replace(/^ceirgo_price_/, '');
-                const apiKey = process.env.CEIRGO_API_KEY || CEIRGO_API_KEY;
-                const baseUrl = process.env.CEIRGO_BASE_URL || CEIRGO_BASE_URL || 'https://ceirgo.my.id';
-                const accountId = process.env.CEIRGO_ACCOUNT_ID || '';
+                const targetImeisArray = cleanImei.split(',').map(i => i.trim().replace(/\D/g, '')).filter(Boolean);
 
-                if (apiKey) {
-                    console.log(`[CeirGO Auto-Order] Memproses pesanan otomatis ke CeirGO (${canonicalServiceCode}) untuk Transaksi ${trxId}...`);
-                    try {
-                        const headers = {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        };
-                        if (accountId) headers['x-account-id'] = accountId;
-
-                        const ceirResp = await fetch(`${baseUrl}/api/order`, {
-                            method: 'POST',
-                            headers,
-                            body: JSON.stringify({
-                                service: canonicalServiceCode,
-                                service_code: canonicalServiceCode,
-                                imei: cleanImei,
-                                phone: targetPhone,
-                                target_phone: targetPhone,
-                                custom_ref: trxId
-                            }),
-                            timeout: 10000
-                        });
-
-                        const ceirData = await ceirResp.json().catch(() => null);
-
-                        if (ceirResp.ok && ceirData && (ceirData.status === true || ceirData.status === 'success' || ceirData.success === true || ceirData.data)) {
-                            refId = ceirData?.data?.order_id || ceirData?.data?.trx_id || ceirData?.order_id || ceirData?.trx_id || ceirData?.ref_id || `CRG_${Date.now()}`;
-                            const ceirStatus = ceirData?.data?.status || ceirData?.status || 'processing';
-                            finalStatus = ceirStatus === 'success' ? 'success' : 'processing';
-                            adminNote = ceirData?.data?.result || ceirData?.result || ceirData?.message || 'Pesanan otomatis CeirGO berhasil diterima server.';
-                            apiResponse = typeof ceirData === 'object' ? JSON.stringify(ceirData) : String(ceirData);
-
-                            console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
-                        } else {
-                            const errorMsg = ceirData?.message || ceirData?.error || `HTTP ${ceirResp.status}`;
-                            console.warn(`[CeirGO Auto-Order] Respon gagal dari CeirGO (${errorMsg}), dialihkan ke antrean manual.`);
-                            adminNote = `CeirGO Auto-Submit: ${errorMsg}. Dialihkan ke antrean manual.`;
-                            apiResponse = typeof ceirData === 'object' ? JSON.stringify(ceirData) : errorMsg;
+                console.log(`[CeirGO Auto-Order] Memproses pesanan otomatis ke CeirGO (${canonicalServiceCode}) untuk Transaksi ${trxId}...`);
+                try {
+                    const orderRes = await ceirgoClient.createOrder({
+                        code: canonicalServiceCode,
+                        data: {
+                            imeis: targetImeisArray.length > 0 ? targetImeisArray : [cleanImei]
                         }
-                    } catch (ceirErr) {
-                        console.error(`[CeirGO Auto-Order Network Error]`, ceirErr.message);
-                        adminNote = `CeirGO Koneksi Timeout: ${ceirErr.message}. Dialihkan ke antrean manual.`;
-                        apiResponse = ceirErr.message;
+                    });
+
+                    if (orderRes.status && orderRes.data) {
+                        const ceirData = orderRes.data;
+                        refId = ceirData.reference_id || ceirData.order_id || ceirData.trx_id || `CRG_${Date.now()}`;
+                        const ceirStatus = (ceirData.status || ceirData.order_status || 'processing').toLowerCase();
+                        finalStatus = (ceirStatus === 'success' || ceirStatus === 'completed') ? 'success' : 'processing';
+                        adminNote = typeof ceirData.result === 'string' ? ceirData.result : (ceirData.message || 'Pesanan otomatis CeirGO berhasil diterima server.');
+                        apiResponse = JSON.stringify(ceirData.result || ceirData);
+
+                        console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
+                    } else {
+                        const errorMsg = orderRes.message || orderRes.error || 'Respon gagal dari CeirGO';
+                        console.warn(`[CeirGO Auto-Order] Respon gagal dari CeirGO (${errorMsg}), dialihkan ke antrean manual.`);
+                        adminNote = `CeirGO Auto-Submit: ${errorMsg}. Dialihkan ke antrean manual.`;
+                        apiResponse = JSON.stringify(orderRes);
                     }
-                } else {
-                    console.warn(`[CeirGO Auto-Order] CEIRGO_API_KEY tidak dikonfigurasi. Pesanan dialihkan ke antrean manual.`);
-                    adminNote = 'CEIRGO_API_KEY belum dikonfigurasi di server. Memerlukan penanganan manual.';
+                } catch (ceirErr) {
+                    console.error(`[CeirGO Auto-Order Network Error]`, ceirErr.message);
+                    adminNote = `CeirGO Koneksi Timeout: ${ceirErr.message}. Dialihkan ke antrean manual.`;
+                    apiResponse = ceirErr.message;
                 }
             }
 

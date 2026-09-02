@@ -1,12 +1,12 @@
 const express = require('express');
-const fetch = require('node-fetch');
+const ceirgoClient = require('./ceirgoClient');
 
 const ceirgoRoutes = express.Router();
 
-let dbAll, isAuthenticated, isAdmin, CEIRGO_API_KEY, CEIRGO_BASE_URL;
+let dbAll, isAuthenticated, isAdmin;
 
 function setDependencies(deps) {
-    ({ dbAll, isAuthenticated, isAdmin, CEIRGO_API_KEY, CEIRGO_BASE_URL } = deps);
+    ({ dbAll, isAuthenticated, isAdmin } = deps);
 }
 
 function readModalPrice(detail, svc) {
@@ -30,7 +30,7 @@ function readModalPrice(detail, svc) {
 }
 
 function normalizeServices(payload) {
-    return payload?.data?.page?.items || payload?.data || [];
+    return payload?.data?.page?.items || payload?.data?.items || payload?.data || [];
 }
 
 const DEFAULT_FALLBACK_SERVICES = [
@@ -48,25 +48,12 @@ function initCeirgoRoutes() {
     // Public list for user pages (filtered client-side by display settings)
     ceirgoRoutes.get('/ceirgo-services', async (req, res) => {
         try {
-            if (!CEIRGO_API_KEY) {
+            const ceirgoRes = await ceirgoClient.getServices({ limit: 50 });
+            if (!ceirgoRes.status) {
                 return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
             }
 
-            const ceirgoRes = await fetch(`${CEIRGO_BASE_URL}/api/services?limit=50`, {
-                headers: {
-                    'Authorization': `Bearer ${CEIRGO_API_KEY}`,
-                    'Accept': 'application/json'
-                },
-                timeout: 5000
-            });
-
-            if (!ceirgoRes.ok) {
-                const errorText = await ceirgoRes.text();
-                throw new Error(`CeirGO API responded with status ${ceirgoRes.status}: ${errorText}`);
-            }
-
-            const servicesPayload = await ceirgoRes.json();
-            const services = normalizeServices(servicesPayload);
+            const services = normalizeServices(ceirgoRes);
             const finalServices = Array.isArray(services) && services.length > 0 ? services : DEFAULT_FALLBACK_SERVICES;
 
             res.json({ status: true, data: finalServices });
@@ -92,28 +79,15 @@ function initCeirgoRoutes() {
         }
     });
 
+    // Admin endpoint with full service details (input_schema, result_schema, unit_price, min_items, max_items)
     ceirgoRoutes.get('/admin/ceirgo-services', isAuthenticated, isAdmin, async (req, res) => {
         try {
-            if (!CEIRGO_API_KEY) {
+            const ceirgoRes = await ceirgoClient.getServices({ limit: 50 });
+            if (!ceirgoRes.status) {
                 return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
             }
 
-            const ceirgoRes = await fetch(`${CEIRGO_BASE_URL}/api/services?limit=50`, {
-                headers: {
-                    'Authorization': `Bearer ${CEIRGO_API_KEY}`,
-                    'Accept': 'application/json'
-                },
-                timeout: 5000
-            });
-
-            if (!ceirgoRes.ok) {
-                const errorText = await ceirgoRes.text();
-                throw new Error(`CeirGO API responded with status ${ceirgoRes.status}: ${errorText}`);
-            }
-
-            const servicesPayload = await ceirgoRes.json();
-            const services = normalizeServices(servicesPayload);
-            
+            const services = normalizeServices(ceirgoRes);
             if (!Array.isArray(services) || services.length === 0) {
                 return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
             }
@@ -122,28 +96,27 @@ function initCeirgoRoutes() {
                 services.map(async (svc) => {
                     if (!svc?.code) return null;
                     try {
-                        const detailRes = await fetch(`${CEIRGO_BASE_URL}/api/services/${svc.code}`, {
-                            headers: {
-                                'Authorization': `Bearer ${CEIRGO_API_KEY}`,
-                                'Accept': 'application/json'
-                            },
-                            timeout: 5000
-                        });
+                        const detailRes = await ceirgoClient.getServiceDetail(svc.code);
+                        let detail = detailRes.status ? detailRes.data : null;
+                        const modalPrice = readModalPrice(detail, svc);
 
-                        let detail = null;
-                        if (detailRes.ok) {
-                            detail = await detailRes.json();
-                        }
                         return {
                             code: svc.code,
                             name: svc.name,
-                            modalPrice: readModalPrice(detail, svc),
+                            description: svc.description || detail?.description || '',
+                            modalPrice,
+                            unit_price: modalPrice,
+                            input_schema: detail?.input_schema || svc.input_schema || null,
+                            result_schema: detail?.result_schema || svc.result_schema || null,
+                            min_items: detail?.min_items || svc.min_items || 1,
+                            max_items: detail?.max_items || svc.max_items || 1
                         };
                     } catch (e) {
                         return {
                             code: svc.code,
                             name: svc.name,
                             modalPrice: readModalPrice(null, svc),
+                            unit_price: readModalPrice(null, svc)
                         };
                     }
                 })
