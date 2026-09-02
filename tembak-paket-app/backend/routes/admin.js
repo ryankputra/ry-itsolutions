@@ -548,39 +548,42 @@ async function getCeirgoAdminBalance() {
         const profileRes = await ceirgoClient.getProfile();
         console.log("[CEIRGO_ME_DEBUG] Balance check summary:", JSON.stringify({
             status: profileRes.status,
+            connected: profileRes.connected,
             statusCode: profileRes.statusCode,
             balance: profileRes.balance,
             hasLiveBalance: profileRes.hasLiveBalance,
+            isFromCache: profileRes.isFromCache,
             message: profileRes.message
         }));
 
-        if (profileRes.hasLiveBalance && typeof profileRes.balance === 'number') {
-            // Persist to database settings so we have a known good balance fallback
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(profileRes.balance)]).catch(() => {});
-            return { balance: profileRes.balance, connected: true, live: true, error: null, profile: profileRes };
-        }
+        let bal = profileRes.balance;
 
-        // If live lookup had an error (e.g. 401, 403 or network issue), log explicitly
-        if (profileRes.statusCode === 401) {
-            console.error(`[CEIRGO_BALANCE_ERROR_401] API Key CeirGO tidak valid atau expired: ${profileRes.message}`);
-        } else if (profileRes.statusCode === 403) {
-            console.error(`[CEIRGO_BALANCE_ERROR_403] Akun CeirGO tidak memiliki permission: ${profileRes.message}`);
-        }
-
-        // Fallback to persisted lastCeirgoBalance if available
-        const cachedRow = await dbGet("SELECT value FROM settings WHERE key IN ('lastCeirgoBalance', 'ceirgo_balance', 'ceirgoBalance') AND value IS NOT NULL AND value != '' ORDER BY ROWID DESC LIMIT 1").catch(() => null);
-        if (cachedRow && cachedRow.value != null) {
-            const cachedVal = Number(cachedRow.value);
-            if (!isNaN(cachedVal) && cachedVal > 0) {
-                console.log("[CEIRGO_BALANCE_FALLBACK] Menggunakan saldo cached dari database:", cachedVal);
-                return { balance: cachedVal, connected: Boolean(profileRes.status), live: false, error: profileRes.message, profile: profileRes };
+        if (bal == null || isNaN(bal)) {
+            const cachedRow = await dbGet("SELECT value FROM settings WHERE key IN ('lastCeirgoBalance', 'ceirgo_balance', 'ceirgoBalance') AND value IS NOT NULL AND value != '' ORDER BY ROWID DESC LIMIT 1").catch(() => null);
+            if (cachedRow && cachedRow.value != null) {
+                const cachedVal = Number(cachedRow.value);
+                if (!isNaN(cachedVal) && cachedVal >= 0) {
+                    bal = cachedVal;
+                }
             }
         }
 
-        return { balance: 0, connected: Boolean(profileRes.status), live: false, error: profileRes.message || "Gagal mendapatkan saldo CeirGO", profile: profileRes };
+        const isConnected = Boolean(profileRes.connected || profileRes.status);
+        const finalBal = Number(bal || 0);
+
+        return {
+            balance: finalBal,
+            connected: isConnected,
+            live: Boolean(profileRes.hasLiveBalance),
+            isFromCache: Boolean(profileRes.isFromCache),
+            error: isConnected ? null : profileRes.message,
+            profile: profileRes
+        };
     } catch (e) {
         console.error("[API Error] getCeirgoAdminBalance failed:", e.message);
-        return { balance: 0, connected: false, live: false, error: e.message, profile: {} };
+        const cachedRow = await dbGet("SELECT value FROM settings WHERE key IN ('lastCeirgoBalance', 'ceirgo_balance', 'ceirgoBalance') AND value IS NOT NULL AND value != '' ORDER BY ROWID DESC LIMIT 1").catch(() => null);
+        const cachedVal = cachedRow && cachedRow.value ? Number(cachedRow.value) : 0;
+        return { balance: isNaN(cachedVal) ? 0 : cachedVal, connected: false, live: false, isFromCache: true, error: e.message, profile: {} };
     }
 }
 

@@ -1,6 +1,6 @@
-const fetch = require('node-fetch');
+const fetch = globalThis.fetch || require('node-fetch');
 
-const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
+const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.id';
 console.log(`[CEIRGO_INIT] API Key Loaded: ${process.env.CEIRGO_API_KEY ? 'YES' : 'NO'}`);
 
 /**
@@ -43,9 +43,14 @@ async function ceirgoRequest(endpoint, options = {}) {
 
     const fetchOptions = {
         method,
-        headers,
-        timeout: options.timeout || 12000
+        headers
     };
+
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+        fetchOptions.signal = AbortSignal.timeout(options.timeout || 15000);
+    } else {
+        fetchOptions.timeout = options.timeout || 15000;
+    }
 
     if (options.body) {
         fetchOptions.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
@@ -53,55 +58,46 @@ async function ceirgoRequest(endpoint, options = {}) {
 
     try {
         const response = await fetch(url, fetchOptions);
+        const contentType = response.headers.get('content-type') || '';
+        let data = {};
 
-        if (response.status === 401) {
-            console.error(`[CeirGO Auth Error 401] Unauthorized / Invalid or expired API Key at ${url}`);
-            const errData = await response.json().catch(() => null);
-            return {
-                status: false,
-                statusCode: 401,
-                error: 'Unauthorized',
-                message: errData?.message || 'API Key CeirGO tidak valid atau telah kadaluarsa.',
-                raw: errData
-            };
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                data = { raw: text };
+            }
         }
-
-        if (response.status === 403) {
-            console.error(`[CeirGO Forbidden Error 403] Forbidden / Missing Permission for ${url}`);
-            const errData = await response.json().catch(() => null);
-            return {
-                status: false,
-                statusCode: 403,
-                error: 'Forbidden',
-                message: errData?.message || 'Akun CeirGO tidak memiliki izin (permission) untuk mengakses fitur ini.',
-                raw: errData
-            };
-        }
-
-        const data = await response.json().catch(() => null);
 
         if (!response.ok) {
-            const errorMsg = data?.message || data?.error || `HTTP ${response.status}`;
-            console.warn(`[CeirGO API Warning] Request to ${url} returned ${response.status}: ${errorMsg}`);
+            const errMsg = data.message || data.error || `HTTP ${response.status} ${response.statusText}`;
             return {
                 status: false,
                 statusCode: response.status,
-                message: errorMsg,
-                data
+                message: errMsg,
+                data: null,
+                raw: data,
+                fullResponse: data
             };
         }
 
+        // Return standardized object
         return {
             status: true,
             statusCode: response.status,
-            data: data?.data !== undefined ? data.data : data,
-            fullResponse: data
+            data: data.data || data,
+            fullResponse: data,
+            raw: data
         };
     } catch (err) {
         console.error(`[CeirGO Connection Error] Gagal menghubungi ${url}:`, err.message);
         return {
             status: false,
-            error: err.name || 'NetworkError',
+            statusCode: 500,
+            error: err.name,
             message: err.message,
             fallback: true
         };
@@ -109,34 +105,32 @@ async function ceirgoRequest(endpoint, options = {}) {
 }
 
 /**
- * 1. Account & Profile Verification (GET /api/me)
- * Checks profile, RBAC roles, permissions, and central wallet balance.
- * Implements fallback ledger discovery (/api/wallet/balance, /api/balance, /api/wallet, /api/order)
+ * 1. Account & Profile Verification & Real-time Balance
+ * Logic:
+ * 1. HEALTH CHECK: Call GET https://ceirgo.id/api/me. If HTTP 200, mark connected = true.
+ * 2. REAL-TIME BALANCE: Fetch remaining_balance from latest order via GET https://ceirgo.id/api/order?limit=1.
+ * 3. CACHE FALLBACK: If order does not return balance, read from SQLite settings.lastCeirgoBalance.
  */
 async function getProfile() {
+    // 1. HEALTH CHECK via GET /api/me
     const res = await ceirgoRequest('/api/me');
     console.log("[CEIRGO_ME_DEBUG] Response from /api/me:", JSON.stringify(res.fullResponse || res.data || res));
 
     let detectedBalance = null;
     let meData = {};
+    const isConnected = Boolean(res.status && res.statusCode === 200);
 
-    if (res.status) {
+    if (isConnected) {
         meData = res.data || {};
         const candidates = [
-            meData.balance,
             meData.remaining_balance,
+            meData.balance,
             meData.wallet_balance,
             meData.saldo,
-            meData.credit,
-            meData.credits,
-            meData.wallet?.balance,
             meData.wallet?.remaining_balance,
-            meData.wallet?.saldo,
-            meData.account?.balance,
-            meData.account?.remaining_balance,
-            meData.user?.balance,
+            meData.wallet?.balance,
             meData.user?.remaining_balance,
-            meData.user?.saldo
+            meData.user?.balance
         ];
         for (const val of candidates) {
             const num = Number(val);
@@ -147,59 +141,60 @@ async function getProfile() {
         }
     } else {
         if (res.statusCode === 401) {
-            console.error(`[CEIRGO_AUTH_ERROR_401] Unauthorized / Invalid or expired API Key at /api/me: ${JSON.stringify(res.raw || res.message)}`);
+            console.error(`[CEIRGO_AUTH_ERROR_401] Unauthorized / Invalid API Key at /api/me: ${JSON.stringify(res.raw || res.message)}`);
         } else if (res.statusCode === 403) {
             console.error(`[CEIRGO_FORBIDDEN_ERROR_403] Forbidden / Missing Permission at /api/me: ${JSON.stringify(res.raw || res.message)}`);
         }
     }
 
-    // If balance is still not found in /api/me, query dedicated ledger & wallet endpoints
+    // 2. RETRIEVAL SALDO REAL-TIME via GET /api/order?limit=1
     if (detectedBalance == null) {
-        // Try /api/wallet/balance
-        try {
-            const wbRes = await ceirgoRequest('/api/wallet/balance');
-            console.log("[CEIRGO_WALLET_BALANCE_DEBUG]", JSON.stringify(wbRes));
-            if (wbRes.status && wbRes.data) {
-                const b = Number(wbRes.data.balance ?? wbRes.data.remaining_balance ?? wbRes.data.saldo ?? wbRes.data);
-                if (!isNaN(b) && b >= 0) detectedBalance = b;
-            }
-        } catch (e) {}
-    }
-
-    if (detectedBalance == null) {
-        // Try /api/balance
-        try {
-            const bRes = await ceirgoRequest('/api/balance');
-            console.log("[CEIRGO_BALANCE_DEBUG]", JSON.stringify(bRes));
-            if (bRes.status && bRes.data) {
-                const b = Number(bRes.data.balance ?? bRes.data.remaining_balance ?? bRes.data.saldo ?? bRes.data);
-                if (!isNaN(b) && b >= 0) detectedBalance = b;
-            }
-        } catch (e) {}
-    }
-
-    if (detectedBalance == null) {
-        // Try /api/wallet
-        try {
-            const wRes = await ceirgoRequest('/api/wallet');
-            console.log("[CEIRGO_WALLET_DEBUG]", JSON.stringify(wRes));
-            if (wRes.status && wRes.data) {
-                const b = Number(wRes.data.balance ?? wRes.data.remaining_balance ?? wRes.data.saldo ?? wRes.data);
-                if (!isNaN(b) && b >= 0) detectedBalance = b;
-            }
-        } catch (e) {}
-    }
-
-    if (detectedBalance == null) {
-        // Try fetching latest order which always returns remaining_balance in CeirGO Orders API
         try {
             const ordersRes = await ceirgoRequest('/api/order?limit=1');
             console.log("[CEIRGO_ORDERS_BALANCE_DEBUG]", JSON.stringify(ordersRes));
             if (ordersRes.status && ordersRes.data) {
-                const items = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data.items || ordersRes.data.data || []);
+                const items = Array.isArray(ordersRes.data)
+                    ? ordersRes.data
+                    : (ordersRes.data.page?.items || ordersRes.data.items || ordersRes.data.data || []);
                 const latestOrder = items[0] || ordersRes.data;
-                const b = Number(latestOrder.remaining_balance ?? latestOrder.balance ?? null);
-                if (!isNaN(b) && b >= 0) detectedBalance = b;
+                const cand = [
+                    latestOrder?.remaining_balance,
+                    latestOrder?.remainingBalance,
+                    latestOrder?.balance,
+                    latestOrder?.saldo
+                ];
+                for (const c of cand) {
+                    const num = Number(c);
+                    if (c != null && !isNaN(num) && num >= 0) {
+                        detectedBalance = num;
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("[CEIRGO_ORDER_FETCH_WARN] Gagal fetch order untuk remaining_balance:", e.message);
+        }
+    }
+
+    // 3. CACHE FALLBACK (SQLite settings.lastCeirgoBalance)
+    let isFromCache = false;
+    if (detectedBalance != null) {
+        // Live balance found, persist to SQLite
+        try {
+            const { dbRun } = require('./config/db');
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(detectedBalance)]);
+        } catch (e) {}
+    } else {
+        // Fallback to SQLite settings.lastCeirgoBalance
+        try {
+            const { dbGet } = require('./config/db');
+            const cachedRow = await dbGet("SELECT value FROM settings WHERE key IN ('lastCeirgoBalance', 'ceirgo_balance', 'ceirgoBalance') AND value IS NOT NULL AND value != '' ORDER BY ROWID DESC LIMIT 1");
+            if (cachedRow && cachedRow.value != null) {
+                const cachedNum = Number(cachedRow.value);
+                if (!isNaN(cachedNum) && cachedNum >= 0) {
+                    detectedBalance = cachedNum;
+                    isFromCache = true;
+                }
             }
         } catch (e) {}
     }
@@ -207,15 +202,17 @@ async function getProfile() {
     const finalBalance = detectedBalance != null ? detectedBalance : 0;
 
     return {
-        status: res.status || detectedBalance != null,
-        statusCode: res.statusCode,
+        status: isConnected,
+        connected: isConnected,
+        statusCode: res.statusCode || (isConnected ? 200 : 500),
         balance: finalBalance,
         ceirgoBalance: finalBalance,
-        hasLiveBalance: detectedBalance != null,
+        hasLiveBalance: detectedBalance != null && !isFromCache,
+        isFromCache,
         role: meData.role || meData.roles || 'user',
         permissions: meData.permissions || [],
         profile: meData,
-        message: res.message,
+        message: isConnected ? 'Terkoneksi ke Server Pusat CeirGO' : (res.message || 'Gagal terhubung ke API CeirGO'),
         raw: res.fullResponse
     };
 }
@@ -384,9 +381,18 @@ async function createOrder({ code, data, imeis }) {
     if (res.status && res.data) {
         const d = res.data;
         const referenceId = d.reference_id || d.order_id || d.trx_id || `REF_${Date.now()}`;
-        const remainingBalance = d.remaining_balance ?? d.balance ?? null;
+        const remainingBalance = d.remaining_balance ?? d.balance ?? d.remainingBalance ?? null;
         const chargedAmount = d.charged_amount ?? d.price ?? d.amount ?? 0;
         const result = d.result ?? d.history ?? d;
+
+        // Auto-sync remaining_balance to database settings if returned
+        if (remainingBalance != null && !isNaN(Number(remainingBalance))) {
+            try {
+                const { dbRun } = require('./config/db');
+                dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(Number(remainingBalance))]).catch(() => {});
+                console.log("[CEIRGO_ORDER_SYNC] Updated settings.lastCeirgoBalance from order:", Number(remainingBalance));
+            } catch (e) {}
+        }
 
         return {
             status: true,
