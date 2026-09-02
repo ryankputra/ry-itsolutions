@@ -133,6 +133,46 @@ function initSchedulers() {
             console.error('[Backup] Gagal saat membuat backup database:', error.message);
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
+    // 4. Auto-poll processing CeirGO transactions (every 2 minutes)
+    cron.schedule('*/2 * * * *', async () => {
+        try {
+            const apiKey = process.env.CEIRGO_API_KEY;
+            const baseUrl = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
+            if (!apiKey) return;
+
+            const processingOrders = await dbAll("SELECT * FROM transactions WHERE service_type = 'ceir' AND status = 'processing' AND accessToken IS NOT NULL LIMIT 10");
+            for (const order of processingOrders) {
+                try {
+                    const ceirRes = await fetch(`${baseUrl}/api/order?trx_id=${encodeURIComponent(order.accessToken)}`, {
+                        headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
+                        timeout: 10000
+                    });
+                    if (ceirRes.ok) {
+                        const ceirData = await ceirRes.json();
+                        if (ceirData.status === 'success' || ceirData.data?.status === 'success') {
+                            const note = ceirData.data?.result || 'Sukses diverifikasi dari CeirGO';
+                            await dbRun("UPDATE transactions SET status = 'success', admin_note = ?, api_response = ? WHERE id = ?",
+                                [note, JSON.stringify(ceirData.data || ceirData), order.id]);
+                            sseSend(order.userId, 'transaction_update', { id: order.id, status: 'success', note });
+                        } else if (ceirData.status === 'failed' || ceirData.data?.status === 'failed') {
+                            const reason = ceirData.data?.reason || 'Gagal dari server CeirGO';
+                            await dbRun("UPDATE transactions SET status = 'failed', admin_note = ?, api_response = ? WHERE id = ?",
+                                [reason, JSON.stringify(ceirData.data || ceirData), order.id]);
+                            // Auto-refund user balance
+                            const refundAmount = Number(order.platformFee || order.originalPrice || 0);
+                            if (refundAmount > 0) {
+                                await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, order.userId]);
+                            }
+                            sseSend(order.userId, 'transaction_update', { id: order.id, status: 'failed', reason, refunded: refundAmount });
+                        }
+                    }
+                } catch (e) {}
+            }
+        } catch (e) {
+            console.error('[Scheduler][CeirgoPoll] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
 }
 
 module.exports = {

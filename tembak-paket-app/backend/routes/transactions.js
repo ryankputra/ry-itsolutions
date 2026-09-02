@@ -474,6 +474,66 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
 
             const targetPhone = req.body.target_phone ? String(req.body.target_phone).trim() : '';
 
+            // AUTOMATIC ORDER PROCESSING FOR CEIRGO SERVICES
+            const isCeirgoService = service_type === 'ceir' || (price_key && (price_key.startsWith('cek_') || price_key.startsWith('create_') || price_key.startsWith('ceirgo_')));
+
+            if (isCeirgoService) {
+                const canonicalServiceCode = (price_key || 'cek_history_imei').replace(/^ceirgo_price_/, '');
+                const apiKey = process.env.CEIRGO_API_KEY || CEIRGO_API_KEY;
+                const baseUrl = process.env.CEIRGO_BASE_URL || CEIRGO_BASE_URL || 'https://ceirgo.my.id';
+                const accountId = process.env.CEIRGO_ACCOUNT_ID || '';
+
+                if (apiKey) {
+                    console.log(`[CeirGO Auto-Order] Memproses pesanan otomatis ke CeirGO (${canonicalServiceCode}) untuk Transaksi ${trxId}...`);
+                    try {
+                        const headers = {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        };
+                        if (accountId) headers['x-account-id'] = accountId;
+
+                        const ceirResp = await fetch(`${baseUrl}/api/order`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({
+                                service: canonicalServiceCode,
+                                service_code: canonicalServiceCode,
+                                imei: cleanImei,
+                                phone: targetPhone,
+                                target_phone: targetPhone,
+                                custom_ref: trxId
+                            }),
+                            timeout: 10000
+                        });
+
+                        const ceirData = await ceirResp.json().catch(() => null);
+
+                        if (ceirResp.ok && ceirData && (ceirData.status === true || ceirData.status === 'success' || ceirData.success === true || ceirData.data)) {
+                            refId = ceirData?.data?.order_id || ceirData?.data?.trx_id || ceirData?.order_id || ceirData?.trx_id || ceirData?.ref_id || `CRG_${Date.now()}`;
+                            const ceirStatus = ceirData?.data?.status || ceirData?.status || 'processing';
+                            finalStatus = ceirStatus === 'success' ? 'success' : 'processing';
+                            adminNote = ceirData?.data?.result || ceirData?.result || ceirData?.message || 'Pesanan otomatis CeirGO berhasil diterima server.';
+                            apiResponse = typeof ceirData === 'object' ? JSON.stringify(ceirData) : String(ceirData);
+
+                            console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
+                        } else {
+                            const errorMsg = ceirData?.message || ceirData?.error || `HTTP ${ceirResp.status}`;
+                            console.warn(`[CeirGO Auto-Order] Respon gagal dari CeirGO (${errorMsg}), dialihkan ke antrean manual.`);
+                            adminNote = `CeirGO Auto-Submit: ${errorMsg}. Dialihkan ke antrean manual.`;
+                            apiResponse = typeof ceirData === 'object' ? JSON.stringify(ceirData) : errorMsg;
+                        }
+                    } catch (ceirErr) {
+                        console.error(`[CeirGO Auto-Order Network Error]`, ceirErr.message);
+                        adminNote = `CeirGO Koneksi Timeout: ${ceirErr.message}. Dialihkan ke antrean manual.`;
+                        apiResponse = ceirErr.message;
+                    }
+                } else {
+                    console.warn(`[CeirGO Auto-Order] CEIRGO_API_KEY tidak dikonfigurasi. Pesanan dialihkan ke antrean manual.`);
+                    adminNote = 'CEIRGO_API_KEY belum dikonfigurasi di server. Memerlukan penanganan manual.';
+                }
+            }
+
             await dbRun(`
                 INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, status, api_response, createdAt, service_type, imei, user_image, user_image_ceir, admin_image, admin_note, speed_option, coupon_code, discount_amount)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'balance', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -481,7 +541,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 trxId,
                 req.session.userId,
                 user.name,
-                price_key || 'manual',
+                price_key || (isCeirgoService ? 'ceirgo_auto' : 'manual'),
                 packageName,
                 finalPriceToPay,
                 totalPrice,
@@ -501,18 +561,26 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 discountAmount + coinsDiscount
             ]);
 
-            const notifMsg = `<b>📦 Pesanan Manual Baru!</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Layanan:</b> ${packageName}\n<b>IMEI:</b> <code>${cleanImei}</code>\n<b>Biaya:</b> Rp ${finalPriceToPay.toLocaleString('id-ID')}\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`;
-            const firstImg = imgFiles[0] ? path.join(__dirname, '..', 'public', 'uploads', 'manual_orders', imgFiles[0].filename) : null;
-            sendManualOrderNotification(notifMsg, trxId, firstImg);
+            if (isCeirgoService && (finalStatus === 'processing' || finalStatus === 'success')) {
+                const autoNotifMsg = `<b>⚡ Pesanan Otomatis CeirGO Diterima!</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Layanan:</b> ${packageName}\n<b>IMEI:</b> <code>${cleanImei}</code>\n<b>Ref ID:</b> <code>${refId || trxId}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`;
+                sendTelegramNotification(autoNotifMsg, 'group');
+            } else {
+                const notifMsg = `<b>📦 Pesanan Manual Baru!</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Layanan:</b> ${packageName}\n<b>IMEI:</b> <code>${cleanImei}</code>\n<b>Biaya:</b> Rp ${finalPriceToPay.toLocaleString('id-ID')}\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>${adminNote ? `\n<b>Catatan:</b> ${adminNote}` : ''}`;
+                const firstImg = imgFiles[0] ? path.join(__dirname, '..', 'public', 'uploads', 'manual_orders', imgFiles[0].filename) : null;
+                sendManualOrderNotification(notifMsg, trxId, firstImg);
+            }
 
             res.json({
                 status: true,
-                message: "Pesanan Anda berhasil dikirim!",
+                message: isCeirgoService && (finalStatus === 'processing' || finalStatus === 'success')
+                    ? "Pesanan CeirGO berhasil diproses otomatis oleh server!"
+                    : "Pesanan Anda berhasil dikirim!",
                 trxId,
                 newBalance: user.balance - finalPriceToPay,
                 data: {
                     id: trxId,
                     status: finalStatus,
+                    ref_id: refId,
                     admin_note: adminNote,
                     admin_image: adminImagePath
                 }
