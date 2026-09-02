@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
+import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 
 const ceirgoNameMapping: Record<string, string> = {
   'create_barcode': 'Create Barcode Universal',
@@ -41,6 +42,9 @@ export default function BarcodePage() {
   const [error, setError] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [barcodeResult, setBarcodeResult] = useState<{ note: string | null, image: string | null } | null>(null);
+
+  const [paymentMethod, setPaymentMethod] = useState<"balance" | "qris">("balance");
+  const [showInstantQris, setShowInstantQris] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -105,42 +109,8 @@ export default function BarcodePage() {
     return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 5000;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!option) return setError("Pilih varian barcode terlebih dahulu.");
-    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
-    if (imei2 && imei2.length < 15) return setError("IMEI Kedua tidak valid (minimal 15 digit angka).");
-
-    const price = getPrice(option);
-    if (user && user.balance < price) {
-      Swal.fire({
-        title: 'Saldo Tidak Mencukupi',
-        text: `Saldo Anda (Rp ${Number(user.balance).toLocaleString('id-ID')}) kurang untuk layanan ini (Rp ${price.toLocaleString('id-ID')}). Silakan top up terlebih dahulu.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Top Up Sekarang',
-        cancelButtonText: 'Batal'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          router.push('/topup');
-        }
-      });
-      return setError('Saldo tidak mencukupi.');
-    }
-
-    const confirm = await Swal.fire({
-      title: 'Konfirmasi Cetak Barcode',
-      text: `Anda akan membuat ${ceirgoNameMapping[option] || option} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#9333ea',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Ya, Generate Barcode!',
-      cancelButtonText: 'Batal'
-    });
-
-    if (!confirm.isConfirmed) return;
-
+  const executeBarcodeSubmission = async (methodOverride?: string) => {
+    const activeMethod = methodOverride || paymentMethod;
     setError("");
     setSubmitting(true);
 
@@ -153,6 +123,7 @@ export default function BarcodePage() {
       if (imei2) formData.append("imei2", imei2);
       formData.append("theme", theme);
       formData.append("duration", ceirgoNameMapping[option] || option);
+      formData.append("payment_method", activeMethod);
 
       const res = await fetch("/api/order/barcode", {
         method: "POST",
@@ -190,6 +161,36 @@ export default function BarcodePage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!option) return setError("Pilih varian barcode terlebih dahulu.");
+    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
+    if (imei2 && imei2.length < 15) return setError("IMEI Kedua tidak valid (minimal 15 digit angka).");
+
+    const price = getPrice(option);
+
+    // If Direct QRIS chosen or balance < price, trigger Instant QRIS directly
+    if (paymentMethod === "qris" || (user && user.balance < price)) {
+      setShowInstantQris(true);
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Konfirmasi Cetak Barcode',
+      text: `Anda akan membuat ${ceirgoNameMapping[option] || option} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#9333ea',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Generate Barcode!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    executeBarcodeSubmission("balance");
   };
 
   const renderServiceButtons = () => {
@@ -385,8 +386,66 @@ export default function BarcodePage() {
             </div>
           </div>
 
+          {/* Pilihan Metode Pembayaran Direct vs Saldo */}
+          <div className="space-y-2 pt-4 border-t border-hairline">
+            <label className="text-xs font-bold text-ink flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[11px] font-bold">4</span>
+                Pilih Metode Pembayaran
+              </span>
+              <span className="text-[10px] text-ink-muted">Langsung diproses otomatis 24 Jam</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("balance")}
+                className={`p-3.5 rounded-2xl border text-left transition-all ${
+                  paymentMethod === "balance"
+                    ? "border-purple-600 bg-purple-500/10 ring-1 ring-purple-600 font-bold shadow-xs text-purple-900 dark:text-purple-300"
+                    : "border-hairline bg-canvas hover:bg-parchment"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold flex items-center gap-1.5">
+                    <span>💳</span> Saldo Akun
+                  </span>
+                  <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-purple-600" />
+                </div>
+                <div className="text-xs text-purple-600 font-mono font-bold mt-1.5">
+                  Rp {Number(user?.balance || 0).toLocaleString("id-ID")}
+                </div>
+                <p className="text-[10px] text-ink-muted mt-0.5">Potong langsung dari dompet akun</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("qris")}
+                className={`p-3.5 rounded-2xl border text-left transition-all ${
+                  paymentMethod === "qris"
+                    ? "border-purple-600 bg-purple-500/10 ring-1 ring-purple-600 font-bold shadow-xs text-purple-900 dark:text-purple-300"
+                    : "border-hairline bg-canvas hover:bg-parchment"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold flex items-center gap-1.5">
+                    <span>⚡</span> Direct QRIS Instan
+                  </span>
+                  <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-purple-600" />
+                </div>
+                <div className="text-xs text-emerald-600 font-bold mt-1.5">
+                  Scan &amp; Langsung Selesai
+                </div>
+                <p className="text-[10px] text-ink-muted mt-0.5">BCA, GoPay, OVO, Dana, ShopeePay &amp; Semua Bank</p>
+              </button>
+            </div>
+          </div>
+
           <Button className="w-full h-12 text-sm font-bold shadow-md shadow-purple-500/20 mt-4 bg-purple-600 hover:bg-purple-700 text-white" type="submit" isLoading={submitting}>
-            Generate Barcode (Rp {getPrice(option).toLocaleString('id-ID')})
+            {submitting
+              ? "Membuat Barcode..."
+              : paymentMethod === "qris" || (user && user.balance < getPrice(option))
+              ? `Bayar via QRIS Direct (Rp ${getPrice(option).toLocaleString('id-ID')}) ➔`
+              : `Generate Barcode (Rp ${getPrice(option).toLocaleString('id-ID')}) ➔`}
           </Button>
         </form>
       </Card>
@@ -417,6 +476,17 @@ export default function BarcodePage() {
         statusText="Barcode IMEI Anda berhasil digenerate dan tersimpan di riwayat transaksi."
         recipientLabel="IMEI Perangkat"
         recipientValue={imei}
+      />
+
+      <InstantQrisPaymentModal
+        isOpen={showInstantQris}
+        onClose={() => setShowInstantQris(false)}
+        amount={getPrice(option)}
+        orderTitle={`Generate ${ceirgoNameMapping[option] || option} (${imei})`}
+        onSuccess={() => {
+          setShowInstantQris(false);
+          executeBarcodeSubmission("qris");
+        }}
       />
     </div>
   );

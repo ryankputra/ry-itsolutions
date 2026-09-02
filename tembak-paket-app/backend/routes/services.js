@@ -15,6 +15,46 @@ router.get('/system-version', (req, res) => {
     res.json({ status: true, version: APP_START_TIME });
 });
 
+// GET /api/services/status (Dynamic feature/service toggles)
+router.get('/services/status', async (req, res) => {
+    try {
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'ceirgo_display_%' OR key LIKE 'imei_speed_%' OR key LIKE 'service_%'");
+        const settings = {};
+        rows.forEach(r => {
+            settings[r.key] = r.value;
+        });
+
+        const barcodeKeys = ['create_barcode', 'create_barcode_samsung', 'create_barcode_redmi', 'create_barcode_ios26'];
+        const barcodeStatuses = {};
+        let hasActiveBarcode = false;
+
+        barcodeKeys.forEach(k => {
+            const val = settings[`ceirgo_display_${k}`];
+            const isActive = val === undefined || val === null || val === 'true' || val === '1' || val === 1 || val === true;
+            barcodeStatuses[k] = isActive;
+            if (isActive) hasActiveBarcode = true;
+        });
+
+        res.json({
+            status: true,
+            hasActiveBarcode,
+            barcode: barcodeStatuses,
+            settings
+        });
+    } catch (e) {
+        res.json({
+            status: true,
+            hasActiveBarcode: true,
+            barcode: {
+                create_barcode: true,
+                create_barcode_samsung: true,
+                create_barcode_redmi: true,
+                create_barcode_ios26: true
+            }
+        });
+    }
+});
+
 // 2. GET /api/status
 router.get('/status', isAuthenticated, async (req, res) => {
     try {

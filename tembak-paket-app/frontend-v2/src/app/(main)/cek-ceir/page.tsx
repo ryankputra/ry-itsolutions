@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
+import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 
 const ceirgoNameMapping: Record<string, string> = {
   'cek_imei': 'Cek Status IMEI',
@@ -46,6 +47,9 @@ export default function CekCeirPage() {
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [ceirResult, setCeirResult] = useState<{ note: string | null, image: string | null, rows?: any[] } | null>(null);
+
+  const [paymentMethod, setPaymentMethod] = useState<"balance" | "qris">("balance");
+  const [showInstantQris, setShowInstantQris] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -110,40 +114,8 @@ export default function CekCeirPage() {
     return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 5000;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
-
-    const price = getPrice(option);
-    if (user && user.balance < price) {
-      Swal.fire({
-        title: 'Saldo Tidak Mencukupi',
-        text: `Saldo Anda (Rp ${Number(user.balance).toLocaleString('id-ID')}) kurang untuk layanan ini (Rp ${price.toLocaleString('id-ID')}). Silakan top up terlebih dahulu.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Top Up Sekarang',
-        cancelButtonText: 'Batal'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          router.push('/topup');
-        }
-      });
-      return setError('Saldo tidak mencukupi.');
-    }
-
-    const confirm = await Swal.fire({
-      title: 'Konfirmasi Pesanan Diagnostik',
-      text: `Anda akan melakukan ${ceirgoNameMapping[option] || option} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Ya, Bayar Sekarang!',
-      cancelButtonText: 'Batal'
-    });
-
-    if (!confirm.isConfirmed) return;
-
+  const executeCeirSubmission = async (methodOverride?: string) => {
+    const activeMethod = methodOverride || paymentMethod;
     setError("");
     setSubmitting(true);
 
@@ -154,6 +126,7 @@ export default function CekCeirPage() {
       formData.append("price_key", option);
       formData.append("imei", imei);
       formData.append("duration", ceirgoNameMapping[option] || option);
+      formData.append("payment_method", activeMethod);
 
       const res = await fetch("/api/order/ceir", {
         method: "POST",
@@ -191,6 +164,34 @@ export default function CekCeirPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
+
+    const price = getPrice(option);
+
+    // If Direct QRIS chosen or balance < price, trigger Instant QRIS directly
+    if (paymentMethod === "qris" || (user && user.balance < price)) {
+      setShowInstantQris(true);
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Konfirmasi Pesanan Diagnostik',
+      text: `Anda akan melakukan ${ceirgoNameMapping[option] || option} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Bayar Sekarang!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    executeCeirSubmission("balance");
   };
 
   const renderServiceButtons = () => {
@@ -344,8 +345,66 @@ export default function CekCeirPage() {
             </div>
           </div>
 
+          {/* Pilihan Metode Pembayaran Direct vs Saldo */}
+          <div className="space-y-2 pt-4 border-t border-hairline">
+            <label className="text-xs font-bold text-ink flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[11px] font-bold">3</span>
+                Pilih Metode Pembayaran
+              </span>
+              <span className="text-[10px] text-ink-muted">Langsung diproses otomatis 24 Jam</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("balance")}
+                className={`p-3.5 rounded-2xl border text-left transition-all ${
+                  paymentMethod === "balance"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary font-bold shadow-xs"
+                    : "border-hairline bg-canvas hover:bg-parchment"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                    <span>💳</span> Saldo Akun
+                  </span>
+                  <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-primary" />
+                </div>
+                <div className="text-xs text-primary font-mono font-bold mt-1.5">
+                  Rp {Number(user?.balance || 0).toLocaleString("id-ID")}
+                </div>
+                <p className="text-[10px] text-ink-muted mt-0.5">Potong langsung dari dompet akun</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("qris")}
+                className={`p-3.5 rounded-2xl border text-left transition-all ${
+                  paymentMethod === "qris"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary font-bold shadow-xs"
+                    : "border-hairline bg-canvas hover:bg-parchment"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                    <span>⚡</span> Direct QRIS Instan
+                  </span>
+                  <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-primary" />
+                </div>
+                <div className="text-xs text-emerald-600 font-bold mt-1.5">
+                  Scan &amp; Langsung Selesai
+                </div>
+                <p className="text-[10px] text-ink-muted mt-0.5">BCA, GoPay, OVO, Dana, ShopeePay &amp; Semua Bank</p>
+              </button>
+            </div>
+          </div>
+
           <Button className="w-full h-12 text-sm font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
-            Bayar Sekarang (Rp {getPrice(option).toLocaleString('id-ID')})
+            {submitting
+              ? "Memproses Server..."
+              : paymentMethod === "qris" || (user && user.balance < getPrice(option))
+              ? `Bayar via QRIS Direct (Rp ${getPrice(option).toLocaleString('id-ID')}) ➔`
+              : `Bayar Sekarang (Rp ${getPrice(option).toLocaleString('id-ID')}) ➔`}
           </Button>
         </form>
       </Card>
@@ -396,6 +455,17 @@ export default function CekCeirPage() {
         statusText="Pesanan diagnostik berhasil diproses oleh server CeirGO!"
         recipientLabel="IMEI Target"
         recipientValue={imei}
+      />
+
+      <InstantQrisPaymentModal
+        isOpen={showInstantQris}
+        onClose={() => setShowInstantQris(false)}
+        amount={getPrice(option)}
+        orderTitle={`Cek ${ceirgoNameMapping[option] || option} (${imei})`}
+        onSuccess={() => {
+          setShowInstantQris(false);
+          executeCeirSubmission("qris");
+        }}
       />
     </div>
   );

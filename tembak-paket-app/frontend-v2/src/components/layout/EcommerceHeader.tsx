@@ -20,6 +20,7 @@ export function EcommerceHeader() {
   const [announcement, setAnnouncement] = useState<any>(null);
   const [unread, setUnread] = useState(false);
   const [pendingOrders, setPendingOrders] = useState(0);
+  const [showBarcodeMenu, setShowBarcodeMenu] = useState(true);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
@@ -46,8 +47,8 @@ export function EcommerceHeader() {
     }
   }, [user]);
 
-  // Check system announcement
   useEffect(() => {
+    // Check system announcement
     fetch("/api/user/announcement")
       .then((res) => res.json())
       .then((data) => {
@@ -60,6 +61,16 @@ export function EcommerceHeader() {
         }
       })
       .catch(() => {});
+
+    // Dynamic Barcode Menu Toggle
+    fetch("/api/services/status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.status && data.hasActiveBarcode !== undefined) {
+          setShowBarcodeMenu(Boolean(data.hasActiveBarcode));
+        }
+      })
+      .catch(() => setShowBarcodeMenu(true));
 
     function handleClickOutside(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -119,6 +130,7 @@ export function EcommerceHeader() {
     { label: "Beranda", href: "/dashboard" },
     { label: "Buka IMEI", href: "/unblock-imei" },
     { label: "Cek CEIR", href: "/cek-ceir" },
+    ...(showBarcodeMenu ? [{ label: "Create Barcode", href: "/barcode" }] : []),
     { label: "Cek Garansi", href: "/cek-garansi" },
     { label: "Klaim Voucher", href: "/vouchers" },
     { label: "Game Koin", href: "/games" },

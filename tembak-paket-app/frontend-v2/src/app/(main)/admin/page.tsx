@@ -150,8 +150,8 @@ export default function AdminPage() {
     setLoadingGopay(true);
     try {
       const res = await fetch('/api/admin/gopay/status', { credentials: 'include' });
-      const d = await res.json();
-      if (d.status && d.data) {
+      const d = await safeJson(res);
+      if (d?.status && d.data) {
         setGopayStatus(d.data);
       }
     } catch (e) {}
@@ -165,25 +165,25 @@ export default function AdminPage() {
     }
     setGopayRequestingOtp(true);
     try {
-      const res = await fetch('/api/admin/gopay/request-otp', {
+      const res = await fetch('/api/admin/gopay/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ phone: gopayPhone })
       });
-      const d = await res.json();
-      if (d.status) {
+      const d = await safeJson(res);
+      if (d?.status || d?.success) {
         setGopayOtpSent(true);
         Swal.fire({
           title: "OTP Berhasil Dikirim!",
-          text: d.message || "Kode OTP 4 digit telah dikirim via SMS ke nomor HP Anda.",
+          text: d?.message || "Kode OTP 4 digit telah dikirim via SMS ke nomor HP Anda.",
           icon: "success"
         });
       } else {
-        Swal.fire("Gagal", d.message || "Gagal meminta OTP GoPay.", "error");
+        Swal.fire("Gagal", d?.message || "GoPay Gateway Port 3002 tidak merespon. Pastikan service aktif.", "error");
       }
     } catch (e: any) {
-      Swal.fire("Error", e.message || "Terjadi kesalahan koneksi.", "error");
+      Swal.fire("Error", e?.message || "Terjadi kesalahan koneksi ke GoPay Gateway.", "error");
     } finally {
       setGopayRequestingOtp(false);
     }
@@ -202,21 +202,21 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify({ otp: gopayOtp.trim() })
       });
-      const d = await res.json();
-      if (d.status) {
+      const d = await safeJson(res);
+      if (d?.status || d?.success) {
         setGopayOtpSent(false);
         setGopayOtp("");
         Swal.fire({
           title: "Login GoPay Berhasil!",
-          text: d.message || "Sesi GoPay Merchant telah aktif dan tersimpan.",
+          text: d?.message || "Sesi GoPay Merchant telah aktif dan tersimpan.",
           icon: "success"
         });
         loadGopayStatus();
       } else {
-        Swal.fire("Verifikasi Gagal", d.message || "Kode OTP salah atau kadaluarsa.", "error");
+        Swal.fire("Verifikasi Gagal", d?.message || "Kode OTP salah, kadaluarsa, atau gateway offline.", "error");
       }
     } catch (e: any) {
-      Swal.fire("Error", e.message || "Terjadi kesalahan saat verifikasi OTP.", "error");
+      Swal.fire("Error", e?.message || "Terjadi kesalahan saat verifikasi OTP.", "error");
     } finally {
       setGopayVerifyingOtp(false);
     }
@@ -286,6 +286,12 @@ export default function AdminPage() {
   const [orderQueueSubTab, setOrderQueueSubTab] = useState<'manual' | 'automated'>('manual');
   const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
   const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
+
+  // WhatsApp Bot Web Modal States
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waBotStatus, setWaBotStatus] = useState<any>(null);
+  const [loadingWaStatus, setLoadingWaStatus] = useState(false);
+  const [resettingWa, setResettingWa] = useState(false);
 
   const [imeiServiceOpen, setImeiServiceOpen] = useState(true);
   const [imeiServiceNote, setImeiServiceNote] = useState("");
@@ -1252,18 +1258,110 @@ export default function AdminPage() {
     setUserPage(1);
   }, [searchUser, userRoleFilter]);
 
-  // Helper: Detect automated CeirGO/Barcode orders vs Manual IMEI orders
+  // WhatsApp Web Bot Status Polling & Reset
+  const fetchWaBotStatus = async () => {
+    try {
+      setLoadingWaStatus(true);
+      const res = await fetch('/api/admin/wabot/status', { credentials: 'include' });
+      const d = await safeJson(res);
+      if (d?.status) {
+        setWaBotStatus(d);
+      }
+    } catch (e) {
+    } finally {
+      setLoadingWaStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    let interval: any = null;
+    if (showWaModal) {
+      fetchWaBotStatus();
+      interval = setInterval(fetchWaBotStatus, 3000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showWaModal]);
+
+  useEffect(() => {
+    if (activeTab === 'pesanan-manual') {
+      fetchWaBotStatus();
+    }
+  }, [activeTab]);
+
+  const handleResetWaSession = async () => {
+    const confirm = await Swal.fire({
+      title: "Reset Sesi WhatsApp?",
+      text: "Folder sesi akan dihapus dan QR Code baru akan dibuat. Pastikan HP Anda siap untuk scan ulang.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#e11d48",
+      confirmButtonText: "Ya, Reset Sesi",
+      cancelButtonText: "Batal"
+    });
+    if (!confirm.isConfirmed) return;
+
+    try {
+      setResettingWa(true);
+      const res = await fetch('/api/admin/wabot/reset', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const d = await res.json();
+      if (res.ok && d.status) {
+        Swal.fire({
+          title: "Berhasil!",
+          text: d.message || "Sesi berhasil direset. Menunggu QR Code baru...",
+          icon: "success",
+          timer: 2000
+        });
+        fetchWaBotStatus();
+      } else {
+        Swal.fire("Gagal", d.message || "Gagal mereset sesi.", "error");
+      }
+    } catch (e: any) {
+      Swal.fire("Error", e?.message || "Gagal menghubungi server", "error");
+    } finally {
+      setResettingWa(false);
+    }
+  };
+
+  // Helper: Detect automated CeirGO/Barcode orders vs Manual IMEI orders (Strict Zero-Leakage)
   const isAutomatedOrder = (o: any) => {
+    if (o.queue_type === 'automated') return true;
+    if (o.queue_type === 'manual') return false;
+    if (typeof o.is_automated === 'boolean') return o.is_automated;
+
     const st = (o.service_type || o.serviceType || '').toLowerCase();
-    const pkg = (o.packageId || o.packageName || '').toLowerCase();
-    return st === 'ceir' || st === 'barcode' || pkg.startsWith('cek_') || pkg.startsWith('create_') || pkg.includes('barcode') || pkg.includes('ceir');
+    const pkgId = (o.packageId || '').toLowerCase();
+
+    const automatedServiceCodes = new Set([
+      'cek_imei', 'cek_imei_beacukai', 'cek_history_imei', 'cek_validity', 'cek_digi', 'cek_sf',
+      'create_barcode', 'create_barcode_samsung', 'create_barcode_redmi', 'create_barcode_ios26'
+    ]);
+
+    return (
+      st === 'ceir' ||
+      st === 'barcode' ||
+      automatedServiceCodes.has(pkgId) ||
+      pkgId.startsWith('cek_') ||
+      pkgId.startsWith('create_')
+    );
   };
 
   const manualOrdersList = manualOrders.filter(o => !isAutomatedOrder(o));
   const automatedOrdersList = manualOrders.filter(o => isAutomatedOrder(o));
 
-  const manualPendingCount = manualOrdersList.filter(o => o.status === 'pending' || o.status === 'processing').length;
-  const automatedPendingCount = automatedOrdersList.filter(o => o.status === 'pending' || o.status === 'processing').length;
+  // Accurate Admin Queue Counter: Strictly counts unfinished orders (PENDING or PROCESSING)
+  const manualPendingCount = manualOrdersList.filter(o => {
+    const s = String(o.status || '').toUpperCase().trim();
+    return s === 'PENDING' || s === 'PROCESSING';
+  }).length;
+  const automatedPendingCount = automatedOrdersList.filter(o => {
+    const s = String(o.status || '').toUpperCase().trim();
+    return s === 'PENDING' || s === 'PROCESSING';
+  }).length;
 
   const handleRetryCeirgoOrder = async (orderId: string) => {
     const confirm = await Swal.fire({
@@ -1597,13 +1695,29 @@ export default function AdminPage() {
       {activeTab === 'pesanan-manual' && (
         <div className="space-y-4">
           <Card glass className="p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-2 border-b border-hairline">
               <div>
                 <h2 className="text-lg font-bold text-ink">Antrean & Log Transaksi Pesanan</h2>
                 <p className="text-xs text-ink-muted mt-0.5">Kelola antrean pengerjaan manual dan pantau log eksekusi otomatis server pusat.</p>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* WhatsApp Bot Connection & QR Modal Trigger Button */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowWaModal(true)}
+                  className="text-xs flex items-center gap-2 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold shadow-sm"
+                >
+                  <span className={`w-2 h-2 rounded-full ${waBotStatus?.connected || waBotStatus?.isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                  <span>📱 Koneksi WhatsApp Bot</span>
+                  {(waBotStatus?.connected || waBotStatus?.isConnected) ? (
+                    <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-black">ON</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">SCAN QR</span>
+                  )}
+                </Button>
+
                 <Button size="sm" variant="outline" onClick={loadManualData} className="text-xs">
                   Muat Ulang
                 </Button>
@@ -1611,47 +1725,71 @@ export default function AdminPage() {
             </div>
 
             {/* SUB-TABS: ANTREAN BUKA IMEI (MANUAL) vs LOG CEIRGO & DIAGNOSTIK (OTOMATIS) */}
-            <div className="flex border-b border-hairline gap-2 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setOrderQueueSubTab('manual')}
-                className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+                className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex items-center justify-between cursor-pointer ${
                   orderQueueSubTab === 'manual'
-                    ? 'border-primary text-primary font-black'
-                    : 'border-transparent text-ink-muted hover:text-ink'
+                    ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/30'
+                    : 'border-hairline bg-canvas hover:border-primary/40 hover:bg-parchment/30'
                 }`}
               >
-                <span>🛠️ ANTREAN BUKA IMEI (MANUAL ADMIN)</span>
-                {manualPendingCount > 0 ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse shadow-sm">
-                    {manualPendingCount}
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-                    {manualOrdersList.length}
-                  </span>
-                )}
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${orderQueueSubTab === 'manual' ? 'bg-primary text-white shadow-sm' : 'bg-parchment text-ink'}`}>
+                    🛠️
+                  </div>
+                  <div>
+                    <p className={`font-black text-xs sm:text-sm ${orderQueueSubTab === 'manual' ? 'text-primary' : 'text-ink'}`}>
+                      ANTREAN BUKA IMEI (MANUAL ADMIN)
+                    </p>
+                    <p className="text-[11px] text-ink-muted">Khusus order manual: verifikasi IMEI, foto, & upload hasil.</p>
+                  </div>
+                </div>
+                <div>
+                  {manualPendingCount > 0 ? (
+                    <span className="bg-amber-100 text-amber-800 border border-amber-300 font-bold px-2 py-0.5 rounded-full text-xs animate-pulse whitespace-nowrap shadow-xs">
+                      {manualPendingCount} Pending
+                    </span>
+                  ) : (
+                    <span className="bg-slate-100 text-slate-600 border border-slate-200 font-bold px-2 py-0.5 rounded-full text-xs whitespace-nowrap">
+                      0 Pending
+                    </span>
+                  )}
+                </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setOrderQueueSubTab('automated')}
-                className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+                className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex items-center justify-between cursor-pointer ${
                   orderQueueSubTab === 'automated'
-                    ? 'border-primary text-primary font-black'
-                    : 'border-transparent text-ink-muted hover:text-ink'
+                    ? 'border-amber-500 bg-amber-500/10 shadow-sm ring-2 ring-amber-500/30'
+                    : 'border-hairline bg-canvas hover:border-amber-400 hover:bg-parchment/30'
                 }`}
               >
-                <span>⚡ LOG CEIRGO & DIAGNOSTIK (OTOMATIS)</span>
-                {automatedPendingCount > 0 ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-sm">
-                    {automatedPendingCount}
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-                    {automatedOrdersList.length}
-                  </span>
-                )}
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${orderQueueSubTab === 'automated' ? 'bg-amber-500 text-white shadow-sm' : 'bg-parchment text-ink'}`}>
+                    ⚡
+                  </div>
+                  <div>
+                    <p className={`font-black text-xs sm:text-sm ${orderQueueSubTab === 'automated' ? 'text-amber-700' : 'text-ink'}`}>
+                      LOG CEIRGO & DIAGNOSTIK (OTOMATIS)
+                    </p>
+                    <p className="text-[11px] text-ink-muted">Layanan instan CEIR & Generator Barcode: Monitoring log API.</p>
+                  </div>
+                </div>
+                <div>
+                  {automatedPendingCount > 0 ? (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-500 text-white shadow-sm whitespace-nowrap">
+                      {automatedPendingCount} Tertunda
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-700 whitespace-nowrap">
+                      {automatedOrdersList.length} Total
+                    </span>
+                  )}
+                </div>
               </button>
             </div>
 
@@ -2021,6 +2159,117 @@ export default function AdminPage() {
               </div>
             )}
           </Card>
+
+          {/* MODAL KONEKSI WHATSAPP BOT ADMIN & WEB QR CODE */}
+          {showWaModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-canvas border border-hairline rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+                <div className="flex items-center justify-between pb-3 border-b border-hairline">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-xl">
+                      📱
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base text-ink">Koneksi WhatsApp Bot</h3>
+                      <p className="text-xs text-ink-muted">Scan QR langsung dari browser</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowWaModal(false)}
+                    className="text-ink-muted hover:text-ink w-8 h-8 rounded-full flex items-center justify-center bg-parchment text-sm font-bold transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Connection Status Banner */}
+                <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold ${
+                  waBotStatus?.connected || waBotStatus?.isConnected
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : waBotStatus?.qrCode
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-slate-50 text-slate-700 border-slate-200'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${waBotStatus?.connected || waBotStatus?.isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                    <span>
+                      {waBotStatus?.connected || waBotStatus?.isConnected
+                        ? `Terhubung (${waBotStatus.connectedPhone || 'Admin'})`
+                        : waBotStatus?.statusText || 'Menunggu Scan QR Code'}
+                    </span>
+                  </div>
+                  {loadingWaStatus && <span className="text-[10px] text-ink-muted animate-spin">⏳</span>}
+                </div>
+
+                {/* Content Area */}
+                {waBotStatus?.connected || waBotStatus?.isConnected ? (
+                  <div className="text-center py-6 space-y-3 bg-emerald-50/50 rounded-2xl border border-emerald-100 p-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl font-black shadow-sm">
+                      ✓
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-sm text-emerald-900">WhatsApp Bot Aktif & Terhubung!</h4>
+                      <p className="text-xs text-emerald-700">
+                        Nomor: <span className="font-bold font-mono">+{waBotStatus.connectedPhone}</span>
+                      </p>
+                      <p className="text-[11px] text-ink-muted pt-2 leading-relaxed">
+                        Bot siap mengirimkan notifikasi pesanan baru. Anda dapat membalas chat WA dengan perintah:
+                        <br />
+                        <code className="bg-emerald-100/80 px-1 py-0.5 rounded text-[10px] text-emerald-900 font-mono font-bold">.proses &lt;ID&gt;</code>, <code className="bg-emerald-100/80 px-1 py-0.5 rounded text-[10px] text-emerald-900 font-mono font-bold">.sukses &lt;ID&gt;</code>, atau <code className="bg-emerald-100/80 px-1 py-0.5 rounded text-[10px] text-emerald-900 font-mono font-bold">.gagal &lt;ID&gt;</code>.
+                      </p>
+                    </div>
+                  </div>
+                ) : waBotStatus?.qrCode ? (
+                  <div className="text-center space-y-3 py-2">
+                    <div className="p-3 bg-white rounded-2xl border shadow-inner inline-block mx-auto">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={waBotStatus.qrCode}
+                        alt="Scan WhatsApp QR"
+                        className="w-56 h-56 object-contain mx-auto"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-ink">Petunjuk Scan:</p>
+                      <ol className="text-[11px] text-ink-muted text-left list-decimal list-inside space-y-1 max-w-xs mx-auto">
+                        <li>Buka aplikasi WhatsApp di HP Anda.</li>
+                        <li>Pilih menu <b>Perangkat Tertaut (Linked Devices)</b>.</li>
+                        <li>Pilih <b>Tautkan Perangkat</b> lalu scan QR di atas.</li>
+                      </ol>
+                      <p className="text-[10px] text-ink-muted pt-1">QR Code otomatis diperbarui setiap beberapa detik.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-10 space-y-2">
+                    <div className="animate-spin text-2xl">⏳</div>
+                    <p className="text-xs font-bold text-ink">Sedang menyiapkan QR Code...</p>
+                    <p className="text-[11px] text-ink-muted">Harap tunggu beberapa detik sementara server menyiapkan sesi Baileys.</p>
+                  </div>
+                )}
+
+                {/* Action Footer */}
+                <div className="flex gap-2 pt-2 border-t border-hairline">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={resettingWa}
+                    onClick={handleResetWaSession}
+                    className="flex-1 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 font-bold"
+                  >
+                    {resettingWa ? "Mereset..." : "🔄 Reset Sesi WA"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowWaModal(false)}
+                    className="flex-1 text-xs font-bold"
+                  >
+                    Tutup
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

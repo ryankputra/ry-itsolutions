@@ -694,7 +694,10 @@ function UnblockImeiContent() {
                     >
                       <div className="font-bold text-xs capitalize truncate">{opt.label}</div>
                       {opt.rangeText && (
-                        <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2">
+                        <div
+                          className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2"
+                          style={{ color: '#d97706' }}
+                        >
                           ⏱️ {opt.rangeText}
                         </div>
                       )}

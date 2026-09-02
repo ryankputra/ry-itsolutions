@@ -503,11 +503,23 @@ async function logoutWABot() {
 }
 
 function getWAStatus() {
+    const isConnected = connectionState === "open";
+    let statusText = "Terputus";
+    if (isConnected) {
+        statusText = `Terhubung (${connectedPhone || 'Admin'})`;
+    } else if (connectionState === "qr_ready" && qrCodeDataUrl) {
+        statusText = "Menunggu Scan QR Code";
+    } else if (connectionState === "connecting") {
+        statusText = "Sedang Menghubungkan...";
+    }
+
     return {
-        isConnected: connectionState === "open",
+        connected: isConnected,
+        isConnected: isConnected,
         state: connectionState,
         connectedPhone: connectedPhone,
-        qrCode: qrCodeDataUrl
+        qrCode: qrCodeDataUrl,
+        statusText: statusText
     };
 }
 

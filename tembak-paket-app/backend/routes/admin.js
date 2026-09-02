@@ -16,6 +16,7 @@ const { isAuthenticated, isAdmin, sseSend, sseBroadcast } = require('../middlewa
 const { sendTelegramNotification } = require('../telegramService');
 const { getKmspAdminBalance } = require('./transactions');
 const ceirgoClient = require('../ceirgoClient');
+const waBot = require('../services/waBot');
 
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
@@ -169,6 +170,8 @@ router.delete('/admin/delete-zero-balance', isAuthenticated, isAdmin, async (req
 // 5. GET /api/admin/manual-orders
 router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) => {
     try {
+        const { type } = req.query; // 'manual' | 'automated' | undefined
+        
         const orders = await dbAll(
             `SELECT * FROM transactions 
              WHERE service_type IN ('imei', 'ceir', 'barcode') 
@@ -176,7 +179,30 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
                 OR packageId LIKE 'create_%' 
              ORDER BY createdAt DESC`
         );
-        res.json({ status: true, data: orders });
+
+        const automatedCodes = new Set([
+            'cek_imei', 'cek_imei_beacukai', 'cek_history_imei', 'cek_validity', 'cek_digi', 'cek_sf',
+            'create_barcode', 'create_barcode_samsung', 'create_barcode_redmi', 'create_barcode_ios26'
+        ]);
+
+        let categorizedOrders = orders.map(o => {
+            const pkgId = (o.packageId || '').toLowerCase();
+            const sType = (o.service_type || '').toLowerCase();
+            const isAuto = sType === 'ceir' || sType === 'barcode' || automatedCodes.has(pkgId) || pkgId.startsWith('cek_') || pkgId.startsWith('create_');
+            return {
+                ...o,
+                is_automated: isAuto,
+                queue_type: isAuto ? 'automated' : 'manual'
+            };
+        });
+
+        if (type === 'manual') {
+            categorizedOrders = categorizedOrders.filter(o => !o.is_automated);
+        } else if (type === 'automated') {
+            categorizedOrders = categorizedOrders.filter(o => o.is_automated);
+        }
+
+        res.json({ status: true, data: categorizedOrders });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
@@ -1076,6 +1102,187 @@ router.get('/admin/deploy-status', isAuthenticated, isAdmin, (req, res) => {
         res.json({ status: true, log: logContent });
     } catch (e) {
         res.status(500).json({ status: false, message: 'Gagal membaca log.' });
+    }
+});
+
+// 23. WhatsApp Bot Status & Web-Based QR Code Endpoints
+router.get(['/admin/wabot/status', '/admin/whatsapp/status'], isAuthenticated, isAdmin, (req, res) => {
+    const waStatus = waBot.getWAStatus();
+    res.json({
+        status: true,
+        connected: waStatus.connected || waStatus.isConnected,
+        isConnected: waStatus.connected || waStatus.isConnected,
+        state: waStatus.state,
+        connectedPhone: waStatus.connectedPhone,
+        qrCode: waStatus.qrCode,
+        statusText: waStatus.statusText
+    });
+});
+
+router.post(['/admin/wabot/reset', '/admin/whatsapp/reset'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await waBot.initWABot(true);
+        res.json({
+            status: true,
+            message: "Sesi WhatsApp berhasil direset. Menghasilkan QR Code baru dalam beberapa detik..."
+        });
+    } catch (err) {
+        res.status(500).json({ status: false, message: "Gagal mereset sesi WhatsApp: " + err.message });
+    }
+});
+
+router.post(['/admin/wabot/init', '/admin/whatsapp/init'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await waBot.initWABot(false);
+        res.json({ status: true, message: "Inisialisasi WhatsApp Bot berhasil dipicu." });
+    } catch (err) {
+        res.status(500).json({ status: false, message: "Gagal inisialisasi WhatsApp: " + err.message });
+    }
+});
+
+router.post(['/admin/wabot/logout', '/admin/whatsapp/logout'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const ok = await waBot.logoutWABot();
+        res.json({ status: ok, message: ok ? "Berhasil logout WhatsApp." : "Gagal logout WhatsApp." });
+    } catch (err) {
+        res.status(500).json({ status: false, message: "Gagal logout: " + err.message });
+    }
+});
+
+// 24. GoPay Merchant Gateway Proxy Endpoints (Port 3002)
+const GOPAY_GW_URL = process.env.GOPAY_GATEWAY_URL || 'http://127.0.0.1:3002';
+const GOPAY_GW_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
+
+router.get('/admin/gopay/status', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const response = await axios.get(`${GOPAY_GW_URL}/token-status`, {
+            headers: { 'x-api-key': GOPAY_GW_KEY },
+            timeout: 6000
+        });
+        const d = response.data;
+        res.json({
+            status: Boolean(d?.success),
+            success: Boolean(d?.success),
+            data: d?.data || d
+        });
+    } catch (err) {
+        // Fallback gracefully without sending HTML error
+        res.json({
+            status: true,
+            success: false,
+            data: {
+                token_status: 'invalid',
+                connected: false,
+                message: "GoPay Gateway Port 3002 tidak merespon. Pastikan service aktif."
+            }
+        });
+    }
+});
+
+router.post(['/admin/gopay/send-otp', '/admin/gopay/request-otp'], isAuthenticated, isAdmin, async (req, res) => {
+    const phone = req.body?.phone || req.body?.phone_number;
+    if (!phone) {
+        return res.status(400).json({ status: false, success: false, message: "Nomor HP GoBiz/GoFood wajib diisi." });
+    }
+    try {
+        let response;
+        try {
+            response = await axios.post(`${GOPAY_GW_URL}/api/otp/request`, { phone }, {
+                headers: { 'x-api-key': GOPAY_GW_KEY, 'Content-Type': 'application/json' },
+                timeout: 30000
+            });
+        } catch (postErr) {
+            if (postErr.response?.status === 404) {
+                response = await axios.post(`${GOPAY_GW_URL}/send-otp`, { phone }, {
+                    headers: { 'x-api-key': GOPAY_GW_KEY, 'Content-Type': 'application/json' },
+                    timeout: 30000
+                });
+            } else {
+                throw postErr;
+            }
+        }
+        const d = response.data;
+        res.json({
+            status: Boolean(d?.success || d?.status),
+            success: Boolean(d?.success || d?.status),
+            message: d?.message || "Kode OTP berhasil dikirim via SMS."
+        });
+    } catch (err) {
+        console.warn("[GOPAY_PROXY_ERROR] Send OTP failed:", err.message);
+        const errorMsg = err.response?.data?.message || (err.code === 'ECONNREFUSED' || err.message.includes('timeout')
+            ? "GoPay Gateway Port 3002 tidak merespon. Pastikan service aktif."
+            : `Gagal mengirim OTP: ${err.message}`);
+        res.status(200).json({
+            status: false,
+            success: false,
+            message: errorMsg
+        });
+    }
+});
+
+router.post('/admin/gopay/verify-otp', isAuthenticated, isAdmin, async (req, res) => {
+    const otp = req.body?.otp || req.body?.code;
+    if (!otp) {
+        return res.status(400).json({ status: false, success: false, message: "Kode OTP 4 digit wajib diisi." });
+    }
+    try {
+        let response;
+        try {
+            response = await axios.post(`${GOPAY_GW_URL}/api/otp/verify`, { otp }, {
+                headers: { 'x-api-key': GOPAY_GW_KEY, 'Content-Type': 'application/json' },
+                timeout: 30000
+            });
+        } catch (postErr) {
+            if (postErr.response?.status === 404) {
+                response = await axios.post(`${GOPAY_GW_URL}/verify-otp`, { otp }, {
+                    headers: { 'x-api-key': GOPAY_GW_KEY, 'Content-Type': 'application/json' },
+                    timeout: 30000
+                });
+            } else {
+                throw postErr;
+            }
+        }
+        const d = response.data;
+        res.json({
+            status: Boolean(d?.success || d?.status),
+            success: Boolean(d?.success || d?.status),
+            message: d?.message || "Verifikasi OTP GoPay berhasil!",
+            data: d?.data
+        });
+    } catch (err) {
+        console.warn("[GOPAY_PROXY_ERROR] Verify OTP failed:", err.message);
+        const errorMsg = err.response?.data?.message || (err.code === 'ECONNREFUSED' || err.message.includes('timeout')
+            ? "GoPay Gateway Port 3002 tidak merespon. Pastikan service aktif."
+            : `Gagal verifikasi OTP: ${err.message}`);
+        res.status(200).json({
+            status: false,
+            success: false,
+            message: errorMsg
+        });
+    }
+});
+
+router.post(['/admin/gopay/cancel-otp', '/admin/gopay/cancel'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const response = await axios.post(`${GOPAY_GW_URL}/api/otp/cancel`, {}, {
+            headers: { 'x-api-key': GOPAY_GW_KEY },
+            timeout: 8000
+        });
+        res.json({ status: true, success: true, message: response.data?.message || "Permintaan OTP dibatalkan." });
+    } catch (err) {
+        res.json({ status: true, success: true, message: "Permintaan OTP dibatalkan." });
+    }
+});
+
+router.post('/admin/gopay/logout', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const response = await axios.post(`${GOPAY_GW_URL}/api/otp/logout`, {}, {
+            headers: { 'x-api-key': GOPAY_GW_KEY },
+            timeout: 8000
+        });
+        res.json({ status: true, success: true, message: response.data?.message || "Sesi GoPay berhasil logout." });
+    } catch (err) {
+        res.json({ status: false, success: false, message: "Gagal logout GoPay: " + err.message });
     }
 });
 
