@@ -14,6 +14,7 @@ const { dbGet, dbRun, dbAll } = require('../config/db');
 const { isAuthenticated } = require('../middleware/auth');
 const ceirgoClient = require('../ceirgoClient');
 const { sendTelegramNotification } = require('../telegramService');
+const { notifyNewOrder } = require('../services/waBot');
 
 // Categorized service codes mapping
 const DIAGNOSTIC_SERVICE_CODES = new Set([
@@ -248,16 +249,16 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             }
             console.log(`[CeirGO Order Router] Sukses! Ref ID: ${refId}, Status: ${orderStatus}`);
         } else {
-            const errMsg = ceirRes.message || ceirRes.error || 'Respon gagal dari CeirGO';
-            console.warn(`[CeirGO Order Router] Respon gagal: ${errMsg}. Masuk antrean manual.`);
+            const errMsg = ceirRes.message || ceirRes.error || 'Respon gagal dari server pusat';
+            console.error(`[CeirGO Order Router Error] Provider error on ${rawCode} (${cleanImei}):`, errMsg);
             orderStatus = 'pending';
-            adminNote = `CeirGO Auto-Submit: ${errMsg}. Menunggu verifikasi manual admin.`;
+            adminNote = `[CeirGO Internal Error] ${errMsg}`;
             apiResponse = JSON.stringify(ceirRes);
         }
     } catch (dispatchErr) {
-        console.error(`[CeirGO Order Router Exception]`, dispatchErr.message);
+        console.error(`[CeirGO Order Router Exception] ${rawCode} (${cleanImei}):`, dispatchErr.message);
         orderStatus = 'pending';
-        adminNote = `CeirGO Exception: ${dispatchErr.message}. Menunggu verifikasi manual admin.`;
+        adminNote = `[CeirGO Exception] ${dispatchErr.message}`;
         apiResponse = JSON.stringify({ error: dispatchErr.message });
     }
 
@@ -288,7 +289,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
                 null,
                 serviceType,
                 cleanImei2 ? `${cleanImei}, ${cleanImei2}` : cleanImei,
-                theme || 'dark',
+                null, // speed_option strictly reserved for manual Buka IMEI
                 appliedCoupon ? appliedCoupon.code : null,
                 discountAmount,
                 refId,
@@ -313,17 +314,37 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
         sendTelegramNotification(notifMsg);
     } catch (tgErr) {}
 
-    // Parse result payload if possible
-    let parsedResult = null;
+    // Send WhatsApp Admin Notification asynchronously with Embedded Command Guides
     try {
-        parsedResult = JSON.parse(apiResponse);
-    } catch (e) {
-        parsedResult = apiResponse;
+        notifyNewOrder({
+            id: trxId,
+            userName: user.name || user.email || 'Pelanggan',
+            packageName: SERVICE_NAMES[rawCode] || rawCode,
+            serviceType: isBarcode ? 'barcode' : 'ceir',
+            imei: cleanImei2 ? `${cleanImei}, ${cleanImei2}` : cleanImei,
+            price: finalPrice,
+            speedOption: 'instant'
+        }).catch(() => {});
+    } catch (waErr) {}
+
+    // Strict User-Facing Error Masking (ZERO LEAKAGE of provider terms)
+    const neutralQueueNote = "Pesanan sedang dalam antrean proses verifikasi oleh sistem/admin.";
+    const userFacingMessage = orderStatus === 'success' 
+        ? 'Pesanan berhasil diselesaikan!' 
+        : neutralQueueNote;
+
+    let userFacingResult = neutralQueueNote;
+    if (orderStatus === 'success') {
+        try {
+            userFacingResult = JSON.parse(apiResponse);
+        } catch (e) {
+            userFacingResult = apiResponse;
+        }
     }
 
     return res.json({
         status: true,
-        message: orderStatus === 'success' ? 'Pesanan berhasil diselesaikan!' : 'Pesanan berhasil dikirim dan sedang diproses!',
+        message: userFacingMessage,
         data: {
             trxId,
             id: trxId,
@@ -334,7 +355,8 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             imei2: cleanImei2,
             status: orderStatus,
             amount: finalPrice,
-            result: parsedResult,
+            result: userFacingResult,
+            userNote: orderStatus === 'success' ? (typeof userFacingResult === 'string' ? userFacingResult : 'Berhasil.') : neutralQueueNote,
             newBalance: updatedUser?.balance ?? (user.balance - finalPrice)
         }
     });

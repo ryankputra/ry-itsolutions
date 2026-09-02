@@ -35,6 +35,7 @@ const reviewRoutes = require('./routes/reviews');
 const gameRoutes = require('./routes/games');
 const telegramRoutes = require('./routes/telegram');
 const orderRoutes = require('./routes/orders');
+const waBot = require('./services/waBot');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -156,8 +157,24 @@ app.use('/api', reviewRoutes);
 app.use('/api', gameRoutes);
 app.use('/api', telegramRoutes.router);
 
+// WhatsApp Admin Bot Control Endpoints
+app.get('/api/admin/whatsapp/status', isAuthenticated, isAdmin, (req, res) => {
+    res.json({ status: true, data: waBot.getWAStatus() });
+});
+app.post('/api/admin/whatsapp/init', isAuthenticated, isAdmin, (req, res) => {
+    waBot.initWABot(req.body.forceNew === true);
+    res.json({ status: true, message: "Inisialisasi WhatsApp Bot dimulai. Silakan cek terminal/QR." });
+});
+app.post('/api/admin/whatsapp/logout', isAuthenticated, isAdmin, async (req, res) => {
+    const ok = await waBot.logoutWABot();
+    res.json({ status: ok, message: ok ? "WhatsApp Bot berhasil logout dan sesi dihapus." : "Gagal logout WhatsApp." });
+});
+
 // 9. Initialize Cron Schedulers
 initSchedulers();
+
+// Auto-start WhatsApp Bot if session exists
+waBot.initWABot(false);
 
 // 10. Start Server
 app.listen(PORT, () => {

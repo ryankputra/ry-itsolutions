@@ -15,6 +15,7 @@ const { dbGet, dbAll, dbRun } = require('../config/db');
 const { isAuthenticated, sseSend } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
 const { sendManualOrderNotification } = require('./telegram');
+const { notifyNewOrder } = require('../services/waBot');
 const ceirgoClient = require('../ceirgoClient');
 const { DEFAULT_QRIS_NOBU, DEFAULT_QRIS_GOPAY, generateDynamicQRIS, generateQrisDataUrl } = require('../config/qrisGenerator');
 
@@ -855,6 +856,20 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 sendManualOrderNotification(notifMsg, trxId, firstImg);
             }
 
+            // Send WhatsApp Admin Notification with Embedded Command Guides
+            try {
+                notifyNewOrder({
+                    id: trxId,
+                    userName: user.name,
+                    packageName: packageName,
+                    serviceType: service_type,
+                    imei: cleanImei,
+                    price: finalPriceToPay,
+                    speedOption: speed_option,
+                    userImage: user_image_paths
+                }).catch(() => {});
+            } catch (waErr) {}
+
             res.json({
                 status: true,
                 message: isCeirgoService && (finalStatus === 'processing' || finalStatus === 'success')
@@ -910,8 +925,29 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
 
             const purchaseVal = Number(item.platformFee || item.originalPrice || item.price || 0);
 
+            // Error Masking: Prevent provider terms leaking to end-user
+            let cleanAdminNote = item.admin_note;
+            const isAutomatedService = item.service_type === 'ceir' || item.service_type === 'barcode' || (item.packageId && (item.packageId.startsWith('cek_') || item.packageId.startsWith('create_')));
+
+            if (cleanAdminNote && /ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(cleanAdminNote)) {
+                cleanAdminNote = "Pesanan sedang dalam antrean proses verifikasi oleh sistem/admin.";
+            }
+
+            let cleanApiResponse = item.api_response;
+            if (cleanApiResponse && /ceirgo|balance|upps|provider|api|sqlite|exception/i.test(cleanApiResponse)) {
+                cleanApiResponse = "Sedang Diproses";
+            }
+
+            // Duration cleanup: Automated services are always instant
+            const cleanSpeedOption = isAutomatedService ? 'instant' : item.speed_option;
+
             return {
                 ...item,
+                admin_note: cleanAdminNote,
+                adminNote: cleanAdminNote,
+                api_response: cleanApiResponse,
+                speed_option: cleanSpeedOption,
+                speedOption: cleanSpeedOption,
                 amount: purchaseVal,
                 originalPrice: purchaseVal,
                 baseAmount: purchaseVal,

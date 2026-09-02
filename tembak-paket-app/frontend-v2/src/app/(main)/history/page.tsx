@@ -381,6 +381,19 @@ function HistoryContent() {
                             IMEI: {trx.imei}
                           </p>
                         )}
+                        {/* Duration cleanup: Automated vs Manual IMEI */}
+                        {(trx.service_type === 'ceir' || trx.service_type === 'barcode' || trx.packageId?.startsWith('cek_') || trx.packageId?.startsWith('create_')) ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                            <svg className="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                            </svg>
+                            Proses Instant (Otomatis System)
+                          </span>
+                        ) : trx.speed_option && trx.speed_option !== 'instant' ? (
+                          <p className="text-[10px] text-ink-muted mt-1">
+                            Opsi Kecepatan: <strong className="text-ink font-bold">{trx.speed_option === 'fast' ? 'Fast (1-3 Jam)' : trx.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}</strong>
+                          </p>
+                        ) : null}
                         <p className="text-[10px] text-ink-muted mt-0.5">
                           {trx.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}
                         </p>
@@ -395,15 +408,21 @@ function HistoryContent() {
                   </div>
                 </div>
 
-                {/* Admin Note Box if exists */}
-                {(trx.admin_note || trx.adminNote) && (
-                  <div className="p-2.5 rounded-xl bg-parchment border border-hairline text-xs space-y-0.5">
-                    <span className="font-bold text-[10px] text-primary uppercase block">Catatan Server / Hasil:</span>
-                    <p className="text-ink text-[11px] leading-relaxed break-words">
-                      {trx.admin_note || trx.adminNote}
-                    </p>
-                  </div>
-                )}
+                {/* Safe User Note Box (Zero Technical Error Leakage) */}
+                {(() => {
+                  const rawNote = trx.admin_note || trx.adminNote || "";
+                  if (!rawNote) return null;
+                  const isLeaked = /ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
+                  const displayNote = isLeaked ? "Pesanan sedang dalam antrean proses verifikasi oleh sistem/admin." : rawNote;
+                  return (
+                    <div className="p-2.5 rounded-xl bg-parchment border border-hairline text-xs space-y-0.5">
+                      <span className="font-bold text-[10px] text-primary uppercase block">Catatan Pesanan:</span>
+                      <p className="text-ink text-[11px] leading-relaxed break-words">
+                        {displayNote}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* Total & Action Buttons Bar */}
                 <div className="pt-2 border-t border-hairline/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

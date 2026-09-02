@@ -169,7 +169,13 @@ router.delete('/admin/delete-zero-balance', isAuthenticated, isAdmin, async (req
 // 5. GET /api/admin/manual-orders
 router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const orders = await dbAll("SELECT * FROM transactions WHERE service_type IN ('imei', 'ceir') ORDER BY createdAt DESC");
+        const orders = await dbAll(
+            `SELECT * FROM transactions 
+             WHERE service_type IN ('imei', 'ceir', 'barcode') 
+                OR packageId LIKE 'cek_%' 
+                OR packageId LIKE 'create_%' 
+             ORDER BY createdAt DESC`
+        );
         res.json({ status: true, data: orders });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -248,6 +254,68 @@ router.post('/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async 
         res.json({ status: true, message: "Status pesanan berhasil disinkronkan dengan CeirGO.", data: { status: newStatus, note, ceirData } });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message || "Gagal melakukan recheck CeirGO." });
+    }
+});
+
+// 7b. POST /api/admin/orders/:id/retry-ceirgo (Retry CeirGO Order Execution from Admin Queue)
+router.post('/admin/orders/:id/retry-ceirgo', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const trxId = req.params.id;
+        const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
+        if (!trx) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
+
+        const canonicalCode = (trx.packageId || trx.service_type || '').replace(/^ceirgo_price_/, '');
+        const cleanImei = (trx.imei || '').split(/[\n,]+/)[0].trim().replace(/\D/g, '');
+
+        if (!canonicalCode || !cleanImei) {
+            return res.status(400).json({ status: false, message: "Data kode layanan atau IMEI tidak lengkap untuk disubmit ulang." });
+        }
+
+        console.log(`[Admin CeirGO Retry] Menjalankan submit ulang ${trxId} (${canonicalCode} -> ${cleanImei})...`);
+        const ceirRes = await ceirgoClient.createOrder({
+            code: canonicalCode,
+            data: { imeis: [cleanImei] }
+        });
+
+        if (ceirRes.status && ceirRes.data) {
+            const cd = ceirRes.data;
+            const refId = cd.reference_id || cd.order_id || cd.trx_id || `CRG_${Date.now()}`;
+            const serverStatus = (cd.status || cd.order_status || 'processing').toLowerCase();
+            const finalStatus = (serverStatus === 'success' || serverStatus === 'completed') ? 'success' : 'processing';
+            const note = typeof cd.result === 'string' ? cd.result : (cd.message || 'Sukses disubmit ulang ke CeirGO.');
+
+            if (cd.remaining_balance != null) {
+                const rb = Number(cd.remaining_balance);
+                if (!isNaN(rb) && rb >= 0) {
+                    await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(rb)]).catch(() => {});
+                }
+            }
+
+            await dbRun(
+                "UPDATE transactions SET status = ?, admin_note = ?, api_response = ?, kmspTrxId = ? WHERE id = ?",
+                [finalStatus, note, JSON.stringify(cd.result || cd), refId, trxId]
+            );
+
+            return res.json({
+                status: true,
+                message: `Pesanan berhasil dikirim ulang ke CeirGO! Status: ${finalStatus.toUpperCase()}`,
+                data: { status: finalStatus, refId, result: cd.result }
+            });
+        } else {
+            const errMsg = ceirRes.message || ceirRes.error || 'Respon gagal dari CeirGO';
+            console.error(`[Admin CeirGO Retry Error] ${trxId}:`, errMsg);
+            await dbRun(
+                "UPDATE transactions SET admin_note = ?, api_response = ? WHERE id = ?",
+                [`[CeirGO Retry Error] ${errMsg}`, JSON.stringify(ceirRes), trxId]
+            );
+            return res.status(400).json({
+                status: false,
+                message: `Gagal submit ulang ke CeirGO: ${errMsg}`
+            });
+        }
+    } catch (e) {
+        console.error("[Admin CeirGO Retry Exception]", e.message);
+        res.status(500).json({ status: false, message: `Terjadi kendala: ${e.message}` });
     }
 });
 

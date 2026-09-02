@@ -565,10 +565,28 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   </div>
                 </>
               ) : (
+                <>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
+                    <span className="text-slate-500 font-medium">Tipe Layanan</span>
+                    <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                      Pengecekan Data & Diagnostik (Non-Garansi)
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
+                    <span className="text-slate-500 font-medium">Waktu Pengerjaan</span>
+                    <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px]">
+                      ⚡ Proses Instant (Otomatis System)
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {/* Manual IMEI Speed Option (Only shown for non-automated manual orders) */}
+              {!isCeirService && !isTopUp && (data.speed || data.speed_option) && (data.speed || data.speed_option) !== 'instant' && (
                 <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
-                  <span className="text-slate-500 font-medium">Tipe Layanan</span>
-                  <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                    Pengecekan Data CEIR (Non-Garansi Sinyal)
+                  <span className="text-slate-500 font-medium">Opsi Kecepatan</span>
+                  <span className="font-bold text-slate-800">
+                    {(data.speed || data.speed_option) === 'fast' ? 'Fast (1-3 Jam)' : (data.speed || data.speed_option) === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}
                   </span>
                 </div>
               )}

@@ -283,6 +283,9 @@ export default function AdminPage() {
   const [searchOrder, setSearchOrder] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
+  const [orderQueueSubTab, setOrderQueueSubTab] = useState<'manual' | 'automated'>('manual');
+  const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
+  const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
 
   const [imeiServiceOpen, setImeiServiceOpen] = useState(true);
   const [imeiServiceNote, setImeiServiceNote] = useState("");
@@ -1249,8 +1252,77 @@ export default function AdminPage() {
     setUserPage(1);
   }, [searchUser, userRoleFilter]);
 
-  // Filtered orders in queue
-  const filteredOrders = manualOrders.filter(o => {
+  // Helper: Detect automated CeirGO/Barcode orders vs Manual IMEI orders
+  const isAutomatedOrder = (o: any) => {
+    const st = (o.service_type || o.serviceType || '').toLowerCase();
+    const pkg = (o.packageId || o.packageName || '').toLowerCase();
+    return st === 'ceir' || st === 'barcode' || pkg.startsWith('cek_') || pkg.startsWith('create_') || pkg.includes('barcode') || pkg.includes('ceir');
+  };
+
+  const manualOrdersList = manualOrders.filter(o => !isAutomatedOrder(o));
+  const automatedOrdersList = manualOrders.filter(o => isAutomatedOrder(o));
+
+  const manualPendingCount = manualOrdersList.filter(o => o.status === 'pending' || o.status === 'processing').length;
+  const automatedPendingCount = automatedOrdersList.filter(o => o.status === 'pending' || o.status === 'processing').length;
+
+  const handleRetryCeirgoOrder = async (orderId: string) => {
+    const confirm = await Swal.fire({
+      title: 'Submit Ulang ke CeirGO?',
+      text: 'Sistem akan mengeksekusi order ulang ke server pusat CeirGO untuk pesanan ini.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Submit Ulang',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#059669',
+    });
+    if (!confirm.isConfirmed) return;
+
+    try {
+      setRetryingOrderId(orderId);
+      const res = await fetch(`/api/admin/orders/${orderId}/retry-ceirgo`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        Swal.fire({
+          title: 'Berhasil!',
+          text: data.message || 'Pesanan berhasil disubmit ulang ke CeirGO.',
+          icon: 'success',
+          timer: 2000
+        });
+        loadManualData();
+      } else {
+        Swal.fire({
+          title: 'Gagal Submit Ulang',
+          text: data.message || 'Terjadi kesalahan saat memanggil server CeirGO.',
+          icon: 'error'
+        });
+        loadManualData();
+      }
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Error',
+        text: err?.message || 'Gagal menghubungi server.',
+        icon: 'error'
+      });
+    } finally {
+      setRetryingOrderId(null);
+    }
+  };
+
+  const toggleLogExpanded = (id: string) => {
+    setExpandedLogIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Filtered orders in queue (Separated by Manual vs Automated sub-tab)
+  const currentSubTabOrders = orderQueueSubTab === 'manual' ? manualOrdersList : automatedOrdersList;
+  const filteredOrders = currentSubTabOrders.filter(o => {
     if (hideSuccess && o.status === "success") return false;
     if (hideFailed && o.status === "failed") return false;
 
@@ -1527,8 +1599,8 @@ export default function AdminPage() {
           <Card glass className="p-5 space-y-4">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
               <div>
-                <h2 className="text-lg font-bold text-ink">Antrean Pesanan Transaksi</h2>
-                <p className="text-xs text-ink-muted mt-0.5">Pantau dan proses pesanan IMEI & pengecekan status yang masuk dari pelanggan.</p>
+                <h2 className="text-lg font-bold text-ink">Antrean & Log Transaksi Pesanan</h2>
+                <p className="text-xs text-ink-muted mt-0.5">Kelola antrean pengerjaan manual dan pantau log eksekusi otomatis server pusat.</p>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -1538,12 +1610,57 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* SUB-TABS: ANTREAN BUKA IMEI (MANUAL) vs LOG CEIRGO & DIAGNOSTIK (OTOMATIS) */}
+            <div className="flex border-b border-hairline gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setOrderQueueSubTab('manual')}
+                className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+                  orderQueueSubTab === 'manual'
+                    ? 'border-primary text-primary font-black'
+                    : 'border-transparent text-ink-muted hover:text-ink'
+                }`}
+              >
+                <span>🛠️ ANTREAN BUKA IMEI (MANUAL ADMIN)</span>
+                {manualPendingCount > 0 ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse shadow-sm">
+                    {manualPendingCount}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                    {manualOrdersList.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOrderQueueSubTab('automated')}
+                className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+                  orderQueueSubTab === 'automated'
+                    ? 'border-primary text-primary font-black'
+                    : 'border-transparent text-ink-muted hover:text-ink'
+                }`}
+              >
+                <span>⚡ LOG CEIRGO & DIAGNOSTIK (OTOMATIS)</span>
+                {automatedPendingCount > 0 ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-sm">
+                    {automatedPendingCount}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                    {automatedOrdersList.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
             {/* Filter & Search Bar */}
             <div className="flex flex-col md:flex-row gap-2.5 pt-1">
               <div className="flex-1">
                 <input
                   type="text"
-                  placeholder="Cari berdasarkan IMEI, nama user, layanan, atau ID..."
+                  placeholder={orderQueueSubTab === 'manual' ? "Cari pesanan manual berdasarkan IMEI, user, ID..." : "Cari log otomatis berdasarkan kode layanan, IMEI, user..."}
                   value={searchOrder}
                   onChange={(e) => setSearchOrder(e.target.value)}
                   className="w-full h-9 px-3.5 rounded-xl border border-hairline bg-canvas text-xs focus:outline-none focus:ring-1 focus:ring-primary font-medium"
@@ -1555,45 +1672,54 @@ export default function AdminPage() {
                   onClick={() => setOrderStatusFilter("all")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
                 >
-                  Semua ({manualOrders.length})
+                  Semua ({currentSubTabOrders.length})
                 </button>
                 <button
                   onClick={() => setOrderStatusFilter("pending")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-700 border-hairline'}`}
                 >
-                  Tertunda ({manualOrders.filter(o => o.status === 'pending' || o.status === 'processing').length})
+                  Tertunda ({currentSubTabOrders.filter(o => o.status === 'pending' || o.status === 'processing').length})
                 </button>
                 <button
                   onClick={() => setOrderStatusFilter("success")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'success' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-700 border-hairline'}`}
                 >
-                  Sukses ({manualOrders.filter(o => o.status === 'success').length})
+                  Sukses ({currentSubTabOrders.filter(o => o.status === 'success').length})
                 </button>
                 <button
                   onClick={() => setOrderStatusFilter("failed")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'failed' ? 'bg-rose-600 text-white border-rose-600' : 'bg-canvas text-rose-700 border-hairline'}`}
                 >
-                  Gagal ({manualOrders.filter(o => o.status === 'failed').length})
+                  Gagal ({currentSubTabOrders.filter(o => o.status === 'failed').length})
                 </button>
               </div>
             </div>
 
-            {/* Order Items */}
+            {/* Order Items List */}
             {loadingManual ? (
               <div className="py-12 text-center text-ink-muted text-xs">Memuat daftar antrean pesanan...</div>
             ) : filteredOrders.length === 0 ? (
               <div className="py-10 text-center border border-dashed rounded-2xl space-y-1 bg-parchment/20">
-                <p className="font-bold text-xs text-ink">Tidak ada pesanan pada filter ini</p>
+                <p className="font-bold text-xs text-ink">
+                  {orderQueueSubTab === 'manual' ? "Tidak ada antrean pesanan Buka IMEI manual." : "Tidak ada log layanan otomatis CeirGO."}
+                </p>
                 <p className="text-[11px] text-ink-muted">Seluruh antrean telah diproses atau tidak ditemukan hasil pencarian.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredOrders.map(o => (
                   <div key={o.id} className="p-4 border border-hairline rounded-2xl bg-canvas space-y-3 hover:border-primary/30 transition-colors">
+                    {/* Header Row */}
                     <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-sm text-ink">{o.packageName}</span>
+                          {/* Service Code badge for automated orders */}
+                          {(o.packageId || o.service_type) && (o.packageId?.startsWith('cek_') || o.packageId?.startsWith('create_') || o.service_type === 'barcode' || o.service_type === 'ceir') && (
+                            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-mono font-bold">
+                              {o.packageId || o.service_type}
+                            </span>
+                          )}
                           <span className="text-xs font-mono text-ink-muted bg-parchment px-2 py-0.5 rounded border border-hairline">
                             #{o.id.substring(0, 14)}
                           </span>
@@ -1609,10 +1735,23 @@ export default function AdminPage() {
                             </span>
                           ))}
                         </div>
-                        {o.speed_option && (
-                          <p className="text-xs font-semibold text-primary mt-1">
-                            Opsi Kecepatan: <span className="font-bold">{o.speed_option === 'fast' ? 'Fast (1-3 Jam)' : o.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}</span>
-                          </p>
+
+                        {/* Speed & Duration: Manual vs Automated Separation */}
+                        {orderQueueSubTab === 'manual' ? (
+                          o.speed_option && o.speed_option !== 'instant' && (
+                            <p className="text-xs font-semibold text-primary mt-1">
+                              Opsi Kecepatan: <span className="font-bold">{o.speed_option === 'fast' ? 'Fast (1-3 Jam)' : o.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}</span>
+                            </p>
+                          )
+                        ) : (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <svg className="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                              </svg>
+                              Proses Instant (Otomatis System)
+                            </span>
+                          </div>
                         )}
                         <p className="text-[11px] text-ink-muted mt-1">{new Date(o.createdAt).toLocaleString('id-ID')}</p>
                       </div>
@@ -1622,13 +1761,13 @@ export default function AdminPage() {
                           {o.status}
                         </span>
                         <span className="text-sm font-bold text-ink">
-                          Rp {(o.platformFee || 0).toLocaleString('id-ID')}
+                          Rp {(o.platformFee || o.originalPrice || 0).toLocaleString('id-ID')}
                         </span>
                       </div>
                     </div>
 
-                    {/* Screenshot Proofs */}
-                    {(o.user_image || o.user_image_ceir) && (
+                    {/* Screenshot Proofs (Only in Manual IMEI tab) */}
+                    {orderQueueSubTab === 'manual' && (o.user_image || o.user_image_ceir) && (
                       <div className="flex gap-4 flex-wrap pt-2 border-t border-hairline/60">
                         {o.user_image && (
                           <div className="space-y-1">
@@ -1685,15 +1824,45 @@ export default function AdminPage() {
                       </div>
                     )}
 
-                    {/* Result Note if available */}
-                    {(o.admin_note || o.admin_image) && (
-                      <div className="p-2.5 bg-parchment/60 rounded-xl border border-hairline text-xs space-y-0.5">
-                        <p className="font-bold text-primary text-[11px] uppercase tracking-wider">Hasil / Catatan Admin:</p>
-                        {o.admin_note && <p className="text-ink">{o.admin_note}</p>}
+                    {/* Result Note & Technical Provider Logs (Admin View) */}
+                    {(o.admin_note || o.admin_image || (orderQueueSubTab === 'automated' && o.api_response)) && (
+                      <div className="p-2.5 bg-parchment/60 rounded-xl border border-hairline text-xs space-y-1">
+                        <p className="font-bold text-primary text-[11px] uppercase tracking-wider">
+                          {orderQueueSubTab === 'automated' ? 'Log Server Pusat / Hasil:' : 'Hasil / Catatan Admin:'}
+                        </p>
+                        {o.admin_note && (
+                          <p className={`text-xs font-medium ${o.admin_note.includes('Error') || o.admin_note.includes('Exception') ? 'text-rose-700 font-semibold' : 'text-ink'}`}>
+                            {o.admin_note}
+                          </p>
+                        )}
                         {o.admin_image && (
                           <a href={o.admin_image} target="_blank" rel="noreferrer" className="text-blue-600 underline font-medium block mt-1">
                             Buka Lampiran Bukti
                           </a>
+                        )}
+
+                        {/* Collapsible raw API response drawer for automated orders */}
+                        {orderQueueSubTab === 'automated' && o.api_response && (
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleLogExpanded(o.id)}
+                              className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+                            >
+                              <span>{expandedLogIds.has(o.id) ? "▼ Sembunyikan Raw Payload JSON" : "▶ Tampilkan Raw Payload JSON"}</span>
+                            </button>
+                            {expandedLogIds.has(o.id) && (
+                              <pre className="mt-1 p-2 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto max-h-48">
+                                {(() => {
+                                  try {
+                                    return JSON.stringify(JSON.parse(o.api_response), null, 2);
+                                  } catch (e) {
+                                    return o.api_response;
+                                  }
+                                })()}
+                              </pre>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
@@ -1755,16 +1924,37 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       <div className="flex gap-2 flex-wrap items-center pt-1 border-t border-hairline/60">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-primary/5 text-primary border-primary/30 hover:bg-primary hover:text-white text-xs"
-                          onClick={() => setManualActionData({ id: o.id, status: o.status, note: o.admin_note || '', file: null })}
-                        >
-                          Proses Pesanan
-                        </Button>
+                        {orderQueueSubTab === 'manual' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-primary/5 text-primary border-primary/30 hover:bg-primary hover:text-white text-xs"
+                            onClick={() => setManualActionData({ id: o.id, status: o.status, note: o.admin_note || '', file: null })}
+                          >
+                            Proses Pesanan
+                          </Button>
+                        )}
 
-                        {o.service_type === 'ceir' && (
+                        {/* Retry API Submit button for automated orders */}
+                        {orderQueueSubTab === 'automated' && (
+                          <Button
+                            size="sm"
+                            disabled={retryingOrderId === o.id}
+                            onClick={() => handleRetryCeirgoOrder(o.id)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                          >
+                            {retryingOrderId === o.id ? (
+                              <span className="animate-spin mr-1">⏳</span>
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                              </svg>
+                            )}
+                            <span>{retryingOrderId === o.id ? "Memproses..." : "Retry API Submit"}</span>
+                          </Button>
+                        )}
+
+                        {(o.service_type === 'ceir' || orderQueueSubTab === 'automated') && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1772,7 +1962,7 @@ export default function AdminPage() {
                             onClick={async () => {
                               const confirm = await Swal.fire({
                                 title: 'Re-check Server Pusat?',
-                                text: `Kueri ulang IMEI ${o.imei?.split(',')[0]} ke Server Pusat.`,
+                                text: `Kueri ulang status order ${o.id} ke Server Pusat.`,
                                 icon: 'question',
                                 showCancelButton: true,
                                 confirmButtonText: 'Ya, Re-check',
@@ -1783,7 +1973,7 @@ export default function AdminPage() {
                                 const res = await fetch(`/api/admin/manual-orders/${o.id}/recheck`, { method: 'POST', credentials: 'include' });
                                 const data = await res.json();
                                 if (res.ok && data.status) {
-                                  Swal.fire({ title: 'Berhasil!', text: data.data?.adminNote || 'Data berhasil diperbarui.', icon: 'success' });
+                                  Swal.fire({ title: 'Berhasil!', text: data.data?.note || 'Data berhasil disinkronkan.', icon: 'success' });
                                   loadManualData();
                                 } else {
                                   Swal.fire({ title: 'Gagal', text: data.message || 'Re-check gagal', icon: 'error' });
@@ -1807,7 +1997,7 @@ export default function AdminPage() {
                               packageName: o.packageName || 'Layanan Resmi',
                               serviceType: o.service_type,
                               createdAt: o.createdAt,
-                              amount: o.platformFee || 0,
+                              amount: o.platformFee || o.originalPrice || 0,
                               status: o.status,
                               adminNote: o.admin_note
                             });
