@@ -40,6 +40,15 @@ export default function AdminPage() {
   const [paymentGateway, setPaymentGateway] = useState("orkut");
   const [savingGateway, setSavingGateway] = useState(false);
   const [providerBalances, setProviderBalances] = useState<{ kmsp: number | null, ceirgo: number | null }>({ kmsp: null, ceirgo: null });
+  const [ceirgoStatus, setCeirgoStatus] = useState<{
+    connected: boolean;
+    error: string | null;
+    loading: boolean;
+  }>({
+    connected: false,
+    error: null,
+    loading: true,
+  });
   const [showBeliPaket, setShowBeliPaket] = useState(false);
   const [savingMenuSettings, setSavingMenuSettings] = useState(false);
   const [showDeposit, setShowDeposit] = useState(true);
@@ -825,20 +834,54 @@ export default function AdminPage() {
         fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
           .then(r => safeJson(r))
           .then(d => {
-            const b = d?.ceirgoBalance ?? d?.data?.ceirgoBalance ?? d?.data?.balance ?? d?.balance ?? d?.data?.saldo ?? d?.saldo;
-            if (b != null && !isNaN(Number(b))) setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
+            console.log("[SALDO_CENTER_DEBUG] Response from /api/admin/ceirgo-balance:", d);
+            const b = d?.ceirgoBalance ?? d?.balance ?? d?.data?.ceirgoBalance ?? d?.data?.balance ?? d?.data?.saldo ?? d?.saldo;
+            if (b != null && !isNaN(Number(b))) {
+              setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
+            }
+            const isConn = Boolean(d?.connected ?? d?.status ?? false);
+            const errMsg = d?.error ?? d?.data?.error ?? (!isConn ? (d?.message || "Server tidak dapat dijangkau") : null);
+            setCeirgoStatus({
+              connected: isConn,
+              error: errMsg,
+              loading: false
+            });
           })
-          .catch(() => { });
+          .catch((err) => {
+            console.error("[SALDO_CENTER_DEBUG] Error fetching ceirgo-balance:", err);
+            setCeirgoStatus({
+              connected: false,
+              error: err?.message || "Gagal menghubungi server backend",
+              loading: false
+            });
+          });
 
         fetch('/api/admin/provider-balances', { credentials: 'include' })
           .then(r => safeJson(r))
           .then(d => {
-            const c = d?.ceirgoBalance ?? d?.data?.ceirgoBalance ?? d?.data?.ceirgo ?? d?.data?.balance ?? d?.balance;
-            const k = d?.kmspBalance ?? d?.data?.kmspBalance ?? d?.data?.kmsp;
-            if (c != null && !isNaN(Number(c))) setProviderBalances(prev => ({ ...prev, ceirgo: Number(c) }));
-            if (k != null && !isNaN(Number(k))) setProviderBalances(prev => ({ ...prev, kmsp: Number(k) }));
+            console.log("[SALDO_CENTER_DEBUG] Response from /api/admin/provider-balances:", d);
+            const c = d?.ceirgoBalance ?? d?.balance ?? d?.data?.ceirgoBalance ?? d?.data?.ceirgo ?? d?.data?.balance;
+            const k = d?.kmspBalance ?? d?.data?.kmspBalance ?? d?.data?.kmsp ?? d?.data?.balance;
+            if (c != null && !isNaN(Number(c))) {
+              setProviderBalances(prev => ({ ...prev, ceirgo: Number(c) }));
+            }
+            if (k != null && !isNaN(Number(k))) {
+              setProviderBalances(prev => ({ ...prev, kmsp: Number(k) }));
+            }
+            if (d?.connected != null || d?.ceirgoConnected != null || d?.ceirgoError) {
+              const isConn = Boolean(d?.connected ?? d?.ceirgoConnected ?? false);
+              const errMsg = d?.ceirgoError ?? d?.data?.error ?? (!isConn ? (d?.message || "Server tidak dapat dijangkau") : null);
+              setCeirgoStatus(prev => ({
+                ...prev,
+                connected: isConn,
+                error: errMsg,
+                loading: false
+              }));
+            }
           })
-          .catch(() => { });
+          .catch((err) => {
+            console.error("[SALDO_CENTER_DEBUG] Error fetching provider-balances:", err);
+          });
 
         fetch('/api/admin/kmsp-balance', { credentials: 'include' })
           .then(r => safeJson(r))
@@ -1390,15 +1433,31 @@ export default function AdminPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Saldo Server Pusat</span>
-            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">
-              Terkoneksi
-            </span>
+            {ceirgoStatus.loading ? (
+              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 animate-pulse">
+                Memuat...
+              </span>
+            ) : ceirgoStatus.connected ? (
+              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">
+                Terkoneksi
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-rose-100 text-rose-800" title={ceirgoStatus.error || "Gagal terhubung"}>
+                Terputus
+              </span>
+            )}
           </div>
           <div className="mt-2">
             <p className="text-lg font-bold text-primary leading-tight truncate">
-              Rp {providerBalances?.ceirgo != null ? Number(providerBalances.ceirgo).toLocaleString('id-ID') : '...'}
+              Rp {Number(providerBalances?.ceirgo ?? 0).toLocaleString('id-ID')}
             </p>
-            <p className="text-[11px] text-ink-muted">Gateway & Database</p>
+            {ceirgoStatus.error && !ceirgoStatus.connected ? (
+              <p className="text-[10px] text-rose-500 font-medium truncate" title={ceirgoStatus.error}>
+                ⚠️ {ceirgoStatus.error}
+              </p>
+            ) : (
+              <p className="text-[11px] text-ink-muted">Gateway & Database</p>
+            )}
           </div>
         </button>
       </div>
@@ -3569,12 +3628,68 @@ export default function AdminPage() {
                 </div>
                 <div className="flex justify-between items-center p-3 bg-canvas border border-hairline rounded-xl">
                   <div>
-                    <div className="font-bold text-xs">Server Pusat (CEIR/IMEI)</div>
-                    <div className="font-bold text-xs text-primary">
-                      Rp {providerBalances?.ceirgo != null ? Number(providerBalances.ceirgo).toLocaleString('id-ID') : '...'}
+                    <div className="flex items-center gap-2">
+                      <div className="font-bold text-xs">Server Pusat (CEIR/IMEI)</div>
+                      {ceirgoStatus.connected ? (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-100 text-emerald-700">
+                          Terkoneksi
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-rose-100 text-rose-700" title={ceirgoStatus.error || "Terputus"}>
+                          Terputus
+                        </span>
+                      )}
                     </div>
+                    <div className="font-bold text-xs text-primary mt-0.5">
+                      Rp {Number(providerBalances?.ceirgo ?? 0).toLocaleString('id-ID')}
+                    </div>
+                    {ceirgoStatus.error && !ceirgoStatus.connected && (
+                      <p className="text-[10px] text-rose-500 font-normal mt-0.5 max-w-xs truncate" title={ceirgoStatus.error}>
+                        ⚠️ {ceirgoStatus.error}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      title="Sinkronkan / Atur Saldo Manual"
+                      onClick={async () => {
+                        const { value: amount } = await Swal.fire({
+                          title: 'Atur Saldo Server Pusat Manual',
+                          text: 'Masukkan nominal saldo riil yang tercatat di dashboard CeirGO:',
+                          input: 'number',
+                          inputValue: String(providerBalances.ceirgo || 0),
+                          showCancelButton: true,
+                          confirmButtonText: 'Simpan',
+                          cancelButtonText: 'Batal'
+                        });
+                        if (amount !== undefined && amount !== null && amount !== '') {
+                          try {
+                            const res = await fetch('/api/admin/ceirgo-balance/set', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({ balance: Number(amount) })
+                            });
+                            const data = await safeJson(res);
+                            if (data?.status) {
+                              setProviderBalances(prev => ({ ...prev, ceirgo: Number(amount) }));
+                              setCeirgoStatus(prev => ({ ...prev, connected: true, error: null }));
+                              Swal.fire('Berhasil', data.message, 'success');
+                            } else {
+                              Swal.fire('Gagal', data?.message || 'Gagal menyimpan saldo', 'error');
+                            }
+                          } catch (err) {
+                            Swal.fire('Error', 'Gagal terhubung ke backend', 'error');
+                          }
+                        }
+                      }}
+                      className="p-1.5 rounded-lg border border-hairline hover:bg-parchment text-ink-muted transition-all cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                    </button>
                     <button
                       type="button"
                       title="Perbarui Saldo CeirGO"
@@ -3582,8 +3697,16 @@ export default function AdminPage() {
                         fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
                           .then(r => safeJson(r))
                           .then(d => {
-                            const b = d?.ceirgoBalance ?? d?.data?.ceirgoBalance ?? d?.data?.balance ?? d?.balance;
+                            console.log("[SALDO_CENTER_DEBUG] Manual Refresh Response:", d);
+                            const b = d?.ceirgoBalance ?? d?.balance ?? d?.data?.ceirgoBalance ?? d?.data?.balance;
                             if (b != null && !isNaN(Number(b))) setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
+                            const isConn = Boolean(d?.connected ?? d?.status ?? false);
+                            const errMsg = d?.error ?? d?.data?.error ?? (!isConn ? (d?.message || "Server tidak dapat dijangkau") : null);
+                            setCeirgoStatus({
+                              connected: isConn,
+                              error: errMsg,
+                              loading: false
+                            });
                           });
                       }}
                       className="p-1.5 rounded-lg border border-hairline hover:bg-parchment text-ink-muted transition-all cursor-pointer"

@@ -557,7 +557,7 @@ async function getCeirgoAdminBalance() {
         if (profileRes.hasLiveBalance && typeof profileRes.balance === 'number') {
             // Persist to database settings so we have a known good balance fallback
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(profileRes.balance)]).catch(() => {});
-            return profileRes.balance;
+            return { balance: profileRes.balance, connected: true, live: true, error: null, profile: profileRes };
         }
 
         // If live lookup had an error (e.g. 401, 403 or network issue), log explicitly
@@ -568,19 +568,19 @@ async function getCeirgoAdminBalance() {
         }
 
         // Fallback to persisted lastCeirgoBalance if available
-        const cachedRow = await dbGet("SELECT value FROM settings WHERE key = 'lastCeirgoBalance'").catch(() => null);
+        const cachedRow = await dbGet("SELECT value FROM settings WHERE key IN ('lastCeirgoBalance', 'ceirgo_balance', 'ceirgoBalance') AND value IS NOT NULL AND value != '' ORDER BY ROWID DESC LIMIT 1").catch(() => null);
         if (cachedRow && cachedRow.value != null) {
             const cachedVal = Number(cachedRow.value);
             if (!isNaN(cachedVal) && cachedVal > 0) {
-                console.log("[CEIRGO_BALANCE_FALLBACK] Menggunakan lastCeirgoBalance dari database:", cachedVal);
-                return cachedVal;
+                console.log("[CEIRGO_BALANCE_FALLBACK] Menggunakan saldo cached dari database:", cachedVal);
+                return { balance: cachedVal, connected: Boolean(profileRes.status), live: false, error: profileRes.message, profile: profileRes };
             }
         }
 
-        return 0;
+        return { balance: 0, connected: Boolean(profileRes.status), live: false, error: profileRes.message || "Gagal mendapatkan saldo CeirGO", profile: profileRes };
     } catch (e) {
         console.error("[API Error] getCeirgoAdminBalance failed:", e.message);
-        return 0;
+        return { balance: 0, connected: false, live: false, error: e.message, profile: {} };
     }
 }
 
@@ -596,55 +596,92 @@ router.get('/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) => 
 
 router.get('/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const bal = await getCeirgoAdminBalance();
-        const profileRes = await ceirgoClient.getProfile().catch(() => ({}));
+        const ceirgoInfo = await getCeirgoAdminBalance();
+        const bal = Number(ceirgoInfo.balance || 0);
+        const isConnected = Boolean(ceirgoInfo.connected || ceirgoInfo.live || bal > 0);
 
         return res.status(200).json({
-            status: true,
-            ceirgoBalance: Number(bal || 0),
-            balance: Number(bal || 0),
+            status: isConnected,
+            connected: isConnected,
+            live: Boolean(ceirgoInfo.live),
+            ceirgoBalance: bal,
+            balance: bal,
+            error: isConnected ? null : ceirgoInfo.error,
             data: {
-                ceirgoBalance: Number(bal || 0),
-                balance: Number(bal || 0),
+                ceirgoBalance: bal,
+                balance: bal,
+                connected: isConnected,
+                live: Boolean(ceirgoInfo.live),
+                error: isConnected ? null : ceirgoInfo.error,
                 reserved: 0,
-                profile: profileRes.profile || null,
-                role: profileRes.role || null,
-                permissions: profileRes.permissions || []
+                profile: ceirgoInfo.profile?.profile || null,
+                role: ceirgoInfo.profile?.role || null,
+                permissions: ceirgoInfo.profile?.permissions || []
             }
         });
     } catch (e) {
         console.error("[API Error] CeirGO balance fetch failed:", e.message);
         res.status(200).json({
-            status: true,
+            status: false,
+            connected: false,
+            live: false,
             ceirgoBalance: 0,
             balance: 0,
-            data: { balance: 0, ceirgoBalance: 0, reserved: 0 },
-            fallback: true,
-            error: e.message
+            error: e.message,
+            data: {
+                balance: 0,
+                ceirgoBalance: 0,
+                connected: false,
+                live: false,
+                reserved: 0,
+                error: e.message
+            },
+            fallback: true
         });
+    }
+});
+
+router.post('/admin/ceirgo-balance/set', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { balance } = req.body;
+        const num = Number(balance);
+        if (isNaN(num)) return res.status(400).json({ status: false, message: "Nominal tidak valid" });
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(num)]);
+        return res.status(200).json({ status: true, message: `Saldo CeirGO berhasil disimpan ke cache: Rp ${num.toLocaleString('id-ID')}`, balance: num, ceirgoBalance: num });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
     }
 });
 
 router.get('/admin/provider-balances', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const kmspBal = await getKmspAdminBalance();
-        const ceirgoBal = await getCeirgoAdminBalance();
-        const profileRes = await ceirgoClient.getProfile().catch(() => ({}));
+        const ceirgoInfo = await getCeirgoAdminBalance();
+        const ceirgoBal = Number(ceirgoInfo.balance || 0);
+        const isConnected = Boolean(ceirgoInfo.connected || ceirgoInfo.live || ceirgoBal > 0);
 
         return res.status(200).json({
             status: true,
-            ceirgoBalance: Number(ceirgoBal || 0),
+            ceirgoBalance: ceirgoBal,
             kmspBalance: Number(kmspBal || 0),
-            balance: Number(ceirgoBal || 0),
+            balance: ceirgoBal,
+            connected: isConnected,
+            ceirgoConnected: isConnected,
+            ceirgoLive: Boolean(ceirgoInfo.live),
+            ceirgoError: isConnected ? null : ceirgoInfo.error,
             data: {
-                ceirgoBalance: Number(ceirgoBal || 0),
+                ceirgoBalance: ceirgoBal,
                 kmspBalance: Number(kmspBal || 0),
                 kmsp: Number(kmspBal || 0),
-                ceirgo: Number(ceirgoBal || 0),
-                balance: Number(ceirgoBal || 0),
-                profile: profileRes.profile || null,
-                role: profileRes.role || null,
-                permissions: profileRes.permissions || []
+                ceirgo: ceirgoBal,
+                balance: ceirgoBal,
+                connected: isConnected,
+                ceirgoConnected: isConnected,
+                ceirgoLive: Boolean(ceirgoInfo.live),
+                ceirgoError: isConnected ? null : ceirgoInfo.error,
+                profile: ceirgoInfo.profile?.profile || null,
+                role: ceirgoInfo.profile?.role || null,
+                permissions: ceirgoInfo.profile?.permissions || []
             }
         });
     } catch (e) {
