@@ -518,11 +518,58 @@ router.post('/admin/announcement', isAuthenticated, isAdmin, async (req, res) =>
     }
 });
 
+// Helper function to fetch live CeirGO balance
+async function getCeirgoAdminBalance() {
+    try {
+        const apiKey = process.env.CEIRGO_API_KEY || CEIRGO_API_KEY;
+        const baseUrl = process.env.CEIRGO_BASE_URL || CEIRGO_BASE_URL || 'https://ceirgo.my.id';
+        const accountId = process.env.CEIRGO_ACCOUNT_ID || '';
+
+        if (!apiKey) return 0;
+
+        const headers = {
+            'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'application/json'
+        };
+        if (accountId) headers['x-account-id'] = accountId;
+
+        // Try /api/wallet/snap
+        try {
+            const resp = await axios.get(`${baseUrl}/api/wallet/snap`, { headers, timeout: 5000 });
+            if (resp.data) {
+                const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
+                if (b != null) return Number(b);
+            }
+        } catch (e1) {
+            // fallback to /api/balance
+            try {
+                const resp = await axios.get(`${baseUrl}/api/balance`, { headers, timeout: 5000 });
+                if (resp.data) {
+                    const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
+                    if (b != null) return Number(b);
+                }
+            } catch (e2) {
+                // fallback to /api/wallet
+                try {
+                    const resp = await axios.get(`${baseUrl}/api/wallet`, { headers, timeout: 5000 });
+                    if (resp.data) {
+                        const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
+                        if (b != null) return Number(b);
+                    }
+                } catch (e3) {}
+            }
+        }
+        return 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
 // 14. Admin Balances
 router.get('/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const balance = await getKmspAdminBalance();
-        res.status(200).json({ status: true, data: { balance } });
+        res.status(200).json({ status: true, data: { balance, kmspBalance: balance }, kmspBalance: balance });
     } catch (error) {
         res.status(500).json({ status: false, message: "Gagal terhubung ke KMSP." });
     }
@@ -530,71 +577,32 @@ router.get('/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) => 
 
 router.get('/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const apiKey = process.env.CEIRGO_API_KEY || CEIRGO_API_KEY;
-        const baseUrl = process.env.CEIRGO_BASE_URL || CEIRGO_BASE_URL || 'https://ceirgo.my.id';
-        const accountId = process.env.CEIRGO_ACCOUNT_ID || '';
-
-        if (!apiKey) {
-            return res.status(200).json({ status: true, data: { balance: 0, reserved: 0 }, fallback: true });
-        }
-
-        const headers = {
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'application/json'
-        };
-        if (accountId) {
-            headers['x-account-id'] = accountId;
-        }
-
-        let bal = null;
-        let resvd = 0;
-
-        // Try /api/wallet/snap
-        try {
-            const resp = await axios.get(`${baseUrl}/api/wallet/snap`, { headers, timeout: 5000 });
-            if (resp.data) {
-                const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
-                if (b != null) {
-                    bal = Number(b);
-                    resvd = Number(resp.data.reserved ?? resp.data.data?.reserved ?? 0);
-                }
-            }
-        } catch (errSnap) {
-            // fallback to /api/balance
-            try {
-                const resp = await axios.get(`${baseUrl}/api/balance`, { headers, timeout: 5000 });
-                if (resp.data) {
-                    const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
-                    if (b != null) {
-                        bal = Number(b);
-                        resvd = Number(resp.data.reserved ?? resp.data.data?.reserved ?? 0);
-                    }
-                }
-            } catch (errBal) {
-                // fallback to /api/wallet
-                try {
-                    const resp = await axios.get(`${baseUrl}/api/wallet`, { headers, timeout: 5000 });
-                    if (resp.data) {
-                        const b = resp.data.balance ?? resp.data.data?.balance ?? resp.data.saldo ?? resp.data.data?.saldo;
-                        if (b != null) {
-                            bal = Number(b);
-                            resvd = Number(resp.data.reserved ?? resp.data.data?.reserved ?? 0);
-                        }
-                    }
-                } catch (e3) {
-                    // Endpoints attempted
-                }
-            }
-        }
-
-        if (bal != null) {
-            return res.status(200).json({ status: true, data: { balance: bal, reserved: resvd } });
-        } else {
-            return res.status(200).json({ status: true, data: { balance: 0, reserved: 0 }, fallback: true });
-        }
+        const bal = await getCeirgoAdminBalance();
+        res.status(200).json({ status: true, data: { balance: bal, ceirgoBalance: bal, reserved: 0 }, ceirgoBalance: bal, balance: bal });
     } catch (e) {
-        console.warn("[API Warning] CeirGO balance fetch failed / timed out:", e.message);
-        res.status(200).json({ status: true, data: { balance: 0, reserved: 0 }, fallback: true, message: 'Server CeirGO sedang offline' });
+        console.warn("[API Warning] CeirGO balance fetch failed:", e.message);
+        res.status(200).json({ status: true, data: { balance: 0, ceirgoBalance: 0, reserved: 0 }, ceirgoBalance: 0, balance: 0, fallback: true });
+    }
+});
+
+router.get('/admin/provider-balances', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const kmspBal = await getKmspAdminBalance();
+        const ceirgoBal = await getCeirgoAdminBalance();
+        res.status(200).json({
+            status: true,
+            data: {
+                kmspBalance: kmspBal,
+                ceirgoBalance: ceirgoBal,
+                kmsp: kmspBal,
+                ceirgo: ceirgoBal,
+                balance: ceirgoBal
+            },
+            kmspBalance: kmspBal,
+            ceirgoBalance: ceirgoBal
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message || "Gagal mengambil saldo provider." });
     }
 });
 

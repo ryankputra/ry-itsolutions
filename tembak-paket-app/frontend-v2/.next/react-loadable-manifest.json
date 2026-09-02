@@ -1,6 +1,39 @@
 {
+  "../node_modules/jspdf/dist/jspdf.es.min.js -> canvg": {
+    "id": 3167,
+    "files": [
+      "static/chunks/bc98253f.b50765b70c666750.js",
+      "static/chunks/5902.b241ca5357292787.js"
+    ]
+  },
+  "../node_modules/jspdf/dist/jspdf.es.min.js -> dompurify": {
+    "id": 91992,
+    "files": [
+      "static/chunks/1992.6b081bd90b619188.js"
+    ]
+  },
+  "../node_modules/jspdf/dist/jspdf.es.min.js -> html2canvas": {
+    "id": 82201,
+    "files": [
+      "static/chunks/ad2866b8.6c51983a1eb56136.js"
+    ]
+  },
   "app/(main)/layout.tsx -> @/lib/sweetalert": {
-    "id": 8637,
+    "id": 88637,
     "files": []
+  },
+  "components/ui/InvoiceModal.tsx -> html2canvas": {
+    "id": 82201,
+    "files": [
+      "static/chunks/ad2866b8.6c51983a1eb56136.js"
+    ]
+  },
+  "components/ui/InvoiceModal.tsx -> jspdf": {
+    "id": 18831,
+    "files": [
+      "static/chunks/2f0b94e8.42b78e3e2fa16a91.js",
+      "static/chunks/164f4fb6.3533bea66250798d.js",
+      "static/chunks/4233.0e26f2761d4498e2.js"
+    ]
   }
 }

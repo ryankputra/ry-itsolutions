@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { analyzeImei } from "@/lib/imeiHelper";
+import { parseCeirResponse } from "@/lib/ceirParser";
 import Swal from "@/lib/sweetalert";
 import { playPopSound } from "@/lib/soundFx";
 
@@ -44,6 +45,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   const [customStoreName, setCustomStoreName] = useState("Ry-ITSolutions");
   const [storePhone, setStorePhone] = useState("");
   const [isEditingStore, setIsEditingStore] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Handle ESC key to close modal
@@ -71,6 +73,94 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   const isSuccess = data.status === 'success' || data.status === 'completed';
   const isTopUp = data.serviceType === 'topup' || data.serviceType === 'topup_qris' || (data.packageName || '').toLowerCase().includes('top up') || (data.packageName || '').toLowerCase().includes('topup');
   const isCeirService = !isTopUp && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || warranty?.hasWarranty === false);
+
+  const handleDownloadPng = async () => {
+    if (!printRef.current) return;
+    try {
+      setIsExporting(true);
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(printRef.current, {
+        scale: 2.5,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `Invoice-${data.trxId || data.imei || "Ry-ITSolutions"}.png`;
+      link.href = dataUrl;
+      link.click();
+      Swal.fire({
+        icon: "success",
+        title: "Gambar Berhasil Diunduh!",
+        text: "Nota / Sertifikat resolusi tinggi telah disimpan dalam format PNG.",
+        timer: 1600,
+        showConfirmButton: false
+      });
+    } catch (err: any) {
+      console.error("Export Image Error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Mengunduh Gambar",
+        text: err?.message || "Terjadi kesalahan saat memproses gambar."
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!printRef.current) return;
+    try {
+      setIsExporting(true);
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const canvas = await html2canvas(printRef.current, {
+        scale: 2.5,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth - 20; // 10mm margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let yPos = 10;
+      if (imgHeight < pageHeight - 20) {
+        yPos = (pageHeight - imgHeight) / 2;
+      }
+
+      pdf.addImage(imgData, "PNG", 10, yPos, imgWidth, imgHeight);
+      pdf.save(`Certificate-${data.trxId || data.imei || "Ry-ITSolutions"}.pdf`);
+
+      Swal.fire({
+        icon: "success",
+        title: "PDF Berhasil Diunduh!",
+        text: "Dokumen resmi telah disimpan dalam format PDF.",
+        timer: 1600,
+        showConfirmButton: false
+      });
+    } catch (err: any) {
+      console.error("Export PDF Error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Mengunduh PDF",
+        text: err?.message || "Terjadi kesalahan saat mengonversi PDF."
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -137,64 +227,18 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   // Helper to parse CEIR result details from Ceirgo API
   const parseCeirDetails = () => {
     const rawNote = data.adminNote || "";
-    let statusText = "TERDAFTAR DI CEIR";
-    if (rawNote.toLowerCase().includes("tidak terdaftar") || data.status === "failed") {
-      statusText = "TIDAK TERDAFTAR";
-    } else if (rawNote.toLowerCase().includes("beacukai")) {
-      statusText = "TERDAFTAR BEA CUKAI";
-    } else if (rawNote.toLowerCase().includes("riwayat")) {
-      statusText = "TERDAFTAR (MEMILIKI RIWAYAT CEIR)";
-    }
-
-    // Parse history items
-    const logs: { index: number; date: string; action: string; note: string }[] = [];
-    const dateFormatted = formatDate(data.createdAt);
-
-    if (rawNote.includes("\n") && rawNote.includes("|")) {
-      const lines = rawNote.split("\n").filter(l => l.includes("|"));
-      lines.forEach((line, idx) => {
-        const parts = line.split("|").map(p => p.trim());
-        logs.push({
-          index: idx + 1,
-          date: parts[0]?.replace(/^\d+\.\s*/, "") || dateFormatted,
-          action: parts[1]?.replace(/^Action:\s*/i, "") || "CEIR_VERIFIED",
-          note: parts[2]?.replace(/^Note:\s*/i, "") || "Pemeriksaan data CEIR sukses"
-        });
-      });
-    } else if (rawNote.toLowerCase().includes("2 riwayat") || rawNote.includes("2")) {
-      logs.push({
-        index: 1,
-        date: dateFormatted,
-        action: "CEIR_WHITELIST_MATCH",
-        note: "Nomor IMEI terdaftar pada database registrasi CEIR Nasional"
-      });
-      logs.push({
-        index: 2,
-        date: dateFormatted,
-        action: "NETWORK_TRAFFIC_ALLOW",
-        note: "Otorisasi jaringan seluler aktif & diizinkan semua operator"
-      });
-    } else if (rawNote.toLowerCase().includes("beacukai")) {
-      logs.push({
-        index: 1,
-        date: dateFormatted,
-        action: "BEACUKAI_ECD_APPROVED",
-        note: rawNote || "Data pendaftaran Bea Cukai resmi terverifikasi"
-      });
-    } else {
-      logs.push({
-        index: 1,
-        date: dateFormatted,
-        action: "CEIR_QUERY_SUCCESS",
-        note: rawNote || "Pemeriksaan IMEI berhasil terverifikasi oleh server CEIR"
-      });
-    }
+    const parsed = parseCeirResponse(rawNote, formatDate(data.createdAt));
 
     return {
-      status: statusText,
+      status: parsed.status,
       gateway: "Central CEIR Database & IMEI Verification Gateway",
-      logs,
-      rawNote: rawNote || "Data IMEI telah berhasil diverifikasi oleh server CEIR.",
+      logs: parsed.rows.map(r => ({
+        index: r.no,
+        date: r.tanggal,
+        action: r.action,
+        note: r.note
+      })),
+      rawNote: parsed.rawText || "Data IMEI telah berhasil diverifikasi oleh server CEIR.",
       operators: "Semua Operator Seluler (Telkomsel, Indosat, XL, Smartfren, Tri)"
     };
   };
@@ -249,13 +293,36 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
               <span className="hidden sm:inline">Kirim WA</span>
             </button>
             <button
+              onClick={handleDownloadPng}
+              disabled={isExporting}
+              className="text-xs font-bold px-3 py-1.5 rounded-full bg-canvas border border-hairline hover:bg-parchment text-slate-800 transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-60"
+              title="Unduh Gambar PNG"
+            >
+              <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+              <span className="hidden sm:inline">{isExporting ? "Memproses..." : "Unduh Gambar"}</span>
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isExporting}
+              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-60"
+              title="Unduh Berkas PDF"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+              <span>{isExporting ? "Memproses..." : "Unduh PDF"}</span>
+            </button>
+            <button
               onClick={handlePrint}
-              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm"
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-full bg-canvas border border-hairline hover:bg-parchment text-ink-muted hover:text-ink transition-colors flex items-center gap-1"
+              title="Cetak Langsung"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
               </svg>
-              Cetak / PDF
+              <span className="hidden sm:inline">Print</span>
             </button>
             <button
               onClick={onClose}

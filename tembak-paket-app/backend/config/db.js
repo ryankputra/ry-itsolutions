@@ -73,6 +73,8 @@ async function initializeDatabase() {
             try { await dbRun("ALTER TABLE transactions ADD COLUMN speed_option TEXT"); } catch (e) { }
             try { await dbRun("ALTER TABLE transactions ADD COLUMN coupon_code TEXT"); } catch (e) { }
             try { await dbRun("ALTER TABLE transactions ADD COLUMN discount_amount REAL DEFAULT 0"); } catch (e) { }
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN qrisBase64Image TEXT"); } catch (e) { }
+            try { await dbRun("ALTER TABLE transactions ADD COLUMN uniqueAmount REAL"); } catch (e) { }
 
             // Promo Coupons & Usages
             await dbRun(`CREATE TABLE IF NOT EXISTS coupons (
