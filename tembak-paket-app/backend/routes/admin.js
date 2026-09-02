@@ -781,8 +781,18 @@ router.delete('/admin/reviews/:id', isAuthenticated, isAdmin, async (req, res) =
 // 19. Payment Gateway Configuration
 router.get('/admin/payment-gateway', async (req, res) => {
     try {
-        const row = await dbGet("SELECT value FROM settings WHERE key = 'payment_gateway'");
-        res.json({ status: true, data: { gateway: row ? row.value : 'orkut' } });
+        const row = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
+        const activeGw = row ? row.value : 'orkut';
+        res.json({
+            status: true,
+            data: {
+                gateway: activeGw,
+                merchants: {
+                    nobu: 'RYYSTORE OK2285905',
+                    gopay: 'RyyStore IT Solutions'
+                }
+            }
+        });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
@@ -791,8 +801,10 @@ router.get('/admin/payment-gateway', async (req, res) => {
 router.put('/admin/payment-gateway', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { gateway } = req.body;
-        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_gateway', ?)", [gateway || 'orkut']);
-        res.json({ status: true, message: "Gateway pembayaran berhasil diubah." });
+        const selected = gateway || 'orkut';
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_gateway', ?)", [selected]);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('paymentGateway', ?)", [selected]);
+        res.json({ status: true, message: `Gateway pembayaran berhasil diubah ke ${selected.toUpperCase()}.` });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }

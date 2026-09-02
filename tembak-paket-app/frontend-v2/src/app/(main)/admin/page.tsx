@@ -3340,16 +3340,18 @@ export default function AdminPage() {
                   onClick={() => setPaymentGateway("orkut")}
                   className={`p-3 rounded-xl border text-left transition-all ${paymentGateway === 'orkut' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
                 >
-                  <div className="font-bold text-xs text-ink">ORKUT (QRIS Statis)</div>
-                  <div className="text-[10px] text-ink-muted mt-0.5">Polling kode unik otomatis</div>
+                  <div className="font-bold text-xs text-ink">Nobu Bank / Orkut</div>
+                  <div className="text-[10px] text-ink-muted mt-0.5">Merchant: <b>RYYSTORE OK2285905</b></div>
+                  <div className="text-[9px] text-emerald-600 font-medium mt-0.5">Polling mutasi OK2285905</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentGateway("gopay")}
                   className={`p-3 rounded-xl border text-left transition-all ${paymentGateway === 'gopay' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-hairline bg-canvas hover:bg-parchment'}`}
                 >
-                  <div className="font-bold text-xs text-ink">GoPay Gateway</div>
-                  <div className="text-[10px] text-ink-muted mt-0.5">QRIS dinamis auto-detect</div>
+                  <div className="font-bold text-xs text-ink">GoPay Direct Gateway</div>
+                  <div className="text-[10px] text-ink-muted mt-0.5">Merchant: <b>RyyStore IT Solutions</b></div>
+                  <div className="text-[9px] text-blue-600 font-medium mt-0.5">Port 3002 / Direct Dynamic</div>
                 </button>
               </div>
 

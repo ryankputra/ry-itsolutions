@@ -49,6 +49,7 @@ function UnblockImeiContent() {
   const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
   const [useCoins, setUseCoins] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"qris" | "balance">("qris");
+  const [selectedQrisGw, setSelectedQrisGw] = useState<"nobu" | "gopay">("nobu");
   const [showInstantQris, setShowInstantQris] = useState(false);
 
   // WhatsApp Recipient Phone State
@@ -897,6 +898,35 @@ function UnblockImeiContent() {
                   </div>
                   <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-primary" />
                 </div>
+
+                {/* Sub-selector QRIS Provider */}
+                {paymentMethod === "qris" && (
+                  <div className="col-span-1 sm:col-span-2 pt-2 border-t border-hairline/60 space-y-1.5">
+                    <label className="text-[11px] font-bold text-ink-muted block">Pilihan Gateway QRIS:</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setSelectedQrisGw('nobu'); }}
+                        className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                          selectedQrisGw === 'nobu' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
+                        }`}
+                      >
+                        <div className="font-bold">QRIS Nobu / All Bank</div>
+                        <div className="text-[9px] text-ink-muted">RYYSTORE OK2285905</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setSelectedQrisGw('gopay'); }}
+                        className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                          selectedQrisGw === 'gopay' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
+                        }`}
+                      >
+                        <div className="font-bold">QRIS GoPay Direct</div>
+                        <div className="text-[9px] text-ink-muted">RyyStore IT Solutions</div>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -918,25 +948,23 @@ function UnblockImeiContent() {
               <Button
                 type="button"
                 onClick={handleAddToCart}
-                className="w-full h-12 text-xs sm:text-sm font-bold bg-canvas border-2 border-primary text-primary hover:bg-primary/5 rounded-2xl shadow-xs flex items-center justify-center gap-2"
+                disabled={submitting}
+                className="w-full h-12 rounded-2xl bg-canvas border border-primary/30 text-primary font-bold text-xs hover:bg-primary/5 transition-all shadow-xs"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                </svg>
-                <span>+ Masukkan Keranjang</span>
+                + Masukkan Keranjang
               </Button>
-
               <Button
-                className="w-full h-12 text-xs sm:text-sm font-bold shadow-lg rounded-2xl bg-primary hover:bg-primary-focus text-white"
                 type="submit"
                 isLoading={submitting}
+                disabled={submitting}
+                className="w-full h-12 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md shadow-primary/20 transition-all"
               >
-                Bayar Sekarang • Rp {totalPrice.toLocaleString("id-ID")}
+                {paymentMethod === "qris" ? "Bayar via QRIS Langsung ➔" : "Bayar dengan Saldo ➔"}
               </Button>
             </div>
           </form>
         ) : (
-          <div className="bg-rose-500/10 border border-rose-200/50 p-6 rounded-2xl text-center space-y-3">
+          <div className="p-8 text-center space-y-3 bg-rose-50/50">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -972,6 +1000,7 @@ function UnblockImeiContent() {
         onClose={() => setShowInstantQris(false)}
         amount={totalPrice}
         orderTitle="Pembayaran Instant Buka Sinyal IMEI"
+        preferredGateway={selectedQrisGw}
         onSuccess={() => {
           setShowInstantQris(false);
           executeOrderSubmission();

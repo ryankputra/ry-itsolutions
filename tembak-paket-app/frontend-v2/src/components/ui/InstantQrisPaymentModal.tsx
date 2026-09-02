@@ -11,11 +11,13 @@ interface InstantQrisPaymentModalProps {
   amount: number;
   orderTitle?: string;
   onSuccess: () => void;
+  preferredGateway?: 'nobu' | 'gopay';
   existingQrisData?: {
     qris_image: string;
     qris_code: string;
     unique_amount: number;
     topup_id: string;
+    merchant?: string;
   } | null;
 }
 
@@ -25,18 +27,25 @@ export function InstantQrisPaymentModal({
   amount,
   orderTitle = "Pembayaran Pesanan Direct QRIS",
   onSuccess,
+  preferredGateway = 'nobu',
   existingQrisData,
 }: InstantQrisPaymentModalProps) {
   const [loading, setLoading] = useState(false);
+  const [selectedGw, setSelectedGw] = useState<'nobu' | 'gopay'>(preferredGateway);
   const [qrisData, setQrisData] = useState<{
     qris_image: string;
     qris_code: string;
     unique_amount: number;
     topup_id: string;
+    merchant?: string;
   } | null>(null);
   const [timeLeft, setTimeLeft] = useState(900); // 15 menit
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setSelectedGw(preferredGateway);
+  }, [preferredGateway]);
 
   // Generate atau tampilkan Direct QRIS eksisting saat modal dibuka
   useEffect(() => {
@@ -62,7 +71,7 @@ export function InstantQrisPaymentModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ amount }),
+      body: JSON.stringify({ amount, gateway: selectedGw, provider: selectedGw }),
     })
       .then((res) => safeJson(res))
       .then((data) => {
@@ -75,6 +84,7 @@ export function InstantQrisPaymentModal({
             qris_code: qData.qris_code || qInfo.base64Image || "",
             unique_amount: qData.unique_amount || qInfo.uniqueAmount || amount,
             topup_id: qData.topup_id || data.topUpId || `TU-${Date.now()}`,
+            merchant: qData.merchant || qInfo.merchant || (selectedGw === 'gopay' ? 'RyyStore IT Solutions' : 'RYYSTORE OK2285905')
           });
         } else {
           Swal.fire({
@@ -101,7 +111,7 @@ export function InstantQrisPaymentModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, amount, existingQrisData]);
+  }, [isOpen, amount, existingQrisData, selectedGw]);
 
   // Realtime Polling & Listener Pemasukan Pembayaran SSE
   useEffect(() => {
@@ -201,9 +211,38 @@ export function InstantQrisPaymentModal({
                 <p className="text-xl sm:text-2xl font-black text-primary">
                   Rp {qrisData.unique_amount.toLocaleString("id-ID")}
                 </p>
-                <p className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
-                  Bebas Biaya Admin • QRIS 24 Jam
-                </p>
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
+                    Bebas Biaya Admin • QRIS 24 Jam
+                  </span>
+                  <span className="text-[10px] text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full inline-block">
+                    Merchant: {qrisData.merchant || (selectedGw === 'gopay' ? 'RyyStore IT Solutions' : 'RYYSTORE OK2285905')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Pilihan Provider QRIS */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSelectedGw('nobu')}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    selectedGw === 'nobu' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
+                  }`}
+                >
+                  <div className="font-bold">QRIS Nobu / All Bank</div>
+                  <div className="text-[9px] opacity-80">RYYSTORE OK2285905</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGw('gopay')}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    selectedGw === 'gopay' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
+                  }`}
+                >
+                  <div className="font-bold">QRIS GoPay Direct</div>
+                  <div className="text-[9px] opacity-80">RyyStore IT Solutions</div>
+                </button>
               </div>
 
               {/* Countdown Timer */}

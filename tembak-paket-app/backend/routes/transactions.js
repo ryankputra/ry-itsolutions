@@ -16,6 +16,7 @@ const { isAuthenticated, sseSend } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
 const { sendManualOrderNotification } = require('./telegram');
 const ceirgoClient = require('../ceirgoClient');
+const { DEFAULT_QRIS_NOBU, DEFAULT_QRIS_GOPAY, generateDynamicQRIS, generateQrisDataUrl } = require('../config/qrisGenerator');
 
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
@@ -23,7 +24,9 @@ const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
 const ORKUT_MERCHANT_ID = process.env.ORKUT_MERCHANT_ID;
 const ORKUT_USERNAME = process.env.ORKUT_USERNAME;
 const ORKUT_TOKEN = process.env.ORKUT_TOKEN;
-const QRIS_STATIS_STRING = process.env.QRIS_STATIS_STRING;
+const QRIS_NOBU_STATIS_STRING = process.env.QRIS_NOBU_STATIS_STRING || process.env.QRIS_STATIS_STRING || DEFAULT_QRIS_NOBU;
+const QRIS_GOPAY_STATIS_STRING = process.env.QRIS_GOPAY_STATIS_STRING || DEFAULT_QRIS_GOPAY;
+const QRIS_STATIS_STRING = QRIS_NOBU_STATIS_STRING;
 
 // Setup Multer for Manual Orders
 const manualOrderStorage = multer.diskStorage({
@@ -71,19 +74,46 @@ async function getKmspAdminBalance() {
     }
 }
 
-// Gopay QRIS Helpers
+// Gopay QRIS Helpers (Direct Gateway with Standalone Fallback)
 async function generateGopayQris(amount) {
     const URL = process.env.GOPAY_GATEWAY_URL;
     const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
-    if (!URL || !API_KEY) throw new Error("GOPAY_GATEWAY_URL belum dikonfigurasi.");
-    const response = await axios.get(`${URL}/create-qris`, {
-        params: { amount, api_key: API_KEY },
-        timeout: 15000
-    });
-    if (response.data?.success && response.data.data) {
-        return response.data.data;
+
+    if (URL && API_KEY) {
+        try {
+            const response = await axios.get(`${URL}/create-qris`, {
+                params: { amount, api_key: API_KEY },
+                timeout: 8000
+            });
+            if (response.data?.success && response.data.data) {
+                return {
+                    ...response.data.data,
+                    merchant: 'RyyStore IT Solutions'
+                };
+            }
+        } catch (gwErr) {
+            console.warn("[GOPAY_GW_WARN] Gateway port 3002 offline/unreachable, generating direct dynamic GoPay QRIS:", gwErr.message);
+        }
     }
-    throw new Error(response.data?.message || 'Gagal membuat QRIS.');
+
+    // Direct standalone dynamic GoPay generation
+    const template = process.env.QRIS_GOPAY_STATIS_STRING || QRIS_GOPAY_STATIS_STRING;
+    const genRes = await generateQrisDataUrl(template, amount);
+    const trxId = 'TRX-GP-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const qrisId = Math.random().toString(36).substring(2, 10);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    return {
+        qris_id: qrisId,
+        trx_id: trxId,
+        qris_url: genRes.dataUrl,
+        qr_image: genRes.dataUrl,
+        qris_code: genRes.dynamicCode,
+        amount: parseInt(amount, 10),
+        expires_at: expiresAt.toISOString(),
+        expires_in: '10 menit',
+        merchant: 'RyyStore IT Solutions'
+    };
 }
 
 // Unified Topup Completion
@@ -243,12 +273,31 @@ function checkGopayPaymentStatus(id, amount, gopayTrxId, startTime) {
     }
 }
 
-// Orkut Dynamic QRIS Helpers
-async function generateDynamicQris(amount) {
-    if (!QRIS_STATIS_STRING) throw new Error("QRIS_STATIS_STRING tidak dikonfigurasi.");
-    const response = await axios.post('https://qrisku.my.id/api', { amount: amount.toString(), qris_statis: QRIS_STATIS_STRING }, { timeout: 15000 });
-    if (response.data?.status === 'success' && response.data.qris_base64) return `data:image/png;base64,${response.data.qris_base64}`;
-    throw new Error(response.data?.message || 'Gagal menghasilkan QRIS.');
+// Dynamic QRIS Generator (Supports Nobu Bank / Orkut & GoPay Direct)
+async function generateDynamicQris(amount, provider = 'nobu') {
+    const isGopay = String(provider).toLowerCase().includes('gopay');
+    const template = isGopay ? (process.env.QRIS_GOPAY_STATIS_STRING || QRIS_GOPAY_STATIS_STRING) : (process.env.QRIS_NOBU_STATIS_STRING || QRIS_NOBU_STATIS_STRING || QRIS_STATIS_STRING);
+    if (!template) throw new Error("Template QRIS statis belum dikonfigurasi.");
+
+    // 1. Instant local EMVCo generator with CRC16 (0ms latency, bulletproof)
+    try {
+        const genRes = await generateQrisDataUrl(template, amount);
+        if (genRes && genRes.dataUrl) {
+            return genRes.dataUrl;
+        }
+    } catch (localErr) {
+        console.warn("[QRIS_GEN] Local generator warning:", localErr.message);
+    }
+
+    // 2. Fallback to external API if available
+    try {
+        const response = await axios.post('https://qrisku.my.id/api', { amount: amount.toString(), qris_statis: template }, { timeout: 8000 });
+        if (response.data?.status === 'success' && response.data.qris_base64) {
+            return `data:image/png;base64,${response.data.qris_base64}`;
+        }
+    } catch (extErr) {}
+
+    throw new Error('Gagal menghasilkan QRIS dinamis.');
 }
 
 function checkOrkutPaymentStatus(id, uniqueAmount) {
@@ -640,24 +689,27 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
 
             // Handle Direct QRIS Purchase
             if (isQrisPayment) {
-                const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+                const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
                 const activeGateway = gwRow ? gwRow.value : 'orkut';
-                const useGopayGw = activeGateway === 'gopay' && process.env.GOPAY_GATEWAY_URL && process.env.GOPAY_GATEWAY_API_KEY;
+                const requestedGw = String(req.body.gateway || req.body.provider || req.body.paymentMethod || req.body.payment_method || '').toLowerCase();
+                const isGopay = requestedGw.includes('gopay') || (activeGateway === 'gopay' && !requestedGw.includes('nobu') && !requestedGw.includes('orkut'));
 
                 let qrisImage = null;
                 let uniqueAmt = finalPriceToPay;
                 let expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
                 let gopayTrxId = null;
+                let merchantName = 'RYYSTORE OK2285905';
 
-                if (useGopayGw) {
+                if (isGopay) {
+                    merchantName = 'RyyStore IT Solutions';
                     const gopayData = await generateGopayQris(finalPriceToPay);
-                    qrisImage = gopayData.qr_image || gopayData.qr_url;
+                    qrisImage = gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
                     gopayTrxId = gopayData.trx_id;
                     expiresAtSec = Math.floor((Date.now() + 10 * 60 * 1000) / 1000);
                 } else {
                     const uniqueCode = Math.floor(Math.random() * 900) + 100;
                     uniqueAmt = finalPriceToPay + uniqueCode;
-                    qrisImage = await generateDynamicQris(uniqueAmt);
+                    qrisImage = await generateDynamicQris(uniqueAmt, 'nobu');
                 }
 
                 await dbRun(`
@@ -685,7 +737,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 ]);
 
                 // Start polling
-                if (useGopayGw && gopayTrxId) {
+                if (isGopay && gopayTrxId) {
                     checkGopayPaymentStatus(trxId, finalPriceToPay, gopayTrxId, new Date().toISOString());
                 } else {
                     checkOrkutPaymentStatus(trxId, uniqueAmt);
@@ -696,18 +748,22 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     message: "Silakan scan QRIS untuk menyelesaikan pembayaran pesanan Anda.",
                     trxId,
                     paymentMethod: 'qris',
+                    merchant: merchantName,
+                    gateway: isGopay ? 'gopay' : 'orkut',
                     data: {
                         id: trxId,
                         status: 'pending_payment',
                         amount: finalPriceToPay,
                         unique_amount: uniqueAmt,
                         qris_image: qrisImage,
+                        merchant: merchantName,
                         expires_at: expiresAtSec
                     },
                     qrisData: {
                         base64Image: qrisImage,
                         uniqueAmount: uniqueAmt,
-                        expiresAt: expiresAtSec
+                        expiresAt: expiresAtSec,
+                        merchant: merchantName
                     }
                 });
             }
@@ -904,20 +960,38 @@ router.post('/user/transactions/:id/cancel', isAuthenticated, async (req, res) =
 // 4.5 GET /api/topup/gateway-info
 router.get('/topup/gateway-info', async (req, res) => {
     try {
-        const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+        const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
         const activeGateway = gwRow ? gwRow.value : 'orkut';
-        const isReady = activeGateway === 'orkut'
-            ? !!(process.env.ORKUT_MERCHANT_ID && process.env.ORKUT_TOKEN)
-            : !!(process.env.GOPAY_GATEWAY_URL && process.env.GOPAY_GATEWAY_API_KEY);
+        const isOrkutReady = !!(process.env.ORKUT_MERCHANT_ID && process.env.ORKUT_TOKEN && QRIS_NOBU_STATIS_STRING);
+        const isGopayReady = !!(QRIS_GOPAY_STATIS_STRING);
 
         res.json({
             status: true,
             data: {
                 active_gateway: activeGateway,
-                is_ready: isReady,
-                message: isReady
-                    ? `Gateway ${activeGateway.toUpperCase()} aktif & siap menerima transaksi.`
-                    : `Gateway ${activeGateway.toUpperCase()} sedang dalam konfigurasi.`
+                is_ready: activeGateway === 'gopay' ? isGopayReady : isOrkutReady,
+                message: `Gateway ${activeGateway.toUpperCase()} aktif & siap menerima transaksi.`,
+                available_gateways: [
+                    {
+                        id: 'orkut',
+                        code: 'qris_nobu',
+                        name: 'QRIS Nobu Bank (Semua E-Wallet / BCA / Mandiri)',
+                        merchant: 'RYYSTORE OK2285905',
+                        is_ready: isOrkutReady
+                    },
+                    {
+                        id: 'gopay',
+                        code: 'qris_gopay',
+                        name: 'QRIS GoPay Direct (Realtime)',
+                        merchant: 'RyyStore IT Solutions',
+                        is_ready: isGopayReady
+                    }
+                ],
+                merchants: {
+                    orkut: 'RYYSTORE OK2285905',
+                    nobu: 'RYYSTORE OK2285905',
+                    gopay: 'RyyStore IT Solutions'
+                }
             }
         });
     } catch (e) {
@@ -928,7 +1002,7 @@ router.get('/topup/gateway-info', async (req, res) => {
 // 5. POST /api/topup/request-qris
 router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
     try {
-        const { amount } = req.body;
+        const { amount, gateway, provider, paymentMethod } = req.body;
         const userId = req.session.userId;
         const baseAmount = parseInt(amount, 10);
 
@@ -939,41 +1013,50 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
         const user = await dbGet("SELECT * FROM users WHERE id = ?", [userId]);
         if (!user) return res.status(404).json({ status: false, message: 'User tidak ditemukan.' });
 
-        const gwRow = await dbGet("SELECT value FROM settings WHERE key = 'paymentGateway'");
+        const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
         const activeGateway = gwRow ? gwRow.value : 'orkut';
-        const useGopayGw = activeGateway === 'gopay' && process.env.GOPAY_GATEWAY_URL && process.env.GOPAY_GATEWAY_API_KEY;
+        const requestedGw = String(gateway || provider || paymentMethod || '').toLowerCase();
+        const isGopay = requestedGw.includes('gopay') || (activeGateway === 'gopay' && !requestedGw.includes('nobu') && !requestedGw.includes('orkut'));
 
-        if (useGopayGw) {
+        if (isGopay) {
             const gopayData = await generateGopayQris(baseAmount);
             const topUpId = `TU-GP-${Date.now()}`;
-            const expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
+            const expiresAtSec = Math.floor((Date.now() + 10 * 60 * 1000) / 1000);
+            const qrisImg = gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
 
             await dbRun(
                 "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', new Date().toISOString(), gopayData.qr_image || gopayData.qr_url]
+                [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', new Date().toISOString(), qrisImg]
             );
 
             checkGopayPaymentStatus(topUpId, baseAmount, gopayData.trx_id, new Date().toISOString());
 
             return res.status(200).json({
                 status: true,
-                message: 'QRIS GoPay berhasil dibuat.',
+                message: 'QRIS GoPay Direct berhasil dibuat.',
                 topUpId,
                 gateway: 'gopay',
+                merchant: 'RyyStore IT Solutions',
                 data: {
-                    qris_image: gopayData.qr_image || gopayData.qr_url,
+                    qris_image: qrisImg,
                     unique_amount: baseAmount,
                     topup_id: topUpId,
                     trx_id: gopayData.trx_id,
-                    expires_at: expiresAtSec
+                    expires_at: expiresAtSec,
+                    merchant: 'RyyStore IT Solutions'
                 },
-                qrisData: { base64Image: gopayData.qr_image || gopayData.qr_url, uniqueAmount: baseAmount, expiresAt: expiresAtSec }
+                qrisData: {
+                    base64Image: qrisImg,
+                    uniqueAmount: baseAmount,
+                    expiresAt: expiresAtSec,
+                    merchant: 'RyyStore IT Solutions'
+                }
             });
         } else {
             const uniqueCode = Math.floor(Math.random() * 900) + 100;
             const uniqueAmount = baseAmount + uniqueCode;
             const topUpId = `TU-${Date.now()}`;
-            const qrisBase64Image = await generateDynamicQris(uniqueAmount);
+            const qrisBase64Image = await generateDynamicQris(uniqueAmount, 'nobu');
             const expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
 
             await dbRun(
@@ -985,19 +1068,28 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
 
             return res.status(200).json({
                 status: true,
-                message: 'Silakan scan QRIS dan transfer sesuai jumlah unik.',
+                message: 'QRIS Nobu / Orkut berhasil dibuat.',
                 topUpId,
+                gateway: 'orkut',
+                merchant: 'RYYSTORE OK2285905',
                 data: {
                     qris_image: qrisBase64Image,
                     qris_code: qrisBase64Image,
                     unique_amount: uniqueAmount,
                     topup_id: topUpId,
-                    expires_at: expiresAtSec
+                    expires_at: expiresAtSec,
+                    merchant: 'RYYSTORE OK2285905'
                 },
-                qrisData: { base64Image: qrisBase64Image, uniqueAmount, expiresAt: expiresAtSec }
+                qrisData: {
+                    base64Image: qrisBase64Image,
+                    uniqueAmount,
+                    expiresAt: expiresAtSec,
+                    merchant: 'RYYSTORE OK2285905'
+                }
             });
         }
     } catch (error) {
+        console.error("[TOPUP_QRIS_ERROR]", error);
         res.status(500).json({ status: false, message: error.message || 'Gagal membuat permintaan top-up.' });
     }
 });

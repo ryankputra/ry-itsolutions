@@ -24,6 +24,7 @@ export default function CartPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [claimingCouponId, setClaimingCouponId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"qris" | "balance">("qris");
+  const [selectedQrisGw, setSelectedQrisGw] = useState<"nobu" | "gopay">("nobu");
   const [showInstantQris, setShowInstantQris] = useState(false);
 
   const handleApplyCoupon = async (code: string) => {
@@ -554,6 +555,35 @@ export default function CartPage() {
                 </div>
                 <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-primary" />
               </div>
+
+              {/* Sub-selector QRIS Provider */}
+              {paymentMethod === "qris" && (
+                <div className="col-span-1 sm:col-span-2 pt-2 border-t border-hairline/60 space-y-1.5">
+                  <label className="text-[11px] font-bold text-ink-muted block">Pilihan Gateway QRIS:</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelectedQrisGw('nobu'); }}
+                      className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                        selectedQrisGw === 'nobu' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
+                      }`}
+                    >
+                      <div className="font-bold">QRIS Nobu / All Bank</div>
+                      <div className="text-[9px] text-ink-muted">RYYSTORE OK2285905</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelectedQrisGw('gopay'); }}
+                      className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                        selectedQrisGw === 'gopay' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
+                      }`}
+                    >
+                      <div className="font-bold">QRIS GoPay Direct</div>
+                      <div className="text-[9px] text-ink-muted">RyyStore IT Solutions</div>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -604,6 +634,7 @@ export default function CartPage() {
         onClose={() => setShowInstantQris(false)}
         amount={grandTotal}
         orderTitle={`Pembayaran Direct Keranjang (${activeCartItems.length} Layanan)`}
+        preferredGateway={selectedQrisGw}
         onSuccess={() => {
           setShowInstantQris(false);
           executeCartCheckout();

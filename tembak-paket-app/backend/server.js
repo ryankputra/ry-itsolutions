@@ -1,11 +1,18 @@
-/**
- * Ry-ITSolutions Main Backend Server Entrypoint
- * Modularized architecture: Clean, lightweight, scalable
- */
-
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
+
+// Fallback defaults for critical environment variables
+process.env.PORT = process.env.PORT || '3001';
+process.env.CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
+process.env.QRIS_NOBU_STATIS_STRING = process.env.QRIS_NOBU_STATIS_STRING || process.env.QRIS_STATIS_STRING || "00020101021126670016COM.NOBUBANK.WWW01189360050300000879140214550177920473550303UMI51440014ID.CO.QRIS.WWW0215ID20253782970190303UMI5204541153033605802ID5918RYYSTORE OK22859056009SURAKARTA61055712462070703A016304774D";
+process.env.QRIS_GOPAY_STATIS_STRING = process.env.QRIS_GOPAY_STATIS_STRING || "00020101021126610014COM.GO-JEK.WWW01189360091432137105260210G2137105260303UMI51440014ID.CO.QRIS.WWW0215ID10264985528880303UMI5204737953033605802ID5921RyyStore IT Solutions6011KARANGANYAR61055773162070703A016304F027";
+process.env.QRIS_STATIS_STRING = process.env.QRIS_NOBU_STATIS_STRING;
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'ryystore_secure_session_secret_2026';
+
+console.log(`[CEIRGO_INIT] API Key Loaded: ${process.env.CEIRGO_API_KEY ? 'YES' : 'NO'}`);
+console.log(`[QRIS_INIT] Nobu/Orkut String: ${process.env.QRIS_NOBU_STATIS_STRING ? 'CONFIGURED' : 'MISSING'} | GoPay String: ${process.env.QRIS_GOPAY_STATIS_STRING ? 'CONFIGURED' : 'MISSING'}`);
+
 const express = require('express');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);

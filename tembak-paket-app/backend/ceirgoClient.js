@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
 
 const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
+console.log(`[CEIRGO_INIT] API Key Loaded: ${process.env.CEIRGO_API_KEY ? 'YES' : 'NO'}`);
 
 /**
  * Standard HTTP request wrapper for CeirGO Official API

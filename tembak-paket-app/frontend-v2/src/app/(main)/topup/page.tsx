@@ -54,8 +54,9 @@ export default function TopUpPage() {
     }, 3500);
   };
 
-  // Gateway readiness state
+  // Gateway readiness state & Dual QRIS Provider Selection
   const [gatewayInfo, setGatewayInfo] = useState<{ active_gateway: string; is_ready: boolean; message: string } | null>(null);
+  const [selectedQrisProvider, setSelectedQrisProvider] = useState<'nobu' | 'gopay'>('nobu');
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -82,7 +83,12 @@ export default function TopUpPage() {
     fetch("/api/topup/gateway-info", { credentials: "include" })
       .then((r) => safeJson(r))
       .then((d) => {
-        if (d && d.status && d.data) setGatewayInfo(d.data);
+        if (d && d.status && d.data) {
+          setGatewayInfo(d.data);
+          if (d.data.active_gateway === 'gopay') {
+            setSelectedQrisProvider('gopay');
+          }
+        }
       })
       .catch(() => {});
 
@@ -303,7 +309,11 @@ export default function TopUpPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: num }),
+        body: JSON.stringify({
+          amount: num,
+          gateway: selectedQrisProvider,
+          provider: selectedQrisProvider
+        }),
       });
       const data = await safeJson(res);
       if (data?.status) {
@@ -521,6 +531,63 @@ export default function TopUpPage() {
               </div>
             </div>
 
+            {/* Pilihan Provider QRIS (Nobu / Orkut vs GoPay Direct) */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-ink flex items-center justify-between">
+                <span>Pilihan Gateway QRIS</span>
+                <span className="text-[10px] text-primary font-medium">Realtime Otomatis</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQrisProvider('nobu')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                    selectedQrisProvider === 'nobu'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-hairline bg-canvas hover:bg-parchment/60'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-ink">QRIS Nobu / All Bank</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">SEMUA BANK</span>
+                    </div>
+                    <p className="text-[10px] text-ink-muted leading-tight">Merchant: <b>RYYSTORE OK2285905</b></p>
+                    <p className="text-[9px] text-ink-muted">BCA, Mandiri, BRI, BNI, Dana, ShopeePay</p>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                    selectedQrisProvider === 'nobu' ? 'border-primary bg-primary text-white' : 'border-hairline'
+                  }`}>
+                    {selectedQrisProvider === 'nobu' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedQrisProvider('gopay')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                    selectedQrisProvider === 'gopay'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-hairline bg-canvas hover:bg-parchment/60'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-ink">QRIS GoPay Direct</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">INSTANT</span>
+                    </div>
+                    <p className="text-[10px] text-ink-muted leading-tight">Merchant: <b>RyyStore IT Solutions</b></p>
+                    <p className="text-[9px] text-ink-muted">Scan via aplikasi Gojek / GoPay</p>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                    selectedQrisProvider === 'gopay' ? 'border-primary bg-primary text-white' : 'border-hairline'
+                  }`}>
+                    {selectedQrisProvider === 'gopay' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </button>
+              </div>
+            </div>
+
             {/* Metode Pembayaran Supported E-Commerce (Full Vector SVGs) */}
             <div className="p-4 rounded-2xl bg-parchment/50 border border-hairline">
               <PaymentLogosGrid />
@@ -541,12 +608,15 @@ export default function TopUpPage() {
         ) : (
           /* Tampilan QRIS E-Commerce */
           <div className="p-6 sm:p-8 flex flex-col items-center text-center space-y-6 bg-gradient-to-b from-canvas to-parchment/50">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Total Pembayaran Tepat</p>
-              <div className="bg-canvas border-2 border-primary/30 p-3.5 rounded-2xl shadow-xs">
+              <div className="bg-canvas border-2 border-primary/30 p-3.5 rounded-2xl shadow-xs space-y-1">
                 <p className="text-3xl sm:text-4xl font-black text-primary">
                   Rp {qrisData.uniqueAmount.toLocaleString("id-ID")}
                 </p>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold">
+                  <span>Merchant: {qrisData.merchant || (selectedQrisProvider === 'gopay' ? 'RyyStore IT Solutions' : 'RYYSTORE OK2285905')}</span>
+                </div>
               </div>
             </div>
 
