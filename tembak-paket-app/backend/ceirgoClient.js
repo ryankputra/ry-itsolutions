@@ -110,51 +110,112 @@ async function ceirgoRequest(endpoint, options = {}) {
 /**
  * 1. Account & Profile Verification (GET /api/me)
  * Checks profile, RBAC roles, permissions, and central wallet balance.
+ * Implements fallback ledger discovery (/api/wallet/balance, /api/balance, /api/wallet, /api/order)
  */
 async function getProfile() {
     const res = await ceirgoRequest('/api/me');
-    if (res.status) {
-        const data = res.data || {};
-        const balance = Number(
-            data.balance ??
-            data.wallet?.balance ??
-            data.saldo ??
-            data.account?.balance ??
-            0
-        );
+    console.log("[CEIRGO_ME_DEBUG] Response from /api/me:", JSON.stringify(res.fullResponse || res.data || res));
 
-        return {
-            status: true,
-            balance,
-            ceirgoBalance: balance,
-            role: data.role || data.roles || 'user',
-            permissions: data.permissions || [],
-            profile: data,
-            raw: res.fullResponse
-        };
+    let detectedBalance = null;
+    let meData = {};
+
+    if (res.status) {
+        meData = res.data || {};
+        const candidates = [
+            meData.balance,
+            meData.remaining_balance,
+            meData.wallet_balance,
+            meData.saldo,
+            meData.credit,
+            meData.credits,
+            meData.wallet?.balance,
+            meData.wallet?.remaining_balance,
+            meData.wallet?.saldo,
+            meData.account?.balance,
+            meData.account?.remaining_balance,
+            meData.user?.balance,
+            meData.user?.remaining_balance,
+            meData.user?.saldo
+        ];
+        for (const val of candidates) {
+            const num = Number(val);
+            if (val != null && !isNaN(num) && num >= 0) {
+                detectedBalance = num;
+                break;
+            }
+        }
+    } else {
+        if (res.statusCode === 401) {
+            console.error(`[CEIRGO_AUTH_ERROR_401] Unauthorized / Invalid or expired API Key at /api/me: ${JSON.stringify(res.raw || res.message)}`);
+        } else if (res.statusCode === 403) {
+            console.error(`[CEIRGO_FORBIDDEN_ERROR_403] Forbidden / Missing Permission at /api/me: ${JSON.stringify(res.raw || res.message)}`);
+        }
     }
 
-    // Fallback attempts if /api/me returned 404
-    try {
-        const snapRes = await ceirgoRequest('/api/wallet/snap');
-        if (snapRes.status) {
-            const b = Number(snapRes.data?.balance ?? snapRes.data?.saldo ?? 0);
-            return {
-                status: true,
-                balance: b,
-                ceirgoBalance: b,
-                role: 'user',
-                permissions: [],
-                profile: snapRes.data
-            };
-        }
-    } catch (e) {}
+    // If balance is still not found in /api/me, query dedicated ledger & wallet endpoints
+    if (detectedBalance == null) {
+        // Try /api/wallet/balance
+        try {
+            const wbRes = await ceirgoRequest('/api/wallet/balance');
+            console.log("[CEIRGO_WALLET_BALANCE_DEBUG]", JSON.stringify(wbRes));
+            if (wbRes.status && wbRes.data) {
+                const b = Number(wbRes.data.balance ?? wbRes.data.remaining_balance ?? wbRes.data.saldo ?? wbRes.data);
+                if (!isNaN(b) && b >= 0) detectedBalance = b;
+            }
+        } catch (e) {}
+    }
+
+    if (detectedBalance == null) {
+        // Try /api/balance
+        try {
+            const bRes = await ceirgoRequest('/api/balance');
+            console.log("[CEIRGO_BALANCE_DEBUG]", JSON.stringify(bRes));
+            if (bRes.status && bRes.data) {
+                const b = Number(bRes.data.balance ?? bRes.data.remaining_balance ?? bRes.data.saldo ?? bRes.data);
+                if (!isNaN(b) && b >= 0) detectedBalance = b;
+            }
+        } catch (e) {}
+    }
+
+    if (detectedBalance == null) {
+        // Try /api/wallet
+        try {
+            const wRes = await ceirgoRequest('/api/wallet');
+            console.log("[CEIRGO_WALLET_DEBUG]", JSON.stringify(wRes));
+            if (wRes.status && wRes.data) {
+                const b = Number(wRes.data.balance ?? wRes.data.remaining_balance ?? wRes.data.saldo ?? wRes.data);
+                if (!isNaN(b) && b >= 0) detectedBalance = b;
+            }
+        } catch (e) {}
+    }
+
+    if (detectedBalance == null) {
+        // Try fetching latest order which always returns remaining_balance in CeirGO Orders API
+        try {
+            const ordersRes = await ceirgoRequest('/api/order?limit=1');
+            console.log("[CEIRGO_ORDERS_BALANCE_DEBUG]", JSON.stringify(ordersRes));
+            if (ordersRes.status && ordersRes.data) {
+                const items = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data.items || ordersRes.data.data || []);
+                const latestOrder = items[0] || ordersRes.data;
+                const b = Number(latestOrder.remaining_balance ?? latestOrder.balance ?? null);
+                if (!isNaN(b) && b >= 0) detectedBalance = b;
+            }
+        } catch (e) {}
+    }
+
+    const finalBalance = detectedBalance != null ? detectedBalance : 0;
 
     return {
-        status: false,
-        balance: 0,
-        ceirgoBalance: 0,
-        message: res.message || 'Gagal mengambil data akun CeirGO'
+        status: res.status || detectedBalance != null,
+        statusCode: res.statusCode,
+        balance: finalBalance,
+        ceirgoBalance: finalBalance,
+        hasLiveBalance: detectedBalance != null,
+        role: meData.role || meData.roles || 'user',
+        permissions: meData.permissions || [],
+        profile: meData,
+        message: res.message,
+        raw: res.fullResponse
     };
 }
 

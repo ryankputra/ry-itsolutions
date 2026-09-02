@@ -821,21 +821,35 @@ export default function AdminPage() {
       loadUsers();
       loadAdminTickets();
 
-      fetch('/api/admin/kmsp-balance', { credentials: 'include' })
-        .then(r => safeJson(r))
-        .then(d => {
-          const b = d?.data?.balance ?? d?.balance ?? d?.data?.saldo ?? d?.saldo ?? (typeof d?.data === 'number' ? d.data : null);
-          if (b != null) setProviderBalances(prev => ({ ...prev, kmsp: Number(b) }));
-        })
-        .catch(() => { });
+      const fetchBalances = () => {
+        fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
+          .then(r => safeJson(r))
+          .then(d => {
+            const b = d?.ceirgoBalance ?? d?.data?.ceirgoBalance ?? d?.data?.balance ?? d?.balance ?? d?.data?.saldo ?? d?.saldo;
+            if (b != null && !isNaN(Number(b))) setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
+          })
+          .catch(() => { });
 
-      fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
-        .then(r => safeJson(r))
-        .then(d => {
-          const b = d?.data?.balance ?? d?.balance ?? d?.data?.saldo ?? d?.saldo ?? (typeof d?.data === 'number' ? d.data : null);
-          if (b != null) setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
-        })
-        .catch(() => { });
+        fetch('/api/admin/provider-balances', { credentials: 'include' })
+          .then(r => safeJson(r))
+          .then(d => {
+            const c = d?.ceirgoBalance ?? d?.data?.ceirgoBalance ?? d?.data?.ceirgo ?? d?.data?.balance ?? d?.balance;
+            const k = d?.kmspBalance ?? d?.data?.kmspBalance ?? d?.data?.kmsp;
+            if (c != null && !isNaN(Number(c))) setProviderBalances(prev => ({ ...prev, ceirgo: Number(c) }));
+            if (k != null && !isNaN(Number(k))) setProviderBalances(prev => ({ ...prev, kmsp: Number(k) }));
+          })
+          .catch(() => { });
+
+        fetch('/api/admin/kmsp-balance', { credentials: 'include' })
+          .then(r => safeJson(r))
+          .then(d => {
+            const b = d?.kmspBalance ?? d?.data?.kmspBalance ?? d?.data?.balance ?? d?.balance ?? d?.data?.saldo ?? d?.saldo;
+            if (b != null && !isNaN(Number(b))) setProviderBalances(prev => ({ ...prev, kmsp: Number(b) }));
+          })
+          .catch(() => { });
+      };
+
+      fetchBalances();
 
       fetch('/api/admin/payment-gateway')
         .then(r => safeJson(r))
@@ -3554,9 +3568,30 @@ export default function AdminPage() {
                 <div className="flex justify-between items-center p-3 bg-canvas border border-hairline rounded-xl">
                   <div>
                     <div className="font-bold text-xs">Server Pusat (CEIR/IMEI)</div>
-                    <div className="font-bold text-xs text-primary">Rp {providerBalances?.ceirgo != null ? Number(providerBalances.ceirgo).toLocaleString('id-ID') : '...'}</div>
+                    <div className="font-bold text-xs text-primary">
+                      Rp {providerBalances?.ceirgo != null ? Number(providerBalances.ceirgo).toLocaleString('id-ID') : '...'}
+                    </div>
                   </div>
-                  <Button size="sm" className="text-xs h-8" onClick={() => setShowCeirgoTopUp(true)}>Isi Saldo</Button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      title="Perbarui Saldo CeirGO"
+                      onClick={() => {
+                        fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
+                          .then(r => safeJson(r))
+                          .then(d => {
+                            const b = d?.ceirgoBalance ?? d?.data?.ceirgoBalance ?? d?.data?.balance ?? d?.balance;
+                            if (b != null && !isNaN(Number(b))) setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
+                          });
+                      }}
+                      className="p-1.5 rounded-lg border border-hairline hover:bg-parchment text-ink-muted transition-all cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                      </svg>
+                    </button>
+                    <Button size="sm" className="text-xs h-8" onClick={() => setShowCeirgoTopUp(true)}>Isi Saldo</Button>
+                  </div>
                 </div>
               </div>
             </Card>

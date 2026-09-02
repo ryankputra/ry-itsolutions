@@ -542,16 +542,44 @@ router.post('/admin/announcement', isAuthenticated, isAdmin, async (req, res) =>
     }
 });
 
-// Helper function to fetch live CeirGO profile and balance via GET /api/me
+// Helper function to fetch live CeirGO profile and balance via GET /api/me & ledger fallbacks
 async function getCeirgoAdminBalance() {
     try {
         const profileRes = await ceirgoClient.getProfile();
-        if (profileRes.status && typeof profileRes.balance === 'number') {
+        console.log("[CEIRGO_ME_DEBUG] Balance check summary:", JSON.stringify({
+            status: profileRes.status,
+            statusCode: profileRes.statusCode,
+            balance: profileRes.balance,
+            hasLiveBalance: profileRes.hasLiveBalance,
+            message: profileRes.message
+        }));
+
+        if (profileRes.hasLiveBalance && typeof profileRes.balance === 'number') {
+            // Persist to database settings so we have a known good balance fallback
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(profileRes.balance)]).catch(() => {});
             return profileRes.balance;
         }
+
+        // If live lookup had an error (e.g. 401, 403 or network issue), log explicitly
+        if (profileRes.statusCode === 401) {
+            console.error(`[CEIRGO_BALANCE_ERROR_401] API Key CeirGO tidak valid atau expired: ${profileRes.message}`);
+        } else if (profileRes.statusCode === 403) {
+            console.error(`[CEIRGO_BALANCE_ERROR_403] Akun CeirGO tidak memiliki permission: ${profileRes.message}`);
+        }
+
+        // Fallback to persisted lastCeirgoBalance if available
+        const cachedRow = await dbGet("SELECT value FROM settings WHERE key = 'lastCeirgoBalance'").catch(() => null);
+        if (cachedRow && cachedRow.value != null) {
+            const cachedVal = Number(cachedRow.value);
+            if (!isNaN(cachedVal) && cachedVal > 0) {
+                console.log("[CEIRGO_BALANCE_FALLBACK] Menggunakan lastCeirgoBalance dari database:", cachedVal);
+                return cachedVal;
+            }
+        }
+
         return 0;
     } catch (e) {
-        console.warn("[API Warning] getCeirgoAdminBalance failed:", e.message);
+        console.error("[API Error] getCeirgoAdminBalance failed:", e.message);
         return 0;
     }
 }
@@ -568,48 +596,59 @@ router.get('/admin/kmsp-balance', isAuthenticated, isAdmin, async (req, res) => 
 
 router.get('/admin/ceirgo-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const profileRes = await ceirgoClient.getProfile();
-        const bal = profileRes.status ? profileRes.balance : 0;
-        res.status(200).json({
+        const bal = await getCeirgoAdminBalance();
+        const profileRes = await ceirgoClient.getProfile().catch(() => ({}));
+
+        return res.status(200).json({
             status: true,
+            ceirgoBalance: Number(bal || 0),
+            balance: Number(bal || 0),
             data: {
-                balance: bal,
-                ceirgoBalance: bal,
+                ceirgoBalance: Number(bal || 0),
+                balance: Number(bal || 0),
                 reserved: 0,
                 profile: profileRes.profile || null,
                 role: profileRes.role || null,
                 permissions: profileRes.permissions || []
-            },
-            ceirgoBalance: bal,
-            balance: bal
+            }
         });
     } catch (e) {
-        console.warn("[API Warning] CeirGO balance fetch failed:", e.message);
-        res.status(200).json({ status: true, data: { balance: 0, ceirgoBalance: 0, reserved: 0 }, ceirgoBalance: 0, balance: 0, fallback: true });
+        console.error("[API Error] CeirGO balance fetch failed:", e.message);
+        res.status(200).json({
+            status: true,
+            ceirgoBalance: 0,
+            balance: 0,
+            data: { balance: 0, ceirgoBalance: 0, reserved: 0 },
+            fallback: true,
+            error: e.message
+        });
     }
 });
 
 router.get('/admin/provider-balances', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const kmspBal = await getKmspAdminBalance();
-        const profileRes = await ceirgoClient.getProfile();
-        const ceirgoBal = profileRes.status ? profileRes.balance : 0;
-        res.status(200).json({
+        const ceirgoBal = await getCeirgoAdminBalance();
+        const profileRes = await ceirgoClient.getProfile().catch(() => ({}));
+
+        return res.status(200).json({
             status: true,
+            ceirgoBalance: Number(ceirgoBal || 0),
+            kmspBalance: Number(kmspBal || 0),
+            balance: Number(ceirgoBal || 0),
             data: {
-                kmspBalance: kmspBal,
-                ceirgoBalance: ceirgoBal,
-                kmsp: kmspBal,
-                ceirgo: ceirgoBal,
-                balance: ceirgoBal,
+                ceirgoBalance: Number(ceirgoBal || 0),
+                kmspBalance: Number(kmspBal || 0),
+                kmsp: Number(kmspBal || 0),
+                ceirgo: Number(ceirgoBal || 0),
+                balance: Number(ceirgoBal || 0),
                 profile: profileRes.profile || null,
                 role: profileRes.role || null,
                 permissions: profileRes.permissions || []
-            },
-            kmspBalance: kmspBal,
-            ceirgoBalance: ceirgoBal
+            }
         });
     } catch (e) {
+        console.error("[API Error] provider-balances failed:", e.message);
         res.status(500).json({ status: false, message: e.message || "Gagal mengambil saldo provider." });
     }
 });

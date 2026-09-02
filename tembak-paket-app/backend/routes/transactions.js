@@ -151,6 +151,12 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
                 finalStatus = (ceirStatus === 'success' || ceirStatus === 'completed') ? 'success' : 'processing';
                 adminNote = typeof ceirData.result === 'string' ? ceirData.result : (ceirData.message || 'Pesanan otomatis CeirGO berhasil diterima server.');
                 apiResponse = JSON.stringify(ceirData.result || ceirData);
+                if (ceirData.remaining_balance != null) {
+                    const rb = Number(ceirData.remaining_balance);
+                    if (!isNaN(rb) && rb >= 0) {
+                        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(rb)]).catch(() => {});
+                    }
+                }
                 console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
             } else {
                 const err = orderRes.message || orderRes.error || 'Respon gagal dari CeirGO';
@@ -735,6 +741,13 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                         finalStatus = (ceirStatus === 'success' || ceirStatus === 'completed') ? 'success' : 'processing';
                         adminNote = typeof ceirData.result === 'string' ? ceirData.result : (ceirData.message || 'Pesanan otomatis CeirGO berhasil diterima server.');
                         apiResponse = JSON.stringify(ceirData.result || ceirData);
+
+                        if (ceirData.remaining_balance != null) {
+                            const rb = Number(ceirData.remaining_balance);
+                            if (!isNaN(rb) && rb >= 0) {
+                                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(rb)]).catch(() => {});
+                            }
+                        }
 
                         console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
                     } else {
