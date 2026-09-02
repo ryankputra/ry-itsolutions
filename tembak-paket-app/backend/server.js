@@ -33,6 +33,9 @@ const PORT = process.env.PORT || 3001;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
 const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.my.id';
 
+// Trust reverse proxy headers (Nginx / Cloudflare on STB/VPS)
+app.set('trust proxy', 1);
+
 // 1. Ensure required public/upload directories exist
 const uploadDirs = [
     path.join(__dirname, 'public', 'uploads', 'avatars'),
@@ -63,8 +66,13 @@ const allowedOrigins = [
     'http://127.0.0.1:3001',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'https://ry-itsolutions.web.id'
-];
+    'https://ry-itsolutions.web.id',
+    'http://ry-itsolutions.web.id',
+    'https://www.ry-itsolutions.web.id',
+    'http://www.ry-itsolutions.web.id',
+    process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
@@ -74,6 +82,7 @@ app.use(cors({
             origin.startsWith('http://127.0.0.1:') ||
             origin.startsWith('http://192.168.') ||
             origin.includes('telegram.org') ||
+            origin.includes('ry-itsolutions.web.id') ||
             origin.endsWith('.web.id')
         ) {
             return callback(null, true);

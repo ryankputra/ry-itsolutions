@@ -824,7 +824,7 @@ export default function AdminPage() {
       fetch('/api/admin/kmsp-balance', { credentials: 'include' })
         .then(r => safeJson(r))
         .then(d => {
-          const b = d?.data?.balance ?? d?.balance;
+          const b = d?.data?.balance ?? d?.balance ?? d?.data?.saldo ?? d?.saldo ?? (typeof d?.data === 'number' ? d.data : null);
           if (b != null) setProviderBalances(prev => ({ ...prev, kmsp: Number(b) }));
         })
         .catch(() => { });
@@ -832,7 +832,7 @@ export default function AdminPage() {
       fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
         .then(r => safeJson(r))
         .then(d => {
-          const b = d?.data?.balance ?? d?.balance;
+          const b = d?.data?.balance ?? d?.balance ?? d?.data?.saldo ?? d?.saldo ?? (typeof d?.data === 'number' ? d.data : null);
           if (b != null) setProviderBalances(prev => ({ ...prev, ceirgo: Number(b) }));
         })
         .catch(() => { });

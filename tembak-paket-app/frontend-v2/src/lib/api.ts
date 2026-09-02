@@ -3,9 +3,18 @@
  * Handles transparent payload normalization, proxy routing, TMA headers, and global error logging.
  */
 
-export const API_BASE = typeof window !== 'undefined'
-  ? (process.env.NEXT_PUBLIC_API_URL || '')
-  : (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:3001');
+export const API_BASE = (() => {
+  if (typeof window !== 'undefined') {
+    const raw = process.env.NEXT_PUBLIC_API_URL || '';
+    // If the browser hostname is not localhost/127.0.0.1, but NEXT_PUBLIC_API_URL points to localhost, safely use relative origin
+    const isBrowserOnRemoteHost = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    if (isBrowserOnRemoteHost && (raw.includes('localhost') || raw.includes('127.0.0.1'))) {
+      return '';
+    }
+    return raw;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:3001';
+})();
 
 export const API_URL = API_BASE ? `${API_BASE.replace(/\/$/, '')}/api` : '/api';
 
