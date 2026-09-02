@@ -1,10 +1,18 @@
+/**
+ * Official CeirGO API Client Implementation
+ * Strictly verified and compliant with CeirGO API Documentation (https://ceirgo.id/docs)
+ * Audit Reference: backend/ceirgo_api_map.json
+ */
+
 const fetch = globalThis.fetch || require('node-fetch');
+const crypto = require('crypto');
 
 const CEIRGO_BASE_URL = process.env.CEIRGO_BASE_URL || 'https://ceirgo.id';
-console.log(`[CEIRGO_INIT] API Key Loaded: ${process.env.CEIRGO_API_KEY ? 'YES' : 'NO'}`);
+console.log(`[CEIRGO_INIT] API Key Loaded: ${process.env.CEIRGO_API_KEY ? 'YES' : 'NO'} | Base URL: ${CEIRGO_BASE_URL}`);
 
 /**
  * Standard HTTP request wrapper for CeirGO Official API
+ * Official doc: https://ceirgo.id/docs/references/request-format
  * Enforces headers:
  * - Authorization: Bearer <CEIRGO_API_KEY>
  * - Accept: application/json
@@ -88,7 +96,7 @@ async function ceirgoRequest(endpoint, options = {}) {
         return {
             status: true,
             statusCode: response.status,
-            data: data.data || data,
+            data: data.data !== undefined ? data.data : data,
             fullResponse: data,
             raw: data
         };
@@ -105,137 +113,117 @@ async function ceirgoRequest(endpoint, options = {}) {
 }
 
 /**
- * 1. Account & Profile Verification & Real-time Balance
- * Logic:
- * 1. HEALTH CHECK: Call GET https://ceirgo.id/api/me. If HTTP 200, mark connected = true.
- * 2. REAL-TIME BALANCE: Fetch remaining_balance from latest order via GET https://ceirgo.id/api/order?limit=1.
- * 3. CACHE FALLBACK: If order does not return balance, read from SQLite settings.lastCeirgoBalance.
+ * 1. Account & Profile Verification (GET /api/me)
+ * Official doc: https://ceirgo.id/docs/authentication/verify-access
+ * Permission: user.me.read
+ * Returns profile, roles, permissions, and combines with live wallet balance from GET /api/wallet/snap.
  */
 async function getProfile() {
-    // 1. HEALTH CHECK via GET /api/me
-    const res = await ceirgoRequest('/api/me');
-    console.log("[CEIRGO_ME_DEBUG] Response from /api/me:", JSON.stringify(res.fullResponse || res.data || res));
+    const meRes = await ceirgoRequest('/api/me');
+    console.log("[CEIRGO_ME_DEBUG] Response from /api/me:", JSON.stringify(meRes.fullResponse || meRes.data || meRes));
 
-    let detectedBalance = null;
-    let meData = {};
-    const isConnected = Boolean(res.status && res.statusCode === 200);
+    const isConnected = Boolean(meRes.status && meRes.statusCode === 200);
+    let liveBalance = null;
+    let reserved = 0;
+    let walletId = null;
 
     if (isConnected) {
-        meData = res.data || {};
-        const candidates = [
-            meData.remaining_balance,
-            meData.balance,
-            meData.wallet_balance,
-            meData.saldo,
-            meData.wallet?.remaining_balance,
-            meData.wallet?.balance,
-            meData.user?.remaining_balance,
-            meData.user?.balance
-        ];
-        for (const val of candidates) {
-            const num = Number(val);
-            if (val != null && !isNaN(num) && num >= 0) {
-                detectedBalance = num;
-                break;
-            }
-        }
-    } else {
-        if (res.statusCode === 401) {
-            console.error(`[CEIRGO_AUTH_ERROR_401] Unauthorized / Invalid API Key at /api/me: ${JSON.stringify(res.raw || res.message)}`);
-        } else if (res.statusCode === 403) {
-            console.error(`[CEIRGO_FORBIDDEN_ERROR_403] Forbidden / Missing Permission at /api/me: ${JSON.stringify(res.raw || res.message)}`);
+        // Query official wallet balance endpoint
+        const wbRes = await getWalletBalance().catch(() => null);
+        if (wbRes && wbRes.status && typeof wbRes.balance === 'number') {
+            liveBalance = wbRes.balance;
+            reserved = wbRes.reserved;
+            walletId = wbRes.wallet_id;
         }
     }
 
-    // 2. RETRIEVAL SALDO REAL-TIME via GET /api/order?limit=1
-    if (detectedBalance == null) {
-        try {
-            const ordersRes = await ceirgoRequest('/api/order?limit=1');
-            console.log("[CEIRGO_ORDERS_BALANCE_DEBUG]", JSON.stringify(ordersRes));
-            if (ordersRes.status && ordersRes.data) {
-                const items = Array.isArray(ordersRes.data)
-                    ? ordersRes.data
-                    : (ordersRes.data.page?.items || ordersRes.data.items || ordersRes.data.data || []);
-                const latestOrder = items[0] || ordersRes.data;
-                const cand = [
-                    latestOrder?.remaining_balance,
-                    latestOrder?.remainingBalance,
-                    latestOrder?.balance,
-                    latestOrder?.saldo
-                ];
-                for (const c of cand) {
-                    const num = Number(c);
-                    if (c != null && !isNaN(num) && num >= 0) {
-                        detectedBalance = num;
-                        break;
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn("[CEIRGO_ORDER_FETCH_WARN] Gagal fetch order untuk remaining_balance:", e.message);
-        }
-    }
-
-    // 3. CACHE FALLBACK (SQLite settings.lastCeirgoBalance)
+    // Fallback to SQLite settings.lastCeirgoBalance if live balance is unavailable
+    let finalBalance = liveBalance;
     let isFromCache = false;
-    if (detectedBalance != null) {
-        // Live balance found, persist to SQLite
-        try {
-            const { dbRun } = require('./config/db');
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(detectedBalance)]);
-        } catch (e) {}
-    } else {
-        // Fallback to SQLite settings.lastCeirgoBalance
+
+    if (finalBalance == null) {
         try {
             const { dbGet } = require('./config/db');
             const cachedRow = await dbGet("SELECT value FROM settings WHERE key IN ('lastCeirgoBalance', 'ceirgo_balance', 'ceirgoBalance') AND value IS NOT NULL AND value != '' ORDER BY ROWID DESC LIMIT 1");
             if (cachedRow && cachedRow.value != null) {
-                const cachedNum = Number(cachedRow.value);
-                if (!isNaN(cachedNum) && cachedNum >= 0) {
-                    detectedBalance = cachedNum;
+                const num = Number(cachedRow.value);
+                if (!isNaN(num) && num >= 0) {
+                    finalBalance = num;
                     isFromCache = true;
                 }
             }
         } catch (e) {}
     }
 
-    const finalBalance = detectedBalance != null ? detectedBalance : 0;
+    const meData = meRes.data || {};
+    const balNum = finalBalance != null ? finalBalance : 0;
 
     return {
         status: isConnected,
         connected: isConnected,
-        statusCode: res.statusCode || (isConnected ? 200 : 500),
-        balance: finalBalance,
-        ceirgoBalance: finalBalance,
-        hasLiveBalance: detectedBalance != null && !isFromCache,
+        statusCode: meRes.statusCode || (isConnected ? 200 : 500),
+        balance: balNum,
+        ceirgoBalance: balNum,
+        reserved,
+        wallet_id: walletId,
+        hasLiveBalance: liveBalance != null,
         isFromCache,
         role: meData.role || meData.roles || 'user',
         permissions: meData.permissions || [],
         profile: meData,
-        message: isConnected ? 'Terkoneksi ke Server Pusat CeirGO' : (res.message || 'Gagal terhubung ke API CeirGO'),
-        raw: res.fullResponse
+        message: isConnected ? 'Terkoneksi ke Server Pusat CeirGO' : (meRes.message || 'Gagal terhubung ke API CeirGO'),
+        raw: meRes.fullResponse
     };
 }
 
 /**
- * 2. Deposit API (GET /api/deposit/provider)
- * Lists active deposit providers.
+ * 1.1 Wallet Balance (GET /api/wallet/snap)
+ * Official doc: https://ceirgo.id/docs/transactions/wallet-balance
+ * Permission: wallet.balance.read
+ * Returns: { balance: number, reserved: number, wallet_id: number }
  */
-async function getDepositProviders() {
-    let res = await ceirgoRequest('/api/deposit/provider');
-    if (res.status && Array.isArray(res.data)) {
-        return res;
-    }
-    // Fallback to plural /api/deposit/providers if standard single route returns 404
-    const altRes = await ceirgoRequest('/api/deposit/providers');
-    if (altRes.status) return altRes;
+async function getWalletBalance() {
+    const res = await ceirgoRequest('/api/wallet/snap');
+    if (res.status && res.data) {
+        const bal = Number(res.data.balance ?? res.data.wallet_balance ?? 0);
+        const reserved = Number(res.data.reserved ?? 0);
+        const walletId = res.data.wallet_id ?? null;
 
+        // Auto-update SQLite cache
+        if (!isNaN(bal) && bal >= 0) {
+            try {
+                const { dbRun } = require('./config/db');
+                dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('lastCeirgoBalance', ?)", [String(bal)]).catch(() => {});
+            } catch (e) {}
+        }
+
+        return {
+            status: true,
+            balance: bal,
+            ceirgoBalance: bal,
+            reserved,
+            wallet_id: walletId,
+            data: res.data
+        };
+    }
     return res;
 }
 
 /**
- * 2.1 Provider Detail (GET /api/deposit/provider/{code})
- * Fetches limits, fees, and instructions for a specific provider.
+ * 2.1 List Deposit Providers (GET /api/deposit/provider)
+ * Official doc: https://ceirgo.id/docs/deposits/providers
+ * Permission: deposit.provider.list
+ */
+async function getDepositProviders(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const endpoint = `/api/deposit/provider${queryString ? `?${queryString}` : ''}`;
+    return await ceirgoRequest(endpoint);
+}
+
+/**
+ * 2.2 Deposit Provider Detail (GET /api/deposit/provider/{code})
+ * Official doc: https://ceirgo.id/docs/deposits/provider-detail
+ * Permission: deposit.provider.list
  */
 async function getDepositProviderDetail(providerCode) {
     if (!providerCode) throw new Error("Provider code diperlukan.");
@@ -243,9 +231,11 @@ async function getDepositProviderDetail(providerCode) {
 }
 
 /**
- * 2.2 Create Deposit (POST /api/deposit)
+ * 2.3 Create Deposit (POST /api/deposit)
+ * Official doc: https://ceirgo.id/docs/deposits/create-deposit
+ * Permission: deposit.create
  * Payload: { "amount": number, "provider_code": string }
- * Returns: amounts.total_pay (total tagihan bayar mutlak), qr_string, qr_url
+ * Returns: amounts.total_pay, qr_string, qr_url, expires_at
  */
 async function createDeposit({ amount, provider_code, providerCode }) {
     const code = provider_code || providerCode;
@@ -270,7 +260,6 @@ async function createDeposit({ amount, provider_code, providerCode }) {
 
     if (res.status && res.data) {
         const d = res.data;
-        // Parse amounts.total_pay, qr_string, qr_url
         const totalPay = Number(
             d.amounts?.total_pay ??
             d.total_pay ??
@@ -302,7 +291,9 @@ async function createDeposit({ amount, provider_code, providerCode }) {
 }
 
 /**
- * 2.3 List Deposits (GET /api/deposit)
+ * 2.4 List Deposits (GET /api/deposit)
+ * Official doc: https://ceirgo.id/docs/deposits/list-deposits
+ * Permission: deposit.read
  */
 async function getDeposits(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -311,8 +302,9 @@ async function getDeposits(params = {}) {
 }
 
 /**
- * 2.4 Deposit Detail (GET /api/deposit/{deposit_id})
- * Status: pending, processing, succeeded, failed, cancelled, expired
+ * 2.5 Deposit Detail (GET /api/deposit/{deposit_id})
+ * Official doc: https://ceirgo.id/docs/deposits/deposit-detail
+ * Permission: deposit.read
  */
 async function getDepositDetail(depositId) {
     if (!depositId) throw new Error("Deposit ID diperlukan.");
@@ -320,7 +312,9 @@ async function getDepositDetail(depositId) {
 }
 
 /**
- * 3. Services API (GET /api/services)
+ * 3.1 List Services (GET /api/services)
+ * Official doc: https://ceirgo.id/docs/orders/services
+ * Permission: service.list
  */
 async function getServices(params = { limit: 50 }) {
     const queryString = new URLSearchParams(params).toString();
@@ -329,8 +323,9 @@ async function getServices(params = { limit: 50 }) {
 }
 
 /**
- * 3.1 Service Detail (GET /api/services/{idOrCode})
- * Reads input_schema, result_schema, unit_price, min_items, max_items
+ * 3.2 Service Detail (GET /api/services/{idOrCode})
+ * Official doc: https://ceirgo.id/docs/orders/service-detail
+ * Permission: service.read_detail
  */
 async function getServiceDetail(idOrCode) {
     if (!idOrCode) throw new Error("ID atau Kode layanan diperlukan.");
@@ -338,15 +333,10 @@ async function getServiceDetail(idOrCode) {
 }
 
 /**
- * 4. Orders API (POST /api/order)
- * Official payload structure:
- * {
- *   "code": "<service_code>", // e.g. "cek_imei", "cek_history_imei"
- *   "data": {
- *     "imeis": ["<15_digit_imei>"]
- *   }
- * }
- * Response captures: reference_id, remaining_balance, charged_amount, result
+ * 4.1 Create Order (POST /api/order)
+ * Official doc: https://ceirgo.id/docs/orders/create-order
+ * Permission: order.create
+ * Payload: { "code": string, "data": { "imeis": string[] } }
  */
 async function createOrder({ code, data, imeis }) {
     if (!code) throw new Error("Kode layanan CeirGO (code) diperlukan.");
@@ -411,8 +401,9 @@ async function createOrder({ code, data, imeis }) {
 }
 
 /**
- * 4.1 List Orders (GET /api/order)
- * Filters: status (draft, awaiting_payment, paid, processing, completed, partial, cancelled, refunded), date range
+ * 4.2 List Orders (GET /api/order)
+ * Official doc: https://ceirgo.id/docs/orders/list-orders
+ * Permission: order.list
  */
 async function getOrders(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -421,22 +412,198 @@ async function getOrders(params = {}) {
 }
 
 /**
- * 4.2 Order Detail (GET /api/order/{idOrRef})
+ * 4.3 Order Detail & Status (GET /api/order/{id})
+ * Official doc: https://ceirgo.id/docs/orders/order-detail and https://ceirgo.id/docs/orders/order-status
+ * Permission: order.read
  */
 async function getOrderDetail(idOrRef) {
     if (!idOrRef) throw new Error("ID Order / Reference ID diperlukan.");
 
-    // Try path-based detail
     const res = await ceirgoRequest(`/api/order/${encodeURIComponent(idOrRef)}`);
     if (res.status) return res;
 
-    // Fallback to query param
     return await ceirgoRequest(`/api/order?trx_id=${encodeURIComponent(idOrRef)}`);
+}
+
+/**
+ * 4.4 Check Order Status (Alias for getOrderDetail)
+ * Official doc: https://ceirgo.id/docs/orders/order-status
+ * Permission: order.read
+ */
+async function getOrderStatus(idOrRef) {
+    return await getOrderDetail(idOrRef);
+}
+
+/**
+ * 5.1 List Transactions (GET /api/transactions)
+ * Official doc: https://ceirgo.id/docs/transactions/list-transactions
+ * Permission: transaction.read
+ */
+async function getTransactions(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const endpoint = `/api/transactions${queryString ? `?${queryString}` : ''}`;
+    return await ceirgoRequest(endpoint);
+}
+
+/**
+ * 5.2 Transaction Detail (GET /api/transactions/{id})
+ * Official doc: https://ceirgo.id/docs/transactions/transaction-detail
+ * Permission: transaction.read
+ */
+async function getTransactionDetail(id) {
+    if (!id) throw new Error("Transaction ID diperlukan.");
+    return await ceirgoRequest(`/api/transactions/${encodeURIComponent(id)}`);
+}
+
+/**
+ * 5.3 List Wallet Mutations (GET /api/mutation)
+ * Official doc: https://ceirgo.id/docs/transactions/list-mutations
+ * Permission: wallet.ledger.read
+ */
+async function getWalletMutations(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const endpoint = `/api/mutation${queryString ? `?${queryString}` : ''}`;
+    return await ceirgoRequest(endpoint);
+}
+
+/**
+ * 5.4 Wallet Mutation Detail (GET /api/mutation/{id})
+ * Official doc: https://ceirgo.id/docs/transactions/mutation-detail
+ * Permission: wallet.ledger.read
+ */
+async function getWalletMutationDetail(id) {
+    if (!id) throw new Error("Mutation ID diperlukan.");
+    return await ceirgoRequest(`/api/mutation/${encodeURIComponent(id)}`);
+}
+
+/**
+ * 6.1 Create Transfer (POST /api/transfer)
+ * Official doc: https://ceirgo.id/docs/transfers/create-transfer
+ * Permission: transfer.create
+ */
+async function createTransfer({ receiver, amount, description, idempotencyKey }) {
+    if (!receiver || !amount) throw new Error("Receiver user ID dan nominal transfer wajib disertakan.");
+    const headers = {};
+    if (idempotencyKey) {
+        headers['Idempotency-Key'] = idempotencyKey;
+    }
+    return await ceirgoRequest('/api/transfer', {
+        method: 'POST',
+        headers,
+        body: {
+            receiver: Number(receiver),
+            amount: Number(amount),
+            description: description || ''
+        }
+    });
+}
+
+/**
+ * 6.2 Transfer Detail (GET /api/transfer/{id})
+ * Official doc: https://ceirgo.id/docs/transfers/transfer-detail
+ * Permission: transfer.read
+ */
+async function getTransferDetail(id) {
+    if (!id) throw new Error("Transfer ID diperlukan.");
+    return await ceirgoRequest(`/api/transfer/${encodeURIComponent(id)}`);
+}
+
+/**
+ * 7. Webhook Signature Verification
+ * Official doc: https://ceirgo.id/docs/webhooks/order-webhooks
+ * Formula: HMAC_SHA256(JSON.stringify({ orderId, amount }), api_key_secret)
+ * Uses timing-safe equality comparison.
+ */
+function verifyWebhookSignature({ payload, signature, secret }) {
+    if (!signature || !payload) return false;
+
+    const hmacKey = secret || 
+        process.env.CEIRGO_API_KEY_SECRET || 
+        (process.env.CEIRGO_API_KEY && process.env.CEIRGO_API_KEY.includes('.') ? process.env.CEIRGO_API_KEY.split('.')[1] : process.env.CEIRGO_API_KEY) || 
+        '';
+
+    if (!hmacKey) {
+        console.warn('[CeirGO Webhook] Tidak dapat memverifikasi signature: secret belum dikonfigurasi.');
+        return false;
+    }
+
+    const status = payload.status || '';
+    const amount = status === 'pending'
+        ? String(payload.total_price ?? payload.total ?? 0)
+        : (status === 'failed' || status === 'cancelled')
+            ? '0'
+            : String(payload.charged_amount ?? payload.amount ?? 0);
+
+    const orderId = Number(payload.order_id || payload.id);
+    const signed = JSON.stringify({ orderId, amount });
+    const expected = crypto.createHmac('sha256', hmacKey).update(signed).digest('hex');
+
+    try {
+        const sigBuf = Buffer.from(signature, 'hex');
+        const expBuf = Buffer.from(expected, 'hex');
+        return sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Robust JSON & Legacy History Parser for CEIR IMEI results
+ */
+function parseCeirHistory(rawResponse) {
+    if (!rawResponse) return [];
+
+    let parsed = rawResponse;
+    if (typeof rawResponse === 'string') {
+        try {
+            parsed = JSON.parse(rawResponse);
+        } catch (e) {
+            parsed = null;
+        }
+    }
+
+    if (parsed) {
+        if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0]?.history)) {
+            return parsed[0].history;
+        }
+        if (parsed.result && Array.isArray(parsed.result) && Array.isArray(parsed.result[0]?.history)) {
+            return parsed.result[0].history;
+        }
+        if (Array.isArray(parsed.history)) {
+            return parsed.history;
+        }
+        if (parsed.data && Array.isArray(parsed.data) && Array.isArray(parsed.data[0]?.history)) {
+            return parsed.data[0].history;
+        }
+    }
+
+    // Legacy regex fallback for table strings
+    if (typeof rawResponse === 'string') {
+        const rows = [];
+        const lines = rawResponse.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        for (const line of lines) {
+            const match = line.match(/^(\d+)\s+([\d-]+\s+[\d:]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.*)$/);
+            if (match) {
+                rows.push({
+                    no: parseInt(match[1], 10),
+                    date: match[2],
+                    imei: match[3],
+                    imsi: match[4],
+                    action: match[5],
+                    note: match[6]
+                });
+            }
+        }
+        if (rows.length > 0) return rows;
+    }
+
+    return [];
 }
 
 module.exports = {
     ceirgoRequest,
     getProfile,
+    getWalletBalance,
     getDepositProviders,
     getDepositProviderDetail,
     createDeposit,
@@ -446,5 +613,14 @@ module.exports = {
     getServiceDetail,
     createOrder,
     getOrders,
-    getOrderDetail
+    getOrderDetail,
+    getOrderStatus,
+    getTransactions,
+    getTransactionDetail,
+    getWalletMutations,
+    getWalletMutationDetail,
+    createTransfer,
+    getTransferDetail,
+    verifyWebhookSignature,
+    parseCeirHistory
 };

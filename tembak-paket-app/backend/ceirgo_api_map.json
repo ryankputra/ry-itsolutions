@@ -1,0 +1,576 @@
+{
+  "api_metadata": {
+    "provider": "CeirGO Official API",
+    "base_url": "https://ceirgo.id",
+    "docs_root": "https://ceirgo.id/docs",
+    "auth_header": "Authorization: Bearer <CEIRGO_API_KEY>",
+    "crawled_at": "2026-09-02T16:39:33Z",
+    "version": "v1"
+  },
+  "endpoints": [
+    {
+      "function_name": "getProfile",
+      "aliases": ["verifyAccess", "getMe"],
+      "method": "GET",
+      "path": "/api/me",
+      "permission": "user.me.read",
+      "docs_url": "https://ceirgo.id/docs/authentication/verify-access",
+      "description": "Verifies API Key, returns user profile, role, phone, email, and array of 21 RBAC permissions.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {},
+        "body": null
+      },
+      "response_example": {
+        "user_id": 2031,
+        "via": "client_api_key",
+        "access_channel": "api",
+        "account_type": "basic",
+        "role": "user",
+        "phone": "6287767287284",
+        "profile_picture_url": null,
+        "username": "ryankptr",
+        "email": "ayusiawanryan@gmail.com",
+        "api_key_id": 108,
+        "api_key_type": "client",
+        "permissions": [
+          "deposit.create",
+          "deposit.provider.list",
+          "deposit.read",
+          "order.create",
+          "order.list",
+          "order.read",
+          "public.service.read",
+          "service.list",
+          "service.read_detail",
+          "ticket.create",
+          "ticket.read.self",
+          "ticket.reply.self",
+          "ticket.tag.self",
+          "transaction.read",
+          "transfer.create",
+          "transfer.read",
+          "upload.complete",
+          "upload.presigned.create",
+          "user.me.read",
+          "wallet.balance.read",
+          "wallet.ledger.read"
+        ],
+        "token": {
+          "expires_at": null,
+          "expires_in": null
+        }
+      }
+    },
+    {
+      "function_name": "getWalletBalance",
+      "aliases": ["getWalletSnap"],
+      "method": "GET",
+      "path": "/api/wallet/snap",
+      "permission": "wallet.balance.read",
+      "docs_url": "https://ceirgo.id/docs/transactions/wallet-balance",
+      "description": "Returns current available wallet balance, reserved balance, and wallet ID.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {},
+        "body": null
+      },
+      "response_example": {
+        "balance": 1550,
+        "reserved": 0,
+        "wallet_id": 1802
+      }
+    },
+    {
+      "function_name": "getServices",
+      "aliases": ["listServices"],
+      "method": "GET",
+      "path": "/api/services",
+      "permission": "service.list",
+      "docs_url": "https://ceirgo.id/docs/orders/services",
+      "description": "Lists all available IMEI/CEIR services with active pricing, rules, and input schemas.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {
+          "limit": "integer, 1..50 (optional, default 20)",
+          "cursor": "positive integer (optional)"
+        },
+        "body": null
+      },
+      "response_example": {
+        "data": {
+          "page": {
+            "items": [
+              {
+                "id": 1,
+                "code": "cek_imei",
+                "name": "Cek Status IMEI",
+                "is_active": true,
+                "processing_type": "automatic",
+                "rule": { "unit_price": 3000 }
+              }
+            ],
+            "next_cursor": null
+          }
+        }
+      }
+    },
+    {
+      "function_name": "getServiceDetail",
+      "aliases": ["readService"],
+      "method": "GET",
+      "path": "/api/services/{idOrCode}",
+      "permission": "service.read_detail",
+      "docs_url": "https://ceirgo.id/docs/orders/service-detail",
+      "description": "Reads full specification, schema, and limits for a single service by code or ID.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "path_params": {
+          "idOrCode": "string (service code or numeric ID)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "id": 1,
+          "code": "cek_imei",
+          "name": "Cek Status IMEI",
+          "rule": {
+            "unit_price": 3000,
+            "min_items": 1,
+            "max_items": 100
+          }
+        }
+      }
+    },
+    {
+      "function_name": "createOrder",
+      "aliases": ["submitOrder"],
+      "method": "POST",
+      "path": "/api/order",
+      "permission": "order.create",
+      "docs_url": "https://ceirgo.id/docs/orders/create-order",
+      "description": "Submits a service order with service code and IMEI payload.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        "body": {
+          "code": "string (e.g. 'cek_imei', 'cek_history_imei')",
+          "data": {
+            "imeis": ["array of 15-digit IMEI strings"]
+          }
+        }
+      },
+      "response_example": {
+        "status": "success",
+        "reference_id": "CEIRGO-20260426CS000321001",
+        "order_id": 321,
+        "transaction_id": 654,
+        "service_code": "cek_imei",
+        "total": 1,
+        "price": 3000,
+        "total_price": 3000,
+        "charged_amount": 3000,
+        "remaining_balance": 1550,
+        "result": { "status": "registered" }
+      }
+    },
+    {
+      "function_name": "getOrders",
+      "aliases": ["listOrders"],
+      "method": "GET",
+      "path": "/api/order",
+      "permission": "order.list",
+      "docs_url": "https://ceirgo.id/docs/orders/list-orders",
+      "description": "Lists order history filtered by status, service, or date range.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {
+          "status": "draft, awaiting_payment, paid, processing, completed, partial, cancelled, refunded",
+          "service_code": "string (optional)",
+          "limit": "integer, 1..50 (optional, default 20)",
+          "cursor": "positive integer (optional)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "page": {
+            "items": [],
+            "next_cursor": null
+          }
+        }
+      }
+    },
+    {
+      "function_name": "getOrderDetail",
+      "aliases": ["getOrderStatus"],
+      "method": "GET",
+      "path": "/api/order/{id}",
+      "permission": "order.read",
+      "docs_url": "https://ceirgo.id/docs/orders/order-detail",
+      "description": "Reads input, result, status, and metadata for a specific order ID.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "path_params": {
+          "id": "positive integer (order ID)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "id": 133766,
+          "reference_id": "CEIRGO-20260828CH133766001",
+          "status": "completed",
+          "unit_price": 3900,
+          "total_items": 1,
+          "total_amount": 3900,
+          "result_payload": [{ "imei": "353969101788981", "history": [] }]
+        }
+      }
+    },
+    {
+      "function_name": "getDepositProviders",
+      "aliases": ["listDepositProviders"],
+      "method": "GET",
+      "path": "/api/deposit/provider",
+      "permission": "deposit.provider.list",
+      "docs_url": "https://ceirgo.id/docs/deposits/providers",
+      "description": "Lists all available deposit payment methods (e.g. gopay/qris, bank_bca).",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {
+          "limit": "integer, 1..50 (optional)",
+          "cursor": "positive integer (optional)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "items": [
+            {
+              "code": "gopay",
+              "display_name": "Qris",
+              "status": "active",
+              "channel": "qris",
+              "processing_type": "automatic"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "function_name": "getDepositProviderDetail",
+      "aliases": ["readDepositProvider"],
+      "method": "GET",
+      "path": "/api/deposit/provider/{code}",
+      "permission": "deposit.provider.list",
+      "docs_url": "https://ceirgo.id/docs/deposits/provider-detail",
+      "description": "Reads deposit limits, fees, and rules for a specific provider code.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "path_params": {
+          "code": "string (provider code, e.g. 'gopay')"
+        }
+      },
+      "response_example": {
+        "data": {
+          "code": "gopay",
+          "display_name": "Qris",
+          "status": "active",
+          "rule": {
+            "min_deposit": "10000",
+            "fee_percent": "0",
+            "fee_flat": "0"
+          }
+        }
+      }
+    },
+    {
+      "function_name": "createDeposit",
+      "aliases": ["startDeposit"],
+      "method": "POST",
+      "path": "/api/deposit",
+      "permission": "deposit.create",
+      "docs_url": "https://ceirgo.id/docs/deposits/create-deposit",
+      "description": "Creates a balance deposit, returning total payable amount and QRIS payload.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        "body": {
+          "amount": "number (positive amount)",
+          "provider_code": "string (e.g. 'gopay')"
+        }
+      },
+      "response_example": {
+        "id": 123,
+        "amounts": {
+          "total_pay": 50987,
+          "deposit_amount": 50000
+        },
+        "qr_string": "000201...",
+        "qr_url": "https://...",
+        "provider_code": "gopay",
+        "status": "pending",
+        "expires_at": "2026-04-26T00:15:00.000Z"
+      }
+    },
+    {
+      "function_name": "getDeposits",
+      "aliases": ["listDeposits"],
+      "method": "GET",
+      "path": "/api/deposit",
+      "permission": "deposit.read",
+      "docs_url": "https://ceirgo.id/docs/deposits/list-deposits",
+      "description": "Lists deposit history with status and date filters.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {
+          "status": "pending, processing, succeeded, failed, cancelled, expired",
+          "limit": "integer, 1..50",
+          "cursor": "positive integer"
+        }
+      },
+      "response_example": {
+        "data": {
+          "page": {
+            "items": [],
+            "next_cursor": null
+          }
+        }
+      }
+    },
+    {
+      "function_name": "getDepositDetail",
+      "aliases": ["readDeposit"],
+      "method": "GET",
+      "path": "/api/deposit/{deposit_id}",
+      "permission": "deposit.read",
+      "docs_url": "https://ceirgo.id/docs/deposits/deposit-detail",
+      "description": "Reads status and instructions for one deposit.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "path_params": {
+          "deposit_id": "positive integer (deposit ID)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "id": 123,
+          "amounts": { "total_pay": 50987, "deposit_amount": 50000 },
+          "status": "succeeded"
+        }
+      }
+    },
+    {
+      "function_name": "getTransactions",
+      "aliases": ["listTransactions"],
+      "method": "GET",
+      "path": "/api/transactions",
+      "permission": "transaction.read",
+      "docs_url": "https://ceirgo.id/docs/transactions/list-transactions",
+      "description": "Lists high-level wallet transactions.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {
+          "status": "pending, succeeded, failed, cancelled",
+          "type": "deposit, order, transfer, manual_adjustment, promo, reversal, fee",
+          "limit": "integer, 1..50",
+          "cursor": "positive integer"
+        }
+      },
+      "response_example": {
+        "data": {
+          "page": {
+            "items": [],
+            "next_cursor": null
+          }
+        }
+      }
+    },
+    {
+      "function_name": "getTransactionDetail",
+      "aliases": ["readTransaction"],
+      "method": "GET",
+      "path": "/api/transactions/{id}",
+      "permission": "transaction.read",
+      "docs_url": "https://ceirgo.id/docs/transactions/transaction-detail",
+      "description": "Reads one transaction and its linked order or deposit IDs.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "path_params": {
+          "id": "positive integer (transaction ID)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "id": 654,
+          "type": "order",
+          "status": "succeeded",
+          "amount": 1500,
+          "related_order_id": 321
+        }
+      }
+    },
+    {
+      "function_name": "getWalletMutations",
+      "aliases": ["listMutations"],
+      "method": "GET",
+      "path": "/api/mutation",
+      "permission": "wallet.ledger.read",
+      "docs_url": "https://ceirgo.id/docs/transactions/list-mutations",
+      "description": "Lists wallet ledger movements including credits, debits, and balance_after.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "query": {
+          "type": "credit, debit",
+          "limit": "integer, 1..50",
+          "cursor": "positive integer"
+        }
+      },
+      "response_example": {
+        "data": {
+          "page": {
+            "items": [],
+            "next_cursor": null
+          }
+        }
+      }
+    },
+    {
+      "function_name": "getWalletMutationDetail",
+      "aliases": ["readMutation"],
+      "method": "GET",
+      "path": "/api/mutation/{id}",
+      "permission": "wallet.ledger.read",
+      "docs_url": "https://ceirgo.id/docs/transactions/mutation-detail",
+      "description": "Reads one wallet ledger mutation by ID.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "path_params": {
+          "id": "positive integer (mutation ID)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "id": 8801,
+          "type": "debit",
+          "amount": 1500,
+          "balance_after": 98500
+        }
+      }
+    },
+    {
+      "function_name": "createTransfer",
+      "aliases": ["sendTransfer"],
+      "method": "POST",
+      "path": "/api/transfer",
+      "permission": "transfer.create",
+      "docs_url": "https://ceirgo.id/docs/transfers/create-transfer",
+      "description": "Moves funds to another CeirGO account user.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Idempotency-Key": "UUID v4",
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        "body": {
+          "receiver": "number (receiver user ID)",
+          "amount": "positive integer",
+          "description": "string (optional note)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "transferId": 501,
+          "transactionId": 9001
+        }
+      }
+    },
+    {
+      "function_name": "getTransferDetail",
+      "aliases": ["readTransfer"],
+      "method": "GET",
+      "path": "/api/transfer/{id}",
+      "permission": "transfer.read",
+      "docs_url": "https://ceirgo.id/docs/transfers/transfer-detail",
+      "description": "Reads one transfer with counterparties and linked transaction data.",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer <api_key>",
+          "Accept": "application/json"
+        },
+        "path_params": {
+          "id": "positive integer (transfer ID)"
+        }
+      },
+      "response_example": {
+        "data": {
+          "id": 501,
+          "amount": 25000,
+          "status": "succeeded"
+        }
+      }
+    },
+    {
+      "function_name": "verifyWebhookSignature",
+      "aliases": ["handleWebhook"],
+      "method": "POST (inbound)",
+      "path": "/webhooks/order (custom receiver)",
+      "permission": "dispatch.webhook.order",
+      "docs_url": "https://ceirgo.id/docs/webhooks/order-webhooks",
+      "description": "Verifies inbound order result webhook using HMAC-SHA256 with timing-safe equality.",
+      "signature_formula": "HMAC_SHA256(JSON.stringify({ orderId, amount }), api_key_secret)",
+      "amount_rules": {
+        "pending": "String(total_price)",
+        "failed_or_cancelled": "\"0\"",
+        "success_or_completed": "String(charged_amount)"
+      }
+    }
+  ]
+}

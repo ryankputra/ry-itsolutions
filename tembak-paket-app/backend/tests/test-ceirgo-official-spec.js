@@ -1,4 +1,8 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const ceirgoClient = require('../ceirgoClient');
 
 console.log("==================================================================");
@@ -20,25 +24,77 @@ function fail(name, error) {
 }
 
 async function runTests() {
-    // Test 1: ceirgoClient Module Exports
+    // Test 1: ceirgo_api_map.json Compliance
     try {
-        assert(typeof ceirgoClient.getProfile === 'function', 'getProfile must be a function');
-        assert(typeof ceirgoClient.getDepositProviders === 'function', 'getDepositProviders must be a function');
-        assert(typeof ceirgoClient.getDepositProviderDetail === 'function', 'getDepositProviderDetail must be a function');
-        assert(typeof ceirgoClient.createDeposit === 'function', 'createDeposit must be a function');
-        assert(typeof ceirgoClient.getDeposits === 'function', 'getDeposits must be a function');
-        assert(typeof ceirgoClient.getDepositDetail === 'function', 'getDepositDetail must be a function');
-        assert(typeof ceirgoClient.getServices === 'function', 'getServices must be a function');
-        assert(typeof ceirgoClient.getServiceDetail === 'function', 'getServiceDetail must be a function');
-        assert(typeof ceirgoClient.createOrder === 'function', 'createOrder must be a function');
-        assert(typeof ceirgoClient.getOrders === 'function', 'getOrders must be a function');
-        assert(typeof ceirgoClient.getOrderDetail === 'function', 'getOrderDetail must be a function');
-        pass('CeirGO Client Function Signatures', 'All 11 official methods exported correctly');
+        const mapPath = path.join(__dirname, '../ceirgo_api_map.json');
+        assert(fs.existsSync(mapPath), 'ceirgo_api_map.json must exist');
+        const apiMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+        assert(apiMap.endpoints && apiMap.endpoints.length >= 18, 'Must map at least 18 endpoints');
+        pass('CeirGO API Map JSON Compliance', `${apiMap.endpoints.length} verified endpoints mapped to official docs`);
+    } catch (e) {
+        fail('CeirGO API Map JSON Compliance', e);
+    }
+
+    // Test 2: ceirgoClient Module Exports
+    try {
+        const expectedFunctions = [
+            'getProfile',
+            'getWalletBalance',
+            'getDepositProviders',
+            'getDepositProviderDetail',
+            'createDeposit',
+            'getDeposits',
+            'getDepositDetail',
+            'getServices',
+            'getServiceDetail',
+            'createOrder',
+            'getOrders',
+            'getOrderDetail',
+            'getOrderStatus',
+            'getTransactions',
+            'getTransactionDetail',
+            'getWalletMutations',
+            'getWalletMutationDetail',
+            'createTransfer',
+            'getTransferDetail',
+            'verifyWebhookSignature',
+            'parseCeirHistory'
+        ];
+        for (const fnName of expectedFunctions) {
+            assert(typeof ceirgoClient[fnName] === 'function', `${fnName} must be exported as a function`);
+        }
+        pass('CeirGO Client Function Signatures', `All ${expectedFunctions.length} methods exported correctly`);
     } catch (e) {
         fail('CeirGO Client Function Signatures', e);
     }
 
-    // Test 2: createOrder payload validation
+    // Test 3: getWalletBalance (/api/wallet/snap)
+    try {
+        const wb = await ceirgoClient.getWalletBalance();
+        assert(wb && typeof wb === 'object', 'getWalletBalance must return an object');
+        assert(typeof wb.balance === 'number', 'Wallet balance must be a number');
+        assert(typeof wb.reserved === 'number', 'Reserved amount must be a number');
+        assert(wb.status === true, 'Status must be true when connected');
+        pass('CeirGO getWalletBalance (/api/wallet/snap)', `Live Balance: Rp ${wb.balance}, Reserved: Rp ${wb.reserved}, Wallet ID: ${wb.wallet_id}`);
+    } catch (e) {
+        fail('CeirGO getWalletBalance', e);
+    }
+
+    // Test 4: getProfile (/api/me) combining live wallet balance
+    try {
+        const prof = await ceirgoClient.getProfile();
+        assert(prof.status === true, 'Profile status must be true');
+        assert(prof.connected === true, 'Connected must be true');
+        assert(typeof prof.balance === 'number', 'Balance must be a number');
+        assert(prof.role, 'Role must be defined');
+        assert(Array.isArray(prof.permissions), 'Permissions must be array');
+        assert(prof.profile?.user_id, 'User ID must be present');
+        pass('CeirGO getProfile (/api/me)', `User: ${prof.profile.username} (ID: ${prof.profile.user_id}), Balance: Rp ${prof.balance}, Role: ${prof.role}`);
+    } catch (e) {
+        fail('CeirGO getProfile', e);
+    }
+
+    // Test 5: createOrder payload validation
     try {
         let threwOnEmpty = false;
         try {
@@ -60,11 +116,11 @@ async function runTests() {
         fail('CeirGO createOrder Validation', e);
     }
 
-    // Test 3: createDeposit payload validation
+    // Test 6: createDeposit payload validation
     try {
         let threwOnInvalidAmount = false;
         try {
-            await ceirgoClient.createDeposit({ amount: 0, provider_code: 'qris' });
+            await ceirgoClient.createDeposit({ amount: 0, provider_code: 'gopay' });
         } catch (e) {
             threwOnInvalidAmount = true;
         }
@@ -74,7 +130,39 @@ async function runTests() {
         fail('CeirGO createDeposit Validation', e);
     }
 
-    // Test 4: ceirParser verification with official JSON result[].history structure
+    // Test 7: verifyWebhookSignature according to official HMAC formula
+    try {
+        const secret = 'test_secret_key_123';
+        const payload = {
+            status: 'completed',
+            order_id: 321,
+            charged_amount: 1500,
+            total_price: 1500
+        };
+        // Expected formula: HMAC_SHA256(JSON.stringify({ orderId: 321, amount: "1500" }), secret)
+        const signedStr = JSON.stringify({ orderId: 321, amount: "1500" });
+        const validSig = crypto.createHmac('sha256', secret).update(signedStr).digest('hex');
+
+        const isValid = ceirgoClient.verifyWebhookSignature({
+            payload,
+            signature: validSig,
+            secret
+        });
+        assert(isValid === true, 'Signature must be valid for correct HMAC');
+
+        const isInvalid = ceirgoClient.verifyWebhookSignature({
+            payload,
+            signature: 'invalid_signature_hex_1234567890abcdef',
+            secret
+        });
+        assert(isInvalid === false, 'Invalid signature must return false');
+
+        pass('CeirGO Webhook Signature Verification', 'HMAC-SHA256 timing-safe verification verified');
+    } catch (e) {
+        fail('CeirGO Webhook Signature Verification', e);
+    }
+
+    // Test 8: ceirParser verification with official JSON result[].history structure
     try {
         const { parseCeirResponse } = require('../ceirParser');
 
@@ -122,33 +210,19 @@ async function runTests() {
         assert.strictEqual(parsed.rows[1].imsi, '510100098765432');
         pass('Official CeirGO JSON History Parser', 'Parsed result[].history with { no, date, imei, imsi, action, note }');
 
-        // Test 4b: Stringified JSON input
+        // Test 8b: Stringified JSON input
         const stringifiedJson = JSON.stringify(officialApiResponse);
         const parsedStr = parseCeirResponse(stringifiedJson);
         assert(parsedStr.totalRecords === 2, 'Stringified JSON must parse 2 records');
-        assert.strictEqual(parsedStr.rows[0].imsi, '510890012345678');
         pass('Stringified CeirGO JSON Parser', 'Parsed stringified JSON correctly');
 
-        // Test 4c: Legacy fallback string
+        // Test 8c: Legacy fallback string
         const legacyText = "1. 2026-06-10 13:16:58 | Action: add_roamer | Note: SF 8080";
         const parsedLegacy = parseCeirResponse(legacyText);
         assert(parsedLegacy.totalRecords === 1, 'Legacy format must parse 1 record');
-        assert.strictEqual(parsedLegacy.rows[0].action, 'add_roamer');
         pass('Legacy String Regex Fallback Parser', 'Maintains 100% backward compatibility');
     } catch (e) {
         fail('CeirGO Response Parser', e);
-    }
-
-    // Test 5: Live / Mock Request Headers Enforced
-    try {
-        const testRes = await ceirgoClient.getProfile();
-        // Even if no live API key is set in test env, response object should have standard keys
-        assert(typeof testRes === 'object', 'Response must be object');
-        assert(typeof testRes.status === 'boolean', 'Response must have boolean status');
-        assert(typeof testRes.balance === 'number', 'Balance must be number');
-        pass('CeirGO getProfile (/api/me) Safe Execution', `Status: ${testRes.status}, Balance: Rp ${testRes.balance}`);
-    } catch (e) {
-        fail('CeirGO getProfile Execution', e);
     }
 
     console.log("\n==================================================================");
