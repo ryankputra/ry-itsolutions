@@ -34,6 +34,7 @@ const adminRoutes = require('./routes/admin');
 const reviewRoutes = require('./routes/reviews');
 const gameRoutes = require('./routes/games');
 const telegramRoutes = require('./routes/telegram');
+const orderRoutes = require('./routes/orders');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -147,6 +148,7 @@ app.use('/api', ceirgoRoutes);
 
 // 8. Mount All Modular API Routers
 app.use('/api', authRoutes.router);
+app.use('/api', orderRoutes);
 app.use('/api', transactionRoutes.router);
 app.use('/api', serviceRoutes);
 app.use('/api', adminRoutes);

@@ -251,15 +251,19 @@ router.post('/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async 
     }
 });
 
-// 8. CeirGO Display Settings (GET, PUT, POST)
 router.get('/admin/ceirgo-display-settings', async (req, res) => {
     try {
+        const DEFAULT_CEK_CEIR = ['cek_imei', 'cek_imei_beacukai', 'cek_history_imei', 'cek_validity', 'cek_digi', 'cek_sf'];
+        const DEFAULT_BARCODE = ['create_barcode', 'create_barcode_samsung', 'create_barcode_redmi', 'create_barcode_ios26'];
+
         const row = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_display_settings'");
         if (row && row.value) {
-            res.json({ status: true, data: JSON.parse(row.value) });
-        } else {
-            res.json({ status: true, data: { cekCeir: [], barcode: [] } });
+            const parsed = JSON.parse(row.value);
+            const cekCeir = Array.isArray(parsed.cekCeir) && parsed.cekCeir.length > 0 ? parsed.cekCeir : DEFAULT_CEK_CEIR;
+            const barcode = Array.isArray(parsed.barcode) && parsed.barcode.length > 0 ? parsed.barcode : DEFAULT_BARCODE;
+            return res.json({ status: true, data: { cekCeir, barcode } });
         }
+        res.json({ status: true, data: { cekCeir: DEFAULT_CEK_CEIR, barcode: DEFAULT_BARCODE } });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }

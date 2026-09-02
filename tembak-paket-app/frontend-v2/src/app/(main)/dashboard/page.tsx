@@ -252,7 +252,7 @@ export default function DashboardPage() {
               ),
             },
             {
-              name: "Cek CEIR",
+              name: "Diagnostik",
               href: "/cek-ceir",
               tourKey: "service-ceir",
               iconBg: "bg-emerald-50 border-emerald-200/80 text-emerald-600",

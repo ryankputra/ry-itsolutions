@@ -11,84 +11,84 @@ import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
 
 const ceirgoNameMapping: Record<string, string> = {
-  'cek_history_imei': 'Cek Riwayat Database CEIR',
+  'cek_imei': 'Cek Status IMEI',
   'cek_imei_beacukai': 'Cek IMEI Bea Cukai',
-  'cek_icloud': 'Cek iCloud & FMI (Clean / Lost)',
-  'cek_fmi': 'Cek iCloud & FMI (Clean / Lost)',
-  'cek_simlock': 'Cek Carrier Simlock (Operator Asal)',
-  'cek_carrier': 'Cek Carrier Simlock (Operator Asal)',
+  'cek_history_imei': 'Cek Riwayat Database CEIR',
   'cek_validity': 'Cek Masa Aktif Sinyal',
   'cek_digi': 'Cek DIGI',
   'cek_sf': 'Cek Smartfren',
-  'cek_imei': 'Cek Status IMEI'
+  'cek_icloud': 'Cek iCloud & FMI',
+  'cek_simlock': 'Cek Carrier / Simlock'
 };
+
+const DIAGNOSTIC_SERVICES_CORE = [
+  { code: 'cek_imei', name: 'Cek Status IMEI', modalPrice: 2000 },
+  { code: 'cek_imei_beacukai', name: 'Cek IMEI Bea Cukai', modalPrice: 1500 },
+  { code: 'cek_history_imei', name: 'Cek Riwayat Database CEIR', modalPrice: 5100 },
+  { code: 'cek_validity', name: 'Cek Masa Aktif Sinyal', modalPrice: 1000 },
+  { code: 'cek_digi', name: 'Cek DIGI', modalPrice: 1000 },
+  { code: 'cek_sf', name: 'Cek Smartfren', modalPrice: 1000 }
+];
 
 export default function CekCeirPage() {
   const { user, updateBalance } = useApp();
   const router = useRouter();
 
-  const [pricing, setPricing] = useState<any>({});
   const [ceirgoPricing, setCeirgoPricing] = useState<any>({});
   const [ceirgoServices, setCeirgoServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [imei, setImei] = useState("");
-  const [imei2, setImei2] = useState("");
-  const [theme, setTheme] = useState("dark");
-  const [option, setOption] = useState("cek_history_imei");
+  const [option, setOption] = useState("cek_imei");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
-  const [ceirResult, setCeirResult] = useState<{ note: string | null, image: string | null } | null>(null);
-
-  const normalizeServices = (payload: any) => {
-    const services = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.data)
-        ? payload.data
-        : Array.isArray(payload?.data?.page?.items)
-          ? payload.data.page.items
-          : [];
-
-    return services
-      .map((svc: any) => ({
-        code: svc?.code,
-        name: svc?.name || ceirgoNameMapping[svc?.code] || svc?.code,
-        modalPrice: Number(svc?.modalPrice ?? svc?.price ?? svc?.unit_price ?? 0) || 0,
-      }))
-      .filter((svc: any) => svc.code && !/barcode|create|dummy|test|sample|demo/i.test(`${svc.code} ${svc.name}`));
-  };
+  const [ceirResult, setCeirResult] = useState<{ note: string | null, image: string | null, rows?: any[] } | null>(null);
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/manual-services-pricing').then(res => safeJson(res)).catch(() => null),
       fetch('/api/ceirgo-pricing').then(res => safeJson(res)).catch(() => null),
       fetch('/api/ceirgo-services').then(res => safeJson(res)).catch(() => ({ status: false })),
       fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false }))
-    ]).then(([prcData, ceirPrcData, ceirSvcData, displayData]) => {
-      if (prcData?.status && prcData.data) setPricing(prcData.data);
-      if (ceirPrcData?.status && ceirPrcData.data) setCeirgoPricing(ceirPrcData.data);
-      const services = ceirSvcData?.status ? normalizeServices(ceirSvcData.data) : [];
+    ]).then(([ceirPrcData, ceirSvcData, displayData]) => {
+      if (ceirPrcData?.status && ceirPrcData.data) {
+        setCeirgoPricing(ceirPrcData.data);
+      }
 
-      // Ensure core diagnostic services (CEIR & Bea Cukai) are available
-      const coreServices = [
-        { code: 'cek_history_imei', name: 'Cek Riwayat Database CEIR', modalPrice: 5100 },
-        { code: 'cek_imei_beacukai', name: 'Cek IMEI Bea Cukai', modalPrice: 1500 }
-      ];
+      // Build available diagnostic services
+      const rawServices = Array.isArray(ceirSvcData?.data?.page?.items)
+        ? ceirSvcData.data.page.items
+        : Array.isArray(ceirSvcData?.data)
+          ? ceirSvcData.data
+          : [];
 
-      coreServices.forEach(cs => {
-        if (!services.some((s: any) => s.code === cs.code)) {
-          services.push(cs);
+      const merged = [...DIAGNOSTIC_SERVICES_CORE];
+      rawServices.forEach((svc: any) => {
+        if (!svc?.code || /barcode|create/i.test(`${svc.code} ${svc.name}`)) return;
+        const exists = merged.find(m => m.code === svc.code);
+        if (exists) {
+          exists.name = svc.name || ceirgoNameMapping[svc.code] || exists.name;
+          exists.modalPrice = Number(svc.modalPrice ?? svc.unit_price ?? exists.modalPrice);
+        } else {
+          merged.push({
+            code: svc.code,
+            name: svc.name || ceirgoNameMapping[svc.code] || svc.code,
+            modalPrice: Number(svc.modalPrice ?? svc.unit_price ?? 2000)
+          });
         }
       });
 
-      const hasCeirSetting = displayData?.status && displayData.data && Object.prototype.hasOwnProperty.call(displayData.data, 'cekCeir');
-      const visibleCodes = hasCeirSetting
-        ? new Set(Array.isArray(displayData.data.cekCeir) ? displayData.data.cekCeir : [])
-        : null;
-      setCeirgoServices(visibleCodes ? services.filter((s: any) => visibleCodes.has(s.code)) : services);
+      // Filter by Admin Toggle Settings
+      const hasSetting = displayData?.status && displayData.data && Array.isArray(displayData.data.cekCeir);
+      const activeCodes = hasSetting ? new Set(displayData.data.cekCeir) : new Set(merged.map(s => s.code));
+
+      const finalServices = merged.filter(s => activeCodes.has(s.code));
+      setCeirgoServices(finalServices);
+      if (finalServices.length > 0 && !activeCodes.has(option)) {
+        setOption(finalServices[0].code);
+      }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -107,27 +107,18 @@ export default function CekCeirPage() {
     }
 
     const modalPrice = Number(svc?.modalPrice);
-    return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 0;
-  };
-
-  const getPriceKey = (opt: string) => {
-    if (opt === 'register') return 'price_ceir_register';
-    if (opt === 'history') return 'price_ceir_history';
-    return opt;
+    return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 5000;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit).");
-
-    const isBarcodeMode = option.includes('barcode');
-    if (isBarcodeMode && imei2 && imei2.length < 15) return setError("IMEI Kedua tidak valid (minimal 15 digit).");
+    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
 
     const price = getPrice(option);
     if (user && user.balance < price) {
       Swal.fire({
         title: 'Saldo Tidak Mencukupi',
-        text: 'Saldo Anda kurang untuk melakukan pesanan ini. Silakan isi saldo terlebih dahulu.',
+        text: `Saldo Anda (Rp ${Number(user.balance).toLocaleString('id-ID')}) kurang untuk layanan ini (Rp ${price.toLocaleString('id-ID')}). Silakan top up terlebih dahulu.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Top Up Sekarang',
@@ -140,54 +131,47 @@ export default function CekCeirPage() {
       return setError('Saldo tidak mencukupi.');
     }
 
+    const confirm = await Swal.fire({
+      title: 'Konfirmasi Pesanan Diagnostik',
+      text: `Anda akan melakukan ${ceirgoNameMapping[option] || option} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Bayar Sekarang!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirm.isConfirmed) return;
+
     setError("");
     setSubmitting(true);
 
     try {
       const formData = new FormData();
       formData.append("service_type", "ceir");
+      formData.append("service_code", option);
+      formData.append("price_key", option);
       formData.append("imei", imei);
-      if (isBarcodeMode && imei2) formData.append("imei2", imei2);
-      if (isBarcodeMode) formData.append("theme", theme);
-
-      let durationStr = "Cek Layanan CEIR";
-      const svc = ceirgoServices.find(s => s.code === option);
-      if (svc) durationStr = svc.name;
-      else if (option === 'register') durationStr = 'Cek Beacukai';
-      else if (option === 'history') durationStr = 'Cek History CEIR';
-
-      formData.append("duration", durationStr);
-      formData.append("price_key", getPriceKey(option));
-
-      const confirm = await Swal.fire({
-        title: 'Ready buat checkout? 💸',
-        text: 'Udah fix nih mau lanjut bayar? Saldo lo bakal kepotong ya.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Gass!',
-        cancelButtonText: 'Ntar Dulu'
-      });
-
-      if (!confirm.isConfirmed) {
-        setSubmitting(false);
-        return;
-      }
+      formData.append("duration", ceirgoNameMapping[option] || option);
 
       const res = await fetch("/api/order/ceir", {
         method: "POST",
         credentials: 'include',
         body: formData
       });
+
       const data = await res.json();
       if (res.ok && data.status) {
-        if (typeof data.newBalance === 'number') {
+        if (typeof data.data?.newBalance === 'number') {
+          updateBalance(data.data.newBalance);
+        } else if (typeof data.newBalance === 'number') {
           updateBalance(data.newBalance);
         }
-        if (data.data?.adminNote || data.data?.adminImage) {
-          setCeirResult({ note: data.data.adminNote, image: data.data.adminImage });
-        }
+
+        const note = data.data?.result?.status || data.data?.adminNote || (typeof data.data?.result === 'string' ? data.data.result : 'Pengecekan berhasil diterima.');
+        const rows = Array.isArray(data.data?.result?.[0]?.history) ? data.data.result[0].history : null;
+        setCeirResult({ note, image: null, rows });
         setShowSuccessPop(true);
       } else {
         Swal.fire({
@@ -210,65 +194,75 @@ export default function CekCeirPage() {
   };
 
   const renderServiceButtons = () => {
-    if (loading) return <p className="text-sm text-ink-muted col-span-2">Memuat layanan...</p>;
+    if (loading) return <p className="text-sm text-ink-muted col-span-full py-4 text-center">Memuat katalog layanan...</p>;
 
-    const buttons: { id: string, label: string, price: number }[] = [];
-
-    const visibleCodes = new Set(ceirgoServices.map(s => s.code));
-    const addButton = (id: string, label: string, price: number) => {
-      if (price > 0 && !buttons.some(btn => btn.id === id)) buttons.push({ id, label, price });
-    };
-
-    ceirgoServices.forEach(svc => {
-      const price = getPrice(svc.code);
-      if (price > 0) addButton(svc.code, svc.name || ceirgoNameMapping[svc.code] || svc.code.replace(/_/g, " ").toUpperCase(), price);
-    });
-
-    if (buttons.length === 0) {
-      return <p className="text-sm text-ink-muted col-span-2">Belum ada layanan yang diaktifkan Admin.</p>;
+    if (ceirgoServices.length === 0) {
+      return (
+        <div className="col-span-full p-4 text-center text-sm text-ink-muted border rounded-xl border-dashed">
+          Belum ada layanan Diagnostik IMEI yang diaktifkan oleh Admin.
+        </div>
+      );
     }
 
-    return buttons.map(btn => {
-      const isSelected = option === btn.id;
+    return ceirgoServices.map(svc => {
+      const isSelected = option === svc.code;
+      const price = getPrice(svc.code);
       return (
         <button
-          key={btn.id}
+          key={svc.code}
           type="button"
-          onClick={() => setOption(btn.id)}
-          className={`p-4 rounded-xl border text-center transition-all duration-200 flex flex-col items-center justify-center gap-1 ${isSelected
-            ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 text-primary ring-1 ring-primary scale-[1.02]'
-            : 'border-hairline bg-canvas hover:bg-parchment hover:border-primary/30'
-            }`}
+          onClick={() => setOption(svc.code)}
+          className={`p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between gap-2 ${
+            isSelected
+              ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary'
+              : 'border-hairline bg-canvas hover:bg-parchment hover:border-primary/40'
+          }`}
         >
-          <div className="font-bold text-sm leading-tight px-1">{btn.label}</div>
-          <div className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 ${isSelected ? 'bg-primary/10 text-primary' : 'bg-parchment text-ink-muted'}`}>
-            Rp {btn.price.toLocaleString('id-ID')}
+          <div>
+            <div className="font-bold text-xs text-ink line-clamp-1">{svc.name}</div>
+            <div className="text-[10px] text-ink-muted font-mono mt-0.5">{svc.code}</div>
+          </div>
+          <div className={`text-xs font-bold px-2 py-0.5 rounded-lg self-start ${isSelected ? 'bg-primary text-white' : 'bg-parchment text-primary'}`}>
+            Rp {price.toLocaleString('id-ID')}
           </div>
         </button>
       );
     });
   };
 
-  const isBarcodeMode = option.includes('barcode');
-
   return (
-    <div className="space-y-6 max-w-2xl mx-auto pb-12">
-      <div className="flex items-center gap-4 mb-4">
+    <div className="space-y-5 max-w-2xl mx-auto pb-12">
+      {/* Category Switcher Tabs */}
+      <div className="flex p-1 bg-parchment rounded-2xl border border-hairline max-w-sm mx-auto shadow-2xs">
+        <button
+          type="button"
+          className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-primary text-white shadow-xs flex items-center justify-center gap-1.5 transition-all"
+        >
+          <span>🔍</span> Diagnostik IMEI
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push('/barcode')}
+          className="flex-1 py-2 px-3 text-xs font-semibold text-ink-muted hover:text-ink rounded-xl flex items-center justify-center gap-1.5 transition-all"
+        >
+          <span>🏷️</span> Generator Barcode
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4 mb-2">
         <button onClick={() => router.push('/dashboard')} className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors">
           <svg width="20" height="20" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink flex items-center gap-2">
-            <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-            Cek CEIR & Status HP
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink flex items-center gap-2">
+            <span className="p-1.5 rounded-xl bg-primary/10 text-primary">🔍</span>
+            Cek Status & Diagnostik IMEI
           </h1>
-          <p className="text-sm text-ink-muted">Pemeriksaan database CEIR Kemenperin, Bea Cukai, Status iCloud & FMI (Clean/Lost), dan Simlock Operator.</p>
+          <p className="text-xs sm:text-sm text-ink-muted">Pemeriksaan database CEIR Kemenperin, Bea Cukai, Masa Aktif Sinyal, DIGI & Smartfren.</p>
         </div>
       </div>
 
-      <Card glass className="p-6 space-y-6">
+      <Card glass className="p-5 sm:p-6 space-y-6">
         {error && (
           <div className="p-3.5 bg-rose-50 text-rose-700 rounded-xl text-xs border border-rose-200 flex items-center gap-2">
             <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -277,36 +271,28 @@ export default function CekCeirPage() {
             {error}
           </div>
         )}
-        {success && (
-          <div className="p-3.5 bg-emerald-50 text-emerald-800 rounded-xl text-xs border border-emerald-200 flex items-center gap-2">
-            <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-            {success}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-ink flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">1</span>
-              Pilih Jenis Layanan
+          <div className="space-y-2.5">
+            <label className="text-xs font-bold text-ink flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[11px] font-bold">1</span>
+              Pilih Layanan Diagnostik
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {renderServiceButtons()}
             </div>
           </div>
 
           <div className="pt-4 border-t border-hairline space-y-4">
-            <label className="text-sm font-bold text-ink flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">2</span>
-              Detail Perangkat
+            <label className="text-xs font-bold text-ink flex items-center gap-2 mb-1">
+              <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[11px] font-bold">2</span>
+              Masukkan Nomor IMEI Target
             </label>
 
             <div>
               <Input
-                label={isBarcodeMode ? "IMEI Utama (SIM 1)" : "Nomor IMEI"}
-                placeholder="Masukkan 15 digit IMEI"
+                label="Nomor IMEI (15 Digit)"
+                placeholder="Contoh: 358921098765432"
                 value={imei}
                 onChange={e => setImei(e.target.value.replace(/\D/g, ''))}
                 maxLength={15}
@@ -329,25 +315,25 @@ export default function CekCeirPage() {
                         </svg>
                       </div>
                       <div>
-                        <p className="font-bold text-ink">
+                        <p className="font-bold text-ink text-xs">
                           {analysis.brand ? `${analysis.brand} ${analysis.model}` : `Perangkat Terdeteksi`}
                         </p>
-                        <p className="text-[11px] opacity-75 font-mono">
+                        <p className="text-[10px] opacity-75 font-mono">
                           {analysis.clean} ({analysis.clean.length}/15 digit)
                         </p>
                       </div>
                     </div>
                     <div>
                       {analysis.isValidLength && analysis.isValidLuhn ? (
-                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md text-[11px]">
                           Luhn Valid
                         </span>
                       ) : analysis.isValidLength && !analysis.isValidLuhn ? (
-                        <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
-                          Cek Ulang Digit
+                        <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md text-[11px]">
+                          Periksa Digit
                         </span>
                       ) : (
-                        <span className="text-ink-muted">
+                        <span className="text-ink-muted text-[11px]">
                           {15 - analysis.clean.length} digit lagi
                         </span>
                       )}
@@ -356,47 +342,45 @@ export default function CekCeirPage() {
                 );
               })()}
             </div>
-
-            {isBarcodeMode && (
-              <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-4 mt-2">
-                <Input
-                  label="IMEI Kedua (SIM 2) - Opsional"
-                  placeholder="Masukkan 15 digit IMEI SIM 2"
-                  value={imei2}
-                  onChange={e => setImei2(e.target.value)}
-                  maxLength={15}
-                />
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink/80">Tema Barcode</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="theme" value="dark" checked={theme === 'dark'} onChange={() => setTheme('dark')} className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium">Dark Mode (Hitam)</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="theme" value="light" checked={theme === 'light'} onChange={() => setTheme('light')} className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium">Light Mode (Putih)</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
-          <Button className="w-full h-14 text-lg font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
-            Bayar Rp {getPrice(option).toLocaleString('id-ID')}
+          <Button className="w-full h-12 text-sm font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
+            Bayar Sekarang (Rp {getPrice(option).toLocaleString('id-ID')})
           </Button>
         </form>
       </Card>
 
       {ceirResult && (
-        <Card className="mt-6 p-6 border-2 border-primary/30 bg-primary/5 animate-fade-in">
-          <h3 className="font-bold text-lg mb-2 text-primary">🎉 Hasil Pengecekan:</h3>
-          <p className="text-ink font-medium leading-relaxed">{ceirResult.note}</p>
-          {ceirResult.image && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={ceirResult.image} alt="Barcode/Hasil CEIR" className="mt-4 rounded-xl border border-hairline w-full max-w-sm object-contain bg-white p-2 shadow-sm" />
+        <Card className="mt-4 p-5 border border-primary/30 bg-primary/5 animate-fade-in space-y-3">
+          <h3 className="font-bold text-sm text-primary flex items-center gap-2">
+            <span>🎉</span> Hasil Pemeriksaan Server:
+          </h3>
+          <p className="text-xs text-ink font-medium leading-relaxed bg-canvas p-3 rounded-xl border border-hairline whitespace-pre-line">
+            {ceirResult.note}
+          </p>
+          {ceirResult.rows && ceirResult.rows.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[11px] border border-hairline rounded-xl overflow-hidden">
+                <thead className="bg-canvas border-b border-hairline font-bold text-ink">
+                  <tr>
+                    <th className="p-2">No</th>
+                    <th className="p-2">Tanggal</th>
+                    <th className="p-2">Aksi</th>
+                    <th className="p-2">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline bg-canvas/50">
+                  {ceirResult.rows.map((row: any, idx: number) => (
+                    <tr key={idx}>
+                      <td className="p-2">{row.no || idx + 1}</td>
+                      <td className="p-2">{row.date || '-'}</td>
+                      <td className="p-2 font-mono font-semibold">{row.action || '-'}</td>
+                      <td className="p-2">{row.note || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
       )}
@@ -405,11 +389,11 @@ export default function CekCeirPage() {
         isOpen={showSuccessPop}
         onClose={() => {
           setShowSuccessPop(false);
-          if (!ceirResult) router.push('/history');
+          router.push('/history');
         }}
         amount={getPrice(option)}
-        title="Pembayaran Berhasil"
-        statusText="Cek CEIR otomatis berhasil!"
+        title="Pemeriksaan Berhasil Dikirim"
+        statusText="Pesanan diagnostik berhasil diproses oleh server CeirGO!"
         recipientLabel="IMEI Target"
         recipientValue={imei}
       />

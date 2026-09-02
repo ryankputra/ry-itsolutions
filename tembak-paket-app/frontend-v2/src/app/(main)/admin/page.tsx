@@ -776,8 +776,16 @@ export default function AdminPage() {
 
       if (displayRes) {
         const d = await safeJson(displayRes);
-        if (d?.status && d.data && Array.isArray(d.data.cekCeir) && d.data.cekCeir.length > 0) {
-          setCeirgoDisplayCodes(new Set(d.data.cekCeir));
+        if (d?.status && d.data) {
+          const activeCodes = [
+            ...(Array.isArray(d.data.cekCeir) ? d.data.cekCeir : []),
+            ...(Array.isArray(d.data.barcode) ? d.data.barcode : [])
+          ];
+          if (activeCodes.length > 0) {
+            setCeirgoDisplayCodes(new Set(activeCodes));
+          } else {
+            setCeirgoDisplayCodes(new Set(loadedServices.map(s => s.code)));
+          }
         } else {
           setCeirgoDisplayCodes(new Set(loadedServices.map(s => s.code)));
         }
@@ -2153,49 +2161,113 @@ export default function AdminPage() {
                   Layanan Server Pusat belum terhubung. Silakan klik tombol "Muat Ulang".
                 </div>
               ) : (
-                <div className="space-y-3.5">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {ceirgoServices.map((svc) => (
-                      <div key={svc.code} className={`bg-canvas border p-3 rounded-xl flex flex-col gap-2.5 ${ceirgoDisplayCodes.has(svc.code) ? 'border-primary ring-1 ring-primary/30' : 'border-hairline opacity-75'}`}>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-bold text-ink text-xs">{svc.name}</p>
-                            <p className="text-[10px] text-primary font-mono">{svc.code}</p>
-                            <p className="text-[11px] text-ink-muted mt-0.5">Modal: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                            <input
-                              type="checkbox"
-                              className="sr-only peer"
-                              checked={ceirgoDisplayCodes.has(svc.code)}
-                              onChange={(e) => {
-                                const newSet = new Set(ceirgoDisplayCodes);
-                                if (e.target.checked) newSet.add(svc.code);
-                                else newSet.delete(svc.code);
-                                setCeirgoDisplayCodes(newSet);
-                              }}
+                <div className="space-y-5">
+                  {/* Category 1: Cek Status & Diagnostik IMEI */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                        <span>🔍</span> Cek Status & Diagnostik IMEI
+                      </span>
+                      <span className="text-[10px] bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
+                        {ceirgoServices.filter(s => !/barcode|create/i.test(`${s.code} ${s.name}`) && ceirgoDisplayCodes.has(s.code)).length} Aktif
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {ceirgoServices
+                        .filter(s => !/barcode|create/i.test(`${s.code} ${s.name}`))
+                        .map((svc) => (
+                          <div key={svc.code} className={`bg-canvas border p-3 rounded-xl flex flex-col gap-2.5 ${ceirgoDisplayCodes.has(svc.code) ? 'border-primary ring-1 ring-primary/30' : 'border-hairline opacity-75'}`}>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-bold text-ink text-xs">{svc.name}</p>
+                                <p className="text-[10px] text-primary font-mono">{svc.code}</p>
+                                <p className="text-[11px] text-ink-muted mt-0.5">Modal: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
+                              </div>
+                              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only peer"
+                                  checked={ceirgoDisplayCodes.has(svc.code)}
+                                  onChange={(e) => {
+                                    const newSet = new Set(ceirgoDisplayCodes);
+                                    if (e.target.checked) newSet.add(svc.code);
+                                    else newSet.delete(svc.code);
+                                    setCeirgoDisplayCodes(newSet);
+                                  }}
+                                />
+                                <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+                              </label>
+                            </div>
+                            <Input
+                              label="Harga Jual (Rp)"
+                              type="number"
+                              value={ceirgoPricing[svc.code] ?? svc.modalPrice}
+                              onChange={(e) => setCeirgoPricing({ ...ceirgoPricing, [svc.code]: parseInt(e.target.value) || 0 })}
                             />
-                            <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
-                          </label>
-                        </div>
-                        <Input
-                          label="Harga Jual (Rp)"
-                          type="number"
-                          value={ceirgoPricing[svc.code] ?? svc.modalPrice}
-                          onChange={(e) => setCeirgoPricing({ ...ceirgoPricing, [svc.code]: parseInt(e.target.value) || 0 })}
-                        />
-                      </div>
-                    ))}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Category 2: Generator Barcode Device */}
+                  <div className="space-y-2 pt-2 border-t border-hairline">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                        <span>🏷️</span> Generator Barcode Device
+                      </span>
+                      <span className="text-[10px] bg-purple-500/10 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
+                        {ceirgoServices.filter(s => /barcode|create/i.test(`${s.code} ${s.name}`) && ceirgoDisplayCodes.has(s.code)).length} Aktif
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {ceirgoServices
+                        .filter(s => /barcode|create/i.test(`${s.code} ${s.name}`))
+                        .map((svc) => (
+                          <div key={svc.code} className={`bg-canvas border p-3 rounded-xl flex flex-col gap-2.5 ${ceirgoDisplayCodes.has(svc.code) ? 'border-primary ring-1 ring-primary/30' : 'border-hairline opacity-75'}`}>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-bold text-ink text-xs">{svc.name}</p>
+                                <p className="text-[10px] text-purple-600 font-mono">{svc.code}</p>
+                                <p className="text-[11px] text-ink-muted mt-0.5">Modal: Rp {svc.modalPrice.toLocaleString('id-ID')}</p>
+                              </div>
+                              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only peer"
+                                  checked={ceirgoDisplayCodes.has(svc.code)}
+                                  onChange={(e) => {
+                                    const newSet = new Set(ceirgoDisplayCodes);
+                                    if (e.target.checked) newSet.add(svc.code);
+                                    else newSet.delete(svc.code);
+                                    setCeirgoDisplayCodes(newSet);
+                                  }}
+                                />
+                                <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+                              </label>
+                            </div>
+                            <Input
+                              label="Harga Jual (Rp)"
+                              type="number"
+                              value={ceirgoPricing[svc.code] ?? svc.modalPrice}
+                              onChange={(e) => setCeirgoPricing({ ...ceirgoPricing, [svc.code]: parseInt(e.target.value) || 0 })}
+                            />
+                          </div>
+                        ))}
+                    </div>
                   </div>
 
                   <Button
                     onClick={async () => {
                       try {
+                        const allActive = Array.from(ceirgoDisplayCodes);
+                        const cekCeir = allActive.filter(c => !/barcode|create/i.test(c));
+                        const barcode = allActive.filter(c => /barcode|create/i.test(c));
+
                         await fetch('/api/admin/ceirgo-display-settings', {
                           method: 'PUT',
                           credentials: 'include',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ cekCeir: Array.from(ceirgoDisplayCodes) })
+                          body: JSON.stringify({ cekCeir, barcode })
                         });
                         const res = await fetch('/api/admin/ceirgo-pricing', {
                           method: 'POST',
@@ -2203,8 +2275,8 @@ export default function AdminPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(ceirgoPricing)
                         });
-                        if (res.ok) Swal.fire({ title: "Info", text: "Harga dan tampilan layanan berhasil disimpan!", icon: "info" });
-                      } catch (e) { Swal.fire({ title: "Info", text: "Error menyimpan", icon: "info" }); }
+                        if (res.ok) Swal.fire({ title: "Sukses", text: "Harga dan tampilan layanan berhasil disimpan!", icon: "success" });
+                      } catch (e) { Swal.fire({ title: "Error", text: "Error menyimpan pengaturan", icon: "error" }); }
                     }}
                     className="w-full text-xs font-bold"
                   >

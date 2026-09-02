@@ -6,61 +6,41 @@ import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
 import Swal from "@/lib/sweetalert";
 import { useRouter } from "next/navigation";
+import { SuccessModal } from "@/components/ui/SuccessModal";
+import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
 
-
 const ceirgoNameMapping: Record<string, string> = {
-  'cek_validity': 'Cek Masa Aktif',
+  'create_barcode': 'Create Barcode Universal',
   'create_barcode_samsung': 'Barcode Samsung',
   'create_barcode_redmi': 'Barcode Redmi',
-  'create_barcode_ios26': 'Barcode iOS 26',
-  'cek_digi': 'Cek DIGI',
-  'cek_sf': 'Cek SF',
-  'create_barcode': 'Create Barcode',
-  'cek_imei_beacukai': 'Cek IMEI Beacukai',
-  'cek_history_imei': 'Cek Riwayat IMEI',
-  'cek_imei': 'Cek Status IMEI',
-  'cek_icloud': 'Cek iCloud',
-  'cek_simlock': 'Cek Carrier / Simlock'
+  'create_barcode_ios26': 'Barcode iOS 26'
 };
+
+const BARCODE_SERVICES_CORE = [
+  { code: 'create_barcode', name: 'Create Barcode Universal', modalPrice: 5000 },
+  { code: 'create_barcode_samsung', name: 'Barcode Samsung', modalPrice: 4997 },
+  { code: 'create_barcode_redmi', name: 'Barcode Redmi', modalPrice: 5000 },
+  { code: 'create_barcode_ios26', name: 'Barcode iOS 26', modalPrice: 5000 }
+];
 
 export default function BarcodePage() {
   const { user, updateBalance } = useApp();
   const router = useRouter();
-  
+
   const [ceirgoPricing, setCeirgoPricing] = useState<any>({});
-  const [ceirgoServices, setCeirgoServices] = useState<any[]>([]);
+  const [barcodeServices, setBarcodeServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [imei, setImei] = useState("");
   const [imei2, setImei2] = useState("");
-  const [theme, setTheme] = useState("dark");
-  
-  // Set default option to first available barcode option later
-  const [option, setOption] = useState("");
-  
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [option, setOption] = useState("create_barcode");
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [barcodeResult, setBarcodeResult] = useState<{ note: string | null, image: string | null } | null>(null);
-
-  const normalizeServices = (payload: any) => {
-    const services = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.data)
-        ? payload.data
-        : Array.isArray(payload?.data?.page?.items)
-          ? payload.data.page.items
-          : [];
-
-    return services
-      .map((svc: any) => ({
-        code: svc?.code,
-        name: svc?.name || ceirgoNameMapping[svc?.code] || svc?.code,
-        modalPrice: Number(svc?.modalPrice ?? svc?.price ?? svc?.unit_price ?? 0) || 0,
-      }))
-      .filter((svc: any) => svc.code && /barcode|create/i.test(`${svc.code} ${svc.name}`));
-  };
 
   useEffect(() => {
     Promise.all([
@@ -69,84 +49,143 @@ export default function BarcodePage() {
       fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false }))
     ]).then(([ceirPrcData, ceirSvcData, displayData]) => {
       if (ceirPrcData?.status && ceirPrcData.data) {
-        const normalizedPricing = Object.fromEntries(
-          Object.entries(ceirPrcData.data || {}).map(([key, value]) => [
-            key.replace(/^ceirgo_price_/, ''),
-            value
-          ])
-        );
-        setCeirgoPricing(normalizedPricing);
+        setCeirgoPricing(ceirPrcData.data);
       }
-      const services = ceirSvcData?.status ? normalizeServices(ceirSvcData.data) : [];
-      const hasBarcodeSetting = displayData?.status && displayData.data && Object.prototype.hasOwnProperty.call(displayData.data, 'barcode');
-      const visibleCodes = hasBarcodeSetting
-        ? new Set(Array.isArray(displayData.data.barcode) ? displayData.data.barcode : [])
-        : null;
-      setCeirgoServices(visibleCodes ? services.filter((s: any) => visibleCodes.has(s.code)) : services);
+
+      // Build available barcode services
+      const rawServices = Array.isArray(ceirSvcData?.data?.page?.items)
+        ? ceirSvcData.data.page.items
+        : Array.isArray(ceirSvcData?.data)
+          ? ceirSvcData.data
+          : [];
+
+      const merged = [...BARCODE_SERVICES_CORE];
+      rawServices.forEach((svc: any) => {
+        if (!svc?.code || !/barcode|create/i.test(`${svc.code} ${svc.name}`)) return;
+        const exists = merged.find(m => m.code === svc.code);
+        if (exists) {
+          exists.name = svc.name || ceirgoNameMapping[svc.code] || exists.name;
+          exists.modalPrice = Number(svc.modalPrice ?? svc.unit_price ?? exists.modalPrice);
+        } else {
+          merged.push({
+            code: svc.code,
+            name: svc.name || ceirgoNameMapping[svc.code] || svc.code,
+            modalPrice: Number(svc.modalPrice ?? svc.unit_price ?? 5000)
+          });
+        }
+      });
+
+      // Filter by Admin Toggle Settings for barcode
+      const hasSetting = displayData?.status && displayData.data && Array.isArray(displayData.data.barcode);
+      const activeCodes = hasSetting ? new Set(displayData.data.barcode) : new Set(merged.map(s => s.code));
+
+      const finalServices = merged.filter(s => activeCodes.has(s.code));
+      setBarcodeServices(finalServices);
+      if (finalServices.length > 0 && !activeCodes.has(option)) {
+        setOption(finalServices[0].code);
+      }
     }).finally(() => setLoading(false));
   }, []);
 
   const getPrice = (opt: string) => {
-    const svc = ceirgoServices.find(s => s.code === opt);
-    const sellingPrice = Number(ceirgoPricing?.[opt] ?? ceirgoPricing?.[`ceirgo_price_${opt}`]);
-    if (Number.isFinite(sellingPrice) && sellingPrice > 0) return sellingPrice;
+    const svc = barcodeServices.find(s => s.code === opt);
+    const aliases = [
+      opt,
+      `ceirgo_price_${opt}`,
+      opt.startsWith('ceirgo_price_') ? opt.replace(/^ceirgo_price_/, '') : null,
+      opt.startsWith('price_') ? opt.replace(/^price_/, '') : null,
+    ].filter(Boolean) as string[];
+
+    for (const key of aliases) {
+      const sellingPrice = Number(ceirgoPricing?.[key]);
+      if (Number.isFinite(sellingPrice) && sellingPrice > 0) return sellingPrice;
+    }
+
     const modalPrice = Number(svc?.modalPrice);
-    return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 0;
+    return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 5000;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!option) return setError("Pilih layanan barcode terlebih dahulu.");
-    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit).");
-    if (imei2 && imei2.length < 15) return setError("IMEI Kedua tidak valid (minimal 15 digit).");
+    if (!option) return setError("Pilih varian barcode terlebih dahulu.");
+    if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
+    if (imei2 && imei2.length < 15) return setError("IMEI Kedua tidak valid (minimal 15 digit angka).");
 
     const price = getPrice(option);
     if (user && user.balance < price) {
       Swal.fire({
-      title: 'Saldo Tidak Mencukupi',
-      text: 'Saldo Anda kurang untuk melakukan pesanan ini. Silakan isi saldo terlebih dahulu.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Top Up Sekarang',
-      cancelButtonText: 'Batal'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        router.push('/topup');
-      }
-    });
-    return setError('Saldo tidak mencukupi.');
+        title: 'Saldo Tidak Mencukupi',
+        text: `Saldo Anda (Rp ${Number(user.balance).toLocaleString('id-ID')}) kurang untuk layanan ini (Rp ${price.toLocaleString('id-ID')}). Silakan top up terlebih dahulu.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Top Up Sekarang',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push('/topup');
+        }
+      });
+      return setError('Saldo tidak mencukupi.');
     }
+
+    const confirm = await Swal.fire({
+      title: 'Konfirmasi Cetak Barcode',
+      text: `Anda akan membuat ${ceirgoNameMapping[option] || option} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#9333ea',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Generate Barcode!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirm.isConfirmed) return;
 
     setError("");
     setSubmitting(true);
 
     try {
       const formData = new FormData();
-      formData.append("service_type", "ceir");
+      formData.append("service_type", "barcode");
+      formData.append("service_code", option);
+      formData.append("price_key", option);
       formData.append("imei", imei);
       if (imei2) formData.append("imei2", imei2);
       formData.append("theme", theme);
-      
-      let durationStr = "Cetak Barcode";
-      const svc = ceirgoServices.find(s => s.code === option);
-      if (svc) durationStr = svc.name;
+      formData.append("duration", ceirgoNameMapping[option] || option);
 
-      formData.append("duration", durationStr);
-      formData.append("price_key", option);
-
-      const res = await fetch("/api/order/ceir", {
+      const res = await fetch("/api/order/barcode", {
         method: "POST",
         credentials: 'include',
         body: formData
       });
+
       const data = await res.json();
       if (res.ok && data.status) {
-        setSuccess("Pesanan berhasil! Hasil cetak barcode akan dikirim ke riwayat transaksi.");
-        setTimeout(() => router.push('/history'), 4000);
+        if (typeof data.data?.newBalance === 'number') {
+          updateBalance(data.data.newBalance);
+        } else if (typeof data.newBalance === 'number') {
+          updateBalance(data.newBalance);
+        }
+
+        const note = data.data?.adminNote || (typeof data.data?.result === 'string' ? data.data.result : 'Barcode berhasil digenerate.');
+        const image = data.data?.result?.qr_url || data.data?.result?.image_url || data.data?.adminImage || null;
+        setBarcodeResult({ note, image });
+        setShowSuccessPop(true);
       } else {
-        setError(data.message || "Gagal membuat pesanan.");
+        Swal.fire({
+          title: "Gagal Membuat Barcode",
+          text: data.message || "Gagal membuat barcode.",
+          icon: "error"
+        });
+        setError(data.message || "Gagal membuat barcode.");
       }
     } catch (err) {
+      Swal.fire({
+        title: "Error Jaringan",
+        text: "Kesalahan jaringan saat memproses pesanan.",
+        icon: "error"
+      });
       setError("Kesalahan jaringan.");
     } finally {
       setSubmitting(false);
@@ -154,39 +193,36 @@ export default function BarcodePage() {
   };
 
   const renderServiceButtons = () => {
-    if (loading) return <p className="text-sm text-ink-muted col-span-2">Memuat layanan...</p>;
+    if (loading) return <p className="text-sm text-ink-muted col-span-full py-4 text-center">Memuat varian barcode...</p>;
 
-    const buttons: { id: string, label: string, price: number }[] = [];
-
-    ceirgoServices.forEach(svc => {
-      const isBarcodeService = /barcode|create/i.test(`${svc.code} ${svc.name}`);
-      if (!isBarcodeService) return;
-      const price = Number(ceirgoPricing[svc.code]);
-      if (price > 0) {
-        buttons.push({ id: svc.code, label: svc.name || ceirgoNameMapping[svc.code] || svc.code.replace(/_/g, " ").toUpperCase(), price });
-      }
-    });
-
-    if (buttons.length === 0) {
-      return <p className="text-sm text-ink-muted col-span-2">Belum ada layanan Barcode yang diaktifkan Admin.</p>;
+    if (barcodeServices.length === 0) {
+      return (
+        <div className="col-span-full p-4 text-center text-sm text-ink-muted border rounded-xl border-dashed">
+          Belum ada varian Barcode Device yang diaktifkan oleh Admin.
+        </div>
+      );
     }
 
-    return buttons.map(btn => {
-      const isSelected = option === btn.id;
+    return barcodeServices.map(svc => {
+      const isSelected = option === svc.code;
+      const price = getPrice(svc.code);
       return (
         <button
-          key={btn.id}
+          key={svc.code}
           type="button"
-          onClick={() => setOption(btn.id)}
-          className={`p-4 rounded-xl border text-center transition-all duration-200 flex flex-col items-center justify-center gap-1 ${
-            isSelected 
-              ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 text-primary ring-1 ring-primary scale-[1.02]' 
-              : 'border-hairline bg-canvas hover:bg-parchment hover:border-primary/30'
+          onClick={() => setOption(svc.code)}
+          className={`p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between gap-2 ${
+            isSelected
+              ? 'border-purple-600 bg-purple-500/5 shadow-md shadow-purple-500/10 ring-1 ring-purple-600'
+              : 'border-hairline bg-canvas hover:bg-parchment hover:border-purple-400/40'
           }`}
         >
-          <div className="font-bold text-sm leading-tight px-1">{btn.label}</div>
-          <div className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 ${isSelected ? 'bg-primary/10 text-primary' : 'bg-parchment text-ink-muted'}`}>
-            Rp {btn.price.toLocaleString('id-ID')}
+          <div>
+            <div className="font-bold text-xs text-ink line-clamp-1">{svc.name}</div>
+            <div className="text-[10px] text-purple-600 font-mono mt-0.5">{svc.code}</div>
+          </div>
+          <div className={`text-xs font-bold px-2 py-0.5 rounded-lg self-start ${isSelected ? 'bg-purple-600 text-white' : 'bg-parchment text-purple-700'}`}>
+            Rp {price.toLocaleString('id-ID')}
           </div>
         </button>
       );
@@ -194,91 +230,194 @@ export default function BarcodePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto pb-12">
-      <div className="flex items-center gap-4 mb-4">
+    <div className="space-y-5 max-w-2xl mx-auto pb-12">
+      {/* Category Switcher Tabs */}
+      <div className="flex p-1 bg-parchment rounded-2xl border border-hairline max-w-sm mx-auto shadow-2xs">
+        <button
+          type="button"
+          onClick={() => router.push('/cek-ceir')}
+          className="flex-1 py-2 px-3 text-xs font-semibold text-ink-muted hover:text-ink rounded-xl flex items-center justify-center gap-1.5 transition-all"
+        >
+          <span>🔍</span> Diagnostik IMEI
+        </button>
+        <button
+          type="button"
+          className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-purple-600 text-white shadow-xs flex items-center justify-center gap-1.5 transition-all"
+        >
+          <span>🏷️</span> Generator Barcode
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4 mb-2">
         <button onClick={() => router.push('/dashboard')} className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors">
           <svg width="20" height="20" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Cetak Barcode</h1>
-          <p className="text-sm text-ink-muted">Buat barcode box HP otomatis via Server Pusat.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink flex items-center gap-2">
+            <span className="p-1.5 rounded-xl bg-purple-500/10 text-purple-600">🏷️</span>
+            Generator Barcode Device
+          </h1>
+          <p className="text-xs sm:text-sm text-ink-muted">Cetak label barcode IMEI resmi untuk Samsung, Redmi, iOS 26, dan universal.</p>
         </div>
       </div>
 
-      <Card glass className="p-6 space-y-6">
+      <Card glass className="p-5 sm:p-6 space-y-6">
         {error && (
-          <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100 flex items-center gap-2">
-            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <div className="p-3.5 bg-rose-50 text-rose-700 rounded-xl text-xs border border-rose-200 flex items-center gap-2">
+            <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
             </svg>
-            <span>{error}</span>
-          </div>
-        )}
-        {success && (
-          <div className="p-3 bg-green-50 text-green-700 rounded-xl text-sm border border-green-100 flex items-center gap-2">
-            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{success}</span>
+            {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-ink flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">1</span>
-              Pilih Jenis Barcode
+          <div className="space-y-2.5">
+            <label className="text-xs font-bold text-ink flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[11px] font-bold">1</span>
+              Pilih Varian Barcode Device
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               {renderServiceButtons()}
             </div>
           </div>
 
           <div className="pt-4 border-t border-hairline space-y-4">
-            <label className="text-sm font-bold text-ink flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">2</span>
-              Detail Perangkat
+            <label className="text-xs font-bold text-ink flex items-center gap-2 mb-1">
+              <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[11px] font-bold">2</span>
+              Detail IMEI & Tema Barcode
             </label>
-            
-            <Input 
-              label="IMEI Utama (SIM 1)" 
-              placeholder="Masukkan 15 digit IMEI" 
-              value={imei} 
-              onChange={e => setImei(e.target.value)} 
-              maxLength={15} 
-              required 
-            />
 
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-4 mt-2">
-              <Input 
-                label="IMEI Kedua (SIM 2) - Opsional" 
-                placeholder="Masukkan 15 digit IMEI SIM 2" 
-                value={imei2} 
-                onChange={e => setImei2(e.target.value)} 
-                maxLength={15} 
+            <div>
+              <Input
+                label="Nomor IMEI Utama (SIM 1)"
+                placeholder="Masukkan 15 digit IMEI"
+                value={imei}
+                onChange={e => setImei(e.target.value.replace(/\D/g, ''))}
+                maxLength={15}
+                required
               />
-              
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink/80">Tema Barcode</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="theme" value="dark" checked={theme === 'dark'} onChange={() => setTheme('dark')} className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Dark Mode (Hitam)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="theme" value="light" checked={theme === 'light'} onChange={() => setTheme('light')} className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Light Mode (Putih)</span>
-                  </label>
-                </div>
+              {imei.length >= 8 && (() => {
+                const analysis = analyzeImei(imei);
+                return (
+                  <div className={`mt-2 flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                    analysis.isValidLength && analysis.isValidLuhn 
+                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900' 
+                      : analysis.isValidLength && !analysis.isValidLuhn
+                      ? 'bg-amber-50/60 border-amber-200 text-amber-900'
+                      : 'bg-canvas border-hairline text-ink-muted'
+                  }`}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-hairline flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-bold text-ink text-xs">
+                          {analysis.brand ? `${analysis.brand} ${analysis.model}` : `Perangkat Terdeteksi`}
+                        </p>
+                        <p className="text-[10px] opacity-75 font-mono">
+                          {analysis.clean} ({analysis.clean.length}/15 digit)
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      {analysis.isValidLength && analysis.isValidLuhn ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md text-[11px]">
+                          Luhn Valid
+                        </span>
+                      ) : analysis.isValidLength && !analysis.isValidLuhn ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md text-[11px]">
+                          Periksa Digit
+                        </span>
+                      ) : (
+                        <span className="text-ink-muted text-[11px]">
+                          {15 - analysis.clean.length} digit lagi
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div>
+              <Input
+                label="Nomor IMEI Kedua (SIM 2) - Opsional"
+                placeholder="Contoh: 358921098765433 (Dual SIM)"
+                value={imei2}
+                onChange={e => setImei2(e.target.value.replace(/\D/g, ''))}
+                maxLength={15}
+              />
+            </div>
+
+            <div className="p-3.5 bg-canvas border border-hairline rounded-xl space-y-2">
+              <label className="text-xs font-bold text-ink">Pilihan Tema Barcode</label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                  theme === 'dark' ? 'border-purple-600 bg-purple-500/10 text-purple-700 font-bold' : 'border-hairline hover:bg-parchment'
+                }`}>
+                  <input
+                    type="radio"
+                    name="barcode_theme"
+                    value="dark"
+                    checked={theme === 'dark'}
+                    onChange={() => setTheme('dark')}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <span className="text-xs">Dark Mode (Hitam)</span>
+                </label>
+                <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                  theme === 'light' ? 'border-purple-600 bg-purple-500/10 text-purple-700 font-bold' : 'border-hairline hover:bg-parchment'
+                }`}>
+                  <input
+                    type="radio"
+                    name="barcode_theme"
+                    value="light"
+                    checked={theme === 'light'}
+                    onChange={() => setTheme('light')}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <span className="text-xs">Light Mode (Putih)</span>
+                </label>
               </div>
             </div>
           </div>
 
-          <Button className="w-full h-14 text-lg font-bold shadow-md shadow-primary/20 mt-4" type="submit" isLoading={submitting}>
-            Bayar Rp {getPrice(option).toLocaleString('id-ID')}
+          <Button className="w-full h-12 text-sm font-bold shadow-md shadow-purple-500/20 mt-4 bg-purple-600 hover:bg-purple-700 text-white" type="submit" isLoading={submitting}>
+            Generate Barcode (Rp {getPrice(option).toLocaleString('id-ID')})
           </Button>
         </form>
       </Card>
+
+      {barcodeResult && (
+        <Card className="mt-4 p-5 border border-purple-500/30 bg-purple-500/5 animate-fade-in space-y-3">
+          <h3 className="font-bold text-sm text-purple-700 flex items-center gap-2">
+            <span>🎉</span> Hasil Generator Barcode:
+          </h3>
+          <p className="text-xs text-ink font-medium leading-relaxed bg-canvas p-3 rounded-xl border border-hairline whitespace-pre-line">
+            {barcodeResult.note}
+          </p>
+          {barcodeResult.image && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={barcodeResult.image} alt="Barcode Hasil" className="mt-3 rounded-xl border border-hairline w-full max-w-sm object-contain bg-white p-2 shadow-sm mx-auto" />
+          )}
+        </Card>
+      )}
+
+      <SuccessModal
+        isOpen={showSuccessPop}
+        onClose={() => {
+          setShowSuccessPop(false);
+          router.push('/history');
+        }}
+        amount={getPrice(option)}
+        title="Barcode Berhasil Dibuat"
+        statusText="Barcode IMEI Anda berhasil digenerate dan tersimpan di riwayat transaksi."
+        recipientLabel="IMEI Perangkat"
+        recipientValue={imei}
+      />
     </div>
   );
 }
