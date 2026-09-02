@@ -372,17 +372,17 @@ export default function AdminPage() {
   const startDeploy = async () => {
     try {
       const res = await fetch('/api/admin/deploy', { method: 'POST', credentials: 'include' });
-      const d = await res.json();
-      if (d.status) {
+      const d = await safeJson(res);
+      if (d?.status) {
         setShowDeployConsole(true);
         setIsDeploying(true);
-        setDeployLogs("Menghubungi server...\n");
+        setDeployLogs("Menghubungi server dan menyiapkan log...\n");
 
         const interval = setInterval(async () => {
           try {
             const statusRes = await fetch('/api/admin/deploy-status', { credentials: 'include' });
-            const statusData = await statusRes.json();
-            if (statusData.status) {
+            const statusData = await safeJson(statusRes);
+            if (statusData?.status && statusData?.log) {
               setDeployLogs(statusData.log);
               if (statusData.log.includes("SELESAI DENGAN KODE")) {
                 clearInterval(interval);
@@ -390,16 +390,16 @@ export default function AdminPage() {
               }
             }
           } catch (err) {
-            setDeployLogs(prev => prev + "\n[SISTEM] Server sedang offline (merestart PM2...). Menunggu koneksi...\n");
+            setDeployLogs(prev => prev + "\n[SISTEM] Server sedang proses pembaruan. Menunggu koneksi...\n");
             clearInterval(interval);
             let checkCount = 0;
             const reconnectInterval = setInterval(async () => {
               checkCount++;
               try {
-                const ping = await fetch('/api/admin/menu-settings');
+                const ping = await fetch('/api/admin/menu-settings', { credentials: 'include' });
                 if (ping.ok) {
                   clearInterval(reconnectInterval);
-                  setDeployLogs(prev => prev + "\n[SISTEM] Koneksi terhubung! Update Sukses. Silakan Muat Ulang Halaman.\n");
+                  setDeployLogs(prev => prev + "\n[SISTEM] Koneksi terhubung kembali! Update Sukses. Silakan Muat Ulang Halaman.\n");
                   setIsDeploying(false);
                   Swal.fire("Sukses!", "Server berhasil diperbarui dan kembali online!", "success");
                 }
@@ -413,9 +413,11 @@ export default function AdminPage() {
             }, 3000);
           }
         }, 1500);
+      } else {
+        Swal.fire("Error", d?.message || "Gagal memicu deployment dari server.", "error");
       }
     } catch (e) {
-      Swal.fire("Error", "Gagal memicu deployment", "error");
+      Swal.fire("Error", "Gagal menghubungi endpoint deployment server.", "error");
     }
   };
 
