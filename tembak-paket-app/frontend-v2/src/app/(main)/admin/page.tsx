@@ -74,9 +74,11 @@ export default function AdminPage() {
   const loadBaileysStatus = async () => {
     try {
       const res = await fetch('/api/admin/baileys/status', { credentials: 'include' });
-      const d = await res.json();
-      if (d.status && d.data) {
-        setBaileysStatus(d.data);
+      const d = await safeJson(res);
+      if (d?.status) {
+        const payload = d.data || d;
+        setBaileysStatus(payload);
+        setWaBotStatus(payload);
       }
     } catch (e) {}
   };
@@ -92,12 +94,12 @@ export default function AdminPage() {
       });
       await loadBaileysStatus();
       
-      // Fast polling loop to catch QR generation quickly (every 1.5s for 15s)
+      // Fast polling loop to catch QR generation quickly (every 1.5s for 20s)
       let attempts = 0;
       const interval = setInterval(async () => {
         attempts++;
         await loadBaileysStatus();
-        if (attempts >= 10) {
+        if (attempts >= 15) {
           clearInterval(interval);
         }
       }, 1500);
@@ -119,13 +121,20 @@ export default function AdminPage() {
     setLoadingBaileys(true);
     try {
       const res = await fetch('/api/admin/baileys/logout', { method: 'POST', credentials: 'include' });
-      const d = await res.json();
-      if (d.status) {
-        Swal.fire({ title: "Terputus", text: "WhatsApp bot telah logout.", icon: "info", timer: 1500 });
-        loadBaileysStatus();
+      const d = await safeJson(res);
+      if (d?.status || d?.success) {
+        Swal.fire({ title: "Terputus", text: d?.message || "WhatsApp bot telah logout.", icon: "info", timer: 1500 });
+        setBaileysStatus({ isConnected: false, connected: false, state: 'disconnected', qrCode: null });
+        setWaBotStatus({ isConnected: false, connected: false, state: 'disconnected', qrCode: null });
+        await loadBaileysStatus();
+      } else {
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal logout WhatsApp.", icon: "error" });
       }
-    } catch (e) {}
-    finally { setLoadingBaileys(false); }
+    } catch (e: any) {
+      Swal.fire({ title: "Error", text: e?.message || "Gagal menghubungi server.", icon: "error" });
+    } finally {
+      setLoadingBaileys(false);
+    }
   };
 
   // GoPay Gateway & Web OTP State
@@ -244,13 +253,27 @@ export default function AdminPage() {
     setGopayLoggingOut(true);
     try {
       const res = await fetch('/api/admin/gopay/logout', { method: 'POST', credentials: 'include' });
-      const d = await res.json();
-      if (d.status) {
-        Swal.fire("Sesi Diputus", "Sesi GoPay telah berhasil logout.", "info");
-        loadGopayStatus();
+      const d = await safeJson(res);
+      if (d?.status || d?.success) {
+        Swal.fire({
+          title: "Sesi Diputus",
+          text: d?.message || "Sesi GoPay Merchant berhasil diputus (Logout).",
+          icon: "success"
+        });
+        setGopayStatus({
+          is_configured: false,
+          token_status: 'invalid',
+          message: 'Sesi telah diputus.'
+        });
+        await loadGopayStatus();
+      } else {
+        Swal.fire("Gagal", d?.message || "Gagal memutus sesi GoPay.", "error");
       }
-    } catch (e) {}
-    finally { setGopayLoggingOut(false); }
+    } catch (e: any) {
+      Swal.fire("Error", e?.message || "Gagal menghubungi server.", "error");
+    } finally {
+      setGopayLoggingOut(false);
+    }
   };
 
   // Server Pusat Deposit / Top Up Modal State
@@ -1708,6 +1731,7 @@ export default function AdminPage() {
                   variant="outline"
                   onClick={() => setShowWaModal(true)}
                   className="text-xs flex items-center gap-2 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold shadow-sm"
+                  title="Jalan pintas untuk memindai QR Code WhatsApp Bot tanpa harus ke tab Pengaturan"
                 >
                   <span className={`w-2 h-2 rounded-full ${waBotStatus?.connected || waBotStatus?.isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
                   <span>📱 Koneksi WhatsApp Bot</span>
@@ -1718,8 +1742,8 @@ export default function AdminPage() {
                   )}
                 </Button>
 
-                <Button size="sm" variant="outline" onClick={loadManualData} className="text-xs">
-                  Muat Ulang
+                <Button size="sm" variant="outline" onClick={loadManualData} className="text-xs flex items-center gap-1.5 font-medium" title="Perbarui tabel data antrean pesanan dari server">
+                  <span>🔄 Refresh Antrean</span>
                 </Button>
               </div>
             </div>

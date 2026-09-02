@@ -1105,47 +1105,79 @@ router.get('/admin/deploy-status', isAuthenticated, isAdmin, (req, res) => {
     }
 });
 
-// 23. WhatsApp Bot Status & Web-Based QR Code Endpoints
-router.get(['/admin/wabot/status', '/admin/whatsapp/status'], isAuthenticated, isAdmin, (req, res) => {
-    const waStatus = waBot.getWAStatus();
-    res.json({
-        status: true,
-        connected: waStatus.connected || waStatus.isConnected,
-        isConnected: waStatus.connected || waStatus.isConnected,
+// 23. WhatsApp Bot Status & Web-Based QR Code Endpoints (Universal Baileys / WABot Support)
+router.get(['/admin/baileys/status', '/admin/wabot/status', '/admin/whatsapp/status'], isAuthenticated, isAdmin, (req, res) => {
+    let waStatus = waBot.getWAStatus();
+    // Auto-trigger initialization if completely disconnected and not initializing
+    if (!waStatus.connected && !waStatus.isConnected && waStatus.state === 'disconnected') {
+        waBot.initWABot(false).catch(() => {});
+        waStatus = waBot.getWAStatus();
+    }
+    const isConn = Boolean(waStatus.connected || waStatus.isConnected);
+    const data = {
+        connected: isConn,
+        isConnected: isConn,
         state: waStatus.state,
         connectedPhone: waStatus.connectedPhone,
         qrCode: waStatus.qrCode,
+        qr: waStatus.qrCode,
         statusText: waStatus.statusText
+    };
+    res.json({
+        status: true,
+        success: true,
+        data: data,
+        ...data
     });
 });
 
-router.post(['/admin/wabot/reset', '/admin/whatsapp/reset'], isAuthenticated, isAdmin, async (req, res) => {
+router.post(['/admin/baileys/init', '/admin/wabot/init', '/admin/whatsapp/init'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const forceNew = req.body?.forceNew === true;
+        await waBot.initWABot(forceNew);
+        res.json({ status: true, success: true, message: "Inisialisasi WhatsApp Bot berhasil dipicu. Kode QR akan muncul dalam beberapa detik." });
+    } catch (err) {
+        res.status(500).json({ status: false, success: false, message: "Gagal inisialisasi WhatsApp: " + err.message });
+    }
+});
+
+router.post(['/admin/baileys/reset', '/admin/wabot/reset', '/admin/whatsapp/reset'], isAuthenticated, isAdmin, async (req, res) => {
     try {
         await waBot.initWABot(true);
         res.json({
             status: true,
+            success: true,
             message: "Sesi WhatsApp berhasil direset. Menghasilkan QR Code baru dalam beberapa detik..."
         });
     } catch (err) {
-        res.status(500).json({ status: false, message: "Gagal mereset sesi WhatsApp: " + err.message });
+        res.status(500).json({ status: false, success: false, message: "Gagal mereset sesi WhatsApp: " + err.message });
     }
 });
 
-router.post(['/admin/wabot/init', '/admin/whatsapp/init'], isAuthenticated, isAdmin, async (req, res) => {
-    try {
-        await waBot.initWABot(false);
-        res.json({ status: true, message: "Inisialisasi WhatsApp Bot berhasil dipicu." });
-    } catch (err) {
-        res.status(500).json({ status: false, message: "Gagal inisialisasi WhatsApp: " + err.message });
-    }
-});
-
-router.post(['/admin/wabot/logout', '/admin/whatsapp/logout'], isAuthenticated, isAdmin, async (req, res) => {
+router.post(['/admin/baileys/logout', '/admin/wabot/logout', '/admin/whatsapp/logout'], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const ok = await waBot.logoutWABot();
-        res.json({ status: ok, message: ok ? "Berhasil logout WhatsApp." : "Gagal logout WhatsApp." });
+        res.json({ status: true, success: true, message: ok ? "Berhasil logout WhatsApp." : "Sesi WhatsApp telah dihapus." });
     } catch (err) {
-        res.status(500).json({ status: false, message: "Gagal logout: " + err.message });
+        res.status(500).json({ status: false, success: false, message: "Gagal logout: " + err.message });
+    }
+});
+
+router.post(['/admin/baileys/test', '/admin/wabot/test', '/admin/whatsapp/test'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const phone = req.body?.targetPhone || req.body?.phone;
+        if (!phone) {
+            return res.status(400).json({ status: false, success: false, message: "Nomor WhatsApp tujuan wajib diisi." });
+        }
+        const text = "Halo! Ini adalah pesan tes notifikasi otomatis dari WhatsApp Bot Toko (Ry-ITSolutions). Bot WhatsApp Toko berfungsi normal dan aktif!";
+        const sent = await waBot.sendTextMessage(phone, text);
+        if (sent) {
+            res.json({ status: true, success: true, message: "Pesan tes berhasil dikirim ke +" + phone });
+        } else {
+            res.status(400).json({ status: false, success: false, message: "Gagal mengirim pesan tes. Pastikan WhatsApp bot berstatus terhubung (scan QR)." });
+        }
+    } catch (err) {
+        res.status(500).json({ status: false, success: false, message: "Error kirim pesan tes: " + err.message });
     }
 });
 
@@ -1157,7 +1189,7 @@ router.get('/admin/gopay/status', isAuthenticated, isAdmin, async (req, res) => 
     try {
         const response = await axios.get(`${GOPAY_GW_URL}/token-status`, {
             headers: { 'x-api-key': GOPAY_GW_KEY },
-            timeout: 6000
+            timeout: 5000
         });
         const d = response.data;
         res.json({
@@ -1166,7 +1198,6 @@ router.get('/admin/gopay/status', isAuthenticated, isAdmin, async (req, res) => 
             data: d?.data || d
         });
     } catch (err) {
-        // Fallback gracefully without sending HTML error
         res.json({
             status: true,
             success: false,
@@ -1276,14 +1307,38 @@ router.post(['/admin/gopay/cancel-otp', '/admin/gopay/cancel'], isAuthenticated,
 
 router.post('/admin/gopay/logout', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const response = await axios.post(`${GOPAY_GW_URL}/api/otp/logout`, {}, {
+        await axios.post(`${GOPAY_GW_URL}/api/otp/logout`, {}, {
             headers: { 'x-api-key': GOPAY_GW_KEY },
-            timeout: 8000
-        });
-        res.json({ status: true, success: true, message: response.data?.message || "Sesi GoPay berhasil logout." });
-    } catch (err) {
-        res.json({ status: false, success: false, message: "Gagal logout GoPay: " + err.message });
+            timeout: 4000
+        }).catch(() => {});
+    } catch (err) {}
+
+    // Direct deletion of session files across possible paths
+    const sessionCandidates = [
+        path.join(__dirname, '../../gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json'),
+        path.join(__dirname, '../gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json'),
+        path.resolve(process.cwd(), 'gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json'),
+        path.resolve(process.cwd(), '../gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json')
+    ];
+
+    let removed = false;
+    for (const p of sessionCandidates) {
+        if (fs.existsSync(p)) {
+            try {
+                fs.unlinkSync(p);
+                removed = true;
+                console.log(`[GOPAY_LOGOUT] Removed session file: ${p}`);
+            } catch (e) {
+                console.error(`[GOPAY_LOGOUT] Failed to remove ${p}:`, e.message);
+            }
+        }
     }
+
+    res.json({ 
+        status: true, 
+        success: true, 
+        message: "Sesi GoPay Merchant Partner berhasil diputus (Logout)." 
+    });
 });
 
 module.exports = router;
