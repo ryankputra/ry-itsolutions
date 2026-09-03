@@ -35,6 +35,7 @@ const reviewRoutes = require('./routes/reviews');
 const gameRoutes = require('./routes/games');
 const telegramRoutes = require('./routes/telegram');
 const orderRoutes = require('./routes/orders');
+const webhookRoutes = require('./routes/webhook');
 const waBot = require('./services/waBot');
 
 const app = express();
@@ -156,6 +157,7 @@ app.use('/api', adminRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api', gameRoutes);
 app.use('/api', telegramRoutes.router);
+app.use('/api', webhookRoutes);
 
 // WhatsApp Admin Bot Control Endpoints
 app.get('/api/admin/whatsapp/status', isAuthenticated, isAdmin, (req, res) => {
