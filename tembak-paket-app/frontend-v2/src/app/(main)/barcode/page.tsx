@@ -428,14 +428,14 @@ export default function BarcodePage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold flex items-center gap-1.5">
-                    <span>⚡</span> Direct QRIS Instan
+                    <span>⚡</span> Direct QRIS Otomatis
                   </span>
                   <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-purple-600" />
                 </div>
                 <div className="text-xs text-emerald-600 font-bold mt-1.5">
-                  Scan &amp; Langsung Selesai
+                  Semua Bank &amp; E-Wallet (Realtime 24 Jam)
                 </div>
-                <p className="text-[10px] text-ink-muted mt-0.5">BCA, GoPay, OVO, Dana, ShopeePay &amp; Semua Bank</p>
+                <p className="text-[10px] text-ink-muted mt-0.5">BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay</p>
               </button>
             </div>
           </div>

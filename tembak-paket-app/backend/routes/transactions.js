@@ -87,8 +87,28 @@ async function generateGopayQris(amount) {
                 timeout: 8000
             });
             if (response.data?.success && response.data.data) {
+                const gData = response.data.data;
+                const rawCode = gData.qris_code || gData.data;
+                let dataUrl = gData.qr_image || null;
+                if (!dataUrl && rawCode) {
+                    try {
+                        const qrcodeLib = require('qrcode');
+                        dataUrl = await qrcodeLib.toDataURL(rawCode, {
+                            errorCorrectionLevel: 'M',
+                            margin: 2,
+                            width: 380,
+                            color: { dark: '#000000', light: '#ffffff' }
+                        });
+                    } catch (errConv) {
+                        console.error("[QR_DATAURL_CONV_ERR]", errConv.message);
+                    }
+                }
                 return {
-                    ...response.data.data,
+                    ...gData,
+                    qr_image: dataUrl || gData.qr_image,
+                    qris_image: dataUrl || gData.qris_image,
+                    qris_url: dataUrl || gData.qris_url,
+                    qris_code: rawCode,
                     merchant: 'RyyStore IT Solutions'
                 };
             }
@@ -109,6 +129,7 @@ async function generateGopayQris(amount) {
         trx_id: trxId,
         qris_url: genRes.dataUrl,
         qr_image: genRes.dataUrl,
+        qris_image: genRes.dataUrl,
         qris_code: genRes.dynamicCode,
         amount: parseInt(amount, 10),
         expires_at: expiresAt.toISOString(),
@@ -693,7 +714,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
                 const activeGateway = gwRow ? gwRow.value : 'orkut';
                 const requestedGw = String(req.body.gateway || req.body.provider || req.body.paymentMethod || req.body.payment_method || '').toLowerCase();
-                const isGopay = requestedGw.includes('gopay') || (activeGateway === 'gopay' && !requestedGw.includes('nobu') && !requestedGw.includes('orkut'));
+                const isGopay = (requestedGw === 'gopay') || (activeGateway === 'gopay' && requestedGw !== 'nobu' && requestedGw !== 'orkut');
 
                 let qrisImage = null;
                 let uniqueAmt = finalPriceToPay;
@@ -704,7 +725,13 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 if (isGopay) {
                     merchantName = 'RyyStore IT Solutions';
                     const gopayData = await generateGopayQris(finalPriceToPay);
-                    qrisImage = gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
+                    qrisImage = gopayData.qris_image || gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
+                    if (qrisImage && !qrisImage.startsWith('data:image') && gopayData.qris_code) {
+                        try {
+                            const qrcodeLib = require('qrcode');
+                            qrisImage = await qrcodeLib.toDataURL(gopayData.qris_code, { margin: 2, width: 380 });
+                        } catch (e) {}
+                    }
                     gopayTrxId = gopayData.trx_id;
                     expiresAtSec = Math.floor((Date.now() + 10 * 60 * 1000) / 1000);
                 } else {
@@ -1052,13 +1079,19 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
         const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
         const activeGateway = gwRow ? gwRow.value : 'orkut';
         const requestedGw = String(gateway || provider || paymentMethod || '').toLowerCase();
-        const isGopay = requestedGw.includes('gopay') || (activeGateway === 'gopay' && !requestedGw.includes('nobu') && !requestedGw.includes('orkut'));
+        const isGopay = (requestedGw === 'gopay') || (activeGateway === 'gopay' && requestedGw !== 'nobu' && requestedGw !== 'orkut');
 
         if (isGopay) {
             const gopayData = await generateGopayQris(baseAmount);
             const topUpId = `TU-GP-${Date.now()}`;
             const expiresAtSec = Math.floor((Date.now() + 10 * 60 * 1000) / 1000);
-            const qrisImg = gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
+            let qrisImg = gopayData.qris_image || gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
+            if (qrisImg && !qrisImg.startsWith('data:image') && gopayData.qris_code) {
+                try {
+                    const qrcodeLib = require('qrcode');
+                    qrisImg = await qrcodeLib.toDataURL(gopayData.qris_code, { margin: 2, width: 380 });
+                } catch (e) {}
+            }
 
             await dbRun(
                 "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1075,6 +1108,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 merchant: 'RyyStore IT Solutions',
                 data: {
                     qris_image: qrisImg,
+                    qris_code: gopayData.qris_code || qrisImg,
                     unique_amount: baseAmount,
                     topup_id: topUpId,
                     trx_id: gopayData.trx_id,

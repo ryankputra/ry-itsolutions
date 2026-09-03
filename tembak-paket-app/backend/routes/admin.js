@@ -916,15 +916,20 @@ router.delete('/admin/reviews/:id', isAuthenticated, isAdmin, async (req, res) =
     }
 });
 
-// 19. Payment Gateway Configuration
-router.get('/admin/payment-gateway', async (req, res) => {
+// 19. Payment Gateway Configuration (User & Admin Access)
+router.get(['/payment/active-gateway', '/admin/payment-gateway'], async (req, res) => {
     try {
         const row = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
         const activeGw = row ? row.value : 'orkut';
+        const formattedGw = activeGw === 'gopay' ? 'gopay' : 'nobu';
         res.json({
             status: true,
+            success: true,
+            gateway: activeGw,
+            activeGateway: formattedGw,
             data: {
                 gateway: activeGw,
+                activeGateway: formattedGw,
                 merchants: {
                     nobu: 'RYYSTORE OK2285905',
                     gopay: 'RyyStore IT Solutions'
@@ -1180,7 +1185,7 @@ router.get('/admin/deploy-status', isAuthenticated, isAdmin, (req, res) => {
 // 23. WhatsApp Bot Status & Web-Based QR Code Endpoints (Universal Baileys / WABot Support)
 router.get(['/admin/baileys/status', '/admin/wabot/status', '/admin/whatsapp/status'], isAuthenticated, isAdmin, (req, res) => {
     let waStatus = waBot.getWAStatus();
-    // Auto-trigger initialization if completely disconnected and not initializing
+    // Auto-trigger initialization only if completely disconnected and not connecting/qr_ready
     if (!waStatus.connected && !waStatus.isConnected && waStatus.state === 'disconnected') {
         waBot.initWABot(false).catch(() => {});
         waStatus = waBot.getWAStatus();
@@ -1189,8 +1194,10 @@ router.get(['/admin/baileys/status', '/admin/wabot/status', '/admin/whatsapp/sta
     const data = {
         connected: isConn,
         isConnected: isConn,
+        status: isConn ? 'open' : waStatus.state,
         state: waStatus.state,
         connectedPhone: waStatus.connectedPhone,
+        currentQrCode: waStatus.currentQrCode,
         qrCode: waStatus.qrCode,
         qr: waStatus.qrCode,
         statusText: waStatus.statusText

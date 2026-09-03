@@ -19,10 +19,12 @@ const { dbGet, dbRun, dbAll } = require("../config/db");
 const SESSIONS_DIR = path.join(__dirname, "..", "sessions", "baileys_auth");
 
 let sock = null;
+let currentQrCode = null;
 let qrCodeDataUrl = null;
 let connectionState = "disconnected"; // 'disconnected' | 'connecting' | 'open' | 'qr_ready'
 let connectedPhone = null;
 let isInitializing = false;
+let saveCredsTimeout = null;
 
 function ensureDirExists(dir) {
     if (!fs.existsSync(dir)) {
@@ -130,54 +132,106 @@ async function initWABot(forceNew = false) {
             generateHighQualityLinkPreview: false
         });
 
-        sock.ev.on("creds.update", saveCreds);
+        const debouncedSaveCreds = () => {
+            if (saveCredsTimeout) clearTimeout(saveCredsTimeout);
+            saveCredsTimeout = setTimeout(async () => {
+                try {
+                    await saveCreds();
+                } catch (err) {
+                    console.error("[WABot] Error saving credentials:", err.message);
+                }
+            }, 500);
+        };
+
+        const flushSaveCreds = async () => {
+            if (saveCredsTimeout) {
+                clearTimeout(saveCredsTimeout);
+                saveCredsTimeout = null;
+                try {
+                    await saveCreds();
+                } catch (e) {}
+            }
+        };
+
+        sock.ev.on("creds.update", debouncedSaveCreds);
 
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
 
+            // Jangan me-reset string QR Code menjadi nilai baru jika status koneksi sedang berada pada fase 'connecting' setelah scan QR
             if (qr) {
-                try {
-                    qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
-                    connectionState = "qr_ready";
-                    isInitializing = false;
+                if (connectionState === "connecting" && !forceNew) {
+                    console.log("[WABot] QR code update diabaikan karena socket sedang dalam fase connecting / pairing handshake.");
+                } else {
+                    try {
+                        currentQrCode = qr;
+                        qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
+                        connectionState = "qr_ready";
+                        isInitializing = false;
 
-                    console.log("\n==================================================================");
-                    console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
-                    console.log("==================================================================");
-                    QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
-                        if (!err && terminalQR) {
-                            console.log(terminalQR);
-                        }
-                    });
-                    console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
-                    console.log("==================================================================\n");
-                } catch (e) {
-                    console.error("[WABot] QR generation error:", e);
+                        console.log("\n==================================================================");
+                        console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
+                        console.log("==================================================================");
+                        QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
+                            if (!err && terminalQR) {
+                                console.log(terminalQR);
+                            }
+                        });
+                        console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
+                        console.log("==================================================================\n");
+                    } catch (e) {
+                        console.error("[WABot] QR generation error:", e);
+                    }
                 }
             }
 
+            if (connection === "connecting") {
+                connectionState = "connecting";
+                console.log("[WABot] Status koneksi: connecting...");
+            }
+
             if (connection === "close") {
-                const statusCode = (lastDisconnect?.error)?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                console.log(`[WABot] Koneksi terputus: ${lastDisconnect?.error?.message}, auto-reconnect: ${shouldReconnect}`);
+                await flushSaveCreds();
+                const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
+                const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+                const isRestartRequired = statusCode === DisconnectReason.restartRequired; // 515
 
-                connectionState = "disconnected";
-                qrCodeDataUrl = null;
-                connectedPhone = null;
+                console.log(`[WABot] Koneksi terputus (Status: ${statusCode || 'unknown'}). Error: ${lastDisconnect?.error?.message}`);
 
-                if (shouldReconnect) {
+                // 1. Jika terputus karena LoggedOut (401), hapus sesi & jangan auto-reconnect
+                if (isLoggedOut) {
+                    console.log("[WABot] Sesi WhatsApp telah Logged Out. Membersihkan auth folder...");
+                    connectionState = "disconnected";
+                    currentQrCode = null;
+                    qrCodeDataUrl = null;
+                    connectedPhone = null;
                     isInitializing = false;
-                    setTimeout(() => initWABot(false), 4000);
-                } else {
                     try {
                         fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
                     } catch (e) {}
-                    isInitializing = false;
+                    return;
                 }
+
+                // 2. Jika restartRequired (515) karena proses pairing / pergantian sesi login baru,
+                // pertahankan QR / connecting state dan lakukan reconnect halus tanpa mereset ke fase baru
+                if (isRestartRequired) {
+                    console.log("[WABot] Restart required (handshake/pairing baru). Re-connecting Baileys socket...");
+                    connectionState = "connecting";
+                    isInitializing = false;
+                    setTimeout(() => initWABot(false), 1500);
+                    return;
+                }
+
+                // 3. Jika koneksi terputus karena timeout/network drop lainnya
+                connectionState = "disconnected";
+                isInitializing = false;
+                setTimeout(() => initWABot(false), 4000);
             } else if (connection === "open") {
+                await flushSaveCreds();
                 connectionState = "open";
+                currentQrCode = null;
                 qrCodeDataUrl = null;
-                connectedPhone = sock.user?.id ? sock.user.id.split(":")[0] : "Connected";
+                connectedPhone = sock.user?.id ? sock.user.id.split(":")[0] : (sock.user?.phone || "Connected");
                 console.log(`[WABot] 🚀 WhatsApp Bot Admin Terhubung sebagai: ${connectedPhone}`);
                 isInitializing = false;
             }
@@ -507,7 +561,7 @@ function getWAStatus() {
     let statusText = "Terputus";
     if (isConnected) {
         statusText = `Terhubung (${connectedPhone || 'Admin'})`;
-    } else if (connectionState === "qr_ready" && qrCodeDataUrl) {
+    } else if (connectionState === "qr_ready" && (qrCodeDataUrl || currentQrCode)) {
         statusText = "Menunggu Scan QR Code";
     } else if (connectionState === "connecting") {
         statusText = "Sedang Menghubungkan...";
@@ -516,8 +570,10 @@ function getWAStatus() {
     return {
         connected: isConnected,
         isConnected: isConnected,
+        status: isConnected ? "open" : connectionState,
         state: connectionState,
         connectedPhone: connectedPhone,
+        currentQrCode: currentQrCode,
         qrCode: qrCodeDataUrl,
         statusText: statusText
     };

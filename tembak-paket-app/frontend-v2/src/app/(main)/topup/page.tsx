@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import QRCode from "qrcode";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
@@ -26,6 +27,7 @@ export default function TopUpPage() {
 
   const [amount, setAmount] = useState<string>("100000");
   const [qrisData, setQrisData] = useState<any>(null);
+  const [renderedQrImage, setRenderedQrImage] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -34,13 +36,25 @@ export default function TopUpPage() {
 
   // Vouchers state
   const [vouchers, setVouchers] = useState<CouponItem[]>([]);
+  const [selectedVoucher, setSelectedVoucher] = useState<CouponItem | null>(null);
+  const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
+  const [coinsUsed, setCoinsUsed] = useState<number>(0);
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   // States for Timer & Polling
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(15 * 60);
   const [topUpId, setTopUpId] = useState<string | null>(null);
   const [isCheckingManual, setIsCheckingManual] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // Sound FX
+  const playSound = (type: "pop" | "success" | "click") => {
+    try {
+      const audio = new Audio(`/sounds/${type}.mp3`);
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    } catch (e) {}
+  };
 
   // Helper untuk trigger sukses
   const triggerSuccess = (newBalance?: number) => {
@@ -54,9 +68,28 @@ export default function TopUpPage() {
     }, 3500);
   };
 
-  // Gateway readiness state & Dual QRIS Provider Selection
+  // Gateway readiness state
   const [gatewayInfo, setGatewayInfo] = useState<{ active_gateway: string; is_ready: boolean; message: string } | null>(null);
-  const [selectedQrisProvider, setSelectedQrisProvider] = useState<'nobu' | 'gopay'>('nobu');
+
+  // Automatically render QR Code image if raw string is returned
+  useEffect(() => {
+    if (!qrisData) {
+      setRenderedQrImage("");
+      return;
+    }
+    const raw = qrisData.base64Image || qrisData.qris_image || qrisData.qris_code || "";
+    if (raw.startsWith("data:image/") || raw.startsWith("http://") || raw.startsWith("https://")) {
+      setRenderedQrImage(raw);
+    } else if (raw) {
+      QRCode.toDataURL(raw, {
+        margin: 2,
+        scale: 8,
+        color: { dark: "#000000", light: "#ffffff" },
+      })
+        .then((url) => setRenderedQrImage(url))
+        .catch(() => setRenderedQrImage(raw));
+    }
+  }, [qrisData]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -85,9 +118,6 @@ export default function TopUpPage() {
       .then((d) => {
         if (d && d.status && d.data) {
           setGatewayInfo(d.data);
-          if (d.data.active_gateway === 'gopay') {
-            setSelectedQrisProvider('gopay');
-          }
         }
       })
       .catch(() => {});
@@ -311,8 +341,8 @@ export default function TopUpPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: num,
-          gateway: selectedQrisProvider,
-          provider: selectedQrisProvider
+          gateway: 'auto',
+          provider: 'auto'
         }),
       });
       const data = await safeJson(res);
@@ -531,60 +561,32 @@ export default function TopUpPage() {
               </div>
             </div>
 
-            {/* Pilihan Provider QRIS (Nobu / Orkut vs GoPay Direct) */}
+            {/* Pilihan Pembayaran Tunggal: ⚡ Direct QRIS Otomatis (Semua Bank & E-Wallet) */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-ink flex items-center justify-between">
-                <span>Pilihan Gateway QRIS</span>
-                <span className="text-[10px] text-primary font-medium">Realtime Otomatis</span>
+                <span>Metode Pembayaran</span>
+                <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  REALTIME 24 JAM
+                </span>
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedQrisProvider('nobu')}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                    selectedQrisProvider === 'nobu'
-                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                      : 'border-hairline bg-canvas hover:bg-parchment/60'
-                  }`}
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-ink">QRIS Nobu / All Bank</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">SEMUA BANK</span>
-                    </div>
-                    <p className="text-[10px] text-ink-muted leading-tight">Merchant: <b>RYYSTORE OK2285905</b></p>
-                    <p className="text-[9px] text-ink-muted">BCA, Mandiri, BRI, BNI, Dana, ShopeePay</p>
-                  </div>
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                    selectedQrisProvider === 'nobu' ? 'border-primary bg-primary text-white' : 'border-hairline'
-                  }`}>
-                    {selectedQrisProvider === 'nobu' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                  </div>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedQrisProvider('gopay')}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                    selectedQrisProvider === 'gopay'
-                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                      : 'border-hairline bg-canvas hover:bg-parchment/60'
-                  }`}
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-ink">QRIS GoPay Direct</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">INSTANT</span>
-                    </div>
-                    <p className="text-[10px] text-ink-muted leading-tight">Merchant: <b>RyyStore IT Solutions</b></p>
-                    <p className="text-[9px] text-ink-muted">Scan via aplikasi Gojek / GoPay</p>
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-left flex items-center justify-between shadow-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                      <span className="text-sm">⚡</span> Direct QRIS Otomatis (Semua Bank &amp; E-Wallet)
+                    </span>
                   </div>
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                    selectedQrisProvider === 'gopay' ? 'border-primary bg-primary text-white' : 'border-hairline'
-                  }`}>
-                    {selectedQrisProvider === 'gopay' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                  </div>
-                </button>
+                  <p className="text-[11px] text-emerald-800 font-medium">
+                    BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay &amp; LinkAja
+                  </p>
+                  <p className="text-[10px] text-ink-muted">
+                    Bebas Biaya Admin • Terhubung Otomatis
+                  </p>
+                </div>
+                <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">
+                  ✓
+                </div>
               </div>
             </div>
 
@@ -615,7 +617,7 @@ export default function TopUpPage() {
                   Rp {qrisData.uniqueAmount.toLocaleString("id-ID")}
                 </p>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold">
-                  <span>Merchant: {qrisData.merchant || (selectedQrisProvider === 'gopay' ? 'RyyStore IT Solutions' : 'RYYSTORE OK2285905')}</span>
+                  <span>Merchant: {qrisData.merchant || 'Direct QRIS Otomatis'}</span>
                 </div>
               </div>
             </div>
@@ -629,15 +631,29 @@ export default function TopUpPage() {
                 {formatTime(timeLeft)}
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrisData.base64Image} alt="QRIS Code" className="w-full h-full object-contain" />
+              <img
+                src={renderedQrImage || qrisData.base64Image}
+                alt="QRIS Code"
+                onError={async () => {
+                  const raw = qrisData.qris_code || qrisData.base64Image;
+                  if (raw) {
+                    try {
+                      const fallback = await QRCode.toDataURL(raw, { margin: 2, scale: 8 });
+                      setRenderedQrImage(fallback);
+                    } catch (e) {}
+                  }
+                }}
+                className="w-full h-full object-contain"
+              />
             </div>
 
             <button
               type="button"
               onClick={() => {
-                if (!qrisData.base64Image) return;
+                const imgToDownload = renderedQrImage || qrisData.base64Image;
+                if (!imgToDownload) return;
                 const a = document.createElement("a");
-                a.href = qrisData.base64Image;
+                a.href = imgToDownload;
                 a.download = `QRIS-Topup-${qrisData.uniqueAmount}.png`;
                 document.body.appendChild(a);
                 a.click();
@@ -650,6 +666,11 @@ export default function TopUpPage() {
               </svg>
               <span>Unduh Gambar QRIS</span>
             </button>
+
+            {/* Informative Labeling */}
+            <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
+              Dapat di-scan menggunakan seluruh aplikasi Bank (BCA, Mandiri, BRI, BNI) dan E-Wallet (GoPay, OVO, DANA, ShopeePay, LinkAja).
+            </p>
 
             <div className="space-y-3 max-w-sm">
               <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex gap-2.5 text-left">

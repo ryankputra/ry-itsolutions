@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { PaymentLogosGrid } from "./PaymentLogos";
 import { playTopupSuccessSound, playPopSound } from "@/lib/soundFx";
 import Swal from "@/lib/sweetalert";
@@ -11,7 +12,7 @@ interface InstantQrisPaymentModalProps {
   amount: number;
   orderTitle?: string;
   onSuccess: () => void;
-  preferredGateway?: 'nobu' | 'gopay';
+  preferredGateway?: 'nobu' | 'gopay' | 'auto';
   existingQrisData?: {
     qris_image: string;
     qris_code: string;
@@ -27,11 +28,11 @@ export function InstantQrisPaymentModal({
   amount,
   orderTitle = "Pembayaran Pesanan Direct QRIS",
   onSuccess,
-  preferredGateway = 'nobu',
+  preferredGateway = 'auto',
   existingQrisData,
 }: InstantQrisPaymentModalProps) {
   const [loading, setLoading] = useState(false);
-  const [selectedGw, setSelectedGw] = useState<'nobu' | 'gopay'>(preferredGateway);
+  const [renderedQrImage, setRenderedQrImage] = useState<string>("");
   const [qrisData, setQrisData] = useState<{
     qris_image: string;
     qris_code: string;
@@ -43,14 +44,35 @@ export function InstantQrisPaymentModal({
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Automatically render QR code if payload string is given
   useEffect(() => {
-    setSelectedGw(preferredGateway);
-  }, [preferredGateway]);
+    if (!qrisData) {
+      setRenderedQrImage("");
+      return;
+    }
+
+    const raw = qrisData.qris_image || qrisData.qris_code || "";
+    if (raw.startsWith("data:image/") || raw.startsWith("http://") || raw.startsWith("https://")) {
+      setRenderedQrImage(raw);
+    } else if (raw) {
+      QRCode.toDataURL(raw, {
+        margin: 2,
+        scale: 8,
+        color: { dark: "#000000", light: "#ffffff" },
+      })
+        .then((url) => setRenderedQrImage(url))
+        .catch((err) => {
+          console.error("QR Code conversion error:", err);
+          setRenderedQrImage(raw);
+        });
+    }
+  }, [qrisData]);
 
   // Generate atau tampilkan Direct QRIS eksisting saat modal dibuka
   useEffect(() => {
     if (!isOpen) {
       setQrisData(null);
+      setRenderedQrImage("");
       return;
     }
 
@@ -71,20 +93,30 @@ export function InstantQrisPaymentModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ amount, gateway: selectedGw, provider: selectedGw }),
+      body: JSON.stringify({ amount, gateway: 'auto', provider: 'auto' }),
     })
       .then((res) => safeJson(res))
-      .then((data) => {
+      .then(async (data) => {
         if (!isMounted) return;
         if (data?.status && (data?.data || data?.qrisData)) {
           const qData = data.data || {};
           const qInfo = data.qrisData || {};
+          const rawImg = qData.qris_image || qInfo.base64Image || "";
+          const rawCode = qData.qris_code || qData.qris_image || qInfo.base64Image || "";
+
+          let resolvedImage = rawImg;
+          if (rawCode && (!rawImg || (!rawImg.startsWith("data:image/") && !rawImg.startsWith("http")))) {
+            try {
+              resolvedImage = await QRCode.toDataURL(rawCode, { margin: 2, scale: 8 });
+            } catch (e) {}
+          }
+
           setQrisData({
-            qris_image: qData.qris_image || qInfo.base64Image || "",
-            qris_code: qData.qris_code || qInfo.base64Image || "",
+            qris_image: resolvedImage,
+            qris_code: rawCode,
             unique_amount: qData.unique_amount || qInfo.uniqueAmount || amount,
             topup_id: qData.topup_id || data.topUpId || `TU-${Date.now()}`,
-            merchant: qData.merchant || qInfo.merchant || (selectedGw === 'gopay' ? 'RyyStore IT Solutions' : 'RYYSTORE OK2285905')
+            merchant: qData.merchant || qInfo.merchant || 'Direct QRIS Otomatis'
           });
         } else {
           Swal.fire({
@@ -111,7 +143,7 @@ export function InstantQrisPaymentModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, amount, existingQrisData, selectedGw]);
+  }, [isOpen, amount, existingQrisData]);
 
   // Realtime Polling & Listener Pemasukan Pembayaran SSE
   useEffect(() => {
@@ -216,33 +248,29 @@ export function InstantQrisPaymentModal({
                     Bebas Biaya Admin • QRIS 24 Jam
                   </span>
                   <span className="text-[10px] text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full inline-block">
-                    Merchant: {qrisData.merchant || (selectedGw === 'gopay' ? 'RyyStore IT Solutions' : 'RYYSTORE OK2285905')}
+                    Merchant: {qrisData.merchant || 'Direct QRIS Otomatis'}
                   </span>
                 </div>
               </div>
 
-              {/* Pilihan Provider QRIS */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setSelectedGw('nobu')}
-                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    selectedGw === 'nobu' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
-                  }`}
-                >
-                  <div className="font-bold">QRIS Nobu / All Bank</div>
-                  <div className="text-[9px] opacity-80">RYYSTORE OK2285905</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedGw('gopay')}
-                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    selectedGw === 'gopay' ? 'border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary' : 'border-hairline bg-canvas text-ink-muted hover:bg-parchment/60'
-                  }`}
-                >
-                  <div className="font-bold">QRIS GoPay Direct</div>
-                  <div className="text-[9px] opacity-80">RyyStore IT Solutions</div>
-                </button>
+              {/* Single Unified Gateway Card: ⚡ Direct QRIS Otomatis (Semua Bank & E-Wallet) */}
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-left flex items-center justify-between shadow-xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-emerald-900 flex items-center gap-1">
+                      <span>⚡</span> Direct QRIS Otomatis
+                    </span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold tracking-wider">
+                      SEMUA BANK &amp; E-WALLET
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-emerald-800 font-medium">
+                    Realtime 24 Jam • Bebas Biaya Admin • Instan
+                  </p>
+                </div>
+                <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">
+                  ✓
+                </div>
               </div>
 
               {/* Countdown Timer */}
@@ -253,21 +281,31 @@ export function InstantQrisPaymentModal({
                 <span>Batas Waktu Pembayaran: {formattedTime}</span>
               </div>
 
-              {/* QRIS Code Image Display */}
+              {/* QRIS Code Image Display with Robust Conversion */}
               <div className="relative p-3 rounded-2xl bg-white border border-slate-200 shadow-md inline-block mx-auto">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={qrisData.qris_image}
+                  src={renderedQrImage || qrisData.qris_image}
                   alt="QRIS Pembayaran Direct"
+                  onError={async () => {
+                    const raw = qrisData.qris_code || qrisData.qris_image;
+                    if (raw) {
+                      try {
+                        const fallbackUrl = await QRCode.toDataURL(raw, { margin: 2, scale: 8 });
+                        setRenderedQrImage(fallbackUrl);
+                      } catch (err) {}
+                    }
+                  }}
                   className="w-48 h-48 sm:w-56 sm:h-56 object-contain mx-auto"
                 />
                 <div className="mt-2.5 flex flex-col sm:flex-row items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      if (!qrisData.qris_image) return;
+                      const imgToDownload = renderedQrImage || qrisData.qris_image;
+                      if (!imgToDownload) return;
                       const a = document.createElement("a");
-                      a.href = qrisData.qris_image;
+                      a.href = imgToDownload;
                       a.download = `QRIS-${qrisData.unique_amount}.png`;
                       document.body.appendChild(a);
                       a.click();
@@ -284,7 +322,7 @@ export function InstantQrisPaymentModal({
 
                   <button
                     type="button"
-                    onClick={() => copyString(qrisData.qris_code)}
+                    onClick={() => copyString(qrisData.qris_code || qrisData.qris_image)}
                     className="text-[10px] font-bold text-slate-700 hover:text-primary transition-colors flex items-center gap-1 px-2 py-1"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -294,6 +332,11 @@ export function InstantQrisPaymentModal({
                   </button>
                 </div>
               </div>
+
+              {/* Informative Labeling as Requested */}
+              <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
+                Dapat di-scan menggunakan seluruh aplikasi Bank (BCA, Mandiri, BRI, BNI) dan E-Wallet (GoPay, OVO, DANA, ShopeePay, LinkAja).
+              </p>
 
               {/* Supported Banks & E-Wallet Icons */}
               <div className="space-y-1.5">
