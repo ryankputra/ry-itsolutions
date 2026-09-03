@@ -540,6 +540,7 @@ async function logoutWABot() {
             fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
         }
         qrCodeDataUrl = null;
+        currentQrCode = null;
         connectedPhone = null;
         connectionState = "disconnected";
         isInitializing = false;

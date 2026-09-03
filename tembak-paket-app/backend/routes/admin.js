@@ -1395,7 +1395,11 @@ router.post('/admin/gopay/logout', isAuthenticated, isAdmin, async (req, res) =>
         path.join(__dirname, '../../gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json'),
         path.join(__dirname, '../gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json'),
         path.resolve(process.cwd(), 'gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json'),
-        path.resolve(process.cwd(), '../gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json')
+        path.resolve(process.cwd(), '../gopay-gateway/.GOPAY_SESI_JANGAN_DIHAPUS.json'),
+        path.join(__dirname, '../../gopay-gateway/.gopay_cache.json'),
+        path.join(__dirname, '../gopay-gateway/.gopay_cache.json'),
+        path.resolve(process.cwd(), 'gopay-gateway/.gopay_cache.json'),
+        path.resolve(process.cwd(), '../gopay-gateway/.gopay_cache.json')
     ];
 
     let removed = false;
