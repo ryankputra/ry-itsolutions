@@ -1,4 +1,12 @@
 {
+  "name": "ry-itsolutions-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd tembak-paket-app/frontend-v2 && npm run build",
+    "build:frontend": "cd tembak-paket-app/frontend-v2 && npm run build",
+    "deploy": "git fetch --all && git reset --hard origin/main && cd tembak-paket-app/frontend-v2 && npm run build && pm2 restart frontend backend"
+  },
   "dependencies": {
     "form-data": "^4.0.3",
     "midtrans-client": "^1.4.3"
