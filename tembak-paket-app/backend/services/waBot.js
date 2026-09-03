@@ -115,8 +115,6 @@ async function initWABot(forceNew = false) {
     }
 
     clearConnectingTimer();
-    global.baileysStatus = "disconnected";
-    connectionState = "disconnected";
 
     try {
         ensureDirExists(SESSIONS_DIR);
@@ -135,6 +133,10 @@ async function initWABot(forceNew = false) {
             } catch (err) {
                 console.error("[WABot] Error resetting session:", err.message);
             }
+        } else {
+            // Handshake Protection: jangan reset status ke disconnected dan jangan kosongkan QR
+            connectionState = "connecting";
+            global.baileysStatus = "connecting";
         }
 
         let waVersion = [2, 3000, 1043857760];
@@ -248,11 +250,11 @@ async function initWABot(forceNew = false) {
                 await flushSaveCreds();
                 const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-                const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515 || statusCode === 428;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
                 console.log(`[WABot] Koneksi terputus (Status: ${statusCode || 'unknown'}). Error: ${lastDisconnect?.error?.message}`);
 
-                // 1. Jika terputus karena LoggedOut (401), hapus sesi & jangan auto-reconnect
+                // 1. HANYA jika terputus karena LoggedOut (401), hapus sesi & jangan auto-reconnect
                 if (isLoggedOut) {
                     console.log("[WABot] Sesi WhatsApp telah Logged Out. Membersihkan auth folder...");
                     connectionState = "disconnected";
@@ -268,21 +270,26 @@ async function initWABot(forceNew = false) {
                     return;
                 }
 
-                // 2. Jika restartRequired (515) atau 428 karena proses pairing
-                if (isRestartRequired) {
-                    console.log(`[WABot] Restart required / pairing (Status: ${statusCode}). Re-connecting Baileys socket tanpa mereset kredensial...`);
+                // 2. HANDSHAKE RECONNECT PROTECTION:
+                // Jika statusCode bernilai 408, 515, atau 428 (atau shouldReconnect bernilai true):
+                // - JANGAN set global.baileysStatus = 'disconnected'
+                // - Tetapkan global.baileysStatus = 'connecting'
+                // - Pertahankan QR code tetap stabil
+                // - Jalankan setTimeout(() => initWABot(false), 2000) tanpa membuang folder baileys_auth
+                if (statusCode === 408 || statusCode === 515 || statusCode === 428 || shouldReconnect) {
+                    console.log(`[WABot] Handshake reconnect protection active (Status: ${statusCode}). Menjaga status connecting & QR tetap stabil...`);
                     connectionState = "connecting";
                     global.baileysStatus = "connecting";
                     isInitializing = false;
-                    setTimeout(() => initWABot(false), 1500);
+                    setTimeout(() => initWABot(false), 2000);
                     return;
                 }
 
-                // 3. Jika koneksi terputus karena timeout/network drop lainnya
-                connectionState = "disconnected";
-                global.baileysStatus = "disconnected";
+                // Fallback reconnect
+                connectionState = "connecting";
+                global.baileysStatus = "connecting";
                 isInitializing = false;
-                setTimeout(() => initWABot(false), 4000);
+                setTimeout(() => initWABot(false), 3000);
             } else if (connection === "open") {
                 clearConnectingTimer();
                 await flushSaveCreds();

@@ -34,7 +34,7 @@ async function initWhatsApp(forceNew = false) {
         isInitializing = false;
     }
     if (isInitializing) {
-        console.log("[Baileys] Inisialisasi sedang berlangsung, melewati panggilan ganda.");
+        console.log("[Baileys] Inisialisasi sedang berjalan, abaikan panggilan simultan.");
         return;
     }
     isInitializing = true;
@@ -42,36 +42,39 @@ async function initWhatsApp(forceNew = false) {
     // 1. FORCE CLEANUP ON NEW INITIALIZATION
     try {
         if (sock) {
-            console.log("[Baileys] Membersihkan socket Baileys lama sebelum inisialisasi baru...");
+            console.log("[Baileys] Membersihkan socket Baileys lama...");
             try { sock.ev.removeAllListeners(); } catch (e) {}
             try { sock.end(undefined); } catch (e) {}
             sock = null;
         }
     } catch (err) {
-        console.warn("[Baileys] Warning membersihkan socket:", err.message);
+        console.warn("[Baileys] Warning socket cleanup:", err.message);
     }
 
     clearConnectingTimer();
-    global.baileysStatus = "disconnected";
-    connectionState = "disconnected";
+
+    if (forceNew) {
+        global.baileysStatus = "disconnected";
+        connectionState = "disconnected";
+        global.qrCode = null;
+        qrCodeDataUrl = null;
+        connectedPhone = null;
+        try {
+            fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
+            ensureDirExists(SESSIONS_DIR);
+            console.log("[Baileys] Sesi auth berhasil direset total.");
+        } catch (e) {
+            console.error("[Baileys] Error resetting auth folder:", e);
+        }
+    } else {
+        // Handshake Protection: jika bukan forceNew, jaga status tetap 'connecting'
+        // dan JANGAN kosongkan global.qrCode
+        connectionState = "connecting";
+        global.baileysStatus = "connecting";
+    }
 
     try {
         ensureDirExists(SESSIONS_DIR);
-
-        if (forceNew) {
-            try {
-                fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
-                ensureDirExists(SESSIONS_DIR);
-                qrCodeDataUrl = null;
-                global.qrCode = null;
-                connectedPhone = null;
-                connectionState = "disconnected";
-                global.baileysStatus = "disconnected";
-                console.log("[Baileys] Folder auth session berhasil direset.");
-            } catch (err) {
-                console.error("[Baileys] Error resetting session:", err);
-            }
-        }
 
         let waVersion = [2, 3000, 1043857760];
         try {
@@ -80,12 +83,11 @@ async function initWhatsApp(forceNew = false) {
                 waVersion = v.version;
             }
         } catch (e) {
-            console.warn("[Baileys] Using default version fallback:", e.message);
+            console.warn("[Baileys] Version fallback:", e.message);
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
 
-        // Buat instance socket baru
         sock = makeWASocket({
             version: waVersion,
             auth: state,
@@ -126,39 +128,29 @@ async function initWhatsApp(forceNew = false) {
                 global.baileysStatus = "connecting";
                 console.log("[Baileys] Status koneksi: connecting...");
 
-                // 3. TIMEOUT CONNECTING SAFETY:
-                // Jika status 'connecting' bertahan > 15 detik tanpa menjadi 'open', paksa reset dan re-init
+                // Timeout safety: jika stuck > 25 detik tanpa open, panggil ulang tanpa reset auth
                 clearConnectingTimer();
                 connectingTimer = setTimeout(() => {
                     if (connectionState === "connecting" || global.baileysStatus === "connecting") {
-                        console.warn("[Baileys] Status 'connecting' timeout (>15s). Memaksa reset & re-init Baileys socket...");
+                        console.warn("[Baileys] Connecting timeout (25s). Memulai ulang socket tanpa reset auth...");
                         clearConnectingTimer();
-                        try {
-                            if (sock) {
-                                sock.ev.removeAllListeners();
-                                sock.end(undefined);
-                                sock = null;
-                            }
-                        } catch (e) {}
-                        global.baileysStatus = "disconnected";
-                        connectionState = "disconnected";
                         isInitializing = false;
                         initWhatsApp(false);
                     }
-                }, 15000);
+                }, 25000);
             }
 
             if (connection === "close") {
                 clearConnectingTimer();
                 const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-                const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515 || statusCode === 428;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
                 console.log(`[Baileys] Connection closed (statusCode: ${statusCode}). Error: ${lastDisconnect?.error?.message}`);
 
-                // Terputus karena LoggedOut (401), bersihkan sesi
+                // HANYA set global.baileysStatus = 'disconnected' & hapus sesi jika 401 (Logged Out)
                 if (isLoggedOut) {
-                    console.log("[Baileys] Sesi WhatsApp telah Logged Out. Membersihkan sesi...");
+                    console.log("[Baileys] Sesi WhatsApp Logged Out (401). Membersihkan sesi...");
                     connectionState = "disconnected";
                     global.baileysStatus = "disconnected";
                     qrCodeDataUrl = null;
@@ -171,19 +163,25 @@ async function initWhatsApp(forceNew = false) {
                     return;
                 }
 
-                // Jika restartRequired (515) atau 428 (Pairing Handshake)
-                if (isRestartRequired) {
-                    console.log(`[Baileys] Restart required / pairing (Status: ${statusCode}). Menyambung ulang tanpa menghapus kredensial...`);
+                // 1. HANDSHAKE RECONNECT PROTECTION:
+                // Jika statusCode 408, 515, 428, atau shouldReconnect true:
+                // - JANGAN set global.baileysStatus = 'disconnected'
+                // - Tetapkan global.baileysStatus = 'connecting'
+                // - Pertahankan global.qrCode agar tidak berkedip error di frontend
+                // - Jalankan initBaileys() setelah jeda tanpa membuang baileys_auth
+                if (statusCode === 408 || statusCode === 515 || statusCode === 428 || shouldReconnect) {
+                    console.log(`[Baileys] Handshake reconnect protection (Status: ${statusCode}). Menjaga status connecting & QR tetap stabil...`);
                     connectionState = "connecting";
                     global.baileysStatus = "connecting";
+                    // Jangan null-kan global.qrCode di sini
                     isInitializing = false;
-                    setTimeout(() => initWhatsApp(false), 1500);
+                    setTimeout(() => initWhatsApp(false), 2000);
                     return;
                 }
 
-                // Drop koneksi lainnya
-                connectionState = "disconnected";
-                global.baileysStatus = "disconnected";
+                // Fallback reconnect umum
+                connectionState = "connecting";
+                global.baileysStatus = "connecting";
                 isInitializing = false;
                 setTimeout(() => initWhatsApp(false), 3000);
             } else if (connection === "open") {
@@ -201,8 +199,6 @@ async function initWhatsApp(forceNew = false) {
     } catch (error) {
         clearConnectingTimer();
         console.error("[Baileys] Init error:", error);
-        connectionState = "disconnected";
-        global.baileysStatus = "disconnected";
         isInitializing = false;
     }
 }
@@ -211,9 +207,7 @@ async function logoutWhatsApp() {
     clearConnectingTimer();
     try {
         if (sock) {
-            try {
-                await sock.logout();
-            } catch (e) {}
+            try { await sock.logout(); } catch (e) {}
             sock.ev.removeAllListeners();
             sock.end(undefined);
             sock = null;
@@ -250,7 +244,11 @@ function getStatus() {
         qr: currentQr,
         statusText: isConn
             ? `Terhubung (${connectedPhone || 'Admin'})`
-            : (currentState === 'scan_ready' || currentQr ? 'Scan QR Code' : (currentState === 'connecting' ? 'Menghubungkan...' : 'Sedang menyiapkan QR Code...'))
+            : (currentState === 'connecting'
+                ? 'Sedang Menautkan Perangkat WhatsApp...'
+                : (currentState === 'scan_ready' || currentQr
+                    ? 'Scan QR Code'
+                    : 'Sedang menyiapkan QR Code...'))
     };
 }
 
