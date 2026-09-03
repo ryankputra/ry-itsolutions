@@ -85,10 +85,32 @@ export default function AdminPage() {
       const d = await safeJson(res);
       if (d?.status) {
         const payload = d.data || d;
-        setBaileysStatus(payload);
-        setWaBotStatus(payload);
+        const isConn = Boolean(payload.isConnected || payload.connected || payload.state === 'open');
+        setBaileysStatus((prev) => {
+          // Jangan timpa qrCode jika status dari backend sedang 'connecting' atau 'open'
+          const isConnectingOrOpen = payload.state === 'connecting' || payload.state === 'open' || isConn;
+          const qr = isConn ? null : (isConnectingOrOpen ? (prev.qrCode || payload.qrCode) : payload.qrCode);
+          return {
+            ...payload,
+            isConnected: isConn,
+            connected: isConn,
+            qrCode: qr
+          };
+        });
+        setWaBotStatus((prev: any) => {
+          const isConnectingOrOpen = payload.state === 'connecting' || payload.state === 'open' || isConn;
+          const qr = isConn ? null : (isConnectingOrOpen ? (prev?.qrCode || payload.qrCode) : payload.qrCode);
+          return {
+            ...payload,
+            connected: isConn,
+            isConnected: isConn,
+            qrCode: qr
+          };
+        });
+        return isConn;
       }
     } catch (e) {}
+    return false;
   };
 
   const handleInitBaileys = async (forceNew = false) => {
@@ -100,15 +122,21 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify({ forceNew })
       });
-      await loadBaileysStatus();
+      const initialConnected = await loadBaileysStatus();
+      if (initialConnected) {
+        setLoadingBaileys(false);
+        return;
+      }
       
       // Fast polling loop to catch QR generation quickly (every 1.5s for 20s)
       let attempts = 0;
-      const interval = setInterval(async () => {
+      let interval: any = null;
+      interval = setInterval(async () => {
         attempts++;
-        await loadBaileysStatus();
-        if (attempts >= 15) {
-          clearInterval(interval);
+        const connected = await loadBaileysStatus();
+        // Hentikan interval polling (clearInterval) secara instan apabila API mengembalikan isConnected: true atau state: 'open'
+        if (connected || attempts >= 15) {
+          if (interval) clearInterval(interval);
         }
       }, 1500);
     } catch (e) {}
@@ -1299,19 +1327,53 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/wabot/status', { credentials: 'include' });
       const d = await safeJson(res);
       if (d?.status) {
-        setWaBotStatus(d);
+        const payload = d.data || d;
+        const isConn = Boolean(payload.connected || payload.isConnected || payload.state === 'open');
+        setWaBotStatus((prev: any) => {
+          // Jangan timpa qrCode jika status dari backend sedang 'connecting' atau 'open'
+          const isConnectingOrOpen = payload.state === 'connecting' || payload.state === 'open' || isConn;
+          const qr = isConn ? null : (isConnectingOrOpen ? (prev?.qrCode || payload.qrCode) : payload.qrCode);
+          return {
+            ...payload,
+            connected: isConn,
+            isConnected: isConn,
+            qrCode: qr
+          };
+        });
+        setBaileysStatus((prev) => {
+          const isConnectingOrOpen = payload.state === 'connecting' || payload.state === 'open' || isConn;
+          const qr = isConn ? null : (isConnectingOrOpen ? (prev.qrCode || payload.qrCode) : payload.qrCode);
+          return {
+            ...payload,
+            isConnected: isConn,
+            connected: isConn,
+            qrCode: qr
+          };
+        });
+        return isConn;
       }
     } catch (e) {
     } finally {
       setLoadingWaStatus(false);
     }
+    return false;
   };
 
   useEffect(() => {
     let interval: any = null;
     if (showWaModal) {
-      fetchWaBotStatus();
-      interval = setInterval(fetchWaBotStatus, 3000);
+      fetchWaBotStatus().then((connected) => {
+        if (connected && interval) {
+          clearInterval(interval);
+        }
+      });
+      interval = setInterval(async () => {
+        const connected = await fetchWaBotStatus();
+        // Hentikan interval polling (clearInterval) secara instan apabila API /api/admin/baileys/status mengembalikan isConnected: true atau state: 'open'
+        if (connected && interval) {
+          clearInterval(interval);
+        }
+      }, 3000);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -2221,15 +2283,25 @@ export default function AdminPage() {
                 <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold ${
                   waBotStatus?.connected || waBotStatus?.isConnected
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : waBotStatus?.state === 'connecting'
+                    ? 'bg-blue-50 text-blue-800 border-blue-200'
                     : waBotStatus?.qrCode
                     ? 'bg-amber-50 text-amber-800 border-amber-200'
                     : 'bg-slate-50 text-slate-700 border-slate-200'
                 }`}>
                   <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${waBotStatus?.connected || waBotStatus?.isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                    <span className={`w-2.5 h-2.5 rounded-full ${
+                      waBotStatus?.connected || waBotStatus?.isConnected 
+                        ? 'bg-emerald-500 animate-pulse' 
+                        : waBotStatus?.state === 'connecting'
+                        ? 'bg-blue-500 animate-pulse'
+                        : 'bg-amber-500'
+                    }`}></span>
                     <span>
                       {waBotStatus?.connected || waBotStatus?.isConnected
                         ? `Terhubung (${waBotStatus.connectedPhone || 'Admin'})`
+                        : waBotStatus?.state === 'connecting'
+                        ? 'Sedang Menautkan Perangkat WhatsApp...'
                         : waBotStatus?.statusText || 'Menunggu Scan QR Code'}
                     </span>
                   </div>

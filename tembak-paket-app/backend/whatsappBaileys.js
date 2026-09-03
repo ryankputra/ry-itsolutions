@@ -76,37 +76,74 @@ async function initWhatsApp(forceNew = false) {
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
 
+            // Stop QR rotation if currently in the middle of pairing, connecting, or already open
             if (qr) {
-                try {
-                    qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
-                    connectionState = "qr_ready";
-                    isInitializing = false;
-                    console.log("[Baileys] New QR Code generated ready for scan.");
-                } catch (e) {
-                    console.error("[Baileys] QR generation error:", e);
+                const isConnectingOrOpen = connectionState === "connecting" || connectionState === "open" || global.baileysStatus === "connecting" || global.baileysStatus === "open";
+                if (isConnectingOrOpen) {
+                    console.log("[Baileys] Sedang dalam proses pairing / connecting. Rotasi QR dihentikan.");
+                } else {
+                    try {
+                        qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
+                        connectionState = "qr_ready";
+                        global.baileysStatus = "qr_ready";
+                        global.qrCode = qrCodeDataUrl;
+                        isInitializing = false;
+                        console.log("[Baileys] New QR Code generated ready for scan.");
+                    } catch (e) {
+                        console.error("[Baileys] QR generation error:", e);
+                    }
                 }
             }
 
+            if (connection === "connecting") {
+                connectionState = "connecting";
+                global.baileysStatus = "connecting";
+                console.log("[Baileys] Status koneksi: connecting...");
+            }
+
             if (connection === "close") {
-                const statusCode = (lastDisconnect?.error)?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                console.log(`[Baileys] Connection closed due to: ${lastDisconnect?.error?.message}, reconnecting: ${shouldReconnect}`);
+                const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
+                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+                const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515 || statusCode === 428;
 
-                connectionState = "disconnected";
-                qrCodeDataUrl = null;
-                connectedPhone = null;
+                console.log(`[Baileys] Connection closed (statusCode: ${statusCode}). Error: ${lastDisconnect?.error?.message}`);
 
-                if (shouldReconnect) {
-                    isInitializing = false;
-                    setTimeout(() => initWhatsApp(false), 3000);
-                } else {
+                // Jika terputus karena LoggedOut (401), hapus sesi
+                if (isLoggedOut) {
+                    console.log("[Baileys] Sesi WhatsApp telah Logged Out. Membersihkan sesi...");
+                    connectionState = "disconnected";
+                    global.baileysStatus = "disconnected";
+                    qrCodeDataUrl = null;
+                    global.qrCode = null;
+                    connectedPhone = null;
                     try {
                         fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
                     } catch (e) {}
                     isInitializing = false;
+                    return;
                 }
+
+                // Jika restartRequired (515) atau 428:
+                // JANGAN hapus folder auth/session. Cukup panggil ulang initBaileys() tanpa mengosongkan kredensial.
+                // Set global.baileysStatus = 'connecting' saat pairing diproses.
+                if (isRestartRequired) {
+                    console.log(`[Baileys] Restart required / pairing (Status: ${statusCode}). Menyambung ulang tanpa menghapus kredensial...`);
+                    connectionState = "connecting";
+                    global.baileysStatus = "connecting";
+                    isInitializing = false;
+                    setTimeout(() => initWhatsApp(false), 1500);
+                    return;
+                }
+
+                // Drop koneksi lainnya
+                connectionState = "disconnected";
+                global.baileysStatus = "disconnected";
+                isInitializing = false;
+                setTimeout(() => initWhatsApp(false), 3000);
             } else if (connection === "open") {
                 connectionState = "open";
+                global.baileysStatus = "open";
+                global.qrCode = null;
                 qrCodeDataUrl = null;
                 connectedPhone = sock.user?.id ? sock.user.id.split(":")[0] : "Connected";
                 console.log(`[Baileys] WhatsApp Connected Successfully as ${connectedPhone}! 🚀`);
@@ -192,7 +229,9 @@ try {
 
 module.exports = {
     initWhatsApp,
+    initBaileys: initWhatsApp,
     logoutWhatsApp,
+    logoutBaileys: logoutWhatsApp,
     getStatus,
     sendTextMessage
 };

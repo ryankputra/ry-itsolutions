@@ -159,37 +159,45 @@ async function initWABot(forceNew = false) {
             const { connection, lastDisconnect, qr } = update;
 
             if (qr) {
-                try {
-                    currentQrCode = qr;
-                    qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
-                    connectionState = "qr_ready";
-                    isInitializing = false;
+                const isConnectingOrOpen = connectionState === "connecting" || connectionState === "open" || global.baileysStatus === "connecting" || global.baileysStatus === "open";
+                if (isConnectingOrOpen) {
+                    console.log("[WABot] Mengabaikan rotasi QR karena soket sedang dalam fase pairing / connecting / open.");
+                } else {
+                    try {
+                        currentQrCode = qr;
+                        qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
+                        connectionState = "qr_ready";
+                        global.baileysStatus = "qr_ready";
+                        global.qrCode = qrCodeDataUrl;
+                        isInitializing = false;
 
-                    console.log("\n==================================================================");
-                    console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
-                    console.log("==================================================================");
-                    QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
-                        if (!err && terminalQR) {
-                            console.log(terminalQR);
-                        }
-                    });
-                    console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
-                    console.log("==================================================================\n");
-                } catch (e) {
-                    console.error("[WABot] QR generation error:", e);
+                        console.log("\n==================================================================");
+                        console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
+                        console.log("==================================================================");
+                        QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
+                            if (!err && terminalQR) {
+                                console.log(terminalQR);
+                            }
+                        });
+                        console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
+                        console.log("==================================================================\n");
+                    } catch (e) {
+                        console.error("[WABot] QR generation error:", e);
+                    }
                 }
             }
 
             if (connection === "connecting") {
                 connectionState = "connecting";
+                global.baileysStatus = "connecting";
                 console.log("[WABot] Status koneksi: connecting...");
             }
 
             if (connection === "close") {
                 await flushSaveCreds();
                 const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
-                const isLoggedOut = statusCode === DisconnectReason.loggedOut;
-                const isRestartRequired = statusCode === DisconnectReason.restartRequired; // 515
+                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+                const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515 || statusCode === 428;
 
                 console.log(`[WABot] Koneksi terputus (Status: ${statusCode || 'unknown'}). Error: ${lastDisconnect?.error?.message}`);
 
@@ -197,8 +205,10 @@ async function initWABot(forceNew = false) {
                 if (isLoggedOut) {
                     console.log("[WABot] Sesi WhatsApp telah Logged Out. Membersihkan auth folder...");
                     connectionState = "disconnected";
+                    global.baileysStatus = "disconnected";
                     currentQrCode = null;
                     qrCodeDataUrl = null;
+                    global.qrCode = null;
                     connectedPhone = null;
                     isInitializing = false;
                     try {
@@ -207,11 +217,13 @@ async function initWABot(forceNew = false) {
                     return;
                 }
 
-                // 2. Jika restartRequired (515) karena proses pairing / pergantian sesi login baru,
-                // pertahankan QR / connecting state dan lakukan reconnect halus tanpa mereset ke fase baru
+                // 2. Jika restartRequired (515) atau 428 karena proses pairing / pergantian sesi login baru,
+                // JANGAN hapus folder auth/session. Cukup panggil ulang initWABot(false) tanpa mengosongkan kredensial.
+                // Set global.baileysStatus = 'connecting' saat pairing diproses.
                 if (isRestartRequired) {
-                    console.log("[WABot] Restart required (handshake/pairing baru). Re-connecting Baileys socket...");
+                    console.log(`[WABot] Restart required / pairing (Status: ${statusCode}). Re-connecting Baileys socket tanpa mereset kredensial...`);
                     connectionState = "connecting";
+                    global.baileysStatus = "connecting";
                     isInitializing = false;
                     setTimeout(() => initWABot(false), 1500);
                     return;
@@ -219,13 +231,16 @@ async function initWABot(forceNew = false) {
 
                 // 3. Jika koneksi terputus karena timeout/network drop lainnya
                 connectionState = "disconnected";
+                global.baileysStatus = "disconnected";
                 isInitializing = false;
                 setTimeout(() => initWABot(false), 4000);
             } else if (connection === "open") {
                 await flushSaveCreds();
                 connectionState = "open";
+                global.baileysStatus = "open";
                 currentQrCode = null;
                 qrCodeDataUrl = null;
+                global.qrCode = null;
                 connectedPhone = sock.user?.id ? sock.user.id.split(":")[0] : (sock.user?.phone || "Connected");
                 console.log(`[WABot] 🚀 WhatsApp Bot Admin Terhubung sebagai: ${connectedPhone}`);
                 isInitializing = false;
