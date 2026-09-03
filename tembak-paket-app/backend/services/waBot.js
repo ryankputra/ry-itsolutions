@@ -21,10 +21,21 @@ const SESSIONS_DIR = path.join(__dirname, "..", "sessions", "baileys_auth");
 let sock = null;
 let currentQrCode = null;
 let qrCodeDataUrl = null;
-let connectionState = "disconnected"; // 'disconnected' | 'connecting' | 'open' | 'qr_ready'
+let connectionState = "disconnected"; // 'disconnected' | 'connecting' | 'scan_ready' | 'open'
 let connectedPhone = null;
 let isInitializing = false;
 let saveCredsTimeout = null;
+let connectingTimer = null;
+
+global.baileysStatus = "disconnected";
+global.qrCode = null;
+
+function clearConnectingTimer() {
+    if (connectingTimer) {
+        clearTimeout(connectingTimer);
+        connectingTimer = null;
+    }
+}
 
 function ensureDirExists(dir) {
     if (!fs.existsSync(dir)) {
@@ -85,24 +96,42 @@ async function initWABot(forceNew = false) {
     if (forceNew) {
         isInitializing = false;
     }
-    if (isInitializing) return;
+    if (isInitializing) {
+        console.log("[WABot] Inisialisasi sedang berlangsung, melewati panggilan ganda.");
+        return;
+    }
     isInitializing = true;
+
+    // 1. FORCE CLEANUP ON NEW INITIALIZATION
+    try {
+        if (sock) {
+            console.log("[WABot] Membersihkan socket Baileys lama sebelum inisialisasi baru...");
+            try { sock.ev.removeAllListeners(); } catch (e) {}
+            try { sock.end(undefined); } catch (e) {}
+            sock = null;
+        }
+    } catch (err) {
+        console.warn("[WABot] Warning membersihkan socket:", err.message);
+    }
+
+    clearConnectingTimer();
+    global.baileysStatus = "disconnected";
+    connectionState = "disconnected";
 
     try {
         ensureDirExists(SESSIONS_DIR);
 
         if (forceNew) {
             try {
-                if (sock) {
-                    sock.ev.removeAllListeners();
-                    sock.end();
-                    sock = null;
-                }
                 fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
                 ensureDirExists(SESSIONS_DIR);
                 qrCodeDataUrl = null;
+                currentQrCode = null;
+                global.qrCode = null;
                 connectedPhone = null;
                 connectionState = "disconnected";
+                global.baileysStatus = "disconnected";
+                console.log("[WABot] Folder auth session berhasil direset.");
             } catch (err) {
                 console.error("[WABot] Error resetting session:", err.message);
             }
@@ -158,18 +187,18 @@ async function initWABot(forceNew = false) {
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
 
+            // 2. LOGIKA GENERATE QR CODE: Izinkan pembuatan QR Code jika status BUKAN 'open'
             if (qr) {
-                const isConnectingOrOpen = connectionState === "connecting" || connectionState === "open" || global.baileysStatus === "connecting" || global.baileysStatus === "open";
-                if (isConnectingOrOpen) {
-                    console.log("[WABot] Mengabaikan rotasi QR karena soket sedang dalam fase pairing / connecting / open.");
-                } else {
+                const isOpen = connectionState === "open" || global.baileysStatus === "open";
+                if (!isOpen) {
                     try {
                         currentQrCode = qr;
                         qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
-                        connectionState = "qr_ready";
-                        global.baileysStatus = "qr_ready";
+                        connectionState = "scan_ready";
+                        global.baileysStatus = "scan_ready";
                         global.qrCode = qrCodeDataUrl;
                         isInitializing = false;
+                        clearConnectingTimer();
 
                         console.log("\n==================================================================");
                         console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
@@ -191,9 +220,31 @@ async function initWABot(forceNew = false) {
                 connectionState = "connecting";
                 global.baileysStatus = "connecting";
                 console.log("[WABot] Status koneksi: connecting...");
+
+                // 3. TIMEOUT CONNECTING SAFETY:
+                // Jika status 'connecting' bertahan > 15 detik tanpa berubah menjadi 'open', paksa reset & panggil ulang initWABot()
+                clearConnectingTimer();
+                connectingTimer = setTimeout(() => {
+                    if (connectionState === "connecting" || global.baileysStatus === "connecting") {
+                        console.warn("[WABot] Status 'connecting' timeout (>15s). Memaksa reset & re-init Baileys socket...");
+                        clearConnectingTimer();
+                        try {
+                            if (sock) {
+                                sock.ev.removeAllListeners();
+                                sock.end(undefined);
+                                sock = null;
+                            }
+                        } catch (e) {}
+                        global.baileysStatus = "disconnected";
+                        connectionState = "disconnected";
+                        isInitializing = false;
+                        initWABot(false);
+                    }
+                }, 15000);
             }
 
             if (connection === "close") {
+                clearConnectingTimer();
                 await flushSaveCreds();
                 const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
@@ -217,9 +268,7 @@ async function initWABot(forceNew = false) {
                     return;
                 }
 
-                // 2. Jika restartRequired (515) atau 428 karena proses pairing / pergantian sesi login baru,
-                // JANGAN hapus folder auth/session. Cukup panggil ulang initWABot(false) tanpa mengosongkan kredensial.
-                // Set global.baileysStatus = 'connecting' saat pairing diproses.
+                // 2. Jika restartRequired (515) atau 428 karena proses pairing
                 if (isRestartRequired) {
                     console.log(`[WABot] Restart required / pairing (Status: ${statusCode}). Re-connecting Baileys socket tanpa mereset kredensial...`);
                     connectionState = "connecting";
@@ -235,6 +284,7 @@ async function initWABot(forceNew = false) {
                 isInitializing = false;
                 setTimeout(() => initWABot(false), 4000);
             } else if (connection === "open") {
+                clearConnectingTimer();
                 await flushSaveCreds();
                 connectionState = "open";
                 global.baileysStatus = "open";
@@ -568,24 +618,27 @@ async function logoutWABot() {
 }
 
 function getWAStatus() {
-    const isConnected = connectionState === "open";
+    const isConnected = connectionState === "open" || global.baileysStatus === "open";
+    const currentQr = global.qrCode || qrCodeDataUrl || currentQrCode;
+    const currentState = isConnected ? "open" : (global.baileysStatus || connectionState);
     let statusText = "Terputus";
     if (isConnected) {
         statusText = `Terhubung (${connectedPhone || 'Admin'})`;
-    } else if (connectionState === "qr_ready" && (qrCodeDataUrl || currentQrCode)) {
+    } else if ((currentState === "qr_ready" || currentState === "scan_ready" || global.baileysStatus === "scan_ready") && currentQr) {
         statusText = "Menunggu Scan QR Code";
-    } else if (connectionState === "connecting") {
+    } else if (currentState === "connecting") {
         statusText = "Sedang Menghubungkan...";
     }
 
     return {
         connected: isConnected,
         isConnected: isConnected,
-        status: isConnected ? "open" : connectionState,
-        state: connectionState,
+        status: isConnected ? "open" : currentState,
+        state: currentState,
         connectedPhone: connectedPhone,
         currentQrCode: currentQrCode,
-        qrCode: qrCodeDataUrl,
+        qrCode: global.qrCode || qrCodeDataUrl,
+        qr: global.qrCode || qrCodeDataUrl,
         statusText: statusText
     };
 }
