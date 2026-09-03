@@ -63,8 +63,16 @@ export default function AdminPage() {
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
 
   // Baileys WhatsApp Bot State (100% Gratis & Unlimited)
-  const [baileysStatus, setBaileysStatus] = useState<{ isConnected: boolean, state: string, connectedPhone: string | null, qrCode: string | null }>({
+  interface BaileysStatusState {
+    isConnected: boolean;
+    connected?: boolean;
+    state: string;
+    connectedPhone: string | null;
+    qrCode: string | null;
+  }
+  const [baileysStatus, setBaileysStatus] = useState<BaileysStatusState>({
     isConnected: false,
+    connected: false,
     state: "disconnected",
     connectedPhone: null,
     qrCode: null
@@ -124,7 +132,7 @@ export default function AdminPage() {
       const d = await safeJson(res);
       if (d?.status || d?.success) {
         Swal.fire({ title: "Terputus", text: d?.message || "WhatsApp bot telah logout.", icon: "info", timer: 1500 });
-        setBaileysStatus({ isConnected: false, connected: false, state: 'disconnected', qrCode: null });
+        setBaileysStatus({ isConnected: false, connected: false, state: 'disconnected', connectedPhone: null, qrCode: null });
         setWaBotStatus({ isConnected: false, connected: false, state: 'disconnected', qrCode: null });
         await loadBaileysStatus();
       } else {
@@ -138,7 +146,7 @@ export default function AdminPage() {
   };
 
   // GoPay Gateway & Web OTP State
-  const [gopayStatus, setGopayStatus] = useState<{
+  interface GopayStatusState {
     is_configured: boolean;
     token_status: string;
     message: string;
@@ -146,7 +154,8 @@ export default function AdminPage() {
     outlet_name?: string;
     phone_number?: string;
     expires_at?: string;
-  } | null>(null);
+  }
+  const [gopayStatus, setGopayStatus] = useState<GopayStatusState | null>(null);
   const [loadingGopay, setLoadingGopay] = useState(false);
   const [gopayPhone, setGopayPhone] = useState("082342392781");
   const [gopayOtp, setGopayOtp] = useState("");

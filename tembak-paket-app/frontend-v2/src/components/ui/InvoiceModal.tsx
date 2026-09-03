@@ -24,6 +24,8 @@ interface InvoiceData {
     notice?: string | null;
   };
   adminNote?: string;
+  speed?: string;
+  speed_option?: string;
   ceirData?: {
     gateway?: string;
     status?: string;
