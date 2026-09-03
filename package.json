@@ -5,7 +5,7 @@
   "scripts": {
     "build": "cd tembak-paket-app/frontend-v2 && npm run build",
     "build:frontend": "cd tembak-paket-app/frontend-v2 && npm run build",
-    "deploy": "git fetch --all && git reset --hard origin/main && cd tembak-paket-app/frontend-v2 && npm run build && pm2 restart frontend backend"
+    "deploy": "git fetch --all && git reset --hard origin/main && pm2 restart all"
   },
   "dependencies": {
     "form-data": "^4.0.3",

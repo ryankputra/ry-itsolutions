@@ -399,9 +399,9 @@ export default function AdminPage() {
                 const ping = await fetch('/api/admin/menu-settings', { credentials: 'include' });
                 if (ping.ok) {
                   clearInterval(reconnectInterval);
-                  setDeployLogs(prev => prev + "\n[SISTEM] Koneksi terhubung kembali! Update Sukses. Silakan Muat Ulang Halaman.\n");
+                  setDeployLogs(prev => prev + "\n[SISTEM] Koneksi terhubung kembali! Deploy Berhasil Tanpa Rebuild! Silakan Muat Ulang Halaman.\n");
                   setIsDeploying(false);
-                  Swal.fire("Sukses!", "Server berhasil diperbarui dan kembali online!", "success");
+                  Swal.fire("Sukses!", "Deploy Berhasil Tanpa Rebuild! Server telah diperbarui dan kembali online.", "success");
                 }
               } catch (e) {
                 if (checkCount > 20) {
@@ -4310,7 +4310,7 @@ export default function AdminPage() {
                   onClick={() => {
                     Swal.fire({
                       title: 'Mulai Auto Deploy?',
-                      text: 'Server akan menarik update kode terbaru dari GitHub dan rebuild aplikasi otomatis.',
+                      text: 'Server akan menarik commit & bundle produksi terbaru dari GitHub lalu restart PM2 secara instan (Tanpa Rebuild).',
                       icon: 'question',
                       showCancelButton: true,
                       confirmButtonText: 'Ya, Jalankan Deploy',

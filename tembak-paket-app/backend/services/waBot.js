@@ -158,30 +158,25 @@ async function initWABot(forceNew = false) {
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
 
-            // Jangan me-reset string QR Code menjadi nilai baru jika status koneksi sedang berada pada fase 'connecting' setelah scan QR
             if (qr) {
-                if (connectionState === "connecting" && !forceNew) {
-                    console.log("[WABot] QR code update diabaikan karena socket sedang dalam fase connecting / pairing handshake.");
-                } else {
-                    try {
-                        currentQrCode = qr;
-                        qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
-                        connectionState = "qr_ready";
-                        isInitializing = false;
+                try {
+                    currentQrCode = qr;
+                    qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
+                    connectionState = "qr_ready";
+                    isInitializing = false;
 
-                        console.log("\n==================================================================");
-                        console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
-                        console.log("==================================================================");
-                        QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
-                            if (!err && terminalQR) {
-                                console.log(terminalQR);
-                            }
-                        });
-                        console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
-                        console.log("==================================================================\n");
-                    } catch (e) {
-                        console.error("[WABot] QR generation error:", e);
-                    }
+                    console.log("\n==================================================================");
+                    console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
+                    console.log("==================================================================");
+                    QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
+                        if (!err && terminalQR) {
+                            console.log(terminalQR);
+                        }
+                    });
+                    console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
+                    console.log("==================================================================\n");
+                } catch (e) {
+                    console.error("[WABot] QR generation error:", e);
                 }
             }
 

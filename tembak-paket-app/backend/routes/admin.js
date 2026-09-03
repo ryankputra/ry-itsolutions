@@ -1099,7 +1099,6 @@ router.delete('/admin/tickets/:id', isAuthenticated, isAdmin, async (req, res) =
 // 22. Admin Auto Deploy Trigger & Log
 router.post('/admin/deploy', isAuthenticated, isAdmin, async (req, res) => {
     const repoRoot = path.resolve(__dirname, '../../..');
-    const frontendDir = path.join(repoRoot, 'tembak-paket-app', 'frontend-v2');
     const logPath = path.join(__dirname, '..', 'deploy.log');
 
     // Immediately respond so frontend opens the deployment console
@@ -1113,7 +1112,7 @@ router.post('/admin/deploy', isAuthenticated, isAdmin, async (req, res) => {
 
     // Initialize clean log
     try {
-        fs.writeFileSync(logPath, `[DEPLOY] ${new Date().toLocaleString('id-ID')}: Memulai auto-deploy dari GitHub...\n`);
+        fs.writeFileSync(logPath, `[DEPLOY] ${new Date().toLocaleString('id-ID')}: Memulai auto-deploy cepat (Tanpa Rebuild)...\n`);
         appendLog(`[DEPLOY] Direktori Repo: ${repoRoot}\n\n`);
     } catch (e) {
         console.error("Failed to write deploy.log:", e);
@@ -1122,9 +1121,8 @@ router.post('/admin/deploy', isAuthenticated, isAdmin, async (req, res) => {
     // Execute commands sequentially
     const { spawn } = require('child_process');
 
-    const runCmd = (cmd, args, cwd) => {
+    const runCmd = (fullCmd, cwd) => {
         return new Promise((resolve, reject) => {
-            const fullCmd = `${cmd} ${args.join(' ')}`;
             appendLog(`$ ${fullCmd}\n`);
             const proc = spawn(fullCmd, { cwd, shell: true });
 
@@ -1138,7 +1136,7 @@ router.post('/admin/deploy', isAuthenticated, isAdmin, async (req, res) => {
 
             proc.on('close', (code) => {
                 if (code === 0) resolve();
-                else reject(new Error(`Command ${cmd} exited with code ${code}`));
+                else reject(new Error(`Command '${fullCmd}' exited with code ${code}`));
             });
 
             proc.on('error', (err) => {
@@ -1150,15 +1148,15 @@ router.post('/admin/deploy', isAuthenticated, isAdmin, async (req, res) => {
 
     (async () => {
         try {
-            appendLog("[DEPLOY] Langkah 1/2: Menarik commit terbaru dari branch origin/main...\n");
-            await runCmd('git', ['fetch', '--all'], repoRoot);
-            await runCmd('git', ['reset', '--hard', 'origin/main'], repoRoot);
+            appendLog("[DEPLOY] Langkah 1/2: Menarik commit terbaru & bundle produksi dari origin/main...\n");
+            await runCmd('git fetch --all', repoRoot);
+            await runCmd('git reset --hard origin/main', repoRoot);
 
-            appendLog("\n[DEPLOY] Langkah 2/2: Mengompilasi frontend Next.js (npm run build)...\n");
-            await runCmd('npm', ['run', 'build'], frontendDir);
+            appendLog("\n[DEPLOY] Langkah 2/2: Memuat ulang runner service (PM2)...\n");
+            await runCmd('pm2 restart all || pm2 restart frontend backend', repoRoot);
 
             appendLog("\n=========================================\n");
-            appendLog("[DEPLOY] SELESAI DENGAN KODE 0: Pembaruan aplikasi berhasil dipasang!\n");
+            appendLog("[DEPLOY] SELESAI DENGAN KODE 0: Deploy Berhasil Tanpa Rebuild!\n");
             appendLog("=========================================\n");
         } catch (err) {
             appendLog(`\n[DEPLOY] ERROR: ${err.message}\n`);
