@@ -157,6 +157,7 @@ app.use('/api', adminRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api', gameRoutes);
 app.use('/api', telegramRoutes.router);
+app.use('/api/webhook', webhookRoutes);
 app.use('/api', webhookRoutes);
 
 // WhatsApp Admin Bot Control Endpoints

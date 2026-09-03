@@ -27,7 +27,7 @@ function findRepoRoot() {
  * Public webhook endpoint for automated GitHub CI/CD deployments.
  * Authentication is enforced via secret query param: ?secret=RyITSolutionsAutoDeploy2026
  */
-router.post('/webhook/deploy', (req, res) => {
+router.post(['/deploy', '/webhook/deploy'], (req, res) => {
     const providedSecret = req.query.secret || req.body?.secret || req.headers['x-webhook-secret'];
 
     if (!providedSecret || providedSecret !== WEBHOOK_SECRET) {
@@ -74,7 +74,7 @@ router.post('/webhook/deploy', (req, res) => {
  * GET /api/webhook/deploy
  * Health check / ping test endpoint for GitHub Webhook verification
  */
-router.get('/webhook/deploy', (req, res) => {
+router.get(['/deploy', '/webhook/deploy'], (req, res) => {
     const providedSecret = req.query.secret || req.headers['x-webhook-secret'];
     if (!providedSecret || providedSecret !== WEBHOOK_SECRET) {
         return res.status(403).json({

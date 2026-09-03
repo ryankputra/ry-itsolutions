@@ -3,6 +3,7 @@ const axios = require('axios');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 require('dotenv').config();
 const sessionManager = require('./sessionManager');
 
@@ -939,6 +940,66 @@ app.all('/check-payment', apiKeyAuth, async (req, res) => {
 // Logs Endpoint
 app.get('/api/logs', apiKeyAuth, (req, res) => {
     res.json({ success: true, logs: activityLogs });
+});
+
+// GitHub Webhook Auto Deploy Endpoint on port 3002
+app.post(['/api/webhook/deploy', '/webhook/deploy', '/api/deploy'], (req, res) => {
+    const providedSecret = req.query.secret || req.body?.secret || req.headers['x-webhook-secret'];
+    const expectedSecret = process.env.AUTO_DEPLOY_SECRET || 'RyITSolutionsAutoDeploy2026';
+
+    if (!providedSecret || providedSecret !== expectedSecret) {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: Secret token tidak valid atau tidak disertakan.'
+        });
+    }
+
+    const repoCandidates = [
+        path.resolve(__dirname, '../../'),
+        path.resolve(__dirname, '../'),
+        path.resolve(process.cwd(), '../../'),
+        path.resolve(process.cwd(), '../')
+    ];
+    let repoRoot = path.resolve(__dirname, '../../');
+    for (const c of repoCandidates) {
+        if (fs.existsSync(path.join(c, '.git'))) {
+            repoRoot = c;
+            break;
+        }
+    }
+
+    res.status(200).json({
+        success: true,
+        status: true,
+        message: "Auto deploy triggered successfully!",
+        repo_root: repoRoot,
+        port: PORT,
+        timestamp: new Date().toISOString()
+    });
+
+    setImmediate(() => {
+        const cmd = 'git fetch --all && git reset --hard origin/main && (pm2 restart all || pm2 restart frontend backend)';
+        exec(cmd, { cwd: repoRoot, shell: true }, (err, stdout, stderr) => {
+            if (err) {
+                console.error('[WEBHOOK_DEPLOY_3002] Error:', err.message);
+                return;
+            }
+            console.log('[WEBHOOK_DEPLOY_3002] Success:\n', stdout);
+        });
+    });
+});
+
+app.get(['/api/webhook/deploy', '/webhook/deploy'], (req, res) => {
+    const providedSecret = req.query.secret || req.headers['x-webhook-secret'];
+    const expectedSecret = process.env.AUTO_DEPLOY_SECRET || 'RyITSolutionsAutoDeploy2026';
+    if (!providedSecret || providedSecret !== expectedSecret) {
+        return res.status(403).json({ success: false, message: 'Forbidden: Gunakan parameter ?secret=' + expectedSecret });
+    }
+    res.json({
+        success: true,
+        message: 'Webhook Auto Deploy endpoint aktif pada port 3002.',
+        port: PORT
+    });
 });
 
 app.listen(PORT, () => {
