@@ -59,7 +59,10 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
 
   const fetchReviews = () => {
     setLoading(true);
-    fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`, { credentials: "include" })
+    fetch(`/api/reviews?productId=${encodeURIComponent(productId)}&_t=${Date.now()}`, {
+      cache: "no-store",
+      credentials: "include"
+    })
       .then(safeJson)
       .then((data) => {
         if (data?.status && Array.isArray(data.reviews)) {
@@ -75,6 +78,25 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
       .finally(() => setLoading(false));
   };
 
+  const handleReviewSubmitted = (newReview?: Review) => {
+    if (newReview) {
+      setReviewsData((prev) => {
+        const currentReviews = prev?.reviews || [];
+        const updatedReviews = [newReview, ...currentReviews.filter((r) => r.id !== newReview.id)];
+        return {
+          summary: {
+            averageRating: updatedReviews.length
+              ? Number((updatedReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / updatedReviews.length).toFixed(1))
+              : newReview.rating,
+            totalReviews: updatedReviews.length
+          },
+          reviews: updatedReviews
+        };
+      });
+    }
+    fetchReviews();
+  };
+
   useEffect(() => {
     try {
       const savedIds = JSON.parse(localStorage.getItem("liked_reviews_ids") || "[]");
@@ -86,10 +108,32 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
 
   const handleWriteReviewClick = async () => {
     try {
-      const data = await safeJson(await fetch(`/api/reviews/check-eligibility?productId=${encodeURIComponent(productId)}`, { credentials: "include" }));
-      if (data?.status && data.canReview) return setShowWriteModal(true);
+      const res = await fetch(`/api/reviews/check-eligibility?productId=${encodeURIComponent(productId)}&_t=${Date.now()}`, {
+        cache: "no-store",
+        credentials: "include"
+      });
+      if (res.status === 401) {
+        Swal.fire({
+          title: "Silakan Login",
+          text: "Silakan masuk ke akun Anda terlebih dahulu untuk memberikan ulasan dan klaim bonus +500 Koin.",
+          icon: "info",
+          showCancelButton: true,
+          confirmButtonText: "Login Sekarang",
+          cancelButtonText: "Batal",
+          confirmButtonColor: "#0066cc",
+        }).then((r) => {
+          if (r.isConfirmed) {
+            window.location.href = "/login";
+          }
+        });
+        return;
+      }
+      const data = await safeJson(res);
+      if (data?.status && data.canReview) {
+        return setShowWriteModal(true);
+      }
     } catch {}
-    Swal.fire({ title: "Khusus Pembeli Terverifikasi", text: "Ulasan hanya dapat ditulis setelah transaksi sukses di Ry-ITSolutions.", icon: "info", confirmButtonText: "Mengerti", confirmButtonColor: "#0066cc" });
+    setShowWriteModal(true);
   };
 
   const handleLike = async (id: string) => {
@@ -139,7 +183,7 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
         </article>;
       })}
     </div>}
-    <WriteReviewModal isOpen={showWriteModal} onClose={() => setShowWriteModal(false)} productId={productId} onReviewSubmitted={fetchReviews} />
+    <WriteReviewModal isOpen={showWriteModal} onClose={() => setShowWriteModal(false)} productId={productId} onReviewSubmitted={handleReviewSubmitted} />
     <UserProfileModal isOpen={Boolean(selectedProfileUser)} onClose={() => setSelectedProfileUser(null)} user={selectedProfileUser || undefined} />
   </section>;
 }

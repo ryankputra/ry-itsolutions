@@ -246,12 +246,11 @@ async function getCustomerPhoneForTransaction(trx) {
     }
     if (trx.userId) {
         try {
-            const userRow = await dbGet("SELECT phone, verifiedPhone FROM users WHERE id = ?", [trx.userId]);
+            const userRow = await dbGet("SELECT verifiedPhone FROM users WHERE id = ?", [trx.userId]);
             if (userRow) {
                 const p1 = userRow.verifiedPhone && cleanPhone(userRow.verifiedPhone);
                 if (p1 && p1.length >= 8) return p1;
-                const p2 = userRow.phone && cleanPhone(userRow.phone);
-                if (p2 && p2.length >= 8) return p2;
+                // verifiedPhone is the standard column
             }
         } catch (e) {}
     }

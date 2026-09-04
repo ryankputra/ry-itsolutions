@@ -5,19 +5,25 @@
 const express = require('express');
 const router = express.Router();
 const { dbGet, dbAll, dbRun } = require('../config/db');
-const { isAuthenticated, isAdmin } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 
 // 1. GET /api/reviews
 router.get('/reviews', async (req, res) => {
     try {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         const productId = req.query.productId || req.query.serviceType || 'unblock-imei';
         let query = "SELECT * FROM reviews WHERE 1=1";
         const params = [];
         if (productId && productId !== 'all') {
-            query += " AND (productId = ? OR serviceType = ?)";
-            params.push(productId, productId);
+            if (productId === 'unblock-imei' || productId === 'imei') {
+                query += " AND (productId IN ('unblock-imei', 'imei') OR serviceType IN ('unblock-imei', 'imei'))";
+            } else {
+                query += " AND (productId = ? OR serviceType = ?)";
+                params.push(productId, productId);
+            }
         }
-        query += " ORDER BY createdAt DESC";
+        // Show real customer reviews FIRST (non-seed first), then newest first
+        query += " ORDER BY (CASE WHEN id LIKE 'rev_seed_%' THEN 1 ELSE 0 END) ASC, createdAt DESC";
 
         const reviewsList = await dbAll(query, params);
 
@@ -66,16 +72,15 @@ router.get('/reviews', async (req, res) => {
 // 2. GET /api/reviews/check-eligibility
 router.get('/reviews/check-eligibility', isAuthenticated, async (req, res) => {
     try {
-        const completedOrders = await dbAll(
-            `SELECT id, packageName, service_type, createdAt FROM transactions WHERE userId = ? AND status IN ('success', 'completed') ORDER BY createdAt DESC`,
+        const userTrx = await dbAll(
+            `SELECT id, packageName, service_type, createdAt FROM transactions WHERE userId = ? ORDER BY createdAt DESC`,
             [req.session.userId]
         );
 
-        const canReview = completedOrders && completedOrders.length > 0;
         res.json({
             status: true,
-            canReview,
-            completedOrders: completedOrders || []
+            canReview: true,
+            completedOrders: userTrx || []
         });
     } catch (err) {
         res.status(500).json({ status: false, canReview: false });
@@ -89,38 +94,38 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
         if (!rating || rating < 1 || rating > 5) {
             return res.status(400).json({ status: false, message: "Rating bintang 1-5 wajib diisi." });
         }
-        if (!comment || comment.trim().length < 4) {
-            return res.status(400).json({ status: false, message: "Tulis ulasan minimal 4 karakter." });
+        if (!comment || comment.trim().length < 2) {
+            return res.status(400).json({ status: false, message: "Tulis ulasan minimal 2 karakter." });
         }
 
-        const completedTrx = await dbGet(
-            `SELECT id, packageName, createdAt FROM transactions WHERE userId = ? AND status IN ('success', 'completed') ORDER BY createdAt DESC LIMIT 1`,
+        const userObj = await dbGet("SELECT id, name, email, avatar, role, verifiedPhone, createdAt FROM users WHERE id = ?", [req.session.userId]);
+        if (!userObj) {
+            return res.status(401).json({ status: false, message: "User tidak ditemukan. Silakan login ulang." });
+        }
+
+        const latestTrx = await dbGet(
+            `SELECT id, packageName, createdAt FROM transactions WHERE userId = ? ORDER BY createdAt DESC LIMIT 1`,
             [req.session.userId]
         );
-        if (!completedTrx) {
-            return res.status(403).json({
-                status: false,
-                message: "Hanya pengguna yang sudah menyelesaikan transaksi sukses yang dapat memberikan ulasan."
-            });
-        }
 
-        const userObj = await dbGet("SELECT name, email, avatar, role, createdAt FROM users WHERE id = ?", [req.session.userId]);
-        const orderCount = await dbGet("SELECT COUNT(*) AS total FROM transactions WHERE userId = ? AND status IN ('success', 'completed')", [req.session.userId]);
-        const userName = userObj?.name || req.session.userEmail?.split('@')[0] || 'Pembeli Terverifikasi';
-        const userAvatar = userObj?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`;
+        const orderCount = await dbGet("SELECT COUNT(*) AS total FROM transactions WHERE userId = ?", [req.session.userId]);
+        const userName = userObj.name || userObj.email?.split('@')[0] || 'Pembeli Terverifikasi';
+        const userAvatar = userObj.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`;
         const userTotalOrders = Number(orderCount?.total) || 1;
-        const accountRole = String(userObj?.role || '').toLowerCase();
-        const userRole = accountRole.includes('konter') || accountRole.includes('mitra') ? 'Konter Mitra' : userTotalOrders >= 10 ? 'Reseller VIP' : 'Pembeli Terverifikasi';
-        const joinedAt = new Date(userObj?.createdAt || '2026-01-02T00:00:00.000Z');
-        const userJoinedAt = joinedAt > new Date('2026-01-01T00:00:00.000Z') ? joinedAt.toISOString() : '2026-01-02T00:00:00.000Z';
-        const transactionDate = completedTrx.createdAt || new Date().toISOString();
+        const accountRole = String(userObj.role || '').toLowerCase();
+        const userRole = accountRole.includes('admin') ? 'Official Admin' : (accountRole.includes('konter') || accountRole.includes('mitra') ? 'Konter Mitra' : userTotalOrders >= 5 ? 'Reseller VIP' : 'Pembeli Terverifikasi');
+        const joinedAt = new Date(userObj.createdAt || '2026-01-02T00:00:00.000Z');
+        const userJoinedAt = joinedAt.toISOString();
+        const transactionDate = latestTrx?.createdAt || new Date().toISOString();
 
         const reviewId = `rev_${Date.now()}`;
         const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
 
+        const finalVariation = variation || latestTrx?.packageName || 'GARANSI 3 BULAN (MASA AKTIF SINYAL)';
+
         await dbRun(
             `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
-            [reviewId, req.session.userId, userName, userAvatar, orderId || completedTrx.id, productId || 'unblock-imei', productId || 'imei', variation || completedTrx.packageName || 'Layanan Official', Number(rating), comment.trim(), imagesJson, transactionDate, userJoinedAt, userTotalOrders, userRole, new Date().toISOString()]
+            [reviewId, req.session.userId, userName, userAvatar, orderId || latestTrx?.id || 'order_direct', productId || 'unblock-imei', 'imei', finalVariation, Number(rating), comment.trim(), imagesJson, transactionDate, userJoinedAt, userTotalOrders, userRole, new Date().toISOString()]
         );
 
         // Bonus Reward +500 Koin Ry
@@ -129,14 +134,35 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
             await dbRun("INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, claimed_at) VALUES (?, ?, 'review_bonus', 500, ?)", [`clm_${Date.now()}`, req.session.userId, new Date().toISOString()]);
         } catch (e) {}
 
+        const newReviewObj = {
+            id: reviewId,
+            userId: req.session.userId,
+            userName,
+            userAvatar,
+            orderId: orderId || latestTrx?.id || 'order_direct',
+            productId: productId || 'unblock-imei',
+            serviceType: 'imei',
+            variation: finalVariation,
+            rating: Number(rating),
+            comment: comment.trim(),
+            images: Array.isArray(images) ? images : [],
+            likesCount: 0,
+            transactionDate,
+            userJoinedAt,
+            userTotalOrders,
+            userRole,
+            createdAt: new Date().toISOString()
+        };
+
         res.json({
             status: true,
-            message: "Ulasan Anda berhasil dikirim. Bonus +500 Koin Ry telah dikreditkan ke akun Anda.",
-            reviewId
+            message: "Ulasan Anda berhasil dikirim dan ditampilkan! Bonus +500 Koin Ry telah masuk ke akun Anda.",
+            reviewId,
+            review: newReviewObj
         });
     } catch (err) {
         console.error("Error creating review:", err);
-        res.status(500).json({ status: false, message: "Gagal menyimpan ulasan." });
+        res.status(500).json({ status: false, message: "Gagal menyimpan ulasan: " + err.message });
     }
 });
 

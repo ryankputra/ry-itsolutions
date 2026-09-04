@@ -10,7 +10,7 @@ interface WriteReviewModalProps {
   productId?: string;
   orderId?: string;
   variation?: string;
-  onReviewSubmitted?: () => void;
+  onReviewSubmitted?: (newReview?: any) => void;
 }
 
 export function WriteReviewModal({
@@ -22,6 +22,7 @@ export function WriteReviewModal({
   onReviewSubmitted,
 }: WriteReviewModalProps) {
   const [rating, setRating] = useState(5);
+  const [selectedVariation, setSelectedVariation] = useState(variation);
   const [comment, setComment] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -63,17 +64,33 @@ export function WriteReviewModal({
           orderId,
           productId,
           rating,
-          comment,
-          variation,
+          comment: comment.trim(),
+          variation: selectedVariation,
           images,
         }),
       });
+
+      if (res.status === 401) {
+        Swal.fire({
+          title: "Silakan Login",
+          text: "Silakan masuk ke akun Anda terlebih dahulu untuk memberikan ulasan.",
+          icon: "info",
+          showCancelButton: true,
+          confirmButtonText: "Login",
+          cancelButtonText: "Batal",
+          confirmButtonColor: "#0066cc",
+        }).then((r) => {
+          if (r.isConfirmed) window.location.href = "/login";
+        });
+        return;
+      }
+
       const data = await safeJson(res);
 
-      if (res.ok && data.status) {
+      if (res.ok && data?.status) {
         try { playCoinClaimSound(); } catch {}
         Swal.fire({
-          title: "Ulasan Berhasil Terkirim",
+          title: "Ulasan Berhasil Terbit!",
           text: data.message || "Terima kasih atas ulasan Anda! Bonus +500 Koin Ry telah masuk ke dompet Anda.",
           icon: "success",
           confirmButtonColor: "#0066cc",
@@ -81,7 +98,7 @@ export function WriteReviewModal({
         setComment("");
         setImages([]);
         onClose();
-        if (onReviewSubmitted) onReviewSubmitted();
+        if (onReviewSubmitted) onReviewSubmitted(data.review);
       } else {
         Swal.fire({
           title: "Gagal Mengirim Ulasan",
@@ -142,6 +159,22 @@ export function WriteReviewModal({
             <p className="text-[11px] font-bold text-amber-600">
               {rating === 5 ? "Sangat Puas" : rating === 4 ? "Puas" : rating === 3 ? "Cukup" : "Kurang Puas"}
             </p>
+          </div>
+
+          {/* Variation Selection */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-ink">Pilihan Layanan / Paket</label>
+            <select
+              value={selectedVariation}
+              onChange={(e) => setSelectedVariation(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:border-primary focus:ring-1 focus:ring-primary outline-none font-medium"
+            >
+              <option value="GARANSI 3 BULAN (MASA AKTIF SINYAL)">GARANSI 3 BULAN (MASA AKTIF SINYAL)</option>
+              <option value="GARANSI 1 TAHUN (MASA AKTIF SINYAL)">GARANSI 1 TAHUN (MASA AKTIF SINYAL)</option>
+              <option value="GARANSI PERMANEN (BEACUKAI RESMI)">GARANSI PERMANEN (BEACUKAI RESMI)</option>
+              <option value="GARANSI 1 BULAN (REGULER)">GARANSI 1 BULAN (REGULER)</option>
+              <option value="CEIR RESMI KEMENPERIN">CEIR RESMI KEMENPERIN</option>
+            </select>
           </div>
 
           {/* Comment input */}

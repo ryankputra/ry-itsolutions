@@ -667,7 +667,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             const finalPriceToPay = Math.max(0, totalPrice - discountAmount - coinsDiscount);
             const isQrisPayment = (req.body.payment_method || req.body.paymentMethod) === 'qris';
 
-            const user = await dbGet("SELECT id, name, balance, phone, verifiedPhone FROM users WHERE id = ?", [req.session.userId]);
+            const user = await dbGet("SELECT id, name, balance, verifiedPhone FROM users WHERE id = ?", [req.session.userId]);
             if (!isQrisPayment && user.balance < finalPriceToPay) {
                 return res.status(402).json({ status: false, message: `Saldo tidak mencukupi untuk pembayaran sebesar Rp ${finalPriceToPay.toLocaleString('id-ID')}` });
             }
@@ -713,7 +713,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             }
             const ceirImagePath = ceirImagePaths.length > 0 ? ceirImagePaths.join(',') : null;
 
-            const targetPhone = String(req.body.target_phone || req.body.targetPhone || user?.verifiedPhone || user?.phone || '').trim();
+            const targetPhone = String(req.body.target_phone || req.body.targetPhone || user?.verifiedPhone || '').trim();
 
             // Handle Direct QRIS Purchase
             if (isQrisPayment) {
