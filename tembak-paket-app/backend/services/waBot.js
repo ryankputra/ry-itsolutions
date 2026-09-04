@@ -6,7 +6,7 @@
  * 1. Persistent Auth: Sessions saved locally in /sessions/baileys_auth (survives PM2 restart).
  * 2. High-speed In-Memory Signal Key Store caching via makeCacheableSignalKeyStore.
  * 3. Instant synchronous creds sync to prevent pairing loss on slow ARM/STB storage.
- * 4. Dual Pairing Modes: Web QR Code (Chrome on Ubuntu) + 8-Digit Pairing Code (Phone Number).
+ * 4. Dual Pairing Modes: Web QR Code (Chrome) + 8-Digit Pairing Code (Phone Number).
  * 5. Automated Order Notification with Embedded Command Guides.
  * 6. Two-way WhatsApp Remote Admin Controller (.proses, .sukses, .gagal, .status, .help).
  */
@@ -15,6 +15,7 @@ const {
     default: makeWASocket, 
     useMultiFileAuthState, 
     DisconnectReason, 
+    fetchLatestWaWebVersion,
     fetchLatestBaileysVersion, 
     Browsers, 
     makeCacheableSignalKeyStore,
@@ -175,12 +176,21 @@ async function initWABot(forceNew = false) {
             }
         }
 
-        let waVersion = [2, 3000, 1043857760];
+        // Ambil versi resmi dari server WhatsApp Web (Bukan hardcoded static json)
+        let waVersion = [2, 2413, 51];
         try {
-            const v = await fetchLatestBaileysVersion();
-            if (v && v.version) waVersion = v.version;
+            const v = await fetchLatestWaWebVersion();
+            if (v && v.version) {
+                waVersion = v.version;
+                logWABot(`Menggunakan versi resmi WhatsApp Web: ${waVersion.join(".")}`, "info");
+            }
         } catch (e) {
-            console.warn("[WABot] Using default version fallback:", e.message);
+            try {
+                const v2 = await fetchLatestBaileysVersion();
+                if (v2 && v2.version) waVersion = v2.version;
+            } catch (e2) {
+                console.warn("[WABot] Using default version fallback:", e.message);
+            }
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
@@ -200,15 +210,30 @@ async function initWABot(forceNew = false) {
             global.baileysStatus = "connecting";
         }
 
-        const silentLogger = pino({ level: "silent" });
+        // Custom stream logger to pipe Baileys internal warnings & pairing events directly to UI
+        const pinoStream = {
+            write: (str) => {
+                try {
+                    const p = JSON.parse(str);
+                    const msg = p.msg || p.message || str;
+                    if (p.level >= 40) {
+                        logWABot(`[Baileys ${p.level >= 50 ? "ERR" : "WARN"}] ${msg}`, p.level >= 50 ? "error" : "warn");
+                    } else if (p.level === 30 && (msg.includes("pair") || msg.includes("login") || msg.includes("open") || msg.includes("restart"))) {
+                        logWABot(`[Baileys] ${msg}`, "info");
+                    }
+                } catch (e) {}
+            }
+        };
+        const customLogger = pino({ level: "info" }, pinoStream);
+
         sock = makeWASocket({
             version: waVersion,
             auth: {
                 creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, silentLogger)
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
             },
             printQRInTerminal: false,
-            logger: silentLogger,
+            logger: customLogger,
             browser: Browsers.ubuntu("Chrome"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
@@ -244,7 +269,7 @@ async function initWABot(forceNew = false) {
             const { connection, lastDisconnect, qr, isNewLogin } = update;
 
             if (isNewLogin) {
-                logWABot("✅ Perangkat WhatsApp berhasil dipindai oleh HP! Mengamankan sesi...", "info");
+                logWABot("✅ Perangkat WhatsApp berhasil dipasangkan dari HP! Mengamankan sesi...", "info");
                 connectionState = "pairing";
                 global.baileysStatus = "pairing";
                 currentQrCode = null;
@@ -439,8 +464,8 @@ async function requestPairingCode(phoneNumber) {
         }
 
         // Tunggu socket siap
-        for (let i = 0; i < 20; i++) {
-            if (sock && sock.requestPairingCode) break;
+        for (let i = 0; i < 25; i++) {
+            if (sock && typeof sock.requestPairingCode === "function" && sock.ws?.isOpen) break;
             await new Promise(r => setTimeout(r, 200));
         }
 
@@ -448,10 +473,10 @@ async function requestPairingCode(phoneNumber) {
             return { status: false, message: "Socket WhatsApp belum siap. Silakan klik Reset Sesi WA lalu coba lagi." };
         }
 
-        logWABot(`Meminta kode pairing 8 digit untuk: ${clean}...`, "info");
+        logWABot(`Meminta kode pairing 8 digit untuk nomor: ${clean}...`, "info");
         const rawCode = await sock.requestPairingCode(clean);
         const code = rawCode?.match(/.{1,4}/g)?.join("-") || rawCode;
-        logWABot(`✅ Kode Pairing Berhasil Dibuat: ${code}`, "info");
+        logWABot(`✅ KODE PAIRING 8 DIGIT: ${code}. Masukkan kode ini di WhatsApp HP Anda.`, "info");
         return { status: true, code: code, phone: clean };
     } catch (e) {
         logWABot(`Gagal membuat kode pairing: ${e.message}`, "error");

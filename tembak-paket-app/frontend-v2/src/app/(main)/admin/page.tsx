@@ -2471,14 +2471,17 @@ export default function AdminPage() {
                       </div>
                     )}
 
-                    <div className="space-y-1 text-left bg-canvas/80 p-3 rounded-xl border border-hairline">
-                      <p className="text-xs font-bold text-ink">Petunjuk di WhatsApp HP:</p>
-                      <ol className="text-[11px] text-ink-muted list-decimal list-inside space-y-1">
+                    <div className="space-y-2 text-left bg-amber-50 p-3 rounded-2xl border border-amber-200">
+                      <p className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                        <span>💡</span>
+                        <span>Cara Memasukkan Kode di WhatsApp HP:</span>
+                      </p>
+                      <ol className="text-[11px] text-amber-900 list-decimal list-inside space-y-1.5 leading-relaxed">
                         <li>Buka WhatsApp di HP Anda.</li>
                         <li>Pilih menu <b>Perangkat Tertaut (Linked Devices)</b>.</li>
-                        <li>Pilih <b>Tautkan Perangkat</b>.</li>
-                        <li>Di bagian bawah kamera, klik <b>Tautkan dengan nomor telepon saja</b>.</li>
-                        <li>Masukkan 8 digit kode di atas.</li>
+                        <li>Ketuk <b>Tautkan Perangkat</b> (layar kamera pemindai QR akan terbuka).</li>
+                        <li>Lihat di <b>bagian paling bawah layar kamera</b>, ketuk teks: <br/><b className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 underline">"Tautkan dengan nomor telepon saja"</b>.</li>
+                        <li>Ketikkan 8 digit kode yang muncul di atas. Selesai!</li>
                       </ol>
                     </div>
                   </div>
