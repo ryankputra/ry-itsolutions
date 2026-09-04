@@ -447,7 +447,7 @@ export default function AdminPage() {
                   setIsDeploying(false);
                 }
               }
-            }, 3000);
+            }, 1500);
           }
         }, 1500);
       } else {
@@ -1330,9 +1330,8 @@ export default function AdminPage() {
         const payload = d.data || d;
         const isConn = Boolean(payload.connected || payload.isConnected || payload.state === 'open');
         setWaBotStatus((prev: any) => {
-          // Jangan timpa qrCode jika status dari backend sedang 'connecting' atau 'open'
-          const isConnectingOrOpen = payload.state === 'connecting' || payload.state === 'open' || isConn;
-          const qr = isConn ? null : (isConnectingOrOpen ? (prev?.qrCode || payload.qrCode) : payload.qrCode);
+          const isConnecting = payload.state === 'connecting';
+          const qr = (isConn || isConnecting) ? null : (payload.qrCode || null);
           return {
             ...payload,
             connected: isConn,
@@ -1341,8 +1340,8 @@ export default function AdminPage() {
           };
         });
         setBaileysStatus((prev) => {
-          const isConnectingOrOpen = payload.state === 'connecting' || payload.state === 'open' || isConn;
-          const qr = isConn ? null : (isConnectingOrOpen ? (prev.qrCode || payload.qrCode) : payload.qrCode);
+          const isConnecting = payload.state === 'connecting';
+          const qr = (isConn || isConnecting) ? null : (payload.qrCode || null);
           return {
             ...payload,
             isConnected: isConn,
@@ -2323,6 +2322,21 @@ export default function AdminPage() {
                         Bot siap mengirimkan notifikasi pesanan baru. Anda dapat membalas chat WA dengan perintah:
                         <br />
                         <code className="bg-emerald-100/80 px-1 py-0.5 rounded text-[10px] text-emerald-900 font-mono font-bold">.proses &lt;ID&gt;</code>, <code className="bg-emerald-100/80 px-1 py-0.5 rounded text-[10px] text-emerald-900 font-mono font-bold">.sukses &lt;ID&gt;</code>, atau <code className="bg-emerald-100/80 px-1 py-0.5 rounded text-[10px] text-emerald-900 font-mono font-bold">.gagal &lt;ID&gt;</code>.
+                      </p>
+                    </div>
+                  </div>
+                ) : waBotStatus?.state === 'connecting' ? (
+                  <div className="text-center py-10 space-y-3 bg-blue-50/50 rounded-2xl border border-blue-200 p-6 animate-pulse">
+                    <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl font-bold">
+                      🔄
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-sm text-blue-900">Sedang Menautkan Perangkat WhatsApp...</h4>
+                      <p className="text-xs text-blue-700">
+                        QR Code berhasil dipindai oleh HP Anda! Server sedang melakukan pertukaran kunci enkripsi & menghubungkan bot.
+                      </p>
+                      <p className="text-[10px] text-blue-600/80 pt-1">
+                        Mohon tunggu sebentar, jangan scan ulang atau menutup modal ini...
                       </p>
                     </div>
                   </div>

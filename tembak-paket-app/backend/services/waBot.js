@@ -29,6 +29,26 @@ let connectingTimer = null;
 global.baileysStatus = "disconnected";
 global.qrCode = null;
 
+const WA_LOGS_MAX = 50;
+const waLogsBuffer = [];
+let currentAuthState = null;
+
+function addWALog(msg) { logWABot(msg, 'info'); }
+function logWABot(msg, level = 'info') {
+    const timestamp = new Date().toLocaleTimeString('id-ID');
+    const entry = `[${timestamp}] [${level.toUpperCase()}] ${msg}`;
+    waLogsBuffer.push(entry);
+    if (waLogsBuffer.length > WA_LOGS_MAX) waLogsBuffer.shift();
+    if (level === 'error') console.error(`[WABot] ${msg}`);
+    else if (level === 'warn') console.warn(`[WABot] ${msg}`);
+    else console.log(`[WABot] ${msg}`);
+}
+
+function getWALogs() {
+    return waLogsBuffer.slice();
+}
+
+
 function clearConnectingTimer() {
     if (connectingTimer) {
         clearTimeout(connectingTimer);
@@ -128,6 +148,7 @@ async function initWABot(forceNew = false) {
                 connectedPhone = null;
                 connectionState = "disconnected";
                 global.baileysStatus = "disconnected";
+                currentAuthState = null;
                 console.log("[WABot] Folder auth session berhasil direset.");
             } catch (err) {
                 console.error("[WABot] Error resetting session:", err.message);
@@ -148,6 +169,16 @@ async function initWABot(forceNew = false) {
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
 
+        // STB Flash Memory Protection: pulihkan creds.me jika di memori sudah ada tapi disk belum selesai flush
+        if (currentAuthState?.creds?.me?.id && !state.creds?.me?.id) {
+            console.log(`[WABot] Memulihkan kredensial 'me' dari in-memory state (${currentAuthState.creds.me.id})...`);
+            Object.assign(state.creds, currentAuthState.creds);
+            try {
+                await saveCreds();
+            } catch (e) {}
+        }
+        currentAuthState = state;
+
         connectionState = "connecting";
 
         sock = makeWASocket({
@@ -164,18 +195,43 @@ async function initWABot(forceNew = false) {
             generateHighQualityLinkPreview: false
         });
 
-        // Simpan kredensial langsung tanpa delay debounce agar creds.json segera terupdate
-        sock.ev.on("creds.update", saveCreds);
+        // Simpan kredensial langsung & pertahankan di memory state
+        sock.ev.on("creds.update", async (update) => {
+            if (update) {
+                Object.assign(state.creds, update);
+                if (currentAuthState) {
+                    Object.assign(currentAuthState.creds, update);
+                }
+            }
+            try {
+                await saveCreds();
+                if (update?.me?.id) {
+                    console.log(`[WABot] Kredensial pairing 'me' berhasil diterima & disimpan (${update.me.id})!`);
+                }
+            } catch (err) {
+                console.error("[WABot] Error saving credentials:", err.message);
+            }
+        });
 
         sock.ev.on("connection.update", async (update) => {
-            const { connection, lastDisconnect, qr } = update;
+            const { connection, lastDisconnect, qr, isNewLogin } = update;
+
+            if (isNewLogin) {
+                addWALog('✅ Perangkat berhasil ditautkan via QR! Menyimpan sesi...');
+                connectionState = 'connecting';
+                global.baileysStatus = 'connecting';
+                currentQrCode = null;
+                qrCodeDataUrl = null;
+                global.qrCode = null;
+                try { await saveCreds(); } catch (e) {}
+            }
 
             // 2. LOGIKA GENERATE QR CODE: Izinkan pembuatan QR Code jika status BUKAN 'open'
             if (qr) {
                 const isOpen = connectionState === "open" || global.baileysStatus === "open";
                 if (!isOpen) {
                     // Jika sesi auth sudah terdaftar (registered/me sudah ada di auth), jangan overwrite ke scan_ready
-                    if (state?.creds?.me?.id || state?.creds?.registered) {
+                    if (state?.creds?.me?.id || currentAuthState?.creds?.me?.id || connectionState === "connecting") {
                         console.log("[WABot] Sesi sudah terautentikasi, mengabaikan regenerasi QR Code.");
                         return;
                     }
@@ -257,12 +313,17 @@ async function initWABot(forceNew = false) {
 
                 // 2. RESTART REQUIRED (515) - Proses pairing QR berhasil di-scan oleh HP
                 if (statusCode === 515 || statusCode === DisconnectReason.restartRequired) {
+                    addWALog('✅ QR berhasil di-scan! WhatsApp meminta restart socket (515)...');
+                    currentQrCode = null;
+                    qrCodeDataUrl = null;
+                    global.qrCode = null;
                     console.log("[WABot] ✅ QR Code berhasil di-scan! WhatsApp meminta restart socket untuk menyelesaikan pairing (515)...");
                     connectionState = "connecting";
                     global.baileysStatus = "connecting";
                     isInitializing = false;
-                    // Jeda sangat singkat (300ms) agar write creds.json selesai sebelum reconnect
-                    setTimeout(() => initWABot(false), 300);
+                    try { await saveCreds(); } catch (e) {}
+                    // Jeda 800ms agar flush I/O di storage STB tuntas sebelum socket baru membaca disk
+                    setTimeout(() => initWABot(false), 800);
                     return;
                 }
 
@@ -283,7 +344,7 @@ async function initWABot(forceNew = false) {
                 setTimeout(() => initWABot(false), 3000);
             } else if (connection === "open") {
                 clearConnectingTimer();
-                await flushSaveCreds();
+                try { await saveCreds(); } catch (e) {}
                 connectionState = "open";
                 global.baileysStatus = "open";
                 currentQrCode = null;
@@ -617,15 +678,16 @@ async function logoutWABot() {
 
 function getWAStatus() {
     const isConnected = connectionState === "open" || global.baileysStatus === "open";
-    const currentQr = global.qrCode || qrCodeDataUrl || currentQrCode;
     const currentState = isConnected ? "open" : (global.baileysStatus || connectionState);
+    const isConnecting = currentState === "connecting";
+    const currentQr = (isConnected || isConnecting) ? null : (global.qrCode || qrCodeDataUrl || currentQrCode);
     let statusText = "Terputus";
     if (isConnected) {
         statusText = `Terhubung (${connectedPhone || 'Admin'})`;
+    } else if (isConnecting) {
+        statusText = "Sedang Menautkan Perangkat WhatsApp...";
     } else if ((currentState === "qr_ready" || currentState === "scan_ready" || global.baileysStatus === "scan_ready") && currentQr) {
         statusText = "Menunggu Scan QR Code";
-    } else if (currentState === "connecting") {
-        statusText = "Sedang Menghubungkan...";
     }
 
     return {
@@ -634,21 +696,17 @@ function getWAStatus() {
         status: isConnected ? "open" : currentState,
         state: currentState,
         connectedPhone: connectedPhone,
-        currentQrCode: currentQrCode,
-        qrCode: global.qrCode || qrCodeDataUrl,
-        qr: global.qrCode || qrCodeDataUrl,
+        currentQrCode: currentQr,
+        qrCode: currentQr,
+        qr: currentQr,
         statusText: statusText
     };
 }
 
-// Auto start on backend boot if session already exists
-try {
-    if (fs.existsSync(SESSIONS_DIR) && fs.readdirSync(SESSIONS_DIR).length > 0) {
-        initWABot(false);
-    }
-} catch (e) {}
+// Auto start handled exclusively by server.js
 
 module.exports = {
+    getWALogs,
     initWABot,
     logoutWABot,
     getWAStatus,

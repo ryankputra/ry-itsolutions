@@ -1180,6 +1180,12 @@ router.get('/admin/deploy-status', isAuthenticated, isAdmin, (req, res) => {
     }
 });
 
+
+router.get(['/admin/baileys/logs', '/admin/wabot/logs', '/admin/whatsapp/logs'], isAuthenticated, isAdmin, (req, res) => {
+    const logs = typeof waBot.getWALogs === 'function' ? waBot.getWALogs() : [];
+    res.json({ status: true, success: true, logs });
+});
+
 // 23. WhatsApp Bot Status & Web-Based QR Code Endpoints (Universal Baileys / WABot Support)
 router.get(['/admin/baileys/status', '/admin/wabot/status', '/admin/whatsapp/status'], isAuthenticated, isAdmin, (req, res) => {
     let waStatus = waBot.getWAStatus();
