@@ -249,7 +249,7 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
             await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ? WHERE id = ?",
                 [status || existingTrx.status, admin_note !== undefined ? admin_note : existingTrx.admin_note, adminImagePath, trxId]);
 
-            if (status === 'failed' && (existingTrx.status === 'pending' || existingTrx.status === 'processing')) {
+            if (status === 'failed' && (existingTrx.status === 'pending' || existingTrx.status === 'processing' || existingTrx.status === 'in_queue')) {
                 const refundAmount = Number(existingTrx.platformFee || existingTrx.originalPrice || 0);
                 if (refundAmount > 0) {
                     await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, existingTrx.userId]);

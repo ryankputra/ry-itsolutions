@@ -1297,7 +1297,7 @@ export default function AdminPage() {
   };
 
   // KPI Calculations
-  const pendingOrdersCount = manualOrders.filter(o => o.status === 'pending' || o.status === 'processing').length;
+  const pendingOrdersCount = manualOrders.filter(o => o.status === 'pending' || o.status === 'processing' || o.status === 'in_queue').length;
   const openTicketsCount = adminTickets.filter(t => t.status === 'open' || t.status === 'replied').length;
   const totalResellersCount = users.filter(u => u.role === 'reseller').length;
 
@@ -1596,7 +1596,7 @@ export default function AdminPage() {
     if (hideSuccess && o.status === "success") return false;
     if (hideFailed && o.status === "failed") return false;
 
-    if (orderStatusFilter === 'pending' && o.status !== 'pending' && o.status !== 'processing') return false;
+    if (orderStatusFilter === 'pending' && o.status !== 'pending' && o.status !== 'processing' && o.status !== 'in_queue') return false;
     if (orderStatusFilter === 'success' && o.status !== 'success') return false;
     if (orderStatusFilter === 'failed' && o.status !== 'failed') return false;
 
@@ -1989,7 +1989,7 @@ export default function AdminPage() {
                   onClick={() => setOrderStatusFilter("pending")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-700 border-hairline'}`}
                 >
-                  Tertunda ({currentSubTabOrders.filter(o => o.status === 'pending' || o.status === 'processing').length})
+                  Tertunda ({currentSubTabOrders.filter(o => o.status === 'pending' || o.status === 'processing' || o.status === 'in_queue').length})
                 </button>
                 <button
                   onClick={() => setOrderStatusFilter("success")}
@@ -2074,8 +2074,8 @@ export default function AdminPage() {
                       </div>
 
                       <div className="flex sm:flex-col items-end justify-between gap-1.5 shrink-0">
-                        <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase tracking-wider ${o.status === 'success' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : o.status === 'failed' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
-                          {o.status}
+                        <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase tracking-wider ${o.status === 'success' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : o.status === 'failed' ? 'bg-rose-100 text-rose-800 border border-rose-200' : o.status === 'processing' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
+                          {o.status === 'in_queue' ? 'ANTREAN (MENUNGGU)' : o.status}
                         </span>
                         <span className="text-sm font-bold text-ink">
                           Rp {(o.platformFee || o.originalPrice || 0).toLocaleString('id-ID')}
@@ -2194,7 +2194,8 @@ export default function AdminPage() {
                             value={manualActionData?.status || "pending"}
                             onChange={e => setManualActionData(prev => prev ? { ...prev, status: e.target.value } : null)}
                           >
-                            <option value="pending">Pending (Menunggu)</option>
+                            <option value="in_queue">In Queue (Menunggu Konfirmasi)</option>
+                            <option value="pending">Pending (Menunggu Pembayaran)</option>
                             <option value="processing">Processing (Sedang Diproses)</option>
                             <option value="success">Success (Selesai & Sinyal Aktif)</option>
                             <option value="failed">Failed (Gagal & Refund Otomatis)</option>

@@ -16,8 +16,10 @@ export default function ProfilePage() {
   const [vouchersCount, setVouchersCount] = useState(0);
   const [orderCounts, setOrderCounts] = useState({
     pending: 0,
+    waiting: 0,
     processing: 0,
     success: 0,
+    canceled: 0,
   });
 
   useEffect(() => {
@@ -26,10 +28,12 @@ export default function ProfilePage() {
       .then((res) => safeJson(res))
       .then((data) => {
         if (data?.status && Array.isArray(data.data)) {
-          const pending = data.data.filter((t: any) => t.status === "pending").length;
-          const processing = data.data.filter((t: any) => t.status === "processing").length;
+          const pending = data.data.filter((t: any) => (t.status === "pending" || t.status === "unpaid") && (t.payment_method !== "balance" && t.paymentMethod !== "balance")).length;
+          const waiting = data.data.filter((t: any) => t.status === "in_queue" || t.status === "waiting" || t.status === "waiting_admin").length;
+          const processing = data.data.filter((t: any) => t.status === "processing" || t.status === "in_progress").length;
           const success = data.data.filter((t: any) => t.status === "success" || t.status === "completed").length;
-          setOrderCounts({ pending, processing, success });
+          const canceled = data.data.filter((t: any) => t.status === "failed" || t.status === "canceled" || t.status === "cancelled" || t.status === "rejected").length;
+          setOrderCounts({ pending, waiting, processing, success, canceled });
         }
       })
       .catch(() => {});
@@ -392,16 +396,26 @@ export default function ProfilePage() {
           </Link>
         </div>
 
-        {/* 4 Status Icons */}
-        <div className="grid grid-cols-4 gap-2 text-center pt-1">
+        {/* 5 Status Icons: Belum Bayar, Menunggu Konfirmasi (Dalam Antrean), Diproses, Selesai, Pengembalian Dana */}
+        <div className="grid grid-cols-5 gap-1 text-center pt-1">
           {[
             {
               label: "Belum Bayar",
               href: "/history?tab=unpaid",
               badge: orderCounts.pending > 0 ? orderCounts.pending : null,
               icon: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                </svg>
+              ),
+            },
+            {
+              label: "Menunggu",
+              href: "/history?tab=waiting",
+              badge: orderCounts.waiting > 0 ? orderCounts.waiting : null,
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               ),
             },
@@ -410,7 +424,7 @@ export default function ProfilePage() {
               href: "/history?tab=processing",
               badge: orderCounts.processing > 0 ? orderCounts.processing : null,
               icon: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                 </svg>
               ),
@@ -420,18 +434,18 @@ export default function ProfilePage() {
               href: "/history?tab=completed",
               badge: null,
               icon: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               ),
             },
             {
-              label: "Pusat Bantuan",
-              href: "/tickets",
-              badge: null,
+              label: "Refund",
+              href: "/history?tab=canceled",
+              badge: orderCounts.canceled > 0 ? orderCounts.canceled : null,
               icon: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
                 </svg>
               ),
             },

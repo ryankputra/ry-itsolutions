@@ -178,15 +178,17 @@ function HistoryContent() {
   const tabs = [
     { key: "all", label: "Semua" },
     { key: "unpaid", label: "Belum Bayar" },
+    { key: "waiting", label: "Menunggu Konfirmasi" },
     { key: "processing", label: "Diproses" },
     { key: "completed", label: "Selesai" },
-    { key: "canceled", label: "Dibatalkan" },
+    { key: "canceled", label: "Pengembalian Dana" },
   ];
 
   const normalizedHistory = history.map((trx) => {
     const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+    // Pesanan via saldo yang belum diproses masuk ke antrean Menunggu Konfirmasi (in_queue)
     if (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid')) {
-      return { ...trx, status: 'processing' };
+      return { ...trx, status: 'in_queue' };
     }
     return trx;
   });
@@ -195,8 +197,13 @@ function HistoryContent() {
     if (activeTab === "all") return true;
 
     const status = trx.status?.toLowerCase() || "";
+    const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+
     if (activeTab === "unpaid") {
-      return status === "pending" || status === "unpaid";
+      return (status === "pending" || status === "unpaid") && !isBalancePaid;
+    }
+    if (activeTab === "waiting") {
+      return status === "in_queue" || status === "waiting" || status === "waiting_admin";
     }
     if (activeTab === "processing") {
       return status === "processing" || status === "in_progress";
@@ -204,8 +211,8 @@ function HistoryContent() {
     if (activeTab === "completed") {
       return status === "success" || status === "completed";
     }
-    if (activeTab === "canceled") {
-      return status === "failed" || status === "canceled" || status === "rejected";
+    if (activeTab === "canceled" || activeTab === "refund") {
+      return status === "failed" || status === "canceled" || status === "cancelled" || status === "rejected";
     }
     return true;
   });
@@ -228,15 +235,22 @@ function HistoryContent() {
         badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
       };
     }
-    if (s === "pending" || s === "unpaid") {
+    if (s === "in_queue" || s === "waiting" || s === "waiting_admin") {
       return {
-        label: "Belum Bayar / Menunggu",
+        label: "Menunggu Konfirmasi Admin",
         textColor: "text-amber-600 font-bold",
         badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
       };
     }
+    if (s === "pending" || s === "unpaid") {
+      return {
+        label: "Belum Bayar",
+        textColor: "text-orange-600 font-bold",
+        badgeBg: "bg-orange-50 text-orange-700 border-orange-200",
+      };
+    }
     return {
-      label: "Dibatalkan / Gagal",
+      label: "Dibatalkan / Pengembalian Dana",
       textColor: "text-rose-600 font-bold",
       badgeBg: "bg-rose-50 text-rose-700 border-rose-200",
     };
@@ -282,17 +296,7 @@ function HistoryContent() {
           <span className="text-base sm:text-lg font-black">Pesanan Saya</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href="/tickets"
-            className="p-1.5 text-ink-muted hover:text-primary transition-colors"
-            title="Pusat Bantuan CS"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-            </svg>
-          </Link>
-        </div>
+        <div className="w-6" />
       </div>
 
       {/* ============================================================ */}
@@ -361,11 +365,12 @@ function HistoryContent() {
         <div className="space-y-3 pt-1">
           {filteredHistory.map((trx) => {
             const isPaidByBalance = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
-            const effectiveStatus = (isPaidByBalance && (trx.status === "pending" || trx.status === "unpaid")) ? "processing" : trx.status;
+            const effectiveStatus = (isPaidByBalance && (trx.status === "pending" || trx.status === "unpaid")) ? "in_queue" : (trx.status || "");
             const badge = getStatusBadge(effectiveStatus, trx.serviceType || trx.service_type, trx.packageName);
             const primaryImei = trx.imei ? trx.imei.split(/[\n,]+/)[0].trim().replace(/\D/g, "") : "";
             const isCompleted = effectiveStatus === "success" || effectiveStatus === "completed";
             const isProcessing = effectiveStatus === "processing" || effectiveStatus === "in_progress";
+            const isWaiting = effectiveStatus === "in_queue" || effectiveStatus === "waiting" || effectiveStatus === "waiting_admin";
             const isPending = (effectiveStatus === "pending" || effectiveStatus === "unpaid") && !isPaidByBalance;
             const amount = trx.amount || trx.baseAmount || trx.price || 0;
 
@@ -483,6 +488,34 @@ function HistoryContent() {
                       </>
                     )}
 
+                    {/* Menunggu Konfirmasi (Dalam Antrean) */}
+                    {isWaiting && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleCancelTransaction(trx)}
+                          className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors"
+                          title="Batalkan dan kembalikan dana ke saldo akun"
+                        >
+                          Batalkan & Refund
+                        </button>
+                        {primaryImei && (
+                          <Link
+                            href={`/cek-garansi?imei=${primaryImei}`}
+                            className="px-3 py-1.5 rounded-xl border border-hairline text-xs font-bold text-ink hover:bg-parchment transition-colors"
+                          >
+                            Lacak IMEI
+                          </Link>
+                        )}
+                        <Link
+                          href="/tickets"
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition-colors"
+                        >
+                          Chat CS Admin
+                        </Link>
+                      </>
+                    )}
+
                     {/* Sedang Diproses */}
                     {isProcessing && (
                       <>
@@ -542,8 +575,8 @@ function HistoryContent() {
                       </>
                     )}
 
-                    {/* Dibatalkan / Gagal */}
-                    {!isPending && !isProcessing && !isCompleted && (
+                    {/* Dibatalkan / Gagal / Pengembalian Dana */}
+                    {!isPending && !isWaiting && !isProcessing && !isCompleted && (
                       <>
                         <Link
                           href="/tickets"

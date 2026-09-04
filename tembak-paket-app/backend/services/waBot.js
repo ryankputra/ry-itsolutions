@@ -477,29 +477,39 @@ async function initWABot(forceNew = false) {
             if (type !== "notify") return;
 
             for (const msg of messages) {
-                if (!msg.message || msg.key.fromMe) continue;
+                if (!msg.message) continue;
 
                 const remoteJid = msg.key.remoteJid;
                 if (!remoteJid || remoteJid.includes("@g.us")) continue; // Ignore groups for command execution
 
-                const senderPhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", ""));
                 const messageText = (
                     msg.message.conversation ||
                     msg.message.extendedTextMessage?.text ||
+                    msg.message.imageMessage?.caption ||
                     ""
                 ).trim();
 
                 if (!messageText.startsWith(".")) continue;
 
+                // Determine sender phone
+                let senderPhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", ""));
+                const myJid = sock?.user?.id || "";
+                const myPhone = cleanPhone(myJid.split(":")[0].replace("@s.whatsapp.net", ""));
+
+                if (msg.key.fromMe) {
+                    senderPhone = myPhone || senderPhone;
+                }
+
                 // Authorization check: Only configured admin numbers can execute commands
                 const adminPhones = await getAdminPhoneNumbers();
-                const isAuthorized = adminPhones.includes(senderPhone);
+                const isAuthorized = msg.key.fromMe || (senderPhone && adminPhones.includes(senderPhone)) || (myPhone && adminPhones.includes(myPhone));
 
                 if (!isAuthorized) {
                     console.warn(`[WABot Security] Pesan ditolak dari nomor non-admin: ${senderPhone}`);
                     continue;
                 }
 
+                logWABot(`[WABot Command] Memproses: "${messageText}" dari ${senderPhone || remoteJid}`, "info");
                 await handleAdminCommand(remoteJid, messageText);
             }
         });
@@ -552,8 +562,15 @@ async function requestPairingCode(phoneNumber) {
 async function handleAdminCommand(replyJid, text) {
     const parts = text.split(/\s+/);
     const command = parts[0].toLowerCase();
-    const orderIdArg = parts[1];
-    const notesArg = parts.slice(2).join(" ");
+    let orderIdArg = parts[1];
+    let notesArg = parts.slice(2).join(" ");
+
+    if (orderIdArg) {
+        orderIdArg = orderIdArg.trim().replace(/^[<"\x27]+|[>"\x27]+$/g, "").trim();
+    }
+    if (notesArg) {
+        notesArg = notesArg.trim().replace(/^[<"\x27]+|[>"\x27]+$/g, "").trim();
+    }
 
     console.log(`[WABot Command] Received: ${command} ${orderIdArg || ""} from ${replyJid}`);
 
@@ -638,7 +655,7 @@ async function handleAdminCommand(replyJid, text) {
         const refundAmount = Number(trx.platformFee || trx.originalPrice || 0);
         let refundNote = "Tidak ada pengembalian dana.";
 
-        if (refundAmount > 0 && (currentStatus === "pending" || currentStatus === "processing")) {
+        if (refundAmount > 0 && (currentStatus === "pending" || currentStatus === "processing" || currentStatus === "in_queue")) {
             await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, trx.userId]);
             refundNote = `Saldo Rp ${refundAmount.toLocaleString("id-ID")} telah dikembalikan ke user.`;
         }
@@ -710,7 +727,12 @@ async function sendTextMessage(targetPhone, message) {
 async function replyWhatsApp(jid, text) {
     if (!sock || connectionState !== "open") return;
     try {
-        await sock.sendMessage(jid, { text });
+        let cleanJid = jid;
+        if (cleanJid && !cleanJid.includes("@g.us")) {
+            const rawPhone = cleanJid.split("@")[0].split(":")[0];
+            cleanJid = `${rawPhone}@s.whatsapp.net`;
+        }
+        await sock.sendMessage(cleanJid, { text });
     } catch (e) {
         console.error(`[WABot] Gagal mengirim balasan ke ${jid}:`, e.message);
     }
@@ -782,8 +804,8 @@ async function notifyNewOrder(orderData) {
             `💡 *PANDUAN PERINTAH CEPAT ADMIN:*\n` +
             `Balas/Reply pesan ini langsung dengan:\n` +
             `• \`.proses ${id}\` (Proses pesanan)\n` +
-            `• \`.sukses ${id} <CATATAN>\` (Selesaikan)\n` +
-            `• \`.gagal ${id} <ALASAN>\` (Tolak & refund)\n` +
+            `• \`.sukses ${id} Catatan...\` (Selesaikan)\n` +
+            `• \`.gagal ${id} Alasan...\` (Tolak & refund)\n` +
             `━━━━━━━━━━━━━━━━━━━━━━`;
 
         // 1. Send to all admin numbers

@@ -230,9 +230,9 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         sseSend(trx.userId, 'transaction_update', { id: trx.id, status: finalStatus, note: adminNote });
         sendTelegramNotification(`<b>⚡ Direct QRIS Paid & Auto CeirGO!</b>\n<b>Layanan:</b> ${trx.packageName}\n<b>IMEI:</b> <code>${trx.imei}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`, 'group');
     } else {
-        // Manual IMEI or other service
-        await dbRun("UPDATE transactions SET status = 'pending', api_response = 'Pembayaran QRIS Terverifikasi. Sedang Diproses Admin.' WHERE id = ?", [trx.id]);
-        sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'pending', message: 'Pembayaran terverifikasi! Pesanan sedang diproses admin.' });
+        // Manual IMEI or other service: Status in_queue (Menunggu Konfirmasi Admin)
+        await dbRun("UPDATE transactions SET status = 'in_queue', api_response = 'Pembayaran QRIS Terverifikasi. Menunggu Konfirmasi Admin.', admin_note = 'Pembayaran QRIS terverifikasi. Menunggu konfirmasi & pengerjaan oleh Admin.' WHERE id = ?", [trx.id]);
+        sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'in_queue', message: 'Pembayaran terverifikasi! Pesanan masuk dalam antrean menunggu konfirmasi admin.' });
         const notifMsg = `<b>📦 Direct QRIS Paid (Manual Order)!</b>\n<b>User ID:</b> ${trx.userId}\n<b>Layanan:</b> ${trx.packageName}\n<b>IMEI:</b> <code>${trx.imei}</code>\n<b>Nominal:</b> Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n<b>Status:</b> WAITING ADMIN`;
         sendManualOrderNotification(notifMsg, trx.id, null);
     }
@@ -809,10 +809,10 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             }
 
             // Pesanan via saldo telah terbayar lunas (saldo user telah terpotong):
-            // Status wajib 'processing' (atau 'success' jika CeirGO instan), tidak boleh 'pending'!
-            let finalStatus = 'processing';
-            let apiResponse = 'Pembayaran Saldo Berhasil. Sedang Diproses Admin.';
-            let adminNote = 'Pesanan terbayar dengan saldo akun. Menunggu pengerjaan oleh Admin.';
+            // Status awal adalah 'in_queue' (Menunggu Konfirmasi Admin / Dalam Antrean), kecuali CeirGO instan yang otomatis 'processing'/'success'
+            let finalStatus = 'in_queue';
+            let apiResponse = 'Pembayaran Saldo Berhasil. Menunggu Konfirmasi Admin.';
+            let adminNote = 'Pesanan terbayar dengan saldo akun. Menunggu konfirmasi & pengerjaan oleh Admin.';
             let adminImagePath = null;
             let refId = null;
 
@@ -1002,10 +1002,10 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
             // Duration cleanup: Automated services are always instant
             const cleanSpeedOption = isAutomatedService ? 'instant' : item.speed_option;
 
-            // Balance purchases are paid immediately upon checkout
+            // Balance purchases are paid immediately upon checkout: if still pending/unpaid, normalize to in_queue (Menunggu Konfirmasi)
             let effectiveStatus = item.status;
             if ((item.payment_method === 'balance' || item.paymentMethod === 'balance') && (effectiveStatus === 'pending' || effectiveStatus === 'unpaid')) {
-                effectiveStatus = 'processing';
+                effectiveStatus = 'in_queue';
             }
 
             let speedLabel = null;
