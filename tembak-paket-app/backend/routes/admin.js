@@ -1204,7 +1204,8 @@ router.get(['/admin/baileys/status', '/admin/wabot/status', '/admin/whatsapp/sta
         currentQrCode: waStatus.currentQrCode,
         qrCode: waStatus.qrCode,
         qr: waStatus.qrCode,
-        statusText: waStatus.statusText
+        statusText: waStatus.statusText,
+        logs: waStatus.logs || []
     };
     res.json({
         status: true,
@@ -1235,6 +1236,23 @@ router.post(['/admin/baileys/reset', '/admin/wabot/reset', '/admin/whatsapp/rese
         });
     } catch (err) {
         res.status(500).json({ status: false, success: false, message: "Gagal mereset sesi WhatsApp: " + err.message });
+    }
+});
+
+router.post(['/admin/baileys/pairing-code', '/admin/wabot/pairing-code', '/admin/whatsapp/pairing-code'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const phone = req.body?.phone || req.body?.phoneNumber;
+        if (!phone) {
+            return res.status(400).json({ status: false, success: false, message: "Nomor WhatsApp wajib diisi." });
+        }
+        const result = await waBot.requestPairingCode(phone);
+        if (result.status) {
+            res.json({ status: true, success: true, code: result.code, phone: result.phone, message: "Kode pairing 8 digit berhasil dibuat." });
+        } else {
+            res.status(500).json({ status: false, success: false, message: result.message || "Gagal membuat kode pairing." });
+        }
+    } catch (err) {
+        res.status(500).json({ status: false, success: false, message: "Gagal membuat kode pairing: " + err.message });
     }
 });
 

@@ -6,7 +6,7 @@
  * 1. Persistent Auth: Sessions saved locally in /sessions/baileys_auth (survives PM2 restart).
  * 2. High-speed In-Memory Signal Key Store caching via makeCacheableSignalKeyStore.
  * 3. Instant synchronous creds sync to prevent pairing loss on slow ARM/STB storage.
- * 4. Terminal QR code display via qrcode library for easy STB terminal scanning.
+ * 4. Dual Pairing Modes: Web QR Code (Chrome on Ubuntu) + 8-Digit Pairing Code (Phone Number).
  * 5. Automated Order Notification with Embedded Command Guides.
  * 6. Two-way WhatsApp Remote Admin Controller (.proses, .sukses, .gagal, .status, .help).
  */
@@ -209,7 +209,7 @@ async function initWABot(forceNew = false) {
             },
             printQRInTerminal: false,
             logger: silentLogger,
-            browser: Browsers.macOS("Desktop"),
+            browser: Browsers.ubuntu("Chrome"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
             qrTimeout: 60000,
@@ -236,7 +236,7 @@ async function initWABot(forceNew = false) {
                 console.error("[WABot] Error saving credentials:", err.message);
             }
             if (update?.me?.id) {
-                logWABot(`Kredensial pairing me berhasil diterima & disimpan (${update.me.id})!`, "info");
+                logWABot(`Kredensial pairing me berhasil diterima: ${update.me.id}`, "info");
             }
         });
 
@@ -244,7 +244,7 @@ async function initWABot(forceNew = false) {
             const { connection, lastDisconnect, qr, isNewLogin } = update;
 
             if (isNewLogin) {
-                logWABot("✅ Perangkat WhatsApp berhasil ditautkan via QR! Mengamankan sesi...", "info");
+                logWABot("✅ Perangkat WhatsApp berhasil dipindai oleh HP! Mengamankan sesi...", "info");
                 connectionState = "pairing";
                 global.baileysStatus = "pairing";
                 currentQrCode = null;
@@ -261,7 +261,7 @@ async function initWABot(forceNew = false) {
                 const hasMe = Boolean(state?.creds?.me?.id || inMemoryCreds?.me?.id);
 
                 if (isOpen || isPairing || hasMe) {
-                    logWABot("QR diabaikan karena socket sedang proses pairing / sudah memiliki login me.", "info");
+                    logWABot("QR diabaikan karena socket sedang proses pairing / sudah memiliki login.", "info");
                     return;
                 }
 
@@ -356,9 +356,9 @@ async function initWABot(forceNew = false) {
                     return;
                 }
 
-                // Jika terputus karena 515 (QR Code baru saja berhasil di-scan oleh HP!)
-                if (isRestart) {
-                    logWABot("✅ QR Code berhasil di-scan! Menghubungkan ulang sesi terautentikasi (515)...", "info");
+                // Jika terputus karena 515 atau socket close setelah pairing/scan
+                if (isRestart || connectionState === "pairing" || global.baileysStatus === "pairing") {
+                    logWABot("✅ QR / Pairing berhasil dipindai! Menghubungkan ulang sesi terautentikasi (515)...", "info");
                     connectionState = "pairing";
                     global.baileysStatus = "pairing";
                     currentQrCode = null;
@@ -421,6 +421,41 @@ async function initWABot(forceNew = false) {
         console.error("[WABot] Init error:", error.message);
         connectionState = "disconnected";
         isInitializing = false;
+    }
+}
+
+/**
+ * Request an 8-Digit Pairing Code for Linking WhatsApp
+ */
+async function requestPairingCode(phoneNumber) {
+    try {
+        const clean = cleanPhone(phoneNumber);
+        if (!clean) {
+            return { status: false, message: "Nomor WhatsApp tidak valid. Format contoh: 087767287284" };
+        }
+
+        if (!sock) {
+            await initWABot(false);
+        }
+
+        // Tunggu socket siap
+        for (let i = 0; i < 20; i++) {
+            if (sock && sock.requestPairingCode) break;
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        if (!sock || typeof sock.requestPairingCode !== "function") {
+            return { status: false, message: "Socket WhatsApp belum siap. Silakan klik Reset Sesi WA lalu coba lagi." };
+        }
+
+        logWABot(`Meminta kode pairing 8 digit untuk: ${clean}...`, "info");
+        const rawCode = await sock.requestPairingCode(clean);
+        const code = rawCode?.match(/.{1,4}/g)?.join("-") || rawCode;
+        logWABot(`✅ Kode Pairing Berhasil Dibuat: ${code}`, "info");
+        return { status: true, code: code, phone: clean };
+    } catch (e) {
+        logWABot(`Gagal membuat kode pairing: ${e.message}`, "error");
+        return { status: false, message: e.message };
     }
 }
 
@@ -749,5 +784,6 @@ module.exports = {
     logoutWABot,
     getWAStatus,
     sendTextMessage,
-    notifyNewOrder
+    notifyNewOrder,
+    requestPairingCode
 };

@@ -352,6 +352,11 @@ export default function AdminPage() {
   const [waBotStatus, setWaBotStatus] = useState<any>(null);
   const [loadingWaStatus, setLoadingWaStatus] = useState(false);
   const [resettingWa, setResettingWa] = useState(false);
+  const [waPairingTab, setWaPairingTab] = useState<"qr" | "code">("qr");
+  const [pairingPhone, setPairingPhone] = useState("087767287284");
+  const [pairingCode, setPairingCode] = useState("");
+  const [loadingPairingCode, setLoadingPairingCode] = useState(false);
+  const [copiedPairingCode, setCopiedPairingCode] = useState(false);
 
   const [imeiServiceOpen, setImeiServiceOpen] = useState(true);
   const [imeiServiceNote, setImeiServiceNote] = useState("");
@@ -1336,7 +1341,8 @@ export default function AdminPage() {
             ...payload,
             connected: isConn,
             isConnected: isConn,
-            qrCode: qr
+            qrCode: qr,
+            logs: payload.logs || prev?.logs || []
           };
         });
         setBaileysStatus((prev) => {
@@ -1384,6 +1390,50 @@ export default function AdminPage() {
       fetchWaBotStatus();
     }
   }, [activeTab]);
+
+  const handleRequestPairingCode = async () => {
+    if (!pairingPhone.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Nomor WhatsApp Kosong",
+        text: "Silakan masukkan nomor WhatsApp Anda (contoh: 087767287284)."
+      });
+      return;
+    }
+    try {
+      setLoadingPairingCode(true);
+      const res = await fetch("/api/admin/wabot/pairing-code", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: pairingPhone.trim() })
+      });
+      const d = await safeJson(res);
+      if (d?.status && d?.code) {
+        setPairingCode(d.code);
+        Swal.fire({
+          icon: "success",
+          title: "Kode Pairing 8 Digit Siap!",
+          html: `<p class="text-sm">Buka WhatsApp di HP > Perangkat Tertaut > Tautkan Perangkat > <b>Tautkan dengan nomor telepon saja</b> lalu ketik:</p><div class="text-2xl font-mono font-black tracking-widest text-emerald-700 bg-emerald-50 py-3 rounded-xl border border-emerald-200 mt-2">${d.code}</div>`,
+          confirmButtonColor: "#059669"
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Gagal Membuat Kode",
+          text: d?.message || "Pastikan server telah siap dan coba beberapa saat lagi."
+        });
+      }
+    } catch (e: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: e.message || "Terjadi kesalahan saat meminta kode pairing."
+      });
+    } finally {
+      setLoadingPairingCode(false);
+    }
+  };
 
   const handleResetWaSession = async () => {
     const confirm = await Swal.fire({
@@ -2309,6 +2359,34 @@ export default function AdminPage() {
                   {loadingWaStatus && <span className="text-[10px] text-ink-muted animate-spin">⏳</span>}
                 </div>
 
+                {/* Method Switcher Tab (QR Code vs Kode Pairing 8 Digit) */}
+                {!(waBotStatus?.connected || waBotStatus?.isConnected || waBotStatus?.state === "pairing") && (
+                  <div className="flex bg-parchment p-1 rounded-2xl border border-hairline text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setWaPairingTab("qr")}
+                      className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                        waPairingTab === "qr"
+                          ? "bg-canvas text-ink shadow-sm"
+                          : "text-ink-muted hover:text-ink"
+                      }`}
+                    >
+                      📷 Scan QR Code
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWaPairingTab("code")}
+                      className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                        waPairingTab === "code"
+                          ? "bg-canvas text-ink shadow-sm"
+                          : "text-ink-muted hover:text-ink"
+                      }`}
+                    >
+                      🔢 Kode Pairing (8 Digit)
+                    </button>
+                  </div>
+                )}
+
                 {/* Content Area */}
                 {waBotStatus?.connected || waBotStatus?.isConnected ? (
                   <div className="text-center py-6 space-y-3 bg-emerald-50/50 rounded-2xl border border-emerald-100 p-4">
@@ -2327,7 +2405,7 @@ export default function AdminPage() {
                       </p>
                     </div>
                   </div>
-                ) : waBotStatus?.state === 'pairing' ? (
+                ) : waBotStatus?.state === "pairing" ? (
                   <div className="text-center py-10 space-y-3 bg-blue-50/50 rounded-2xl border border-blue-200 p-6 animate-pulse">
                     <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl font-bold">
                       🔄
@@ -2335,11 +2413,73 @@ export default function AdminPage() {
                     <div className="space-y-1">
                       <h4 className="font-bold text-sm text-blue-900">Sedang Menautkan Perangkat WhatsApp...</h4>
                       <p className="text-xs text-blue-700">
-                        QR Code berhasil dipindai oleh HP Anda! Server sedang melakukan pertukaran kunci enkripsi & menghubungkan bot.
+                        Sinyal pairing berhasil dipindai oleh HP Anda! Server sedang melakukan pertukaran kunci enkripsi & menghubungkan bot.
                       </p>
                       <p className="text-[10px] text-blue-600/80 pt-1">
                         Mohon tunggu sebentar, jangan scan ulang atau menutup modal ini...
                       </p>
+                    </div>
+                  </div>
+                ) : waPairingTab === "code" ? (
+                  <div className="text-center space-y-3 py-2 bg-emerald-50/30 rounded-2xl border border-emerald-100 p-4">
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-xs text-ink">Tautkan Tanpa Scan Kamera</h4>
+                      <p className="text-[11px] text-ink-muted leading-relaxed">
+                        Masukkan nomor WhatsApp Anda untuk membuat kode pairing 8 digit yang dimasukkan langsung di aplikasi WhatsApp HP Anda.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 max-w-xs mx-auto text-left">
+                      <label className="text-[11px] font-bold text-ink block">Nomor WhatsApp Admin:</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="tel"
+                          placeholder="087767287284"
+                          value={pairingPhone}
+                          onChange={(e) => setPairingPhone(e.target.value)}
+                          className="flex-1 px-3 py-2 bg-canvas border border-hairline rounded-xl text-xs font-mono font-bold text-ink focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <Button
+                          size="sm"
+                          disabled={loadingPairingCode}
+                          onClick={handleRequestPairingCode}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0"
+                        >
+                          {loadingPairingCode ? "Membuat..." : "Minta Kode"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {pairingCode && (
+                      <div className="bg-emerald-100/70 border-2 border-emerald-400/60 rounded-2xl p-3 space-y-2 animate-in fade-in zoom-in duration-150">
+                        <p className="text-[11px] font-bold text-emerald-900">Kode Pairing Anda:</p>
+                        <div className="text-2xl font-black font-mono tracking-widest text-emerald-950 bg-white py-2 rounded-xl shadow-inner border border-emerald-200">
+                          {pairingCode}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(pairingCode.replace(/-/g, ""));
+                            setCopiedPairingCode(true);
+                            setTimeout(() => setCopiedPairingCode(false), 2000);
+                          }}
+                          className="text-xs text-emerald-800 font-bold hover:bg-emerald-200/50"
+                        >
+                          {copiedPairingCode ? "✓ Berhasil Disalin!" : "📋 Salin Kode"}
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="space-y-1 text-left bg-canvas/80 p-3 rounded-xl border border-hairline">
+                      <p className="text-xs font-bold text-ink">Petunjuk di WhatsApp HP:</p>
+                      <ol className="text-[11px] text-ink-muted list-decimal list-inside space-y-1">
+                        <li>Buka WhatsApp di HP Anda.</li>
+                        <li>Pilih menu <b>Perangkat Tertaut (Linked Devices)</b>.</li>
+                        <li>Pilih <b>Tautkan Perangkat</b>.</li>
+                        <li>Di bagian bawah kamera, klik <b>Tautkan dengan nomor telepon saja</b>.</li>
+                        <li>Masukkan 8 digit kode di atas.</li>
+                      </ol>
                     </div>
                   </div>
                 ) : waBotStatus?.qrCode ? (
@@ -2359,13 +2499,13 @@ export default function AdminPage() {
                         <li>Pilih menu <b>Perangkat Tertaut (Linked Devices)</b>.</li>
                         <li>Pilih <b>Tautkan Perangkat</b> lalu scan QR di atas.</li>
                       </ol>
-                      <p className="text-[10px] text-ink-muted pt-1">QR Code otomatis diperbarui setiap beberapa detik.</p>
+                      <p className="text-[10px] text-ink-muted pt-1">QR Code otomatis diperbarui setiap 60 detik.</p>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-10 space-y-2">
                     <div className="animate-spin text-2xl">⏳</div>
-                    <p className="text-xs font-bold text-ink">Sedang menyiapkan QR Code...</p>
+                    <p className="text-xs font-bold text-ink">Sedang menyiapkan sesi WhatsApp...</p>
                     <p className="text-[11px] text-ink-muted">Harap tunggu beberapa detik sementara server menyiapkan sesi Baileys.</p>
                   </div>
                 )}
