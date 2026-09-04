@@ -585,15 +585,15 @@ function HistoryContent() {
 
                 {/* Safe User Note Box (Zero Technical Error Leakage) */}
                 {(() => {
-                  const rawNote = trx.admin_note || trx.adminNote || "";
+                  const rawNote = (trx.admin_note || trx.adminNote || "").trim();
                   if (!rawNote) return null;
-                  const isLeaked = /ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
-                  const displayNote = isLeaked ? "Pesanan sedang dalam antrean proses verifikasi oleh sistem/admin." : rawNote;
+                  const isLeakedOrGeneric = /sedang dikerjakan oleh admin|sedang diproses oleh admin|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
+                  if (isLeakedOrGeneric) return null;
                   return (
                     <div className="p-2.5 rounded-xl bg-parchment border border-hairline text-xs space-y-0.5">
                       <span className="font-bold text-[10px] text-primary uppercase block">Catatan Pesanan:</span>
                       <p className="text-ink text-[11px] leading-relaxed break-words">
-                        {displayNote}
+                        {rawNote}
                       </p>
                     </div>
                   );

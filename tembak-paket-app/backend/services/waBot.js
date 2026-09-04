@@ -238,6 +238,26 @@ function purgeStalePeerSessions() {
     }
 }
 
+async function getCustomerPhoneForTransaction(trx) {
+    if (!trx) return null;
+    let candidate = trx.targetPhone || trx.customerPhone;
+    if (candidate && !candidate.includes('@') && cleanPhone(candidate).length >= 8) {
+        return cleanPhone(candidate);
+    }
+    if (trx.userId) {
+        try {
+            const userRow = await dbGet("SELECT phone, verifiedPhone FROM users WHERE id = ?", [trx.userId]);
+            if (userRow) {
+                const p1 = userRow.verifiedPhone && cleanPhone(userRow.verifiedPhone);
+                if (p1 && p1.length >= 8) return p1;
+                const p2 = userRow.phone && cleanPhone(userRow.phone);
+                if (p2 && p2.length >= 8) return p2;
+            }
+        } catch (e) {}
+    }
+    return null;
+}
+
 function cleanPhone(raw) {
     if (!raw) return "";
     let p = String(raw).replace(/\D/g, "");
@@ -774,14 +794,21 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
 
     // 1. Command .proses (or 1)
     if (command === ".proses") {
-        const processNote = notesArg || "Sedang dikerjakan oleh admin via WA";
-        await dbRun(
-            "UPDATE transactions SET status = 'processing', admin_note = ? WHERE id = ?",
-            [processNote, trx.id]
-        );
+        const customNote = notesArg ? notesArg.trim() : "";
+        if (customNote) {
+            await dbRun(
+                "UPDATE transactions SET status = 'processing', admin_note = ? WHERE id = ?",
+                [customNote, trx.id]
+            );
+        } else {
+            await dbRun(
+                "UPDATE transactions SET status = 'processing' WHERE id = ?",
+                [trx.id]
+            );
+        }
         if (trx.userId) {
-            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'processing', message: processNote });
-            sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'processing', note: processNote });
+            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'processing', message: customNote || "Pesanan sedang diproses admin." });
+            sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'processing', note: customNote || null });
         }
         if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'processing' });
 
@@ -792,27 +819,31 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             `📦 *Layanan:* ${trx.packageName}\n` +
             `📱 *IMEI:* \`${trx.imei}\`\n` +
             `⚡ *Status Baru:* *PROCESSING (Diproses)*\n` +
-            `📝 *Catatan:* ${processNote}\n` +
+            (customNote ? `📝 *Catatan:* ${customNote}\n` : "") +
             `━━━━━━━━━━━━━━━━━━\n` +
             `💡 *Selesaikan:* Balas pesan ini ketik *2* atau *.sukses*`;
         await replyWhatsApp(replyJid, reply);
 
         // Notify customer via WhatsApp that order has started processing
-        if (trx.targetPhone) {
-            const cleanCust = cleanPhone(trx.targetPhone);
-            if (cleanCust) {
-                const custJid = await resolveWhatsAppJid(cleanCust);
-                const custMsg = `Halo Kak *${trx.userName || "Pelanggan"}*! 👋\n\n` +
-                    `⚡ *Pesanan Unblock IMEI Sedang Diproses!*\n` +
-                    `━━━━━━━━━━━━━━━━━━\n` +
-                    `🆔 *Order ID:* \`${trx.id}\`\n` +
-                    `📱 *IMEI:* \`${trx.imei}\`\n` +
-                    `📦 *Layanan:* ${trx.packageName}\n` +
-                    `📝 *Status:* Sedang Dikerjakan Admin\n` +
-                    `━━━━━━━━━━━━━━━━━━\n` +
-                    `Tim teknis kami sedang mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
-                    `Pantau status pesanan: https://ry-itsolutions.web.id/history?tab=processing`;
-                sendAndStoreMessage(custJid, { text: custMsg }).catch(() => {});
+        const customerTarget = await getCustomerPhoneForTransaction(trx);
+        if (customerTarget) {
+            const custJid = `${customerTarget}@s.whatsapp.net`;
+            const custMsg = `Halo Kak *${trx.userName || "Pelanggan"}*! 👋\n\n` +
+                `⚡ *Pesanan Unblock IMEI Sedang Diproses!*\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `🆔 *Order ID:* \`${trx.id}\`\n` +
+                `📱 *IMEI:* \`${trx.imei}\`\n` +
+                `📦 *Layanan:* ${trx.packageName}\n` +
+                `📝 *Status:* Sedang Dikerjakan Admin\n` +
+                (customNote ? `💬 *Catatan Admin:* ${customNote}\n` : "") +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `Tim teknis kami sedang mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
+                `Pantau status pesanan: https://ry-itsolutions.web.id/history?tab=processing`;
+            try {
+                await sendAndStoreMessage(custJid, { text: custMsg });
+                logWABot(`✅ Notifikasi proses pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerTarget})`, "info");
+            } catch (err) {
+                logWABot(`❌ Gagal kirim notifikasi proses ke pelanggan ${customerTarget}: ${err.message}`, "error");
             }
         }
         return;
@@ -843,20 +874,23 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         await replyWhatsApp(replyJid, reply);
 
         // Notify customer if phone number is available
-        if (trx.targetPhone) {
-            const cleanCust = cleanPhone(trx.targetPhone);
-            if (cleanCust) {
-                const custJid = await resolveWhatsAppJid(cleanCust);
-                const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
-                    `✅ *Pesanan Unblock IMEI Anda Telah Selesai!*\n` +
-                    `━━━━━━━━━━━━━━━━━━\n` +
-                    `🆔 *Order ID:* \`${trx.id}\`\n` +
-                    `📱 *IMEI:* \`${trx.imei}\`\n` +
-                    `📦 *Layanan:* ${trx.packageName}\n` +
-                    `📝 *Catatan Admin:* ${finalNote}\n` +
-                    `━━━━━━━━━━━━━━━━━━\n` +
-                    `Silakan restart perangkat HP Anda atau lepas-pasang kartu SIM. Terima kasih telah menggunakan layanan Ry-ITSolutions!`;
-                sendAndStoreMessage(custJid, { text: custMsg }).catch(() => {});
+        const customerTarget = await getCustomerPhoneForTransaction(trx);
+        if (customerTarget) {
+            const custJid = `${customerTarget}@s.whatsapp.net`;
+            const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
+                `✅ *Pesanan Unblock IMEI Anda Telah Selesai!*\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `🆔 *Order ID:* \`${trx.id}\`\n` +
+                `📱 *IMEI:* \`${trx.imei}\`\n` +
+                `📦 *Layanan:* ${trx.packageName}\n` +
+                `📝 *Catatan Admin:* ${finalNote}\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `Silakan restart perangkat HP Anda atau lepas-pasang kartu SIM. Terima kasih telah menggunakan layanan Ry-ITSolutions!`;
+            try {
+                await sendAndStoreMessage(custJid, { text: custMsg });
+                logWABot(`✅ Notifikasi selesai pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerTarget})`, "info");
+            } catch (err) {
+                logWABot(`❌ Gagal kirim notifikasi selesai ke pelanggan ${customerTarget}: ${err.message}`, "error");
             }
         }
         return;
@@ -899,21 +933,24 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             `━━━━━━━━━━━━━━━━━━`;
         await replyWhatsApp(replyJid, reply);
 
-        if (trx.targetPhone) {
-            const cleanCust = cleanPhone(trx.targetPhone);
-            if (cleanCust) {
-                const custJid = await resolveWhatsAppJid(cleanCust);
-                const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
-                    `⚠️ *Pemberitahuan Pesanan Unblock IMEI*\n` +
-                    `━━━━━━━━━━━━━━━━━━\n` +
-                    `🆔 *Order ID:* \`${trx.id}\`\n` +
-                    `📱 *IMEI:* \`${trx.imei}\`\n` +
-                    `❌ *Status:* Dibatalkan / Gagal\n` +
-                    `📝 *Alasan:* ${failReason}\n` +
-                    `💵 *Refund:* ${refundNote}\n` +
-                    `━━━━━━━━━━━━━━━━━━\n` +
-                    `Silakan cek saldo akun Anda atau hubungi admin jika ada pertanyaan.`;
-                sendAndStoreMessage(custJid, { text: custMsg }).catch(() => {});
+        const customerTarget = await getCustomerPhoneForTransaction(trx);
+        if (customerTarget) {
+            const custJid = `${customerTarget}@s.whatsapp.net`;
+            const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
+                `⚠️ *Pemberitahuan Pesanan Unblock IMEI*\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `🆔 *Order ID:* \`${trx.id}\`\n` +
+                `📱 *IMEI:* \`${trx.imei}\`\n` +
+                `❌ *Status:* Dibatalkan / Gagal\n` +
+                `📝 *Alasan:* ${failReason}\n` +
+                `💵 *Refund:* ${refundNote}\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `Silakan cek saldo akun Anda atau hubungi admin jika ada pertanyaan.`;
+            try {
+                await sendAndStoreMessage(custJid, { text: custMsg });
+                logWABot(`✅ Notifikasi pembatalan pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerTarget})`, "info");
+            } catch (err) {
+                logWABot(`❌ Gagal kirim notifikasi pembatalan ke pelanggan ${customerTarget}: ${err.message}`, "error");
             }
         }
         return;
@@ -1094,11 +1131,20 @@ async function notifyNewOrder(orderData) {
         console.log(`[WABot] Notifikasi pesanan ${id} berhasil dikirim ke ${adminPhones.length} nomor admin.`);
 
         // 2. Also send confirmation to customer phone if provided
-        const customerTarget = customerPhone || targetPhone;
+        let customerTarget = customerPhone || targetPhone;
+        if (!customerTarget || customerTarget.includes('@') || cleanPhone(customerTarget).length < 8) {
+            try {
+                const trxRow = await dbGet("SELECT userId, targetPhone FROM transactions WHERE id = ?", [id]);
+                if (trxRow) {
+                    const dbPhone = await getCustomerPhoneForTransaction(trxRow);
+                    if (dbPhone) customerTarget = dbPhone;
+                }
+            } catch (e) {}
+        }
         if (customerTarget) {
             const cleanCust = cleanPhone(customerTarget);
-            if (cleanCust) {
-                const custJid = await resolveWhatsAppJid(cleanCust);
+            if (cleanCust && cleanCust.length >= 8) {
+                const custJid = `${cleanCust}@s.whatsapp.net`;
                 const customerMsg =
                     `Halo Kak *${userName || "Pelanggan"}*! 👋\n` +
                     `Terima kasih telah memesan layanan di *Ry-ITSolutions*.\n\n` +
@@ -1113,8 +1159,10 @@ async function notifyNewOrder(orderData) {
                     `_Pesan otomatis ini dikirim resmi oleh sistem Ry-ITSolutions._`;
                 try {
                     await sendAndStoreMessage(custJid, { text: customerMsg });
+                    logWABot(`✅ Notifikasi pesanan ${id} berhasil dikirim ke pelanggan (${cleanCust})`, "info");
                     console.log(`[WABot] Notifikasi pesanan ${id} berhasil dikirim ke pelanggan (${cleanCust}).`);
                 } catch (custErr) {
+                    logWABot(`❌ Gagal mengirim notifikasi ke pelanggan ${cleanCust}: ${custErr.message}`, "error");
                     console.warn(`[WABot] Gagal mengirim notifikasi ke pelanggan ${cleanCust}:`, custErr.message);
                 }
             }
