@@ -4,12 +4,22 @@
  * 
  * Features:
  * 1. Persistent Auth: Sessions saved locally in /sessions/baileys_auth (survives PM2 restart).
- * 2. Terminal QR code display via qrcode library for easy STB terminal scanning.
- * 3. Automated Order Notification with Embedded Command Guides.
- * 4. Two-way WhatsApp Remote Admin Controller (.proses, .sukses, .gagal, .status, .help).
+ * 2. High-speed In-Memory Signal Key Store caching via makeCacheableSignalKeyStore.
+ * 3. Instant synchronous creds sync to prevent pairing loss on slow ARM/STB storage.
+ * 4. Terminal QR code display via qrcode library for easy STB terminal scanning.
+ * 5. Automated Order Notification with Embedded Command Guides.
+ * 6. Two-way WhatsApp Remote Admin Controller (.proses, .sukses, .gagal, .status, .help).
  */
 
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require("@whiskeysockets/baileys");
+const { 
+    default: makeWASocket, 
+    useMultiFileAuthState, 
+    DisconnectReason, 
+    fetchLatestBaileysVersion, 
+    Browsers, 
+    makeCacheableSignalKeyStore,
+    BufferJSON 
+} = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const QRCode = require("qrcode");
 const path = require("path");
@@ -21,33 +31,32 @@ const SESSIONS_DIR = path.join(__dirname, "..", "sessions", "baileys_auth");
 let sock = null;
 let currentQrCode = null;
 let qrCodeDataUrl = null;
-let connectionState = "disconnected"; // 'disconnected' | 'connecting' | 'scan_ready' | 'open'
+let connectionState = "disconnected"; // "disconnected" | "connecting" | "scan_ready" | "pairing" | "open"
 let connectedPhone = null;
 let isInitializing = false;
 let connectingTimer = null;
+let inMemoryCreds = null;
 
 global.baileysStatus = "disconnected";
 global.qrCode = null;
 
 const WA_LOGS_MAX = 50;
 const waLogsBuffer = [];
-let currentAuthState = null;
 
-function addWALog(msg) { logWABot(msg, 'info'); }
-function logWABot(msg, level = 'info') {
-    const timestamp = new Date().toLocaleTimeString('id-ID');
+function addWALog(msg) { logWABot(msg, "info"); }
+function logWABot(msg, level = "info") {
+    const timestamp = new Date().toLocaleTimeString("id-ID");
     const entry = `[${timestamp}] [${level.toUpperCase()}] ${msg}`;
     waLogsBuffer.push(entry);
     if (waLogsBuffer.length > WA_LOGS_MAX) waLogsBuffer.shift();
-    if (level === 'error') console.error(`[WABot] ${msg}`);
-    else if (level === 'warn') console.warn(`[WABot] ${msg}`);
+    if (level === "error") console.error(`[WABot] ${msg}`);
+    else if (level === "warn") console.warn(`[WABot] ${msg}`);
     else console.log(`[WABot] ${msg}`);
 }
 
 function getWALogs() {
     return waLogsBuffer.slice();
 }
-
 
 function clearConnectingTimer() {
     if (connectingTimer) {
@@ -62,11 +71,22 @@ function ensureDirExists(dir) {
     }
 }
 
+function syncSaveCreds(creds) {
+    if (!creds) return;
+    try {
+        ensureDirExists(SESSIONS_DIR);
+        const credsFile = path.join(SESSIONS_DIR, "creds.json");
+        fs.writeFileSync(credsFile, JSON.stringify(creds, BufferJSON.replacer, 2), "utf-8");
+    } catch (e) {
+        console.error("[WABot] Error writing creds.json synchronously:", e.message);
+    }
+}
+
 function cleanPhone(raw) {
-    if (!raw) return '';
-    let p = String(raw).replace(/\D/g, '');
-    if (p.startsWith('0')) p = '62' + p.substring(1);
-    else if (!p.startsWith('62')) p = '62' + p;
+    if (!raw) return "";
+    let p = String(raw).replace(/\D/g, "");
+    if (p.startsWith("0")) p = "62" + p.substring(1);
+    else if (!p.startsWith("62")) p = "62" + p;
     return p;
 }
 
@@ -77,8 +97,8 @@ async function getAdminPhoneNumbers() {
     const adminPhones = new Set();
 
     // 1. From environment variables
-    const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || '6287767287284';
-    envAdmin.split(',').forEach(num => {
+    const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || "6287767287284";
+    envAdmin.split(",").forEach(num => {
         const cp = cleanPhone(num.trim());
         if (cp) adminPhones.add(cp);
     });
@@ -87,7 +107,7 @@ async function getAdminPhoneNumbers() {
     try {
         const row = await dbGet("SELECT value FROM settings WHERE key = 'wa_admin_number'");
         if (row && row.value) {
-            row.value.split(',').forEach(num => {
+            row.value.split(",").forEach(num => {
                 const cp = cleanPhone(num.trim());
                 if (cp) adminPhones.add(cp);
             });
@@ -121,7 +141,7 @@ async function initWABot(forceNew = false) {
     }
     isInitializing = true;
 
-    // 1. FORCE CLEANUP ON NEW INITIALIZATION
+    // 1. Force cleanup old socket
     try {
         if (sock) {
             console.log("[WABot] Membersihkan socket Baileys lama sebelum inisialisasi baru...");
@@ -146,17 +166,13 @@ async function initWABot(forceNew = false) {
                 currentQrCode = null;
                 global.qrCode = null;
                 connectedPhone = null;
+                inMemoryCreds = null;
                 connectionState = "disconnected";
                 global.baileysStatus = "disconnected";
-                currentAuthState = null;
-                console.log("[WABot] Folder auth session berhasil direset.");
+                logWABot("Folder auth session berhasil direset.", "info");
             } catch (err) {
                 console.error("[WABot] Error resetting session:", err.message);
             }
-        } else {
-            // Handshake Protection: jangan reset status ke disconnected dan jangan kosongkan QR
-            connectionState = "connecting";
-            global.baileysStatus = "connecting";
         }
 
         let waVersion = [2, 3000, 1043857760];
@@ -169,47 +185,58 @@ async function initWABot(forceNew = false) {
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
 
-        // STB Flash Memory Protection: pulihkan creds.me jika di memori sudah ada tapi disk belum selesai flush
-        if (currentAuthState?.creds?.me?.id && !state.creds?.me?.id) {
-            console.log(`[WABot] Memulihkan kredensial 'me' dari in-memory state (${currentAuthState.creds.me.id})...`);
-            Object.assign(state.creds, currentAuthState.creds);
-            try {
-                await saveCreds();
-            } catch (e) {}
+        // Flash Memory Protection: Pulihkan creds jika di in-memory sudah ada tapi disk belum sinkron
+        if (inMemoryCreds?.me?.id && !state.creds?.me?.id) {
+            logWABot(`Memulihkan kredensial me dari in-memory cache (${inMemoryCreds.me.id})...`, "info");
+            Object.assign(state.creds, inMemoryCreds);
+            syncSaveCreds(state.creds);
+            try { await saveCreds(); } catch (e) {}
+        } else if (state.creds?.me?.id) {
+            inMemoryCreds = { ...state.creds };
         }
-        currentAuthState = state;
 
-        connectionState = "connecting";
+        if (connectionState !== "pairing") {
+            connectionState = "connecting";
+            global.baileysStatus = "connecting";
+        }
 
+        const silentLogger = pino({ level: "silent" });
         sock = makeWASocket({
             version: waVersion,
-            auth: state,
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, silentLogger)
+            },
             printQRInTerminal: false,
-            logger: pino({ level: "silent" }),
-            browser: Browsers.ubuntu("Chrome"),
+            logger: silentLogger,
+            browser: Browsers.macOS("Desktop"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
+            qrTimeout: 60000,
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             keepAliveIntervalMs: 25000,
             generateHighQualityLinkPreview: false
         });
 
-        // Simpan kredensial langsung & pertahankan di memory state
+        // Simpan kredensial langsung & pertahankan di memory state & disk secara sinkron
         sock.ev.on("creds.update", async (update) => {
             if (update) {
                 Object.assign(state.creds, update);
-                if (currentAuthState) {
-                    Object.assign(currentAuthState.creds, update);
+                if (inMemoryCreds) {
+                    Object.assign(inMemoryCreds, update);
+                } else {
+                    inMemoryCreds = { ...state.creds };
                 }
             }
+            syncSaveCreds(state.creds);
             try {
                 await saveCreds();
-                if (update?.me?.id) {
-                    console.log(`[WABot] Kredensial pairing 'me' berhasil diterima & disimpan (${update.me.id})!`);
-                }
             } catch (err) {
                 console.error("[WABot] Error saving credentials:", err.message);
+            }
+            if (update?.me?.id) {
+                logWABot(`Kredensial pairing me berhasil diterima & disimpan (${update.me.id})!`, "info");
             }
         });
 
@@ -217,23 +244,24 @@ async function initWABot(forceNew = false) {
             const { connection, lastDisconnect, qr, isNewLogin } = update;
 
             if (isNewLogin) {
-                addWALog('✅ Perangkat berhasil ditautkan via QR! Menyimpan sesi...');
-                connectionState = 'pairing';
-                global.baileysStatus = 'pairing';
+                logWABot("✅ Perangkat WhatsApp berhasil ditautkan via QR! Mengamankan sesi...", "info");
+                connectionState = "pairing";
+                global.baileysStatus = "pairing";
                 currentQrCode = null;
                 qrCodeDataUrl = null;
                 global.qrCode = null;
+                syncSaveCreds(state.creds);
                 try { await saveCreds(); } catch (e) {}
             }
 
-            // 2. LOGIKA GENERATE QR CODE: Izinkan pembuatan QR Code jika status BUKAN 'open'
+            // 1. Tangani QR Code baru
             if (qr) {
                 const isOpen = connectionState === "open" || global.baileysStatus === "open";
-                const isRegistered = Boolean(state?.creds?.me?.id || currentAuthState?.creds?.me?.id);
                 const isPairing = connectionState === "pairing" || global.baileysStatus === "pairing";
+                const hasMe = Boolean(state?.creds?.me?.id || inMemoryCreds?.me?.id);
 
-                if (isOpen || isRegistered || isPairing) {
-                    console.log("[WABot] QR diabaikan karena socket sedang pairing / sudah terdaftar.");
+                if (isOpen || isPairing || hasMe) {
+                    logWABot("QR diabaikan karena socket sedang proses pairing / sudah memiliki login me.", "info");
                     return;
                 }
 
@@ -246,14 +274,12 @@ async function initWABot(forceNew = false) {
                     isInitializing = false;
                     clearConnectingTimer();
 
-                    logWABot("Kode QR baru siap di-scan", "info");
+                    logWABot("Kode QR baru siap di-scan (aktif 60 detik)", "info");
                     console.log("\n==================================================================");
                     console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
                     console.log("==================================================================");
-                    QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
-                        if (!err && terminalQR) {
-                            console.log(terminalQR);
-                        }
+                    QRCode.toString(qr, { type: "terminal", small: true }, (err, terminalQR) => {
+                        if (!err && terminalQR) console.log(terminalQR);
                     });
                     console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
                     console.log("==================================================================\n");
@@ -262,17 +288,18 @@ async function initWABot(forceNew = false) {
                 }
             }
 
+            // 2. Status connecting
             if (connection === "connecting") {
-                connectionState = "connecting";
-                global.baileysStatus = "connecting";
+                if (connectionState !== "scan_ready" && connectionState !== "open" && connectionState !== "pairing") {
+                    connectionState = "connecting";
+                    global.baileysStatus = "connecting";
+                }
                 console.log("[WABot] Status koneksi: connecting...");
 
-                // 3. TIMEOUT CONNECTING SAFETY:
-                // Jika status 'connecting' bertahan > 15 detik tanpa berubah menjadi 'open', paksa reset & panggil ulang initWABot()
                 clearConnectingTimer();
                 connectingTimer = setTimeout(() => {
                     if (connectionState === "connecting" || global.baileysStatus === "connecting") {
-                        console.warn("[WABot] Status 'connecting' timeout (>35s). Memaksa reset & re-init Baileys socket...");
+                        console.warn("[WABot] Status connecting timeout (>50s). Re-init socket...");
                         clearConnectingTimer();
                         try {
                             if (sock) {
@@ -286,66 +313,13 @@ async function initWABot(forceNew = false) {
                         isInitializing = false;
                         initWABot(false);
                     }
-                }, 35000);
+                }, 50000);
             }
 
-            if (connection === "close") {
+            // 3. Status open (Berhasil Terhubung)
+            if (connection === "open") {
                 clearConnectingTimer();
-                                const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
-                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
-
-                console.log(`[WABot] Koneksi terputus (Status: ${statusCode || 'unknown'}). Error: ${lastDisconnect?.error?.message}`);
-
-                // 1. HANYA jika terputus karena LoggedOut (401), hapus sesi & jangan auto-reconnect
-                if (isLoggedOut) {
-                    console.log("[WABot] Sesi WhatsApp telah Logged Out. Membersihkan auth folder...");
-                    connectionState = "disconnected";
-                    global.baileysStatus = "disconnected";
-                    currentQrCode = null;
-                    qrCodeDataUrl = null;
-                    global.qrCode = null;
-                    connectedPhone = null;
-                    isInitializing = false;
-                    try {
-                        fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
-                    } catch (e) {}
-                    return;
-                }
-
-                // 2. RESTART REQUIRED (515) - Proses pairing QR berhasil di-scan oleh HP
-                if (statusCode === 515 || statusCode === DisconnectReason.restartRequired) {
-                    addWALog('✅ QR berhasil di-scan! WhatsApp meminta restart socket (515)...');
-                    currentQrCode = null;
-                    qrCodeDataUrl = null;
-                    global.qrCode = null;
-                    console.log("[WABot] ✅ QR Code berhasil di-scan! WhatsApp meminta restart socket untuk menyelesaikan pairing (515)...");
-                    connectionState = "pairing";
-                    global.baileysStatus = "pairing";
-                    isInitializing = false;
-                    try { await saveCreds(); } catch (e) {}
-                    // Jeda 800ms agar flush I/O di storage STB tuntas sebelum socket baru membaca disk
-                    setTimeout(() => initWABot(false), 800);
-                    return;
-                }
-
-                // 3. HANDSHAKE RECONNECT PROTECTION (408 / 428 / network drop):
-                if (statusCode === 408 || statusCode === 428 || shouldReconnect) {
-                    console.log(`[WABot] Handshake reconnect protection active (Status: ${statusCode}). Menjaga status connecting & QR tetap stabil...`);
-                    connectionState = "connecting";
-                    global.baileysStatus = "connecting";
-                    isInitializing = false;
-                    setTimeout(() => initWABot(false), 1500);
-                    return;
-                }
-
-                // Fallback reconnect
-                connectionState = "connecting";
-                global.baileysStatus = "connecting";
-                isInitializing = false;
-                setTimeout(() => initWABot(false), 3000);
-            } else if (connection === "open") {
-                clearConnectingTimer();
+                syncSaveCreds(state.creds);
                 try { await saveCreds(); } catch (e) {}
                 connectionState = "open";
                 global.baileysStatus = "open";
@@ -353,29 +327,82 @@ async function initWABot(forceNew = false) {
                 qrCodeDataUrl = null;
                 global.qrCode = null;
                 connectedPhone = sock.user?.id ? sock.user.id.split(":")[0] : (sock.user?.phone || "Connected");
+                logWABot(`🚀 WhatsApp Bot Terhubung sebagai: ${connectedPhone}`, "info");
                 console.log(`[WABot] 🚀 WhatsApp Bot Admin Terhubung sebagai: ${connectedPhone}`);
                 isInitializing = false;
+            }
+
+            // 4. Status close (Koneksi terputus / QR discan memicu 515 restart)
+            if (connection === "close") {
+                clearConnectingTimer();
+                const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
+                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+                const isRestart = statusCode === DisconnectReason.restartRequired || statusCode === 515;
+
+                logWABot(`Koneksi socket terputus (Status: ${statusCode || "unknown"}). Error: ${lastDisconnect?.error?.message || "None"}`, "warn");
+
+                // Jika terputus karena LoggedOut (401), bersihkan sesi
+                if (isLoggedOut) {
+                    logWABot("Sesi WhatsApp Logged Out. Membersihkan auth session...", "warn");
+                    connectionState = "disconnected";
+                    global.baileysStatus = "disconnected";
+                    currentQrCode = null;
+                    qrCodeDataUrl = null;
+                    global.qrCode = null;
+                    connectedPhone = null;
+                    inMemoryCreds = null;
+                    isInitializing = false;
+                    try { fs.rmSync(SESSIONS_DIR, { recursive: true, force: true }); } catch (e) {}
+                    return;
+                }
+
+                // Jika terputus karena 515 (QR Code baru saja berhasil di-scan oleh HP!)
+                if (isRestart) {
+                    logWABot("✅ QR Code berhasil di-scan! Menghubungkan ulang sesi terautentikasi (515)...", "info");
+                    connectionState = "pairing";
+                    global.baileysStatus = "pairing";
+                    currentQrCode = null;
+                    qrCodeDataUrl = null;
+                    global.qrCode = null;
+                    isInitializing = false;
+                    syncSaveCreds(state.creds);
+                    try { await saveCreds(); } catch (e) {}
+                    // Jeda 1200ms agar flush I/O di storage STB tuntas & server WA siap menerima koneksi companion
+                    setTimeout(() => initWABot(false), 1200);
+                    return;
+                }
+
+                // Reconnect untuk status kode lainnya (network drop / keepalive / 408 / 428)
+                if (state?.creds?.me?.id || inMemoryCreds?.me?.id) {
+                    connectionState = "connecting";
+                    global.baileysStatus = "connecting";
+                } else {
+                    connectionState = "connecting";
+                    global.baileysStatus = "connecting";
+                }
+                isInitializing = false;
+                setTimeout(() => initWABot(false), 2000);
             }
         });
 
         // --- INCOMING MESSAGE CONTROLLER (ADMIN COMMANDS) ---
         sock.ev.on("messages.upsert", async ({ messages, type }) => {
-            if (type !== 'notify') return;
+            if (type !== "notify") return;
 
             for (const msg of messages) {
                 if (!msg.message || msg.key.fromMe) continue;
 
                 const remoteJid = msg.key.remoteJid;
-                if (!remoteJid || remoteJid.includes('@g.us')) continue; // Ignore groups for command execution
+                if (!remoteJid || remoteJid.includes("@g.us")) continue; // Ignore groups for command execution
 
-                const senderPhone = cleanPhone(remoteJid.replace('@s.whatsapp.net', ''));
+                const senderPhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", ""));
                 const messageText = (
                     msg.message.conversation ||
                     msg.message.extendedTextMessage?.text ||
-                    ''
+                    ""
                 ).trim();
 
-                if (!messageText.startsWith('.')) continue;
+                if (!messageText.startsWith(".")) continue;
 
                 // Authorization check: Only configured admin numbers can execute commands
                 const adminPhones = await getAdminPhoneNumbers();
@@ -404,11 +431,11 @@ async function handleAdminCommand(replyJid, text) {
     const parts = text.split(/\s+/);
     const command = parts[0].toLowerCase();
     const orderIdArg = parts[1];
-    const notesArg = parts.slice(2).join(' ');
+    const notesArg = parts.slice(2).join(" ");
 
-    console.log(`[WABot Command] Received: ${command} ${orderIdArg || ''} from ${replyJid}`);
+    console.log(`[WABot Command] Received: ${command} ${orderIdArg || ""} from ${replyJid}`);
 
-    if (command === '.bantuan' || command === '.help' || command === '.menu') {
+    if (command === ".bantuan" || command === ".help" || command === ".menu") {
         const helpMsg = `🤖 *PANDUAN PERINTAH BOT ADMIN Ry-ITSolutions*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `• *.proses <ID_ORDER>*\n` +
@@ -444,27 +471,27 @@ async function handleAdminCommand(replyJid, text) {
     const currentStatus = trx.status;
 
     // 1. Command .proses
-    if (command === '.proses') {
+    if (command === ".proses") {
         await dbRun(
             "UPDATE transactions SET status = 'processing', admin_note = ? WHERE id = ?",
-            [notesArg || 'Sedang diproses oleh admin via WA', trx.id]
+            [notesArg || "Sedang diproses oleh admin via WA", trx.id]
         );
         const reply = `✅ *STATUS ORDER DIPERBARUI!*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${trx.id}\`\n` +
-            `👤 *User:* ${trx.userName || 'User'}\n` +
+            `👤 *User:* ${trx.userName || "User"}\n` +
             `📦 *Layanan:* ${trx.packageName}\n` +
             `📱 *IMEI:* \`${trx.imei}\`\n` +
             `⚡ *Status Baru:* *PROCESSING (Diproses)*\n` +
-            `📝 *Catatan:* ${notesArg || 'Sedang dikerjakan admin'}\n` +
+            `📝 *Catatan:* ${notesArg || "Sedang dikerjakan admin"}\n` +
             `━━━━━━━━━━━━━━━━━━`;
         await replyWhatsApp(replyJid, reply);
         return;
     }
 
     // 2. Command .sukses
-    if (command === '.sukses') {
-        const finalNote = notesArg || 'Pesanan berhasil diselesaikan oleh admin. Sinyal aktif.';
+    if (command === ".sukses") {
+        const finalNote = notesArg || "Pesanan berhasil diselesaikan oleh admin. Sinyal aktif.";
         await dbRun(
             "UPDATE transactions SET status = 'success', admin_note = ? WHERE id = ?",
             [finalNote, trx.id]
@@ -472,10 +499,10 @@ async function handleAdminCommand(replyJid, text) {
         const reply = `🎉 *PESANAN SELESAI (SUCCESS)!*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${trx.id}\`\n` +
-            `👤 *User:* ${trx.userName || 'User'}\n` +
+            `👤 *User:* ${trx.userName || "User"}\n` +
             `📦 *Layanan:* ${trx.packageName}\n` +
             `📱 *IMEI:* \`${trx.imei}\`\n` +
-            `💰 *Nominal:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n` +
+            `💰 *Nominal:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString("id-ID")}\n` +
             `✅ *Status:* *SUCCESS*\n` +
             `📝 *Hasil:* ${finalNote}\n` +
             `━━━━━━━━━━━━━━━━━━`;
@@ -484,14 +511,14 @@ async function handleAdminCommand(replyJid, text) {
     }
 
     // 3. Command .gagal (with automatic balance refund)
-    if (command === '.gagal') {
-        const failReason = notesArg || 'Pesanan dibatalkan oleh admin.';
+    if (command === ".gagal") {
+        const failReason = notesArg || "Pesanan dibatalkan oleh admin.";
         const refundAmount = Number(trx.platformFee || trx.originalPrice || 0);
-        let refundNote = 'Tidak ada pengembalian dana.';
+        let refundNote = "Tidak ada pengembalian dana.";
 
-        if (refundAmount > 0 && (currentStatus === 'pending' || currentStatus === 'processing')) {
+        if (refundAmount > 0 && (currentStatus === "pending" || currentStatus === "processing")) {
             await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, trx.userId]);
-            refundNote = `Saldo Rp ${refundAmount.toLocaleString('id-ID')} telah dikembalikan ke user.`;
+            refundNote = `Saldo Rp ${refundAmount.toLocaleString("id-ID")} telah dikembalikan ke user.`;
         }
 
         await dbRun(
@@ -502,7 +529,7 @@ async function handleAdminCommand(replyJid, text) {
         const reply = `⚠️ *PESANAN DITOLAK / GAGAL (FAILED)*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${trx.id}\`\n` +
-            `👤 *User:* ${trx.userName || 'User'}\n` +
+            `👤 *User:* ${trx.userName || "User"}\n` +
             `📦 *Layanan:* ${trx.packageName}\n` +
             `📱 *IMEI:* \`${trx.imei}\`\n` +
             `❌ *Status:* *FAILED*\n` +
@@ -514,17 +541,17 @@ async function handleAdminCommand(replyJid, text) {
     }
 
     // 4. Command .status
-    if (command === '.status') {
+    if (command === ".status") {
         const reply = `ℹ️ *INFORMASI STATUS PESANAN*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${trx.id}\`\n` +
-            `👤 *User:* ${trx.userName || 'User'}\n` +
+            `👤 *User:* ${trx.userName || "User"}\n` +
             `📦 *Layanan:* ${trx.packageName}\n` +
             `📱 *IMEI:* \`${trx.imei}\`\n` +
-            `💰 *Harga:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n` +
-            `⚡ *Status:* *${(trx.status || 'PENDING').toUpperCase()}*\n` +
-            `📝 *Catatan:* ${trx.admin_note || '-'}\n` +
-            `🕒 *Waktu:* ${new Date(trx.createdAt).toLocaleString('id-ID')}\n` +
+            `💰 *Harga:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString("id-ID")}\n` +
+            `⚡ *Status:* *(${(trx.status || "PENDING").toUpperCase()})*\n` +
+            `📝 *Catatan:* ${trx.admin_note || "-"}\n` +
+            `🕒 *Waktu:* ${new Date(trx.createdAt).toLocaleString("id-ID")}\n` +
             `━━━━━━━━━━━━━━━━━━`;
         await replyWhatsApp(replyJid, reply);
         return;
@@ -559,7 +586,7 @@ async function sendTextMessage(targetPhone, message) {
  * Helper to reply to a WhatsApp JID
  */
 async function replyWhatsApp(jid, text) {
-    if (!sock || connectionState !== 'open') return;
+    if (!sock || connectionState !== "open") return;
     try {
         await sock.sendMessage(jid, { text });
     } catch (e) {
@@ -573,7 +600,7 @@ async function replyWhatsApp(jid, text) {
  */
 async function notifyNewOrder(orderData) {
     try {
-        if (!sock || connectionState !== 'open') {
+        if (!sock || connectionState !== "open") {
             return;
         }
 
@@ -595,19 +622,19 @@ async function notifyNewOrder(orderData) {
             userImageCeir
         } = orderData;
 
-        const isAutomated = serviceType === 'ceir' || serviceType === 'barcode';
+        const isAutomated = serviceType === "ceir" || serviceType === "barcode";
         const speedDisplay = isAutomated 
-            ? '⚡ Instant (Otomatis System)' 
-            : (speedOption === 'fast' ? 'Fast (1-3 Jam)' : speedOption === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)');
+            ? "⚡ Instant (Otomatis System)" 
+            : (speedOption === "fast" ? "Fast (1-3 Jam)" : speedOption === "semi" ? "Semi Fast (1-12 Jam)" : "Standar (1-3 Hari)");
 
         const messageBody = 
             `🔔 *PESANAN BARU MASUK!*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${id}\`\n` +
-            `👤 *Pelanggan:* ${userName || 'Pelanggan'}\n` +
-            `📦 *Layanan:* ${packageName || 'Layanan'}\n` +
-            `📱 *IMEI:* \`${imei || '-'}\`\n` +
-            `💰 *Total Biaya:* Rp ${Number(price || 0).toLocaleString('id-ID')}\n` +
+            `👤 *Pelanggan:* ${userName || "Pelanggan"}\n` +
+            `📦 *Layanan:* ${packageName || "Layanan"}\n` +
+            `📱 *IMEI:* \`${imei || "-"}\`\n` +
+            `💰 *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
             `⚡ *Kecepatan:* ${speedDisplay}\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `💡 *PANDUAN PERINTAH CEPAT ADMIN:*\n` +
@@ -623,10 +650,10 @@ async function notifyNewOrder(orderData) {
 
             // If user attached screenshot photo, send with caption
             let photoSent = false;
-            const photoPath = (userImage || userImageCeir || '').split(',')[0].trim();
+            const photoPath = (userImage || userImageCeir || "").split(",")[0].trim();
 
             if (photoPath) {
-                const fullPath = path.join(__dirname, '..', photoPath);
+                const fullPath = path.join(__dirname, "..", photoPath);
                 if (fs.existsSync(fullPath)) {
                     try {
                         await sock.sendMessage(adminJid, {
@@ -658,8 +685,8 @@ async function logoutWABot() {
     try {
         if (sock) {
             try { await sock.logout(); } catch (e) {}
-            sock.ev.removeAllListeners();
-            sock.end();
+            try { sock.ev.removeAllListeners(); } catch (e) {}
+            try { sock.end(); } catch (e) {}
             sock = null;
         }
         if (fs.existsSync(SESSIONS_DIR)) {
@@ -667,10 +694,13 @@ async function logoutWABot() {
         }
         qrCodeDataUrl = null;
         currentQrCode = null;
+        global.qrCode = null;
         connectedPhone = null;
+        inMemoryCreds = null;
         connectionState = "disconnected";
+        global.baileysStatus = "disconnected";
         isInitializing = false;
-        console.log("[WABot] Session cleared.");
+        logWABot("Sesi WhatsApp berhasil dibersihkan / logout.", "info");
         return true;
     } catch (e) {
         console.error("[WABot] Logout error:", e.message);
@@ -682,28 +712,32 @@ function getWAStatus() {
     const isConnected = connectionState === "open" || global.baileysStatus === "open";
     const currentState = isConnected ? "open" : (global.baileysStatus || connectionState);
     const isPairing = currentState === "pairing";
-    const currentQr = (isConnected || isPairing) ? null : (global.qrCode || qrCodeDataUrl || currentQrCode);
+    const hasQr = !isConnected && !isPairing && Boolean(global.qrCode || qrCodeDataUrl || currentQrCode);
+    const activeQr = hasQr ? (global.qrCode || qrCodeDataUrl || currentQrCode) : null;
+
     let statusText = "Terputus";
     if (isConnected) {
-        statusText = `Terhubung (${connectedPhone || 'Admin'})`;
+        statusText = `Terhubung (${connectedPhone || "Admin"})`;
     } else if (isPairing) {
         statusText = "Sedang Menautkan Perangkat WhatsApp...";
-    } else if (currentState === "scan_ready" && currentQr) {
+    } else if (hasQr) {
         statusText = "Menunggu Scan QR Code";
     } else if (currentState === "connecting") {
         statusText = "Menyiapkan QR Code WhatsApp...";
     }
 
     return {
+        success: true,
         connected: isConnected,
         isConnected: isConnected,
         status: isConnected ? "open" : currentState,
-        state: currentState,
+        state: isConnected ? "open" : currentState,
         connectedPhone: connectedPhone,
-        currentQrCode: currentQr,
-        qrCode: currentQr,
-        qr: currentQr,
-        statusText: statusText
+        currentQrCode: activeQr,
+        qrCode: activeQr,
+        qr: activeQr,
+        statusText: statusText,
+        logs: waLogsBuffer.slice(-20)
     };
 }
 

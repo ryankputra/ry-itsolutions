@@ -2301,7 +2301,9 @@ export default function AdminPage() {
                         ? `Terhubung (${waBotStatus.connectedPhone || 'Admin'})`
                         : waBotStatus?.state === 'pairing'
                         ? 'Sedang Menautkan Perangkat WhatsApp...'
-                        : waBotStatus?.statusText || 'Menunggu Scan QR Code'}
+                        : waBotStatus?.qrCode
+                        ? 'Menunggu Scan QR Code'
+                        : waBotStatus?.statusText || 'Menyiapkan QR Code WhatsApp...'}
                     </span>
                   </div>
                   {loadingWaStatus && <span className="text-[10px] text-ink-muted animate-spin">⏳</span>}
@@ -2365,6 +2367,26 @@ export default function AdminPage() {
                     <div className="animate-spin text-2xl">⏳</div>
                     <p className="text-xs font-bold text-ink">Sedang menyiapkan QR Code...</p>
                     <p className="text-[11px] text-ink-muted">Harap tunggu beberapa detik sementara server menyiapkan sesi Baileys.</p>
+                  </div>
+                )}
+
+                {/* Real-time Baileys Diagnostic Logs */}
+                {waBotStatus?.logs && waBotStatus.logs.length > 0 && (
+                  <div className="bg-slate-950 text-slate-200 rounded-2xl p-3 text-[10px] font-mono border border-slate-800 space-y-1 text-left">
+                    <div className="flex items-center justify-between text-slate-400 border-b border-slate-800/80 pb-1.5 mb-1 font-sans text-[11px] font-semibold">
+                      <span className="flex items-center gap-1.5 text-slate-300">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Status Real-time Baileys
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">STB Logs</span>
+                    </div>
+                    <div className="max-h-24 overflow-y-auto space-y-0.5 scrollbar-thin">
+                      {waBotStatus.logs.map((log: string, idx: number) => (
+                        <div key={idx} className="leading-relaxed text-slate-300">
+                          {log}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
