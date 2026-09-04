@@ -106,6 +106,16 @@ function HistoryContent() {
   };
 
   const handlePayNow = (trx: any) => {
+    const isPaidWithBalance = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+    if (isPaidWithBalance) {
+      Swal.fire({
+        title: "Pesanan Sudah Terbayar",
+        text: "Pesanan ini sudah dibayar menggunakan Saldo Ry dan saat ini sedang diproses oleh admin/server.",
+        icon: "info",
+      });
+      return;
+    }
+
     const amt = trx.amount || trx.baseAmount || trx.price || 0;
     const existingData = (trx.qrisBase64Image || trx.qris_image)
       ? {
@@ -113,6 +123,9 @@ function HistoryContent() {
           qris_code: trx.qrisBase64Image || trx.qris_image,
           unique_amount: trx.uniqueAmount || trx.unique_amount || amt,
           topup_id: trx.id,
+          createdAt: trx.createdAt || trx.created_at,
+          expiresAt: trx.expiresAt || trx.expired_at,
+          merchant: trx.merchant,
         }
       : null;
 
@@ -170,7 +183,15 @@ function HistoryContent() {
     { key: "canceled", label: "Dibatalkan" },
   ];
 
-  const filteredHistory = history.filter((trx) => {
+  const normalizedHistory = history.map((trx) => {
+    const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+    if (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid')) {
+      return { ...trx, status: 'processing' };
+    }
+    return trx;
+  });
+
+  const filteredHistory = normalizedHistory.filter((trx) => {
     if (activeTab === "all") return true;
 
     const status = trx.status?.toLowerCase() || "";
@@ -339,11 +360,13 @@ function HistoryContent() {
       ) : (
         <div className="space-y-3 pt-1">
           {filteredHistory.map((trx) => {
-            const badge = getStatusBadge(trx.status, trx.serviceType || trx.service_type, trx.packageName);
+            const isPaidByBalance = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+            const effectiveStatus = (isPaidByBalance && (trx.status === "pending" || trx.status === "unpaid")) ? "processing" : trx.status;
+            const badge = getStatusBadge(effectiveStatus, trx.serviceType || trx.service_type, trx.packageName);
             const primaryImei = trx.imei ? trx.imei.split(/[\n,]+/)[0].trim().replace(/\D/g, "") : "";
-            const isCompleted = trx.status === "success" || trx.status === "completed";
-            const isProcessing = trx.status === "processing" || trx.status === "in_progress";
-            const isPending = trx.status === "pending" || trx.status === "unpaid";
+            const isCompleted = effectiveStatus === "success" || effectiveStatus === "completed";
+            const isProcessing = effectiveStatus === "processing" || effectiveStatus === "in_progress";
+            const isPending = (effectiveStatus === "pending" || effectiveStatus === "unpaid") && !isPaidByBalance;
             const amount = trx.amount || trx.baseAmount || trx.price || 0;
 
             return (

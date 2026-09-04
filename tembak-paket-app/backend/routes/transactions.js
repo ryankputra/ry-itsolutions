@@ -808,9 +808,11 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 });
             }
 
-            let finalStatus = 'pending';
-            let apiResponse = 'Selesai / Sedang Diproses Admin';
-            let adminNote = null;
+            // Pesanan via saldo telah terbayar lunas (saldo user telah terpotong):
+            // Status wajib 'processing' (atau 'success' jika CeirGO instan), tidak boleh 'pending'!
+            let finalStatus = 'processing';
+            let apiResponse = 'Pembayaran Saldo Berhasil. Sedang Diproses Admin.';
+            let adminNote = 'Pesanan terbayar dengan saldo akun. Menunggu pengerjaan oleh Admin.';
             let adminImagePath = null;
             let refId = null;
 
@@ -905,9 +907,11 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     imei: cleanImei,
                     price: finalPriceToPay,
                     speedOption: speed_option,
-                    userImage: user_image_paths
-                }).catch(() => {});
-            } catch (waErr) {}
+                    userImage: imagePath
+                }).catch((err) => console.error("[WABot] Error sending manual order notification:", err.message));
+            } catch (waErr) {
+                console.error("[WABot] Exception in notifyNewOrder:", waErr.message);
+            }
 
             res.json({
                 status: true,
@@ -944,6 +948,8 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
                 const unique = Number(item.uniqueAmount) || 0;
                 const totalVal = (unique >= base && unique > 0) ? unique : (base > 0 ? base : (Number(item.amount) || 0));
 
+                const createdTime = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
+                const expiresAtSec = Math.floor((createdTime + 15 * 60 * 1000) / 1000);
                 return {
                     id: item.id,
                     userId: item.userId,
@@ -951,13 +957,17 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
                     serviceType: 'topup_qris',
                     status: item.status,
                     createdAt: item.createdAt,
+                    expiresAt: expiresAtSec,
+                    expired_at: expiresAtSec,
                     amount: totalVal,
                     baseAmount: base > 0 ? base : totalVal,
                     originalPrice: totalVal,
                     price: totalVal,
                     uniqueAmount: (unique > base) ? (unique - base) : 0,
                     packageName: topupDescription,
-                    qrisData: item.qrisBase64Image ? { base64Image: item.qrisBase64Image, uniqueAmount: totalVal } : undefined,
+                    qrisBase64Image: item.qrisBase64Image,
+                    qris_image: item.qrisBase64Image,
+                    qrisData: item.qrisBase64Image ? { base64Image: item.qrisBase64Image, uniqueAmount: totalVal, createdAt: item.createdAt, expiresAt: expiresAtSec } : undefined,
                     api_response: `Top up ${item.status}`
                 };
             }
@@ -980,8 +990,15 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
             // Duration cleanup: Automated services are always instant
             const cleanSpeedOption = isAutomatedService ? 'instant' : item.speed_option;
 
+            // Balance purchases are paid immediately upon checkout
+            let effectiveStatus = item.status;
+            if ((item.payment_method === 'balance' || item.paymentMethod === 'balance') && (effectiveStatus === 'pending' || effectiveStatus === 'unpaid')) {
+                effectiveStatus = 'processing';
+            }
+
             return {
                 ...item,
+                status: effectiveStatus,
                 admin_note: cleanAdminNote,
                 adminNote: cleanAdminNote,
                 api_response: cleanApiResponse,
@@ -1124,6 +1141,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                     unique_amount: baseAmount,
                     topup_id: topUpId,
                     trx_id: gopayData.trx_id,
+                    created_at: new Date().toISOString(),
                     expires_at: expiresAtSec,
                     merchant: 'RyyStore IT Solutions'
                 },
@@ -1131,6 +1149,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                     base64Image: qrisImg,
                     qrisCode: gopayData.qris_code,
                     uniqueAmount: baseAmount,
+                    createdAt: new Date().toISOString(),
                     expiresAt: expiresAtSec,
                     merchant: 'RyyStore IT Solutions'
                 }
@@ -1162,6 +1181,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                     qris_code: dynamicRawCode || qrisBase64Image,
                     unique_amount: uniqueAmount,
                     topup_id: topUpId,
+                    created_at: new Date().toISOString(),
                     expires_at: expiresAtSec,
                     merchant: 'RYYSTORE OK2285905'
                 },
@@ -1169,6 +1189,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                     base64Image: qrisBase64Image,
                     qrisCode: dynamicRawCode,
                     uniqueAmount,
+                    createdAt: new Date().toISOString(),
                     expiresAt: expiresAtSec,
                     merchant: 'RYYSTORE OK2285905'
                 }

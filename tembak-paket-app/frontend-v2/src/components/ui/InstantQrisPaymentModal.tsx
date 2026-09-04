@@ -7,6 +7,18 @@ import { playTopupSuccessSound, playPopSound } from "@/lib/soundFx";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 
+export interface ExistingQrisData {
+  qris_image: string;
+  qris_code: string;
+  unique_amount: number;
+  topup_id: string;
+  merchant?: string;
+  createdAt?: string | number | Date;
+  created_at?: string | number | Date;
+  expiresAt?: string | number | Date;
+  expires_at?: string | number | Date;
+}
+
 interface InstantQrisPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -14,13 +26,29 @@ interface InstantQrisPaymentModalProps {
   orderTitle?: string;
   onSuccess: () => void;
   preferredGateway?: 'nobu' | 'gopay' | 'auto';
-  existingQrisData?: {
-    qris_image: string;
-    qris_code: string;
-    unique_amount: number;
-    topup_id: string;
-    merchant?: string;
-  } | null;
+  existingQrisData?: ExistingQrisData | null;
+}
+
+// Helper to compute absolute expiry timestamp in ms
+function computeTargetExpiryMs(exp?: any, crt?: any): number {
+  if (exp) {
+    const numExp = Number(exp);
+    if (!isNaN(numExp) && numExp > 0) {
+      return numExp < 10000000000 ? numExp * 1000 : numExp;
+    }
+    const parsed = new Date(exp).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  if (crt) {
+    const numCrt = Number(crt);
+    const crtMs = !isNaN(numCrt) && numCrt > 0
+      ? (numCrt < 10000000000 ? numCrt * 1000 : numCrt)
+      : new Date(crt).getTime();
+    if (!isNaN(crtMs) && crtMs > 0) {
+      return crtMs + 15 * 60 * 1000;
+    }
+  }
+  return Date.now() + 15 * 60 * 1000;
 }
 
 export function InstantQrisPaymentModal({
@@ -41,7 +69,8 @@ export function InstantQrisPaymentModal({
     topup_id: string;
     merchant?: string;
   } | null>(null);
-  const [timeLeft, setTimeLeft] = useState(900); // 15 menit
+  const [expiresAtMs, setExpiresAtMs] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState(900);
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -55,8 +84,9 @@ export function InstantQrisPaymentModal({
     let isMounted = true;
     const raw = qrisData.qris_code || qrisData.qris_image || "";
 
-    // If we have an EMVCo payload string (starts with 000201 or not a data:image URL), render via canvas with logo
-    if (raw && (raw.startsWith("000201") || (!raw.startsWith("data:image/") && !raw.startsWith("http")))) {
+    if (raw) {
+      // Pass both raw EMVCo code and base64 image through generateQrisCanvasDataUrl
+      // to ensure the app logo (/logo.png) is rendered in the center
       generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" })
         .then((url) => {
           if (isMounted && url) setRenderedQrImage(url);
@@ -65,8 +95,6 @@ export function InstantQrisPaymentModal({
           console.error("QRIS Canvas generator error:", err);
           if (isMounted) setRenderedQrImage(qrisData.qris_image || raw);
         });
-    } else if (raw) {
-      setRenderedQrImage(raw);
     }
 
     return () => {
@@ -79,12 +107,19 @@ export function InstantQrisPaymentModal({
     if (!isOpen) {
       setQrisData(null);
       setRenderedQrImage("");
+      setExpiresAtMs(null);
       return;
     }
 
     if (existingQrisData) {
       setQrisData(existingQrisData);
-      setTimeLeft(900);
+      const targetMs = computeTargetExpiryMs(
+        existingQrisData.expiresAt || existingQrisData.expires_at,
+        existingQrisData.createdAt || existingQrisData.created_at
+      );
+      setExpiresAtMs(targetMs);
+      const remainingSec = Math.max(0, Math.floor((targetMs - Date.now()) / 1000));
+      setTimeLeft(remainingSec);
       setLoading(false);
       return;
     }
@@ -93,7 +128,6 @@ export function InstantQrisPaymentModal({
 
     let isMounted = true;
     setLoading(true);
-    setTimeLeft(900);
 
     fetch("/api/topup/request-qris", {
       method: "POST",
@@ -111,13 +145,23 @@ export function InstantQrisPaymentModal({
           const rawCode = qData.qris_code || qInfo.qrisCode || "";
 
           let resolvedImage = rawImg;
-          if (rawCode && (!rawImg || (!rawImg.startsWith("data:image/") && !rawImg.startsWith("http")))) {
+          if (rawCode || rawImg) {
             try {
-              resolvedImage = await generateQrisCanvasDataUrl(rawCode, { logoUrl: "/logo.png" });
+              resolvedImage = await generateQrisCanvasDataUrl(rawCode || rawImg, { logoUrl: "/logo.png" });
             } catch (e) {
-              resolvedImage = await QRCode.toDataURL(rawCode, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
+              if (rawCode && !rawCode.startsWith("data:image/")) {
+                resolvedImage = await QRCode.toDataURL(rawCode, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
+              }
             }
           }
+
+          const targetMs = computeTargetExpiryMs(
+            qData.expires_at || qInfo.expiresAt,
+            qData.created_at || qData.createdAt || qInfo.createdAt || new Date()
+          );
+          setExpiresAtMs(targetMs);
+          const remainingSec = Math.max(0, Math.floor((targetMs - Date.now()) / 1000));
+          setTimeLeft(remainingSec);
 
           setQrisData({
             qris_image: resolvedImage,
@@ -157,17 +201,35 @@ export function InstantQrisPaymentModal({
   useEffect(() => {
     if (!isOpen || !qrisData) return;
 
-    // Timer Hitung Mundur 15 Menit
-    const timerInterval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
+    // Timer countdown: strictly calculate elapsed time from creation/targetExpiryMs
+    const tickTimer = () => {
+      if (expiresAtMs) {
+        const remaining = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
+        setTimeLeft(remaining);
+        if (remaining <= 0) {
           clearInterval(timerInterval);
+          Swal.fire({
+            title: "Batas Waktu Pembayaran Habis",
+            text: "Waktu pembayaran 15 menit telah habis. Silakan buat pesanan atau pembayaran baru.",
+            icon: "warning",
+            confirmButtonText: "Tutup",
+          });
           onClose();
-          return 0;
         }
-        return prev - 1;
-      });
-    }, 1000);
+      } else {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerInterval);
+            onClose();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
+    };
+
+    tickTimer();
+    const timerInterval = setInterval(tickTimer, 1000);
 
     // Listener Event SSE
     const handlePaymentSuccess = () => {
@@ -196,7 +258,7 @@ export function InstantQrisPaymentModal({
       clearInterval(pollingInterval);
       window.removeEventListener("topup_success", handlePaymentSuccess);
     };
-  }, [isOpen, qrisData, onClose, onSuccess]);
+  }, [isOpen, qrisData, expiresAtMs, onClose, onSuccess]);
 
   if (!isOpen) return null;
 
@@ -306,7 +368,7 @@ export function InstantQrisPaymentModal({
                   alt="QRIS Pembayaran Direct"
                   onError={async () => {
                     const raw = qrisData.qris_code || qrisData.qris_image;
-                    if (raw && !raw.startsWith("data:image/")) {
+                    if (raw) {
                       try {
                         const fallbackUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" });
                         setRenderedQrImage(fallbackUrl);

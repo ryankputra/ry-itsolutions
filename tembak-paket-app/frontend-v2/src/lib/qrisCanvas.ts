@@ -24,9 +24,46 @@ export function sanitizeQrisPayload(raw: string): string {
 }
 
 /**
+ * Helper to safely load an image asynchronously
+ */
+function loadImageAsync(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    let resolved = false;
+
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(null);
+      }
+    }, 2500);
+
+    img.onload = () => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve(img);
+      }
+    };
+
+    img.onerror = () => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve(null);
+      }
+    };
+
+    img.src = src;
+  });
+}
+
+/**
  * Generates an ultra-crisp, scan-ready QRIS PNG Base64 Data URL
  * with Error Correction Level 'H' (30% recovery), margin 4,
  * and a centered logo overlay on a white background pad (~20-22% size).
+ * Works seamlessly with both EMVCo raw payload strings AND existing base64 QR images.
  */
 export async function generateQrisCanvasDataUrl(
   payload: string,
@@ -36,11 +73,6 @@ export async function generateQrisCanvasDataUrl(
 
   const cleanPayload = (payload || "").trim();
   if (!cleanPayload) return "";
-
-  // If payload is already a data URL and not an EMVCo string, return it as preview
-  if (cleanPayload.startsWith("data:image/")) {
-    return cleanPayload;
-  }
 
   const canvasWidth = options.width || 512;
   const margin = typeof options.margin === "number" ? options.margin : 4;
@@ -52,20 +84,28 @@ export async function generateQrisCanvasDataUrl(
   canvas.width = canvasWidth;
   canvas.height = canvasWidth;
 
-  // 2. Render base QR Code on Canvas with High Error Correction
-  await QRCode.toCanvas(canvas, cleanPayload, {
-    errorCorrectionLevel,
-    margin,
-    width: canvasWidth,
-    color: {
-      dark: "#000000",
-      light: "#ffffff",
-    },
-  });
-
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    return canvas.toDataURL("image/png");
+    return cleanPayload;
+  }
+
+  // 2. Render base QR Code (either from base64 image or generating from EMVCo payload)
+  if (cleanPayload.startsWith("data:image/")) {
+    const qrImg = await loadImageAsync(cleanPayload);
+    if (!qrImg) return cleanPayload;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasWidth, canvasWidth);
+    ctx.drawImage(qrImg, 0, 0, canvasWidth, canvasWidth);
+  } else {
+    await QRCode.toCanvas(canvas, cleanPayload, {
+      errorCorrectionLevel,
+      margin,
+      width: canvasWidth,
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+    });
   }
 
   // 3. Calculate Center White Pad Dimensions (~20-22% of total canvas width)
@@ -78,7 +118,7 @@ export async function generateQrisCanvasDataUrl(
   // 4. Draw White Background Pad with rounded corners & subtle shadow/border
   ctx.save();
   ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.12)";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.14)";
   ctx.shadowBlur = 8;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 2;
@@ -94,7 +134,7 @@ export async function generateQrisCanvasDataUrl(
 
   // Draw clean hairline border for contrast separation
   ctx.save();
-  ctx.strokeStyle = "#e2e8f0";
+  ctx.strokeStyle = "#cbd5e1";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   if (typeof ctx.roundRect === "function") {
@@ -105,44 +145,13 @@ export async function generateQrisCanvasDataUrl(
   ctx.stroke();
   ctx.restore();
 
-  // 5. Draw Merchant / QRIS Logo inside the White Pad
-  const loadLogo = (src: string): Promise<HTMLImageElement | null> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      let resolved = false;
-
-      const timer = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          resolve(null);
-        }
-      }, 2500);
-
-      img.onload = () => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          resolve(img);
-        }
-      };
-
-      img.onerror = () => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          resolve(null);
-        }
-      };
-
-      img.src = src;
-    });
-  };
-
-  let logoImg = await loadLogo(logoUrl);
+  // 5. Draw Merchant / App Logo inside the White Pad
+  let logoImg = await loadImageAsync(logoUrl);
+  if (!logoImg && logoUrl !== "/logo.png") {
+    logoImg = await loadImageAsync("/logo.png");
+  }
   if (!logoImg && logoUrl !== "/payments/qris.png") {
-    // Fallback to /payments/qris.png if /logo.png failed
-    logoImg = await loadLogo("/payments/qris.png");
+    logoImg = await loadImageAsync("/payments/qris.png");
   }
 
   if (logoImg && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
