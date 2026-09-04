@@ -269,6 +269,14 @@ async function initWABot(forceNew = false) {
                 try {
                     const p = JSON.parse(str);
                     const msg = p.msg || p.message || str;
+                    // Abaikan pesan background history-sync lama yang wajar saat awal login
+                    if (
+                        msg.includes("handling message") ||
+                        msg.includes("Bad MAC") ||
+                        msg.includes("decrypt")
+                    ) {
+                        return;
+                    }
                     if (p.level >= 40) {
                         logWABot(`[Baileys ${p.level >= 50 ? "ERR" : "WARN"}] ${msg}`, p.level >= 50 ? "error" : "warn");
                     } else if (p.level === 30 && (msg.includes("pair") || msg.includes("login") || msg.includes("open") || msg.includes("restart"))) {
