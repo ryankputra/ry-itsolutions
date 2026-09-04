@@ -588,7 +588,11 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                 <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
                   <span className="text-slate-500 font-medium">Opsi Kecepatan</span>
                   <span className="font-bold text-slate-800">
-                    {(data.speed || data.speed_option) === 'fast' ? 'Fast (1-3 Jam)' : (data.speed || data.speed_option) === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}
+                    {data.speed_label || data.speedLabel || (
+                      (data.speed || data.speed_option) === 'fast' ? 'Fast (1-3 Jam)' :
+                      (data.speed || data.speed_option) === 'semi' ? 'Semi Fast (1-12 Jam)' :
+                      'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                    )}
                   </span>
                 </div>
               )}

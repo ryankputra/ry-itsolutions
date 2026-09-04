@@ -2051,7 +2051,13 @@ export default function AdminPage() {
                         {orderQueueSubTab === 'manual' ? (
                           o.speed_option && o.speed_option !== 'instant' && (
                             <p className="text-xs font-semibold text-primary mt-1">
-                              Opsi Kecepatan: <span className="font-bold">{o.speed_option === 'fast' ? 'Fast (1-3 Jam)' : o.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}</span>
+                              Opsi Kecepatan: <span className="font-bold">
+                                {o.speed_label || (
+                                  o.speed_option === 'fast' ? 'Fast (1-3 Jam)' :
+                                  o.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' :
+                                  'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                                )}
+                              </span>
                             </p>
                           )
                         ) : (

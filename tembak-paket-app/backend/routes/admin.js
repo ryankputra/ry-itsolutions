@@ -185,12 +185,34 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
             'create_barcode', 'create_barcode_samsung', 'create_barcode_redmi', 'create_barcode_ios26'
         ]);
 
+        const speedRanges = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'imei_speed_%_range'");
+        const speedRangeMap = {
+            fast: '1-3 Jam',
+            semi: '1-12 Jam',
+            slow: 'Max kirim jam 14:00, selesai max jam 00:00 WIB'
+        };
+        speedRanges.forEach(r => {
+            const m = r.key.match(/^imei_speed_(.*)_range$/);
+            if (m && r.value) speedRangeMap[m[1]] = r.value;
+        });
+
         let categorizedOrders = orders.map(o => {
             const pkgId = (o.packageId || '').toLowerCase();
             const sType = (o.service_type || '').toLowerCase();
             const isAuto = sType === 'ceir' || sType === 'barcode' || automatedCodes.has(pkgId) || pkgId.startsWith('cek_') || pkgId.startsWith('create_');
+
+            let speedLabel = null;
+            if (o.speed_option && o.speed_option !== 'instant') {
+                const optKey = o.speed_option.toLowerCase();
+                const rangeStr = speedRangeMap[optKey] || speedRangeMap['slow'];
+                const optName = optKey === 'slow' ? 'Slow' : optKey === 'fast' ? 'Fast' : optKey === 'semi' ? 'Semi Fast' : optKey;
+                speedLabel = `${optName} (${rangeStr})`;
+            }
+
             return {
                 ...o,
+                speed_label: speedLabel,
+                speed_range: speedRangeMap[(o.speed_option || 'slow').toLowerCase()] || speedRangeMap['slow'],
                 is_automated: isAuto,
                 queue_type: isAuto ? 'automated' : 'manual'
             };
