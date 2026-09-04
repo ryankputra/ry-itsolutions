@@ -24,6 +24,7 @@ const pino = require("pino");
 const QRCode = require("qrcode");
 const path = require("path");
 const fs = require("fs");
+const { exec } = require("child_process");
 const { dbGet, dbRun, dbAll } = require("../config/db");
 
 const SESSIONS_DIR = path.join(__dirname, "..", "sessions", "baileys_auth");
@@ -63,6 +64,57 @@ function clearConnectingTimer() {
         clearTimeout(connectingTimer);
         connectingTimer = null;
     }
+}
+
+function applyBaileysPatches() {
+    try {
+        const candidates = [
+            path.join(__dirname, "..", "node_modules", "@whiskeysockets", "baileys", "lib", "Utils", "validate-connection.js"),
+            path.resolve(process.cwd(), "node_modules", "@whiskeysockets", "baileys", "lib", "Utils", "validate-connection.js")
+        ];
+        for (const targetPath of candidates) {
+            if (!fs.existsSync(targetPath)) continue;
+            let fileCode = fs.readFileSync(targetPath, "utf8");
+            if (fileCode.includes("/* PATCH_BIZ_SIGNATURE_APPLIED */")) continue;
+
+            const targetStr = "if (Buffer.compare(hmac, advSign) !== 0) {\n        throw new Boom('Invalid account signature');\n    }";
+            if (fileCode.includes(targetStr)) {
+                const patchedStr = `/* PATCH_BIZ_SIGNATURE_APPLIED */\n    if (Buffer.compare(hmac, advSign) !== 0) {\n        const altPrefix = isHostedAccount ? Buffer.alloc(0) : Buffer.from([6, 5]);\n        const altSign = hmacSign(Buffer.concat([altPrefix, details]), Buffer.from(advSecretKey, 'base64'));\n        if (Buffer.compare(hmac, altSign) === 0) {\n            isHostedAccount = !isHostedAccount;\n            hmacPrefix = altPrefix;\n            advSign = altSign;\n        } else {\n            throw new Boom('Invalid account signature');\n        }\n    }`;
+                fileCode = fileCode.replace(targetStr, patchedStr);
+
+                const curveTarget = "if (!Curve.verify(accountSignatureKey, accountMsg, accountSignature)) {\n        throw new Boom('Failed to verify account signature');\n    }";
+                const curvePatched = `if (!Curve.verify(accountSignatureKey, accountMsg, accountSignature)) {\n        const altMsg = Buffer.concat([isHostedAccount ? Buffer.from([6, 0]) : Buffer.from([6, 5]), deviceDetails, signedIdentityKey.public]);\n        if (!Curve.verify(accountSignatureKey, altMsg, accountSignature)) {\n            throw new Boom('Failed to verify account signature');\n        }\n    }`;
+                if (fileCode.includes(curveTarget)) {
+                    fileCode = fileCode.replace(curveTarget, curvePatched);
+                }
+
+                fs.writeFileSync(targetPath, fileCode, "utf8");
+                logWABot("✅ Patch validasi signature WhatsApp (Business & Standard) berhasil diterapkan.", "info");
+                break;
+            }
+        }
+    } catch (e) {
+        console.warn("[WABot] Notice: signature patch check:", e.message);
+    }
+}
+
+let isAutoUpgrading = false;
+function checkAndAutoUpgradeBaileys(currentVer) {
+    if (!currentVer || currentVer === "6.7.24" || isAutoUpgrading) return;
+    isAutoUpgrading = true;
+    logWABot(`[Auto-Upgrade STB] Baileys v${currentVer} terdeteksi. Memperbarui ke v6.7.24 secara otomatis...`, "warn");
+    const cmd = "npm --prefix tembak-paket-app/backend install @whiskeysockets/baileys@6.7.24 --no-audit --ignore-scripts || npm install @whiskeysockets/baileys@6.7.24 --no-audit --ignore-scripts";
+    exec(cmd, (err, stdout) => {
+        isAutoUpgrading = false;
+        if (!err) {
+            logWABot("[Auto-Upgrade STB] Berhasil memperbarui Baileys ke v6.7.24! Memuat ulang backend...", "info");
+            setTimeout(() => {
+                exec("pm2 restart backend || pm2 restart all");
+            }, 1000);
+        } else {
+            logWABot("[Auto-Upgrade STB] Gagal memperbarui: " + err.message, "error");
+        }
+    });
 }
 
 function ensureDirExists(dir) {
@@ -191,6 +243,8 @@ async function initWABot(forceNew = false) {
             console.warn("[WABot] Using default version fallback:", e.message);
         }
         logWABot(`Baileys Library v${baileysLibVer} | MD Version: ${waVersion.join(".")}`, "info");
+        applyBaileysPatches();
+        checkAndAutoUpgradeBaileys(baileysLibVer);
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
 
@@ -797,6 +851,7 @@ function getWAStatus() {
         qrCode: activeQr,
         qr: activeQr,
         statusText: statusText,
+        baileysVersion: (() => { try { return require("@whiskeysockets/baileys/package.json").version; } catch(e) { return "unknown"; } })(),
         logs: waLogsBuffer.slice(-20)
     };
 }

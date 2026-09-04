@@ -352,6 +352,7 @@ export default function AdminPage() {
   const [waBotStatus, setWaBotStatus] = useState<any>(null);
   const [loadingWaStatus, setLoadingWaStatus] = useState(false);
   const [resettingWa, setResettingWa] = useState(false);
+  const [upgradingBaileys, setUpgradingBaileys] = useState(false);
   const [waPairingTab, setWaPairingTab] = useState<"qr" | "code">("qr");
   const [pairingPhone, setPairingPhone] = useState("087767287284");
   const [pairingCode, setPairingCode] = useState("");
@@ -1435,6 +1436,32 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpgradeBaileys = async () => {
+    try {
+      setUpgradingBaileys(true);
+      const res = await fetch("/api/admin/baileys/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (data.status) {
+        Swal.fire({
+          icon: "success",
+          title: "Pembaruan Baileys Dipicu!",
+          text: data.message || "Baileys sedang diperbarui ke v6.7.24 di STB. Server akan restart otomatis dalam beberapa detik.",
+          timer: 4000
+        });
+        setTimeout(fetchWaBotStatus, 4000);
+      } else {
+        Swal.fire({ icon: "error", title: "Gagal Upgrade", text: data.message || "Gagal mengupdate Baileys." });
+      }
+    } catch (e: any) {
+      Swal.fire({ icon: "error", title: "Error", text: e.message });
+    } finally {
+      setUpgradingBaileys(false);
+    }
+  };
+
   const handleResetWaSession = async () => {
     const confirm = await Swal.fire({
       title: "Reset Sesi WhatsApp?",
@@ -2329,6 +2356,26 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-3.5 pr-0.5 py-3 scrollbar-thin">
+                {/* Baileys Version Update Prompt */}
+                {waBotStatus?.baileysVersion && waBotStatus.baileysVersion !== "6.7.24" && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-between text-xs animate-in fade-in duration-200">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-amber-800 dark:text-amber-300">Versi STB: v{waBotStatus.baileysVersion}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-200/60 text-amber-900 text-[10px] font-bold">Update Tersedia</span>
+                      </div>
+                      <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">Perbarui ke v6.7.24 untuk penautan WA yang stabil.</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={upgradingBaileys}
+                      onClick={handleUpgradeBaileys}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all disabled:opacity-50 shrink-0 ml-2"
+                    >
+                      {upgradingBaileys ? "Updating..." : "⚡ Upgrade 6.7.24"}
+                    </button>
+                  </div>
+                )}
                 {/* Connection Status Banner */}
                 <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold ${
                   waBotStatus?.connected || waBotStatus?.isConnected

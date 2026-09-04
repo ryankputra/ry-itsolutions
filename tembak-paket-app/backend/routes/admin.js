@@ -1229,6 +1229,22 @@ router.post(['/admin/baileys/init', '/admin/wabot/init', '/admin/whatsapp/init']
     }
 });
 
+router.post(['/admin/baileys/upgrade', '/admin/wabot/upgrade'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const repoRoot = findRepoRoot();
+        const cmd = "npm --prefix tembak-paket-app/backend install @whiskeysockets/baileys@6.7.24 --no-audit --ignore-scripts || npm install @whiskeysockets/baileys@6.7.24 --no-audit --ignore-scripts";
+        exec(cmd, { cwd: repoRoot }, (err, stdout, stderr) => {
+            if (err) {
+                return res.status(500).json({ status: false, message: "Gagal upgrade: " + err.message });
+            }
+            exec("pm2 restart backend || pm2 restart all", { cwd: repoRoot });
+            res.json({ status: true, message: "Baileys berhasil di-upgrade ke v6.7.24! Backend sedang dimuat ulang." });
+        });
+    } catch (err) {
+        res.status(500).json({ status: false, message: err.message });
+    }
+});
+
 router.post(['/admin/baileys/reset', '/admin/wabot/reset', '/admin/whatsapp/reset'], isAuthenticated, isAdmin, async (req, res) => {
     try {
         await waBot.initWABot(true);
