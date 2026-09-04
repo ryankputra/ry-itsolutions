@@ -1462,6 +1462,34 @@ export default function AdminPage() {
     }
   };
 
+  const [fixingWa, setFixingWa] = useState(false);
+
+  const handleFixWaEncryption = async () => {
+    try {
+      setFixingWa(true);
+      const res = await fetch('/api/admin/wabot/fix-e2e', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const d = await res.json();
+      if (res.ok && d.status) {
+        Swal.fire({
+          title: "Enkripsi Diperbarui!",
+          text: d.message || "Cache sesi lama kontak dibersihkan. Pesan WhatsApp tidak akan lagi pending/menunggu.",
+          icon: "success",
+          timer: 3000
+        });
+        fetchWaBotStatus();
+      } else {
+        Swal.fire("Gagal", d.message || "Gagal memperbarui enkripsi.", "error");
+      }
+    } catch (e: any) {
+      Swal.fire("Error", e?.message || "Gagal menghubungi server", "error");
+    } finally {
+      setFixingWa(false);
+    }
+  };
+
   const handleResetWaSession = async () => {
     const confirm = await Swal.fire({
       title: "Reset Sesi WhatsApp?",
@@ -2592,6 +2620,16 @@ export default function AdminPage() {
 
                 {/* Action Footer */}
                 <div className="flex gap-2 pt-2.5 border-t border-hairline shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={fixingWa}
+                    onClick={handleFixWaEncryption}
+                    className="flex-1 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 font-bold shadow-xs"
+                    title="Perbaiki pesan 'Menunggu pesan ini' tanpa perlu scan ulang QR"
+                  >
+                    {fixingWa ? "Memproses..." : "⚡ Perbaiki Enkripsi (Anti-Pending)"}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

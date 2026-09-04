@@ -1315,6 +1315,22 @@ router.post(['/admin/baileys/pairing-code', '/admin/wabot/pairing-code', '/admin
     }
 });
 
+router.post(['/admin/baileys/fix-e2e', '/admin/wabot/fix-e2e', '/admin/whatsapp/fix-e2e', '/admin/whatsapp/refresh-sessions'], isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const count = typeof waBot.purgeStalePeerSessions === 'function' ? waBot.purgeStalePeerSessions() : 0;
+        if (typeof waBot.sendTextMessage === 'function' && req.body?.testPhone) {
+            await waBot.sendTextMessage(req.body.testPhone, "✅ Sesi enkripsi WhatsApp bot berhasil diperbarui.");
+        }
+        res.json({
+            status: true,
+            success: true,
+            message: `Berhasil membersihkan ${count} cache sesi enkripsi kontak lama. Kunci Signal diperbarui tanpa logout.`
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 router.post(['/admin/baileys/logout', '/admin/wabot/logout', '/admin/whatsapp/logout'], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const ok = await waBot.logoutWABot();

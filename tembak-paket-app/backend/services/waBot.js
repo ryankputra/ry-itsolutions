@@ -82,17 +82,7 @@ async function getStoredMessage(key) {
 async function resolveWhatsAppJid(phone) {
     const clean = cleanPhone(phone);
     if (!clean) return null;
-    const fallbackJid = `${clean}@s.whatsapp.net`;
-    if (!sock || connectionState !== "open") return fallbackJid;
-    try {
-        const results = await sock.onWhatsApp(clean);
-        if (results && results.length > 0 && results[0].exists) {
-            return results[0].jid || fallbackJid;
-        }
-    } catch (e) {
-        // Fallback silently if USync query times out
-    }
-    return fallbackJid;
+    return `${clean}@s.whatsapp.net`;
 }
 
 const SESSIONS_DIR = path.join(__dirname, "..", "sessions", "baileys_auth");
@@ -161,6 +151,29 @@ function applyBaileysPatches() {
                 break;
             }
         }
+
+        // Patch 2: Fix Baileys retry receipt handling for 1-on-1 chats
+        const recvCandidates = [
+            path.join(__dirname, "..", "node_modules", "@whiskeysockets", "baileys", "lib", "Socket", "messages-recv.js"),
+            path.resolve(process.cwd(), "node_modules", "@whiskeysockets", "baileys", "lib", "Socket", "messages-recv.js")
+        ];
+        for (const recvPath of recvCandidates) {
+            if (!fs.existsSync(recvPath)) continue;
+            let recvCode = fs.readFileSync(recvPath, "utf8");
+            if (recvCode.includes("/* PATCH_RETRY_RECIP_APPLIED */")) continue;
+
+            const targetRetry = "if (willSendMessageAgain(ids[0], key.participant)) {\n                            if (key.fromMe) {\n                                try {\n                                    logger.debug({ attrs, key }, 'recv retry request');\n                                    await sendMessagesAgain(key, ids, retryNode);\n                                }\n                                catch (error) {\n                                    logger.error({ key, ids, trace: error.stack }, 'error in sending message again');\n                                }\n                            }\n                            else {\n                                logger.info({ attrs, key }, 'recv retry for not fromMe message');\n                            }\n                        }";
+            const patchedRetry = "/* PATCH_RETRY_RECIP_APPLIED */\n                        if (willSendMessageAgain(ids[0], key.participant)) {\n                            const msgToResend = await getMessage({ ...key, id: ids[0] });\n                            if (key.fromMe || msgToResend) {\n                                try {\n                                    logger.info({ attrs, key }, 'recv retry request, resending message via Signal assertSessions...');\n                                    await sendMessagesAgain(key, ids, retryNode);\n                                }\n                                catch (error) {\n                                    logger.error({ key, ids, trace: error.stack }, 'error in sending message again');\n                                }\n                            }\n                            else {\n                                logger.info({ attrs, key }, 'recv retry for not fromMe message');\n                            }\n                        }";
+            if (recvCode.includes("if (willSendMessageAgain(ids[0], key.participant)) {\n                            if (key.fromMe) {")) {
+                recvCode = recvCode.replace(
+                    "if (willSendMessageAgain(ids[0], key.participant)) {\n                            if (key.fromMe) {",
+                    "/* PATCH_RETRY_RECIP_APPLIED */\n                        if (willSendMessageAgain(ids[0], key.participant)) {\n                            const msgToResend = await getMessage({ ...key, id: ids[0] });\n                            if (key.fromMe || msgToResend) {"
+                );
+                fs.writeFileSync(recvPath, recvCode, "utf8");
+                logWABot("✅ Patch retry decryption WhatsApp (Auto-Resend on Retry) berhasil diterapkan.", "info");
+                break;
+            }
+        }
     } catch (e) {
         console.warn("[WABot] Notice: signature patch check:", e.message);
     }
@@ -199,6 +212,29 @@ function syncSaveCreds(creds) {
         fs.writeFileSync(credsFile, JSON.stringify(creds, BufferJSON.replacer, 2), "utf-8");
     } catch (e) {
         console.error("[WABot] Error writing creds.json synchronously:", e.message);
+    }
+}
+
+function purgeStalePeerSessions() {
+    try {
+        if (!fs.existsSync(SESSIONS_DIR)) return 0;
+        const files = fs.readdirSync(SESSIONS_DIR);
+        let count = 0;
+        for (const file of files) {
+            if (file.startsWith("session-") || file.startsWith("sender-key-")) {
+                try {
+                    fs.unlinkSync(path.join(SESSIONS_DIR, file));
+                    count++;
+                } catch (e) {}
+            }
+        }
+        if (count > 0) {
+            logWABot(`🧹 Membersihkan ${count} file sesi kontak lama (session-*) untuk memperbarui ratchet Signal.`, "info");
+        }
+        return count;
+    } catch (e) {
+        console.warn("[WABot] Notice cleaning stale peer sessions:", e.message);
+        return 0;
     }
 }
 
@@ -312,6 +348,7 @@ async function initWABot(forceNew = false) {
         }
         logWABot(`Baileys Library v${baileysLibVer} | MD Version: ${waVersion.join(".")}`, "info");
         applyBaileysPatches();
+        purgeStalePeerSessions();
         checkAndAutoUpgradeBaileys(baileysLibVer);
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
@@ -367,7 +404,7 @@ async function initWABot(forceNew = false) {
             logger: customLogger,
             browser: Browsers.macOS("Chrome"),
             syncFullHistory: false,
-            markOnlineOnConnect: false,
+            markOnlineOnConnect: true,
             qrTimeout: 60000,
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
@@ -486,6 +523,9 @@ async function initWABot(forceNew = false) {
                 logWABot(`🚀 WhatsApp Bot Terhubung sebagai: ${connectedPhone}`, "info");
                 console.log(`[WABot] 🚀 WhatsApp Bot Admin Terhubung sebagai: ${connectedPhone}`);
                 isInitializing = false;
+                try {
+                    sock.sendPresenceUpdate("available").catch(() => {});
+                } catch (e) {}
             }
 
             // 4. Status close (Koneksi terputus / QR discan memicu 515 restart)
@@ -689,6 +729,13 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
     }
 
     console.log(`[WABot Command] Received: ${command} ${orderIdArg || ""} from ${replyJid}`);
+
+    if (command === ".fixwa" || command === ".clearsesi" || command === ".resetsesi") {
+        const cleaned = purgeStalePeerSessions();
+        try { sock.sendPresenceUpdate("available").catch(() => {}); } catch (e) {}
+        await replyWhatsApp(replyJid, `✅ *ENKRIPSI DIPERBARUI!*\n━━━━━━━━━━━━━━━━━━\nBerhasil membersihkan ${cleaned} sesi kontak lama.\nKunci Signal telah disinkronkan ulang tanpa perlu logout.`);
+        return;
+    }
 
     if (command === ".bantuan" || command === ".help" || command === ".menu") {
         const helpMsg = `🤖 *PANDUAN PERINTAH BOT ADMIN Ry-ITSolutions*\n` +
@@ -935,7 +982,7 @@ async function replyWhatsApp(jid, text) {
     if (!sock || connectionState !== "open") return;
     try {
         let cleanJid = jid;
-        if (cleanJid && !cleanJid.includes("@g.us")) {
+        if (cleanJid && !cleanJid.includes("@g.us") && !cleanJid.includes("@lid")) {
             const rawPhone = cleanJid.split("@")[0].split(":")[0];
             cleanJid = `${rawPhone}@s.whatsapp.net`;
         }
@@ -1150,5 +1197,6 @@ module.exports = {
     getWAStatus,
     sendTextMessage,
     notifyNewOrder,
-    requestPairingCode
+    requestPairingCode,
+    purgeStalePeerSessions
 };
