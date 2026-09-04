@@ -14,8 +14,16 @@ function HistoryContent() {
   const { updateBalance } = useApp();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialTab = searchParams.get("tab") || "all";
 
+  const resolveTabKey = (t: string | null) => {
+    if (!t) return "all";
+    const low = t.toLowerCase();
+    if (low === "refund" || low === "cancelled" || low === "failed") return "canceled";
+    if (low === "in_queue" || low === "antrean") return "waiting";
+    return low;
+  };
+
+  const initialTab = resolveTabKey(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +40,17 @@ function HistoryContent() {
   useEffect(() => {
     const tabFromUrl = searchParams.get("tab");
     if (tabFromUrl) {
-      setActiveTab(tabFromUrl);
+      setActiveTab(resolveTabKey(tabFromUrl));
     }
   }, [searchParams]);
+
+  // Auto scroll active tab into view
+  useEffect(() => {
+    const activeEl = document.getElementById(`history-tab-${activeTab}`);
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [activeTab]);
 
   const fetchHistory = async () => {
     try {
@@ -89,7 +105,7 @@ function HistoryContent() {
         }
         Swal.fire({
           title: "Dibatalkan!",
-          text: data.message || "Transaksi telah dibatalkan dan dipindahkan ke tab Dibatalkan.",
+          text: data.message || "Transaksi telah dibatalkan dan dipindahkan ke tab Refund.",
           icon: "success",
           timer: 1500,
           showConfirmButton: false,
@@ -97,6 +113,8 @@ function HistoryContent() {
         setHistory((prev) =>
           prev.map((t) => (t.id === trx.id ? { ...t, status: "cancelled" } : t))
         );
+        setActiveTab("canceled");
+        router.replace("/history?tab=canceled");
       } else {
         Swal.fire({ title: "Gagal", text: data?.message || "Gagal membatalkan transaksi.", icon: "error" });
       }
@@ -178,16 +196,23 @@ function HistoryContent() {
   const tabs = [
     { key: "all", label: "Semua" },
     { key: "unpaid", label: "Belum Bayar" },
-    { key: "waiting", label: "Menunggu Konfirmasi" },
+    { key: "waiting", label: "Menunggu" },
     { key: "processing", label: "Diproses" },
     { key: "completed", label: "Selesai" },
-    { key: "canceled", label: "Pengembalian Dana" },
+    { key: "canceled", label: "Refund" },
   ];
 
   const normalizedHistory = history.map((trx) => {
     const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
-    // Pesanan via saldo yang belum diproses masuk ke antrean Menunggu Konfirmasi (in_queue)
-    if (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid')) {
+    const rawNote = (trx.admin_note || trx.adminNote || "").toLowerCase();
+    const isWaitingAdmin = (
+      trx.status === 'in_queue' ||
+      trx.status === 'waiting' ||
+      trx.status === 'waiting_admin' ||
+      (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid')) ||
+      (isBalancePaid && trx.status === 'processing' && rawNote.includes("menunggu"))
+    );
+    if (isWaitingAdmin) {
       return { ...trx, status: 'in_queue' };
     }
     return trx;
@@ -196,8 +221,9 @@ function HistoryContent() {
   const filteredHistory = normalizedHistory.filter((trx) => {
     if (activeTab === "all") return true;
 
-    const status = trx.status?.toLowerCase() || "";
+    const status = (trx.status || "").toLowerCase();
     const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+    const rawNote = (trx.admin_note || trx.adminNote || "").toLowerCase();
 
     if (activeTab === "unpaid") {
       return (status === "pending" || status === "unpaid") && !isBalancePaid;
@@ -206,15 +232,21 @@ function HistoryContent() {
       return status === "in_queue" || status === "waiting" || status === "waiting_admin";
     }
     if (activeTab === "processing") {
-      return status === "processing" || status === "in_progress";
+      return (status === "processing" || status === "in_progress") && !rawNote.includes("menunggu");
     }
     if (activeTab === "completed") {
       return status === "success" || status === "completed";
     }
-    if (activeTab === "canceled" || activeTab === "refund") {
-      return status === "failed" || status === "canceled" || status === "cancelled" || status === "rejected";
+    if (activeTab === "canceled") {
+      return (
+        status === "failed" ||
+        status === "canceled" ||
+        status === "cancelled" ||
+        status === "rejected" ||
+        status === "refunded"
+      );
     }
-    return true;
+    return false;
   });
 
   const getStatusBadge = (status: string, serviceType?: string, packageName?: string) => {
@@ -308,12 +340,13 @@ function HistoryContent() {
           return (
             <button
               key={tab.key}
+              id={`history-tab-${tab.key}`}
               type="button"
               onClick={() => {
                 setActiveTab(tab.key);
                 router.replace(`/history?tab=${tab.key}`);
               }}
-              className={`flex-1 min-w-[90px] py-3 text-xs sm:text-sm font-bold text-center relative transition-colors ${
+              className={`flex-1 min-w-[72px] sm:min-w-[90px] py-3 text-xs sm:text-sm font-bold text-center relative transition-colors ${
                 isActive ? "text-primary font-black" : "text-ink-muted hover:text-ink"
               }`}
             >
@@ -365,12 +398,19 @@ function HistoryContent() {
         <div className="space-y-3 pt-1">
           {filteredHistory.map((trx) => {
             const isPaidByBalance = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
-            const effectiveStatus = (isPaidByBalance && (trx.status === "pending" || trx.status === "unpaid")) ? "in_queue" : (trx.status || "");
+            const rawNote = (trx.admin_note || trx.adminNote || "").toLowerCase();
+            const isWaiting = (
+              trx.status === "in_queue" ||
+              trx.status === "waiting" ||
+              trx.status === "waiting_admin" ||
+              (isPaidByBalance && (trx.status === "pending" || trx.status === "unpaid")) ||
+              (isPaidByBalance && trx.status === "processing" && rawNote.includes("menunggu"))
+            );
+            const effectiveStatus = isWaiting ? "in_queue" : (trx.status || "");
             const badge = getStatusBadge(effectiveStatus, trx.serviceType || trx.service_type, trx.packageName);
             const primaryImei = trx.imei ? trx.imei.split(/[\n,]+/)[0].trim().replace(/\D/g, "") : "";
             const isCompleted = effectiveStatus === "success" || effectiveStatus === "completed";
-            const isProcessing = effectiveStatus === "processing" || effectiveStatus === "in_progress";
-            const isWaiting = effectiveStatus === "in_queue" || effectiveStatus === "waiting" || effectiveStatus === "waiting_admin";
+            const isProcessing = (effectiveStatus === "processing" || effectiveStatus === "in_progress") && !isWaiting;
             const isPending = (effectiveStatus === "pending" || effectiveStatus === "unpaid") && !isPaidByBalance;
             const amount = trx.amount || trx.baseAmount || trx.price || 0;
 

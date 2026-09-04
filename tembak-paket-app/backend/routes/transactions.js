@@ -1002,10 +1002,13 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
             // Duration cleanup: Automated services are always instant
             const cleanSpeedOption = isAutomatedService ? 'instant' : item.speed_option;
 
-            // Balance purchases are paid immediately upon checkout: if still pending/unpaid, normalize to in_queue (Menunggu Konfirmasi)
+            // Balance purchases are paid immediately upon checkout: normalize to in_queue if pending/unpaid or still waiting in queue
             let effectiveStatus = item.status;
-            if ((item.payment_method === 'balance' || item.paymentMethod === 'balance') && (effectiveStatus === 'pending' || effectiveStatus === 'unpaid')) {
-                effectiveStatus = 'in_queue';
+            const noteLower = (item.admin_note || "").toLowerCase();
+            if (item.payment_method === 'balance' || item.paymentMethod === 'balance') {
+                if (effectiveStatus === 'pending' || effectiveStatus === 'unpaid' || (effectiveStatus === 'processing' && noteLower.includes("menunggu"))) {
+                    effectiveStatus = 'in_queue';
+                }
             }
 
             let speedLabel = null;

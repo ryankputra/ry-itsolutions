@@ -29,10 +29,18 @@ export default function ProfilePage() {
       .then((data) => {
         if (data?.status && Array.isArray(data.data)) {
           const pending = data.data.filter((t: any) => (t.status === "pending" || t.status === "unpaid") && (t.payment_method !== "balance" && t.paymentMethod !== "balance")).length;
-          const waiting = data.data.filter((t: any) => t.status === "in_queue" || t.status === "waiting" || t.status === "waiting_admin").length;
-          const processing = data.data.filter((t: any) => t.status === "processing" || t.status === "in_progress").length;
+          const waiting = data.data.filter((t: any) => {
+            const s = (t.status || "").toLowerCase();
+            const note = (t.admin_note || t.adminNote || "").toLowerCase();
+            return s === "in_queue" || s === "waiting" || s === "waiting_admin" || (s === "processing" && note.includes("menunggu"));
+          }).length;
+          const processing = data.data.filter((t: any) => {
+            const s = (t.status || "").toLowerCase();
+            const note = (t.admin_note || t.adminNote || "").toLowerCase();
+            return (s === "processing" || s === "in_progress") && !note.includes("menunggu");
+          }).length;
           const success = data.data.filter((t: any) => t.status === "success" || t.status === "completed").length;
-          const canceled = data.data.filter((t: any) => t.status === "failed" || t.status === "canceled" || t.status === "cancelled" || t.status === "rejected").length;
+          const canceled = data.data.filter((t: any) => t.status === "failed" || t.status === "canceled" || t.status === "cancelled" || t.status === "rejected" || t.status === "refunded").length;
           setOrderCounts({ pending, waiting, processing, success, canceled });
         }
       })
