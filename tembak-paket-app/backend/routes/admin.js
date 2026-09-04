@@ -1204,7 +1204,8 @@ router.get(['/admin/baileys/status', '/admin/wabot/status', '/admin/whatsapp/sta
         status: true,
         success: true,
         data: data,
-        ...data
+        ...data,
+        status: true
     });
 });
 

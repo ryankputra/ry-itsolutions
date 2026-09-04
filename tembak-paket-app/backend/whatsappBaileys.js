@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const QRCode = require("qrcode");
 const path = require("path");
@@ -93,7 +93,9 @@ async function initWhatsApp(forceNew = false) {
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: "silent" }),
-            browser: ["Mac OS", "Chrome", "121.0.0"],
+            browser: Browsers.ubuntu("Chrome"),
+            syncFullHistory: false,
+            markOnlineOnConnect: false,
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             keepAliveIntervalMs: 25000,
@@ -109,6 +111,10 @@ async function initWhatsApp(forceNew = false) {
             if (qr) {
                 const isOpen = connectionState === "open" || global.baileysStatus === "open";
                 if (!isOpen) {
+                    if (state?.creds?.me?.id || state?.creds?.registered) {
+                        console.log("[Baileys] Sesi sudah terautentikasi, mengabaikan regenerasi QR Code.");
+                        return;
+                    }
                     try {
                         qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
                         connectionState = "scan_ready";
@@ -163,19 +169,23 @@ async function initWhatsApp(forceNew = false) {
                     return;
                 }
 
-                // 1. HANDSHAKE RECONNECT PROTECTION:
-                // Jika statusCode 408, 515, 428, atau shouldReconnect true:
-                // - JANGAN set global.baileysStatus = 'disconnected'
-                // - Tetapkan global.baileysStatus = 'connecting'
-                // - Pertahankan global.qrCode agar tidak berkedip error di frontend
-                // - Jalankan initBaileys() setelah jeda tanpa membuang baileys_auth
-                if (statusCode === 408 || statusCode === 515 || statusCode === 428 || shouldReconnect) {
+                // 1. RESTART REQUIRED (515) - Pairing QR berhasil di-scan HP
+                if (statusCode === 515 || statusCode === DisconnectReason.restartRequired) {
+                    console.log("[Baileys] ✅ QR Code berhasil di-scan! WhatsApp meminta restart socket untuk menyelesaikan pairing (515)...");
+                    connectionState = "connecting";
+                    global.baileysStatus = "connecting";
+                    isInitializing = false;
+                    setTimeout(() => initWhatsApp(false), 300);
+                    return;
+                }
+
+                // 2. HANDSHAKE RECONNECT PROTECTION (408 / 428 / network drop):
+                if (statusCode === 408 || statusCode === 428 || shouldReconnect) {
                     console.log(`[Baileys] Handshake reconnect protection (Status: ${statusCode}). Menjaga status connecting & QR tetap stabil...`);
                     connectionState = "connecting";
                     global.baileysStatus = "connecting";
-                    // Jangan null-kan global.qrCode di sini
                     isInitializing = false;
-                    setTimeout(() => initWhatsApp(false), 2000);
+                    setTimeout(() => initWhatsApp(false), 1500);
                     return;
                 }
 

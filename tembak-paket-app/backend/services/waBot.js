@@ -9,7 +9,7 @@
  * 4. Two-way WhatsApp Remote Admin Controller (.proses, .sukses, .gagal, .status, .help).
  */
 
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const QRCode = require("qrcode");
 const path = require("path");
@@ -24,7 +24,6 @@ let qrCodeDataUrl = null;
 let connectionState = "disconnected"; // 'disconnected' | 'connecting' | 'scan_ready' | 'open'
 let connectedPhone = null;
 let isInitializing = false;
-let saveCredsTimeout = null;
 let connectingTimer = null;
 
 global.baileysStatus = "disconnected";
@@ -156,35 +155,17 @@ async function initWABot(forceNew = false) {
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: "silent" }),
-            browser: ["Ry-ITSolutions", "Chrome", "122.0.0"],
+            browser: Browsers.ubuntu("Chrome"),
+            syncFullHistory: false,
+            markOnlineOnConnect: false,
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             keepAliveIntervalMs: 25000,
             generateHighQualityLinkPreview: false
         });
 
-        const debouncedSaveCreds = () => {
-            if (saveCredsTimeout) clearTimeout(saveCredsTimeout);
-            saveCredsTimeout = setTimeout(async () => {
-                try {
-                    await saveCreds();
-                } catch (err) {
-                    console.error("[WABot] Error saving credentials:", err.message);
-                }
-            }, 500);
-        };
-
-        const flushSaveCreds = async () => {
-            if (saveCredsTimeout) {
-                clearTimeout(saveCredsTimeout);
-                saveCredsTimeout = null;
-                try {
-                    await saveCreds();
-                } catch (e) {}
-            }
-        };
-
-        sock.ev.on("creds.update", debouncedSaveCreds);
+        // Simpan kredensial langsung tanpa delay debounce agar creds.json segera terupdate
+        sock.ev.on("creds.update", saveCreds);
 
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
@@ -193,6 +174,11 @@ async function initWABot(forceNew = false) {
             if (qr) {
                 const isOpen = connectionState === "open" || global.baileysStatus === "open";
                 if (!isOpen) {
+                    // Jika sesi auth sudah terdaftar (registered/me sudah ada di auth), jangan overwrite ke scan_ready
+                    if (state?.creds?.me?.id || state?.creds?.registered) {
+                        console.log("[WABot] Sesi sudah terautentikasi, mengabaikan regenerasi QR Code.");
+                        return;
+                    }
                     try {
                         currentQrCode = qr;
                         qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
@@ -228,7 +214,7 @@ async function initWABot(forceNew = false) {
                 clearConnectingTimer();
                 connectingTimer = setTimeout(() => {
                     if (connectionState === "connecting" || global.baileysStatus === "connecting") {
-                        console.warn("[WABot] Status 'connecting' timeout (>15s). Memaksa reset & re-init Baileys socket...");
+                        console.warn("[WABot] Status 'connecting' timeout (>35s). Memaksa reset & re-init Baileys socket...");
                         clearConnectingTimer();
                         try {
                             if (sock) {
@@ -242,13 +228,12 @@ async function initWABot(forceNew = false) {
                         isInitializing = false;
                         initWABot(false);
                     }
-                }, 15000);
+                }, 35000);
             }
 
             if (connection === "close") {
                 clearConnectingTimer();
-                await flushSaveCreds();
-                const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
+                                const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
                 const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
@@ -270,18 +255,24 @@ async function initWABot(forceNew = false) {
                     return;
                 }
 
-                // 2. HANDSHAKE RECONNECT PROTECTION:
-                // Jika statusCode bernilai 408, 515, atau 428 (atau shouldReconnect bernilai true):
-                // - JANGAN set global.baileysStatus = 'disconnected'
-                // - Tetapkan global.baileysStatus = 'connecting'
-                // - Pertahankan QR code tetap stabil
-                // - Jalankan setTimeout(() => initWABot(false), 2000) tanpa membuang folder baileys_auth
-                if (statusCode === 408 || statusCode === 515 || statusCode === 428 || shouldReconnect) {
+                // 2. RESTART REQUIRED (515) - Proses pairing QR berhasil di-scan oleh HP
+                if (statusCode === 515 || statusCode === DisconnectReason.restartRequired) {
+                    console.log("[WABot] ✅ QR Code berhasil di-scan! WhatsApp meminta restart socket untuk menyelesaikan pairing (515)...");
+                    connectionState = "connecting";
+                    global.baileysStatus = "connecting";
+                    isInitializing = false;
+                    // Jeda sangat singkat (300ms) agar write creds.json selesai sebelum reconnect
+                    setTimeout(() => initWABot(false), 300);
+                    return;
+                }
+
+                // 3. HANDSHAKE RECONNECT PROTECTION (408 / 428 / network drop):
+                if (statusCode === 408 || statusCode === 428 || shouldReconnect) {
                     console.log(`[WABot] Handshake reconnect protection active (Status: ${statusCode}). Menjaga status connecting & QR tetap stabil...`);
                     connectionState = "connecting";
                     global.baileysStatus = "connecting";
                     isInitializing = false;
-                    setTimeout(() => initWABot(false), 2000);
+                    setTimeout(() => initWABot(false), 1500);
                     return;
                 }
 
