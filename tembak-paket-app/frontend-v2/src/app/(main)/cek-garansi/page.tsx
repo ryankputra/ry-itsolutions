@@ -19,7 +19,7 @@ function CekGaransiContent() {
   const [showInvoice, setShowInvoice] = useState(false);
 
   const doCheck = async (imeiToCheck: string) => {
-    const clean = imeiToCheck.replace(/\D/g, "");
+    const clean = (imeiToCheck || "").replace(/\D/g, "");
     if (!clean || clean.length < 8) {
       setError("Masukkan nomor IMEI minimal 8 digit.");
       return;
@@ -32,10 +32,10 @@ function CekGaransiContent() {
     try {
       const res = await fetch(`/api/public/check-warranty?imei=${clean}`);
       const d = await res.json();
-      if (res.ok && d.status) {
+      if (res.ok && d.status && d.data) {
         setResult(d.data);
       } else {
-        setError(d.message || "Data pelacakan IMEI tidak ditemukan.");
+        setError(d?.message || "Data pelacakan IMEI tidak ditemukan.");
       }
     } catch (err) {
       setError("Gagal menghubungi server. Silakan coba beberapa saat lagi.");
@@ -53,20 +53,45 @@ function CekGaransiContent() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchImei) {
-      router.push(`/cek-garansi?imei=${searchImei.replace(/\D/g, "")}`);
-      doCheck(searchImei);
+      const clean = searchImei.replace(/\D/g, "");
+      router.push(`/cek-garansi?imei=${clean}`);
+      doCheck(clean);
     }
   };
 
   const imeiAnalysis = searchImei.length >= 8 ? analyzeImei(searchImei) : null;
-  const isCeirService = result?.serviceType === 'ceir' || (result?.packageName || '').toLowerCase().includes('ceir') || result?.hasWarranty === false;
+  const rawStatus = String(result?.orderStatus || result?.status || 'processing').toLowerCase();
+  const rawService = String(result?.serviceType || result?.service_type || 'imei').toLowerCase();
+  const isCeirService = rawService === 'ceir' || (result?.packageName || '').toLowerCase().includes('ceir') || result?.hasWarranty === false;
   const warranty = result?.warranty;
+
+  const isCompleted = rawStatus === 'success' || rawStatus === 'completed';
+  const isProcessing = rawStatus === 'processing' || rawStatus === 'in_progress';
+  const isPending = rawStatus === 'pending' || rawStatus === 'unpaid';
+
+  let statusBadgeClass = 'bg-amber-100 text-amber-800 border border-amber-300';
+  let statusBadgeLabel = 'SEDANG DIPROSES';
+
+  if (isCompleted) {
+    statusBadgeClass = 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+    statusBadgeLabel = isCeirService ? 'CEIR SELESAI DICEK' : 'SELESAI / SINYAL ON';
+  } else if (isProcessing) {
+    statusBadgeClass = 'bg-amber-100 text-amber-800 border border-amber-300';
+    statusBadgeLabel = 'SEDANG DIPROSES';
+  } else if (isPending) {
+    statusBadgeClass = 'bg-amber-100 text-amber-800 border border-amber-300';
+    statusBadgeLabel = 'MENUNGGU';
+  } else {
+    statusBadgeClass = 'bg-rose-100 text-rose-800 border border-rose-300';
+    statusBadgeLabel = (rawStatus || 'GAGAL').toUpperCase();
+  }
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-16">
       {/* Header */}
       <div className="flex items-center gap-4 mb-2">
         <button
+          type="button"
           onClick={() => router.push("/dashboard")}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors"
         >
@@ -79,7 +104,7 @@ function CekGaransiContent() {
             <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
             </svg>
-            Cek Status & Garansi IMEI
+            Cek Status &amp; Garansi IMEI
           </h1>
           <p className="text-sm text-ink-muted">Cek keabsahan pengerjaan, progress pengerjaan, dan status garansi layanan.</p>
         </div>
@@ -157,14 +182,8 @@ function CekGaransiContent() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                  result.orderStatus === 'success' || result.orderStatus === 'completed'
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : result.orderStatus === 'pending' || result.orderStatus === 'processing'
-                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                    : 'bg-rose-100 text-rose-800 border border-rose-300'
-                }`}>
-                  {result.orderStatus === 'success' ? (isCeirService ? 'CEIR SELESAI DICEK' : 'SELESAI / SINYAL ON') : result.orderStatus === 'processing' ? 'SEDANG DIPROSES' : result.orderStatus.toUpperCase()}
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${statusBadgeClass}`}>
+                  {statusBadgeLabel}
                 </span>
               </div>
             </div>
@@ -193,20 +212,26 @@ function CekGaransiContent() {
                       {warranty?.isPermanent
                         ? 'Layanan ini memiliki jaminan sinyal aktif seumur hidup.'
                         : warranty?.expiryDate
-                        ? `Garansi berlaku sampai: ${new Date(warranty.expiryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                        ? `Garansi berlaku sampai: ${(() => {
+                            try {
+                              const d = new Date(warranty.expiryDate);
+                              return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                            } catch { return '-'; }
+                          })()}`
                         : 'Sedang dalam pengerjaan oleh tim operasional.'}
                     </p>
                   </div>
                 </div>
 
                 <Button
+                  type="button"
                   onClick={() => setShowInvoice(true)}
                   className="w-full sm:w-auto font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow-md flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl shrink-0"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
-                  Cetak Nota & Garansi
+                  Cetak Nota &amp; Garansi
                 </Button>
               </div>
             ) : (
@@ -220,7 +245,7 @@ function CekGaransiContent() {
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 justify-center sm:justify-start">
-                      <h3 className="font-black text-base text-slate-900">Layanan Cek Status & Riwayat CEIR</h3>
+                      <h3 className="font-black text-base text-slate-900">Layanan Cek Status &amp; Riwayat CEIR</h3>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Non-Garansi</span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
@@ -235,6 +260,7 @@ function CekGaransiContent() {
                 </div>
 
                 <Button
+                  type="button"
                   onClick={() => setShowInvoice(true)}
                   className="w-full sm:w-auto font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow-md flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl shrink-0"
                 >
@@ -254,8 +280,8 @@ function CekGaransiContent() {
                   {[
                     { step: 1, label: "Order Masuk", done: true },
                     { step: 2, label: "Validasi IMEI", done: true },
-                    { step: 3, label: "Proses Server", done: result.orderStatus === 'processing' || result.orderStatus === 'success' },
-                    { step: 4, label: "Sinyal ON", done: result.orderStatus === 'success' }
+                    { step: 3, label: "Proses Server", done: isProcessing || isCompleted },
+                    { step: 4, label: "Sinyal ON", done: isCompleted }
                   ].map((st) => (
                     <div key={st.step} className="flex flex-col items-center gap-1.5">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
@@ -273,8 +299,8 @@ function CekGaransiContent() {
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   {[
                     { step: 1, label: "Order Dibuat", done: true },
-                    { step: 2, label: "Query Database CEIR", done: result.orderStatus === 'processing' || result.orderStatus === 'success' },
-                    { step: 3, label: "Hasil Cek Selesai", done: result.orderStatus === 'success' }
+                    { step: 2, label: "Query Database CEIR", done: isProcessing || isCompleted },
+                    { step: 3, label: "Hasil Cek Selesai", done: isCompleted }
                   ].map((st) => (
                     <div key={st.step} className="flex flex-col items-center gap-1.5">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
@@ -295,14 +321,26 @@ function CekGaransiContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-hairline text-xs">
               <div className="p-3 rounded-xl bg-parchment/60 border border-hairline">
                 <span className="text-ink-muted block text-[11px]">Tipe Layanan</span>
-                <span className="font-bold text-ink text-sm">{result.packageName}</span>
+                <span className="font-bold text-ink text-sm">{result.packageName || result.service_type || 'Aktivasi IMEI'}</span>
               </div>
               <div className="p-3 rounded-xl bg-parchment/60 border border-hairline">
                 <span className="text-ink-muted block text-[11px]">Waktu Transaksi</span>
                 <span className="font-bold text-ink text-sm">
-                  {new Date(result.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {result.createdAt ? new Date(result.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
                 </span>
               </div>
+              {result.speed_label || result.speed_option ? (
+                <div className="p-3 rounded-xl bg-parchment/60 border border-hairline">
+                  <span className="text-ink-muted block text-[11px]">Kecepatan Proses Server</span>
+                  <span className="font-bold text-ink text-sm text-primary">
+                    {result.speed_label || (
+                      result.speed_option === 'fast' ? 'Fast (1-3 Jam)' :
+                      result.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' :
+                      'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                    )}
+                  </span>
+                </div>
+              ) : null}
               {imeiAnalysis && (
                 <div className="p-3 rounded-xl bg-parchment/60 border border-hairline">
                   <span className="text-ink-muted block text-[11px]">Model Perangkat Terdeteksi</span>
@@ -312,7 +350,7 @@ function CekGaransiContent() {
                 </div>
               )}
               {result.adminNote && (
-                <div className="p-3 rounded-xl bg-parchment/60 border border-hairline">
+                <div className="p-3 rounded-xl bg-parchment/60 border border-hairline sm:col-span-2">
                   <span className="text-ink-muted block text-[11px]">Catatan / Hasil Sistem</span>
                   <span className="font-bold text-ink text-sm">{result.adminNote}</span>
                 </div>
@@ -327,14 +365,14 @@ function CekGaransiContent() {
         isOpen={showInvoice}
         onClose={() => setShowInvoice(false)}
         data={result ? {
-          trxId: result.trxId,
+          trxId: result.trxId || result.id || '-',
           imei: result.imei,
           packageName: result.packageName,
-          serviceType: result.serviceType,
+          serviceType: result.serviceType || result.service_type,
           createdAt: result.createdAt,
-          status: result.orderStatus,
+          status: rawStatus,
           warranty: result.warranty,
-          adminNote: result.adminNote,
+          adminNote: result.adminNote || result.admin_note,
           ceirData: result.ceirData
         } : null}
       />

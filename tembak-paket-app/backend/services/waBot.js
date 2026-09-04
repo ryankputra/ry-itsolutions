@@ -723,6 +723,7 @@ async function replyWhatsApp(jid, text) {
 async function notifyNewOrder(orderData) {
     try {
         if (!sock || connectionState !== "open") {
+            console.warn(`[WABot] Notifikasi pesanan ${orderData?.id} tidak terkirim: Bot WhatsApp belum terhubung (status: ${connectionState || 'offline'}).`);
             return;
         }
 
@@ -741,13 +742,32 @@ async function notifyNewOrder(orderData) {
             price,
             speedOption,
             userImage,
-            userImageCeir
+            userImageCeir,
+            customerPhone,
+            targetPhone
         } = orderData;
+
+        // Fetch dynamic speed settings if available
+        let speedRangeText = "Max kirim jam 14:00, selesai max jam 00:00 WIB";
+        try {
+            const optKey = (speedOption || "slow").toLowerCase();
+            const sRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${optKey}_range`]);
+            if (sRow && sRow.value) {
+                speedRangeText = sRow.value;
+            } else if (optKey === "fast") {
+                speedRangeText = "1-3 Jam";
+            } else if (optKey === "semi") {
+                speedRangeText = "1-12 Jam";
+            }
+        } catch (e) {}
+
+        const optName = (speedOption || "slow").toLowerCase();
+        const optTitle = optName === "slow" ? "Slow" : optName === "fast" ? "Fast" : optName === "semi" ? "Semi Fast" : optName;
 
         const isAutomated = serviceType === "ceir" || serviceType === "barcode";
         const speedDisplay = isAutomated 
             ? "⚡ Instant (Otomatis System)" 
-            : (speedOption === "fast" ? "Fast (1-3 Jam)" : speedOption === "semi" ? "Semi Fast (1-12 Jam)" : "Standar (1-3 Hari)");
+            : `${optTitle} (${speedRangeText})`;
 
         const messageBody = 
             `🔔 *PESANAN BARU MASUK!*\n` +
@@ -766,7 +786,7 @@ async function notifyNewOrder(orderData) {
             `• \`.gagal ${id} <ALASAN>\` (Tolak & refund)\n` +
             `━━━━━━━━━━━━━━━━━━━━━━`;
 
-        // Send to all admin numbers
+        // 1. Send to all admin numbers
         for (const phone of adminPhones) {
             const adminJid = `${phone}@s.whatsapp.net`;
 
@@ -795,6 +815,33 @@ async function notifyNewOrder(orderData) {
         }
 
         console.log(`[WABot] Notifikasi pesanan ${id} berhasil dikirim ke ${adminPhones.length} nomor admin.`);
+
+        // 2. Also send confirmation to customer phone if provided
+        const customerTarget = customerPhone || targetPhone;
+        if (customerTarget) {
+            const cleanCust = cleanPhone(customerTarget);
+            if (cleanCust && !adminPhones.includes(cleanCust)) {
+                const custJid = `${cleanCust}@s.whatsapp.net`;
+                const customerMsg =
+                    `Halo Kak *${userName || "Pelanggan"}*! 👋\n` +
+                    `Terima kasih telah memesan layanan di *Ry-ITSolutions*.\n\n` +
+                    `📦 *Layanan:* ${packageName || "Layanan"}\n` +
+                    `🆔 *Order ID:* #${id}\n` +
+                    `📱 *IMEI:* ${imei || "-"}\n` +
+                    `⚡ *Kecepatan:* ${speedDisplay}\n` +
+                    `💰 *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
+                    `⏳ *Status:* Sedang Diproses Admin\n\n` +
+                    `Pesanan Anda sedang dalam antrean pengerjaan oleh tim operasional kami.\n` +
+                    `Anda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutions.web.id/history\n\n` +
+                    `_Pesan otomatis ini dikirim resmi oleh sistem Ry-ITSolutions._`;
+                try {
+                    await sock.sendMessage(custJid, { text: customerMsg });
+                    console.log(`[WABot] Notifikasi pesanan ${id} berhasil dikirim ke pelanggan (${cleanCust}).`);
+                } catch (custErr) {
+                    console.warn(`[WABot] Gagal mengirim notifikasi ke pelanggan ${cleanCust}:`, custErr.message);
+                }
+            }
+        }
     } catch (e) {
         console.error("[WABot] Error sending order notification:", e.message);
     }

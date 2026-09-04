@@ -197,12 +197,69 @@ router.get('/public/check-warranty', async (req, res) => {
         if (!trx) {
             return res.status(200).json({
                 status: false,
-                message: `Tidak ditemukan data garansi untuk IMEI ${queryImei}.`
+                message: `Tidak ditemukan data pelacakan / garansi untuk IMEI ${queryImei}.`
             });
         }
 
-        res.json({ status: true, data: trx });
+        // Fetch dynamic speed ranges configured by admin in settings
+        const speedRanges = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'imei_speed_%_range'");
+        const speedRangeMap = {
+            fast: '1-3 Jam',
+            semi: '1-12 Jam',
+            slow: 'Max kirim jam 14:00, selesai max jam 00:00 WIB'
+        };
+        speedRanges.forEach(r => {
+            const m = r.key.match(/^imei_speed_(.*)_range$/);
+            if (m && r.value) speedRangeMap[m[1]] = r.value;
+        });
+
+        const optKey = (trx.speed_option || 'slow').toLowerCase();
+        const rangeText = speedRangeMap[optKey] || speedRangeMap['slow'];
+        const optTitle = optKey === 'slow' ? 'Slow' : optKey === 'fast' ? 'Fast' : optKey === 'semi' ? 'Semi Fast' : optKey;
+        const speedLabel = `${optTitle} (${rangeText})`;
+
+        // Build robust warranty structure
+        const isCeir = trx.service_type === 'ceir' || (trx.packageName || '').toLowerCase().includes('ceir');
+        let warranty = null;
+        if (!isCeir) {
+            const isPermanent = (trx.packageName || '').toLowerCase().includes('permanen');
+            let durationMonths = 3;
+            if ((trx.packageName || '').includes('1 Bulan') || (trx.packageName || '').includes('1 bulan')) durationMonths = 1;
+            else if ((trx.packageName || '').includes('2 Bulan') || (trx.packageName || '').includes('2 bulan')) durationMonths = 2;
+            else if ((trx.packageName || '').includes('3 Bulan') || (trx.packageName || '').includes('3 bulan')) durationMonths = 3;
+            else if ((trx.packageName || '').includes('6 Bulan') || (trx.packageName || '').includes('6 bulan')) durationMonths = 6;
+            else if ((trx.packageName || '').includes('12 Bulan') || (trx.packageName || '').includes('12 bulan') || (trx.packageName || '').includes('1 Tahun')) durationMonths = 12;
+
+            const orderDate = new Date(trx.createdAt || Date.now());
+            const expiryDate = new Date(orderDate);
+            expiryDate.setMonth(expiryDate.getMonth() + durationMonths);
+
+            const now = new Date();
+            const diffDays = Math.max(0, Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
+            warranty = {
+                isPermanent,
+                warrantyStatus: trx.status === 'success' || trx.status === 'completed' ? (isPermanent ? 'permanent' : 'active') : 'in_progress',
+                expiryDate: expiryDate.toISOString(),
+                remainingDays: diffDays,
+                hasWarranty: true
+            };
+        }
+
+        const data = {
+            ...trx,
+            trxId: trx.id,
+            orderStatus: trx.status,
+            serviceType: trx.service_type,
+            speed_option: trx.speed_option || 'slow',
+            speed_label: speedLabel,
+            speed_range: rangeText,
+            warranty
+        };
+
+        res.json({ status: true, data });
     } catch (e) {
+        console.error("[CHECK_WARRANTY_ERR]", e.message);
         res.status(500).json({ status: false, message: "Gagal memeriksa garansi." });
     }
 });

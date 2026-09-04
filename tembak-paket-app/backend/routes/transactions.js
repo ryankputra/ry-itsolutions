@@ -897,7 +897,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 sendManualOrderNotification(notifMsg, trxId, firstImg);
             }
 
-            // Send WhatsApp Admin Notification with Embedded Command Guides
+            // Send WhatsApp Admin & Customer Notification
             try {
                 notifyNewOrder({
                     id: trxId,
@@ -906,8 +906,9 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     serviceType: service_type,
                     imei: cleanImei,
                     price: finalPriceToPay,
-                    speedOption: speed_option,
-                    userImage: imagePath
+                    speedOption: speed_option || 'slow',
+                    userImage: imagePath,
+                    customerPhone: targetPhone || user.phone || user.verifiedPhone
                 }).catch((err) => console.error("[WABot] Error sending manual order notification:", err.message));
             } catch (waErr) {
                 console.error("[WABot] Exception in notifyNewOrder:", waErr.message);
@@ -940,6 +941,17 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
     try {
         const purchases = await dbAll('SELECT *, "purchase" as type FROM transactions WHERE userId = ?', [req.session.userId]);
         const topups = await dbAll('SELECT *, "topup" as type FROM topups WHERE userId = ?', [req.session.userId]);
+
+        const speedRanges = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'imei_speed_%_range'");
+        const speedRangeMap = {
+            fast: '1-3 Jam',
+            semi: '1-12 Jam',
+            slow: 'Max kirim jam 14:00, selesai max jam 00:00 WIB'
+        };
+        speedRanges.forEach(r => {
+            const m = r.key.match(/^imei_speed_(.*)_range$/);
+            if (m && r.value) speedRangeMap[m[1]] = r.value;
+        });
 
         const allActivities = [...purchases, ...topups].map(item => {
             if (item.type === 'topup') {
@@ -996,6 +1008,14 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
                 effectiveStatus = 'processing';
             }
 
+            let speedLabel = null;
+            if (cleanSpeedOption && cleanSpeedOption !== 'instant') {
+                const optKey = cleanSpeedOption.toLowerCase();
+                const rangeStr = speedRangeMap[optKey] || speedRangeMap['slow'];
+                const optName = optKey === 'slow' ? 'Slow' : optKey === 'fast' ? 'Fast' : optKey === 'semi' ? 'Semi Fast' : optKey;
+                speedLabel = `${optName} (${rangeStr})`;
+            }
+
             return {
                 ...item,
                 status: effectiveStatus,
@@ -1004,6 +1024,9 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
                 api_response: cleanApiResponse,
                 speed_option: cleanSpeedOption,
                 speedOption: cleanSpeedOption,
+                speed_label: speedLabel,
+                speedLabel: speedLabel,
+                speed_range: speedRangeMap[(cleanSpeedOption || 'slow').toLowerCase()] || speedRangeMap['slow'],
                 amount: purchaseVal,
                 originalPrice: purchaseVal,
                 baseAmount: purchaseVal,

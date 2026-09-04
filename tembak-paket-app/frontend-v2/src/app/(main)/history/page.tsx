@@ -414,7 +414,13 @@ function HistoryContent() {
                           </span>
                         ) : trx.speed_option && trx.speed_option !== 'instant' ? (
                           <p className="text-[10px] text-ink-muted mt-1">
-                            Opsi Kecepatan: <strong className="text-ink font-bold">{trx.speed_option === 'fast' ? 'Fast (1-3 Jam)' : trx.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : 'Standar (1-3 Hari)'}</strong>
+                            Opsi Kecepatan: <strong className="text-ink font-bold">
+                              {trx.speed_label || (
+                                trx.speed_option === 'fast' ? 'Fast (1-3 Jam)' :
+                                trx.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' :
+                                'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                              )}
+                            </strong>
                           </p>
                         ) : null}
                         <p className="text-[10px] text-ink-muted mt-0.5">
