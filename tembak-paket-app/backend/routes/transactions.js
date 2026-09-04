@@ -94,9 +94,9 @@ async function generateGopayQris(amount) {
                     try {
                         const qrcodeLib = require('qrcode');
                         dataUrl = await qrcodeLib.toDataURL(rawCode, {
-                            errorCorrectionLevel: 'M',
-                            margin: 2,
-                            width: 380,
+                            errorCorrectionLevel: 'H',
+                            margin: 4,
+                            width: 480,
                             color: { dark: '#000000', light: '#ffffff' }
                         });
                     } catch (errConv) {
@@ -305,7 +305,10 @@ async function generateDynamicQris(amount, provider = 'nobu') {
     try {
         const genRes = await generateQrisDataUrl(template, amount);
         if (genRes && genRes.dataUrl) {
-            return genRes.dataUrl;
+            return {
+                dataUrl: genRes.dataUrl,
+                dynamicCode: genRes.dynamicCode
+            };
         }
     } catch (localErr) {
         console.warn("[QRIS_GEN] Local generator warning:", localErr.message);
@@ -315,7 +318,10 @@ async function generateDynamicQris(amount, provider = 'nobu') {
     try {
         const response = await axios.post('https://qrisku.my.id/api', { amount: amount.toString(), qris_statis: template }, { timeout: 8000 });
         if (response.data?.status === 'success' && response.data.qris_base64) {
-            return `data:image/png;base64,${response.data.qris_base64}`;
+            return {
+                dataUrl: `data:image/png;base64,${response.data.qris_base64}`,
+                dynamicCode: response.data.qris_code || response.data.qris_data || ''
+            };
         }
     } catch (extErr) {}
 
@@ -717,6 +723,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 const isGopay = (requestedGw === 'gopay') || (activeGateway === 'gopay' && requestedGw !== 'nobu' && requestedGw !== 'orkut');
 
                 let qrisImage = null;
+                let dynamicRawCode = '';
                 let uniqueAmt = finalPriceToPay;
                 let expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
                 let gopayTrxId = null;
@@ -726,10 +733,11 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     merchantName = 'RyyStore IT Solutions';
                     const gopayData = await generateGopayQris(finalPriceToPay);
                     qrisImage = gopayData.qris_image || gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
+                    dynamicRawCode = gopayData.qris_code || '';
                     if (qrisImage && !qrisImage.startsWith('data:image') && gopayData.qris_code) {
                         try {
                             const qrcodeLib = require('qrcode');
-                            qrisImage = await qrcodeLib.toDataURL(gopayData.qris_code, { margin: 2, width: 380 });
+                            qrisImage = await qrcodeLib.toDataURL(gopayData.qris_code, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
                         } catch (e) {}
                     }
                     gopayTrxId = gopayData.trx_id;
@@ -737,7 +745,9 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 } else {
                     const uniqueCode = Math.floor(Math.random() * 900) + 100;
                     uniqueAmt = finalPriceToPay + uniqueCode;
-                    qrisImage = await generateDynamicQris(uniqueAmt, 'nobu');
+                    const nobuGen = await generateDynamicQris(uniqueAmt, 'nobu');
+                    qrisImage = typeof nobuGen === 'string' ? nobuGen : (nobuGen?.dataUrl || '');
+                    dynamicRawCode = typeof nobuGen === 'string' ? '' : (nobuGen?.dynamicCode || '');
                 }
 
                 await dbRun(`
@@ -784,11 +794,13 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                         amount: finalPriceToPay,
                         unique_amount: uniqueAmt,
                         qris_image: qrisImage,
+                        qris_code: dynamicRawCode || qrisImage,
                         merchant: merchantName,
                         expires_at: expiresAtSec
                     },
                     qrisData: {
                         base64Image: qrisImage,
+                        qrisCode: dynamicRawCode,
                         uniqueAmount: uniqueAmt,
                         expiresAt: expiresAtSec,
                         merchant: merchantName
@@ -1089,7 +1101,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
             if (qrisImg && !qrisImg.startsWith('data:image') && gopayData.qris_code) {
                 try {
                     const qrcodeLib = require('qrcode');
-                    qrisImg = await qrcodeLib.toDataURL(gopayData.qris_code, { margin: 2, width: 380 });
+                    qrisImg = await qrcodeLib.toDataURL(gopayData.qris_code, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
                 } catch (e) {}
             }
 
@@ -1117,6 +1129,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 },
                 qrisData: {
                     base64Image: qrisImg,
+                    qrisCode: gopayData.qris_code,
                     uniqueAmount: baseAmount,
                     expiresAt: expiresAtSec,
                     merchant: 'RyyStore IT Solutions'
@@ -1126,7 +1139,9 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
             const uniqueCode = Math.floor(Math.random() * 900) + 100;
             const uniqueAmount = baseAmount + uniqueCode;
             const topUpId = `TU-${Date.now()}`;
-            const qrisBase64Image = await generateDynamicQris(uniqueAmount, 'nobu');
+            const nobuGen = await generateDynamicQris(uniqueAmount, 'nobu');
+            const qrisBase64Image = typeof nobuGen === 'string' ? nobuGen : (nobuGen?.dataUrl || '');
+            const dynamicRawCode = typeof nobuGen === 'string' ? '' : (nobuGen?.dynamicCode || '');
             const expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
 
             await dbRun(
@@ -1144,7 +1159,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 merchant: 'RYYSTORE OK2285905',
                 data: {
                     qris_image: qrisBase64Image,
-                    qris_code: qrisBase64Image,
+                    qris_code: dynamicRawCode || qrisBase64Image,
                     unique_amount: uniqueAmount,
                     topup_id: topUpId,
                     expires_at: expiresAtSec,
@@ -1152,6 +1167,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 },
                 qrisData: {
                     base64Image: qrisBase64Image,
+                    qrisCode: dynamicRawCode,
                     uniqueAmount,
                     expiresAt: expiresAtSec,
                     merchant: 'RYYSTORE OK2285905'

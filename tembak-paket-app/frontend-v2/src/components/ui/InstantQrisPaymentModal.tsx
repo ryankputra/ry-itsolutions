@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { generateQrisCanvasDataUrl, sanitizeQrisPayload } from "@/lib/qrisCanvas";
 import { PaymentLogosGrid } from "./PaymentLogos";
 import { playTopupSuccessSound, playPopSound } from "@/lib/soundFx";
 import Swal from "@/lib/sweetalert";
@@ -44,28 +45,33 @@ export function InstantQrisPaymentModal({
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Automatically render QR code if payload string is given
+  // Automatically render QR code with High error correction & center logo overlay
   useEffect(() => {
     if (!qrisData) {
       setRenderedQrImage("");
       return;
     }
 
-    const raw = qrisData.qris_image || qrisData.qris_code || "";
-    if (raw.startsWith("data:image/") || raw.startsWith("http://") || raw.startsWith("https://")) {
-      setRenderedQrImage(raw);
-    } else if (raw) {
-      QRCode.toDataURL(raw, {
-        margin: 2,
-        scale: 8,
-        color: { dark: "#000000", light: "#ffffff" },
-      })
-        .then((url) => setRenderedQrImage(url))
+    let isMounted = true;
+    const raw = qrisData.qris_code || qrisData.qris_image || "";
+
+    // If we have an EMVCo payload string (starts with 000201 or not a data:image URL), render via canvas with logo
+    if (raw && (raw.startsWith("000201") || (!raw.startsWith("data:image/") && !raw.startsWith("http")))) {
+      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" })
+        .then((url) => {
+          if (isMounted && url) setRenderedQrImage(url);
+        })
         .catch((err) => {
-          console.error("QR Code conversion error:", err);
-          setRenderedQrImage(raw);
+          console.error("QRIS Canvas generator error:", err);
+          if (isMounted) setRenderedQrImage(qrisData.qris_image || raw);
         });
+    } else if (raw) {
+      setRenderedQrImage(raw);
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [qrisData]);
 
   // Generate atau tampilkan Direct QRIS eksisting saat modal dibuka
@@ -102,13 +108,15 @@ export function InstantQrisPaymentModal({
           const qData = data.data || {};
           const qInfo = data.qrisData || {};
           const rawImg = qData.qris_image || qInfo.base64Image || "";
-          const rawCode = qData.qris_code || qData.qris_image || qInfo.base64Image || "";
+          const rawCode = qData.qris_code || qInfo.qrisCode || "";
 
           let resolvedImage = rawImg;
           if (rawCode && (!rawImg || (!rawImg.startsWith("data:image/") && !rawImg.startsWith("http")))) {
             try {
-              resolvedImage = await QRCode.toDataURL(rawCode, { margin: 2, scale: 8 });
-            } catch (e) {}
+              resolvedImage = await generateQrisCanvasDataUrl(rawCode, { logoUrl: "/logo.png" });
+            } catch (e) {
+              resolvedImage = await QRCode.toDataURL(rawCode, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
+            }
           }
 
           setQrisData({
@@ -197,8 +205,17 @@ export function InstantQrisPaymentModal({
   const formattedTime = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
   const copyString = (str: string) => {
-    if (!str) return;
-    navigator.clipboard.writeText(str);
+    const clean = sanitizeQrisPayload(str);
+    if (!clean || clean.startsWith("data:image/")) {
+      if (qrisData?.qris_code && !qrisData.qris_code.startsWith("data:image/")) {
+        navigator.clipboard.writeText(qrisData.qris_code);
+        setCopied(true);
+        try { playPopSound(); } catch {}
+        setTimeout(() => setCopied(false), 2000);
+      }
+      return;
+    }
+    navigator.clipboard.writeText(clean);
     setCopied(true);
     try { playPopSound(); } catch {}
     setTimeout(() => setCopied(false), 2000);
@@ -289,9 +306,9 @@ export function InstantQrisPaymentModal({
                   alt="QRIS Pembayaran Direct"
                   onError={async () => {
                     const raw = qrisData.qris_code || qrisData.qris_image;
-                    if (raw) {
+                    if (raw && !raw.startsWith("data:image/")) {
                       try {
-                        const fallbackUrl = await QRCode.toDataURL(raw, { margin: 2, scale: 8 });
+                        const fallbackUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" });
                         setRenderedQrImage(fallbackUrl);
                       } catch (err) {}
                     }

@@ -24,44 +24,62 @@ function crc16(data) {
 /**
  * Converts a static QRIS template into an official EMVCo dynamic QRIS string with amount
  */
-function generateDynamicQRIS(staticTemplate, amount) {
-    if (!staticTemplate) return null;
-    let payload = String(staticTemplate).trim();
+function generateDynamicQRIS(rawPayload, amount) {
+    if (!rawPayload) return null;
 
-    // Strip old CRC (Tag 63) if present
-    const idx63 = payload.indexOf('6304');
-    if (idx63 !== -1) {
-        payload = payload.substring(0, idx63);
+    // 1. Sanitize string: remove surrounding quotes, newlines (\r, \n), tabs (\t) and trim ends
+    let cleanPayload = String(rawPayload)
+        .trim()
+        .replace(/^["']|["']$/g, '')
+        .replace(/[\r\n\t]+/g, '')
+        .trim();
+
+    // 2. Validate EMVCo standard format (must start with 00020101 or 000201)
+    if (!cleanPayload.startsWith('00020101') && !cleanPayload.startsWith('000201')) {
+        console.warn("[QRIS] Payload string does not start with valid EMVCo header (00020101):", cleanPayload.substring(0, 12));
+        return null;
     }
 
-    // Parse TLV tags
+    // 3. Parse EMVCo TLV (Tag-Length-Value) tags sequentially until Tag 63 (CRC)
     const tags = [];
     let i = 0;
     try {
-        while (i < payload.length) {
-            const tag = payload.substring(i, i + 2);
-            const length = parseInt(payload.substring(i + 2, i + 4), 10);
-            if (isNaN(length)) break;
-            const val = payload.substring(i + 4, i + 4 + length);
+        while (i < cleanPayload.length) {
+            if (i + 4 > cleanPayload.length) break;
+            const tag = cleanPayload.substring(i, i + 2);
+            const length = parseInt(cleanPayload.substring(i + 2, i + 4), 10);
+            if (isNaN(length) || length < 0) break;
+
+            // When Tag 63 (CRC Checksum) is reached, stop parsing (will be recalculated)
+            if (tag === '63') {
+                break;
+            }
+
+            const val = cleanPayload.substring(i + 4, i + 4 + length);
             tags.push({ tag, val });
             i += 4 + length;
         }
     } catch (e) {
+        console.error("[QRIS] Error parsing TLV tags:", e.message);
         return null;
     }
 
-    const amountStr = parseInt(amount, 10).toString();
+    const amountNum = parseInt(amount, 10);
+    const amountStr = (!isNaN(amountNum) && amountNum > 0) ? amountNum.toString() : '';
     const newTags = [];
     let hasTag54 = false;
 
     for (const item of tags) {
         if (item.tag === '01') {
-            // Change static (11) to dynamic (12)
+            // Change Point of Initiation: Static (11) to Dynamic (12)
             newTags.push({ tag: '01', val: '12' });
         } else if (item.tag === '54') {
-            newTags.push({ tag: '54', val: amountStr });
-            hasTag54 = true;
-        } else if (item.tag === '58' && !hasTag54) {
+            if (amountStr) {
+                newTags.push({ tag: '54', val: amountStr });
+                hasTag54 = true;
+            }
+        } else if (item.tag === '58' && !hasTag54 && amountStr) {
+            // Standard EMVCo placement: Tag 54 precedes Tag 58 (Country Code ID)
             newTags.push({ tag: '54', val: amountStr });
             hasTag54 = true;
             newTags.push(item);
@@ -70,32 +88,34 @@ function generateDynamicQRIS(staticTemplate, amount) {
         }
     }
 
-    if (!hasTag54) {
+    if (!hasTag54 && amountStr) {
         newTags.push({ tag: '54', val: amountStr });
     }
 
+    // Assemble payload string with exact 2-digit length headers
     let result = '';
     for (const item of newTags) {
         const lenStr = item.val.length.toString().padStart(2, '0');
         result += `${item.tag}${lenStr}${item.val}`;
     }
 
+    // Append Tag 63 header (6304) and calculate ISO/IEC 13239 CRC16
     result += '6304';
     const checksum = crc16(result);
     return result + checksum;
 }
 
 /**
- * Generate Base64 Data URL Image for QRIS
+ * Generate Base64 Data URL Image for QRIS with High Error Correction ('H') & Quiet Zone Margin 4
  */
-async function generateQrisDataUrl(staticTemplate, amount) {
-    const dynamicCode = generateDynamicQRIS(staticTemplate, amount);
+async function generateQrisDataUrl(rawPayload, amount) {
+    const dynamicCode = generateDynamicQRIS(rawPayload, amount);
     if (!dynamicCode) throw new Error("Gagal memproses string template QRIS.");
 
     const dataUrl = await qrcode.toDataURL(dynamicCode, {
-        errorCorrectionLevel: 'M',
-        margin: 2,
-        width: 380,
+        errorCorrectionLevel: 'H', // 30% recovery capability allows center logo overlay
+        margin: 4,               // Quiet zone standard for reliable camera detection
+        width: 480,
         color: {
             dark: '#000000',
             light: '#ffffff'

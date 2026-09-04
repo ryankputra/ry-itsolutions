@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import QRCode from "qrcode";
+import { generateQrisCanvasDataUrl, sanitizeQrisPayload } from "@/lib/qrisCanvas";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useApp } from "@/lib/store";
@@ -71,24 +72,32 @@ export default function TopUpPage() {
   // Gateway readiness state
   const [gatewayInfo, setGatewayInfo] = useState<{ active_gateway: string; is_ready: boolean; message: string } | null>(null);
 
-  // Automatically render QR Code image if raw string is returned
+  // Automatically render QR Code image with High error correction & center logo overlay
   useEffect(() => {
     if (!qrisData) {
       setRenderedQrImage("");
       return;
     }
-    const raw = qrisData.base64Image || qrisData.qris_image || qrisData.qris_code || "";
-    if (raw.startsWith("data:image/") || raw.startsWith("http://") || raw.startsWith("https://")) {
-      setRenderedQrImage(raw);
+    let isMounted = true;
+    const raw = qrisData.qris_code || qrisData.base64Image || qrisData.qris_image || "";
+
+    // If we have an EMVCo payload string (starts with 000201 or not a data:image URL), render via canvas with logo
+    if (raw && (raw.startsWith("000201") || (!raw.startsWith("data:image/") && !raw.startsWith("http")))) {
+      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" })
+        .then((url) => {
+          if (isMounted && url) setRenderedQrImage(url);
+        })
+        .catch((err) => {
+          console.error("TopUp QRIS Canvas generator error:", err);
+          if (isMounted) setRenderedQrImage(qrisData.base64Image || raw);
+        });
     } else if (raw) {
-      QRCode.toDataURL(raw, {
-        margin: 2,
-        scale: 8,
-        color: { dark: "#000000", light: "#ffffff" },
-      })
-        .then((url) => setRenderedQrImage(url))
-        .catch(() => setRenderedQrImage(raw));
+      setRenderedQrImage(raw);
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [qrisData]);
 
   useEffect(() => {
@@ -636,9 +645,9 @@ export default function TopUpPage() {
                 alt="QRIS Code"
                 onError={async () => {
                   const raw = qrisData.qris_code || qrisData.base64Image;
-                  if (raw) {
+                  if (raw && !raw.startsWith("data:image/")) {
                     try {
-                      const fallback = await QRCode.toDataURL(raw, { margin: 2, scale: 8 });
+                      const fallback = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" });
                       setRenderedQrImage(fallback);
                     } catch (e) {}
                   }
@@ -647,25 +656,50 @@ export default function TopUpPage() {
               />
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                const imgToDownload = renderedQrImage || qrisData.base64Image;
-                if (!imgToDownload) return;
-                const a = document.createElement("a");
-                a.href = imgToDownload;
-                a.download = `QRIS-Topup-${qrisData.uniqueAmount}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-              }}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm mx-auto"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-              </svg>
-              <span>Unduh Gambar QRIS</span>
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mx-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  const imgToDownload = renderedQrImage || qrisData.base64Image;
+                  if (!imgToDownload) return;
+                  const a = document.createElement("a");
+                  a.href = imgToDownload;
+                  a.download = `QRIS-Topup-${qrisData.uniqueAmount}.png`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                <span>Unduh Gambar QRIS</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const rawPayload = sanitizeQrisPayload(qrisData.qris_code || "");
+                  if (rawPayload && !rawPayload.startsWith("data:image/")) {
+                    navigator.clipboard.writeText(rawPayload);
+                    Swal.fire({
+                      title: "Kode Disalin!",
+                      text: "String payload QRIS berhasil disalin ke clipboard.",
+                      icon: "success",
+                      timer: 1500,
+                      showConfirmButton: false,
+                    });
+                  }
+                }}
+                className="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-200"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                </svg>
+                <span>Salin String</span>
+              </button>
+            </div>
 
             {/* Informative Labeling */}
             <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">

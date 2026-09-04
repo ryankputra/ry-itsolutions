@@ -88,22 +88,28 @@ function calculateCRC16(payload) {
 // Generate QRIS Dinamis Standar EMVCo (Parsing TLV Presisi Tinggi)
 function generateDynamicQRIS(staticTemplate, amount) {
     if (!staticTemplate) return null;
-    let payload = staticTemplate.trim();
+    let payload = String(staticTemplate)
+        .trim()
+        .replace(/^["']|["']$/g, '')
+        .replace(/[\r\n\t]+/g, '')
+        .trim();
 
-    // Hapus Tag 63 (CRC) lama jika ada di akhir
-    const idx63 = payload.indexOf('6304');
-    if (idx63 !== -1) {
-        payload = payload.substring(0, idx63);
+    // Validasi format standar EMVCo
+    if (!payload.startsWith('00020101') && !payload.startsWith('000201')) {
+        console.warn("[GOPAY_QRIS] Payload bukan format EMVCo valid:", payload.substring(0, 10));
+        return null;
     }
 
-    // Parse EMVCo TLV Tags
+    // Parse EMVCo TLV Tags secara sekuensial sampai Tag 63 (CRC)
     const tags = [];
     let i = 0;
     try {
         while (i < payload.length) {
+            if (i + 4 > payload.length) break;
             const tag = payload.substring(i, i + 2);
             const length = parseInt(payload.substring(i + 2, i + 4), 10);
-            if (isNaN(length)) break;
+            if (isNaN(length) || length < 0) break;
+            if (tag === '63') break; // Tag CRC diabaikan karena akan dihitung ulang
             const val = payload.substring(i + 4, i + 4 + length);
             tags.push({ tag, val });
             i += 4 + length;
@@ -450,12 +456,12 @@ app.get('/qr/:id', (req, res) => {
             qrisStore.delete(req.params.id);
             return res.status(410).send('QRIS Kedaluwarsa');
         }
-        const qrServerUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qris.data)}`;
+        const qrServerUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=H&margin=4&data=${encodeURIComponent(qris.data)}`;
         return res.redirect(302, qrServerUrl);
     }
 
     const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(qris.amount);
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qris.data)}`;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=H&margin=4&data=${encodeURIComponent(qris.data)}`;
     const expiresTimestamp = qris.expiresAt.getTime();
 
     const html = `<!DOCTYPE html>
