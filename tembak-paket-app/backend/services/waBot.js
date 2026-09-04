@@ -15,7 +15,6 @@ const {
     default: makeWASocket, 
     useMultiFileAuthState, 
     DisconnectReason, 
-    fetchLatestWaWebVersion,
     fetchLatestBaileysVersion, 
     Browsers, 
     makeCacheableSignalKeyStore,
@@ -176,21 +175,16 @@ async function initWABot(forceNew = false) {
             }
         }
 
-        // Ambil versi resmi dari server WhatsApp Web (Bukan hardcoded static json)
-        let waVersion = [2, 2413, 51];
+        // Gunakan versi Baileys Multi-Device resmi (Mencegah error 405 Connection Failure)
+        let waVersion = [2, 3000, 1043857760];
         try {
-            const v = await fetchLatestWaWebVersion();
+            const v = await fetchLatestBaileysVersion();
             if (v && v.version) {
                 waVersion = v.version;
-                logWABot(`Menggunakan versi resmi WhatsApp Web: ${waVersion.join(".")}`, "info");
+                logWABot(`Menggunakan versi Baileys MD: ${waVersion.join(".")}`, "info");
             }
         } catch (e) {
-            try {
-                const v2 = await fetchLatestBaileysVersion();
-                if (v2 && v2.version) waVersion = v2.version;
-            } catch (e2) {
-                console.warn("[WABot] Using default version fallback:", e.message);
-            }
+            console.warn("[WABot] Using default version fallback:", e.message);
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
@@ -234,7 +228,7 @@ async function initWABot(forceNew = false) {
             },
             printQRInTerminal: false,
             logger: customLogger,
-            browser: Browsers.ubuntu("Chrome"),
+            browser: Browsers.macOS("Chrome"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
             qrTimeout: 60000,

@@ -2308,9 +2308,9 @@ export default function AdminPage() {
 
           {/* MODAL KONEKSI WHATSAPP BOT ADMIN & WEB QR CODE */}
           {showWaModal && (
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="bg-canvas border border-hairline rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
-                <div className="flex items-center justify-between pb-3 border-b border-hairline">
+            <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+              <div className="bg-canvas border border-hairline rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-2xl my-auto max-h-[calc(100dvh-1.5rem)] flex flex-col animate-in fade-in zoom-in duration-150">
+                <div className="flex items-center justify-between pb-3 border-b border-hairline shrink-0">
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-xl">
                       📱
@@ -2328,6 +2328,7 @@ export default function AdminPage() {
                   </button>
                 </div>
 
+                <div className="flex-1 overflow-y-auto space-y-3.5 pr-0.5 py-3 scrollbar-thin">
                 {/* Connection Status Banner */}
                 <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold ${
                   waBotStatus?.connected || waBotStatus?.isConnected
@@ -2533,8 +2534,10 @@ export default function AdminPage() {
                   </div>
                 )}
 
+                </div>
+
                 {/* Action Footer */}
-                <div className="flex gap-2 pt-2 border-t border-hairline">
+                <div className="flex gap-2 pt-2.5 border-t border-hairline shrink-0">
                   <Button
                     variant="outline"
                     size="sm"
