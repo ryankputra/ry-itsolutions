@@ -222,15 +222,14 @@ function HistoryContent() {
 
   const normalizedHistory = history.map((trx) => {
     const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
-    const rawNote = (trx.admin_note || trx.adminNote || "").toLowerCase();
+    // Only treat as waiting admin if explicitly unpaid/pending with balance or in_queue
     const isWaitingAdmin = (
       trx.status === 'in_queue' ||
       trx.status === 'waiting' ||
       trx.status === 'waiting_admin' ||
-      (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid')) ||
-      (isBalancePaid && trx.status === 'processing' && rawNote.includes("menunggu"))
+      (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid'))
     );
-    if (isWaitingAdmin) {
+    if (isWaitingAdmin && trx.status !== 'processing' && trx.status !== 'success' && trx.status !== 'failed') {
       return { ...trx, status: 'in_queue' };
     }
     return trx;
@@ -250,7 +249,7 @@ function HistoryContent() {
       return status === "in_queue" || status === "waiting" || status === "waiting_admin";
     }
     if (activeTab === "processing") {
-      return (status === "processing" || status === "in_progress") && !rawNote.includes("menunggu");
+      return status === "processing" || status === "in_progress";
     }
     if (activeTab === "completed") {
       return status === "success" || status === "completed";
@@ -350,32 +349,79 @@ function HistoryContent() {
       </div>
 
       {/* ============================================================ */}
-      {/* 2. SHOPEE-STYLE TAB STRIP WITH INDICATOR LINE                */}
+      {/* 2. SHOPEE-STYLE TAB STRIP WITH DYNAMIC BADGE COUNTERS         */}
       {/* ============================================================ */}
-      <div className="flex border-b border-hairline overflow-x-auto scrollbar-none bg-canvas sticky top-14 z-30">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              id={`history-tab-${tab.key}`}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.key);
-                router.replace(`/history?tab=${tab.key}`);
-              }}
-              className={`flex-1 min-w-[72px] sm:min-w-[90px] py-3 text-xs sm:text-sm font-bold text-center relative transition-colors ${
-                isActive ? "text-primary font-black" : "text-ink-muted hover:text-ink"
-              }`}
-            >
-              <span>{tab.label}</span>
-              {isActive && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"></span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {(() => {
+        const tabCounts: Record<string, number> = {
+          all: 0,
+          unpaid: 0,
+          waiting: 0,
+          processing: 0,
+        };
+
+        normalizedHistory.forEach((trx) => {
+          const status = (trx.status || "").toLowerCase();
+          const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+
+          if ((status === "pending" || status === "unpaid") && !isBalancePaid) {
+            tabCounts.unpaid += 1;
+            tabCounts.all += 1;
+          } else if (status === "in_queue" || status === "waiting" || status === "waiting_admin") {
+            tabCounts.waiting += 1;
+            tabCounts.all += 1;
+          } else if (status === "processing" || status === "in_progress") {
+            tabCounts.processing += 1;
+            tabCounts.all += 1;
+          }
+        });
+
+        return (
+          <div className="flex border-b border-hairline overflow-x-auto scrollbar-none bg-canvas sticky top-14 z-30">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.key;
+              const count = tabCounts[tab.key] || 0;
+              const showBadge = (tab.key === "all" || tab.key === "unpaid" || tab.key === "waiting" || tab.key === "processing") && count > 0;
+
+              return (
+                <button
+                  key={tab.key}
+                  id={`history-tab-${tab.key}`}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.key);
+                    router.replace(`/history?tab=${tab.key}`);
+                  }}
+                  className={`flex-1 min-w-[72px] sm:min-w-[90px] py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-center relative transition-colors flex flex-col items-center justify-center ${
+                    isActive ? "text-primary font-black" : "text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  <div className="relative inline-flex items-center gap-1">
+                    <span>{tab.label}</span>
+                    {showBadge && (
+                      <span className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-tight transition-transform ${
+                        isActive 
+                          ? "bg-primary text-white shadow-xs" 
+                          : tab.key === "unpaid"
+                          ? "bg-rose-500 text-white"
+                          : tab.key === "waiting"
+                          ? "bg-amber-500 text-white"
+                          : tab.key === "processing"
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-700 text-white"
+                      }`}>
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
+                  </div>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"></span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ============================================================ */}
       {/* 3. ORDER CARDS LIST                                         */}

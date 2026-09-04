@@ -18,6 +18,7 @@ const {
     fetchLatestBaileysVersion, 
     Browsers, 
     makeCacheableSignalKeyStore,
+    proto,
     BufferJSON 
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
@@ -55,16 +56,43 @@ async function getStoredMessage(key) {
     if (!key?.id) return undefined;
     const inMem = messageStore.get(key.id);
     if (inMem) {
-        return inMem.message || inMem;
+        try {
+            return proto.Message.fromObject(inMem.message || inMem);
+        } catch (e) {
+            return inMem.message || inMem;
+        }
     }
     try {
         const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ?", [key.id]);
         if (row?.messageContent) {
             const parsed = JSON.parse(row.messageContent);
-            return parsed.message || parsed;
+            try {
+                return proto.Message.fromObject(parsed.message || parsed);
+            } catch (e) {
+                return parsed.message || parsed;
+            }
         }
     } catch (e) {}
     return undefined;
+}
+
+/**
+ * Resolve canonical WhatsApp JID and pre-synchronize encryption keys via USync
+ */
+async function resolveWhatsAppJid(phone) {
+    const clean = cleanPhone(phone);
+    if (!clean) return null;
+    const fallbackJid = `${clean}@s.whatsapp.net`;
+    if (!sock || connectionState !== "open") return fallbackJid;
+    try {
+        const results = await sock.onWhatsApp(clean);
+        if (results && results.length > 0 && results[0].exists) {
+            return results[0].jid || fallbackJid;
+        }
+    } catch (e) {
+        // Fallback silently if USync query times out
+    }
+    return fallbackJid;
 }
 
 const SESSIONS_DIR = path.join(__dirname, "..", "sessions", "baileys_auth");
@@ -514,7 +542,7 @@ async function initWABot(forceNew = false) {
             }
         });
 
-        // --- INCOMING MESSAGE CONTROLLER (ADMIN COMMANDS) ---
+        // --- INCOMING MESSAGE CONTROLLER (ADMIN COMMANDS & SHORTCUTS) ---
         sock.ev.on("messages.upsert", async ({ messages, type }) => {
             for (const msg of messages) {
                 if (msg.key?.id && msg.message) {
@@ -522,13 +550,11 @@ async function initWABot(forceNew = false) {
                 }
             }
 
-            if (type !== "notify") return;
-
             for (const msg of messages) {
                 if (!msg.message) continue;
 
                 const remoteJid = msg.key.remoteJid;
-                if (!remoteJid || remoteJid.includes("@g.us")) continue; // Ignore groups for command execution
+                if (!remoteJid || remoteJid.includes("@g.us")) continue; // Ignore groups
 
                 const messageText = (
                     msg.message.conversation ||
@@ -537,7 +563,14 @@ async function initWABot(forceNew = false) {
                     ""
                 ).trim();
 
-                if (!messageText.startsWith(".")) continue;
+                if (!messageText) continue;
+
+                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses)
+                const isCommand = (
+                    messageText.startsWith(".") ||
+                    /^(1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu)\b/i.test(messageText)
+                );
+                if (!isCommand) continue;
 
                 // Determine sender phone
                 let senderPhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", ""));
@@ -558,7 +591,7 @@ async function initWABot(forceNew = false) {
                 }
 
                 logWABot(`[WABot Command] Memproses: "${messageText}" dari ${senderPhone || remoteJid}`, "info");
-                await handleAdminCommand(remoteJid, messageText);
+                await handleAdminCommand(remoteJid, messageText, msg);
             }
         });
 
@@ -607,17 +640,52 @@ async function requestPairingCode(phoneNumber) {
 /**
  * Command Processor for WhatsApp Admin Remote Control
  */
-async function handleAdminCommand(replyJid, text) {
-    const parts = text.split(/\s+/);
-    const command = parts[0].toLowerCase();
+async function handleAdminCommand(replyJid, text, rawMsg = null) {
+    const parts = text.trim().split(/\s+/);
+    let command = parts[0].toLowerCase();
     let orderIdArg = parts[1];
     let notesArg = parts.slice(2).join(" ");
 
+    // 1. Normalize quick shortcuts:
+    // 1 / .1 / p / .p / proses -> .proses
+    // 2 / .2 / s / .s / sukses -> .sukses
+    // 3 / .3 / g / .g / gagal  -> .gagal
+    if (command === "1" || command === ".1" || command === "p" || command === ".p" || command === "proses") {
+        command = ".proses";
+    } else if (command === "2" || command === ".2" || command === "s" || command === ".s" || command === "sukses") {
+        command = ".sukses";
+    } else if (command === "3" || command === ".3" || command === "g" || command === ".g" || command === "gagal") {
+        command = ".gagal";
+    } else if (command === "status" || command === "cek") {
+        command = ".status";
+    } else if (command === "help" || command === "bantuan" || command === "menu") {
+        command = ".help";
+    }
+
     if (orderIdArg) {
-        orderIdArg = orderIdArg.trim().replace(/^[<"\x27]+|[>"\x27]+$/g, "").trim();
+        orderIdArg = orderIdArg.trim().replace(/^[<"\x27\`]+|[>"\x27\`]+$/g, "").trim();
     }
     if (notesArg) {
-        notesArg = notesArg.trim().replace(/^[<"\x27]+|[>"\x27]+$/g, "").trim();
+        notesArg = notesArg.trim().replace(/^[<"\x27\`]+|[>"\x27\`]+$/g, "").trim();
+    }
+
+    // 2. Auto-extract Order ID if admin simply REPLIED to an order notification:
+    if (!orderIdArg && rawMsg?.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+        const quoted = rawMsg.message.extendedTextMessage.contextInfo.quotedMessage;
+        const quotedText = (
+            quoted.conversation ||
+            quoted.extendedTextMessage?.text ||
+            quoted.imageMessage?.caption ||
+            ""
+        );
+        const match = quotedText.match(/(?:Order ID:\s*[\`\*#]*|#)?(trx_m_\d+|trx_\d+)/i);
+        if (match && match[1]) {
+            orderIdArg = match[1];
+            // If user typed '2 Sinyal On', then parts[1] was 'Sinyal' and parts.slice(1).join(' ') was 'Sinyal On'
+            if (parts.length > 1 && !notesArg) {
+                notesArg = parts.slice(1).join(" ");
+            }
+        }
     }
 
     console.log(`[WABot Command] Received: ${command} ${orderIdArg || ""} from ${replyJid}`);
@@ -657,17 +725,19 @@ async function handleAdminCommand(replyJid, text) {
 
     const currentStatus = trx.status;
 
-    // 1. Command .proses
+    // 1. Command .proses (or 1)
     if (command === ".proses") {
+        const processNote = notesArg || "Sedang dikerjakan oleh admin via WA";
         await dbRun(
             "UPDATE transactions SET status = 'processing', admin_note = ? WHERE id = ?",
-            [notesArg || "Sedang diproses oleh admin via WA", trx.id]
+            [processNote, trx.id]
         );
         if (trx.userId) {
-            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'processing', message: notesArg || "Sedang diproses oleh admin" });
-            sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'processing', note: notesArg || "Sedang diproses oleh admin" });
+            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'processing', message: processNote });
+            sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'processing', note: processNote });
         }
         if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'processing' });
+
         const reply = `✅ *STATUS ORDER DIPERBARUI!*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${trx.id}\`\n` +
@@ -675,9 +745,29 @@ async function handleAdminCommand(replyJid, text) {
             `📦 *Layanan:* ${trx.packageName}\n` +
             `📱 *IMEI:* \`${trx.imei}\`\n` +
             `⚡ *Status Baru:* *PROCESSING (Diproses)*\n` +
-            `📝 *Catatan:* ${notesArg || "Sedang dikerjakan admin"}\n` +
-            `━━━━━━━━━━━━━━━━━━`;
+            `📝 *Catatan:* ${processNote}\n` +
+            `━━━━━━━━━━━━━━━━━━\n` +
+            `💡 *Selesaikan:* Balas pesan ini ketik *2* atau *.sukses*`;
         await replyWhatsApp(replyJid, reply);
+
+        // Notify customer via WhatsApp that order has started processing
+        if (trx.targetPhone) {
+            const cleanCust = cleanPhone(trx.targetPhone);
+            if (cleanCust) {
+                const custJid = await resolveWhatsAppJid(cleanCust);
+                const custMsg = `Halo Kak *${trx.userName || "Pelanggan"}*! 👋\n\n` +
+                    `⚡ *Pesanan Unblock IMEI Sedang Diproses!*\n` +
+                    `━━━━━━━━━━━━━━━━━━\n` +
+                    `🆔 *Order ID:* \`${trx.id}\`\n` +
+                    `📱 *IMEI:* \`${trx.imei}\`\n` +
+                    `📦 *Layanan:* ${trx.packageName}\n` +
+                    `📝 *Status:* Sedang Dikerjakan Admin\n` +
+                    `━━━━━━━━━━━━━━━━━━\n` +
+                    `Tim teknis kami sedang mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
+                    `Pantau status pesanan: https://ry-itsolutions.web.id/history?tab=processing`;
+                sendAndStoreMessage(custJid, { text: custMsg }).catch(() => {});
+            }
+        }
         return;
     }
 
@@ -709,7 +799,7 @@ async function handleAdminCommand(replyJid, text) {
         if (trx.targetPhone) {
             const cleanCust = cleanPhone(trx.targetPhone);
             if (cleanCust) {
-                const custJid = `${cleanCust}@s.whatsapp.net`;
+                const custJid = await resolveWhatsAppJid(cleanCust);
                 const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
                     `✅ *Pesanan Unblock IMEI Anda Telah Selesai!*\n` +
                     `━━━━━━━━━━━━━━━━━━\n` +
@@ -765,7 +855,7 @@ async function handleAdminCommand(replyJid, text) {
         if (trx.targetPhone) {
             const cleanCust = cleanPhone(trx.targetPhone);
             if (cleanCust) {
-                const custJid = `${cleanCust}@s.whatsapp.net`;
+                const custJid = await resolveWhatsAppJid(cleanCust);
                 const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
                     `⚠️ *Pemberitahuan Pesanan Unblock IMEI*\n` +
                     `━━━━━━━━━━━━━━━━━━\n` +
@@ -908,6 +998,7 @@ async function notifyNewOrder(orderData) {
             ? "⚡ Instant (Otomatis System)" 
             : `${optTitle} (${speedRangeText})`;
 
+        const shortId = id.slice(-4);
         const messageBody = 
             `🔔 *PESANAN BARU MASUK!*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
@@ -918,11 +1009,11 @@ async function notifyNewOrder(orderData) {
             `💰 *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
             `⚡ *Kecepatan:* ${speedDisplay}\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `💡 *PANDUAN PERINTAH CEPAT ADMIN:*\n` +
-            `Balas/Reply pesan ini langsung dengan:\n` +
-            `• \`.proses ${id}\` (Proses pesanan)\n` +
-            `• \`.sukses ${id} Catatan...\` (Selesaikan)\n` +
-            `• \`.gagal ${id} Alasan...\` (Tolak & refund)\n` +
+            `💡 *CARA CEPAT PROSES (BALAS PESAN INI):*\n` +
+            `• Ketik *1* atau *.proses* ➡️ Mulai proses\n` +
+            `• Ketik *2* atau *.sukses* ➡️ Selesaikan\n` +
+            `• Ketik *3* atau *.gagal* ➡️ Tolak & refund\n` +
+            `_(Bisa juga manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)_\n` +
             `━━━━━━━━━━━━━━━━━━━━━━`;
 
         // 1. Send to all admin numbers
@@ -959,8 +1050,8 @@ async function notifyNewOrder(orderData) {
         const customerTarget = customerPhone || targetPhone;
         if (customerTarget) {
             const cleanCust = cleanPhone(customerTarget);
-            if (cleanCust && !adminPhones.includes(cleanCust)) {
-                const custJid = `${cleanCust}@s.whatsapp.net`;
+            if (cleanCust) {
+                const custJid = await resolveWhatsAppJid(cleanCust);
                 const customerMsg =
                     `Halo Kak *${userName || "Pelanggan"}*! 👋\n` +
                     `Terima kasih telah memesan layanan di *Ry-ITSolutions*.\n\n` +
