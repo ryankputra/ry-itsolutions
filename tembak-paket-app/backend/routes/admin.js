@@ -1148,11 +1148,14 @@ router.post('/admin/deploy', isAuthenticated, isAdmin, async (req, res) => {
 
     (async () => {
         try {
-            appendLog("[DEPLOY] Langkah 1/2: Menarik commit terbaru & bundle produksi dari origin/main...\n");
+            appendLog("[DEPLOY] Langkah 1/3: Menarik commit terbaru & bundle produksi dari origin/main...\n");
             await runCmd('git fetch --all', repoRoot);
             await runCmd('git reset --hard origin/main', repoRoot);
 
-            appendLog("\n[DEPLOY] Langkah 2/2: Memuat ulang runner service (PM2)...\n");
+            appendLog("\n[DEPLOY] Langkah 2/3: Memperbarui dependencies backend jika ada update...\n");
+            await runCmd('npm --prefix tembak-paket-app/backend install --omit=dev --no-audit || npm --prefix backend install --omit=dev --no-audit || true', repoRoot);
+
+            appendLog("\n[DEPLOY] Langkah 3/3: Memuat ulang runner service (PM2)...\n");
             await runCmd('pm2 restart all || pm2 restart frontend backend', repoRoot);
 
             appendLog("\n=========================================\n");

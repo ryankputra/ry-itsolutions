@@ -175,17 +175,22 @@ async function initWABot(forceNew = false) {
             }
         }
 
-        // Gunakan versi Baileys Multi-Device resmi (Mencegah error 405 Connection Failure)
+        // Baileys library info & Multi-Device versioning
+        let baileysLibVer = "unknown";
+        try {
+            baileysLibVer = require("@whiskeysockets/baileys/package.json").version;
+        } catch (e) {}
+
         let waVersion = [2, 3000, 1043857760];
         try {
             const v = await fetchLatestBaileysVersion();
             if (v && v.version) {
                 waVersion = v.version;
-                logWABot(`Menggunakan versi Baileys MD: ${waVersion.join(".")}`, "info");
             }
         } catch (e) {
             console.warn("[WABot] Using default version fallback:", e.message);
         }
+        logWABot(`Baileys Library v${baileysLibVer} | MD Version: ${waVersion.join(".")}`, "info");
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
 
@@ -360,9 +365,9 @@ async function initWABot(forceNew = false) {
 
                 logWABot(`Koneksi socket terputus (Status: ${statusCode || "unknown"}). Error: ${lastDisconnect?.error?.message || "None"}`, "warn");
 
-                // Jika terputus karena LoggedOut (401), bersihkan sesi
+                // Jika terputus karena LoggedOut (401), bersihkan sesi & siapkan QR baru otomatis
                 if (isLoggedOut) {
-                    logWABot("Sesi WhatsApp Logged Out. Membersihkan auth session...", "warn");
+                    logWABot("Sesi WhatsApp Logged Out (401). Membersihkan sesi & menyiapkan QR baru...", "warn");
                     connectionState = "disconnected";
                     global.baileysStatus = "disconnected";
                     currentQrCode = null;
@@ -372,6 +377,7 @@ async function initWABot(forceNew = false) {
                     inMemoryCreds = null;
                     isInitializing = false;
                     try { fs.rmSync(SESSIONS_DIR, { recursive: true, force: true }); } catch (e) {}
+                    setTimeout(() => initWABot(false), 2000);
                     return;
                 }
 

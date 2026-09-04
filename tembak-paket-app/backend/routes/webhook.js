@@ -56,7 +56,7 @@ router.post(['/deploy', '/webhook/deploy'], (req, res) => {
         console.log(`[WEBHOOK_DEPLOY] Working Directory: ${repoRoot}`);
         console.log(`==================================================`);
 
-        const deployCmd = `git fetch --all && git reset --hard origin/main && (pm2 restart all || pm2 restart frontend backend)`;
+        const deployCmd = `git fetch --all && git reset --hard origin/main && (npm --prefix tembak-paket-app/backend install --omit=dev --no-audit || npm --prefix backend install --omit=dev --no-audit || true) && (pm2 restart all || pm2 restart frontend backend)`;
 
         exec(deployCmd, { cwd: repoRoot, shell: true }, (err, stdout, stderr) => {
             if (err) {
