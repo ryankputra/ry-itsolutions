@@ -187,7 +187,7 @@ router.get('/public/check-warranty', async (req, res) => {
         }
 
         const trx = await dbGet(`
-            SELECT id, userId, packageName, platformFee, status, createdAt, service_type, imei, admin_note, speed_option
+            SELECT id, userId, userName, packageName, platformFee, status, createdAt, service_type, imei, admin_note, speed_option, user_image, user_image_ceir, admin_image
             FROM transactions
             WHERE imei LIKE ? AND service_type IN ('imei', 'ceir')
             ORDER BY datetime(createdAt) DESC
@@ -254,6 +254,9 @@ router.get('/public/check-warranty', async (req, res) => {
             speed_option: trx.speed_option || 'slow',
             speed_label: speedLabel,
             speed_range: rangeText,
+            user_image: trx.user_image || null,
+            user_image_ceir: trx.user_image_ceir || null,
+            admin_image: trx.admin_image || null,
             warranty
         };
 

@@ -73,6 +73,24 @@ function HistoryContent() {
 
   useEffect(() => {
     fetchHistory();
+
+    const handleUpdate = () => {
+      fetchHistory();
+    };
+
+    window.addEventListener("transaction_status_update", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+
+    // Smart auto-polling: Poll every 4 seconds to guarantee instantaneous updates without refresh
+    const interval = setInterval(() => {
+      fetchHistory();
+    }, 4000);
+
+    return () => {
+      window.removeEventListener("transaction_status_update", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleCancelTransaction = async (trx: any) => {
@@ -471,6 +489,43 @@ function HistoryContent() {
                         <p className="text-[10px] text-ink-muted mt-0.5">
                           {trx.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}
                         </p>
+
+                        {/* Image attachments indicator */}
+                        {(trx.user_image || trx.user_image_ceir || trx.admin_image) ? (
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                            <span className="text-[10px] text-ink-muted font-bold">Lampiran:</span>
+                            {trx.user_image && (
+                              <a
+                                href={trx.user_image}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md border border-primary/20 transition-colors"
+                              >
+                                <span>📷 Foto IMEI</span>
+                              </a>
+                            )}
+                            {trx.user_image_ceir && (
+                              <a
+                                href={trx.user_image_ceir}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200 transition-colors"
+                              >
+                                <span>🔍 Cek CEIR</span>
+                              </a>
+                            )}
+                            {trx.admin_image && (
+                              <a
+                                href={trx.admin_image}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors"
+                              >
+                                <span>✅ Bukti Admin</span>
+                              </a>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="text-right shrink-0">
                         <span className="text-xs font-bold text-ink block">

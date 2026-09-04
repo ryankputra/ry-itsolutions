@@ -25,7 +25,47 @@ const QRCode = require("qrcode");
 const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
+const NodeCache = require("node-cache");
 const { dbGet, dbRun, dbAll } = require("../config/db");
+const { sseSend, sseBroadcast } = require("../middleware/auth");
+
+// E2E Signal ratchet retry cache & message store to prevent 'Menunggu pesan ini / Waiting for this message'
+const msgRetryCounterCache = new NodeCache();
+const messageStore = new NodeCache({ stdTTL: 86400, checkperiod: 120 });
+
+// Ensure SQLite persistent store table exists
+dbRun("CREATE TABLE IF NOT EXISTS wa_message_store (id TEXT PRIMARY KEY, remoteJid TEXT, messageContent TEXT, createdAt INTEGER)").catch(() => {});
+
+async function storeMessage(id, remoteJid, messageObj) {
+    if (!id || !messageObj) return;
+    try {
+        messageStore.set(id, messageObj);
+        const serialized = JSON.stringify(messageObj);
+        await dbRun(
+            "INSERT OR REPLACE INTO wa_message_store (id, remoteJid, messageContent, createdAt) VALUES (?, ?, ?, ?)",
+            [id, remoteJid || "", serialized, Date.now()]
+        );
+        if (Math.random() < 0.02) {
+            dbRun("DELETE FROM wa_message_store WHERE createdAt < ?", [Date.now() - 3 * 86400000]).catch(() => {});
+        }
+    } catch (err) {}
+}
+
+async function getStoredMessage(key) {
+    if (!key?.id) return undefined;
+    const inMem = messageStore.get(key.id);
+    if (inMem) {
+        return inMem.message || inMem;
+    }
+    try {
+        const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ?", [key.id]);
+        if (row?.messageContent) {
+            const parsed = JSON.parse(row.messageContent);
+            return parsed.message || parsed;
+        }
+    } catch (e) {}
+    return undefined;
+}
 
 const SESSIONS_DIR = path.join(__dirname, "..", "sessions", "baileys_auth");
 
@@ -293,6 +333,8 @@ async function initWABot(forceNew = false) {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
             },
+            msgRetryCounterCache,
+            getMessage: getStoredMessage,
             printQRInTerminal: false,
             logger: customLogger,
             browser: Browsers.macOS("Chrome"),
@@ -474,6 +516,12 @@ async function initWABot(forceNew = false) {
 
         // --- INCOMING MESSAGE CONTROLLER (ADMIN COMMANDS) ---
         sock.ev.on("messages.upsert", async ({ messages, type }) => {
+            for (const msg of messages) {
+                if (msg.key?.id && msg.message) {
+                    await storeMessage(msg.key.id, msg.key.remoteJid, msg.message);
+                }
+            }
+
             if (type !== "notify") return;
 
             for (const msg of messages) {
@@ -615,6 +663,11 @@ async function handleAdminCommand(replyJid, text) {
             "UPDATE transactions SET status = 'processing', admin_note = ? WHERE id = ?",
             [notesArg || "Sedang diproses oleh admin via WA", trx.id]
         );
+        if (trx.userId) {
+            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'processing', message: notesArg || "Sedang diproses oleh admin" });
+            sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'processing', note: notesArg || "Sedang diproses oleh admin" });
+        }
+        if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'processing' });
         const reply = `✅ *STATUS ORDER DIPERBARUI!*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${trx.id}\`\n` +
@@ -635,6 +688,11 @@ async function handleAdminCommand(replyJid, text) {
             "UPDATE transactions SET status = 'success', admin_note = ? WHERE id = ?",
             [finalNote, trx.id]
         );
+        if (trx.userId) {
+            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'success', message: finalNote });
+            sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'success', note: finalNote });
+        }
+        if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'success' });
         const reply = `🎉 *PESANAN SELESAI (SUCCESS)!*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 *Order ID:* \`${trx.id}\`\n` +
@@ -646,6 +704,24 @@ async function handleAdminCommand(replyJid, text) {
             `📝 *Hasil:* ${finalNote}\n` +
             `━━━━━━━━━━━━━━━━━━`;
         await replyWhatsApp(replyJid, reply);
+
+        // Notify customer if phone number is available
+        if (trx.targetPhone) {
+            const cleanCust = cleanPhone(trx.targetPhone);
+            if (cleanCust) {
+                const custJid = `${cleanCust}@s.whatsapp.net`;
+                const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
+                    `✅ *Pesanan Unblock IMEI Anda Telah Selesai!*\n` +
+                    `━━━━━━━━━━━━━━━━━━\n` +
+                    `🆔 *Order ID:* \`${trx.id}\`\n` +
+                    `📱 *IMEI:* \`${trx.imei}\`\n` +
+                    `📦 *Layanan:* ${trx.packageName}\n` +
+                    `📝 *Catatan Admin:* ${finalNote}\n` +
+                    `━━━━━━━━━━━━━━━━━━\n` +
+                    `Silakan restart perangkat HP Anda atau lepas-pasang kartu SIM. Terima kasih telah menggunakan layanan Ry-ITSolutions!`;
+                sendAndStoreMessage(custJid, { text: custMsg }).catch(() => {});
+            }
+        }
         return;
     }
 
@@ -664,6 +740,15 @@ async function handleAdminCommand(replyJid, text) {
             "UPDATE transactions SET status = 'failed', admin_note = ? WHERE id = ?",
             [failReason, trx.id]
         );
+        if (trx.userId) {
+            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'failed', message: failReason });
+            sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'failed', note: failReason });
+            if (refundAmount > 0) {
+                const u = await dbGet("SELECT balance FROM users WHERE id = ?", [trx.userId]);
+                if (u) sseSend(trx.userId, 'balance_update', { balance: u.balance, source: 'order_refund' });
+            }
+        }
+        if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'failed' });
 
         const reply = `⚠️ *PESANAN DITOLAK / GAGAL (FAILED)*\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
@@ -676,6 +761,24 @@ async function handleAdminCommand(replyJid, text) {
             `💵 *Refund:* ${refundNote}\n` +
             `━━━━━━━━━━━━━━━━━━`;
         await replyWhatsApp(replyJid, reply);
+
+        if (trx.targetPhone) {
+            const cleanCust = cleanPhone(trx.targetPhone);
+            if (cleanCust) {
+                const custJid = `${cleanCust}@s.whatsapp.net`;
+                const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
+                    `⚠️ *Pemberitahuan Pesanan Unblock IMEI*\n` +
+                    `━━━━━━━━━━━━━━━━━━\n` +
+                    `🆔 *Order ID:* \`${trx.id}\`\n` +
+                    `📱 *IMEI:* \`${trx.imei}\`\n` +
+                    `❌ *Status:* Dibatalkan / Gagal\n` +
+                    `📝 *Alasan:* ${failReason}\n` +
+                    `💵 *Refund:* ${refundNote}\n` +
+                    `━━━━━━━━━━━━━━━━━━\n` +
+                    `Silakan cek saldo akun Anda atau hubungi admin jika ada pertanyaan.`;
+                sendAndStoreMessage(custJid, { text: custMsg }).catch(() => {});
+            }
+        }
         return;
     }
 
@@ -700,6 +803,20 @@ async function handleAdminCommand(replyJid, text) {
 }
 
 /**
+ * Internal wrapper to send a message via Baileys and cache it in messageStore & DB
+ */
+async function sendAndStoreMessage(targetJid, content, options = {}) {
+    if (!sock || connectionState !== "open") {
+        throw new Error("WhatsApp Bot belum terhubung / open");
+    }
+    const sent = await sock.sendMessage(targetJid, content, options);
+    if (sent?.key?.id && sent?.message) {
+        await storeMessage(sent.key.id, targetJid, sent.message);
+    }
+    return sent;
+}
+
+/**
  * Send WhatsApp text message
  */
 async function sendTextMessage(targetPhone, message) {
@@ -712,7 +829,7 @@ async function sendTextMessage(targetPhone, message) {
         if (!phone) return { status: false, message: "Nomor tujuan tidak valid." };
 
         const jid = `${phone}@s.whatsapp.net`;
-        await sock.sendMessage(jid, { text: message });
+        await sendAndStoreMessage(jid, { text: message });
         console.log(`[WABot] Pesan terkirim ke: ${phone}`);
         return { status: true, message: `Pesan berhasil dikirim ke ${phone}` };
     } catch (error) {
@@ -732,7 +849,7 @@ async function replyWhatsApp(jid, text) {
             const rawPhone = cleanJid.split("@")[0].split(":")[0];
             cleanJid = `${rawPhone}@s.whatsapp.net`;
         }
-        await sock.sendMessage(cleanJid, { text });
+        await sendAndStoreMessage(cleanJid, { text });
     } catch (e) {
         console.error(`[WABot] Gagal mengirim balasan ke ${jid}:`, e.message);
     }
@@ -820,7 +937,7 @@ async function notifyNewOrder(orderData) {
                 const fullPath = path.join(__dirname, "..", photoPath);
                 if (fs.existsSync(fullPath)) {
                     try {
-                        await sock.sendMessage(adminJid, {
+                        await sendAndStoreMessage(adminJid, {
                             image: fs.readFileSync(fullPath),
                             caption: messageBody
                         });
@@ -832,7 +949,7 @@ async function notifyNewOrder(orderData) {
             }
 
             if (!photoSent) {
-                await sock.sendMessage(adminJid, { text: messageBody });
+                await sendAndStoreMessage(adminJid, { text: messageBody });
             }
         }
 
@@ -857,7 +974,7 @@ async function notifyNewOrder(orderData) {
                     `Anda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutions.web.id/history\n\n` +
                     `_Pesan otomatis ini dikirim resmi oleh sistem Ry-ITSolutions._`;
                 try {
-                    await sock.sendMessage(custJid, { text: customerMsg });
+                    await sendAndStoreMessage(custJid, { text: customerMsg });
                     console.log(`[WABot] Notifikasi pesanan ${id} berhasil dikirim ke pelanggan (${cleanCust}).`);
                 } catch (custErr) {
                     console.warn(`[WABot] Gagal mengirim notifikasi ke pelanggan ${cleanCust}:`, custErr.message);

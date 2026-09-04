@@ -13,6 +13,9 @@ interface InvoiceData {
   createdAt: string;
   amount?: number;
   status: string;
+  user_image?: string;
+  user_image_ceir?: string;
+  admin_image?: string;
   warranty?: {
     hasWarranty?: boolean;
     isPermanent?: boolean;
@@ -251,87 +254,48 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-hidden"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-xl bg-canvas text-ink rounded-3xl shadow-2xl border border-hairline my-6 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-xl bg-canvas text-ink rounded-2xl sm:rounded-3xl shadow-2xl border border-hairline overflow-hidden flex flex-col h-[94dvh] sm:h-auto sm:max-h-[90vh] my-auto">
         
         {/* Top Sticky Header (Hidden on print) */}
-        <div className="p-4 bg-parchment border-b border-hairline flex items-center justify-between gap-2 shrink-0 print:hidden">
-          <div className="flex items-center gap-2">
+        <div className="p-3 sm:p-4 bg-parchment border-b border-hairline flex items-center justify-between gap-2 shrink-0 print:hidden">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 rounded-full bg-canvas border border-hairline hover:bg-parchment text-xs font-bold text-ink flex items-center gap-1.5 transition-colors shadow-xs"
+              className="px-3 py-1.5 rounded-full bg-canvas border border-hairline hover:bg-parchment text-xs font-bold text-ink flex items-center gap-1.5 transition-colors shadow-xs shrink-0"
               title="Kembali ke halaman sebelumnya"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
-              Kembali
+              <span>Kembali</span>
             </button>
-            <span className="text-xs font-bold text-ink hidden sm:inline-block">
-              {isTopUp ? "Nota Top Up Saldo" : isCeirService ? "Nota Verifikasi CEIR" : "Nota & Garansi IMEI"}
+            <span className="text-xs font-bold text-ink truncate">
+              {isTopUp ? "Nota Top Up" : isCeirService ? "Nota CEIR" : "Nota & Garansi"}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setIsEditingStore(!isEditingStore)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors flex items-center gap-1.5"
+              className={`text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${
+                isEditingStore ? 'bg-primary text-white border-primary' : 'bg-canvas border-hairline hover:bg-parchment text-ink'
+              }`}
+              title="Ubah Nama Toko (White-label Reseller)"
             >
-              <svg className="w-3.5 h-3.5 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
               </svg>
               <span className="hidden sm:inline">{isEditingStore ? "Selesai" : "Ubah Toko"}</span>
             </button>
             <button
-              onClick={handleShareWhatsApp}
-              className="text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center gap-1.5 shadow-sm"
-              title="Kirim ke WhatsApp Pelanggan"
-            >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z" />
-              </svg>
-              <span className="hidden sm:inline">Kirim WA</span>
-            </button>
-            <button
-              onClick={handleDownloadPng}
-              disabled={isExporting}
-              className="text-xs font-bold px-3 py-1.5 rounded-full bg-canvas border border-hairline hover:bg-parchment text-slate-800 transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-60"
-              title="Unduh Gambar PNG"
-            >
-              <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-              </svg>
-              <span className="hidden sm:inline">{isExporting ? "Memproses..." : "Unduh Gambar"}</span>
-            </button>
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isExporting}
-              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-60"
-              title="Unduh Berkas PDF"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-              </svg>
-              <span>{isExporting ? "Memproses..." : "Unduh PDF"}</span>
-            </button>
-            <button
-              onClick={handlePrint}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-full bg-canvas border border-hairline hover:bg-parchment text-ink-muted hover:text-ink transition-colors flex items-center gap-1"
-              title="Cetak Langsung"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
-              </svg>
-              <span className="hidden sm:inline">Print</span>
-            </button>
-            <button
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-canvas border border-hairline flex items-center justify-center text-ink-muted hover:text-ink hover:bg-parchment transition-colors"
-              title="Tutup"
+              title="Tutup Modal"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -376,7 +340,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         )}
 
         {/* Printable Invoice & Certificate Area (Scrollable Body) */}
-        <div className="overflow-y-auto flex-1 p-6 sm:p-8 bg-white text-slate-900 font-sans print:p-4 print:shadow-none space-y-6">
+        <div className="overflow-y-auto flex-1 p-3.5 sm:p-8 bg-white text-slate-900 font-sans print:p-4 print:shadow-none space-y-4 sm:space-y-6 pb-28 sm:pb-8">
           <div ref={printRef} className="space-y-6">
             {/* Header Brand */}
             <div className="flex justify-between items-start border-b border-slate-200 pb-5">
@@ -636,37 +600,50 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
           </div>
         </div>
 
-        {/* Bottom Action Footer (Always Visible, Hidden on print) */}
-        <div className="p-4 bg-parchment border-t border-hairline flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
+        {/* Bottom Action Footer (Always Visible, Hidden on print, z-20 above background nav) */}
+        <div className="p-3 sm:p-4 bg-slate-50/95 backdrop-blur border-t border-hairline flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 shrink-0 print:hidden z-20">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl bg-canvas border border-hairline hover:bg-parchment text-xs font-bold text-ink flex items-center gap-2 transition-colors"
+            className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-canvas border border-hairline hover:bg-parchment text-xs font-bold text-ink flex items-center justify-center gap-2 transition-colors order-2 sm:order-1 shadow-xs"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
-            Tutup / Kembali
+            Tutup
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="w-full sm:w-auto flex items-center gap-2 order-1 sm:order-2">
             <button
               onClick={handleShareWhatsApp}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
+              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z" />
               </svg>
-              Kirim Nota WA
+              <span>Kirim WA</span>
             </button>
 
             <button
-              onClick={handlePrint}
-              className="px-5 py-2.5 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
+              onClick={handleDownloadPng}
+              disabled={isExporting}
+              className="px-3 py-2.5 rounded-xl bg-canvas border border-hairline hover:bg-parchment text-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs disabled:opacity-60"
+              title="Unduh Gambar PNG"
+            >
+              <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+              <span className="hidden xs:inline">Gambar</span>
+            </button>
+
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isExporting}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors disabled:opacity-60"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>
-              Cetak / PDF
+              <span>Cetak / PDF</span>
             </button>
           </div>
         </div>

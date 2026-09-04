@@ -50,6 +50,18 @@ function CekGaransiContent() {
     }
   }, [initialImei]);
 
+  // Real-time update listener: auto re-check if admin changes order status
+  useEffect(() => {
+    const handleTxUpdate = () => {
+      const activeImei = searchImei || initialImei;
+      if (activeImei && activeImei.replace(/\D/g, '').length >= 8) {
+        doCheck(activeImei);
+      }
+    };
+    window.addEventListener("transaction_status_update", handleTxUpdate);
+    return () => window.removeEventListener("transaction_status_update", handleTxUpdate);
+  }, [searchImei, initialImei]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchImei) {
@@ -356,6 +368,91 @@ function CekGaransiContent() {
                 </div>
               )}
             </div>
+
+            {/* Lampiran Gambar & Bukti (User Uploaded & Admin Verified) */}
+            {(result.user_image || result.user_image_ceir || result.admin_image) && (
+              <div className="pt-4 border-t border-hairline space-y-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-muted flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                  Lampiran Foto &amp; Bukti Perangkat
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {result.user_image && (
+                    <a
+                      href={result.user_image}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group p-3 rounded-2xl bg-parchment/70 border border-hairline hover:border-primary/50 transition-all flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-ink">Foto IMEI Pelanggan</span>
+                        <span className="text-[10px] text-primary group-hover:underline">Buka ↗</span>
+                      </div>
+                      <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-hairline relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={result.user_image}
+                          alt="Foto IMEI Pelanggan"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    </a>
+                  )}
+
+                  {result.user_image_ceir && (
+                    <a
+                      href={result.user_image_ceir}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group p-3 rounded-2xl bg-parchment/70 border border-hairline hover:border-primary/50 transition-all flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-ink">Screenshot CEIR Pelanggan</span>
+                        <span className="text-[10px] text-primary group-hover:underline">Buka ↗</span>
+                      </div>
+                      <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-hairline relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={result.user_image_ceir}
+                          alt="Screenshot CEIR Pelanggan"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    </a>
+                  )}
+
+                  {result.admin_image && (
+                    <a
+                      href={result.admin_image}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 hover:border-emerald-400 transition-all flex flex-col gap-2 sm:col-span-2 md:col-span-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-emerald-900 flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Bukti Selesai Admin
+                        </span>
+                        <span className="text-[10px] text-emerald-700 group-hover:underline">Buka ↗</span>
+                      </div>
+                      <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-emerald-200 relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={result.admin_image}
+                          alt="Bukti Selesai Admin"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       )}
@@ -373,7 +470,10 @@ function CekGaransiContent() {
           status: rawStatus,
           warranty: result.warranty,
           adminNote: result.adminNote || result.admin_note,
-          ceirData: result.ceirData
+          ceirData: result.ceirData,
+          user_image: result.user_image,
+          user_image_ceir: result.user_image_ceir,
+          admin_image: result.admin_image
         } : null}
       />
     </div>

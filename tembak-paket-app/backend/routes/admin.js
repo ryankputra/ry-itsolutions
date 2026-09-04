@@ -246,17 +246,35 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
                 adminImagePath = `/uploads/manual_orders/${req.files['admin_image'][0].filename}`;
             }
 
-            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ? WHERE id = ?",
-                [status || existingTrx.status, admin_note !== undefined ? admin_note : existingTrx.admin_note, adminImagePath, trxId]);
+            const newStatus = status || existingTrx.status;
+            const newNote = admin_note !== undefined ? admin_note : existingTrx.admin_note;
 
+            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ? WHERE id = ?",
+                [newStatus, newNote, adminImagePath, trxId]);
+
+            let refundMsg = "";
             if (status === 'failed' && (existingTrx.status === 'pending' || existingTrx.status === 'processing' || existingTrx.status === 'in_queue')) {
                 const refundAmount = Number(existingTrx.platformFee || existingTrx.originalPrice || 0);
                 if (refundAmount > 0) {
                     await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, existingTrx.userId]);
+                    const updatedUser = await dbGet("SELECT balance FROM users WHERE id = ?", [existingTrx.userId]);
+                    if (updatedUser) {
+                        sseSend(existingTrx.userId, 'balance_update', { balance: updatedUser.balance, source: 'order_refund' });
+                    }
+                    refundMsg = ` Saldo Rp ${refundAmount.toLocaleString('id-ID')} telah dikembalikan.`;
                 }
             }
 
-            res.json({ status: true, message: "Pesanan berhasil diperbarui" });
+            // Real-time instant notification via SSE to client browser
+            if (existingTrx.userId) {
+                sseSend(existingTrx.userId, 'transaction_status', { id: trxId, status: newStatus, message: newNote });
+                sseSend(existingTrx.userId, 'transaction_update', { id: trxId, status: newStatus, note: newNote });
+            }
+            if (typeof sseBroadcast === 'function') {
+                sseBroadcast('transaction_status', { id: trxId, status: newStatus, message: newNote });
+            }
+
+            res.json({ status: true, message: `Pesanan berhasil diperbarui.${refundMsg}` });
         } catch (e) {
             res.status(500).json({ status: false, message: e.message });
         }
