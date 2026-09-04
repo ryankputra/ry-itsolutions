@@ -218,8 +218,8 @@ async function initWABot(forceNew = false) {
 
             if (isNewLogin) {
                 addWALog('✅ Perangkat berhasil ditautkan via QR! Menyimpan sesi...');
-                connectionState = 'connecting';
-                global.baileysStatus = 'connecting';
+                connectionState = 'pairing';
+                global.baileysStatus = 'pairing';
                 currentQrCode = null;
                 qrCodeDataUrl = null;
                 global.qrCode = null;
@@ -229,34 +229,36 @@ async function initWABot(forceNew = false) {
             // 2. LOGIKA GENERATE QR CODE: Izinkan pembuatan QR Code jika status BUKAN 'open'
             if (qr) {
                 const isOpen = connectionState === "open" || global.baileysStatus === "open";
-                if (!isOpen) {
-                    // Jika sesi auth sudah terdaftar (registered/me sudah ada di auth), jangan overwrite ke scan_ready
-                    if (state?.creds?.me?.id || currentAuthState?.creds?.me?.id || connectionState === "connecting") {
-                        console.log("[WABot] Sesi sudah terautentikasi, mengabaikan regenerasi QR Code.");
-                        return;
-                    }
-                    try {
-                        currentQrCode = qr;
-                        qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
-                        connectionState = "scan_ready";
-                        global.baileysStatus = "scan_ready";
-                        global.qrCode = qrCodeDataUrl;
-                        isInitializing = false;
-                        clearConnectingTimer();
+                const isRegistered = Boolean(state?.creds?.me?.id || currentAuthState?.creds?.me?.id);
+                const isPairing = connectionState === "pairing" || global.baileysStatus === "pairing";
 
-                        console.log("\n==================================================================");
-                        console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
-                        console.log("==================================================================");
-                        QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
-                            if (!err && terminalQR) {
-                                console.log(terminalQR);
-                            }
-                        });
-                        console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
-                        console.log("==================================================================\n");
-                    } catch (e) {
-                        console.error("[WABot] QR generation error:", e);
-                    }
+                if (isOpen || isRegistered || isPairing) {
+                    console.log("[WABot] QR diabaikan karena socket sedang pairing / sudah terdaftar.");
+                    return;
+                }
+
+                try {
+                    currentQrCode = qr;
+                    qrCodeDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
+                    connectionState = "scan_ready";
+                    global.baileysStatus = "scan_ready";
+                    global.qrCode = qrCodeDataUrl;
+                    isInitializing = false;
+                    clearConnectingTimer();
+
+                    logWABot("Kode QR baru siap di-scan", "info");
+                    console.log("\n==================================================================");
+                    console.log("📲 SCAN QR CODE WHATSAPP BOT ADMIN (Ry-ITSolutions)");
+                    console.log("==================================================================");
+                    QRCode.toString(qr, { type: 'terminal', small: true }, (err, terminalQR) => {
+                        if (!err && terminalQR) {
+                            console.log(terminalQR);
+                        }
+                    });
+                    console.log("Buka WhatsApp di HP Anda > Perangkat Tertaut > Tautkan Perangkat.");
+                    console.log("==================================================================\n");
+                } catch (e) {
+                    console.error("[WABot] QR generation error:", e);
                 }
             }
 
@@ -318,8 +320,8 @@ async function initWABot(forceNew = false) {
                     qrCodeDataUrl = null;
                     global.qrCode = null;
                     console.log("[WABot] ✅ QR Code berhasil di-scan! WhatsApp meminta restart socket untuk menyelesaikan pairing (515)...");
-                    connectionState = "connecting";
-                    global.baileysStatus = "connecting";
+                    connectionState = "pairing";
+                    global.baileysStatus = "pairing";
                     isInitializing = false;
                     try { await saveCreds(); } catch (e) {}
                     // Jeda 800ms agar flush I/O di storage STB tuntas sebelum socket baru membaca disk
@@ -679,15 +681,17 @@ async function logoutWABot() {
 function getWAStatus() {
     const isConnected = connectionState === "open" || global.baileysStatus === "open";
     const currentState = isConnected ? "open" : (global.baileysStatus || connectionState);
-    const isConnecting = currentState === "connecting";
-    const currentQr = (isConnected || isConnecting) ? null : (global.qrCode || qrCodeDataUrl || currentQrCode);
+    const isPairing = currentState === "pairing";
+    const currentQr = (isConnected || isPairing) ? null : (global.qrCode || qrCodeDataUrl || currentQrCode);
     let statusText = "Terputus";
     if (isConnected) {
         statusText = `Terhubung (${connectedPhone || 'Admin'})`;
-    } else if (isConnecting) {
+    } else if (isPairing) {
         statusText = "Sedang Menautkan Perangkat WhatsApp...";
-    } else if ((currentState === "qr_ready" || currentState === "scan_ready" || global.baileysStatus === "scan_ready") && currentQr) {
+    } else if (currentState === "scan_ready" && currentQr) {
         statusText = "Menunggu Scan QR Code";
+    } else if (currentState === "connecting") {
+        statusText = "Menyiapkan QR Code WhatsApp...";
     }
 
     return {

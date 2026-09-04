@@ -1330,8 +1330,8 @@ export default function AdminPage() {
         const payload = d.data || d;
         const isConn = Boolean(payload.connected || payload.isConnected || payload.state === 'open');
         setWaBotStatus((prev: any) => {
-          const isConnecting = payload.state === 'connecting';
-          const qr = (isConn || isConnecting) ? null : (payload.qrCode || null);
+          const isPairing = payload.state === 'pairing';
+          const qr = (isConn || isPairing) ? null : (payload.qrCode || null);
           return {
             ...payload,
             connected: isConn,
@@ -1340,8 +1340,8 @@ export default function AdminPage() {
           };
         });
         setBaileysStatus((prev) => {
-          const isConnecting = payload.state === 'connecting';
-          const qr = (isConn || isConnecting) ? null : (payload.qrCode || null);
+          const isPairing = payload.state === 'pairing';
+          const qr = (isConn || isPairing) ? null : (payload.qrCode || null);
           return {
             ...payload,
             isConnected: isConn,
@@ -2282,7 +2282,7 @@ export default function AdminPage() {
                 <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold ${
                   waBotStatus?.connected || waBotStatus?.isConnected
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    : waBotStatus?.state === 'connecting'
+                    : waBotStatus?.state === 'pairing'
                     ? 'bg-blue-50 text-blue-800 border-blue-200'
                     : waBotStatus?.qrCode
                     ? 'bg-amber-50 text-amber-800 border-amber-200'
@@ -2292,14 +2292,14 @@ export default function AdminPage() {
                     <span className={`w-2.5 h-2.5 rounded-full ${
                       waBotStatus?.connected || waBotStatus?.isConnected 
                         ? 'bg-emerald-500 animate-pulse' 
-                        : waBotStatus?.state === 'connecting'
+                        : waBotStatus?.state === 'pairing'
                         ? 'bg-blue-500 animate-pulse'
                         : 'bg-amber-500'
                     }`}></span>
                     <span>
                       {waBotStatus?.connected || waBotStatus?.isConnected
                         ? `Terhubung (${waBotStatus.connectedPhone || 'Admin'})`
-                        : waBotStatus?.state === 'connecting'
+                        : waBotStatus?.state === 'pairing'
                         ? 'Sedang Menautkan Perangkat WhatsApp...'
                         : waBotStatus?.statusText || 'Menunggu Scan QR Code'}
                     </span>
@@ -2325,7 +2325,7 @@ export default function AdminPage() {
                       </p>
                     </div>
                   </div>
-                ) : waBotStatus?.state === 'connecting' ? (
+                ) : waBotStatus?.state === 'pairing' ? (
                   <div className="text-center py-10 space-y-3 bg-blue-50/50 rounded-2xl border border-blue-200 p-6 animate-pulse">
                     <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl font-bold">
                       🔄
