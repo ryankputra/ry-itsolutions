@@ -733,6 +733,13 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             const ceirImagePath = ceirImagePaths.length > 0 ? ceirImagePaths.join(',') : null;
 
             const targetPhone = String(req.body.target_phone || req.body.targetPhone || user?.verifiedPhone || '').trim();
+            if (targetPhone && !user?.verifiedPhone) {
+                const cleanUserP = targetPhone.replace(/\D/g, '');
+                if (cleanUserP.length >= 9) {
+                    const formattedP = cleanUserP.startsWith('0') ? '62' + cleanUserP.slice(1) : (cleanUserP.startsWith('62') ? cleanUserP : '62' + cleanUserP);
+                    dbRun("UPDATE users SET verifiedPhone = ? WHERE id = ? AND (verifiedPhone IS NULL OR verifiedPhone = '')", [formattedP, req.session.userId]).catch(() => {});
+                }
+            }
 
             // Handle Direct QRIS Purchase
             if (isQrisPayment) {

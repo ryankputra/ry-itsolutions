@@ -131,6 +131,11 @@ function UnblockImeiContent() {
     if (files.length === 0) {
       missing.push("Unggah Bukti Screenshot *#06# HP target.");
     }
+    if (!targetPhone.trim() && !user?.verifiedPhone && !user?.phone) {
+      missing.push("Nomor WhatsApp Penerima Nota harus diisi agar Anda menerima notifikasi dan update pengerjaan via WA.");
+    } else if (targetPhone.trim() && targetPhone.replace(/\D/g, "").length < 9) {
+      missing.push("Nomor WhatsApp Penerima Nota minimal 9 digit angka (contoh: 081234567890).");
+    }
     if (!agreed) {
       missing.push("Centang persetujuan Syarat & Ketentuan Layanan.");
     }

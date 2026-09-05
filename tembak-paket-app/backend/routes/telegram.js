@@ -83,8 +83,10 @@ async function sendManualOrderNotification(message, trxId, imageLocalPath) {
     }
 }
 
+let isPollingActive = false;
 async function pollTelegramUpdates() {
-    if (!TELEGRAM_BOT_TOKEN) return;
+    if (!TELEGRAM_BOT_TOKEN || isPollingActive) return;
+    isPollingActive = true;
     try {
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${tgLastUpdateId + 1}&timeout=25`;
         const res = await fetch(url, { timeout: 35000 });
@@ -92,18 +94,27 @@ async function pollTelegramUpdates() {
             const data = await res.json();
             if (data.ok && Array.isArray(data.result) && data.result.length > 0) {
                 for (const update of data.result) {
-                    tgLastUpdateId = update.update_id;
-                    if (update.callback_query) {
-                        await handleTelegramCallbackQuery(update.callback_query);
+                    if (update.update_id > tgLastUpdateId) {
+                        tgLastUpdateId = update.update_id;
                     }
-                    if (update.message) {
-                        await handleTelegramMessage(update.message);
+                    try {
+                        if (update.callback_query) {
+                            await handleTelegramCallbackQuery(update.callback_query);
+                        } else if (update.message) {
+                            await handleTelegramMessage(update.message);
+                        }
+                    } catch (handleErr) {
+                        console.error("[Telegram Handler Error]", handleErr.message);
                     }
                 }
             }
         }
-    } catch (e) { }
-    setTimeout(pollTelegramUpdates, 3000);
+    } catch (e) {
+        // Network timeout / poll drop is normal
+    } finally {
+        isPollingActive = false;
+        setTimeout(pollTelegramUpdates, 1500);
+    }
 }
 
 async function sendTelegramButtons(chatId, text, inlineKeyboard) {
@@ -450,51 +461,111 @@ async function handleTelegramCallbackQuery(cb) {
         const trxId = parts.slice(2).join('_');
 
         try {
+            // Immediate feedback to Telegram client so button stops loading spinner
+            await answerCallback(cbId, `⏳ Memproses pesanan ${trxId}...`);
+
             const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
             if (!trx) {
-                await answerCallback(cbId, "Transaksi tidak ditemukan.");
+                await answerCallback(cbId, "⚠️ Transaksi tidak ditemukan.");
                 return;
             }
             if (['success', 'failed'].includes(trx.status)) {
                 if (trx.status !== status) {
-                    await answerCallback(cbId, `Transaksi sudah final (${trx.status}). Tidak bisa diubah lagi.`);
+                    await answerCallback(cbId, `ℹ️ Transaksi sudah final (${trx.status.toUpperCase()}). Tidak bisa diubah lagi.`);
                     return;
                 }
             }
 
             let apiRes = 'Pesanan diproses';
             if (status === 'success') apiRes = 'Pesanan berhasil diselesaikan';
-            if (status === 'failed') apiRes = 'Pesanan dibatalkan/ditolak';
-            if (status === 'pending') apiRes = 'Menunggu Proses';
-            if (status === 'processing') apiRes = 'Sedang diproses';
+            else if (status === 'failed') apiRes = 'Pesanan dibatalkan/ditolak';
+            else if (status === 'pending') apiRes = 'Menunggu Proses';
+            else if (status === 'processing') apiRes = 'Sedang diproses';
+
+            const updatedNote = `Status diperbarui menjadi ${status.toUpperCase()} via Telegram`;
 
             await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ? WHERE id = ?",
-                [status, `Status diperbarui menjadi ${status.toUpperCase()} via Telegram`, apiRes, trxId]);
+                [status, updatedNote, apiRes, trxId]);
 
-            // Refund if failed and previously was pending/processing
-            if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing' || trx.status === 'menunggu_saldo_provider')) {
+            // Refund if failed and previously was pending/processing/in_queue
+            if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing' || trx.status === 'in_queue' || trx.status === 'menunggu_saldo_provider')) {
                 const refundAmount = Number(trx.platformFee || trx.originalPrice || 0);
-                if (refundAmount > 0) {
+                if (refundAmount > 0 && trx.userId) {
                     await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmount, trx.userId]);
+                    try {
+                        const { sseSend } = require('../middleware/auth');
+                        const updatedUser = await dbGet("SELECT balance FROM users WHERE id = ?", [trx.userId]);
+                        if (updatedUser) {
+                            sseSend(trx.userId, 'balance_update', { balance: updatedUser.balance, source: 'order_refund' });
+                        }
+                    } catch (e) {}
                 }
             }
 
-            await answerCallback(cbId, `Pesanan ${trxId} diubah menjadi ${status}!`);
+            // Real-time SSE to web dashboard and customer
+            try {
+                const { sseSend, sseBroadcast } = require('../middleware/auth');
+                if (typeof sseBroadcast === 'function') {
+                    sseBroadcast('transaction_status', { id: trxId, status: status, message: updatedNote });
+                }
+                if (trx.userId && typeof sseSend === 'function') {
+                    sseSend(trx.userId, 'transaction_status', { id: trxId, status: status, message: updatedNote });
+                    sseSend(trx.userId, 'transaction_update', { id: trxId, status: status, note: updatedNote });
+                }
+            } catch (sseErr) {
+                console.warn('[Telegram Callback] SSE broadcast warning:', sseErr.message);
+            }
 
-            const originalText = (cb.message.text || '').split('\n\n<b>Status Diupdate:')[0];
+            // WhatsApp Notification to Customer on Status Change
+            if (status !== trx.status && ['processing', 'success', 'failed'].includes(status)) {
+                try {
+                    const { notifyCustomerOnStatusChange } = require('../services/waBot');
+                    notifyCustomerOnStatusChange(trxId, status, updatedNote).catch(err => {
+                        console.warn('[Telegram Callback] WhatsApp customer notification warning:', err.message);
+                    });
+                } catch (waErr) {
+                    console.warn('[Telegram Callback] WhatsApp notification exception:', waErr.message);
+                }
+            }
+
+            // Update Telegram Message UI (Caption if Photo, Text if Text)
+            const isPhotoMessage = Boolean(cb.message.caption !== undefined || cb.message.photo);
             const isFinal = (status === 'success' || status === 'failed');
-            queueTelegramRequest('editMessageText', {
-                chat_id: chatId,
-                message_id: messageId,
-                text: originalText + `\n\n<b>Status Diupdate: ${status.toUpperCase()}</b>`,
-                parse_mode: 'HTML',
-                reply_markup: isFinal ? { inline_keyboard: [] } : getInlineKeyboard(trxId)
-            });
+            const statusBadge = `\n\n<b>Status Diupdate: ${status.toUpperCase()}</b>`;
+
+            if (isPhotoMessage) {
+                const rawCaption = cb.message.caption || '';
+                const baseCaption = rawCaption.split('\n\n<b>Status Diupdate:')[0].split('\n\nStatus Diupdate:')[0];
+                const finalCaption = (baseCaption + statusBadge).slice(0, 1024);
+
+                queueTelegramRequest('editMessageCaption', {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    caption: finalCaption,
+                    parse_mode: 'HTML',
+                    reply_markup: isFinal ? { inline_keyboard: [] } : getInlineKeyboard(trxId)
+                });
+            } else {
+                const rawText = cb.message.text || '';
+                const baseText = rawText.split('\n\n<b>Status Diupdate:')[0].split('\n\nStatus Diupdate:')[0];
+                const finalText = baseText + statusBadge;
+
+                queueTelegramRequest('editMessageText', {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    text: finalText,
+                    parse_mode: 'HTML',
+                    reply_markup: isFinal ? { inline_keyboard: [] } : getInlineKeyboard(trxId)
+                });
+            }
+
+            await answerCallback(cbId, `✅ Berhasil ubah status ke ${status.toUpperCase()}`);
 
         } catch (e) {
-            console.error('Callback error', e);
-            await answerCallback(cbId, "Terjadi kesalahan server.");
+            console.error('[Telegram Callback Error]', e);
+            await answerCallback(cbId, "⚠️ Terjadi kesalahan server.");
         }
+        return;
     }
 }
 

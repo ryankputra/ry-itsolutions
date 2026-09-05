@@ -263,9 +263,23 @@ async function getCustomerPhoneForTransaction(trx) {
     }
     if (trx.userId) {
         try {
-            const userRow = await dbGet("SELECT verifiedPhone FROM users WHERE id = ?", [trx.userId]);
+            const userRow = await dbGet("SELECT verifiedPhone, savedPhones FROM users WHERE id = ?", [trx.userId]);
             if (userRow && userRow.verifiedPhone && isValidIndonesianMobile(userRow.verifiedPhone)) {
                 return cleanPhone(userRow.verifiedPhone);
+            }
+            if (userRow && userRow.savedPhones) {
+                try {
+                    const sp = JSON.parse(userRow.savedPhones);
+                    if (Array.isArray(sp) && sp.length > 0) {
+                        for (const p of sp) {
+                            if (isValidIndonesianMobile(p)) return cleanPhone(p);
+                        }
+                    }
+                } catch (e) {}
+            }
+            const prev = await dbGet("SELECT targetPhone FROM transactions WHERE userId = ? AND targetPhone IS NOT NULL AND targetPhone != '' AND targetPhone NOT LIKE '%@%' ORDER BY createdAt DESC LIMIT 1", [trx.userId]);
+            if (prev && prev.targetPhone && isValidIndonesianMobile(prev.targetPhone)) {
+                return cleanPhone(prev.targetPhone);
             }
         } catch (e) {}
     }
@@ -1010,7 +1024,8 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
  * Internal wrapper to send a message via Baileys and cache it in messageStore & DB
  */
 async function sendAndStoreMessage(targetJid, content, options = {}) {
-    if (!sock || connectionState !== "open") {
+    const isConnected = (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id));
+    if (!sock || !isConnected) {
         throw new Error("WhatsApp Bot belum terhubung / open");
     }
 
@@ -1020,6 +1035,8 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         const clean = cleanPhone(rawNumber);
         if (clean && clean.length >= 8) {
             finalJid = `${clean}@s.whatsapp.net`;
+        } else {
+            throw new Error(`Nomor telepon tujuan tidak valid: ${targetJid}`);
         }
     }
 
@@ -1075,8 +1092,19 @@ async function replyWhatsApp(jid, text) {
  */
 async function notifyNewOrder(orderData) {
     try {
-        if (!sock || connectionState !== "open") {
-            console.warn(`[WABot] Notifikasi pesanan ${orderData?.id} tidak terkirim: Bot WhatsApp belum terhubung (status: ${connectionState || 'offline'}).`);
+        let isConnected = (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id));
+        if (!isConnected && sock) {
+            // Reconnect grace period up to 2.5s if socket is momentarily reconnecting
+            for (let i = 0; i < 5; i++) {
+                await new Promise(r => setTimeout(r, 500));
+                if (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id)) {
+                    isConnected = true;
+                    break;
+                }
+            }
+        }
+        if (!sock || !isConnected) {
+            console.warn(`[WABot] Notifikasi pesanan ${orderData?.id} tidak terkirim: Bot WhatsApp belum terhubung (status: ${connectionState || "offline"}).`);
             return;
         }
 
@@ -1137,42 +1165,46 @@ async function notifyNewOrder(orderData) {
             `• Ketik *1* atau *.proses* ➡️ Mulai proses\n` +
             `• Ketik *2* atau *.sukses* ➡️ Selesaikan\n` +
             `• Ketik *3* atau *.gagal* ➡️ Tolak & refund\n` +
-            `_(Bisa juga manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)_\n` +
+            `_(Bisa juga manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)\_\n` +
             `━━━━━━━━━━━━━━━━━━━━━━`;
 
-        // 1. Send to all admin numbers
+        // 1. Send text notification to all admin numbers immediately (instant delivery)
         for (const phone of adminPhones) {
-            const adminJid = `${phone}@s.whatsapp.net`;
+            const cleanAdmin = cleanPhone(phone);
+            if (!cleanAdmin || cleanAdmin.length < 8) continue;
+            const adminJid = `${cleanAdmin}@s.whatsapp.net`;
 
-            // If user attached screenshot photo, send with caption
-            let photoSent = false;
+            try {
+                await sendAndStoreMessage(adminJid, { text: messageBody });
+                logWABot(`✅ Notifikasi pesanan ${id} berhasil dikirim ke admin (${cleanAdmin})`, "info");
+                console.log(`[WABot] Notifikasi pesanan ${id} berhasil dikirim ke admin (${cleanAdmin}).`);
+            } catch (adminErr) {
+                logWABot(`❌ Gagal mengirim notifikasi ke admin ${cleanAdmin}: ${adminErr.message}`, "warn");
+                console.warn(`[WABot] Gagal mengirim pesan ke admin ${cleanAdmin}:`, adminErr.message);
+            }
+
+            // If user attached screenshot photo, send in background non-blocking promise
             const photoPath = (userImage || userImageCeir || "").split(",")[0].trim();
-
             if (photoPath) {
                 const fullPath = path.join(__dirname, "..", photoPath);
                 if (fs.existsSync(fullPath)) {
-                    try {
-                        await sendAndStoreMessage(adminJid, {
-                            image: fs.readFileSync(fullPath),
-                            caption: messageBody
-                        });
-                        photoSent = true;
-                    } catch (imgErr) {
-                        console.warn("[WABot] Gagal mengirim lampiran gambar:", imgErr.message);
-                    }
+                    (async () => {
+                        try {
+                            await sendAndStoreMessage(adminJid, {
+                                image: fs.readFileSync(fullPath),
+                                caption: `📸 *Lampiran Bukti Pesanan #${id}*\nLayanan: ${packageName || "Layanan"}\nIMEI: \`${imei || "-"}\``
+                            });
+                        } catch (imgErr) {
+                            console.warn("[WABot] Notice: Gagal mengirim lampiran gambar:", imgErr.message);
+                        }
+                    })();
                 }
-            }
-
-            if (!photoSent) {
-                await sendAndStoreMessage(adminJid, { text: messageBody });
             }
         }
 
-        console.log(`[WABot] Notifikasi pesanan ${id} berhasil dikirim ke ${adminPhones.length} nomor admin.`);
-
-        // 2. Also send confirmation to customer phone if provided
+        // 2. Resolve customer phone number robustly from all available sources
         let customerTarget = customerPhone || targetPhone;
-        if (!customerTarget || customerTarget.includes('@') || cleanPhone(customerTarget).length < 8) {
+        if (!customerTarget || customerTarget.includes("@") || cleanPhone(customerTarget).length < 8) {
             try {
                 const trxRow = await dbGet("SELECT userId, targetPhone FROM transactions WHERE id = ?", [id]);
                 if (trxRow) {
@@ -1181,6 +1213,18 @@ async function notifyNewOrder(orderData) {
                 }
             } catch (e) {}
         }
+        if (!customerTarget && id) {
+            try {
+                const trxRow = await dbGet("SELECT userId FROM transactions WHERE id = ?", [id]);
+                if (trxRow && trxRow.userId) {
+                    const pastTrx = await dbGet("SELECT targetPhone FROM transactions WHERE userId = ? AND targetPhone IS NOT NULL AND targetPhone != '' AND targetPhone NOT LIKE '%@%' ORDER BY createdAt DESC LIMIT 1", [trxRow.userId]);
+                    if (pastTrx && pastTrx.targetPhone && isValidIndonesianMobile(pastTrx.targetPhone)) {
+                        customerTarget = cleanPhone(pastTrx.targetPhone);
+                    }
+                }
+            } catch (e) {}
+        }
+
         if (customerTarget) {
             const cleanCust = cleanPhone(customerTarget);
             if (cleanCust && cleanCust.length >= 8) {
@@ -1206,15 +1250,14 @@ async function notifyNewOrder(orderData) {
                     console.warn(`[WABot] Gagal mengirim notifikasi ke pelanggan ${cleanCust}:`, custErr.message);
                 }
             }
+        } else {
+            console.log(`[WABot] Info: Transaksi #${id} tidak memiliki nomor WhatsApp pelanggan yang valid untuk notifikasi.`);
         }
     } catch (e) {
         console.error("[WABot] Error sending order notification:", e.message);
     }
 }
 
-/**
- * Logout and clear session
- */
 async function logoutWABot() {
     try {
         if (sock) {

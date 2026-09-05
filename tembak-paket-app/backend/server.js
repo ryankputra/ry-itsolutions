@@ -181,10 +181,10 @@ waBot.initWABot(false);
 
 // 10. Start Server
 app.listen(PORT, () => {
-    if (process.env.TELEGRAM_USE_POLLING === 'true') {
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_USE_POLLING !== 'false') {
         pollTelegramUpdates();
         console.log(`[Telegram] Polling updates mode active.`);
-    } else {
+    } else if (process.env.TELEGRAM_BOT_TOKEN) {
         console.log(`[Telegram] Webhook mode active on /api/telegram/webhook`);
     }
     console.log(`🚀 Ry-ITSolutions Modular Backend Running on http://localhost:${PORT}`);
