@@ -40,46 +40,57 @@ function getInlineKeyboard(trxId) {
 }
 
 async function sendManualOrderNotification(message, trxId, imageLocalPath) {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return;
+    if (!TELEGRAM_BOT_TOKEN) return;
 
-    let photoSent = false;
-    try {
-        if (imageLocalPath && fs.existsSync(imageLocalPath)) {
-            const form = new FormData();
-            form.append('chat_id', TELEGRAM_ADMIN_CHAT_ID);
-            form.append('photo', fs.createReadStream(imageLocalPath));
-            // Caption must be <= 1024 chars in Telegram sendPhoto
-            const safeCaption = message.length > 1000 ? message.slice(0, 997) + '...' : message;
-            form.append('caption', safeCaption);
-            form.append('parse_mode', 'HTML');
-            form.append('reply_markup', JSON.stringify(getInlineKeyboard(trxId)));
+    const targetChats = new Set([
+        TELEGRAM_ADMIN_CHAT_ID,
+        process.env.TELEGRAM_ADMIN_CHAT_ID,
+        process.env.TELEGRAM_CHAT_ID,
+        process.env.TELEGRAM_GROUP_CHAT_ID
+    ].filter(Boolean).map(id => String(id).trim()));
 
-            const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-                method: 'POST',
-                headers: form.getHeaders(),
-                body: form,
-                timeout: 15000
-            });
-            const d = await res.json();
-            if (d && d.ok) {
-                photoSent = true;
-                console.log(`[Telegram] Notifikasi foto order ${trxId} berhasil dikirim ke Admin.`);
-            } else {
-                console.warn(`[Telegram] Gagal kirim foto order ${trxId} (${d?.description || 'unknown'}), fallback ke text message.`);
+    if (targetChats.size === 0) return;
+
+    for (const targetChat of targetChats) {
+        let photoSent = false;
+        try {
+            if (imageLocalPath && fs.existsSync(imageLocalPath)) {
+                const form = new FormData();
+                form.append('chat_id', targetChat);
+                form.append('photo', fs.createReadStream(imageLocalPath));
+                // Caption must be <= 1024 chars in Telegram sendPhoto
+                const safeCaption = message.length > 1000 ? message.slice(0, 997) + '...' : message;
+                form.append('caption', safeCaption);
+                form.append('parse_mode', 'HTML');
+                form.append('reply_markup', JSON.stringify(getInlineKeyboard(trxId)));
+
+                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    headers: form.getHeaders(),
+                    body: form,
+                    timeout: 15000
+                });
+                const d = await res.json();
+                if (d && d.ok) {
+                    photoSent = true;
+                    console.log(`[Telegram] Notifikasi foto order ${trxId} berhasil dikirim ke ${targetChat}.`);
+                } else {
+                    console.warn(`[Telegram] Gagal kirim foto order ${trxId} ke ${targetChat} (${d?.description || 'unknown'}), fallback ke text message.`);
+                }
             }
+        } catch (e) {
+            console.error('[Telegram] Error sendManualOrderNotification (photo):', e.message);
         }
-    } catch (e) {
-        console.error('[Telegram] Error sendManualOrderNotification (photo):', e.message);
-    }
 
-    // Always fallback to sendMessage text if photo was not sent or failed
-    if (!photoSent) {
-        queueTelegramRequest('sendMessage', {
-            chat_id: TELEGRAM_ADMIN_CHAT_ID,
-            text: message,
-            parse_mode: 'HTML',
-            reply_markup: getInlineKeyboard(trxId)
-        });
+        // Always fallback to sendMessage text if photo was not sent or failed
+        if (!photoSent) {
+            queueTelegramRequest('sendMessage', {
+                chat_id: targetChat,
+                text: message,
+                parse_mode: 'HTML',
+                reply_markup: getInlineKeyboard(trxId)
+            });
+        }
     }
 }
 
@@ -143,16 +154,73 @@ async function answerCallback(callbackQueryId, text) {
     });
 }
 
-const telegramReviewMainMenu = [
+const telegramAdminMainMenu = [
     [
-        { text: "➕ Tambah Ulasan Cepat", callback_data: "tg_rev_add_guide" },
-        { text: "📸 Petunjuk Foto + Caption", callback_data: "tg_rev_photo_guide" }
+        { text: "📦 Antrean Pesanan Masuk", callback_data: "tg_orders_list" }
     ],
     [
-        { text: "📋 Lihat 5 Ulasan Terbaru", callback_data: "tg_rev_list" },
-        { text: "🗑️ Hapus Ulasan Terakhir", callback_data: "tg_rev_delete_latest" }
+        { text: "➕ Tambah Ulasan", callback_data: "tg_rev_add_guide" },
+        { text: "📸 Ulasan + Foto", callback_data: "tg_rev_photo_guide" }
+    ],
+    [
+        { text: "📋 5 Ulasan Terbaru", callback_data: "tg_rev_list" },
+        { text: "🖥️ Status Server & DB", callback_data: "tg_server_status" }
     ]
 ];
+const telegramReviewMainMenu = telegramAdminMainMenu;
+
+async function sendPendingOrdersList(chatId) {
+    try {
+        const pendingOrders = await dbAll(
+            "SELECT * FROM transactions WHERE status IN ('pending', 'processing', 'in_queue', 'menunggu_saldo_provider') ORDER BY createdAt DESC LIMIT 5"
+        );
+
+        if (!pendingOrders || pendingOrders.length === 0) {
+            await sendTelegramButtons(
+                chatId,
+                `📭 <b>TIDAK ADA PESANAN DALAM ANTREAN</b>\n\nSemua pesanan pelanggan saat ini telah selesai atau belum ada pesanan baru yang masuk.`,
+                [[{ text: "🔄 Refresh Antrean", callback_data: "tg_orders_list" }, { text: "🔙 Menu Utama", callback_data: "tg_rev_main_menu" }]]
+            );
+            return;
+        }
+
+        await sendTelegramText(
+            chatId,
+            `📦 <b>DAFTAR ANTREAN PESANAN AKTIF (${pendingOrders.length} Pesanan):</b>\n━━━━━━━━━━━━━━━━━━━━━━\nSilakan gunakan tombol proses di bawah untuk memproses pesanan:`
+        );
+
+        for (const o of pendingOrders) {
+            const speedDisplay = o.speed_option === 'fast' ? 'Fast (1-3 Jam)' : (o.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : (o.speed_option === 'instant' ? 'Instant' : 'Slow'));
+            const cost = (o.platformFee || o.originalPrice || 0);
+            const cardMsg = 
+                `🔔 <b>PESANAN #${o.id}</b>\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `👤 <b>Pelanggan:</b> ${escapeHtml(o.userName || 'Pelanggan')}\n` +
+                `📞 <b>No. WhatsApp:</b> <code>${o.targetPhone || '-'}</code>\n` +
+                `📦 <b>Layanan:</b> ${escapeHtml(o.packageName || 'Layanan')}\n` +
+                `📱 <b>IMEI:</b> <code>${o.imei || '-'}</code>\n` +
+                `💰 <b>Total Biaya:</b> Rp ${Number(cost).toLocaleString('id-ID')}\n` +
+                `⚡ <b>Kecepatan:</b> ${speedDisplay}\n` +
+                `⏳ <b>Status:</b> <b>${(o.status || 'PENDING').toUpperCase()}</b>\n` +
+                (o.admin_note ? `📝 <b>Catatan:</b> ${escapeHtml(o.admin_note)}\n` : '') +
+                `━━━━━━━━━━━━━━━━━━━━━━`;
+
+            const photoRel = (o.user_image || o.user_image_ceir || '').split(',')[0].trim();
+            const photoLocal = photoRel ? path.join(__dirname, '..', photoRel) : null;
+
+            if (photoLocal && fs.existsSync(photoLocal)) {
+                await sendManualOrderNotification(cardMsg, o.id, photoLocal);
+            } else {
+                await sendTelegramButtons(chatId, cardMsg, getInlineKeyboard(o.id).inline_keyboard);
+            }
+            await new Promise(r => setTimeout(r, 100));
+        }
+
+    } catch (e) {
+        console.error('[Telegram] Error sendPendingOrdersList:', e);
+        await sendTelegramText(chatId, `⚠️ Gagal memuat daftar antrean pesanan: ${e.message}`);
+    }
+}
 
 // Message / Command Handler
 async function handleTelegramMessage(msg) {
@@ -170,9 +238,15 @@ async function handleTelegramMessage(msg) {
     if (text === '/start' || text === '/menu') {
         await sendTelegramButtons(
             chatId,
-            `⭐ <b>PANEL KONTROL BOT RY-ITSOLUTIONS</b> ⭐\n\nSelamat datang di Bot Admin Ry-ITSolutions. Silakan pilih menu di bawah atau ketik <code>/help</code> untuk panduan lengkap:`,
-            telegramReviewMainMenu
+            `⭐ <b>PANEL KONTROL ADMIN RY-ITSOLUTIONS</b> ⭐\n\nSelamat datang di Bot Admin Ry-ITSolutions. Silakan pilih menu di bawah untuk mengelola pesanan masuk atau ulasan:`,
+            telegramAdminMainMenu
         );
+        return;
+    }
+
+    // Command /orders, /pesanan, /antrean
+    if (text === '/orders' || text === '/pesanan' || text === '/antrean' || text === '/order') {
+        await sendPendingOrdersList(chatId);
         return;
     }
 
@@ -360,6 +434,34 @@ async function handleTelegramCallbackQuery(cb) {
 
     if (!isTelegramAdmin(chatId, fromId)) {
         await answerCallback(cbId, "⛔ Akses Ditolak: Anda bukan Admin.");
+        return;
+    }
+
+    if (data === 'tg_orders_list') {
+        await answerCallback(cbId, "Memuat antrean pesanan...");
+        await sendPendingOrdersList(chatId);
+        return;
+    }
+
+    if (data === 'tg_server_status') {
+        await answerCallback(cbId, "Memeriksa status sistem...");
+        try {
+            const pendingTrx = await dbGet("SELECT COUNT(*) as total FROM transactions WHERE status IN ('pending', 'processing', 'in_queue', 'menunggu_saldo_provider')");
+            const successTrx = await dbGet("SELECT COUNT(*) as total FROM transactions WHERE status IN ('success', 'completed')");
+            const totalUsers = await dbGet("SELECT COUNT(*) as total FROM users");
+            const uptimeMinutes = Math.floor((Date.now() - APP_START_TIME) / 60000);
+
+            const statusText = `🖥️ <b>STATUS SISTEM RY-ITSOLUTIONS</b>\n\n` +
+                `🟢 <b>Server:</b> Online (Uptime: ${uptimeMinutes} menit)\n` +
+                `🗄️ <b>Database:</b> SQLite3 (Terhubung & Terverifikasi)\n` +
+                `👥 <b>Total Pengguna:</b> ${totalUsers?.total || 0} akun\n` +
+                `⏳ <b>Transaksi Antrean:</b> ${pendingTrx?.total || 0} pesanan\n` +
+                `✅ <b>Transaksi Sukses:</b> ${successTrx?.total || 0} pesanan\n` +
+                `🤖 <b>Telegram Polling:</b> Aktif`;
+            await sendTelegramButtons(chatId, statusText, [[{ text: "🔙 Kembali ke Menu", callback_data: "tg_rev_main_menu" }]]);
+        } catch (e) {
+            await sendTelegramText(chatId, `❌ Gagal: ${escapeHtml(e.message)}`);
+        }
         return;
     }
 

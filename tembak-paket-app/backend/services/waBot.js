@@ -724,6 +724,40 @@ async function requestPairingCode(phoneNumber) {
  * Command Processor for WhatsApp Admin Remote Control
  */
 /**
+ * Optional Gateway Fallback (e.g. Fonnte) when Baileys socket is temporarily offline
+ */
+async function sendGatewayFallbackMessage(targetPhone, text) {
+    try {
+        const tokenRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_token' OR key = 'whatsapp_gateway_token'");
+        if (tokenRow && tokenRow.value) {
+            const urlRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_url' OR key = 'whatsapp_gateway_url'");
+            const endpoint = (urlRow && urlRow.value) ? urlRow.value : "https://api.fonnte.com/send";
+            const clean = cleanPhone(targetPhone);
+            if (!clean || clean.length < 8) return false;
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Authorization": tokenRow.value,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    target: clean,
+                    message: text
+                })
+            });
+            const d = await res.json();
+            if (d && (d.status === true || d.status === "success" || d.status === 200)) {
+                logWABot(`✅ Pesan terkirim via WhatsApp Gateway API ke ${clean}`, "info");
+                return true;
+            }
+        }
+    } catch (e) {
+        console.warn("[WABot] Gateway fallback notice:", e.message);
+    }
+    return false;
+}
+
+/**
  * Notify customer via WhatsApp on order status changes (processing, success, failed)
  * Can be called from WA Bot admin commands OR from Web Admin Dashboard
  */
@@ -1104,7 +1138,55 @@ async function notifyNewOrder(orderData) {
             }
         }
         if (!sock || !isConnected) {
-            console.warn(`[WABot] Notifikasi pesanan ${orderData?.id} tidak terkirim: Bot WhatsApp belum terhubung (status: ${connectionState || "offline"}).`);
+            console.warn(`[WABot] Socket Baileys belum terhubung (status: ${connectionState || "offline"}). Memeriksa Gateway Fallback...`);
+            // Check if gateway token is available in settings as fallback
+            try {
+                const tokenRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_token' OR key = 'whatsapp_gateway_token'");
+                if (tokenRow && tokenRow.value) {
+                    const urlRow = await dbGet("SELECT value FROM settings WHERE key = 'whatsapp_url' OR key = 'whatsapp_gateway_url'");
+                    const endpoint = (urlRow && urlRow.value) ? urlRow.value : "https://api.fonnte.com/send";
+
+                    for (const phone of adminPhones) {
+                        const cleanAdmin = cleanPhone(phone);
+                        if (!cleanAdmin || cleanAdmin.length < 8) continue;
+                        fetch(endpoint, {
+                            method: "POST",
+                            headers: { "Authorization": tokenRow.value, "Content-Type": "application/json" },
+                            body: JSON.stringify({ target: cleanAdmin, message: messageBody })
+                        }).catch(() => {});
+                    }
+
+                    let custTgt = customerPhone || targetPhone;
+                    if (custTgt) {
+                        const cleanCust = cleanPhone(custTgt);
+                        if (cleanCust && cleanCust.length >= 8) {
+                            const customerMsg =
+                                `Halo Kak *${userName || "Pelanggan"}*! 👋\n` +
+                                `Terima kasih telah memesan layanan di *Ry-ITSolutions*.\n\n` +
+                                `📦 *Layanan:* ${packageName || "Layanan"}\n` +
+                                `🆔 *Order ID:* #${id}\n` +
+                                `📱 *IMEI:* ${imei || "-"}\n` +
+                                `⚡ *Kecepatan:* ${speedDisplay}\n` +
+                                `💰 *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
+                                `⏳ *Status:* Sedang Diproses Admin\n\n` +
+                                `Pesanan Anda sedang dalam antrean pengerjaan oleh tim operasional kami.\n` +
+                                `Anda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutions.web.id/history\n\n` +
+                                `_Pesan otomatis ini dikirim resmi oleh sistem Ry-ITSolutions._`;
+                            fetch(endpoint, {
+                                method: "POST",
+                                headers: { "Authorization": tokenRow.value, "Content-Type": "application/json" },
+                                body: JSON.stringify({ target: cleanCust, message: customerMsg })
+                            }).catch(() => {});
+                        }
+                    }
+                    logWABot(`✅ Pesanan #${id} diteruskan melalui WhatsApp Gateway (Fonnte Fallback).`, "info");
+                    return;
+                }
+            } catch (gwErr) {
+                console.warn("[WABot] Gateway fallback error:", gwErr.message);
+            }
+
+            logWABot(`⚠️ Notifikasi pesanan #${id} tertunda: WhatsApp Bot Baileys belum terhubung di server. Silakan scan QR / tautkan perangkat di menu Admin > WhatsApp Bot.`, "warn");
             return;
         }
 

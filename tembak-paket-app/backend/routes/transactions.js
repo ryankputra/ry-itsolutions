@@ -13,7 +13,7 @@ const qrcode = require('qrcode');
 
 const { dbGet, dbAll, dbRun } = require('../config/db');
 const { isAuthenticated, sseSend } = require('../middleware/auth');
-const { sendTelegramNotification } = require('../telegramService');
+const { escapeHtml, sendTelegramNotification } = require('../telegramService');
 const { sendManualOrderNotification } = require('./telegram');
 const { notifyNewOrder } = require('../services/waBot');
 const ceirgoClient = require('../ceirgoClient');
@@ -233,7 +233,18 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         // Manual IMEI or other service: Status in_queue (Menunggu Konfirmasi Admin)
         await dbRun("UPDATE transactions SET status = 'in_queue', api_response = 'Pembayaran QRIS Terverifikasi. Menunggu Konfirmasi Admin.', admin_note = 'Pembayaran QRIS terverifikasi. Menunggu konfirmasi & pengerjaan oleh Admin.' WHERE id = ?", [trx.id]);
         sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'in_queue', message: 'Pembayaran terverifikasi! Pesanan masuk dalam antrean menunggu konfirmasi admin.' });
-        const notifMsg = `<b>📦 Direct QRIS Paid (Manual Order)!</b>\n<b>User ID:</b> ${trx.userId}\n<b>Layanan:</b> ${trx.packageName}\n<b>IMEI:</b> <code>${trx.imei}</code>\n<b>Nominal:</b> Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n<b>Status:</b> WAITING ADMIN`;
+        const notifMsg = 
+            `🔔 <b>PEMBAYARAN QRIS MANUAL BERHASIL!</b>\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `🆔 <b>Order ID:</b> <code>${trx.id}</code>\n` +
+            `👤 <b>Pelanggan:</b> ${escapeHtml(trx.userName || 'Pelanggan')}\n` +
+            `📞 <b>No. WhatsApp:</b> <code>${trx.targetPhone || '-'}</code>\n` +
+            `📦 <b>Layanan:</b> ${escapeHtml(trx.packageName)}\n` +
+            `📱 <b>IMEI:</b> <code>${trx.imei}</code>\n` +
+            `💰 <b>Nominal:</b> Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n` +
+            `⏳ <b>Status:</b> <b>DALAM ANTREAN</b>\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `💡 <i>Gunakan tombol aksi di bawah untuk memproses pesanan:</i>`;
         sendManualOrderNotification(notifMsg, trx.id, null);
 
         // Send WhatsApp Admin & Customer Notification on QRIS payment
@@ -918,7 +929,21 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 const autoNotifMsg = `<b>⚡ Pesanan Otomatis CeirGO Diterima!</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Layanan:</b> ${packageName}\n<b>IMEI:</b> <code>${cleanImei}</code>\n<b>Ref ID:</b> <code>${refId || trxId}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`;
                 sendTelegramNotification(autoNotifMsg, 'group');
             } else {
-                const notifMsg = `<b>📦 Pesanan Manual Baru!</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Layanan:</b> ${packageName}\n<b>IMEI:</b> <code>${cleanImei}</code>\n<b>Biaya:</b> Rp ${finalPriceToPay.toLocaleString('id-ID')}\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>${adminNote ? `\n<b>Catatan:</b> ${adminNote}` : ''}`;
+                const speedText = speed_option === 'fast' ? 'Fast (1-3 Jam)' : (speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : (speed_option === 'instant' ? 'Instant' : 'Slow'));
+                const notifMsg = 
+                    `🔔 <b>PESANAN MANUAL BARU MASUK!</b>\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                    `🆔 <b>Order ID:</b> <code>${trxId}</code>\n` +
+                    `👤 <b>Pelanggan:</b> ${escapeHtml(user.name)}\n` +
+                    `📞 <b>No. WhatsApp:</b> <code>${targetPhone || '-'}</code>\n` +
+                    `📦 <b>Layanan:</b> ${escapeHtml(packageName)}\n` +
+                    `📱 <b>IMEI:</b> <code>${cleanImei}</code>\n` +
+                    `💰 <b>Total Biaya:</b> Rp ${finalPriceToPay.toLocaleString('id-ID')}\n` +
+                    `⚡ <b>Kecepatan:</b> ${speedText}\n` +
+                    `⏳ <b>Status:</b> <b>${finalStatus.toUpperCase()}</b>\n` +
+                    (adminNote ? `📝 <b>Catatan:</b> ${escapeHtml(adminNote)}\n` : '') +
+                    `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                    `💡 <i>Gunakan tombol aksi di bawah untuk memproses pesanan:</i>`;
                 const firstImg = imgFiles[0] ? path.join(__dirname, '..', 'public', 'uploads', 'manual_orders', imgFiles[0].filename) : null;
                 sendManualOrderNotification(notifMsg, trxId, firstImg);
             }
