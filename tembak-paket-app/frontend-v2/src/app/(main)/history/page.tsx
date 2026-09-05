@@ -540,36 +540,53 @@ function HistoryContent() {
                         {(trx.user_image || trx.user_image_ceir || trx.admin_image) ? (
                           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                             <span className="text-[10px] text-ink-muted font-bold">Lampiran:</span>
-                            {trx.user_image && (
-                              <a
-                                href={trx.user_image}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md border border-primary/20 transition-colors"
-                              >
-                                <span>📷 Foto IMEI</span>
-                              </a>
-                            )}
-                            {trx.user_image_ceir && (
-                              <a
-                                href={trx.user_image_ceir}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200 transition-colors"
-                              >
-                                <span>🔍 Cek CEIR</span>
-                              </a>
-                            )}
-                            {trx.admin_image && (
-                              <a
-                                href={trx.admin_image}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors"
-                              >
-                                <span>✅ Bukti Admin</span>
-                              </a>
-                            )}
+                            {trx.user_image && trx.user_image.split(',').map((url: string, idx: number) => {
+                              const cleanUrl = url.trim();
+                              if (!cleanUrl) return null;
+                              const count = trx.user_image.split(',').length;
+                              return (
+                                <a
+                                  key={`u-${idx}`}
+                                  href={cleanUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md border border-primary/20 transition-colors"
+                                >
+                                  <span>📷 Foto IMEI {count > 1 ? `#${idx + 1}` : ''}</span>
+                                </a>
+                              );
+                            })}
+                            {trx.user_image_ceir && trx.user_image_ceir.split(',').map((url: string, idx: number) => {
+                              const cleanUrl = url.trim();
+                              if (!cleanUrl) return null;
+                              const count = trx.user_image_ceir.split(',').length;
+                              return (
+                                <a
+                                  key={`c-${idx}`}
+                                  href={cleanUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200 transition-colors"
+                                >
+                                  <span>🔍 Cek CEIR {count > 1 ? `#${idx + 1}` : ''}</span>
+                                </a>
+                              );
+                            })}
+                            {trx.admin_image && trx.admin_image.split(',').map((url: string, idx: number) => {
+                              const cleanUrl = url.trim();
+                              if (!cleanUrl) return null;
+                              return (
+                                <a
+                                  key={`a-${idx}`}
+                                  href={cleanUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors"
+                                >
+                                  <span>✅ Bukti Admin</span>
+                                </a>
+                              );
+                            })}
                           </div>
                         ) : null}
                       </div>

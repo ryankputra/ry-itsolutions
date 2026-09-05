@@ -42,30 +42,44 @@ function getInlineKeyboard(trxId) {
 async function sendManualOrderNotification(message, trxId, imageLocalPath) {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return;
 
+    let photoSent = false;
     try {
         if (imageLocalPath && fs.existsSync(imageLocalPath)) {
             const form = new FormData();
             form.append('chat_id', TELEGRAM_ADMIN_CHAT_ID);
             form.append('photo', fs.createReadStream(imageLocalPath));
-            form.append('caption', message);
+            // Caption must be <= 1024 chars in Telegram sendPhoto
+            const safeCaption = message.length > 1000 ? message.slice(0, 997) + '...' : message;
+            form.append('caption', safeCaption);
             form.append('parse_mode', 'HTML');
             form.append('reply_markup', JSON.stringify(getInlineKeyboard(trxId)));
 
-            await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+            const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
                 method: 'POST',
+                headers: form.getHeaders(),
                 body: form,
                 timeout: 15000
             });
-        } else {
-            queueTelegramRequest('sendMessage', {
-                chat_id: TELEGRAM_ADMIN_CHAT_ID,
-                text: message,
-                parse_mode: 'HTML',
-                reply_markup: getInlineKeyboard(trxId)
-            });
+            const d = await res.json();
+            if (d && d.ok) {
+                photoSent = true;
+                console.log(`[Telegram] Notifikasi foto order ${trxId} berhasil dikirim ke Admin.`);
+            } else {
+                console.warn(`[Telegram] Gagal kirim foto order ${trxId} (${d?.description || 'unknown'}), fallback ke text message.`);
+            }
         }
     } catch (e) {
-        console.error('Error sendManualOrderNotification', e);
+        console.error('[Telegram] Error sendManualOrderNotification (photo):', e.message);
+    }
+
+    // Always fallback to sendMessage text if photo was not sent or failed
+    if (!photoSent) {
+        queueTelegramRequest('sendMessage', {
+            chat_id: TELEGRAM_ADMIN_CHAT_ID,
+            text: message,
+            parse_mode: 'HTML',
+            reply_markup: getInlineKeyboard(trxId)
+        });
     }
 }
 

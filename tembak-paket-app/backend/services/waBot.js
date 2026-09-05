@@ -240,7 +240,10 @@ function purgeStalePeerSessions() {
 
 function cleanPhone(raw) {
     if (!raw) return "";
-    let p = String(raw).replace(/\D/g, "");
+    const str = String(raw).trim();
+    if (str.includes("@")) return ""; // Email addresses are not phone numbers
+    let p = str.replace(/\D/g, "");
+    if (!p || p.length < 8) return ""; // Require at least 8 digits for valid mobile number
     if (p.startsWith("0")) p = "62" + p.substring(1);
     else if (!p.startsWith("62")) p = "62" + p;
     return p;
@@ -821,9 +824,10 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             quoted.imageMessage?.caption ||
             ""
         );
-        const match = quotedText.match(/(?:Order ID:\s*[\`\*#]*|#)?(trx_m_\d+|trx_\d+)/i);
+        const match = quotedText.match(/Order ID:\s*[\`\*#]*([a-zA-Z0-9_\-]+)/i) ||
+                      quotedText.match(/(?:#|ID:\s*)([a-zA-Z0-9_\-]+)/i);
         if (match && match[1]) {
-            orderIdArg = match[1];
+            orderIdArg = match[1].trim();
             // If user typed '2 Sinyal On', then parts[1] was 'Sinyal' and parts.slice(1).join(' ') was 'Sinyal On'
             if (parts.length > 1 && !notesArg) {
                 notesArg = parts.slice(1).join(" ");
@@ -1011,25 +1015,11 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
     }
 
     let finalJid = targetJid;
-    // Normalize and pre-warm E2E Signal session for 1-on-1 chats to eliminate 'Menunggu pesan ini'
     if (finalJid && !finalJid.includes("@g.us") && !finalJid.includes("@lid")) {
         const rawNumber = finalJid.split("@")[0].split(":")[0];
         const clean = cleanPhone(rawNumber);
-        if (clean) {
+        if (clean && clean.length >= 8) {
             finalJid = `${clean}@s.whatsapp.net`;
-            try {
-                const onWa = await sock.onWhatsApp(finalJid);
-                if (Array.isArray(onWa) && onWa.length > 0 && onWa[0].exists && onWa[0].jid) {
-                    finalJid = onWa[0].jid;
-                }
-            } catch (e) {}
-
-            try {
-                await sock.presenceSubscribe(finalJid);
-                await sock.sendPresenceUpdate('composing', finalJid);
-                await new Promise(res => setTimeout(res, 400));
-                await sock.sendPresenceUpdate('paused', finalJid);
-            } catch (e) {}
         }
     }
 

@@ -190,7 +190,9 @@ router.get('/public/check-warranty', async (req, res) => {
             SELECT id, userId, userName, packageName, platformFee, status, createdAt, service_type, imei, admin_note, speed_option, user_image, user_image_ceir, admin_image
             FROM transactions
             WHERE imei LIKE ? AND service_type IN ('imei', 'ceir')
-            ORDER BY datetime(createdAt) DESC
+            ORDER BY 
+                (CASE WHEN status IN ('in_queue', 'processing', 'pending') THEN 0 ELSE 1 END) ASC,
+                datetime(createdAt) DESC
             LIMIT 1
         `, [`%${queryImei}%`]);
 

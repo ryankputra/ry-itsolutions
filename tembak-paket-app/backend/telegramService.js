@@ -48,11 +48,14 @@ async function processQueue() {
                 timeout: 15000
             });
             const data = await res.json();
-            if (!data.ok && data.error_code === 429) {
-                const retryAfter = (data.parameters?.retry_after || 2) * 1000;
-                console.warn(`[Telegram Queue] Rate limited (429). Retrying after ${retryAfter}ms`);
-                messageQueue.unshift(item); // Put back to front of queue
-                await new Promise(r => setTimeout(r, retryAfter));
+            if (!data.ok) {
+                console.warn(`[Telegram Queue] Telegram API response not ok: ${data.description || 'unknown'} (error_code: ${data.error_code})`);
+                if (data.error_code === 429) {
+                    const retryAfter = (data.parameters?.retry_after || 2) * 1000;
+                    console.warn(`[Telegram Queue] Rate limited (429). Retrying after ${retryAfter}ms`);
+                    messageQueue.unshift(item); // Put back to front of queue
+                    await new Promise(r => setTimeout(r, retryAfter));
+                }
             }
         } catch (err) {
             console.error('[Telegram Queue] Error sending request:', err.message);
@@ -72,21 +75,32 @@ function queueTelegramRequest(method, payload) {
 
 // --- 3. SAFE TELEGRAM NOTIFICATIONS ---
 function sendTelegramNotification(message, target = 'group') {
-    let targetChatId = TELEGRAM_GROUP_CHAT_ID || TELEGRAM_CHAT_ID || TELEGRAM_ADMIN_CHAT_ID;
-    if (target === 'admin') {
-        targetChatId = TELEGRAM_ADMIN_CHAT_ID || TELEGRAM_CHAT_ID || TELEGRAM_GROUP_CHAT_ID;
+    if (!TELEGRAM_BOT_TOKEN) return;
+
+    let targetChatId = TELEGRAM_GROUP_CHAT_ID || TELEGRAM_CHAT_ID;
+    if (target === 'admin' || !targetChatId) {
+        targetChatId = TELEGRAM_ADMIN_CHAT_ID;
     }
 
-    if (!TELEGRAM_BOT_TOKEN || !targetChatId) {
-        return;
+    // Send to primary target chat if valid
+    if (targetChatId) {
+        queueTelegramRequest('sendMessage', {
+            chat_id: targetChatId,
+            text: message,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        });
     }
 
-    queueTelegramRequest('sendMessage', {
-        chat_id: targetChatId,
-        text: message,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-    });
+    // Always ensure admin receives notifications if target was group or group failed
+    if (TELEGRAM_ADMIN_CHAT_ID && targetChatId !== TELEGRAM_ADMIN_CHAT_ID) {
+        queueTelegramRequest('sendMessage', {
+            chat_id: TELEGRAM_ADMIN_CHAT_ID,
+            text: message,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        });
+    }
 }
 
 // --- 4. TELEGRAM WEBAPP INITDATA HMAC & EXPIRATION VALIDATION ---

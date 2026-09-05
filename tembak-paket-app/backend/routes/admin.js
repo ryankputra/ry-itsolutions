@@ -39,7 +39,8 @@ const manualOrderUpload = multer({
     storage: manualOrderStorage,
     limits: { fileSize: 10 * 1024 * 1024 }
 }).fields([
-    { name: 'admin_image', maxCount: 1 }
+    { name: 'admin_image', maxCount: 1 },
+    { name: 'image', maxCount: 1 }
 ]);
 
 // 1. GET /api/admin/users
@@ -242,8 +243,10 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
             if (!existingTrx) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan" });
 
             let adminImagePath = existingTrx.admin_image;
-            if (req.files && req.files['admin_image'] && req.files['admin_image'][0]) {
-                adminImagePath = `/uploads/manual_orders/${req.files['admin_image'][0].filename}`;
+            const uploadedFile = (req.files && req.files['admin_image'] && req.files['admin_image'][0]) ||
+                                 (req.files && req.files['image'] && req.files['image'][0]);
+            if (uploadedFile) {
+                adminImagePath = `/uploads/manual_orders/${uploadedFile.filename}`;
             }
 
             const newStatus = status || existingTrx.status;

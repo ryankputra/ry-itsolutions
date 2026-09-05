@@ -1624,6 +1624,8 @@ export default function AdminPage() {
     if (hideSuccess && o.status === "success") return false;
     if (hideFailed && o.status === "failed") return false;
 
+    if (orderStatusFilter === 'in_queue' && o.status !== 'in_queue' && o.status !== 'pending') return false;
+    if (orderStatusFilter === 'processing' && o.status !== 'processing') return false;
     if (orderStatusFilter === 'pending' && o.status !== 'pending' && o.status !== 'processing' && o.status !== 'in_queue') return false;
     if (orderStatusFilter === 'success' && o.status !== 'success') return false;
     if (orderStatusFilter === 'failed' && o.status !== 'failed') return false;
@@ -2006,28 +2008,39 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                 <button
+                  type="button"
                   onClick={() => setOrderStatusFilter("all")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${orderStatusFilter === 'all' ? 'bg-ink text-white border-ink' : 'bg-canvas text-ink-muted border-hairline'}`}
                 >
                   Semua ({currentSubTabOrders.length})
                 </button>
                 <button
-                  onClick={() => setOrderStatusFilter("pending")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-700 border-hairline'}`}
+                  type="button"
+                  onClick={() => setOrderStatusFilter("in_queue")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${orderStatusFilter === 'in_queue' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas text-amber-700 border-hairline'}`}
                 >
-                  Tertunda ({currentSubTabOrders.filter(o => o.status === 'pending' || o.status === 'processing' || o.status === 'in_queue').length})
+                  Antrean ({currentSubTabOrders.filter(o => o.status === 'in_queue' || o.status === 'pending').length})
                 </button>
                 <button
+                  type="button"
+                  onClick={() => setOrderStatusFilter("processing")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${orderStatusFilter === 'processing' ? 'bg-blue-600 text-white border-blue-600' : 'bg-canvas text-blue-700 border-hairline'}`}
+                >
+                  Diproses ({currentSubTabOrders.filter(o => o.status === 'processing').length})
+                </button>
+                <button
+                  type="button"
                   onClick={() => setOrderStatusFilter("success")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'success' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-700 border-hairline'}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${orderStatusFilter === 'success' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-700 border-hairline'}`}
                 >
                   Sukses ({currentSubTabOrders.filter(o => o.status === 'success').length})
                 </button>
                 <button
+                  type="button"
                   onClick={() => setOrderStatusFilter("failed")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${orderStatusFilter === 'failed' ? 'bg-rose-600 text-white border-rose-600' : 'bg-canvas text-rose-700 border-hairline'}`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${orderStatusFilter === 'failed' ? 'bg-rose-600 text-white border-rose-600' : 'bg-canvas text-rose-700 border-hairline'}`}
                 >
                   Gagal ({currentSubTabOrders.filter(o => o.status === 'failed').length})
                 </button>
@@ -2251,16 +2264,24 @@ export default function AdminPage() {
                               const formData = new FormData();
                               formData.append("status", manualActionData?.status || "pending");
                               formData.append("admin_note", manualActionData?.note || "");
-                              if (manualActionData?.file) formData.append("image", manualActionData?.file);
+                              if (manualActionData?.file) {
+                                formData.append("admin_image", manualActionData.file);
+                                formData.append("image", manualActionData.file);
+                              }
 
                               try {
                                 const res = await fetch(`/api/admin/manual-orders/${o.id}`, { method: 'PUT', credentials: 'include', body: formData });
-                                if (res.ok) {
-                                  Swal.fire({ title: "Tersimpan!", text: "Status pesanan berhasil diperbarui.", icon: "success", timer: 1500 });
+                                const d = await res.json().catch(() => null);
+                                if (res.ok && d?.status) {
+                                  Swal.fire({ title: "Tersimpan!", text: d.message || "Status pesanan berhasil diperbarui.", icon: "success", timer: 1500 });
                                   setManualActionData(null);
                                   loadManualData();
+                                } else {
+                                  Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui status pesanan.", icon: "error" });
                                 }
-                              } catch (e) { }
+                              } catch (e: any) {
+                                Swal.fire({ title: "Error", text: e.message || "Gagal menghubungi server.", icon: "error" });
+                              }
                             }}
                           >
                             Simpan Perubahan
