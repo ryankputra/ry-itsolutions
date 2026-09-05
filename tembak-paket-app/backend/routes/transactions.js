@@ -235,6 +235,25 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'in_queue', message: 'Pembayaran terverifikasi! Pesanan masuk dalam antrean menunggu konfirmasi admin.' });
         const notifMsg = `<b>📦 Direct QRIS Paid (Manual Order)!</b>\n<b>User ID:</b> ${trx.userId}\n<b>Layanan:</b> ${trx.packageName}\n<b>IMEI:</b> <code>${trx.imei}</code>\n<b>Nominal:</b> Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n<b>Status:</b> WAITING ADMIN`;
         sendManualOrderNotification(notifMsg, trx.id, null);
+
+        // Send WhatsApp Admin & Customer Notification on QRIS payment
+        try {
+            const { notifyNewOrder, getCustomerPhoneForTransaction } = require('../services/waBot');
+            getCustomerPhoneForTransaction(trx).then(custPhone => {
+                notifyNewOrder({
+                    id: trx.id,
+                    userName: trx.userName,
+                    packageName: trx.packageName,
+                    serviceType: trx.service_type,
+                    imei: trx.imei,
+                    price: trx.platformFee || trx.originalPrice || 0,
+                    speedOption: trx.speed_option || 'slow',
+                    userImage: trx.user_image,
+                    userImageCeir: trx.user_image_ceir,
+                    customerPhone: custPhone
+                }).catch(waErr => console.error('[WABot QRIS Error]', waErr.message));
+            }).catch(() => {});
+        } catch (e) {}
     }
     return true;
 }

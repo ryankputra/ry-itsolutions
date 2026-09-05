@@ -238,6 +238,7 @@ router.get('/auth/me', async (req, res) => {
 
         const { password, ...userWithoutPassword } = user;
         if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
+        userWithoutPassword.phone = userWithoutPassword.verifiedPhone || '';
         res.status(200).json({ status: true, user: userWithoutPassword, maintenanceMode });
     } catch (error) {
         console.error("Error in /api/auth/me:", error);

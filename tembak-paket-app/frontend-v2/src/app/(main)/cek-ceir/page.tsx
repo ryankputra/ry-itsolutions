@@ -127,6 +127,11 @@ export default function CekCeirPage() {
       formData.append("imei", imei);
       formData.append("duration", ceirgoNameMapping[option] || option);
       formData.append("payment_method", activeMethod);
+    const userPhone = user?.phone || user?.verifiedPhone || "";
+    if (userPhone) {
+      formData.append("target_phone", userPhone);
+      formData.append("targetPhone", userPhone);
+    }
 
       const res = await fetch("/api/order/ceir", {
         method: "POST",

@@ -238,31 +238,38 @@ function purgeStalePeerSessions() {
     }
 }
 
-async function getCustomerPhoneForTransaction(trx) {
-    if (!trx) return null;
-    let candidate = trx.targetPhone || trx.customerPhone;
-    if (candidate && !candidate.includes('@') && cleanPhone(candidate).length >= 8) {
-        return cleanPhone(candidate);
-    }
-    if (trx.userId) {
-        try {
-            const userRow = await dbGet("SELECT verifiedPhone FROM users WHERE id = ?", [trx.userId]);
-            if (userRow) {
-                const p1 = userRow.verifiedPhone && cleanPhone(userRow.verifiedPhone);
-                if (p1 && p1.length >= 8) return p1;
-                // verifiedPhone is the standard column
-            }
-        } catch (e) {}
-    }
-    return null;
-}
-
 function cleanPhone(raw) {
     if (!raw) return "";
     let p = String(raw).replace(/\D/g, "");
     if (p.startsWith("0")) p = "62" + p.substring(1);
     else if (!p.startsWith("62")) p = "62" + p;
     return p;
+}
+
+function isValidIndonesianMobile(phone) {
+    if (!phone) return false;
+    const clean = cleanPhone(phone);
+    return /^628\d{7,11}$/.test(clean);
+}
+
+async function getCustomerPhoneForTransaction(trx) {
+    if (!trx) return null;
+    const candidate = trx.targetPhone || trx.customerPhone;
+    if (candidate && isValidIndonesianMobile(candidate)) {
+        return cleanPhone(candidate);
+    }
+    if (trx.userId) {
+        try {
+            const userRow = await dbGet("SELECT verifiedPhone FROM users WHERE id = ?", [trx.userId]);
+            if (userRow && userRow.verifiedPhone && isValidIndonesianMobile(userRow.verifiedPhone)) {
+                return cleanPhone(userRow.verifiedPhone);
+            }
+        } catch (e) {}
+    }
+    if (candidate && !candidate.includes('@') && cleanPhone(candidate).length >= 9 && cleanPhone(candidate).length <= 15 && cleanPhone(candidate) !== cleanPhone(trx.imei)) {
+        return cleanPhone(candidate);
+    }
+    return null;
 }
 
 /**
@@ -367,7 +374,7 @@ async function initWABot(forceNew = false) {
         }
         logWABot(`Baileys Library v${baileysLibVer} | MD Version: ${waVersion.join(".")}`, "info");
         applyBaileysPatches();
-        purgeStalePeerSessions();
+        // Session preservation: Do NOT purge peer sessions on startup to keep Signal ratchet keys intact
         checkAndAutoUpgradeBaileys(baileysLibVer);
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
@@ -699,6 +706,83 @@ async function requestPairingCode(phoneNumber) {
 /**
  * Command Processor for WhatsApp Admin Remote Control
  */
+/**
+ * Notify customer via WhatsApp on order status changes (processing, success, failed)
+ * Can be called from WA Bot admin commands OR from Web Admin Dashboard
+ */
+async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '') {
+    try {
+        let trx = trxOrId;
+        if (typeof trx === 'string') {
+            trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxOrId]);
+        }
+        if (!trx) {
+            console.warn(`[WABot] notifyCustomerOnStatusChange: Transaksi ${trxOrId} tidak ditemukan.`);
+            return;
+        }
+
+        const customerPhone = await getCustomerPhoneForTransaction(trx);
+        if (!customerPhone) {
+            console.log(`[WABot] Transaksi ${trx.id} tidak memiliki nomor WhatsApp pelanggan yang valid.`);
+            return;
+        }
+
+        const custJid = `${customerPhone}@s.whatsapp.net`;
+        const userName = trx.userName || "Pelanggan";
+        let custMsg = "";
+
+        if (newStatus === "processing") {
+            custMsg = `Halo Kak *${userName}*! 👋\n\n` +
+                `⚡ *Pesanan Unblock IMEI Sedang Diproses!*\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `🆔 *Order ID:* \`${trx.id}\`\n` +
+                `📱 *IMEI:* \`${trx.imei || "-"}\`\n` +
+                `📦 *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                `📝 *Status:* Sedang Dikerjakan Admin\n` +
+                (customNote ? `💬 *Catatan Admin:* ${customNote}\n` : "") +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `Tim teknis kami sedang memproses dan mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
+                `Pantau status pesanan: https://ry-itsolutions.web.id/history?tab=processing`;
+        } else if (newStatus === "success" || newStatus === "completed") {
+            custMsg = `Halo Kak *${userName}*! 👋\n\n` +
+                `🎉 *Pesanan Unblock IMEI Telah Selesai (SUCCESS)!*\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `🆔 *Order ID:* \`${trx.id}\`\n` +
+                `📱 *IMEI:* \`${trx.imei || "-"}\`\n` +
+                `📦 *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                `✅ *Status:* Selesai / Sinyal Aktif\n` +
+                (customNote ? `📝 *Catatan Admin:* ${customNote}\n` : "") +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `Silakan restart HP Anda atau lepas-pasang kartu SIM untuk mengaktifkan jaringan sinyal.\n\n` +
+                `Cetak Nota & Kartu Garansi: https://ry-itsolutions.web.id/history?tab=success\n\n` +
+                `_Terima kasih telah mempercayakan layanan kepada Ry-ITSolutions._`;
+        } else if (newStatus === "failed" || newStatus === "cancelled") {
+            custMsg = `Halo Kak *${userName}*! 👋\n\n` +
+                `⚠️ *Pemberitahuan Pesanan Unblock IMEI*\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `🆔 *Order ID:* \`${trx.id}\`\n` +
+                `📱 *IMEI:* \`${trx.imei || "-"}\`\n` +
+                `📦 *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                `❌ *Status:* Dibatalkan / Gagal\n` +
+                `📝 *Alasan:* ${customNote || "Pesanan tidak dapat diproses oleh admin."}\n` +
+                `━━━━━━━━━━━━━━━━━━\n` +
+                `Silakan cek saldo akun Anda di website atau hubungi admin jika ada pertanyaan: https://ry-itsolutions.web.id/history`;
+        } else {
+            return;
+        }
+
+        await sendAndStoreMessage(custJid, { text: custMsg });
+        logWABot(`✅ Notifikasi status '${newStatus}' pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerPhone})`, "info");
+        console.log(`[WABot] Notifikasi status '${newStatus}' berhasil dikirim ke pelanggan (${customerPhone}).`);
+    } catch (err) {
+        logWABot(`❌ Gagal kirim notifikasi status ke pelanggan: ${err.message}`, "error");
+        console.error(`[WABot] Gagal kirim notifikasi status ke pelanggan:`, err.message);
+    }
+}
+
+/**
+ * Handle Admin WhatsApp Commands
+ */
 async function handleAdminCommand(replyJid, text, rawMsg = null) {
     const parts = text.trim().split(/\s+/);
     let command = parts[0].toLowerCase();
@@ -824,27 +908,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         await replyWhatsApp(replyJid, reply);
 
         // Notify customer via WhatsApp that order has started processing
-        const customerTarget = await getCustomerPhoneForTransaction(trx);
-        if (customerTarget) {
-            const custJid = `${customerTarget}@s.whatsapp.net`;
-            const custMsg = `Halo Kak *${trx.userName || "Pelanggan"}*! 👋\n\n` +
-                `⚡ *Pesanan Unblock IMEI Sedang Diproses!*\n` +
-                `━━━━━━━━━━━━━━━━━━\n` +
-                `🆔 *Order ID:* \`${trx.id}\`\n` +
-                `📱 *IMEI:* \`${trx.imei}\`\n` +
-                `📦 *Layanan:* ${trx.packageName}\n` +
-                `📝 *Status:* Sedang Dikerjakan Admin\n` +
-                (customNote ? `💬 *Catatan Admin:* ${customNote}\n` : "") +
-                `━━━━━━━━━━━━━━━━━━\n` +
-                `Tim teknis kami sedang mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
-                `Pantau status pesanan: https://ry-itsolutions.web.id/history?tab=processing`;
-            try {
-                await sendAndStoreMessage(custJid, { text: custMsg });
-                logWABot(`✅ Notifikasi proses pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerTarget})`, "info");
-            } catch (err) {
-                logWABot(`❌ Gagal kirim notifikasi proses ke pelanggan ${customerTarget}: ${err.message}`, "error");
-            }
-        }
+        await notifyCustomerOnStatusChange(trx, 'processing', customNote);
         return;
     }
 
@@ -873,25 +937,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         await replyWhatsApp(replyJid, reply);
 
         // Notify customer if phone number is available
-        const customerTarget = await getCustomerPhoneForTransaction(trx);
-        if (customerTarget) {
-            const custJid = `${customerTarget}@s.whatsapp.net`;
-            const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
-                `✅ *Pesanan Unblock IMEI Anda Telah Selesai!*\n` +
-                `━━━━━━━━━━━━━━━━━━\n` +
-                `🆔 *Order ID:* \`${trx.id}\`\n` +
-                `📱 *IMEI:* \`${trx.imei}\`\n` +
-                `📦 *Layanan:* ${trx.packageName}\n` +
-                `📝 *Catatan Admin:* ${finalNote}\n` +
-                `━━━━━━━━━━━━━━━━━━\n` +
-                `Silakan restart perangkat HP Anda atau lepas-pasang kartu SIM. Terima kasih telah menggunakan layanan Ry-ITSolutions!`;
-            try {
-                await sendAndStoreMessage(custJid, { text: custMsg });
-                logWABot(`✅ Notifikasi selesai pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerTarget})`, "info");
-            } catch (err) {
-                logWABot(`❌ Gagal kirim notifikasi selesai ke pelanggan ${customerTarget}: ${err.message}`, "error");
-            }
-        }
+        await notifyCustomerOnStatusChange(trx, 'success', finalNote);
         return;
     }
 
@@ -932,26 +978,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             `━━━━━━━━━━━━━━━━━━`;
         await replyWhatsApp(replyJid, reply);
 
-        const customerTarget = await getCustomerPhoneForTransaction(trx);
-        if (customerTarget) {
-            const custJid = `${customerTarget}@s.whatsapp.net`;
-            const custMsg = `Halo *${trx.userName || "Kak"}*,\n\n` +
-                `⚠️ *Pemberitahuan Pesanan Unblock IMEI*\n` +
-                `━━━━━━━━━━━━━━━━━━\n` +
-                `🆔 *Order ID:* \`${trx.id}\`\n` +
-                `📱 *IMEI:* \`${trx.imei}\`\n` +
-                `❌ *Status:* Dibatalkan / Gagal\n` +
-                `📝 *Alasan:* ${failReason}\n` +
-                `💵 *Refund:* ${refundNote}\n` +
-                `━━━━━━━━━━━━━━━━━━\n` +
-                `Silakan cek saldo akun Anda atau hubungi admin jika ada pertanyaan.`;
-            try {
-                await sendAndStoreMessage(custJid, { text: custMsg });
-                logWABot(`✅ Notifikasi pembatalan pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerTarget})`, "info");
-            } catch (err) {
-                logWABot(`❌ Gagal kirim notifikasi pembatalan ke pelanggan ${customerTarget}: ${err.message}`, "error");
-            }
-        }
+        await notifyCustomerOnStatusChange(trx, 'failed', `${failReason}. ${refundNote}`);
         return;
     }
 
@@ -982,9 +1009,33 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
     if (!sock || connectionState !== "open") {
         throw new Error("WhatsApp Bot belum terhubung / open");
     }
-    const sent = await sock.sendMessage(targetJid, content, options);
+
+    let finalJid = targetJid;
+    // Normalize and pre-warm E2E Signal session for 1-on-1 chats to eliminate 'Menunggu pesan ini'
+    if (finalJid && !finalJid.includes("@g.us") && !finalJid.includes("@lid")) {
+        const rawNumber = finalJid.split("@")[0].split(":")[0];
+        const clean = cleanPhone(rawNumber);
+        if (clean) {
+            finalJid = `${clean}@s.whatsapp.net`;
+            try {
+                const onWa = await sock.onWhatsApp(finalJid);
+                if (Array.isArray(onWa) && onWa.length > 0 && onWa[0].exists && onWa[0].jid) {
+                    finalJid = onWa[0].jid;
+                }
+            } catch (e) {}
+
+            try {
+                await sock.presenceSubscribe(finalJid);
+                await sock.sendPresenceUpdate('composing', finalJid);
+                await new Promise(res => setTimeout(res, 400));
+                await sock.sendPresenceUpdate('paused', finalJid);
+            } catch (e) {}
+        }
+    }
+
+    const sent = await sock.sendMessage(finalJid, content, options);
     if (sent?.key?.id && sent?.message) {
-        await storeMessage(sent.key.id, targetJid, sent.message);
+        await storeMessage(sent.key.id, finalJid, sent.message);
     }
     return sent;
 }
@@ -1244,6 +1295,9 @@ module.exports = {
     getWAStatus,
     sendTextMessage,
     notifyNewOrder,
+    notifyCustomerOnStatusChange,
+    getCustomerPhoneForTransaction,
+    isValidIndonesianMobile,
     requestPairingCode,
     purgeStalePeerSessions
 };

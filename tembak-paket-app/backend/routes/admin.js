@@ -274,6 +274,14 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
                 sseBroadcast('transaction_status', { id: trxId, status: newStatus, message: newNote });
             }
 
+            // WhatsApp notification to customer on status change
+            if (newStatus !== existingTrx.status && (newStatus === 'processing' || newStatus === 'success' || newStatus === 'failed')) {
+                try {
+                    const { notifyCustomerOnStatusChange } = require('../services/waBot');
+                    notifyCustomerOnStatusChange(trxId, newStatus, newNote).catch(e => console.error('[WABot Admin Notif Error]', e.message));
+                } catch (e) {}
+            }
+
             res.json({ status: true, message: `Pesanan berhasil diperbarui.${refundMsg}` });
         } catch (e) {
             res.status(500).json({ status: false, message: e.message });

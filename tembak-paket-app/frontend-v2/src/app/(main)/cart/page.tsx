@@ -232,7 +232,9 @@ export default function CartPage() {
         formData.append("price_key", pkgKey);
         formData.append("speed", item.speed || "regular");
         formData.append("speed_option", item.speed || "regular");
-        formData.append("target_phone", item.targetPhone || user?.phone || "");
+        const custPhone = item.targetPhone || user?.phone || user?.verifiedPhone || "";
+      formData.append("target_phone", custPhone);
+      formData.append("targetPhone", custPhone);
 
         // Apply coupon & coins on first applicable item to prevent duplicate coupon reuse error
         if (idx === 0 && appliedCoupon) {

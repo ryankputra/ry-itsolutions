@@ -68,8 +68,9 @@ function UnblockImeiContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user?.phone && !targetPhone) {
-      setTargetPhone(user.phone);
+    const defaultPhone = user?.phone || user?.verifiedPhone;
+    if (defaultPhone && !targetPhone) {
+      setTargetPhone(defaultPhone);
     }
   }, [user, targetPhone]);
 
@@ -167,7 +168,7 @@ function UnblockImeiContent() {
       price: Number(pkg.price || 0),
       duration: pkg.duration,
       imei: imei.trim(),
-      targetPhone: targetPhone || user?.phone || "",
+      targetPhone: targetPhone || user?.phone || user?.verifiedPhone || "",
       quantity: imeiCount,
       speed: selectedSpeed || "regular",
       speedPrice: speedCost,
@@ -314,9 +315,10 @@ function UnblockImeiContent() {
       formData.append("coupon_code", appliedCoupon.code);
     }
 
-    if (targetPhone) {
-      formData.append("targetPhone", targetPhone);
-      formData.append("target_phone", targetPhone);
+    const finalPhone = targetPhone || user?.phone || user?.verifiedPhone || "";
+    if (finalPhone) {
+      formData.append("targetPhone", finalPhone);
+      formData.append("target_phone", finalPhone);
     }
 
     (files || []).forEach(f => {
