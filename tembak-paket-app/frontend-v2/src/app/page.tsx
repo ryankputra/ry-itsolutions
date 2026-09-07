@@ -141,34 +141,45 @@ export default function LandingPage() {
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Portal Layanan Sinyal & Database CEIR
+                Pusat Solusi IT, Otomasi &amp; FinTech Digital Terintegrasi
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-ink leading-[1.15]">
-                Aktivasi Sinyal HP Inter <br />
+                Solusi Teknologi &amp; Layanan Digital <br />
                 <span className="bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  All Operator & Bergaransi
+                  Cepat, Terpercaya &amp; Terintegrasi
                 </span>
               </h1>
 
               <p className="text-base sm:text-lg text-ink-muted max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
-                Layanan aktivasi sinyal seluler All Operator, pengecekan riwayat database gateway CEIR, serta cetak nota transaksi dan surat garansi digital online.
+                Pusat kebutuhan IT &amp; gadget terpadu: Mulai dari aktivasi sinyal seluler HP Inter All Operator bergaransi, integrasi Payment Gateway GoPay &amp; QRIS otomatis untuk website/bot toko, query gateway CEIR nasional, hingga sistem nota kustom digital.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                 <Link
                   href="/unblock-imei"
-                  className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-primary text-white hover:bg-primary/90 font-bold text-sm shadow-xl shadow-primary/25 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-primary text-white hover:bg-primary/90 font-bold text-sm shadow-xl shadow-primary/25 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
                   </svg>
-                  Buka Gembok IMEI
+                  Aktivasi Sinyal HP
+                </Link>
+
+                <Link
+                  href="/gateway"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-primary text-white hover:opacity-95 font-bold text-sm shadow-xl shadow-indigo-600/20 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h3.75m0 0v3.75m0-3.75l-3.75 3.75" />
+                  </svg>
+                  Payment Gateway GoPay
                 </Link>
 
                 <Link
                   href="/cek-ceir"
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-parchment hover:bg-parchment/80 border border-hairline font-bold text-sm text-ink transition-colors flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-parchment hover:bg-parchment/80 border border-hairline font-bold text-sm text-ink transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -178,14 +189,22 @@ export default function LandingPage() {
               </div>
 
               {/* Trust Badges */}
-              <div className="pt-2 flex items-center justify-center lg:justify-start gap-6 text-xs font-semibold text-ink-muted">
+              <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs font-semibold text-ink-muted">
                 <span className="flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                  Garansi Sinyal Sesuai Paket
+                  Buka Sinyal All Operator
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                  Proses Cepat & Terpantau
+                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                  Payment Gateway QRIS
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                  Gateway Database CEIR
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                  Garansi Digital Resmi
                 </span>
               </div>
             </div>
@@ -258,66 +277,188 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Services Grid (id="layanan") */}
+      {/* Services Grid (id="layanan") - 6 Universal IT Solutions Pillars */}
       <section id="layanan" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        <div className="text-center max-w-2xl mx-auto space-y-2">
-          <h2 className="text-3xl font-black text-ink tracking-tight">Layanan Utama</h2>
-          <p className="text-sm text-ink-muted">Aktivasi sinyal terstruktur dengan laporan digital dan garansi transparan.</p>
+        <div className="text-center max-w-3xl mx-auto space-y-3">
+          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider border border-primary/20">
+            Ekosistem Solusi IT Terpadu
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-ink tracking-tight">Layanan &amp; Solusi Digital Kami</h2>
+          <p className="text-sm text-ink-muted leading-relaxed">
+            Menyediakan kebutuhan solusi teknologi terpadu untuk gadget, integrasi sistem pembayaran bisnis, otomasi bot, dan basis data resmi.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1 */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-primary/40 transition-all space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center font-bold">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-              </svg>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card 1: Buka Gembok IMEI */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-primary/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink group-hover:text-primary transition-colors">Aktivasi Sinyal HP Inter</h3>
+                <p className="text-xs text-ink-muted leading-relaxed mt-1">
+                  Aktivasi sinyal seluler iPhone &amp; Android All Operator (Telkomsel, Indosat, XL, Smartfren, Tri) bergaransi dengan pilihan durasi 3 bln, 1 thn, hingga permanen.
+                </p>
+              </div>
+              <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
+                <li className="flex items-center gap-2">✓ Garansi sinyal aktif sesuai paket</li>
+                <li className="flex items-center gap-2">✓ Support semua tipe iPhone &amp; Android</li>
+                <li className="flex items-center gap-2">✓ Update progres transparan via WA</li>
+              </ul>
             </div>
-            <h3 className="text-lg font-bold text-ink">Buka Gembok IMEI</h3>
-            <p className="text-xs text-ink-muted leading-relaxed">
-              Aktivasi sinyal seluler iPhone & Android untuk semua operator (Telkomsel, Indosat, XL, Smartfren, Tri) dengan jaminan masa aktif sesuai paket yang dipilih.
-            </p>
-            <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-              <li className="flex items-center gap-2">✓ Garansi sinyal aktif</li>
-              <li className="flex items-center gap-2">✓ Dukungan iPhone & Android</li>
-              <li className="flex items-center gap-2">✓ Notifikasi progres pengerjaan</li>
-            </ul>
+            <Link
+              href="/unblock-imei"
+              className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              Lihat Paket Sinyal &gt;
+            </Link>
           </div>
 
-          {/* Card 2 */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-primary/40 transition-all space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
+          {/* Card 2: Payment Gateway GoPay & QRIS */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-blue-500/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h3.75m0 0v3.75m0-3.75l-3.75 3.75" />
+                </svg>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-lg font-bold text-ink group-hover:text-blue-600 transition-colors">Payment Gateway GoPay &amp; QRIS</h3>
+                </div>
+                <p className="text-xs text-ink-muted leading-relaxed mt-1">
+                  Solusi SaaS integrasi pembayaran otomatis 24 jam untuk website toko online, bot Telegram, atau aplikasi Android Anda via API Key &amp; Webhook instan.
+                </p>
+              </div>
+              <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
+                <li className="flex items-center gap-2">✓ Flat Rp 10.000 / bln per API Key</li>
+                <li className="flex items-center gap-2">✓ Uang langsung masuk rekening GoPay</li>
+                <li className="flex items-center gap-2">✓ Auto-check mutasi &amp; HTTP Webhook</li>
+              </ul>
             </div>
-            <h3 className="text-lg font-bold text-ink">Cek Riwayat Database CEIR</h3>
-            <p className="text-xs text-ink-muted leading-relaxed">
-              Pemeriksaan status pendaftaran IMEI pada gateway database CEIR & Bea Cukai untuk melihat data riwayat whitelist perangkat secara realtime.
-            </p>
-            <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-              <li className="flex items-center gap-2">✓ Terhubung ke server CEIR</li>
-              <li className="flex items-center gap-2">✓ Log detail riwayat query</li>
-              <li className="flex items-center gap-2">✓ Hasil cek instan & akurat</li>
-            </ul>
+            <Link
+              href="/gateway"
+              className="mt-2 text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+            >
+              Mulai Integrasi Gateway &gt;
+            </Link>
           </div>
 
-          {/* Card 3 */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-primary/40 transition-all space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-              </svg>
+          {/* Card 3: Cek Database CEIR */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-emerald-500/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink group-hover:text-emerald-600 transition-colors">Cek Database CEIR &amp; Bea Cukai</h3>
+                <p className="text-xs text-ink-muted leading-relaxed mt-1">
+                  Pemeriksaan status pendaftaran IMEI pada gateway database CEIR Kemenperin &amp; Bea Cukai untuk verifikasi data whitelist nasional secara realtime.
+                </p>
+              </div>
+              <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
+                <li className="flex items-center gap-2">✓ Terkoneksi gateway server CEIR</li>
+                <li className="flex items-center gap-2">✓ Riwayat log query lengkap &amp; akurat</li>
+                <li className="flex items-center gap-2">✓ Hasil cek instan dalam hitungan detik</li>
+              </ul>
             </div>
-            <h3 className="text-lg font-bold text-ink">Surat Garansi & Nota Toko</h3>
-            <p className="text-xs text-ink-muted leading-relaxed">
-              Cetak nota kwitansi transaksi dan surat garansi atas nama toko Anda sendiri lengkap dengan barcode dan QR Code verifikasi online.
-            </p>
-            <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-              <li className="flex items-center gap-2">✓ Cetak nota custom nama toko</li>
-              <li className="flex items-center gap-2">✓ QR verifikasi masa aktif</li>
-              <li className="flex items-center gap-2">✓ Program komisi referral</li>
-            </ul>
+            <Link
+              href="/cek-ceir"
+              className="mt-2 text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
+            >
+              Cek Status CEIR Sekarang &gt;
+            </Link>
+          </div>
+
+          {/* Card 4: Surat Garansi & Nota Toko */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-indigo-500/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink group-hover:text-indigo-600 transition-colors">Surat Garansi &amp; Nota Digital</h3>
+                <p className="text-xs text-ink-muted leading-relaxed mt-1">
+                  Cetak nota kwitansi transaksi dan surat garansi resmi atas nama toko Anda sendiri lengkap dengan QR Code verifikasi online dan barcode scanner.
+                </p>
+              </div>
+              <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
+                <li className="flex items-center gap-2">✓ Cetak nota custom nama toko Anda</li>
+                <li className="flex items-center gap-2">✓ QR verifikasi masa aktif sinyal</li>
+                <li className="flex items-center gap-2">✓ Desain profesional siap kirim ke customer</li>
+              </ul>
+            </div>
+            <Link
+              href="/cek-garansi"
+              className="mt-2 text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
+            >
+              Cek Garansi &amp; Nota &gt;
+            </Link>
+          </div>
+
+          {/* Card 5: Otomasi Bot & Notifikasi WA */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-emerald-500/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink group-hover:text-emerald-600 transition-colors">Otomasi WhatsApp &amp; Bot Order</h3>
+                <p className="text-xs text-ink-muted leading-relaxed mt-1">
+                  Sistem pengiriman bukti transaksi, nota digital otomatis, update status antrean, dan notifikasi pesanan ke WhatsApp &amp; Telegram pelanggan secara realtime.
+                </p>
+              </div>
+              <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
+                <li className="flex items-center gap-2">✓ Integrasi WhatsApp Baileys 24/7</li>
+                <li className="flex items-center gap-2">✓ Bot Telegram antrean admin</li>
+                <li className="flex items-center gap-2">✓ Notifikasi instan pembayaran sukses</li>
+              </ul>
+            </div>
+            <Link
+              href="/dashboard"
+              className="mt-2 text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
+            >
+              Lihat Sistem Otomasi &gt;
+            </Link>
+          </div>
+
+          {/* Card 6: Kemitraan Reseller & Kuota */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-amber-500/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.199l-.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink group-hover:text-amber-600 transition-colors">Program Kemitraan Reseller</h3>
+                <p className="text-xs text-ink-muted leading-relaxed mt-1">
+                  Daftar akun gratis dan nikmati harga spesial reseller, komisi referral otomatis, saldo dompet fleksibel, serta akses prioritas untuk semua layanan digital.
+                </p>
+              </div>
+              <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
+                <li className="flex items-center gap-2">✓ Margin keuntungan tinggi untuk mitra</li>
+                <li className="flex items-center gap-2">✓ Komisi referral cair ke saldo</li>
+                <li className="flex items-center gap-2">✓ Top up saldo otomatis QRIS 24 jam</li>
+              </ul>
+            </div>
+            <Link
+              href="/referral"
+              className="mt-2 text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            >
+              Gabung Reseller Sekarang &gt;
+            </Link>
           </div>
         </div>
       </section>

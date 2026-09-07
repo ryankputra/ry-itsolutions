@@ -175,6 +175,10 @@ async function initializeDatabase() {
                 FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
             )`);
 
+            try {
+                await dbRun("ALTER TABLE merchant_gateway_keys ADD COLUMN lastReminderSentAt TEXT");
+            } catch (e) {}
+
             await dbRun(`CREATE TABLE IF NOT EXISTS merchant_gateway_logs (
                 id TEXT PRIMARY KEY,
                 keyId TEXT NOT NULL,

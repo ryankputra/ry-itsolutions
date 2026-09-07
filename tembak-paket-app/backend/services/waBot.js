@@ -1414,5 +1414,6 @@ module.exports = {
     getCustomerPhoneForTransaction,
     isValidIndonesianMobile,
     requestPairingCode,
-    purgeStalePeerSessions
+    purgeStalePeerSessions,
+    getAdminPhoneNumbers
 };

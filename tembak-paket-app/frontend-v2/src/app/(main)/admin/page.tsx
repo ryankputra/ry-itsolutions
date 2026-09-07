@@ -29,6 +29,14 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchUser, setSearchUser] = useState("");
+
+  // Payment Gateway SaaS Subscription State
+  const [adminGatewayKeys, setAdminGatewayKeys] = useState<any[]>([]);
+  const [loadingGatewayKeys, setLoadingGatewayKeys] = useState(false);
+  const [gatewayKeyFilter, setGatewayKeyFilter] = useState("all");
+  const [gatewayKeySearch, setGatewayKeySearch] = useState("");
+  const [revealedAdminKeys, setRevealedAdminKeys] = useState<{ [id: number]: boolean }>({});
+  const [actionLoadingKeyId, setActionLoadingKeyId] = useState<number | null>(null);
   const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [balAmount, setBalAmount] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -891,6 +899,140 @@ export default function AdminPage() {
     }
   };
 
+  // Load Admin Gateway Keys
+  const loadGatewayKeys = async () => {
+    setLoadingGatewayKeys(true);
+    try {
+      const res = await fetch('/api/admin/gateway-keys', { credentials: 'include' });
+      const d = await safeJson(res);
+      if (d?.status && Array.isArray(d.data)) {
+        setAdminGatewayKeys(d.data);
+      } else {
+        setAdminGatewayKeys([]);
+      }
+    } catch (e) {
+      console.error('Failed to load gateway keys:', e);
+      setAdminGatewayKeys([]);
+    } finally {
+      setLoadingGatewayKeys(false);
+    }
+  };
+
+  const handleRenewGatewayKey = async (keyItem: any) => {
+    const { value: days } = await Swal.fire({
+      title: 'Perpanjang Masa Aktif',
+      html: `<div class="text-xs text-left space-y-2">
+        <p>Perpanjang lisensi API Key <b>${keyItem.name || 'Merchant'}</b> milik <b>@${keyItem.username}</b>.</p>
+        <p class="text-ink-muted">Masa aktif saat ini: ${keyItem.expiresAt ? new Date(keyItem.expiresAt).toLocaleDateString('id-ID') : '-'}</p>
+      </div>`,
+      input: 'number',
+      inputLabel: 'Jumlah Hari Tambahan',
+      inputValue: 30,
+      showCancelButton: true,
+      confirmButtonText: 'Perpanjang Sekarang',
+      cancelButtonText: 'Batal',
+      inputValidator: (value) => {
+        if (!value || parseInt(value) <= 0) {
+          return 'Masukkan jumlah hari yang valid (minimal 1 hari)';
+        }
+      }
+    });
+
+    if (!days) return;
+
+    setActionLoadingKeyId(keyItem.id);
+    try {
+      const res = await fetch(`/api/admin/gateway-keys/${keyItem.id}/renew`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ days: parseInt(days) })
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire('Berhasil', d.message || 'Masa aktif berhasil diperpanjang', 'success');
+        loadGatewayKeys();
+      } else {
+        Swal.fire('Gagal', d?.message || 'Gagal memperpanjang masa aktif', 'error');
+      }
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'Terjadi kesalahan sistem', 'error');
+    } finally {
+      setActionLoadingKeyId(null);
+    }
+  };
+
+  const handleToggleGatewayKey = async (keyItem: any) => {
+    const confirm = await Swal.fire({
+      title: keyItem.isActive ? 'Nonaktifkan API Key?' : 'Aktifkan API Key?',
+      text: `Apakah Anda yakin ingin ${keyItem.isActive ? 'menonaktifkan' : 'mengaktifkan kembali'} API Key ini?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: keyItem.isActive ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    setActionLoadingKeyId(keyItem.id);
+    try {
+      const res = await fetch(`/api/admin/gateway-keys/${keyItem.id}/toggle`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire('Berhasil', d.message, 'success');
+        loadGatewayKeys();
+      } else {
+        Swal.fire('Gagal', d?.message || 'Gagal mengubah status key', 'error');
+      }
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'Terjadi kesalahan sistem', 'error');
+    } finally {
+      setActionLoadingKeyId(null);
+    }
+  };
+
+  const handleSendWaReminder = async (keyItem: any) => {
+    const phone = keyItem.phone || keyItem.verifiedPhone;
+    if (!phone) {
+      return Swal.fire('Perhatian', 'Pengguna ini belum mendaftarkan nomor WhatsApp.', 'warning');
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Kirim Pengingat WhatsApp',
+      html: `<div class="text-xs text-left space-y-1">
+        <p>Kirim notifikasi pengingat masa aktif ke WhatsApp pelanggan <b>${phone}</b> (@${keyItem.username})?</p>
+      </div>`,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Kirim Notifikasi WA',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    setActionLoadingKeyId(keyItem.id);
+    try {
+      const res = await fetch(`/api/admin/gateway-keys/${keyItem.id}/remind-wa`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire('Terkirim!', d.message || 'Pengingat WhatsApp berhasil dikirim', 'success');
+        loadGatewayKeys();
+      } else {
+        Swal.fire('Gagal', d?.message || 'Gagal mengirim pesan WhatsApp', 'error');
+      }
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'Terjadi kesalahan jaringan', 'error');
+    } finally {
+      setActionLoadingKeyId(null);
+    }
+  };
+
   const loadUsers = async () => {
     setLoadingUsers(true);
     try {
@@ -1019,11 +1161,15 @@ export default function AdminPage() {
     if (user?.role === 'admin') {
       if (activeTab === "paket") loadPackages();
       if (activeTab === "pengguna") loadUsers();
-      if (activeTab === "pesanan-manual" || activeTab === "layanan-imei") loadManualData();
+      if (activeTab === "pesanan-manual" || activeTab === "layanan-imei") {
+        loadManualData();
+        loadGatewayKeys();
+      }
       if (activeTab === "tiket-bantuan") loadAdminTickets();
       if (activeTab === "kupon-promo") loadCoupons();
       if (activeTab === "referral") loadRefSettings();
       if (activeTab === "ulasan-dummy") loadAdminReviews();
+      if (activeTab === "gateway-saas") loadGatewayKeys();
       if (activeTab === "pengaturan") {
         loadBaileysStatus();
       }
@@ -1685,6 +1831,15 @@ export default function AdminPage() {
       name: "Sistem & Server",
       description: "Gateway, Database, & Server",
       tabs: [
+        { id: "gateway-saas", label: "Langganan Gateway GoPay", badge: adminGatewayKeys.filter(k => {
+            if (!k.isActive || !k.expiresAt) return false;
+            const diff = Math.ceil((new Date(k.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            return diff >= 0 && diff <= 3;
+          }).length > 0 ? adminGatewayKeys.filter(k => {
+            if (!k.isActive || !k.expiresAt) return false;
+            const diff = Math.ceil((new Date(k.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            return diff >= 0 && diff <= 3;
+          }).length : null, badgeColor: "bg-amber-500" },
         { id: "pengaturan", label: "Pengaturan & Gateway", badge: null },
       ]
     }
@@ -4702,6 +4857,353 @@ export default function AdminPage() {
             </Card>
           </div>
 
+        </div>
+      )}
+
+      {/* TAB: GATEWAY SAAS SUBSCRIPTION MONITOR */}
+      {activeTab === 'gateway-saas' && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="bg-canvas p-6 rounded-3xl border border-hairline shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-600 rounded-full border border-blue-500/20">
+                  FinTech & SaaS Monitor
+                </span>
+                <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 rounded-full border border-emerald-500/20">
+                  Unofficial GoPay QRIS
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-ink">Manajemen Langganan Payment Gateway</h2>
+              <p className="text-xs text-ink-muted mt-1 max-w-2xl">
+                Pantau seluruh API Key merchant terdaftar, masa aktif lisensi, integrasi GoBiz, serta kirim notifikasi pengingat WhatsApp secara manual atau otomatis.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs bg-canvas"
+                onClick={loadGatewayKeys}
+                isLoading={loadingGatewayKeys}
+              >
+                <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Segarkan Data
+              </Button>
+            </div>
+          </div>
+
+          {/* Stat Cards */}
+          {(() => {
+            const now = Date.now();
+            const totalKeys = adminGatewayKeys.length;
+            const activeKeys = adminGatewayKeys.filter(k => k.isActive && (!k.expiresAt || new Date(k.expiresAt).getTime() > now)).length;
+            const expiringSoonKeys = adminGatewayKeys.filter(k => {
+              if (!k.isActive || !k.expiresAt) return false;
+              const diff = Math.ceil((new Date(k.expiresAt).getTime() - now) / (1000 * 60 * 60 * 24));
+              return diff >= 0 && diff <= 3;
+            }).length;
+            const expiredKeys = adminGatewayKeys.filter(k => k.expiresAt && new Date(k.expiresAt).getTime() <= now).length;
+            const totalRevenue = adminGatewayKeys.reduce((acc, k) => acc + (Number(k.amountPaid) || 0), 0);
+
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="p-4 rounded-2xl bg-canvas border border-hairline shadow-xs">
+                  <div className="flex items-center justify-between text-ink-muted mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Total Lisensi</span>
+                    <span className="text-blue-500">🔑</span>
+                  </div>
+                  <p className="text-2xl font-black text-ink">{totalKeys}</p>
+                  <p className="text-[11px] text-ink-muted mt-0.5">Semua API Key terdaftar</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-canvas border border-hairline shadow-xs">
+                  <div className="flex items-center justify-between text-ink-muted mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Aktif Digunakan</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  </div>
+                  <p className="text-2xl font-black text-emerald-600">{activeKeys}</p>
+                  <p className="text-[11px] text-ink-muted mt-0.5">Status aktif & masa aktif valid</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-canvas border border-hairline shadow-xs">
+                  <div className="flex items-center justify-between text-ink-muted mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Segera Expired (&le;3 Hari)</span>
+                    <span className="text-amber-500">⏳</span>
+                  </div>
+                  <p className="text-2xl font-black text-amber-600">{expiringSoonKeys}</p>
+                  <p className="text-[11px] text-ink-muted mt-0.5">{expiredKeys} lisensi telah kedaluwarsa</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-canvas border border-hairline shadow-xs">
+                  <div className="flex items-center justify-between text-ink-muted mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Estimasi Omset</span>
+                    <span className="text-emerald-500">💰</span>
+                  </div>
+                  <p className="text-2xl font-black text-primary">Rp {totalRevenue.toLocaleString('id-ID')}</p>
+                  <p className="text-[11px] text-ink-muted mt-0.5">Dari biaya langganan API</p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Filter & Search Bar */}
+          <div className="bg-canvas p-4 rounded-2xl border border-hairline shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+              {[
+                { id: 'all', label: 'Semua Lisensi' },
+                { id: 'active', label: 'Aktif' },
+                { id: 'expiring', label: 'Segera Habis (<=3 Hari)' },
+                { id: 'expired', label: 'Kedaluwarsa' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setGatewayKeyFilter(tab.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    gatewayKeyFilter === tab.id
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'bg-parchment/60 text-ink-muted hover:text-ink hover:bg-parchment'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-full sm:w-64">
+              <Input
+                placeholder="Cari user, label, atau prefix..."
+                value={gatewayKeySearch}
+                onChange={e => setGatewayKeySearch(e.target.value)}
+                className="text-xs h-9"
+              />
+            </div>
+          </div>
+
+          {/* Keys Table */}
+          <Card className="p-0 overflow-hidden border-hairline shadow-xs">
+            {loadingGatewayKeys ? (
+              <div className="p-12 text-center">
+                <div className="w-7 h-7 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-xs text-ink-muted font-semibold">Memuat data langganan gateway...</p>
+              </div>
+            ) : adminGatewayKeys.length === 0 ? (
+              <div className="p-12 text-center text-ink-muted space-y-2">
+                <p className="text-sm font-bold">Belum Ada Pengguna Berlangganan API Key</p>
+                <p className="text-xs">Ketika pengguna meng-order API Key dari menu Gateway, data langganan akan muncul otomatis di sini.</p>
+              </div>
+            ) : (() => {
+              const now = Date.now();
+              const filtered = adminGatewayKeys.filter(k => {
+                // Search filter
+                const s = gatewayKeySearch.toLowerCase();
+                const matchSearch = !s || (
+                  (k.username && k.username.toLowerCase().includes(s)) ||
+                  (k.name && k.name.toLowerCase().includes(s)) ||
+                  (k.apiKeyPrefix && k.apiKeyPrefix.toLowerCase().includes(s)) ||
+                  (k.phone && k.phone.includes(s))
+                );
+                if (!matchSearch) return false;
+
+                // Status filter
+                if (gatewayKeyFilter === 'active') {
+                  return k.isActive && (!k.expiresAt || new Date(k.expiresAt).getTime() > now);
+                }
+                if (gatewayKeyFilter === 'expiring') {
+                  if (!k.isActive || !k.expiresAt) return false;
+                  const diff = Math.ceil((new Date(k.expiresAt).getTime() - now) / (1000 * 60 * 60 * 24));
+                  return diff >= 0 && diff <= 3;
+                }
+                if (gatewayKeyFilter === 'expired') {
+                  return k.expiresAt && new Date(k.expiresAt).getTime() <= now;
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="p-8 text-center text-ink-muted text-xs font-semibold">
+                    Tidak ada lisensi yang sesuai dengan kriteria pencarian / filter.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-parchment/60 border-b border-hairline text-[11px] font-bold text-ink-muted uppercase">
+                      <tr>
+                        <th className="p-3.5">Pelanggan</th>
+                        <th className="p-3.5">Label & API Key</th>
+                        <th className="p-3.5">Status GoBiz</th>
+                        <th className="p-3.5">Masa Aktif</th>
+                        <th className="p-3.5">Status Saklar</th>
+                        <th className="p-3.5 text-right">Aksi Administrator</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-hairline">
+                      {filtered.map(k => {
+                        const isRevealed = revealedAdminKeys[k.id] || false;
+                        const displayKey = isRevealed ? k.apiKey : (k.apiKeyPrefix ? `${k.apiKeyPrefix}••••••••` : '••••••••••••••••');
+                        const phone = k.phone || k.verifiedPhone;
+                        const expiryDate = k.expiresAt ? new Date(k.expiresAt) : null;
+                        const daysLeft = expiryDate ? Math.ceil((expiryDate.getTime() - now) / (1000 * 60 * 60 * 24)) : null;
+                        const isExpired = daysLeft !== null && daysLeft <= 0;
+                        const isExpiringSoon = daysLeft !== null && daysLeft > 0 && daysLeft <= 3;
+                        const isActionLoading = actionLoadingKeyId === k.id;
+
+                        return (
+                          <tr key={k.id} className="hover:bg-parchment/30 transition-colors">
+                            {/* Pelanggan */}
+                            <td className="p-3.5 align-top">
+                              <div className="font-bold text-ink flex items-center gap-1.5">
+                                <span>@{k.username || 'user'}</span>
+                                {k.role === 'admin' && (
+                                  <span className="px-1.5 py-0.2 text-[9px] bg-primary/10 text-primary font-black rounded">ADMIN</span>
+                                )}
+                              </div>
+                              {k.name && k.name !== k.username && (
+                                <p className="text-[11px] text-ink-muted">{k.name}</p>
+                              )}
+                              {phone ? (
+                                <a
+                                  href={`https://wa.me/${phone.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] text-emerald-600 hover:text-emerald-700 font-semibold mt-1"
+                                >
+                                  <span>🟢 {phone}</span>
+                                </a>
+                              ) : (
+                                <span className="text-[10px] text-ink-muted">No WA: -</span>
+                              )}
+                            </td>
+
+                            {/* Label & API Key */}
+                            <td className="p-3.5 align-top">
+                              <div className="font-bold text-ink">{k.name || 'Merchant'}</div>
+                              <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] text-ink-muted bg-parchment px-2 py-1 rounded-lg border border-hairline w-fit">
+                                <span>{displayKey}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setRevealedAdminKeys({ ...revealedAdminKeys, [k.id]: !isRevealed })}
+                                  className="text-[9px] text-primary hover:underline ml-1 font-sans font-bold"
+                                >
+                                  {isRevealed ? 'Tutup' : 'Lihat'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(k.apiKey);
+                                    Swal.fire({ title: 'Tersalin!', text: 'API Key berhasil disalin ke clipboard', icon: 'success', timer: 1500, showConfirmButton: false });
+                                  }}
+                                  className="text-[9px] text-ink-muted hover:text-ink font-sans ml-0.5"
+                                  title="Salin API Key"
+                                >
+                                  📋
+                                </button>
+                              </div>
+                            </td>
+
+                            {/* GoBiz Status */}
+                            <td className="p-3.5 align-top">
+                              {k.gobizOutletId || k.gobizSession ? (
+                                <div className="space-y-0.5">
+                                  <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 text-[10px] font-bold inline-flex items-center gap-1 border border-blue-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    GoBiz Terhubung
+                                  </span>
+                                  {k.gobizOutletId && (
+                                    <p className="text-[10px] text-ink-muted font-mono">Outlet: {k.gobizOutletId}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-md bg-slate-500/10 text-slate-500 text-[10px] font-semibold inline-flex items-center gap-1 border border-slate-500/20">
+                                  Belum Ditautkan
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Masa Aktif */}
+                            <td className="p-3.5 align-top">
+                              {expiryDate ? (
+                                <div className="space-y-1">
+                                  <div className="text-ink font-semibold text-[11px]">
+                                    {expiryDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </div>
+                                  {isExpired ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 text-[10px] font-bold border border-rose-500/20 inline-block">
+                                      Kedaluwarsa ({Math.abs(daysLeft || 0)} hari lalu)
+                                    </span>
+                                  ) : isExpiringSoon ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 text-[10px] font-black border border-amber-500/30 inline-flex items-center gap-1 animate-pulse">
+                                      <span>⚠️ Sisa {daysLeft} Hari Lagi</span>
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold border border-emerald-500/20 inline-flex items-center gap-1">
+                                      <span>Aktif ({daysLeft} Hari)</span>
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-ink-muted text-[11px] font-medium">-</span>
+                              )}
+                            </td>
+
+                            {/* Status Saklar */}
+                            <td className="p-3.5 align-top">
+                              <button
+                                onClick={() => handleToggleGatewayKey(k)}
+                                disabled={isActionLoading}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-black border transition-all ${
+                                  k.isActive
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                    : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
+                                }`}
+                              >
+                                {k.isActive ? '● Aktif' : '○ Nonaktif'}
+                              </button>
+                            </td>
+
+                            {/* Aksi */}
+                            <td className="p-3.5 align-top text-right">
+                              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                {phone && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-[10px] h-7 px-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                    onClick={() => handleSendWaReminder(k)}
+                                    disabled={isActionLoading}
+                                    title="Kirim Pesan Pengingat Masa Aktif ke WhatsApp"
+                                  >
+                                    💬 Kirim WA
+                                  </Button>
+                                )}
+
+                                <Button
+                                  size="sm"
+                                  className="text-[10px] h-7 px-2.5 bg-primary hover:bg-primary-hover text-white font-bold"
+                                  onClick={() => handleRenewGatewayKey(k)}
+                                  disabled={isActionLoading}
+                                  title="Perpanjang Masa Aktif Lisensi"
+                                >
+                                  + Perpanjang
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </Card>
         </div>
       )}
 

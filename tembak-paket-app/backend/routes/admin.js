@@ -1533,4 +1533,162 @@ router.post('/admin/gopay/logout', isAuthenticated, isAdmin, async (req, res) =>
     });
 });
 
+
+// ==============================================================================
+// PAYMENT GATEWAY SAAS SUBSCRIPTION MANAGEMENT FOR ADMIN
+// ==============================================================================
+
+/**
+ * GET /api/admin/gateway-keys
+ * Fetch all customer gateway keys, metrics, and user profiles
+ */
+router.get('/admin/gateway-keys', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const keys = await dbAll(`
+            SELECT k.*, 
+                   u.username, u.name, u.phone, u.verifiedPhone, u.balance, u.email
+            FROM merchant_gateway_keys k
+            LEFT JOIN users u ON k.userId = u.id
+            ORDER BY k.createdAt DESC
+        `);
+
+        const now = Date.now();
+        const totalKeys = keys.length;
+        const activeKeys = keys.filter(k => k.status === 'active' && new Date(k.expiresAt).getTime() > now).length;
+        const expiringSoonKeys = keys.filter(k => {
+            const diff = new Date(k.expiresAt).getTime() - now;
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            return k.status === 'active' && days >= 0 && days <= 3;
+        }).length;
+        const expiredKeys = keys.filter(k => k.status === 'expired' || new Date(k.expiresAt).getTime() <= now).length;
+        const totalRevenue = totalKeys * 10000;
+
+        // Augment each key with calculated daysRemaining
+        const augmented = keys.map(k => {
+            const diff = new Date(k.expiresAt).getTime() - now;
+            const daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            return {
+                ...k,
+                daysRemaining: daysRemaining < 0 ? 0 : daysRemaining,
+                isExpired: new Date(k.expiresAt).getTime() <= now || k.status === 'expired',
+                isExpiringSoon: daysRemaining >= 0 && daysRemaining <= 3 && k.status === 'active'
+            };
+        });
+
+        res.json({
+            status: true,
+            data: augmented,
+            metrics: {
+                totalKeys,
+                activeKeys,
+                expiringSoonKeys,
+                expiredKeys,
+                totalRevenue
+            }
+        });
+    } catch (error) {
+        console.error('[Admin Gateway Error]', error);
+        res.status(500).json({ status: false, message: error.message });
+    }
+});
+
+/**
+ * POST /api/admin/gateway-keys/:id/renew
+ * Admin manual extension (+30 days) for customer support / promo
+ */
+router.post('/admin/gateway-keys/:id/renew', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const keyId = req.params.id;
+        const key = await dbGet("SELECT * FROM merchant_gateway_keys WHERE id = ?", [keyId]);
+        if (!key) return res.status(404).json({ status: false, message: "Key tidak ditemukan" });
+
+        const now = Date.now();
+        const curExp = new Date(key.expiresAt).getTime();
+        const base = curExp > now ? curExp : now;
+        const newExpiresAt = new Date(base + 30 * 24 * 60 * 60 * 1000);
+
+        await dbRun("UPDATE merchant_gateway_keys SET expiresAt = ?, status = 'active' WHERE id = ?", [
+            newExpiresAt.toISOString(),
+            keyId
+        ]);
+
+        res.json({
+            status: true,
+            message: `Masa aktif key '${key.name}' berhasil diperpanjang 30 hari secara manual oleh admin!`,
+            newExpiresAt: newExpiresAt.toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ status: false, message: error.message });
+    }
+});
+
+/**
+ * POST /api/admin/gateway-keys/:id/toggle
+ * Toggle active / suspended
+ */
+router.post('/admin/gateway-keys/:id/toggle', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const keyId = req.params.id;
+        const key = await dbGet("SELECT * FROM merchant_gateway_keys WHERE id = ?", [keyId]);
+        if (!key) return res.status(404).json({ status: false, message: "Key tidak ditemukan" });
+
+        const nextStatus = key.status === 'active' ? 'suspended' : 'active';
+        await dbRun("UPDATE merchant_gateway_keys SET status = ? WHERE id = ?", [nextStatus, keyId]);
+
+        res.json({
+            status: true,
+            message: `Status key '${key.name}' diubah menjadi '${nextStatus}'.`,
+            statusValue: nextStatus
+        });
+    } catch (error) {
+        res.status(500).json({ status: false, message: error.message });
+    }
+});
+
+/**
+ * POST /api/admin/gateway-keys/:id/remind-wa
+ * Admin triggers instant WhatsApp renewal reminder to the user
+ */
+router.post('/admin/gateway-keys/:id/remind-wa', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const keyId = req.params.id;
+        const key = await dbGet(`
+            SELECT k.*, u.username, u.name, u.phone, u.verifiedPhone
+            FROM merchant_gateway_keys k
+            LEFT JOIN users u ON k.userId = u.id
+            WHERE k.id = ?
+        `, [keyId]);
+
+        if (!key) return res.status(404).json({ status: false, message: "Key tidak ditemukan" });
+
+        const targetPhone = key.phone || key.verifiedPhone;
+        if (!targetPhone) {
+            return res.status(400).json({ status: false, message: "Pengguna tidak memiliki nomor WhatsApp tersimpan." });
+        }
+
+        const now = Date.now();
+        const diff = new Date(key.expiresAt).getTime() - now;
+        const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        const expDateFormatted = new Date(key.expiresAt).toLocaleDateString('id-ID', { dateStyle: 'long' });
+
+        const waBot = require('../services/waBot');
+        const reminderMsg = `⚠️ *PENGINGAT MASA AKTIF PAYMENT GATEWAY GOPAY* ⚡\n\n` +
+            `Halo Kak *${key.username || key.name}*! 👋\n\n` +
+            `Masa aktif API Key Payment Gateway Anda (*${key.name}*) tersisa *${daysLeft > 0 ? daysLeft + ' hari lagi' : 'sudah berakhir'}* (pada ${expDateFormatted}).\n\n` +
+            `💰 Biaya perpanjangan: *Rp 10.000 / 30 hari*\n\n` +
+            `Segera lakukan perpanjangan di dashboard agar sistem pembayaran QRIS toko / bot Anda tetap online:\n` +
+            `👉 https://ry-itsolutionts.web.id/gateway\n\n` +
+            `Salam,\n*Tim Ry-ITSolutions*`;
+
+        const sent = await waBot.sendTextMessage(targetPhone, reminderMsg);
+        res.json({
+            status: true,
+            message: `Pesan pengingat WhatsApp berhasil dikirim ke ${targetPhone}!`,
+            waResult: sent
+        });
+    } catch (error) {
+        res.status(500).json({ status: false, message: error.message });
+    }
+});
+
 module.exports = router;

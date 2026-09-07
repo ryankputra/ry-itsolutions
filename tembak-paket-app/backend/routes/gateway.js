@@ -156,8 +156,15 @@ router.post('/gateway/keys', isAuthenticated, async (req, res) => {
             webhookUrl ? String(webhookUrl).trim() : null
         ]);
 
-        const updatedUser = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+        const updatedUser = await dbGet("SELECT balance, username, name, phone, verifiedPhone FROM users WHERE id = ?", [userId]);
         sseSend(userId, 'balance_update', { balance: updatedUser.balance, source: 'gateway_subscription' });
+
+        // Trigger multi-channel notifications (WA Admin, Telegram Admin, WA User)
+        notifyGatewaySubscription(updatedUser, {
+            name: trimmedName,
+            apiKey,
+            expiresAt: expiresAt.toISOString()
+        }, false).catch(err => console.error('[Gateway Notify Error]', err));
 
         res.json({
             status: true,
@@ -231,8 +238,15 @@ router.post('/gateway/keys/:id/renew', isAuthenticated, async (req, res) => {
             keyId
         ]);
 
-        const updatedUser = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+        const updatedUser = await dbGet("SELECT balance, username, name, phone, verifiedPhone FROM users WHERE id = ?", [userId]);
         sseSend(userId, 'balance_update', { balance: updatedUser.balance, source: 'gateway_renewal' });
+
+        // Trigger multi-channel notifications (WA Admin, Telegram Admin, WA User)
+        notifyGatewaySubscription(updatedUser, {
+            name: key.name,
+            apiKey: key.apiKey,
+            expiresAt: newExpiresAt.toISOString()
+        }, true).catch(err => console.error('[Gateway Notify Error]', err));
 
         res.json({
             status: true,

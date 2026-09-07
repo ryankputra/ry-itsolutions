@@ -529,6 +529,34 @@ export default function GatewayDeveloperPage() {
             </button>
           </div>
 
+          {/* In-App Expiration Alert Banner */}
+          {keys.some(k => k.status === 'active' && k.daysRemaining <= 3) && (
+            <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 text-xl font-bold">
+                  ⏳
+                </div>
+                <div>
+                  <h3 className="font-black text-xs sm:text-sm text-amber-900 dark:text-amber-200">
+                    Pemberitahuan: Masa Aktif API Key Segera Berakhir!
+                  </h3>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
+                    Ada API Key aktif yang tersisa &le; 3 hari lagi. Segera perpanjang agar transaksi QRIS otomatis di website Anda tidak terhenti.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const expiringKey = keys.find(k => k.status === 'active' && k.daysRemaining <= 3);
+                  if (expiringKey) handleOpenRenewModal(expiringKey);
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-xs transition-transform hover:scale-105"
+              >
+                ⚡ Perpanjang Sekarang
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="p-12 text-center bg-canvas border border-hairline rounded-3xl animate-pulse">
               <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
@@ -577,10 +605,17 @@ export default function GatewayDeveloperPage() {
 
                       <div className="flex items-center gap-2">
                         {k.status === "active" ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase flex items-center gap-1 border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Aktif ({k.daysRemaining} Hari Lagi)
-                          </span>
+                          k.daysRemaining <= 3 ? (
+                            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 text-[10px] font-black uppercase flex items-center gap-1 border border-amber-500/40 animate-pulse">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                              Sisa {k.daysRemaining} Hari Lagi (Segera Habis)
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase flex items-center gap-1 border border-emerald-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                              Aktif ({k.daysRemaining} Hari Lagi)
+                            </span>
+                          )
                         ) : (
                           <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-600 text-[10px] font-black uppercase flex items-center gap-1 border border-red-500/20">
                             Kedaluwarsa
