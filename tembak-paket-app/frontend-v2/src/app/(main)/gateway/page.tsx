@@ -405,7 +405,15 @@ export default function GatewayDeveloperPage() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6 pb-28">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 border border-blue-500/20 p-6 sm:p-8 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl border border-blue-500/30 p-6 sm:p-8 text-white shadow-xl">
+        {/* Real Commercial Photography Background */}
+        <img
+          src="/banners/banner_gopay.jpg"
+          alt="GoPay Merchant Banner"
+          className="absolute inset-0 w-full h-full object-cover object-right opacity-30"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-blue-950/60" />
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-wider">

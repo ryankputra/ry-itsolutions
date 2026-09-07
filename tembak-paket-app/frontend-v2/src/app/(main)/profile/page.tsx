@@ -273,25 +273,33 @@ export default function ProfilePage() {
         {/* ============================================================ */}
         <div
           onClick={() => router.push("/gateway")}
-          className="mt-2.5 p-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 text-white flex items-center justify-between cursor-pointer hover:opacity-95 transition-all shadow-md group"
+          className="relative overflow-hidden mt-2.5 p-3 rounded-2xl border border-white/20 text-white flex items-center justify-between cursor-pointer hover:opacity-95 transition-all shadow-md group"
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-slate-950 text-amber-300 flex items-center justify-center font-black shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+          <img
+            src="/banners/banner_gopay.jpg"
+            alt="Payment Gateway GoPay"
+            className="absolute inset-0 w-full h-full object-cover object-right group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-blue-950/40" />
+
+          <div className="relative z-10 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-sm group-hover:scale-105 transition-transform">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h3.75m0 0v3.75m0-3.75l-3.75 3.75" />
               </svg>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-black text-xs text-white">Payment Gateway GoPay &amp; QRIS (Unofficial)</h4>
-                <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider">
+                <h4 className="font-black text-xs text-white drop-shadow">Payment Gateway GoPay &amp; QRIS (Unofficial)</h4>
+                <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider shadow-xs">
                   Rp 10rb/bln
                 </span>
               </div>
-              <p className="text-[10px] text-teal-100 font-medium">Terima pembayaran otomatis di web / bot toko Anda sendiri</p>
+              <p className="text-[10px] text-slate-200 font-medium drop-shadow-sm">Terima pembayaran otomatis di web / bot toko Anda sendiri</p>
             </div>
           </div>
-          <span className="px-2.5 py-1 rounded-lg bg-white/20 text-white font-bold text-[10px] uppercase tracking-wider shrink-0 border border-white/20 group-hover:bg-white/30 transition-colors">
+          <span className="relative z-10 px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-xs text-white font-bold text-[10px] uppercase tracking-wider shrink-0 border border-white/25 group-hover:bg-white/30 transition-colors shadow-sm">
             Buka &gt;
           </span>
         </div>

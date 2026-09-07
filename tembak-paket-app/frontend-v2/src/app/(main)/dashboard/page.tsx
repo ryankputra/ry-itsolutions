@@ -55,6 +55,15 @@ export default function DashboardPage() {
       bgGradient: "from-cyan-950/90 via-blue-950/80 to-transparent",
       image: "/banners/banner_rewards.jpg",
     },
+    {
+      title: "PAYMENT GATEWAY GOPAY & QRIS",
+      subtitle: "Terima pembayaran QRIS otomatis di web & bot toko Anda. Uang langsung masuk rekening GoPay.",
+      badge: "UNOFFICIAL SAAS",
+      ctaText: "MULAI INTEGRASI >",
+      ctaLink: "/gateway",
+      bgGradient: "from-slate-950/95 via-blue-950/85 to-transparent",
+      image: "/banners/banner_gopay.jpg",
+    },
   ];
 
   // Auto-rotate Hero Carousel
@@ -348,27 +357,46 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       <div
         onClick={() => router.push("/gateway")}
-        className="rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-950 border border-blue-400/30 p-3.5 sm:p-4 text-white flex items-center justify-between cursor-pointer shadow-md hover:scale-[1.01] transition-all group"
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-blue-400/40 p-3.5 sm:p-4 text-white flex items-center justify-between cursor-pointer shadow-lg hover:shadow-xl transition-all group"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-sm group-hover:rotate-6 transition-transform">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+        {/* Background Real Commercial Talent Image */}
+        <img
+          src="/banners/banner_gopay.jpg"
+          alt="Payment Gateway GoPay & QRIS"
+          className="absolute inset-0 w-full h-full object-cover object-right sm:object-center group-hover:scale-105 transition-transform duration-700"
+        />
+
+        {/* Dynamic Dark Gradient Overlay for Maximum Text Clarity */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 sm:via-slate-950/75 to-blue-950/30" />
+
+        {/* Left Content */}
+        <div className="relative z-10 flex items-center gap-3 sm:gap-4 max-w-sm sm:max-w-lg">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-md group-hover:rotate-6 transition-transform">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h3.75m0 0v3.75m0-3.75l-3.75 3.75" />
             </svg>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-black text-xs sm:text-sm text-white">Payment Gateway GoPay &amp; QRIS <span className="text-amber-300 font-bold text-[10px] sm:text-xs">(Unofficial)</span></h3>
-              <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h3 className="font-black text-xs sm:text-sm text-white drop-shadow-md">
+                Payment Gateway GoPay &amp; QRIS
+              </h3>
+              <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider shadow-xs">
+                Unofficial
+              </span>
+              <span className="px-1.5 py-0.2 rounded bg-blue-500/80 backdrop-blur-xs text-white text-[9px] font-black uppercase tracking-wider border border-white/20">
                 Rp 10rb/bln
               </span>
             </div>
-            <p className="text-[10px] text-slate-300 font-medium">
-              Terima pembayaran otomatis di website, bot, atau aplikasi toko Anda sendiri
+            <p className="text-[10px] sm:text-[11px] text-slate-200 font-medium mt-0.5 line-clamp-1 sm:line-clamp-none drop-shadow-sm">
+              Terima pembayaran QRIS otomatis di website &amp; bot toko Anda. Uang langsung masuk rekening GoPay.
             </p>
           </div>
         </div>
-        <span className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs uppercase tracking-wider shrink-0 border border-white/20 flex items-center gap-1">
+
+        {/* Right CTA Button */}
+        <span className="relative z-10 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold text-xs uppercase tracking-wider shrink-0 border border-white/25 flex items-center gap-1 shadow-md group-hover:scale-105 transition-transform">
           <span>Kelola</span>
           <span>&gt;</span>
         </span>
