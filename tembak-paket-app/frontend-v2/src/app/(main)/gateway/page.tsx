@@ -409,7 +409,7 @@ export default function GatewayDeveloperPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-wider">
-              <span>⚡ Payment Gateway as a Service</span>
+              <span>⚡ Payment Gateway GoPay &amp; QRIS (SaaS)</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               GoPay &amp; QRIS Merchant Hub
@@ -696,7 +696,7 @@ export default function GatewayDeveloperPage() {
       {activeTab === "docs" && (
         <div className="space-y-6">
           <div className="p-6 rounded-3xl bg-canvas border border-hairline shadow-sm space-y-4">
-            <h2 className="text-lg font-black text-ink">Panduan Integrasi API Ry-ITSolutions Gateway</h2>
+            <h2 className="text-lg font-black text-ink">Panduan Integrasi Payment Gateway GoPay &amp; QRIS</h2>
             <p className="text-xs text-ink-muted leading-relaxed">
               Integrasikan sistem pembayaran GoPay &amp; QRIS Dinamis ke website toko online, bot Telegram, atau aplikasi Android Anda hanya dengan 2 endpoint sederhana.
             </p>
