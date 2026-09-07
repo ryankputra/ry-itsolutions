@@ -2,6 +2,7 @@
   "/_not-found/page": "app/_not-found/page.js",
   "/_global-error/page": "app/_global-error/page.js",
   "/icon.svg/route": "app/icon.svg/route.js",
+  "/qr/[id]/route": "app/qr/[id]/route.js",
   "/check-payment/route": "app/check-payment/route.js",
   "/create-qris/route": "app/create-qris/route.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",

@@ -2,6 +2,7 @@
   "/_not-found/page": "/_not-found",
   "/_global-error/page": "/_global-error",
   "/icon.svg/route": "/icon.svg",
+  "/qr/[id]/route": "/qr/[id]",
   "/check-payment/route": "/check-payment",
   "/create-qris/route": "/create-qris",
   "/(auth)/login/page": "/login",

@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
         destination: `${gatewayUrl}/check-payment`
       },
       {
+        source: '/qr/:path*',
+        destination: `${gatewayUrl}/qr/:path*`
+      },
+      {
         source: '/api/create-qris',
         destination: `${gatewayUrl}/create-qris`
       },

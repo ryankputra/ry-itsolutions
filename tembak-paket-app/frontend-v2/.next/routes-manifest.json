@@ -49,6 +49,11 @@
         "regex": "^/check-payment(?:/)?$"
       },
       {
+        "source": "/qr/:path*",
+        "destination": "http://127.0.0.1:3002/qr/:path*",
+        "regex": "^/qr(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
         "source": "/api/create-qris",
         "destination": "http://127.0.0.1:3002/create-qris",
         "regex": "^/api/create-qris(?:/)?$"
@@ -84,6 +89,14 @@
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/produk/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/qr/[id]",
+      "regex": "^/qr/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/qr/(?<nxtPid>[^/]+?)(?:/)?$"
     }
   ],
   "staticRoutes": [

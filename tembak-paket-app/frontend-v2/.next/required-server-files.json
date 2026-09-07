@@ -318,6 +318,10 @@
           "destination": "http://127.0.0.1:3002/check-payment"
         },
         {
+          "source": "/qr/:path*",
+          "destination": "http://127.0.0.1:3002/qr/:path*"
+        },
+        {
           "source": "/api/create-qris",
           "destination": "http://127.0.0.1:3002/create-qris"
         },
