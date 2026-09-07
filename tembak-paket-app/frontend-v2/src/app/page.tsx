@@ -43,8 +43,8 @@ export default function LandingPage() {
       a: "Pastikan HP Anda bukan barang bypass iCloud/ID dan IC Baseband perangkat dalam kondisi sehat (saat dimasukkan SIM Card muncul status 'Tidak Ada Layanan' / 'No Service', BUKAN 'Tidak Ada SIM')."
     },
     {
-      q: "Bagaimana cara bergabung menjadi mitra Reseller?",
-      a: "Cukup daftar akun di Ry-ITSolutions. Anda langsung mendapatkan akses harga spesial reseller, fitur cetak nota kustom atas nama toko Anda sendiri, serta komisi dari program referral."
+      q: "Bagaimana cara integrasi Layanan IT & Payment Gateway?",
+      a: "Cukup daftar akun gratis di Ry-ITSolutions. Anda langsung mendapatkan akses portal aktivasi sinyal IMEI, pembuatan API Key QRIS GoPay, cetak nota digital, dan integrasi API untuk bisnis Anda."
     },
     {
       q: "Apa fungsi layanan Cek CEIR?",
@@ -433,32 +433,34 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Card 6: Kemitraan Reseller & Kuota */}
-          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-amber-500/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
+          {/* Card 6: Dukungan Teknis & Konsultasi IT 24/7 */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-emerald-500/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.199l-.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.516 0c.85.493 1.508 1.333 1.508 2.316V18" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-ink group-hover:text-amber-600 transition-colors">Program Kemitraan Reseller</h3>
+                <h3 className="text-lg font-bold text-ink group-hover:text-emerald-600 transition-colors">Dukungan Teknis &amp; Konsultasi IT</h3>
                 <p className="text-xs text-ink-muted leading-relaxed mt-1">
-                  Daftar akun gratis dan nikmati harga spesial reseller, komisi referral otomatis, saldo dompet fleksibel, serta akses prioritas untuk semua layanan digital.
+                  Bantuan teknis responsif melalui WhatsApp dan Telegram. Tim kami siap mendampingi kendala aktivasi sinyal, setup gateway, dan panduan integrasi sistem.
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Margin keuntungan tinggi untuk mitra</li>
-                <li className="flex items-center gap-2">✓ Komisi referral cair ke saldo</li>
-                <li className="flex items-center gap-2">✓ Top up saldo otomatis QRIS 24 jam</li>
+                <li className="flex items-center gap-2">✓ Layanan bantuan CS responsif 24/7</li>
+                <li className="flex items-center gap-2">✓ Panduan setup API &amp; Webhook</li>
+                <li className="flex items-center gap-2">✓ Pantauan kendala database CEIR realtime</li>
               </ul>
             </div>
-            <Link
-              href="/referral"
-              className="mt-2 text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            <a
+              href="https://wa.me/6285770020477"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
             >
-              Gabung Reseller Sekarang &gt;
-            </Link>
+              Hubungi Bantuan CS WhatsApp &gt;
+            </a>
           </div>
         </div>
       </section>
@@ -556,29 +558,29 @@ export default function LandingPage() {
               </div>
             )}
 
-            {/* 3. Paket Mitra Reseller & Referral */}
+            {/* 3. Payment Gateway GoPay & QRIS Unofficial */}
             <div className="p-6 sm:p-8 rounded-3xl bg-canvas border border-hairline shadow-xs space-y-5 flex flex-col justify-between">
               <div className="space-y-3.5">
-                <span className="text-[11px] font-bold text-emerald-600 uppercase">Mitra Toko</span>
-                <h3 className="text-xl font-bold text-ink">Program Reseller</h3>
+                <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Payment Gateway SaaS</span>
+                <h3 className="text-xl font-bold text-ink">Gateway QRIS GoPay</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-emerald-600">Diskon Saldo</span>
-                  <span className="text-xs text-ink-muted">/ transaksi</span>
+                  <span className="text-2xl font-bold text-blue-600">Rp 10.000</span>
+                  <span className="text-xs text-ink-muted">/ bulan (per key)</span>
                 </div>
                 <p className="text-xs text-ink-muted leading-relaxed">
-                  Dapatkan diskon harga per unit untuk pemesanan rutin toko HP dan fitur cetak nota white-label.
+                  Integrasi pembayaran QRIS otomatis untuk website atau bot Anda dengan mutasi real-time langsung ke rekening GoPay.
                 </p>
                 <ul className="text-xs space-y-2 text-ink-muted pt-1">
-                  <li className="flex items-center gap-2">✓ Multi-IMEI Bulk Order (Banyak Unit)</li>
-                  <li className="flex items-center gap-2">✓ Nota Custom Atas Nama Toko Sendiri</li>
-                  <li className="flex items-center gap-2">✓ Komisi Saldo dari Program Referral</li>
+                  <li className="flex items-center gap-2">✓ Auto Check Mutasi 24 Jam Non-stop</li>
+                  <li className="flex items-center gap-2">✓ Webhook Notifikasi Instan ke Server</li>
+                  <li className="flex items-center gap-2">✓ Token API Key &amp; Sandbox Tester</li>
                 </ul>
               </div>
               <Link
-                href="/register"
-                className="w-full py-2.5 rounded-xl bg-parchment hover:bg-parchment/80 border border-hairline font-bold text-xs text-center text-ink transition-colors block"
+                href="/gateway"
+                className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs text-center shadow-xs transition-colors block"
               >
-                Daftar Jadi Reseller
+                Buka Layanan Gateway
               </Link>
             </div>
 

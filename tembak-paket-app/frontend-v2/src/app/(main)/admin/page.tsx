@@ -3295,7 +3295,7 @@ export default function AdminPage() {
           <div className="flex justify-between items-center flex-wrap gap-2">
             <div>
               <h2 className="text-base font-bold text-ink">Kelola Paket Kuota KMSP</h2>
-              <p className="text-xs text-ink-muted mt-0.5">Sinkronisasi paket dari KMSP dan atur margin laba user/reseller.</p>
+              <p className="text-xs text-ink-muted mt-0.5">Sinkronisasi paket dari KMSP dan atur margin laba platform.</p>
             </div>
             <Button variant="outline" size="sm" onClick={handleSync} isLoading={syncing} className="text-xs">
               Sinkronisasi KMSP
@@ -3356,6 +3356,7 @@ export default function AdminPage() {
                     setPackages(newPkgs);
                   }}
                 />
+                {/* Reseller Fee preserved for future expansion
                 <Input
                   label="Reseller Fee (Laba Reseller Rp)"
                   type="number"
@@ -3365,7 +3366,7 @@ export default function AdminPage() {
                     newPkgs[selectedPkgIndex!] = { ...newPkgs[selectedPkgIndex!], reseller_fee: parseInt(e.target.value) || 0 };
                     setPackages(newPkgs);
                   }}
-                />
+                /> */}
               </div>
 
               <div className="flex flex-col gap-3">
@@ -3425,12 +3426,13 @@ export default function AdminPage() {
               >
                 Semua ({users.length})
               </button>
+              {/* Reseller filter hidden for future expansion
               <button
                 onClick={() => setUserRoleFilter("reseller")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${userRoleFilter === 'reseller' ? 'bg-primary text-white border-primary' : 'bg-canvas text-primary border-hairline'}`}
               >
                 Reseller ({users.filter(u => u.role === 'reseller').length})
-              </button>
+              </button> */}
               <button
                 onClick={() => setUserRoleFilter("user")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${userRoleFilter === 'user' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-canvas text-emerald-600 border-hairline'}`}
@@ -3475,7 +3477,7 @@ export default function AdminPage() {
                       }}
                     >
                       <option value="user">Member (User)</option>
-                      <option value="reseller">Reseller</option>
+                      {/* <option value="reseller">Reseller (Pilar Masa Depan)</option> */}
                       <option value="admin">Admin</option>
                     </select>
 
