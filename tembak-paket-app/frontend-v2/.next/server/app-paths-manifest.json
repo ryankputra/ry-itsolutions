@@ -26,5 +26,6 @@
   "/(main)/tickets/page": "app/(main)/tickets/page.js",
   "/(main)/topup/page": "app/(main)/topup/page.js",
   "/(main)/unblock-imei/page": "app/(main)/unblock-imei/page.js",
+  "/(main)/videos/page": "app/(main)/videos/page.js",
   "/(main)/vouchers/page": "app/(main)/vouchers/page.js"
 }

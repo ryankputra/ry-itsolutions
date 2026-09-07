@@ -251,6 +251,12 @@
       "namedRegex": "^/unblock\\-imei(?:/)?$"
     },
     {
+      "page": "/videos",
+      "regex": "^/videos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/videos(?:/)?$"
+    },
+    {
       "page": "/vouchers",
       "regex": "^/vouchers(?:/)?$",
       "routeKeys": {},

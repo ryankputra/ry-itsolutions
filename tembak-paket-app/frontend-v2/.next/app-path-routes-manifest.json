@@ -26,5 +26,6 @@
   "/(main)/tickets/page": "/tickets",
   "/(main)/topup/page": "/topup",
   "/(main)/unblock-imei/page": "/unblock-imei",
+  "/(main)/videos/page": "/videos",
   "/(main)/vouchers/page": "/vouchers"
 }
