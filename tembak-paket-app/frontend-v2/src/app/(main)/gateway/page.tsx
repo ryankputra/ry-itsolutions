@@ -409,14 +409,19 @@ export default function GatewayDeveloperPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-wider">
-              <span>⚡ Payment Gateway GoPay &amp; QRIS (SaaS)</span>
+              <span>⚡ Payment Gateway GoPay &amp; QRIS Unofficial (SaaS)</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              GoPay &amp; QRIS Merchant Hub
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center flex-wrap gap-2">
+              <span>GoPay &amp; QRIS Merchant Hub</span>
+              <span className="px-2 py-0.5 rounded-lg bg-amber-400/20 border border-amber-400/30 text-amber-300 text-xs font-black uppercase tracking-wider">Unofficial</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               Terima pembayaran QRIS otomatis di website, bot, atau aplikasi toko Anda sendiri. Uang langsung masuk ke rekening GoPay Anda tanpa perantara.
             </p>
+            <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-200 text-xs flex items-center gap-2">
+              <span className="text-sm shrink-0">⚠️</span>
+              <span><strong>Catatan Unofficial:</strong> Layanan ini adalah integrasi payment gateway mandiri berbasis akun GoBiz merchant, tidak terafiliasi resmi dengan PT GoTo Gojek Tokopedia Tbk.</span>
+            </div>
             <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-300 font-medium">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -696,7 +701,7 @@ export default function GatewayDeveloperPage() {
       {activeTab === "docs" && (
         <div className="space-y-6">
           <div className="p-6 rounded-3xl bg-canvas border border-hairline shadow-sm space-y-4">
-            <h2 className="text-lg font-black text-ink">Panduan Integrasi Payment Gateway GoPay &amp; QRIS</h2>
+            <h2 className="text-lg font-black text-ink">Panduan Integrasi Payment Gateway GoPay &amp; QRIS (Unofficial)</h2>
             <p className="text-xs text-ink-muted leading-relaxed">
               Integrasikan sistem pembayaran GoPay &amp; QRIS Dinamis ke website toko online, bot Telegram, atau aplikasi Android Anda hanya dengan 2 endpoint sederhana.
             </p>

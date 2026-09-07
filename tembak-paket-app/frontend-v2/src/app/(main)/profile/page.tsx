@@ -283,7 +283,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-black text-xs text-white">Payment Gateway (GoPay &amp; QRIS)</h4>
+                <h4 className="font-black text-xs text-white">Payment Gateway GoPay &amp; QRIS (Unofficial)</h4>
                 <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider">
                   Rp 10rb/bln
                 </span>
@@ -644,7 +644,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-black text-xs sm:text-sm text-white">Payment Gateway GoPay &amp; QRIS</h4>
+                <h4 className="font-black text-xs sm:text-sm text-white">Payment Gateway GoPay &amp; QRIS (Unofficial)</h4>
                 <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
                   Rp 10rb/bln
                 </span>

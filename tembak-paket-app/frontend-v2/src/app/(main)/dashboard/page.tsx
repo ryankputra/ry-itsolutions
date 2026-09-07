@@ -297,6 +297,7 @@ export default function DashboardPage() {
             },
             {
               name: "Gateway GoPay",
+              badge: "Unoff",
               href: "/gateway",
               tourKey: "service-gateway",
               iconBg: "bg-blue-50 border-blue-200/80 text-blue-600",
@@ -326,8 +327,13 @@ export default function DashboardPage() {
               onClick={item.onClick || (() => router.push(item.href!))}
               className="flex flex-col items-center justify-start group p-0.5 focus:outline-none"
             >
-              <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform ${item.iconBg}`}>
+              <div className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform ${item.iconBg}`}>
                 {item.icon}
+                {(item as any).badge && (
+                  <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-amber-500 text-slate-950 font-black text-[7.5px] rounded-full uppercase tracking-tight shadow-xs border border-white/60 leading-tight">
+                    {(item as any).badge}
+                  </span>
+                )}
               </div>
               <span className="text-[10px] sm:text-xs font-bold text-ink group-hover:text-primary transition-colors mt-1 leading-tight line-clamp-1">
                 {item.name}
@@ -352,7 +358,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-black text-xs sm:text-sm text-white">Payment Gateway GoPay &amp; QRIS</h3>
+              <h3 className="font-black text-xs sm:text-sm text-white">Payment Gateway GoPay &amp; QRIS <span className="text-amber-300 font-bold text-[10px] sm:text-xs">(Unofficial)</span></h3>
               <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider">
                 Rp 10rb/bln
               </span>
