@@ -74,7 +74,8 @@ router.get('/user/packages', async (req, res) => {
         const packages = await dbAll('SELECT * FROM packages WHERE isVisible = 1 ORDER BY position ASC, rowid ASC');
 
         const packagesWithCustomFee = packages.map(pkg => {
-            const platformFee = user && user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+            // Reseller fee differentiation bypassed for now (preserved for future)
+            const platformFee = pkg.platform_fee || 0;
             return {
                 ...pkg,
                 platform_fee: platformFee,

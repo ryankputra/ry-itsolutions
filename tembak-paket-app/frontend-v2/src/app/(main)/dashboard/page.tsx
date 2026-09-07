@@ -591,7 +591,7 @@ export default function DashboardPage() {
         <BatikPatternOverlay opacity={0.3} />
         <div className="space-y-0.5 relative z-10">
           <span className="inline-block bg-white text-amber-900 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-            BONUS REFERRAL RESELLER
+            BONUS REFERRAL
           </span>
           <h4 className="text-xs sm:text-sm font-black text-white">Ajak Teman &amp; Dapatkan Komisi Saldo</h4>
           <p className="text-[10px] text-amber-100 font-medium">Bagikan link referral dan peroleh bonus komisi tiap transaksi</p>

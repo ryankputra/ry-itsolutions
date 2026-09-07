@@ -372,7 +372,7 @@ export default function GamesPage() {
                 Ry
               </span>
               <span className="text-[11px] font-bold text-slate-800">
-                Ajak Teman Reseller, Dapat 500 Koin
+                Ajak Teman, Dapat 500 Koin
               </span>
             </div>
             <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[10px] font-black uppercase">
@@ -623,7 +623,7 @@ export default function GamesPage() {
               onClick: () => router.push("/unblock-imei"),
             },
             {
-              title: "Ajak Teman Reseller",
+              title: "Ajak Teman",
               desc: "Bagikan kode referral dan dapatkan koin serta komisi saldo",
               reward: "+500 Koin",
               action: "Ajak",

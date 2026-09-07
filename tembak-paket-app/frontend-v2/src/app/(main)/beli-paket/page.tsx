@@ -110,7 +110,8 @@ export default function BeliPaketPage() {
     return providerObj.keywords?.some(kw => pName.includes(kw));
   });
 
-  const getPrice = (p: any) => p.original_price + (user?.role === 'reseller' ? (p.reseller_fee || 0) : (p.platform_fee || 0));
+  // Standard platform fee (reseller fee logic preserved for future expansion)
+  const getPrice = (p: any) => p.original_price + (p.platform_fee || 0);
 
   const handleRequestOtp = async () => {
     if (!phone) return setError("Nomor tujuan harus diisi");

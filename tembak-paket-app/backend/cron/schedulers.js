@@ -21,6 +21,10 @@ const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
 // Reseller Retention Check
 async function runResellerRetentionCheck() {
+    // [RESELLER_FEATURE_FLAG: TEMPORARILY DISABLED AS A FUTURE PILLAR]
+    const ENABLE_RESELLER_RETENTION = false;
+    if (!ENABLE_RESELLER_RETENTION) return;
+
     console.log('[Scheduler][ResellerRetention] Menjalankan cek retention reseller pada', new Date().toISOString());
     const downgraded = [];
     try {

@@ -149,7 +149,9 @@ async function completeTopup(topUpId, gopayTrxId = '') {
         const user = await dbGet("SELECT id, name, email, role, upgradedToResellerAt FROM users WHERE id = ?", [topUp.userId]);
         await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [topUp.baseAmount, user.id]);
 
-        if (user.role !== 'reseller' && topUp.baseAmount >= 50000) {
+        // [RESELLER_FEATURE_FLAG: TEMPORARILY DISABLED AS A FUTURE PILLAR]
+        const ENABLE_RESELLER_UPGRADE = false;
+        if (ENABLE_RESELLER_UPGRADE && user.role !== 'reseller' && topUp.baseAmount >= 50000) {
             await dbRun("UPDATE users SET role = 'reseller', upgradedToResellerAt = ? WHERE id = ?", [new Date().toISOString(), user.id]);
             sseSend(user.id, 'role_change', { newRole: 'reseller', reason: 'Selamat! Anda berhasil upgrade menjadi Reseller.' });
         }
@@ -513,7 +515,8 @@ router.post(['/purchase', '/purchase/non-otp'], isAuthenticated, async (req, res
         if (!pkg) return res.status(404).json({ status: false, message: "Paket tidak ditemukan." });
 
         const isBalancePayment = paymentMethod === 'balance';
-        const fee = user.role === 'reseller' ? (pkg.reseller_fee || 0) : (pkg.platform_fee || 0);
+        // Reseller fee differentiation bypassed for now (preserved for future)
+        const fee = pkg.platform_fee || 0;
         effectiveFee = isBalancePayment ? (pkg.original_price + fee) : fee;
         const platformFeeOnly = fee;
 

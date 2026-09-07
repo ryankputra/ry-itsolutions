@@ -1951,7 +1951,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Pengguna & Mitra</span>
             <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary">
-              {totalResellersCount} Reseller
+              {users.length} Akun Terdaftar
             </span>
           </div>
           <div className="mt-2">
@@ -3396,7 +3396,7 @@ export default function AdminPage() {
         <Card glass className="p-5 space-y-4">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-3">
             <div>
-              <h2 className="text-base font-bold text-ink">Kelola Pengguna & Mitra Reseller</h2>
+              <h2 className="text-base font-bold text-ink">Kelola Pengguna Terdaftar</h2>
               <p className="text-xs text-ink-muted mt-0.5">Kelola role, saldo akun, persetujuan member baru, dan penyesuaian akun.</p>
             </div>
 
@@ -4122,7 +4122,7 @@ export default function AdminPage() {
                     className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="Pembeli Terverifikasi">Pembeli Terverifikasi</option>
-                    <option value="Reseller VIP">Reseller VIP</option>
+                    <option value="Pelanggan VIP">Pelanggan VIP</option>
                     <option value="Konter Mitra">Konter Mitra</option>
                   </select>
                 </div>

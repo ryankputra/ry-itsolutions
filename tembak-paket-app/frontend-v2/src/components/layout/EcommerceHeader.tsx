@@ -102,7 +102,7 @@ export function EcommerceHeader() {
     { title: "Cek Garansi & Lacak IMEI", desc: "Pantau masa aktif dan cetak nota digital", href: "/cek-garansi", tag: "Garansi" },
     { title: "Klaim Voucher Diskon", desc: "Kupon promo cashback & potongan harga", href: "/vouchers", tag: "Hemat" },
     { title: "Game Koin Harian", desc: "Check-in & Putar Roda Hoki untuk koin gratis", href: "/games", tag: "Gratis" },
-    { title: "Program Referral Reseller", desc: "Ajak teman dan dapatkan komisi", href: "/referral", tag: "Cuan" },
+    { title: "Program Referral", desc: "Ajak teman dan dapatkan komisi", href: "/referral", tag: "Cuan" },
     { title: "Isi Saldo (Top Up QRIS)", desc: "Deposit saldo instan otomatis 24 jam", href: "/topup", tag: "Instan" },
   ];
 

@@ -18,7 +18,7 @@ const QUICK_AMOUNTS = [
   { amount: 50000, label: "Rp 50.000", tag: "Rekomendasi", badge: null },
   { amount: 100000, label: "Rp 100.000", tag: "Paling Populer", badge: "HOT" },
   { amount: 250000, label: "Rp 250.000", tag: "Hemat Order", badge: "HEMAT" },
-  { amount: 500000, label: "Rp 500.000", tag: "Paket Reseller", badge: "BEST SELLER" },
+  { amount: 500000, label: "Rp 500.000", tag: "Paket Hemat", badge: "BEST SELLER" },
   { amount: 1000000, label: "Rp 1.000.000", tag: "Sultan / VIP", badge: "VIP" },
 ];
 

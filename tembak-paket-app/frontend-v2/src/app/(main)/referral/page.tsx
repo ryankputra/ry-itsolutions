@@ -74,7 +74,7 @@ export default function ReferralPage() {
           Program Referral & Komisi
         </h1>
         <p className="text-sm text-ink-muted mt-1">
-          Ajak teman atau reseller lain bergabung dan dapatkan komisi saldo otomatis setiap kali mereka order.
+          Ajak teman dan rekan Anda bergabung dan dapatkan komisi saldo otomatis setiap kali mereka order.
         </p>
       </div>
 
