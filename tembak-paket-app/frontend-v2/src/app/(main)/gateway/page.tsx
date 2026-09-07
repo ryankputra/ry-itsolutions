@@ -946,12 +946,12 @@ if ($res['paid'] === true) {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL 1: CREATE API KEY                                      */}
+      {/* MODAL 1: CREATE API KEY (Responsif & Anti-Overlap)           */}
       {/* ============================================================ */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-canvas border border-hairline rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-hairline pb-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+          <div className="bg-canvas border border-hairline rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-3.5 max-h-[85vh] sm:max-h-[90vh] flex flex-col my-auto overflow-hidden">
+            <div className="flex items-center justify-between border-b border-hairline pb-2.5 shrink-0">
               <h3 className="font-black text-sm sm:text-base text-ink">Buat API Key Baru</h3>
               <button
                 type="button"
@@ -962,92 +962,95 @@ if ($res['paid'] === true) {
               </button>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs space-y-1">
-              <span className="font-black block">Biaya Langganan: Rp 10.000 / Bulan</span>
-              <p className="text-[11px] leading-relaxed">
-                Biaya Rp 10.000 akan dipotong langsung dari saldo akun Anda. API Key akan aktif selama 30 hari penuh.
-              </p>
+            <div className="overflow-y-auto pr-1 space-y-3 flex-1">
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs space-y-1">
+                <span className="font-black block">Biaya Langganan: Rp 10.000 / Bulan</span>
+                <p className="text-[11px] leading-relaxed">
+                  Biaya Rp 10.000 akan dipotong langsung dari saldo akun Anda. API Key akan aktif selama 30 hari penuh.
+                </p>
+              </div>
+
+              <form id="createKeyForm" onSubmit={handleCreateKey} className="space-y-3 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Label Nama Toko / Aplikasi *</label>
+                  <input
+                    type="text"
+                    required
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                    placeholder="Contoh: Toko Diamond ML / Bot Discord"
+                    className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">String QRIS Statis GoPay Anda (Opsional)</label>
+                  <textarea
+                    value={createQris}
+                    onChange={(e) => setCreateQris(e.target.value)}
+                    rows={2}
+                    placeholder="00020101021126610014COM.GO-JEK..."
+                    className="w-full p-2.5 rounded-xl border border-hairline bg-canvas font-mono text-[11px] text-ink focus:border-primary outline-none"
+                  />
+                  <span className="text-[10px] text-ink-muted block">
+                    String QRIS statis dari aplikasi GoBiz / banner toko Anda. Jika dikosongkan, bisa diisi nanti.
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Webhook URL (Opsional)</label>
+                  <input
+                    type="url"
+                    value={createWebhook}
+                    onChange={(e) => setCreateWebhook(e.target.value)}
+                    placeholder="https://tokoanda.com/api/webhook-gopay"
+                    className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="autoRenewCreate"
+                    checked={createAutoRenew}
+                    onChange={(e) => setCreateAutoRenew(e.target.checked)}
+                    className="rounded text-primary focus:ring-0 cursor-pointer"
+                  />
+                  <label htmlFor="autoRenewCreate" className="font-bold text-ink select-none cursor-pointer">
+                    Auto-Renew (Otomatis perpanjang tiap bulan jika saldo mencukupi)
+                  </label>
+                </div>
+              </form>
             </div>
 
-            <form onSubmit={handleCreateKey} className="space-y-3.5 text-xs">
-              <div className="space-y-1">
-                <label className="font-bold text-ink">Label Nama Toko / Aplikasi *</label>
-                <input
-                  type="text"
-                  required
-                  value={createName}
-                  onChange={(e) => setCreateName(e.target.value)}
-                  placeholder="Contoh: Toko Diamond ML / Bot Discord"
-                  className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-ink">String QRIS Statis GoPay Anda (Opsional)</label>
-                <textarea
-                  value={createQris}
-                  onChange={(e) => setCreateQris(e.target.value)}
-                  rows={2}
-                  placeholder="00020101021126610014COM.GO-JEK..."
-                  className="w-full p-2.5 rounded-xl border border-hairline bg-canvas font-mono text-[11px] text-ink focus:border-primary outline-none"
-                />
-                <span className="text-[10px] text-ink-muted block">
-                  String QRIS statis dari aplikasi GoBiz / banner toko Anda. Jika dikosongkan, bisa diisi nanti.
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-ink">Webhook URL (Opsional)</label>
-                <input
-                  type="url"
-                  value={createWebhook}
-                  onChange={(e) => setCreateWebhook(e.target.value)}
-                  placeholder="https://tokoanda.com/api/webhook-gopay"
-                  className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="autoRenewCreate"
-                  checked={createAutoRenew}
-                  onChange={(e) => setCreateAutoRenew(e.target.checked)}
-                  className="rounded text-primary focus:ring-0"
-                />
-                <label htmlFor="autoRenewCreate" className="font-bold text-ink select-none cursor-pointer">
-                  Auto-Renew (Otomatis perpanjang tiap bulan jika saldo mencukupi)
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-hairline">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-parchment hover:bg-hairline text-ink font-bold"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-md transition-all flex items-center gap-1.5"
-                >
-                  {creating ? "Memproses..." : "Bayar & Buat Key (Rp 10.000)"}
-                </button>
-              </div>
-            </form>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-hairline shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 rounded-xl bg-parchment hover:bg-hairline text-ink font-bold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="createKeyForm"
+                disabled={creating}
+                className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+              >
+                {creating ? "Memproses..." : "Bayar & Buat Key (Rp 10.000)"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* ============================================================ */}
-      {/* MODAL 2: GOBIZ OTP PAIRING                                   */}
+      {/* MODAL 2: GOBIZ OTP PAIRING (Responsif & Anti-Overlap)        */}
       {/* ============================================================ */}
       {selectedKeyForOtp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-canvas border border-hairline rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-hairline pb-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+          <div className="bg-canvas border border-hairline rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-3.5 max-h-[85vh] sm:max-h-[90vh] flex flex-col my-auto overflow-hidden">
+            <div className="flex items-center justify-between border-b border-hairline pb-2.5 shrink-0">
               <div>
                 <h3 className="font-black text-sm sm:text-base text-ink">Hubungkan Akun GoBiz</h3>
                 <span className="text-[10px] text-ink-muted">Key: {selectedKeyForOtp.name}</span>
@@ -1061,77 +1064,79 @@ if ($res['paid'] === true) {
               </button>
             </div>
 
-            <p className="text-xs text-ink-muted leading-relaxed">
-              Login nomor HP GoBiz Anda untuk menghubungkan mutasi transaksi otomatis. Sesi disimpan 100% aman di server Anda sendiri.
-            </p>
+            <div className="overflow-y-auto pr-1 space-y-3 flex-1">
+              <p className="text-xs text-ink-muted leading-relaxed">
+                Login nomor HP GoBiz Anda untuk menghubungkan mutasi transaksi otomatis. Sesi disimpan 100% aman di server Anda sendiri.
+              </p>
 
-            <div className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <label className="font-bold text-ink">Nomor HP Terdaftar di GoBiz</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="tel"
-                    disabled={otpSent}
-                    value={otpPhone}
-                    onChange={(e) => setOtpPhone(e.target.value)}
-                    placeholder="08123456789"
-                    className="flex-1 p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
-                  />
-                  {!otpSent && (
-                    <button
-                      type="button"
-                      disabled={otpLoading}
-                      onClick={handleRequestOtp}
-                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-xs shrink-0"
-                    >
-                      {otpLoading ? "Mengirim..." : "Kirim OTP"}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {otpSent && (
-                <div className="space-y-2 p-4 rounded-2xl bg-blue-50/50 border border-blue-200 animate-in fade-in">
-                  <label className="font-bold text-blue-950 block">Masukkan 4 Digit Kode OTP (SMS):</label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                    placeholder="1234"
-                    className="w-full text-center text-xl font-mono tracking-widest font-black p-2.5 rounded-xl border border-blue-300 bg-white text-blue-900 focus:border-primary outline-none"
-                  />
-                  <div className="flex items-center justify-between pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setOtpSent(false)}
-                      className="text-[11px] font-bold text-blue-600 hover:underline"
-                    >
-                      Ubah Nomor HP
-                    </button>
-                    <button
-                      type="button"
-                      disabled={otpLoading}
-                      onClick={handleVerifyOtp}
-                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition-all shadow-sm"
-                    >
-                      {otpLoading ? "Memverifikasi..." : "Verifikasi & Hubungkan"}
-                    </button>
+              <div className="space-y-3 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Nomor HP Terdaftar di GoBiz</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="tel"
+                      disabled={otpSent}
+                      value={otpPhone}
+                      onChange={(e) => setOtpPhone(e.target.value)}
+                      placeholder="08123456789"
+                      className="flex-1 p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
+                    />
+                    {!otpSent && (
+                      <button
+                        type="button"
+                        disabled={otpLoading}
+                        onClick={handleRequestOtp}
+                        className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-xs shrink-0"
+                      >
+                        {otpLoading ? "Mengirim..." : "Kirim OTP"}
+                      </button>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {otpSent && (
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-blue-50/50 border border-blue-200 animate-in fade-in">
+                    <label className="font-bold text-blue-950 block">Masukkan 4 Digit Kode OTP (SMS):</label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                      placeholder="1234"
+                      className="w-full text-center text-xl font-mono tracking-widest font-black p-2.5 rounded-xl border border-blue-300 bg-white text-blue-900 focus:border-primary outline-none"
+                    />
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setOtpSent(false)}
+                        className="text-[11px] font-bold text-blue-600 hover:underline"
+                      >
+                        Ubah Nomor HP
+                      </button>
+                      <button
+                        type="button"
+                        disabled={otpLoading}
+                        onClick={handleVerifyOtp}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition-all shadow-sm"
+                      >
+                        {otpLoading ? "Memverifikasi..." : "Verifikasi & Hubungkan"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ============================================================ */}
-      {/* MODAL 3: KEY SETTINGS (QRIS & WEBHOOK)                       */}
+      {/* MODAL 3: KEY SETTINGS (QRIS & WEBHOOK - Responsif)          */}
       {/* ============================================================ */}
       {selectedKeyForConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-canvas border border-hairline rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-hairline pb-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+          <div className="bg-canvas border border-hairline rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-3.5 max-h-[85vh] sm:max-h-[90vh] flex flex-col my-auto overflow-hidden">
+            <div className="flex items-center justify-between border-b border-hairline pb-2.5 shrink-0">
               <h3 className="font-black text-sm sm:text-base text-ink">Pengaturan API Key</h3>
               <button
                 type="button"
@@ -1142,76 +1147,79 @@ if ($res['paid'] === true) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveConfig} className="space-y-3.5 text-xs">
-              <div className="space-y-1">
-                <label className="font-bold text-ink">Label Nama</label>
-                <input
-                  type="text"
-                  required
-                  value={configName}
-                  onChange={(e) => setConfigName(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
-                />
-              </div>
+            <div className="overflow-y-auto pr-1 space-y-3 flex-1">
+              <form id="configKeyForm" onSubmit={handleSaveConfig} className="space-y-3 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Label Nama</label>
+                  <input
+                    type="text"
+                    required
+                    value={configName}
+                    onChange={(e) => setConfigName(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
+                  />
+                </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-ink">String Template QRIS Statis GoPay</label>
-                <textarea
-                  rows={3}
-                  value={configQris}
-                  onChange={(e) => setConfigQris(e.target.value)}
-                  placeholder="00020101021126610014COM.GO-JEK..."
-                  className="w-full p-2.5 rounded-xl border border-hairline bg-canvas font-mono text-[11px] text-ink focus:border-primary outline-none"
-                />
-                <span className="text-[10px] text-ink-muted block">
-                  Cetak dinamis akan otomatis memakai QRIS statis ini untuk toko Anda.
-                </span>
-              </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">String Template QRIS Statis GoPay</label>
+                  <textarea
+                    rows={2}
+                    value={configQris}
+                    onChange={(e) => setConfigQris(e.target.value)}
+                    placeholder="00020101021126610014COM.GO-JEK..."
+                    className="w-full p-2.5 rounded-xl border border-hairline bg-canvas font-mono text-[11px] text-ink focus:border-primary outline-none"
+                  />
+                  <span className="text-[10px] text-ink-muted block">
+                    Cetak dinamis akan otomatis memakai QRIS statis ini untuk toko Anda.
+                  </span>
+                </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-ink">Webhook URL Notifikasi</label>
-                <input
-                  type="url"
-                  value={configWebhook}
-                  onChange={(e) => setConfigWebhook(e.target.value)}
-                  placeholder="https://tokoanda.com/api/gopay-callback"
-                  className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink focus:border-primary outline-none"
-                />
-                <span className="text-[10px] text-ink-muted block">
-                  Menerima POST webhook saat ada pembayaran sukses.
-                </span>
-              </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Webhook URL Notifikasi</label>
+                  <input
+                    type="url"
+                    value={configWebhook}
+                    onChange={(e) => setConfigWebhook(e.target.value)}
+                    placeholder="https://tokoanda.com/api/gopay-callback"
+                    className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink focus:border-primary outline-none"
+                  />
+                  <span className="text-[10px] text-ink-muted block">
+                    Menerima POST webhook saat ada pembayaran sukses.
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="autoRenewConfig"
-                  checked={configAutoRenew}
-                  onChange={(e) => setConfigAutoRenew(e.target.checked)}
-                  className="rounded text-primary focus:ring-0"
-                />
-                <label htmlFor="autoRenewConfig" className="font-bold text-ink select-none cursor-pointer">
-                  Auto-Renew Langganan (Potong Saldo Rp 10.000 / bln)
-                </label>
-              </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="autoRenewConfig"
+                    checked={configAutoRenew}
+                    onChange={(e) => setConfigAutoRenew(e.target.checked)}
+                    className="rounded text-primary focus:ring-0 cursor-pointer"
+                  />
+                  <label htmlFor="autoRenewConfig" className="font-bold text-ink select-none cursor-pointer">
+                    Auto-Renew Langganan (Potong Saldo Rp 10.000 / bln)
+                  </label>
+                </div>
+              </form>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-hairline">
-                <button
-                  type="button"
-                  onClick={() => setSelectedKeyForConfig(null)}
-                  className="px-4 py-2 rounded-xl bg-parchment hover:bg-hairline text-ink font-bold"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={configSaving}
-                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-md transition-all"
-                >
-                  {configSaving ? "Menyimpan..." : "Simpan Pengaturan"}
-                </button>
-              </div>
-            </form>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-hairline shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedKeyForConfig(null)}
+                className="px-4 py-2 rounded-xl bg-parchment hover:bg-hairline text-ink font-bold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="configKeyForm"
+                disabled={configSaving}
+                className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all"
+              >
+                {configSaving ? "Menyimpan..." : "Simpan Pengaturan"}
+              </button>
+            </div>
           </div>
         </div>
       )}
