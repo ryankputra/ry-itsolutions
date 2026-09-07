@@ -36,6 +36,7 @@ const gameRoutes = require('./routes/games');
 const telegramRoutes = require('./routes/telegram');
 const orderRoutes = require('./routes/orders');
 const webhookRoutes = require('./routes/webhook');
+const gatewayRoutes = require('./routes/gateway');
 const waBot = require('./services/waBot');
 
 const app = express();
@@ -159,6 +160,7 @@ app.use('/api', gameRoutes);
 app.use('/api', telegramRoutes.router);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api', webhookRoutes);
+app.use('/api', gatewayRoutes);
 
 // WhatsApp Admin Bot Control Endpoints
 app.get('/api/admin/whatsapp/status', isAuthenticated, isAdmin, (req, res) => {
@@ -180,6 +182,40 @@ initSchedulers();
 waBot.initWABot(false);
 
 // 10. Start Server
+
+// Payment Gateway SaaS Subscription Auto-Renew & Expire Monitor (runs every hour)
+setInterval(async () => {
+    try {
+        const nowIso = new Date().toISOString();
+        const expiredKeys = await dbAll(
+            "SELECT * FROM merchant_gateway_keys WHERE status = 'active' AND expiresAt <= ?",
+            [nowIso]
+        );
+        for (const k of (expiredKeys || [])) {
+            if (k.autoRenew) {
+                const user = await dbGet("SELECT id, name, balance FROM users WHERE id = ?", [k.userId]);
+                const price = k.pricePerMonth || 10000;
+                if (user && user.balance >= price) {
+                    await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [price, user.id]);
+                    const newExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                    await dbRun("UPDATE merchant_gateway_keys SET expiresAt = ?, status = 'active' WHERE id = ?", [newExp, k.id]);
+                    const trxId = `gw_auto_${Date.now()}`;
+                    await dbRun(`
+                        INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, status, api_response, createdAt)
+                        VALUES (?, ?, ?, 'gateway_apikey_renew', ?, ?, ?, 'completed', 'Auto-renew Langganan API Key Gateway 30 Hari', ?)
+                    `, [trxId, user.id, user.name, `Auto-renew API Key (${k.name})`, price, price, new Date().toISOString()]);
+                    console.log(`[Gateway SaaS] Auto-renewed API key ${k.id} for user ${user.name}`);
+                    continue;
+                }
+            }
+            await dbRun("UPDATE merchant_gateway_keys SET status = 'expired' WHERE id = ?", [k.id]);
+            console.log(`[Gateway SaaS] API key ${k.id} marked as expired.`);
+        }
+    } catch (e) {
+        console.warn("[Gateway SaaS Monitor Error]", e.message);
+    }
+}, 60 * 60 * 1000);
+
 app.listen(PORT, () => {
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_USE_POLLING !== 'false') {
         pollTelegramUpdates();

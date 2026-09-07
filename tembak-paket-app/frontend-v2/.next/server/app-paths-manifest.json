@@ -13,6 +13,7 @@
   "/(main)/cek-garansi/page": "app/(main)/cek-garansi/page.js",
   "/(main)/dashboard/page": "app/(main)/dashboard/page.js",
   "/(main)/games/page": "app/(main)/games/page.js",
+  "/(main)/gateway/page": "app/(main)/gateway/page.js",
   "/(main)/history/page": "app/(main)/history/page.js",
   "/(main)/notifications/page": "app/(main)/notifications/page.js",
   "/(main)/produk/[id]/page": "app/(main)/produk/[id]/page.js",

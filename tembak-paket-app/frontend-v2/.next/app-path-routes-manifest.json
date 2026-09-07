@@ -13,6 +13,7 @@
   "/(main)/cek-garansi/page": "/cek-garansi",
   "/(main)/dashboard/page": "/dashboard",
   "/(main)/games/page": "/games",
+  "/(main)/gateway/page": "/gateway",
   "/(main)/history/page": "/history",
   "/(main)/notifications/page": "/notifications",
   "/(main)/produk/[id]/page": "/produk/[id]",

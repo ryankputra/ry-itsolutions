@@ -7,6 +7,44 @@ const { exec } = require('child_process');
 require('dotenv').config();
 const sessionManager = require('./sessionManager');
 
+let sqlite3Module;
+try {
+    sqlite3Module = require('../backend/node_modules/sqlite3').verbose();
+} catch (e) {
+    try { sqlite3Module = require('sqlite3').verbose(); } catch (e2) {}
+}
+
+const DB_PATH = path.resolve(__dirname, '..', 'backend', 'database.sqlite');
+let dbConn = null;
+if (sqlite3Module && fs.existsSync(DB_PATH)) {
+    try {
+        dbConn = new sqlite3Module.Database(DB_PATH);
+    } catch (e) {
+        console.warn("[Gateway SaaS] Gagal connect SQLite:", e.message);
+    }
+}
+
+function getMerchantKey(apiKey) {
+    return new Promise((resolve) => {
+        if (!dbConn) return resolve(null);
+        dbConn.get("SELECT * FROM merchant_gateway_keys WHERE apiKey = ?", [apiKey], (err, row) => {
+            if (err) resolve(null);
+            else resolve(row);
+        });
+    });
+}
+
+function updateKeyUsage(keyId, endpoint, amount = null, ip = null) {
+    if (!dbConn) return;
+    try {
+        const now = new Date().toISOString();
+        dbConn.run("UPDATE merchant_gateway_keys SET totalRequests = totalRequests + 1, lastUsedAt = ? WHERE id = ?", [now, keyId]);
+        const logId = `gwl_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        dbConn.run("INSERT INTO merchant_gateway_logs (id, keyId, endpoint, amount, status, ip, createdAt) VALUES (?, ?, ?, ?, 'success', ?, ?)", [logId, keyId, endpoint, amount ? parseFloat(amount) : null, ip, now]);
+    } catch (e) {}
+}
+
+
 const PORT = process.env.PORT || 3000;
 const MAX_LOGS = 100;
 const CLAIMED_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 jam
@@ -153,13 +191,53 @@ function generateDynamicQRIS(staticTemplate, amount) {
     return result + checksum;
 }
 
-// Middleware Proteksi API Key
-const apiKeyAuth = (req, res, next) => {
+// Middleware Proteksi API Key (Supports Master Internal Key & Tenant Merchant Keys)
+const apiKeyAuth = async (req, res, next) => {
     const apiKey = req.headers['x-api-key'] || req.query.api_key || req.query.apikey || req.body?.api_key || req.body?.apikey;
-    if (!apiKey || apiKey !== process.env.API_KEY) {
-        return res.status(401).json({ success: false, message: 'Autentikasi Gagal: API Key tidak valid' });
+    if (!apiKey) {
+        return res.status(401).json({ success: false, message: 'Autentikasi Gagal: Header x-api-key atau parameter api_key tidak disertakan.' });
     }
-    next();
+
+    // Master key used by Ry-ITSolutions internal server
+    if (apiKey === process.env.API_KEY) {
+        req.isMasterKey = true;
+        req.gatewayKey = null;
+        return next();
+    }
+
+    // Tenant / Merchant Client API Key
+    try {
+        const keyRow = await getMerchantKey(apiKey);
+        if (!keyRow) {
+            return res.status(401).json({ success: false, message: 'Autentikasi Gagal: API Key tidak terdaftar di sistem.' });
+        }
+
+        const expTime = new Date(keyRow.expiresAt).getTime();
+        if (expTime <= Date.now() || keyRow.status === 'expired') {
+            return res.status(403).json({
+                success: false,
+                message: 'API Key Anda telah kedaluwarsa. Silakan perpanjang masa aktif di dashboard https://ry-itsolutionts.web.id/gateway.'
+            });
+        }
+
+        if (keyRow.status === 'suspended') {
+            return res.status(403).json({
+                success: false,
+                message: 'API Key Anda ditangguhkan (Suspended). Silakan hubungi CS Ry-ITSolutions.'
+            });
+        }
+
+        req.isMasterKey = false;
+        req.gatewayKey = keyRow;
+
+        // Async log usage
+        updateKeyUsage(keyRow.id, req.path, req.body?.amount || req.query?.amount, req.ip);
+
+        next();
+    } catch (e) {
+        console.error('[Gateway Auth Error]', e.message);
+        return res.status(500).json({ success: false, message: 'Kesalahan internal saat memverifikasi API Key.' });
+    }
 };
 
 const app = express();
@@ -402,9 +480,9 @@ app.all('/create-qris', apiKeyAuth, (req, res) => {
         return res.status(400).json({ success: false, message: 'Nominal pembayaran tidak valid (gunakan ?amount=...)' });
     }
 
-    const staticTemplate = process.env.QRIS_STATIC;
+    const staticTemplate = req.body?.qris_static || req.query?.qris_static || req.gatewayKey?.qrisTemplate || process.env.QRIS_STATIC;
     if (!staticTemplate) {
-        return res.status(500).json({ success: false, message: 'QRIS_STATIC belum dikonfigurasi di .env' });
+        return res.status(500).json({ success: false, message: 'Template QRIS belum dikonfigurasi. Atur QRIS Statis di dashboard https://ry-itsolutionts.web.id/gateway atau sertakan parameter qris_static.' });
     }
 
     const dynamicCode = generateDynamicQRIS(staticTemplate, amount);
@@ -915,11 +993,27 @@ app.all('/check-payment', apiKeyAuth, async (req, res) => {
     }
 
     try {
-        const merchantId = req.headers['x-gopay-merchant-id'] || null;
+        const merchantId = req.headers['x-gopay-merchant-id'] || req.gatewayKey?.merchantId || null;
         const matchedTransaction = await verifyPayment(amount, startTime, merchantId, req.headers['user-agent'], scopeId);
 
         if (matchedTransaction) {
             logActivity('SUCCESS', `Pembayaran terverifikasi lunas untuk nominal Rp ${parseInt(amount, 10)}`, matchedTransaction);
+
+            // Auto dispatch webhook if configured by merchant
+            if (req.gatewayKey && req.gatewayKey.webhookUrl) {
+                axios.post(req.gatewayKey.webhookUrl, {
+                    event: 'payment.success',
+                    status: 'PAID',
+                    trx_id: scopeId,
+                    amount: parseInt(amount, 10),
+                    merchant_name: req.gatewayKey.outletName || 'Merchant',
+                    transaction: matchedTransaction,
+                    timestamp: new Date().toISOString()
+                }, { timeout: 8000 }).catch(whErr => {
+                    console.warn(`[Webhook Error to ${req.gatewayKey.webhookUrl}]:`, whErr.message);
+                });
+            }
+
             return res.json({
                 success: true,
                 paid: true,

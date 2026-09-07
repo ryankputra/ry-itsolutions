@@ -134,6 +134,12 @@
       "namedRegex": "^/games(?:/)?$"
     },
     {
+      "page": "/gateway",
+      "regex": "^/gateway(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/gateway(?:/)?$"
+    },
+    {
       "page": "/history",
       "regex": "^/history(?:/)?$",
       "routeKeys": {},

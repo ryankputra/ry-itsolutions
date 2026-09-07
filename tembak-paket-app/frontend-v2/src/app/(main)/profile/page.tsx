@@ -601,6 +601,36 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* ============================================================ */}
+        {/* INTEGRASI PAYMENT GATEWAY (DEVELOPER SAAS)                  */}
+        {/* ============================================================ */}
+        <div
+          onClick={() => router.push("/gateway")}
+          className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-primary text-white flex items-center justify-between cursor-pointer shadow-md hover:opacity-95 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+              </svg>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-xs sm:text-sm text-white">Integrasi Payment Gateway</h4>
+                <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
+                  Rp 10rb/bln
+                </span>
+              </div>
+              <p className="text-[10px] text-blue-100 font-medium mt-0.5">
+                Terima pembayaran GoPay &amp; QRIS otomatis di website / bot Anda sendiri
+              </p>
+            </div>
+          </div>
+          <svg className="w-4 h-4 text-white/80 group-hover:translate-x-0.5 transition-transform shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </div>
+
         {/* Promo Reseller Banner */}
         <div
           onClick={() => router.push("/referral")}

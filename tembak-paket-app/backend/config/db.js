@@ -154,6 +154,39 @@ async function initializeDatabase() {
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('ceirgo_price_cek_history_imei', '50000')`);
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('imei_speed_fast', '50000')`);
 
+            // Merchant Payment Gateway Keys (Multi-Tenant SaaS)
+            await dbRun(`CREATE TABLE IF NOT EXISTS merchant_gateway_keys (
+                id TEXT PRIMARY KEY,
+                userId TEXT NOT NULL,
+                apiKey TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                status TEXT DEFAULT 'active',
+                pricePerMonth REAL DEFAULT 10000,
+                createdAt TEXT NOT NULL,
+                expiresAt TEXT NOT NULL,
+                autoRenew INTEGER DEFAULT 1,
+                gopayPhone TEXT,
+                merchantId TEXT,
+                outletName TEXT,
+                qrisTemplate TEXT,
+                webhookUrl TEXT,
+                totalRequests INTEGER DEFAULT 0,
+                lastUsedAt TEXT,
+                FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+            )`);
+
+            await dbRun(`CREATE TABLE IF NOT EXISTS merchant_gateway_logs (
+                id TEXT PRIMARY KEY,
+                keyId TEXT NOT NULL,
+                endpoint TEXT,
+                amount REAL,
+                status TEXT,
+                ip TEXT,
+                response TEXT,
+                createdAt TEXT,
+                FOREIGN KEY (keyId) REFERENCES merchant_gateway_keys(id) ON DELETE CASCADE
+            )`);
+
             // Reviews Table
             await dbRun(`CREATE TABLE IF NOT EXISTS reviews (
                 id TEXT PRIMARY KEY,
