@@ -501,9 +501,13 @@ app.all('/create-qris', apiKeyAuth, (req, res) => {
         status: 'PENDING'
     });
 
-    const host = req.get('host');
-    const protocol = req.protocol;
-    const publicUrl = `${protocol}://${host}/qr/${qrisId}`;
+    const forwardedHost = req.get('x-forwarded-host');
+    const forwardedProto = req.get('x-forwarded-proto') || 'https';
+    let baseUrl = process.env.BASE_URL || process.env.PUBLIC_DOMAIN || 'https://ry-itsolutionts.web.id';
+    if (forwardedHost && !forwardedHost.includes('127.0.0.1') && !forwardedHost.includes('localhost')) {
+        baseUrl = `${forwardedProto}://${forwardedHost}`;
+    }
+    const publicUrl = `${baseUrl}/qr/${qrisId}`;
 
     logActivity('INFO', `QRIS Dinamis dibuat | TRX-ID: ${trxId} | Nominal: Rp ${amount}`);
 

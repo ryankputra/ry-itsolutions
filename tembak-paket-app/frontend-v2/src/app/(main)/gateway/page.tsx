@@ -37,6 +37,7 @@ export default function GatewayDeveloperPage() {
   const [userBalance, setUserBalance] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<"keys" | "docs" | "tester">("keys");
   const [docLang, setDocLang] = useState<"php" | "nodejs" | "curl" | "python">("php");
+  const [showRealKeyInDocs, setShowRealKeyInDocs] = useState(false);
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -402,6 +403,8 @@ export default function GatewayDeveloperPage() {
     }
   };
 
+  const docApiKey = showRealKeyInDocs && keys[0]?.apiKey ? keys[0].apiKey : "ry_live_your_api_key_here";
+
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6 pb-28">
       {/* Header Banner */}
@@ -739,19 +742,31 @@ export default function GatewayDeveloperPage() {
               <span className="text-xs text-ink-muted">Cetak QRIS Dinamis Sesuai Nominal</span>
             </div>
 
-            <div className="flex items-center gap-1.5 border-b border-hairline pb-2">
-              <span className="text-xs font-bold text-ink-muted mr-2">Pilih Bahasa:</span>
-              {(["php", "nodejs", "curl", "python"] as const).map((lang) => (
+            <div className="flex items-center justify-between flex-wrap gap-2 border-b border-hairline pb-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-ink-muted mr-2">Pilih Bahasa:</span>
+                {(["php", "nodejs", "curl", "python"] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => setDocLang(lang)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                      docLang === lang ? "bg-primary text-white" : "bg-parchment text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    {lang.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+
+              {keys.length > 0 && (
                 <button
-                  key={lang}
-                  onClick={() => setDocLang(lang)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                    docLang === lang ? "bg-primary text-white" : "bg-parchment text-ink-muted hover:text-ink"
-                  }`}
+                  type="button"
+                  onClick={() => setShowRealKeyInDocs(!showRealKeyInDocs)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-canvas border border-hairline hover:bg-parchment text-ink transition-colors shadow-2xs"
                 >
-                  {lang.toUpperCase()}
+                  <span>{showRealKeyInDocs ? "🔒 Sensor API Key" : "👁️ Sisipkan API Key Saya"}</span>
                 </button>
-              ))}
+              )}
             </div>
 
             {/* Code Samples */}
@@ -759,7 +774,7 @@ export default function GatewayDeveloperPage() {
               <pre>
                 {docLang === "php" &&
 `<?php
-$apiKey = "${keys[0]?.apiKey || "ry_live_your_api_key_here"}";
+$apiKey = "${docApiKey}";
 $url = "https://ry-itsolutionts.web.id/create-qris";
 
 $payload = json_encode([
@@ -792,7 +807,7 @@ if ($result && $result['success']) {
 `const axios = require('axios');
 
 async function createPayment() {
-    const apiKey = "${keys[0]?.apiKey || "ry_live_your_api_key_here"}";
+    const apiKey = "${docApiKey}";
     const res = await axios.post("https://ry-itsolutionts.web.id/create-qris", {
         amount: 50000
     }, {
@@ -808,13 +823,13 @@ async function createPayment() {
 createPayment();`}
                 {docLang === "curl" &&
 `curl -X POST "https://ry-itsolutionts.web.id/create-qris" \
-  -H "x-api-key: ${keys[0]?.apiKey || "ry_live_your_api_key_here"}" \
+  -H "x-api-key: ${docApiKey}" \
   -H "Content-Type: application/json" \
   -d '{"amount": 50000}'`}
                 {docLang === "python" &&
 `import requests
 
-api_key = "${keys[0]?.apiKey || "ry_live_your_api_key_here"}"
+api_key = "${docApiKey}"
 url = "https://ry-itsolutionts.web.id/create-qris"
 
 res = requests.post(url, json={"amount": 50000}, headers={"x-api-key": api_key})
@@ -837,7 +852,7 @@ print("QRIS Checkout URL:", data["data"]["qris_url"])`}
 {`// Cek Status Pembayaran via PHP
 $ch = curl_init("https://ry-itsolutionts.web.id/check-payment?amount=50000&trx_id=" . $trxId);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ["x-api-key: ${keys[0]?.apiKey || "ry_live_your_api_key_here"}"]);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["x-api-key: ${docApiKey}"]);
 $res = json_decode(curl_exec($ch), true);
 
 if ($res['paid'] === true) {
