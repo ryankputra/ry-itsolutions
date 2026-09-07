@@ -307,4 +307,18 @@ app.listen(PORT, () => {
     console.log(`🚀 Ry-ITSolutions Modular Backend Running on http://localhost:${PORT}`);
 });
 
+const gracefulShutdown = async (signal) => {
+    console.log(`[Server] Signal ${signal} diterima: Menutup koneksi WhatsApp Bot secara bersih...`);
+    try {
+        if (typeof waBot.closeWABot === 'function') {
+            await waBot.closeWABot();
+        }
+    } catch (e) {}
+    process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 module.exports = app;
+

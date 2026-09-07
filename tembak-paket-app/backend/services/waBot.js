@@ -95,6 +95,7 @@ let connectedPhone = null;
 let isInitializing = false;
 let connectingTimer = null;
 let inMemoryCreds = null;
+let consecutiveLoggedOutCount = 0;
 
 global.baileysStatus = "disconnected";
 global.qrCode = null;
@@ -181,7 +182,7 @@ function applyBaileysPatches() {
 
 let isAutoUpgrading = false;
 function checkAndAutoUpgradeBaileys(currentVer) {
-    if (!currentVer || currentVer === "6.7.24" || isAutoUpgrading) return;
+    if (!currentVer || currentVer.startsWith("6.7.") || isAutoUpgrading) return;
     isAutoUpgrading = true;
     logWABot(`[Auto-Upgrade STB] Baileys v${currentVer} terdeteksi. Memperbarui ke v6.7.24 secara otomatis...`, "warn");
     const cmd = "npm --prefix tembak-paket-app/backend install @whiskeysockets/baileys@6.7.24 --no-audit --ignore-scripts || npm install @whiskeysockets/baileys@6.7.24 --no-audit --ignore-scripts";
@@ -330,6 +331,24 @@ async function getAdminPhoneNumbers() {
 /**
  * Initialize Baileys WhatsApp Client
  */
+/**
+ * Cleanly close socket on PM2 restart or graceful shutdown to prevent 401 conflict
+ */
+async function closeWABot() {
+    clearConnectingTimer();
+    try {
+        if (sock) {
+            console.log("[WABot] Menutup koneksi socket secara bersih sebelum restart...");
+            sock.ev.removeAllListeners();
+            sock.end(undefined);
+            sock = null;
+        }
+    } catch (e) {}
+    connectionState = "disconnected";
+    global.baileysStatus = "disconnected";
+    isInitializing = false;
+}
+
 async function initWABot(forceNew = false) {
     if (forceNew) {
         isInitializing = false;
@@ -563,6 +582,7 @@ async function initWABot(forceNew = false) {
                 qrCodeDataUrl = null;
                 global.qrCode = null;
                 connectedPhone = sock.user?.id ? sock.user.id.split(":")[0] : (sock.user?.phone || "Connected");
+                consecutiveLoggedOutCount = 0;
                 logWABot(`🚀 WhatsApp Bot Terhubung sebagai: ${connectedPhone}`, "info");
                 console.log(`[WABot] 🚀 WhatsApp Bot Admin Terhubung sebagai: ${connectedPhone}`);
                 isInitializing = false;
@@ -574,15 +594,41 @@ async function initWABot(forceNew = false) {
             // 4. Status close (Koneksi terputus / QR discan memicu 515 restart)
             if (connection === "close") {
                 clearConnectingTimer();
-                const statusCode = (lastDisconnect?.error)?.output?.statusCode || (lastDisconnect?.error)?.statusCode;
-                const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+                const err = lastDisconnect?.error;
+                const statusCode = err?.output?.statusCode || err?.statusCode;
+                const errMsg = (err?.message || "").toLowerCase();
+                const isConflict = errMsg.includes("conflict") || errMsg.includes("stream errored") || statusCode === 440;
                 const isRestart = statusCode === DisconnectReason.restartRequired || statusCode === 515;
+                const isLoggedOut = (statusCode === DisconnectReason.loggedOut || statusCode === 401) && !isConflict;
 
-                logWABot(`Koneksi socket terputus (Status: ${statusCode || "unknown"}). Error: ${lastDisconnect?.error?.message || "None"}`, "warn");
+                logWABot(`Koneksi socket terputus (Status: ${statusCode || "unknown"}). Error: ${err?.message || "None"}`, "warn");
 
-                // Jika terputus karena LoggedOut (401), bersihkan sesi & siapkan QR baru otomatis
+                // Penanganan khusus jika terjadi konflik socket saat PM2 restart (bukan logout asli dari HP)
+                if (isConflict) {
+                    logWABot("⚠️ Konflik koneksi terdeteksi (proses restart/overlap). Menunggu 5 detik sebelum reconnect tanpa menghapus sesi...", "warn");
+                    connectionState = "connecting";
+                    global.baileysStatus = "connecting";
+                    isInitializing = false;
+                    setTimeout(() => initWABot(false), 5000);
+                    return;
+                }
+
+                // Jika terputus karena LoggedOut (401)
                 if (isLoggedOut) {
-                    logWABot("Sesi WhatsApp Logged Out (401). Membersihkan sesi & menyiapkan QR baru...", "warn");
+                    consecutiveLoggedOutCount++;
+                    // Jika baru 1x terdeteksi 401 dan sesi lokal masih ada, beri kesempatan reconnect 1x
+                    const hasLocalCreds = fs.existsSync(path.join(SESSIONS_DIR, "creds.json"));
+                    if (consecutiveLoggedOutCount < 2 && hasLocalCreds) {
+                        logWABot(`⚠️ Sinyal 401 terdeteksi (percobaan 1/2). Melakukan reconnect pengujian sebelum mereset sesi...`, "warn");
+                        connectionState = "connecting";
+                        global.baileysStatus = "connecting";
+                        isInitializing = false;
+                        setTimeout(() => initWABot(false), 3000);
+                        return;
+                    }
+
+                    logWABot("Sesi WhatsApp Logged Out dari HP (401 terkonfirmasi). Menyiapkan sesi & QR baru...", "warn");
+                    consecutiveLoggedOutCount = 0;
                     connectionState = "disconnected";
                     global.baileysStatus = "disconnected";
                     currentQrCode = null;
@@ -1407,6 +1453,7 @@ module.exports = {
     getWALogs,
     initWABot,
     logoutWABot,
+    closeWABot,
     getWAStatus,
     sendTextMessage,
     notifyNewOrder,

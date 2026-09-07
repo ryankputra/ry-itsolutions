@@ -8,3 +8,7 @@ dist/
 build/  
 .output/ 
 .next/cache/
+
+# WhatsApp auth sessions
+sessions/
+backend/sessions/
