@@ -278,9 +278,9 @@ export default function ProfilePage() {
           <img
             src="/banners/banner_gopay.jpg"
             alt="Payment Gateway GoPay"
-            className="absolute inset-0 w-full h-full object-cover object-right group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 w-full h-full object-cover object-[65%_center] group-hover:scale-105 transition-transform duration-500"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-blue-950/40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-transparent" />
 
           <div className="relative z-10 flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-sm group-hover:scale-105 transition-transform">

@@ -61,7 +61,7 @@ export default function DashboardPage() {
       badge: "UNOFFICIAL SAAS",
       ctaText: "MULAI INTEGRASI >",
       ctaLink: "/gateway",
-      bgGradient: "from-slate-950/95 via-blue-950/85 to-transparent",
+      bgGradient: "from-slate-950/90 via-blue-950/65 to-transparent",
       image: "/banners/banner_gopay.jpg",
     },
   ];
@@ -357,17 +357,17 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       <div
         onClick={() => router.push("/gateway")}
-        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-blue-400/40 p-3.5 sm:p-4 text-white flex items-center justify-between cursor-pointer shadow-lg hover:shadow-xl transition-all group"
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-blue-400/40 p-4 sm:p-5 text-white flex items-center justify-between cursor-pointer shadow-lg hover:shadow-xl transition-all group min-h-[105px] sm:min-h-[120px]"
       >
-        {/* Background Real Commercial Talent Image */}
+        {/* Background Real Commercial Talent Image - Bright & Clear */}
         <img
           src="/banners/banner_gopay.jpg"
           alt="Payment Gateway GoPay & QRIS"
-          className="absolute inset-0 w-full h-full object-cover object-right sm:object-center group-hover:scale-105 transition-transform duration-700"
+          className="absolute inset-0 w-full h-full object-cover object-[65%_center] sm:object-[60%_35%] group-hover:scale-105 transition-transform duration-700"
         />
 
         {/* Dynamic Dark Gradient Overlay for Maximum Text Clarity */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 sm:via-slate-950/75 to-blue-950/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/75 sm:via-slate-950/50 to-transparent" />
 
         {/* Left Content */}
         <div className="relative z-10 flex items-center gap-3 sm:gap-4 max-w-sm sm:max-w-lg">

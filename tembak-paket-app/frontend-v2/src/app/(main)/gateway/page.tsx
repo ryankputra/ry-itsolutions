@@ -405,14 +405,15 @@ export default function GatewayDeveloperPage() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6 pb-28">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-blue-500/30 p-6 sm:p-8 text-white shadow-xl">
-        {/* Real Commercial Photography Background */}
+      <div className="relative overflow-hidden rounded-3xl border border-blue-400/40 p-6 sm:p-8 text-white shadow-xl min-h-[220px]">
+        {/* Real Commercial Photography Background - Bright & Clear */}
         <img
           src="/banners/banner_gopay.jpg"
           alt="GoPay Merchant Banner"
-          className="absolute inset-0 w-full h-full object-cover object-right opacity-30"
+          className="absolute inset-0 w-full h-full object-cover object-[65%_center] sm:object-[60%_35%] transition-transform duration-700"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-blue-950/60" />
+        {/* Soft edge gradient to keep left text 100% readable while keeping the photo fully visible */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 sm:via-slate-950/55 to-transparent" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
@@ -446,7 +447,7 @@ export default function GatewayDeveloperPage() {
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md border border-white/15 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[200px] text-center shadow-lg">
+          <div className="bg-slate-950/60 backdrop-blur-md border border-white/20 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[190px] text-center shadow-xl">
             <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">Saldo Akun Anda</span>
             <span className="text-xl sm:text-2xl font-black text-amber-300 my-1">
               Rp {userBalance.toLocaleString("id-ID")}
