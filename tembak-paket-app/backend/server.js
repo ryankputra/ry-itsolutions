@@ -235,10 +235,7 @@ setInterval(async () => {
         // 1. Check keys approaching expiry (3 days & 1 day left) and send automated WA reminder
         try {
             const warningKeys = await dbAll(`
-                SELECT k.*, u.username, u.name, u.phone, u.verifiedPhone, u.balance
-                FROM merchant_gateway_keys k
-                JOIN users u ON k.userId = u.id
-                WHERE k.status = 'active' AND k.expiresAt > ?
+                SELECT k.*, u.name, u.email, u.verifiedPhone, u.savedPhones, u.balance FROM merchant_gateway_keys k JOIN users u ON k.userId = u.id WHERE k.status = 'active' AND k.expiresAt > ?
             `, [nowIso]);
 
             for (const k of warningKeys) {
@@ -247,11 +244,12 @@ setInterval(async () => {
 
                 // Send reminder if 3 days or 1 day left and not yet reminded today
                 if ((daysLeft === 3 || daysLeft === 1 || daysLeft === 0) && k.lastReminderSentAt !== todayStr) {
-                    const userPhone = k.phone || k.verifiedPhone;
+                    const userPhone = k.verifiedPhone || k.gopayPhone || '';
+                    const userName = k.name || (k.email ? k.email.split('@')[0] : 'Merchant');
                     if (userPhone && userPhone.length >= 8) {
                         const expFormatted = new Date(k.expiresAt).toLocaleDateString('id-ID', { dateStyle: 'long' });
                         const reminderMsg = `⚠️ *PENGINGAT MASA AKTIF PAYMENT GATEWAY GOPAY* ⚡\n\n` +
-                            `Halo Kak *${k.username || k.name}*! 👋\n\n` +
+                            `Halo Kak *${userName}*! 👋\n\n` +
                             `Masa aktif API Key GoPay & QRIS Anda (*${k.name}*) akan kedaluwarsa dalam *${daysLeft} HARI LAGI* (pada ${expFormatted}).\n\n` +
                             `💰 Biaya perpanjangan: *Rp 10.000 / 30 hari*\n` +
                             `💳 Saldo Anda saat ini: *Rp ${(k.balance || 0).toLocaleString('id-ID')}*\n\n` +

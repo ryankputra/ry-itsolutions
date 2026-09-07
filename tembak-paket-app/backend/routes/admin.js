@@ -1545,11 +1545,7 @@ router.post('/admin/gopay/logout', isAuthenticated, isAdmin, async (req, res) =>
 router.get('/admin/gateway-keys', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const keys = await dbAll(`
-            SELECT k.*, 
-                   u.username, u.name, u.phone, u.verifiedPhone, u.balance, u.email
-            FROM merchant_gateway_keys k
-            LEFT JOIN users u ON k.userId = u.id
-            ORDER BY k.createdAt DESC
+            SELECT k.*, u.name, u.email, u.verifiedPhone, u.savedPhones, u.balance, u.role FROM merchant_gateway_keys k LEFT JOIN users u ON k.userId = u.id ORDER BY k.createdAt DESC
         `);
 
         const now = Date.now();
@@ -1563,15 +1559,27 @@ router.get('/admin/gateway-keys', isAuthenticated, isAdmin, async (req, res) => 
         const expiredKeys = keys.filter(k => k.status === 'expired' || new Date(k.expiresAt).getTime() <= now).length;
         const totalRevenue = totalKeys * 10000;
 
-        // Augment each key with calculated daysRemaining
+        // Augment each key with calculated fields for frontend compatibility
         const augmented = keys.map(k => {
             const diff = new Date(k.expiresAt).getTime() - now;
             const daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            const isActive = k.status === 'active';
+            const apiKeyPrefix = k.apiKey ? k.apiKey.slice(0, 16) : '';
+            const phone = k.verifiedPhone || k.gopayPhone || '';
+            const username = k.name || (k.email ? k.email.split('@')[0] : 'user');
+            const isGopayConnected = Boolean(k.merchantId && k.gopayPhone);
+
             return {
                 ...k,
+                username,
+                phone,
+                apiKeyPrefix,
+                isActive,
+                isGopayConnected,
+                amountPaid: k.pricePerMonth || 10000,
                 daysRemaining: daysRemaining < 0 ? 0 : daysRemaining,
                 isExpired: new Date(k.expiresAt).getTime() <= now || k.status === 'expired',
-                isExpiringSoon: daysRemaining >= 0 && daysRemaining <= 3 && k.status === 'active'
+                isExpiringSoon: daysRemaining >= 0 && daysRemaining <= 3 && isActive
             };
         });
 
@@ -1605,7 +1613,8 @@ router.post('/admin/gateway-keys/:id/renew', isAuthenticated, isAdmin, async (re
         const now = Date.now();
         const curExp = new Date(key.expiresAt).getTime();
         const base = curExp > now ? curExp : now;
-        const newExpiresAt = new Date(base + 30 * 24 * 60 * 60 * 1000);
+        const days = parseInt(req.body?.days) || 30;
+        const newExpiresAt = new Date(base + days * 24 * 60 * 60 * 1000);
 
         await dbRun("UPDATE merchant_gateway_keys SET expiresAt = ?, status = 'active' WHERE id = ?", [
             newExpiresAt.toISOString(),
@@ -1614,7 +1623,7 @@ router.post('/admin/gateway-keys/:id/renew', isAuthenticated, isAdmin, async (re
 
         res.json({
             status: true,
-            message: `Masa aktif key '${key.name}' berhasil diperpanjang 30 hari secara manual oleh admin!`,
+            message: `Masa aktif key '${key.name}' berhasil diperpanjang ${days} hari secara manual oleh admin!`,
             newExpiresAt: newExpiresAt.toISOString()
         });
     } catch (error) {
@@ -1653,10 +1662,7 @@ router.post('/admin/gateway-keys/:id/remind-wa', isAuthenticated, isAdmin, async
     try {
         const keyId = req.params.id;
         const key = await dbGet(`
-            SELECT k.*, u.username, u.name, u.phone, u.verifiedPhone
-            FROM merchant_gateway_keys k
-            LEFT JOIN users u ON k.userId = u.id
-            WHERE k.id = ?
+            SELECT k.*, u.name, u.email, u.verifiedPhone, u.savedPhones FROM merchant_gateway_keys k LEFT JOIN users u ON k.userId = u.id WHERE k.id = ?
         `, [keyId]);
 
         if (!key) return res.status(404).json({ status: false, message: "Key tidak ditemukan" });

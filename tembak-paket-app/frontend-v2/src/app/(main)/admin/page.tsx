@@ -1056,6 +1056,7 @@ export default function AdminPage() {
       loadManualData();
       loadUsers();
       loadAdminTickets();
+      loadGatewayKeys();
 
       const fetchBalances = () => {
         fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
@@ -4902,14 +4903,16 @@ export default function AdminPage() {
           {(() => {
             const now = Date.now();
             const totalKeys = adminGatewayKeys.length;
-            const activeKeys = adminGatewayKeys.filter(k => k.isActive && (!k.expiresAt || new Date(k.expiresAt).getTime() > now)).length;
+            const activeKeys = adminGatewayKeys.filter(k => (k.status === 'active' || k.isActive) && (!k.expiresAt || new Date(k.expiresAt).getTime() > now)).length;
             const expiringSoonKeys = adminGatewayKeys.filter(k => {
-              if (!k.isActive || !k.expiresAt) return false;
+              if (!k.expiresAt) return false;
+              const isAct = k.status === 'active' || k.isActive;
+              if (!isAct) return false;
               const diff = Math.ceil((new Date(k.expiresAt).getTime() - now) / (1000 * 60 * 60 * 24));
               return diff >= 0 && diff <= 3;
             }).length;
-            const expiredKeys = adminGatewayKeys.filter(k => k.expiresAt && new Date(k.expiresAt).getTime() <= now).length;
-            const totalRevenue = adminGatewayKeys.reduce((acc, k) => acc + (Number(k.amountPaid) || 0), 0);
+            const expiredKeys = adminGatewayKeys.filter(k => k.status === 'expired' || (k.expiresAt && new Date(k.expiresAt).getTime() <= now)).length;
+            const totalRevenue = adminGatewayKeys.reduce((acc, k) => acc + (Number(k.amountPaid) || Number(k.pricePerMonth) || 10000), 0);
 
             return (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -5005,22 +5008,27 @@ export default function AdminPage() {
                 const matchSearch = !s || (
                   (k.username && k.username.toLowerCase().includes(s)) ||
                   (k.name && k.name.toLowerCase().includes(s)) ||
+                  (k.email && k.email.toLowerCase().includes(s)) ||
                   (k.apiKeyPrefix && k.apiKeyPrefix.toLowerCase().includes(s)) ||
-                  (k.phone && k.phone.includes(s))
+                  (k.apiKey && k.apiKey.toLowerCase().includes(s)) ||
+                  (k.phone && k.phone.includes(s)) ||
+                  (k.verifiedPhone && k.verifiedPhone.includes(s))
                 );
                 if (!matchSearch) return false;
 
+                const isAct = k.status === 'active' || Boolean(k.isActive);
+
                 // Status filter
                 if (gatewayKeyFilter === 'active') {
-                  return k.isActive && (!k.expiresAt || new Date(k.expiresAt).getTime() > now);
+                  return isAct && (!k.expiresAt || new Date(k.expiresAt).getTime() > now);
                 }
                 if (gatewayKeyFilter === 'expiring') {
-                  if (!k.isActive || !k.expiresAt) return false;
+                  if (!isAct || !k.expiresAt) return false;
                   const diff = Math.ceil((new Date(k.expiresAt).getTime() - now) / (1000 * 60 * 60 * 24));
                   return diff >= 0 && diff <= 3;
                 }
                 if (gatewayKeyFilter === 'expired') {
-                  return k.expiresAt && new Date(k.expiresAt).getTime() <= now;
+                  return k.status === 'expired' || (k.expiresAt && new Date(k.expiresAt).getTime() <= now);
                 }
                 return true;
               });
@@ -5112,14 +5120,17 @@ export default function AdminPage() {
 
                             {/* GoBiz Status */}
                             <td className="p-3.5 align-top">
-                              {k.gobizOutletId || k.gobizSession ? (
+                              {k.isGopayConnected || k.merchantId || k.outletName || k.gobizOutletId || k.gopayPhone ? (
                                 <div className="space-y-0.5">
-                                  <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 text-[10px] font-bold inline-flex items-center gap-1 border border-blue-500/20">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 text-[10px] font-bold inline-flex items-center gap-1 border border-emerald-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                     GoBiz Terhubung
                                   </span>
-                                  {k.gobizOutletId && (
-                                    <p className="text-[10px] text-ink-muted font-mono">Outlet: {k.gobizOutletId}</p>
+                                  {(k.outletName || k.merchantId || k.gobizOutletId) && (
+                                    <p className="text-[10px] text-ink-muted font-mono">{k.outletName || k.merchantId || k.gobizOutletId}</p>
+                                  )}
+                                  {k.gopayPhone && (
+                                    <p className="text-[9px] text-ink-muted font-mono">HP: {k.gopayPhone}</p>
                                   )}
                                 </div>
                               ) : (
@@ -5161,12 +5172,12 @@ export default function AdminPage() {
                                 onClick={() => handleToggleGatewayKey(k)}
                                 disabled={isActionLoading}
                                 className={`px-2.5 py-1 rounded-full text-[10px] font-black border transition-all ${
-                                  k.isActive
+                                  (k.status === 'active' || k.isActive)
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
                                     : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
                                 }`}
                               >
-                                {k.isActive ? '● Aktif' : '○ Nonaktif'}
+                                {(k.status === 'active' || k.isActive) ? '● Aktif' : '○ Nonaktif'}
                               </button>
                             </td>
 
