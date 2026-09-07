@@ -238,7 +238,7 @@ export default function DashboardPage() {
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
       {/* ============================================================ */}
       <div className="bg-canvas border border-hairline rounded-2xl p-3 sm:p-4 shadow-2xs">
-        <div className="grid grid-cols-6 gap-1.5 sm:gap-2 text-center">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 text-center">
           {[
             {
               name: "Buka IMEI",
@@ -296,6 +296,17 @@ export default function DashboardPage() {
               ),
             },
             {
+              name: "Gateway API",
+              href: "/gateway",
+              tourKey: "service-gateway",
+              iconBg: "bg-purple-50 border-purple-200/80 text-purple-600",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                </svg>
+              ),
+            },
+            {
               name: "Panduan",
               onClick: () => window.dispatchEvent(new Event("open_app_tour")),
               tourKey: "service-panduan",
@@ -323,6 +334,37 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* 2.5 DEDICATED PAYMENT GATEWAY SAAS CARD ON DASHBOARD        */}
+      {/* ============================================================ */}
+      <div
+        onClick={() => router.push("/gateway")}
+        className="rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-950 border border-blue-400/30 p-3.5 sm:p-4 text-white flex items-center justify-between cursor-pointer shadow-md hover:scale-[1.01] transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-sm group-hover:rotate-6 transition-transform">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+            </svg>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-xs sm:text-sm text-white">Payment Gateway GoPay &amp; QRIS</h3>
+              <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider">
+                Rp 10rb/bln
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-300 font-medium">
+              Terima pembayaran otomatis di website, bot, atau aplikasi toko Anda sendiri
+            </p>
+          </div>
+        </div>
+        <span className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs uppercase tracking-wider shrink-0 border border-white/20 flex items-center gap-1">
+          <span>Kelola</span>
+          <span>&gt;</span>
+        </span>
       </div>
 
       {/* ============================================================ */}
