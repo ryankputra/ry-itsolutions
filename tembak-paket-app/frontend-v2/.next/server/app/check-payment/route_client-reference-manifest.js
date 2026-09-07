@@ -1,0 +1,1 @@
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/check-payment/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"/Users/ryankptr/ry-itsolutions/tembak-paket-app/frontend-v2/src/app/check-payment/route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

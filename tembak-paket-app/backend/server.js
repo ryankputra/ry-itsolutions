@@ -102,7 +102,7 @@ app.use(cors({
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data', 'x-telegram-bot-api-secret-token', 'X-Requested-With', 'Accept', 'Cache-Control', 'x-internal-test-key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data', 'x-telegram-bot-api-secret-token', 'X-Requested-With', 'Accept', 'Cache-Control', 'x-internal-test-key', 'x-api-key', 'X-Api-Key'],
     exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 app.options('*', cors());
@@ -161,6 +161,48 @@ app.use('/api', telegramRoutes.router);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api', webhookRoutes);
 app.use('/api', gatewayRoutes);
+
+// Public Payment Gateway Endpoints Proxy to GoPay Microservice
+const gopayGatewayServiceUrl = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
+app.all(['/create-qris', '/api/create-qris'], async (req, res) => {
+    try {
+        const response = await axios({
+            method: req.method,
+            url: `${gopayGatewayServiceUrl}/create-qris`,
+            params: req.query,
+            data: req.body,
+            headers: {
+                'x-api-key': req.headers['x-api-key'] || req.query.api_key,
+                'content-type': req.headers['content-type'] || 'application/json'
+            },
+            timeout: 15000
+        });
+        return res.status(response.status).json(response.data);
+    } catch (err) {
+        if (err.response) return res.status(err.response.status).json(err.response.data);
+        return res.status(502).json({ success: false, message: "GoPay Gateway microservice unreachable: " + err.message });
+    }
+});
+
+app.all(['/check-payment', '/api/check-payment'], async (req, res) => {
+    try {
+        const response = await axios({
+            method: req.method,
+            url: `${gopayGatewayServiceUrl}/check-payment`,
+            params: req.query,
+            data: req.body,
+            headers: {
+                'x-api-key': req.headers['x-api-key'] || req.query.api_key,
+                'content-type': req.headers['content-type'] || 'application/json'
+            },
+            timeout: 15000
+        });
+        return res.status(response.status).json(response.data);
+    } catch (err) {
+        if (err.response) return res.status(err.response.status).json(err.response.data);
+        return res.status(502).json({ success: false, message: "GoPay Gateway microservice unreachable: " + err.message });
+    }
+});
 
 // WhatsApp Admin Bot Control Endpoints
 app.get('/api/admin/whatsapp/status', isAuthenticated, isAdmin, (req, res) => {
