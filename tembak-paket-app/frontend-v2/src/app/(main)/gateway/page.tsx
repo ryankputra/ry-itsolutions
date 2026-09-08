@@ -586,8 +586,9 @@ export default function GatewayDeveloperPage() {
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-hairline pb-2">
+      {/* Tabs Navigation (Hanya tampil jika user sudah login) */}
+      {user && (
+        <div className="flex items-center gap-2 border-b border-hairline pb-2">
         <button
           onClick={() => setActiveTab("keys")}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 ${
@@ -630,9 +631,10 @@ export default function GatewayDeveloperPage() {
           <span>API Sandbox / Tester</span>
         </button>
       </div>
+      )}
 
-      {/* TAB 1: KEYS MANAGEMENT */}
-      {activeTab === "keys" && (
+      {/* TAB 1: KEYS MANAGEMENT (Hanya untuk pengguna login) */}
+      {user && activeTab === "keys" && (
         <div className="space-y-4">
           {!user && (
             <div className="p-8 sm:p-10 rounded-3xl bg-canvas border border-hairline text-center space-y-4 shadow-sm animate-in fade-in">
@@ -924,8 +926,8 @@ export default function GatewayDeveloperPage() {
         </div>
       )}
 
-      {/* TAB 2: DOCUMENTATION */}
-      {activeTab === "docs" && (
+      {/* TAB 2: DOCUMENTATION (Tampil langsung untuk pengunjung tanpa login, atau saat tab docs dipilih) */}
+      {(!user || activeTab === "docs") && (
         <div className="space-y-6">
           <div className="p-6 rounded-3xl bg-canvas border border-hairline shadow-sm space-y-4">
             <h2 className="text-lg font-black text-ink">Panduan Integrasi Payment Gateway GoPay &amp; QRIS (Unofficial)</h2>
@@ -1211,8 +1213,8 @@ if ($res['paid'] === true) {
         </div>
       )}
 
-      {/* TAB 3: API SANDBOX / TESTER */}
-      {activeTab === "tester" && (
+      {/* TAB 3: API SANDBOX / TESTER (Hanya untuk pengguna login) */}
+      {user && activeTab === "tester" && (
         <div className="p-6 rounded-3xl bg-canvas border border-hairline shadow-sm space-y-4">
           <div>
             <h2 className="text-base sm:text-lg font-black text-ink">API Sandbox &amp; Live Tester</h2>

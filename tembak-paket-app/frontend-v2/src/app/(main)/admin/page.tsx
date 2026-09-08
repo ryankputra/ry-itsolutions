@@ -5120,18 +5120,26 @@ export default function AdminPage() {
 
                             {/* GoBiz Status */}
                             <td className="p-3.5 align-top">
-                              {k.isGopayConnected || k.merchantId || k.outletName || k.gobizOutletId || k.gopayPhone ? (
+                              {k.isGopayConnected && k.merchantId ? (
                                 <div className="space-y-0.5">
                                   <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 text-[10px] font-bold inline-flex items-center gap-1 border border-emerald-500/20">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                     GoBiz Terhubung
                                   </span>
-                                  {(k.outletName || k.merchantId || k.gobizOutletId) && (
-                                    <p className="text-[10px] text-ink-muted font-mono">{k.outletName || k.merchantId || k.gobizOutletId}</p>
+                                  {k.outletName && (
+                                    <p className="text-[10px] text-ink-muted font-mono">{k.outletName}</p>
                                   )}
                                   {k.gopayPhone && (
                                     <p className="text-[9px] text-ink-muted font-mono">HP: {k.gopayPhone}</p>
                                   )}
+                                </div>
+                              ) : k.gopayPhone ? (
+                                <div className="space-y-0.5">
+                                  <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 text-[10px] font-bold inline-flex items-center gap-1 border border-amber-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                    Menunggu OTP
+                                  </span>
+                                  <p className="text-[9px] text-ink-muted font-mono">HP: {k.gopayPhone}</p>
                                 </div>
                               ) : (
                                 <span className="px-2 py-0.5 rounded-md bg-slate-500/10 text-slate-500 text-[10px] font-semibold inline-flex items-center gap-1 border border-slate-500/20">
