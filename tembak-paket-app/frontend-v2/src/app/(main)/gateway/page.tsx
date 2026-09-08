@@ -36,7 +36,13 @@ export default function GatewayDeveloperPage() {
   const [keys, setKeys] = useState<GatewayKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [userBalance, setUserBalance] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<"keys" | "docs" | "tester">("keys");
+  const [activeTab, setActiveTab] = useState<"keys" | "docs" | "tester">(() => {
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "keys" || hash === "docs" || hash === "tester") return hash;
+    }
+    return user ? "keys" : "docs";
+  });
   const [docLang, setDocLang] = useState<"php" | "nodejs" | "curl" | "python">("php");
   const [showRealKeyInDocs, setShowRealKeyInDocs] = useState(false);
   const [isExtractingQr, setIsExtractingQr] = useState(false);
@@ -552,18 +558,31 @@ export default function GatewayDeveloperPage() {
             </div>
           </div>
 
-          <div className="bg-slate-950/60 backdrop-blur-md border border-white/20 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[190px] text-center shadow-xl">
-            <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">Saldo Akun Anda</span>
-            <span className="text-xl sm:text-2xl font-black text-amber-300 my-1">
-              Rp {userBalance.toLocaleString("id-ID")}
-            </span>
-            <button
-              onClick={() => router.push("/topup")}
-              className="mt-2 w-full py-1.5 px-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-transform hover:scale-105"
-            >
-              + Isi Saldo
-            </button>
-          </div>
+          {user ? (
+            <div className="bg-slate-950/60 backdrop-blur-md border border-white/20 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[190px] text-center shadow-xl">
+              <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">Saldo Akun Anda</span>
+              <span className="text-xl sm:text-2xl font-black text-amber-300 my-1">
+                Rp {userBalance.toLocaleString("id-ID")}
+              </span>
+              <button
+                onClick={() => router.push("/topup")}
+                className="mt-2 w-full py-1.5 px-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-transform hover:scale-105"
+              >
+                + Isi Saldo
+              </button>
+            </div>
+          ) : (
+            <div className="bg-slate-950/60 backdrop-blur-md border border-white/20 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[190px] text-center shadow-xl">
+              <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">Akses Publik &amp; Integrasi</span>
+              <span className="text-xs text-slate-400 my-1">Dokumentasi &amp; Tester Terbuka</span>
+              <Link
+                href="/login"
+                className="mt-2 w-full py-2 px-3 bg-primary hover:bg-primary-hover text-white font-bold text-xs rounded-xl shadow-md text-center transition-transform hover:scale-105 block"
+              >
+                Masuk / Buat Key
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 

@@ -11,6 +11,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isAiPage = pathname === "/ai";
+  const isPublicRoute = Boolean(
+    pathname && (
+      pathname === "/gateway" ||
+      pathname.startsWith("/gateway/") ||
+      pathname === "/cek-garansi" ||
+      pathname.startsWith("/cek-garansi/")
+    )
+  );
   const [showWaMenu, setShowWaMenu] = useState(false);
   const [showTour, setShowTour] = useState(false);
 
@@ -33,10 +41,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isPublicRoute) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isPublicRoute]);
 
   useEffect(() => {
     let currentVersion: number | null = null;
@@ -82,7 +90,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <ModernAppLoader text="Memuat Sistem & Layanan..." />;
   }
 
-  if (!user) return null;
+  if (!user && !isPublicRoute) return null;
 
   return (
     <>
