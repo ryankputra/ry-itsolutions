@@ -518,6 +518,7 @@ app.all('/create-qris', apiKeyAuth, (req, res) => {
         trxId,
         expiresAt,
         createdAt,
+        gatewayKey: req.gatewayKey || null,
         status: 'PENDING'
     });
 
@@ -863,10 +864,37 @@ app.get('/transactions/all', apiKeyAuth, async (req, res) => {
 
 // Core Helper: Verifikasi Pembayaran dari GoPay API
 // qrisId: scope klaim — satu txId hanya bisa diklaim oleh satu qrisId
-async function verifyPayment(amount, startTime, merchantIdOverride = null, userAgent = null, qrisId = null) {
-    let headers = await sessionManager.getValidHeaders(userAgent);
-    if (!headers) {
-        throw new Error('Sesi GoPay belum ada. Jalankan `node login.js` di terminal.');
+async function verifyPayment(amount, startTime, merchantIdOverride = null, userAgent = null, qrisId = null, gatewayKey = null) {
+    let headers = null;
+
+    if (gatewayKey) {
+        const tenantSessionFile = path.join(__dirname, 'sessions', `${gatewayKey.id}.json`);
+        if (fs.existsSync(tenantSessionFile)) {
+            try {
+                const sData = JSON.parse(fs.readFileSync(tenantSessionFile, 'utf8'));
+                const token = sData.access_token || sData.token || sData.authToken || sData.data?.access_token || sData.data?.token;
+                if (token) {
+                    headers = {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'User-Agent': userAgent || 'GoBiz/3.54.0 (Android; 12)',
+                        'X-AppVersion': '3.54.0',
+                        'X-Platform': 'Android'
+                    };
+                }
+            } catch (e) {
+                console.warn('[Tenant Session Error]', e.message);
+            }
+        }
+
+        if (!headers) {
+            throw new Error(`Sesi GoBiz pada API Key (${gatewayKey.name || gatewayKey.id}) belum aktif atau kedaluwarsa. Silakan lakukan 'Hubungkan GoBiz (OTP)' di dashboard https://ry-itsolutionts.web.id/gateway.`);
+        }
+    } else {
+        headers = await sessionManager.getValidHeaders(userAgent);
+        if (!headers) {
+            throw new Error('Sesi GoPay server utama belum ada. Jalankan `node login.js` di terminal.');
+        }
     }
 
     const fetchCheckPayment = async (activeHeaders) => {
@@ -896,6 +924,9 @@ async function verifyPayment(amount, startTime, merchantIdOverride = null, userA
         response = await fetchCheckPayment(headers);
     } catch (firstErr) {
         if (firstErr.response && firstErr.response.status === 401) {
+            if (gatewayKey) {
+                throw new Error(`Sesi GoBiz pada API Key (${gatewayKey.name || gatewayKey.id}) telah kedaluwarsa dari pihak GoJek. Silakan hubungkan ulang GoBiz (OTP) di dashboard https://ry-itsolutionts.web.id/gateway.`);
+            }
             logActivity('WARNING', 'Sesi expired (401) di verifyPayment. Memulai auto-refresh...');
             const refreshed = await sessionManager.refreshSession();
             if (refreshed) {
@@ -990,7 +1021,14 @@ app.get('/api/qr-status/:id', async (req, res) => {
 
     try {
         // Pakai trx_id sebagai scope klaim agar transaksi hanya bisa diklaim oleh payment ini
-        const matched = await verifyPayment(qris.amount, qris.createdAt, null, req.headers['user-agent'], qris.trxId || qrisId);
+        const matched = await verifyPayment(
+            qris.amount,
+            qris.createdAt,
+            qris.gatewayKey?.merchantId || null,
+            req.headers['user-agent'],
+            qris.trxId || qrisId,
+            qris.gatewayKey || null
+        );
         if (matched) {
             qris.status = 'PAID';
             qris.transaction = matched;
@@ -1016,9 +1054,20 @@ app.all('/check-payment', apiKeyAuth, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Nominal pembayaran tidak valid' });
     }
 
+    // Validasi akun GoBiz untuk API Key Tenant / Pengguna
+    if (req.gatewayKey) {
+        if (!req.gatewayKey.merchantId || !req.gatewayKey.gopayPhone) {
+            return res.status(400).json({
+                success: false,
+                paid: false,
+                message: 'Akun GoBiz belum terhubung pada API Key ini. Silakan klik tombol "Hubungkan GoBiz (OTP)" di dashboard https://ry-itsolutionts.web.id/gateway terlebih dahulu agar sistem dapat mengecek mutasi transaksi GoPay Anda.'
+            });
+        }
+    }
+
     try {
         const merchantId = req.headers['x-gopay-merchant-id'] || req.gatewayKey?.merchantId || null;
-        const matchedTransaction = await verifyPayment(amount, startTime, merchantId, req.headers['user-agent'], scopeId);
+        const matchedTransaction = await verifyPayment(amount, startTime, merchantId, req.headers['user-agent'], scopeId, req.gatewayKey);
 
         if (matchedTransaction) {
             logActivity('SUCCESS', `Pembayaran terverifikasi lunas untuk nominal Rp ${parseInt(amount, 10)}`, matchedTransaction);
