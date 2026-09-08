@@ -336,7 +336,7 @@ export default function LandingPage() {
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Flat Rp 10.000 / bln per API Key</li>
+                <li className="flex items-center gap-2">✓ Aktivasi Rp 35.000 (Perpanjang Rp 10.000 / bln)</li>
                 <li className="flex items-center gap-2">✓ Uang langsung masuk rekening GoPay</li>
                 <li className="flex items-center gap-2">✓ Auto-check mutasi &amp; HTTP Webhook</li>
               </ul>
@@ -564,8 +564,8 @@ export default function LandingPage() {
                 <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Payment Gateway SaaS</span>
                 <h3 className="text-xl font-bold text-ink">Gateway QRIS GoPay</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-blue-600">Rp 10.000</span>
-                  <span className="text-xs text-ink-muted">/ bulan (per key)</span>
+                  <span className="text-2xl font-bold text-blue-600">Rp 35.000</span>
+                  <span className="text-xs text-ink-muted">aktivasi (perpanjang Rp 10.000/bln)</span>
                 </div>
                 <p className="text-xs text-ink-muted leading-relaxed">
                   Integrasi pembayaran QRIS otomatis untuk website atau bot Anda dengan mutasi real-time langsung ke rekening GoPay.

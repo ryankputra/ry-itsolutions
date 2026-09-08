@@ -18,12 +18,12 @@ interface Message {
   }[];
 }
 
-const STORAGE_KEY = 'ry_ai_chat_history_v3';
+const STORAGE_KEY = 'ry_ai_chat_history_v4';
 
 const QUICK_PROMPTS = [
   { label: '⚡ Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan syarat buka blokir IMEI 3 Bulan?' },
   { label: '⏱️ Unblock IMEI yang Fast ada?', query: 'Apakah ada unblock IMEI yang fast atau kilat?' },
-  { label: '💳 Payment Gateway GoPay 10rb', query: 'Jelaskan tentang fitur Payment Gateway GoPay & QRIS SaaS 10rb/bulan' },
+  { label: '💳 Gateway GoPay & QRIS', query: 'Jelaskan tentang fitur Payment Gateway GoPay & QRIS SaaS serta biaya aktivasinya' },
   { label: '🔍 Cek Garansi Apple & CEIR', query: 'Bagaimana cara cek garansi Apple dan status CEIR gratis?' },
   { label: '💰 Cara Topup Saldo QRIS', query: 'Bagaimana cara isi saldo akun otomatis via QRIS tanpa admin?' },
   { label: '💬 Hubungi CS Admin WhatsApp', query: 'Saya butuh bantuan customer support WhatsApp admin' },
@@ -47,7 +47,7 @@ export default function AiChatPage() {
   const getWelcomeMessage = (): Message => ({
     id: 'welcome_init',
     sender: 'ai',
-    text: 'Halo! Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Anda dapat menanyakan seputar:\n• **Buka Blokir IMEI All Operator** (Tersedia Paket 3 Bulan, garansi aktif)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Langganan Rp 10.000/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR** (100% Gratis)\n• **Top Up Saldo Akun Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Bantuan CS Admin WhatsApp**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!',
+    text: 'Halo! Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Anda dapat menanyakan seputar:\n• **Buka Blokir IMEI All Operator** (Tersedia Paket 3 Bulan, garansi aktif)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Aktivasi Rp 35.000, Perpanjang Rp 10.000/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR** (100% Gratis)\n• **Top Up Saldo Akun Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Bantuan CS Admin WhatsApp**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!',
     timestamp: formatTime(new Date()),
     actions: [
       { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
@@ -84,6 +84,7 @@ export default function AiChatPage() {
       // Purge previous keys that held hallucinated answers
       localStorage.removeItem('ry_ai_chat_history');
       localStorage.removeItem('ry_ai_chat_history_v2');
+      localStorage.removeItem('ry_ai_chat_history_v3');
 
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -93,7 +94,8 @@ export default function AiChatPage() {
           const hasHallucination = parsed.some((m: Message) => 
             (m.text || '').includes('60.000') || 
             (m.text || '').includes('15 - 45 Menit') ||
-            (m.text || '').includes('Paket Garansi Resmi Permanen')
+            (m.text || '').includes('Paket Garansi Resmi Permanen') ||
+            (m.text || '').includes('Hanya **Rp 10.000 / 30 Hari**')
           );
 
           if (!hasHallucination) {
@@ -219,7 +221,7 @@ export default function AiChatPage() {
       q.includes('saas')
     ) {
       return {
-        reply: '### 💳 Payment Gateway GoPay & Dynamic QRIS SaaS\n\nSolusi Payment Gateway otomatis yang dirancang khusus untuk pemilik website toko online, bot Telegram/WhatsApp, dan aplikasi digital.\n\n**Fitur Utama:**\n• **Biaya Langganan Super Murah**: Hanya **Rp 10.000 / 30 Hari**.\n• **Fee Transaksi 0%**: Bebas potongan pihak ketiga. 100% uang pembayaran masuk utuh ke akun GoPay Merchant / GoBiz Anda.\n• **Direct Settlement**: Uang langsung masuk ke GoPay Anda secara instan tanpa tertahan.\n• **Real-Time Webhook Callback**: Respon super cepat **0.2 - 0.5 detik** untuk approve pesanan otomatis.\n• **Pairing Sangat Mudah**: Cukup masukkan nomor HP GoBiz & OTP tanpa perlu ribet urus berkas legalitas PT/CV.\n• **Dokumentasi Lengkap**: Tersedia contoh integrasi cURL, PHP, Node.js, dan Python.',
+        reply: '### 💳 Payment Gateway GoPay & Dynamic QRIS SaaS\n\nSolusi Payment Gateway otomatis yang dirancang khusus untuk pemilik website toko online, bot Telegram/WhatsApp, dan aplikasi digital.\n\n**Skema Biaya & Fitur Utama:**\n• **Biaya Aktivasi Perdana**: **Rp 35.000** (sudah termasuk masa aktif 30 hari penuh).\n• **Perpanjangan Bulanan**: Sangat terjangkau, hanya **Rp 10.000 / bulan** (tersedia manual & auto-renew potong saldo).\n• **Fee Transaksi 0%**: Bebas potongan pihak ketiga. 100% uang pembayaran masuk utuh ke akun GoPay Merchant / GoBiz Anda.\n• **Direct Settlement**: Uang langsung masuk ke GoPay Anda secara instan tanpa tertahan.\n• **Real-Time Webhook Callback**: Respon super cepat **0.2 - 0.5 detik** untuk approve pesanan otomatis.\n• **Pairing Sangat Mudah**: Cukup masukkan nomor HP GoBiz & OTP tanpa perlu ribet urus berkas legalitas PT/CV.\n• **Dokumentasi Lengkap**: Tersedia contoh integrasi cURL, PHP, Node.js, dan Python.',
         actions: [
           { label: 'Coba Gateway GoPay', href: '/gateway', icon: '💳' },
           { label: 'Lihat Dokumentasi API', href: '/gateway', icon: '📚' },
@@ -316,7 +318,7 @@ export default function AiChatPage() {
       q.includes('malam')
     ) {
       return {
-        reply: 'Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten virtual cerdas dari **Ry-ITSolutions**.\n\nSaya siap memberikan informasi akurat mengenai:\n• Buka Blokir IMEI All Operator (Paket 3 Bulan)\n• Payment Gateway GoPay & Dynamic QRIS (Rp 10.000/bln)\n• Cek Garansi Apple & CEIR (Gratis)\n• Top Up Saldo Akun QRIS Otomatis (Bebas Admin)\n\nAda layanan spesifik yang ingin Anda tanyakan?',
+        reply: 'Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten virtual cerdas dari **Ry-ITSolutions**.\n\nSaya siap memberikan informasi akurat mengenai:\n• Buka Blokir IMEI All Operator (Paket 3 Bulan)\n• Payment Gateway GoPay & Dynamic QRIS (Aktivasi Rp 35.000, Perpanjang Rp 10.000/bln)\n• Cek Garansi Apple & CEIR (Gratis)\n• Top Up Saldo Akun QRIS Otomatis (Bebas Admin)\n\nAda layanan spesifik yang ingin Anda tanyakan?',
         actions: [
           { label: 'Buka Blokir IMEI', href: '/unblock-imei', icon: '⚡' },
           { label: 'Payment Gateway GoPay', href: '/gateway', icon: '💳' },
@@ -327,7 +329,7 @@ export default function AiChatPage() {
 
     // 12. DEFAULT FALLBACK
     return {
-      reply: `Terima kasih atas pertanyaannya mengenai: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat memberikan informasi akurat seputar:\n1. **Aktivasi & Buka Blokir IMEI All Operator** (Paket 3 Bulan, jalur reguler).\n2. **SaaS Payment Gateway GoPay & QRIS Dinamis** (Langganan 10rb/bulan, fee 0%).\n3. **Cek Garansi Apple & Database CEIR** (Gratis dan instan).\n4. **Top Up Saldo Akun Otomatis** (QRIS bebas biaya admin 24 jam).\n\nSilakan klik salah satu menu di bawah atau tanyakan langsung pada saya!`,
+      reply: `Terima kasih atas pertanyaannya mengenai: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat memberikan informasi akurat seputar:\n1. **Aktivasi & Buka Blokir IMEI All Operator** (Paket 3 Bulan, jalur reguler).\n2. **SaaS Payment Gateway GoPay & QRIS Dinamis** (Aktivasi Rp 35.000, Perpanjang Rp 10.000/bln, fee 0%).\n3. **Cek Garansi Apple & Database CEIR** (Gratis dan instan).\n4. **Top Up Saldo Akun Otomatis** (QRIS bebas biaya admin 24 jam).\n\nSilakan klik salah satu menu di bawah atau tanyakan langsung pada saya!`,
       actions: [
         { label: 'Lihat Layanan IMEI', href: '/unblock-imei', icon: '⚡' },
         { label: 'Lihat Gateway GoPay', href: '/gateway', icon: '💳' },

@@ -559,6 +559,10 @@ async function notifyGatewaySubscription(user, keyData, isRenewal = false) {
         const expDate = keyData.expiresAt ? new Date(keyData.expiresAt).toLocaleDateString('id-ID', { dateStyle: 'long' }) : '-';
         const maskedKey = keyData.apiKey ? `${keyData.apiKey.slice(0, 16)}••••••••` : '-';
 
+        const feeLabel = isRenewal 
+            ? `Rp ${SUBSCRIPTION_PRICE_PER_MONTH.toLocaleString('id-ID')} (Perpanjangan 30 Hari)` 
+            : `Rp ${ACTIVATION_PRICE.toLocaleString('id-ID')} (Aktivasi Perdana 30 Hari)`;
+
         // 1. Telegram Admin Notification
         const tgMsg = `⚡ <b>GATEWAY SAAS: ${actionType} API KEY</b> ⚡\n\n` +
             `👤 <b>Pelanggan:</b> ${userName} (ID: ${user?.id || '-'})
@@ -571,7 +575,7 @@ async function notifyGatewaySubscription(user, keyData, isRenewal = false) {
 ` +
             `📅 <b>Masa Aktif s/d:</b> ${expDate}
 ` +
-            `💰 <b>Nominal:</b> Rp 10.000 (30 Hari)
+            `💰 <b>Nominal:</b> ${feeLabel}
 
 ` +
             `<i>Kelola lisensi di Admin Dashboard:</i> https://ry-itsolutionts.web.id/admin`;
@@ -586,7 +590,7 @@ async function notifyGatewaySubscription(user, keyData, isRenewal = false) {
                 `🏷️ *Label:* ${keyData.name || '-'}\n` +
                 `🔑 *Key:* ${maskedKey}\n` +
                 `📅 *Masa Aktif:* ${expDate}\n` +
-                `💰 *Biaya:* Rp 10.000\n\n` +
+                `💰 *Biaya:* ${feeLabel}\n\n` +
                 `Dashboard: https://ry-itsolutionts.web.id/admin`;
 
             for (const admPhone of (adminPhones || [])) {
@@ -599,13 +603,17 @@ async function notifyGatewaySubscription(user, keyData, isRenewal = false) {
         // 3. WhatsApp Customer Notification (if phone exists)
         if (userPhone && userPhone.length >= 8) {
             try {
+                const customerFeeText = isRenewal 
+                    ? `Rp ${SUBSCRIPTION_PRICE_PER_MONTH.toLocaleString('id-ID')} / bulan` 
+                    : `Rp ${ACTIVATION_PRICE.toLocaleString('id-ID')} (Aktivasi Perdana, perpanjangan bulan berikutnya Rp ${SUBSCRIPTION_PRICE_PER_MONTH.toLocaleString('id-ID')}/bln)`;
+
                 const waCustomerMsg = `🎉 *PEMBAYARAN LISENSI API KEY BERHASIL* ⚡\n\n` +
                     `Halo Kak *${userName}*! 👋\n\n` +
-                    `Terima kasih, ${isRenewal ? 'perpanjangan' : 'langganan'} API Key Payment Gateway GoPay & QRIS Anda telah aktif:\n\n` +
+                    `Terima kasih, ${isRenewal ? 'perpanjangan' : 'aktivasi perdana'} API Key Payment Gateway GoPay & QRIS Anda telah aktif:\n\n` +
                     `🏷️ *Nama Layanan:* ${keyData.name || 'Merchant Gateway'}\n` +
                     `🔑 *API Key:* ${maskedKey}\n` +
                     `📅 *Masa Aktif Hingga:* ${expDate} (30 Hari)\n` +
-                    `💰 *Biaya Langganan:* Rp 10.000 / bulan\n\n` +
+                    `💰 *Biaya:* ${customerFeeText}\n\n` +
                     `Untuk panduan integrasi, webhook, dan testing sandbox, silakan akses:\n` +
                     `👉 https://ry-itsolutionts.web.id/gateway\n\n` +
                     `Salam,\n*Tim Ry-ITSolutions*`;
