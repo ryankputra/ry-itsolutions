@@ -480,9 +480,29 @@ app.all('/create-qris', apiKeyAuth, (req, res) => {
         return res.status(400).json({ success: false, message: 'Nominal pembayaran tidak valid (gunakan ?amount=...)' });
     }
 
-    const staticTemplate = req.body?.qris_static || req.query?.qris_static || req.gatewayKey?.qrisTemplate || process.env.QRIS_STATIC;
+    let staticTemplate = req.body?.qris_static || req.query?.qris_static;
+
+    if (!staticTemplate && req.gatewayKey) {
+        // Khusus Merchant SaaS / Tenant: gunakan QRIS milik merchant sendiri
+        staticTemplate = req.gatewayKey.qrisTemplate;
+        if (!staticTemplate) {
+            return res.status(400).json({
+                success: false,
+                message: 'Akun GoBiz belum terhubung atau Template QRIS belum dikonfigurasi pada API Key ini. Silakan klik tombol "Hubungkan GoBiz (OTP)" atau isi Template QRIS Statis di menu "Pengaturan QRIS & Webhook" pada dashboard https://ry-itsolutionts.web.id/gateway.'
+            });
+        }
+    }
+
+    // Fallback ke QRIS internal server hanya berlaku untuk Master Key internal Ry-ITSolutions
+    if (!staticTemplate && req.isMasterKey) {
+        staticTemplate = process.env.QRIS_STATIC;
+    }
+
     if (!staticTemplate) {
-        return res.status(500).json({ success: false, message: 'Template QRIS belum dikonfigurasi. Atur QRIS Statis di dashboard https://ry-itsolutionts.web.id/gateway atau sertakan parameter qris_static.' });
+        return res.status(400).json({
+            success: false,
+            message: 'Template QRIS belum dikonfigurasi. Atur QRIS Statis di dashboard https://ry-itsolutionts.web.id/gateway atau sertakan parameter qris_static.'
+        });
     }
 
     const dynamicCode = generateDynamicQRIS(staticTemplate, amount);
