@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { playPopSound, playDingSound } from '@/lib/soundFx';
@@ -51,11 +50,11 @@ export default function AiChatPage() {
       }
     } catch {}
 
-    // Default welcome message
+    // Initial welcome message
     const welcomeMsg: Message = {
       id: 'welcome_1',
       sender: 'ai',
-      text: 'Halo! Saya **Ry-AI**, asisten pintar & konsultan IT resmi **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Anda bisa menanyakan seputar:\n• **Layanan Buka Blokir IMEI** (All Operator, iPhone & Android)\n• **Payment Gateway GoPay & QRIS SaaS** (Langganan 10rb/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR**\n• **Top Up Saldo Otomatis QRIS 24 Jam**\n• **Integrasi API, Webhook, & Solusi IT**\n\nSilakan pilih topik di bawah atau ketik pertanyaan Anda!',
+      text: 'Halo! Saya **Ry-AI**, asisten virtual cerdas resmi **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Tanyakan apa saja seputar:\n• **Buka Blokir IMEI All Operator** (iPhone & Android)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Langganan 10rb/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR** (Gratis)\n• **Top Up Saldo Akun Otomatis 24 Jam** (QRIS Bebas Admin)\n• **Integrasi API, Webhook, & Solusi IT**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!',
       timestamp: formatTime(new Date()),
       actions: [
         { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
@@ -94,8 +93,8 @@ export default function AiChatPage() {
       return {
         reply: '### 📶 Layanan Buka Blokir IMEI All Operator\n\nLayanan buka blokir IMEI di Ry-ITSolutions ditujukan untuk **iPhone (Inter / All Series) & Android** yang mengalami hilang sinyal (*No Service* / Terblokir Bea Cukai & Kemenperin).\n\n**Keunggulan Layanan:**\n• Mendukung **All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, dan Smartfren.\n• **Proses Kilat**: 15 - 45 Menit langsung ON.\n• **Terverifikasi Resmi Database CEIR** Kemenperin & Bea Cukai.\n• **Garansi 100%**: Jika sinyal gagal aktif, dana akan dikembalikan / diproses ulang.\n\n**Pilihan Durasi & Estimasi Tarif:**\n1. **Paket 1 Bulan**: Mulai Rp 60.000\n2. **Paket 3 Bulan**: Mulai Rp 120.000\n3. **Paket Garansi Resmi Permanen**: Mulai Rp 250.000\n\nAnda bisa langsung mendaftarkan 15 digit IMEI perangkat Anda di menu **Buka IMEI**.',
         actions: [
-          { label: 'Buka Form IMEI Sekarang', href: '/unblock-imei', icon: '⚡' },
-          { label: 'Cek Status IMEI di CEIR', href: '/cek-ceir', icon: '🔍' },
+          { label: 'Buka Form IMEI', href: '/unblock-imei', icon: '⚡' },
+          { label: 'Cek Status CEIR', href: '/cek-ceir', icon: '🔍' },
         ],
       };
     }
@@ -106,7 +105,7 @@ export default function AiChatPage() {
         reply: '### 💳 Payment Gateway GoPay & Dynamic QRIS SaaS\n\nSolusi Payment Gateway otomatis yang dirancang khusus untuk pemilik website toko online, bot Telegram/WhatsApp, dan aplikasi digital.\n\n**Fitur Utama:**\n• **Biaya Langganan Super Murah**: Hanya **Rp 10.000 / 30 Hari**.\n• **Fee Transaksi 0%**: Bebas potongan pihak ketiga. 100% uang pembayaran masuk utuh ke akun GoPay Merchant / GoBiz Anda.\n• **Direct Settlement**: Uang langsung masuk ke GoPay Anda secara instan tanpa tertahan.\n• **Real-Time Webhook Callback**: Respon super cepat **0.2 - 0.5 detik** untuk approve pesanan otomatis.\n• **Pairing Sangat Mudah**: Cukup masukkan nomor HP GoBiz & OTP tanpa perlu ribet urus berkas legalitas PT/CV.\n• **Dokumentasi Lengkap**: Tersedia contoh integrasi cURL, PHP, Node.js, dan Python.',
         actions: [
           { label: 'Coba Gateway GoPay', href: '/gateway', icon: '💳' },
-          { label: 'Lihat Dokumentasi API', href: '/gateway', icon: '📚' },
+          { label: 'Dokumentasi API', href: '/gateway', icon: '📚' },
         ],
       };
     }
@@ -127,8 +126,8 @@ export default function AiChatPage() {
       return {
         reply: '### 💰 Top Up Saldo Akun Ry-ITSolutions\n\nIsi saldo akun Anda untuk bertransaksi berbagai layanan IT secara otomatis 24 jam nonstop.\n\n**Keunggulan Top Up:**\n• **Bebas Biaya Admin (0 Rupiah)**.\n• **Metode Pembayaran Lengkap via QRIS**: Mendukung semua Bank (BCA, Mandiri, BRI, BNI, BSI) & E-Wallet (GoPay, OVO, Dana, ShopeePay, LinkAja).\n• **Auto Approve Instan**: Saldo otomatis masuk ke akun Anda dalam 2 - 5 detik setelah pembayaran berhasil.\n• **Aktif 24 Jam Nonstop**: Bisa deposit kapan saja bahkan di tengah malam.',
         actions: [
-          { label: 'Isi Saldo Akun Sekarang', href: '/topup', icon: '💰' },
-          { label: 'Lihat Riwayat Transaksi', href: '/history', icon: '📜' },
+          { label: 'Isi Saldo Akun', href: '/topup', icon: '💰' },
+          { label: 'Riwayat Transaksi', href: '/history', icon: '📜' },
         ],
       };
     }
@@ -218,7 +217,7 @@ export default function AiChatPage() {
       setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
       try { playDingSound(); } catch {}
-    }, 600);
+    }, 500);
   };
 
   // Handle Copy Message Text
@@ -232,12 +231,12 @@ export default function AiChatPage() {
   const handleClearChat = () => {
     Swal.fire({
       title: 'Reset Percakapan?',
-      text: 'Riwayat percakapan dengan Ry-AI akan dihapus.',
+      text: 'Riwayat percakapan dengan Ry-AI akan dibersihkan.',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#0066cc',
       cancelButtonColor: '#71717A',
-      confirmButtonText: 'Ya, Hapus',
+      confirmButtonText: 'Ya, Bersihkan',
       cancelButtonText: 'Batal',
     }).then((result) => {
       if (result.isConfirmed) {
@@ -245,7 +244,7 @@ export default function AiChatPage() {
         const welcomeMsg: Message = {
           id: `welcome_${Date.now()}`,
           sender: 'ai',
-          text: 'Riwayat obrolan telah dibersihkan. Ada yang bisa **Ry-AI** bantu kembali?',
+          text: 'Riwayat percakapan telah dibersihkan. Ada yang bisa **Ry-AI** bantu kembali?',
           timestamp: formatTime(new Date()),
           actions: [
             { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
@@ -261,30 +260,27 @@ export default function AiChatPage() {
   const renderFormattedText = (raw: string) => {
     const lines = raw.split('\n');
     return lines.map((line, idx) => {
-      // Header
       if (line.startsWith('### ')) {
         return (
-          <h4 key={idx} className="font-extrabold text-sm sm:text-base text-primary dark:text-primary mt-1 mb-1">
+          <h4 key={idx} className="font-bold text-sm text-primary dark:text-primary mt-1 mb-1">
             {line.replace('### ', '')}
           </h4>
         );
       }
 
-      // Bullets
       if (line.startsWith('• ')) {
         const content = line.substring(2);
         return (
-          <div key={idx} className="flex items-start gap-1.5 text-xs sm:text-sm my-0.5 leading-relaxed">
+          <div key={idx} className="flex items-start gap-1.5 my-0.5 leading-relaxed">
             <span className="text-primary font-bold">•</span>
             <span>{parseBold(content)}</span>
           </div>
         );
       }
 
-      // Numbered List
       if (/^\d+\.\s/.test(line)) {
         return (
-          <div key={idx} className="text-xs sm:text-sm my-0.5 leading-relaxed pl-2 font-medium">
+          <div key={idx} className="my-0.5 leading-relaxed pl-2">
             {parseBold(line)}
           </div>
         );
@@ -295,102 +291,101 @@ export default function AiChatPage() {
       }
 
       return (
-        <p key={idx} className="text-xs sm:text-sm leading-relaxed my-0.5">
+        <p key={idx} className="leading-relaxed my-0.5">
           {parseBold(line)}
         </p>
       );
     });
   };
 
-  // Parse **bold** strings
   const parseBold = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} className="font-bold text-zinc-900 dark:text-zinc-100">{part.slice(2, -2)}</strong>;
+        return <strong key={i} className="font-semibold text-ink">{part.slice(2, -2)}</strong>;
       }
       return part;
     });
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100dvh-130px)] sm:h-[calc(100dvh-150px)] max-h-[850px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden select-none">
+    <div className="flex-1 w-full h-full flex flex-col overflow-hidden bg-canvas select-none">
       
       {/* ============================================================ */}
-      {/* 1. TOP CHAT HEADER                                           */}
+      {/* 1. TOP CHAT HEADER BAR (Pinned under top navigation)         */}
       {/* ============================================================ */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0">
+      <div className="h-12 px-3.5 sm:px-4 flex items-center justify-between border-b border-hairline bg-canvas/90 backdrop-blur-md shrink-0 z-20">
         <div className="flex items-center gap-2.5">
-          {/* Ry-AI Avatar with Glowing Ring */}
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center shadow-md">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+          {/* AI Avatar with subtle pulse dot */}
+          <div className="relative w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-cyan-500 text-white flex items-center justify-center shadow-xs">
+            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
             </svg>
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900" />
+            <span className="absolute 0 bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-canvas" />
           </div>
 
           <div>
             <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-extrabold text-zinc-900 dark:text-white">Ry-AI Assistant</h2>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
-                v2.5
-              </span>
+              <h2 className="text-xs sm:text-sm font-bold text-ink">Ry-AI Assistant</h2>
+              <span className="text-[9px] font-bold px-1 rounded bg-primary/10 text-primary">v2.5</span>
             </div>
-            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
-              Konsultan IT & Layanan 24/7
+            <p className="text-[10px] text-ink-muted flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              <span>Online • Konsultan IT 24/7</span>
             </p>
           </div>
         </div>
 
-        {/* Header Right Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleClearChat}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            title="Reset Percakapan"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-            </svg>
-          </button>
-        </div>
+        {/* Clear Conversation Button */}
+        <button
+          onClick={handleClearChat}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-ink-muted hover:text-rose-500 hover:bg-rose-500/10 border border-hairline text-[11px] font-medium transition-all active:scale-95"
+          title="Bersihkan Percakapan"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+          </svg>
+          <span className="hidden sm:inline">Reset</span>
+        </button>
       </div>
 
       {/* ============================================================ */}
-      {/* 2. CHAT MESSAGES SCROLL AREA                                 */}
+      {/* 2. MESSAGES SCROLL VIEWPORT                                  */}
       {/* ============================================================ */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3.5 py-3.5 space-y-3.5 no-scrollbar">
         {messages.map((msg) => {
           const isAi = msg.sender === 'ai';
 
-          return (
-            <div
-              key={msg.id}
-              className={`flex items-start gap-2.5 ${isAi ? 'justify-start' : 'justify-end'} animate-in fade-in duration-200`}
-            >
-              {/* AI Avatar */}
-              {isAi && (
-                <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-sm">
-                  ✨
+          if (!isAi) {
+            // User message bubble (sleek modern right aligned)
+            return (
+              <div key={msg.id} className="flex justify-end animate-in fade-in duration-150">
+                <div className="bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 max-w-[82%] sm:max-w-[75%] text-[13px] leading-relaxed shadow-xs">
+                  <div>{msg.text}</div>
+                  <div className="text-[9.5px] text-white/70 text-right mt-1 font-normal">
+                    {msg.timestamp}
+                  </div>
                 </div>
-              )}
+              </div>
+            );
+          }
 
-              {/* Message Bubble */}
-              <div
-                className={`max-w-[86%] sm:max-w-[78%] rounded-2xl p-3 sm:p-3.5 shadow-xs relative group ${
-                  isAi
-                    ? 'bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200'
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-tr-xs shadow-md'
-                }`}
-              >
-                {/* Text Content */}
-                <div className="prose dark:prose-invert max-w-none">
+          // AI message bubble (clean modern card left aligned)
+          return (
+            <div key={msg.id} className="flex items-start gap-2.5 animate-in fade-in duration-150">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-cyan-500 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
+                ✨
+              </div>
+
+              <div className="flex-1 max-w-[88%] sm:max-w-[82%] bg-surface-pearl dark:bg-surface-tile border border-hairline rounded-2xl rounded-tl-xs p-3.5 text-[13px] text-ink shadow-2xs leading-relaxed group">
+                {/* Content */}
+                <div className="space-y-1">
                   {renderFormattedText(msg.text)}
                 </div>
 
-                {/* Direct Action Buttons (If attached to AI message) */}
-                {isAi && msg.actions && msg.actions.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-zinc-200/80 dark:border-zinc-800">
+                {/* Direct Action Chips */}
+                {msg.actions && msg.actions.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-hairline">
                     {msg.actions.map((act, i) => {
                       if (act.isExternal) {
                         return (
@@ -399,9 +394,9 @@ export default function AiChatPage() {
                             href={act.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-xs transition-all active:scale-95"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-semibold shadow-2xs transition-all active:scale-95"
                           >
-                            <span>{act.icon || '🔗'}</span>
+                            <span>{act.icon || '💬'}</span>
                             <span>{act.label}</span>
                           </a>
                         );
@@ -410,7 +405,7 @@ export default function AiChatPage() {
                         <button
                           key={i}
                           onClick={() => act.href && router.push(act.href)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 text-[11px] font-bold transition-all active:scale-95"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 text-[11px] font-semibold transition-all active:scale-95"
                         >
                           <span>{act.icon || '⚡'}</span>
                           <span>{act.label}</span>
@@ -421,35 +416,33 @@ export default function AiChatPage() {
                   </div>
                 )}
 
-                {/* Bubble Footer (Time & Copy Button) */}
-                <div className="flex items-center justify-between gap-2 mt-1.5 pt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+                {/* Footer (Timestamp & Copy) */}
+                <div className="flex items-center justify-between gap-2 mt-2 pt-1 text-[10px] text-ink-muted">
                   <span>{msg.timestamp}</span>
-                  {isAi && (
-                    <button
-                      onClick={() => handleCopyText(msg.id, msg.text)}
-                      className="opacity-0 group-hover:opacity-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-opacity flex items-center gap-1"
-                      title="Salin jawaban"
-                    >
-                      {copiedId === msg.id ? (
-                        <span className="text-emerald-500 font-bold">Tersalin ✓</span>
-                      ) : (
-                        <span>Salin</span>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleCopyText(msg.id, msg.text)}
+                    className="opacity-60 hover:opacity-100 transition-opacity"
+                    title="Salin Teks"
+                  >
+                    {copiedId === msg.id ? (
+                      <span className="text-emerald-500 font-bold">Tersalin ✓</span>
+                    ) : (
+                      <span>Salin</span>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
           );
         })}
 
-        {/* AI Typing Indicator */}
+        {/* Typing State Indicator */}
         {isTyping && (
-          <div className="flex items-center gap-2.5 animate-in fade-in duration-150">
-            <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs shrink-0 shadow-sm">
+          <div className="flex items-start gap-2.5 animate-in fade-in duration-150">
+            <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs shrink-0 shadow-xs">
               ✨
             </div>
-            <div className="px-3.5 py-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-400 flex items-center gap-1.5">
+            <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-xs bg-surface-pearl dark:bg-surface-tile border border-hairline text-xs text-ink-muted flex items-center gap-1.5 shadow-2xs">
               <span>Ry-AI sedang mengetik</span>
               <span className="flex gap-1 items-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -464,18 +457,18 @@ export default function AiChatPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* 3. QUICK PROMPT CHIPS (Above Input Bar)                       */}
+      {/* 3. QUICK SUGGESTIONS BAR (Pilihan Cepat)                      */}
       {/* ============================================================ */}
-      <div className="px-3 py-1.5 border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider shrink-0 pl-1">
-          Pilihan Cepat:
+      <div className="px-3 py-1.5 border-t border-hairline bg-canvas flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider shrink-0 pl-0.5">
+          Pilihan:
         </span>
         {QUICK_PROMPTS.map((p, idx) => (
           <button
             key={idx}
             onClick={() => handleSendMessage(p.query)}
             disabled={isTyping}
-            className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 hover:bg-primary/10 dark:hover:bg-primary/20 text-zinc-700 dark:text-zinc-300 hover:text-primary dark:hover:text-primary border border-zinc-200 dark:border-zinc-800 text-[11px] font-semibold whitespace-nowrap transition-colors shrink-0 active:scale-95 disabled:opacity-50"
+            className="px-2.5 py-1 rounded-full bg-surface-pearl dark:bg-surface-tile hover:bg-primary/10 text-ink-muted hover:text-primary border border-hairline text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 active:scale-95 disabled:opacity-50 shadow-2xs"
           >
             {p.label}
           </button>
@@ -483,15 +476,15 @@ export default function AiChatPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* 4. CHAT INPUT BAR                                            */}
+      {/* 4. PINNED CHAT INPUT BAR                                      */}
       {/* ============================================================ */}
-      <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shrink-0">
+      <div className="p-2 sm:p-2.5 px-3 bg-canvas/95 backdrop-blur-md border-t border-hairline shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSendMessage();
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 bg-surface-pearl dark:bg-surface-tile border border-hairline rounded-full px-3.5 py-1 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-xs"
         >
           <input
             ref={inputRef}
@@ -500,13 +493,13 @@ export default function AiChatPage() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={isTyping}
-            className="flex-1 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700/80 rounded-full px-4 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all disabled:opacity-50"
+            className="flex-1 bg-transparent text-[13px] text-ink placeholder-ink-muted focus:outline-none py-1.5"
           />
 
           <button
             type="submit"
             disabled={!inputValue.trim() || isTyping}
-            className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center justify-center shadow-md transition-all active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            className="w-8 h-8 rounded-full bg-primary hover:bg-primary-focus text-white flex items-center justify-center shadow-xs transition-transform active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
             title="Kirim Pertanyaan"
           >
             <svg className="w-4 h-4 translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
