@@ -15,7 +15,8 @@ const { isAuthenticated, sseSend } = require('../middleware/auth');
 
 const GOPAY_GATEWAY_URL = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
 const GOPAY_GATEWAY_API_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
-const SUBSCRIPTION_PRICE_PER_MONTH = 10000;
+const ACTIVATION_PRICE = 35000; // Biaya Aktivasi Perdana (Sudah termasuk 30 hari aktif)
+const SUBSCRIPTION_PRICE_PER_MONTH = 10000; // Biaya Perpanjangan Bulanan berikutnya
 
 // Path to sessions folder inside gopay-gateway
 const GOPAY_SESSIONS_DIR = path.join(__dirname, '..', '..', 'gopay-gateway', 'sessions');
@@ -83,6 +84,7 @@ router.get('/gateway/keys', isAuthenticated, async (req, res) => {
         res.json({
             status: true,
             userBalance: user?.balance || 0,
+            activationPrice: ACTIVATION_PRICE,
             subscriptionPrice: SUBSCRIPTION_PRICE_PER_MONTH,
             data: formattedKeys
         });
@@ -107,10 +109,10 @@ router.post('/gateway/keys', isAuthenticated, async (req, res) => {
         }
 
         const user = await dbGet("SELECT id, name, balance FROM users WHERE id = ?", [userId]);
-        if (!user || user.balance < SUBSCRIPTION_PRICE_PER_MONTH) {
+        if (!user || user.balance < ACTIVATION_PRICE) {
             return res.status(400).json({
                 status: false,
-                message: `Saldo akun tidak mencukupi untuk membuat API Key. Dibutuhkan Rp ${SUBSCRIPTION_PRICE_PER_MONTH.toLocaleString('id-ID')}, saldo Anda saat ini Rp ${(user?.balance || 0).toLocaleString('id-ID')}. Silakan isi saldo terlebih dahulu.`
+                message: `Saldo akun tidak mencukupi untuk aktivasi API Key. Dibutuhkan Rp ${ACTIVATION_PRICE.toLocaleString('id-ID')} (sudah termasuk masa aktif 30 hari), saldo Anda saat ini Rp ${(user?.balance || 0).toLocaleString('id-ID')}. Silakan isi saldo terlebih dahulu.`
             });
         }
 
@@ -119,21 +121,21 @@ router.post('/gateway/keys', isAuthenticated, async (req, res) => {
         const now = new Date();
         const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-        // Deduct subscription fee from user balance
-        await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [SUBSCRIPTION_PRICE_PER_MONTH, userId]);
+        // Deduct activation fee from user balance
+        await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [ACTIVATION_PRICE, userId]);
 
         // Record transaction log for transparent finance history
-        const trxId = `gw_sub_${Date.now()}`;
+        const trxId = `gw_act_${Date.now()}`;
         await dbRun(`
             INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, status, api_response, createdAt)
-            VALUES (?, ?, ?, 'gateway_apikey_monthly', ?, ?, ?, 'completed', 'Langganan API Key Payment Gateway 30 Hari', ?)
+            VALUES (?, ?, ?, 'gateway_apikey_activation', ?, ?, ?, 'completed', 'Aktivasi Perdana API Key Gateway 30 Hari', ?)
         `, [
             trxId,
             userId,
             user.name,
-            `Langganan API Key Gateway (${trimmedName})`,
-            SUBSCRIPTION_PRICE_PER_MONTH,
-            SUBSCRIPTION_PRICE_PER_MONTH,
+            `Aktivasi API Key Gateway (${trimmedName})`,
+            ACTIVATION_PRICE,
+            ACTIVATION_PRICE,
             now.toISOString()
         ]);
 
@@ -168,7 +170,7 @@ router.post('/gateway/keys', isAuthenticated, async (req, res) => {
 
         res.json({
             status: true,
-            message: `API Key '${trimmedName}' berhasil dibuat! Masa aktif berlaku 30 hari ke depan. Saldo terpotong Rp ${SUBSCRIPTION_PRICE_PER_MONTH.toLocaleString('id-ID')}.`,
+            message: `API Key '${trimmedName}' berhasil diaktifkan! Masa aktif berlaku 30 hari ke depan. Saldo terpotong Rp ${ACTIVATION_PRICE.toLocaleString('id-ID')}. Perpanjangan bulan berikutnya hanya Rp ${SUBSCRIPTION_PRICE_PER_MONTH.toLocaleString('id-ID')}/bln.`,
             newBalance: updatedUser.balance,
             data: {
                 id: keyId,

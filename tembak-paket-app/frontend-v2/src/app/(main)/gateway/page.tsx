@@ -216,11 +216,11 @@ export default function GatewayDeveloperPage() {
       return;
     }
 
-    if (userBalance < 10000) {
+    if (userBalance < 35000) {
       Swal.fire({
         icon: "error",
         title: "Saldo Kurang",
-        text: `Saldo Anda saat ini Rp ${userBalance.toLocaleString("id-ID")}. Dibutuhkan Rp 10.000 untuk langganan 30 hari. Silakan top up saldo terlebih dahulu.`,
+        text: `Saldo Anda saat ini Rp ${userBalance.toLocaleString("id-ID")}. Dibutuhkan Rp 35.000 untuk aktivasi perdana (termasuk masa aktif 30 hari). Silakan top up saldo terlebih dahulu.`,
         showCancelButton: true,
         confirmButtonText: "Top Up Saldo",
         cancelButtonText: "Batal"
@@ -231,11 +231,11 @@ export default function GatewayDeveloperPage() {
     }
 
     const confirm = await Swal.fire({
-      title: "Konfirmasi Pembuatan API Key",
-      text: `Saldo akun Anda akan dipotong Rp 10.000 untuk masa aktif 30 hari. Lanjutkan?`,
+      title: "Konfirmasi Aktivasi API Key",
+      text: `Saldo akun Anda akan dipotong Rp 35.000 untuk biaya aktivasi perdana (sudah termasuk 30 hari aktif). Perpanjangan bulan berikutnya hanya Rp 10.000/bln. Lanjutkan?`,
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Ya, Buat API Key",
+      confirmButtonText: "Ya, Aktivasi Key",
       cancelButtonText: "Batal",
       confirmButtonColor: "#2563eb"
     });
@@ -553,7 +553,7 @@ export default function GatewayDeveloperPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                Rp 10.000 / Bulan per API Key
+                Aktivasi Rp 35.000 (Perpanjang Rp 10.000 / Bln)
               </span>
             </div>
           </div>
@@ -721,7 +721,7 @@ export default function GatewayDeveloperPage() {
               </div>
               <h3 className="font-black text-sm text-ink">Belum Ada API Key</h3>
               <p className="text-xs text-ink-muted max-w-md mx-auto">
-                Anda belum memiliki API Key. Buat API Key pertama Anda hanya dengan Rp 10.000 / bulan untuk mulai menerima pembayaran otomatis di website Anda.
+                Anda belum memiliki API Key. Buat API Key perdana Anda seharga Rp 35.000 (sudah termasuk 30 hari aktif, perpanjangan bulan berikutnya hanya Rp 10.000/bln) untuk mulai menerima pembayaran otomatis di website Anda.
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -1314,10 +1314,13 @@ if ($res['paid'] === true) {
             </div>
 
             <div className="overflow-y-auto pr-1 space-y-3 flex-1">
-              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs space-y-1">
-                <span className="font-black block">Biaya Langganan: Rp 10.000 / Bulan</span>
-                <p className="text-[11px] leading-relaxed">
-                  Biaya Rp 10.000 akan dipotong langsung dari saldo akun Anda. API Key akan aktif selama 30 hari penuh.
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-xs block">Biaya Aktivasi Perdana: Rp 35.000</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">30 Hari Penuh</span>
+                </div>
+                <p className="text-[11px] text-ink-muted leading-relaxed">
+                  Biaya aktivasi Rp 35.000 dipotong dari saldo akun Anda untuk 30 hari pertama. Biaya perpanjangan di bulan-bulan berikutnya sangat hemat, hanya <strong>Rp 10.000 / bulan</strong>.
                 </p>
               </div>
 
@@ -1414,7 +1417,7 @@ if ($res['paid'] === true) {
                 disabled={creating}
                 className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
               >
-                {creating ? "Memproses..." : "Bayar & Buat Key (Rp 10.000)"}
+                {creating ? "Memproses..." : "Bayar & Aktivasi Key (Rp 35.000)"}
               </button>
             </div>
           </div>
