@@ -18,6 +18,8 @@ interface Message {
   }[];
 }
 
+const STORAGE_KEY = 'ry_ai_chat_history_v3';
+
 const QUICK_PROMPTS = [
   { label: '⚡ Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan syarat buka blokir IMEI 3 Bulan?' },
   { label: '⏱️ Unblock IMEI yang Fast ada?', query: 'Apakah ada unblock IMEI yang fast atau kilat?' },
@@ -41,6 +43,20 @@ export default function AiChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Initial welcome message (Accurate and truthful)
+  const getWelcomeMessage = (): Message => ({
+    id: 'welcome_init',
+    sender: 'ai',
+    text: 'Halo! Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Anda dapat menanyakan seputar:\n• **Buka Blokir IMEI All Operator** (Tersedia Paket 3 Bulan, garansi aktif)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Langganan Rp 10.000/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR** (100% Gratis)\n• **Top Up Saldo Akun Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Bantuan CS Admin WhatsApp**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!',
+    timestamp: formatTime(new Date()),
+    actions: [
+      { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
+      { label: 'Gateway GoPay', href: '/gateway', icon: '💳' },
+      { label: 'Cek Garansi', href: '/cek-garansi', icon: '🔍' },
+      { label: 'Top Up Saldo', href: '/topup', icon: '💰' },
+    ],
+  });
+
   // Fetch live package and pricing data
   useEffect(() => {
     fetch('/api/imei-packages', { credentials: 'include' })
@@ -62,40 +78,40 @@ export default function AiChatPage() {
       .catch(() => {});
   }, []);
 
-  // Load chat history from localStorage
+  // Load chat history from localStorage (and purge old obsolete hallucinated history)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('ry_ai_chat_history');
+      // Purge previous keys that held hallucinated answers
+      localStorage.removeItem('ry_ai_chat_history');
+      localStorage.removeItem('ry_ai_chat_history_v2');
+
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-          return;
+          // Check if any old message still has hallucinated text like "Rp 60.000" or "Permanen"
+          const hasHallucination = parsed.some((m: Message) => 
+            (m.text || '').includes('60.000') || 
+            (m.text || '').includes('15 - 45 Menit') ||
+            (m.text || '').includes('Paket Garansi Resmi Permanen')
+          );
+
+          if (!hasHallucination) {
+            setMessages(parsed);
+            return;
+          }
         }
       }
     } catch {}
 
-    // Initial welcome message (Accurate and truthful)
-    const welcomeMsg: Message = {
-      id: 'welcome_1',
-      sender: 'ai',
-      text: 'Halo! Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Anda dapat menanyakan seputar:\n• **Buka Blokir IMEI All Operator** (Tersedia Paket 3 Bulan, garansi aktif)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Langganan Rp 10.000/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR** (100% Gratis)\n• **Top Up Saldo Akun Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Bantuan CS Admin WhatsApp**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!',
-      timestamp: formatTime(new Date()),
-      actions: [
-        { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
-        { label: 'Gateway GoPay', href: '/gateway', icon: '💳' },
-        { label: 'Cek Garansi', href: '/cek-garansi', icon: '🔍' },
-        { label: 'Top Up Saldo', href: '/topup', icon: '💰' },
-      ],
-    };
-    setMessages([welcomeMsg]);
+    setMessages([getWelcomeMessage()]);
   }, []);
 
   // Save chat history to localStorage
   useEffect(() => {
     if (messages.length > 0) {
       try {
-        localStorage.setItem('ry_ai_chat_history', JSON.stringify(messages));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
       } catch {}
     }
   }, [messages]);
@@ -109,7 +125,7 @@ export default function AiChatPage() {
     return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   }
 
-  // Generate Accurate & Truthful AI Response (No Hallucinations)
+  // Generate Accurate & Truthful AI Response (Strictly grounded in real DB)
   const generateAiResponse = (userText: string): { reply: string; actions?: Message['actions'] } => {
     const q = userText.toLowerCase();
 
@@ -132,7 +148,7 @@ export default function AiChatPage() {
       return {
         reply: '### ⏱️ Informasi Kecepatan & Estimasi Unblock IMEI\n\nUntuk saat ini, opsi **Fast / Kilat sedang TIDAK TERSEDIA (nonaktif)**.\n\nLayanan unblock IMEI yang aktif saat ini adalah jalur **Reguler** dengan ketentuan pengerjaan:\n• **Batas Pengiriman Pesanan**: Maksimal pukul **14:00 WIB** setiap harinya.\n• **Estimasi Selesai**: Selesai di hari yang sama, maksimal pukul **00:00 WIB** (tengah malam).\n• Pesanan yang masuk di atas pukul 14:00 WIB akan diproses dalam antrean hari berikutnya.\n\nSemua pengerjaan diproses sesuai antrean sistem harian secara aman dan terverifikasi.',
         actions: [
-          { label: 'Lihat Form Buka IMEI', href: '/unblock-imei', icon: '⚡' },
+          { label: 'Buka Form IMEI', href: '/unblock-imei', icon: '⚡' },
           { label: 'Tanya CS WhatsApp', href: 'https://wa.me/6288706611370', isExternal: true, icon: '💬' },
         ],
       };
@@ -304,6 +320,7 @@ export default function AiChatPage() {
         actions: [
           { label: 'Buka Blokir IMEI', href: '/unblock-imei', icon: '⚡' },
           { label: 'Payment Gateway GoPay', href: '/gateway', icon: '💳' },
+          { label: 'Cek Garansi Apple', href: '/cek-garansi', icon: '🔍' },
         ],
       };
     }
@@ -314,22 +331,22 @@ export default function AiChatPage() {
       actions: [
         { label: 'Lihat Layanan IMEI', href: '/unblock-imei', icon: '⚡' },
         { label: 'Lihat Gateway GoPay', href: '/gateway', icon: '💳' },
-        { label: 'Chat WhatsApp CS', href: 'https://wa.me/6288706611370', isExternal: true, icon: '💬' },
+        { label: 'Cek Garansi Gratis', href: '/cek-garansi', icon: '🔍' },
       ],
     };
   };
 
   // Handle Send Message
   const handleSendMessage = (textToSend?: string) => {
-    const query = (textToSend || inputValue).trim();
-    if (!query || isTyping) return;
+    const text = (textToSend !== undefined ? textToSend : inputValue).trim();
+    if (!text || isTyping) return;
 
     try { playPopSound(); } catch {}
 
     const userMessage: Message = {
-      id: `usr_${Date.now()}`,
+      id: `user_${Date.now()}`,
       sender: 'user',
-      text: query,
+      text,
       timestamp: formatTime(new Date()),
     };
 
@@ -337,66 +354,56 @@ export default function AiChatPage() {
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate natural AI thinking & response
+    // Simulate AI thinking
     setTimeout(() => {
-      const { reply, actions } = generateAiResponse(query);
+      const aiResponseData = generateAiResponse(text);
       const aiMessage: Message = {
         id: `ai_${Date.now()}`,
         sender: 'ai',
-        text: reply,
+        text: aiResponseData.reply,
         timestamp: formatTime(new Date()),
-        actions,
+        actions: aiResponseData.actions,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
       try { playDingSound(); } catch {}
-    }, 450);
+    }, 400);
   };
 
   // Handle Copy Message Text
-  const handleCopyText = (msgId: string, text: string) => {
+  const handleCopyMessage = (msgId: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(msgId);
-    setTimeout(() => setCopiedId(null), 1800);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Clear Chat History
-  const handleClearChat = () => {
+  // Handle Reset Chat
+  const handleResetChat = () => {
     Swal.fire({
       title: 'Reset Percakapan?',
-      text: 'Riwayat percakapan dengan Ry-AI akan dibersihkan.',
+      text: 'Riwayat percakapan dengan Ry-AI akan dihapus dan dimulai dari awal.',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#0066cc',
-      cancelButtonColor: '#71717A',
-      confirmButtonText: 'Ya, Bersihkan',
+      cancelButtonColor: '#7a7a7a',
+      confirmButtonText: 'Ya, Reset',
       cancelButtonText: 'Batal',
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.removeItem('ry_ai_chat_history');
-        const welcomeMsg: Message = {
-          id: `welcome_${Date.now()}`,
-          sender: 'ai',
-          text: 'Riwayat percakapan telah dibersihkan. Ada yang bisa **Ry-AI** bantu kembali seputar layanan kami?',
-          timestamp: formatTime(new Date()),
-          actions: [
-            { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
-            { label: 'Gateway GoPay', href: '/gateway', icon: '💳' },
-          ],
-        };
-        setMessages([welcomeMsg]);
+        localStorage.removeItem(STORAGE_KEY);
+        setMessages([getWelcomeMessage()]);
       }
     });
   };
 
-  // Render Markdown-like Formatted Text
+  // Render markdown-like formatted text with high-contrast, crystal-clear readability
   const renderFormattedText = (raw: string) => {
     const lines = raw.split('\n');
     return lines.map((line, idx) => {
       if (line.startsWith('### ')) {
         return (
-          <h4 key={idx} className="font-bold text-sm text-primary dark:text-primary mt-1 mb-1">
+          <h4 key={idx} className="font-bold text-[13.5px] sm:text-[14px] text-blue-600 dark:text-sky-400 mt-1 mb-1.5 tracking-tight flex items-center gap-1.5">
             {line.replace('### ', '')}
           </h4>
         );
@@ -405,8 +412,8 @@ export default function AiChatPage() {
       if (line.startsWith('• ')) {
         const content = line.substring(2);
         return (
-          <div key={idx} className="flex items-start gap-1.5 my-0.5 leading-relaxed">
-            <span className="text-primary font-bold">•</span>
+          <div key={idx} className="flex items-start gap-2 my-0.5 leading-relaxed text-slate-700 dark:text-slate-200">
+            <span className="text-blue-500 dark:text-sky-400 font-bold shrink-0 mt-0.5">•</span>
             <span>{parseBold(content)}</span>
           </div>
         );
@@ -414,7 +421,7 @@ export default function AiChatPage() {
 
       if (/^\d+\.\s/.test(line)) {
         return (
-          <div key={idx} className="my-0.5 leading-relaxed pl-2">
+          <div key={idx} className="my-0.5 leading-relaxed pl-2 text-slate-700 dark:text-slate-200">
             {parseBold(line)}
           </div>
         );
@@ -425,7 +432,7 @@ export default function AiChatPage() {
       }
 
       return (
-        <p key={idx} className="leading-relaxed my-0.5">
+        <p key={idx} className="leading-relaxed my-0.5 text-slate-700 dark:text-slate-200">
           {parseBold(line)}
         </p>
       );
@@ -433,47 +440,64 @@ export default function AiChatPage() {
   };
 
   const parseBold = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*)/g);
+    const parts = text.split(/(\**.*?\**)/g);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} className="font-semibold text-ink">{part.slice(2, -2)}</strong>;
+        return (
+          <strong key={i} className="font-semibold text-slate-900 dark:text-white">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (part.startsWith('*') && part.endsWith('*')) {
+        return (
+          <em key={i} className="italic text-slate-600 dark:text-slate-300">
+            {part.slice(1, -1)}
+          </em>
+        );
+      }
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return (
+          <code key={i} className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-sky-300 rounded text-[11px] font-mono">
+            {part.slice(1, -1)}
+          </code>
+        );
       }
       return part;
     });
   };
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col overflow-hidden bg-canvas select-none">
+    <div className="flex-1 w-full h-full flex flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950 select-none">
       
       {/* ============================================================ */}
       {/* 1. TOP CHAT HEADER BAR                                       */}
       {/* ============================================================ */}
-      <div className="h-12 px-3.5 sm:px-4 flex items-center justify-between border-b border-hairline bg-canvas/90 backdrop-blur-md shrink-0 z-20">
+      <div className="h-12 px-3.5 sm:px-4 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 z-20">
         <div className="flex items-center gap-2.5">
-          <div className="relative w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-cyan-500 text-white flex items-center justify-center shadow-xs">
+          <div className="relative w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center shadow-xs">
             <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
             </svg>
-            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-canvas" />
+            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
           </div>
 
           <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-xs sm:text-sm font-bold text-ink">Ry-AI Assistant</h2>
-              <span className="text-[9px] font-bold px-1 rounded bg-primary/10 text-primary">v2.5</span>
+            <div className="flex items-center gap-1.5 leading-none">
+              <h1 className="text-[13px] font-bold text-slate-900 dark:text-white">Ry-AI Assistant</h1>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-sky-300">v3.0</span>
             </div>
-            <p className="text-[10px] text-ink-muted flex items-center gap-1">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
               <span>Online • Data Akurat 100%</span>
             </p>
           </div>
         </div>
 
-        {/* Clear Conversation Button */}
         <button
-          onClick={handleClearChat}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-ink-muted hover:text-rose-500 hover:bg-rose-500/10 border border-hairline text-[11px] font-medium transition-all active:scale-95"
-          title="Bersihkan Percakapan"
+          onClick={handleResetChat}
+          className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          title="Bersihkan riwayat percakapan"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -493,9 +517,9 @@ export default function AiChatPage() {
             // User bubble
             return (
               <div key={msg.id} className="flex justify-end animate-in fade-in duration-150">
-                <div className="bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 max-w-[82%] sm:max-w-[75%] text-[13px] leading-relaxed shadow-xs">
+                <div className="bg-blue-600 text-white rounded-2xl rounded-tr-xs px-3.5 py-2 max-w-[82%] sm:max-w-[75%] text-[13px] leading-relaxed shadow-xs">
                   <div>{msg.text}</div>
-                  <div className="text-[9.5px] text-white/70 text-right mt-1 font-normal">
+                  <div className="text-[9.5px] text-blue-200 text-right mt-1 font-normal">
                     {msg.timestamp}
                   </div>
                 </div>
@@ -506,11 +530,11 @@ export default function AiChatPage() {
           // AI bubble
           return (
             <div key={msg.id} className="flex items-start gap-2.5 animate-in fade-in duration-150">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-cyan-500 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
                 ✨
               </div>
 
-              <div className="flex-1 max-w-[88%] sm:max-w-[82%] bg-surface-pearl dark:bg-surface-tile border border-hairline rounded-2xl rounded-tl-xs p-3.5 text-[13px] text-ink shadow-2xs leading-relaxed group">
+              <div className="flex-1 max-w-[88%] sm:max-w-[82%] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl rounded-tl-xs p-3.5 text-[13px] shadow-xs leading-relaxed group">
                 {/* Content */}
                 <div className="space-y-1">
                   {renderFormattedText(msg.text)}
@@ -518,7 +542,7 @@ export default function AiChatPage() {
 
                 {/* Direct Action Chips */}
                 {msg.actions && msg.actions.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-hairline">
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
                     {msg.actions.map((act, i) => {
                       if (act.isExternal) {
                         return (
@@ -538,7 +562,7 @@ export default function AiChatPage() {
                         <button
                           key={i}
                           onClick={() => act.href && router.push(act.href)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 text-[11px] font-semibold transition-all active:scale-95"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-600 dark:text-sky-300 dark:hover:text-white dark:border-blue-800 text-[11px] font-semibold transition-all active:scale-95"
                         >
                           <span>{act.icon || '⚡'}</span>
                           <span>{act.label}</span>
@@ -549,18 +573,23 @@ export default function AiChatPage() {
                   </div>
                 )}
 
-                {/* Footer (Timestamp & Copy) */}
-                <div className="flex items-center justify-between gap-2 mt-2 pt-1 text-[10px] text-ink-muted">
+                {/* Footer time & copy */}
+                <div className="flex items-center justify-between mt-2 pt-1 text-[9.5px] text-slate-400 dark:text-slate-500">
                   <span>{msg.timestamp}</span>
                   <button
-                    onClick={() => handleCopyText(msg.id, msg.text)}
-                    className="opacity-60 hover:opacity-100 transition-opacity"
-                    title="Salin Teks"
+                    onClick={() => handleCopyMessage(msg.id, msg.text)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-600 dark:hover:text-sky-400 flex items-center gap-0.5"
+                    title="Salin teks pesan"
                   >
                     {copiedId === msg.id ? (
-                      <span className="text-emerald-500 font-bold">Tersalin ✓</span>
+                      <span className="text-emerald-500 font-semibold">Tersalin!</span>
                     ) : (
-                      <span>Salin</span>
+                      <>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                        </svg>
+                        <span>Salin</span>
+                      </>
                     )}
                   </button>
                 </div>
@@ -569,18 +598,18 @@ export default function AiChatPage() {
           );
         })}
 
-        {/* Typing State Indicator */}
+        {/* AI Typing Indicator */}
         {isTyping && (
           <div className="flex items-start gap-2.5 animate-in fade-in duration-150">
-            <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs shrink-0 shadow-xs">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
               ✨
             </div>
-            <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-xs bg-surface-pearl dark:bg-surface-tile border border-hairline text-xs text-ink-muted flex items-center gap-1.5 shadow-2xs">
+            <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-xs bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shadow-2xs">
               <span>Ry-AI sedang memproses</span>
               <span className="flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '300ms' }} />
               </span>
             </div>
           </div>
@@ -590,34 +619,36 @@ export default function AiChatPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* 3. QUICK SUGGESTIONS BAR (Pilihan Cepat)                      */}
+      {/* 3. QUICK SUGGESTION CHIPS                                    */}
       {/* ============================================================ */}
-      <div className="px-3 py-1.5 border-t border-hairline bg-canvas flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-        <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider shrink-0 pl-0.5">
-          Pilihan:
-        </span>
-        {QUICK_PROMPTS.map((p, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleSendMessage(p.query)}
-            disabled={isTyping}
-            className="px-2.5 py-1 rounded-full bg-surface-pearl dark:bg-surface-tile hover:bg-primary/10 text-ink-muted hover:text-primary border border-hairline text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 active:scale-95 disabled:opacity-50 shadow-2xs"
-          >
-            {p.label}
-          </button>
-        ))}
+      <div className="px-3 py-2 border-t border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 shrink-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500 tracking-wider shrink-0 uppercase mr-1">
+            PILIHAN:
+          </span>
+          {QUICK_PROMPTS.map((prompt, i) => (
+            <button
+              key={i}
+              onClick={() => handleSendMessage(prompt.query)}
+              disabled={isTyping}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-medium transition-all active:scale-95 disabled:opacity-50"
+            >
+              {prompt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ============================================================ */}
-      {/* 4. PINNED CHAT INPUT BAR                                      */}
+      {/* 4. CHAT INPUT BAR                                            */}
       {/* ============================================================ */}
-      <div className="p-2 sm:p-2.5 px-3 bg-canvas/95 backdrop-blur-md border-t border-hairline shrink-0">
+      <div className="p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSendMessage();
           }}
-          className="flex items-center gap-2 bg-surface-pearl dark:bg-surface-tile border border-hairline rounded-full px-3.5 py-1 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-xs"
+          className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-full px-3.5 py-1 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all shadow-xs"
         >
           <input
             ref={inputRef}
@@ -626,13 +657,13 @@ export default function AiChatPage() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={isTyping}
-            className="flex-1 bg-transparent text-[13px] text-ink placeholder-ink-muted focus:outline-none py-1.5"
+            className="flex-1 bg-transparent text-[13px] text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none py-1.5"
           />
 
           <button
             type="submit"
             disabled={!inputValue.trim() || isTyping}
-            className="w-8 h-8 rounded-full bg-primary hover:bg-primary-focus text-white flex items-center justify-center shadow-xs transition-transform active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+            className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-transform active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
             title="Kirim Pertanyaan"
           >
             <svg className="w-4 h-4 translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
