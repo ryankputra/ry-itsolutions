@@ -618,5 +618,80 @@ async function notifyGatewaySubscription(user, keyData, isRenewal = false) {
     }
 }
 
+
+// Cooldown tracker for tenant session expired notifications (max once per 2 hours per key)
+const tenantAlertCooldowns = new Map();
+const TENANT_ALERT_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * Send WhatsApp notification to tenant when their GoBiz session has expired
+ */
+async function notifyTenantSessionExpired(keyId) {
+    try {
+        const lastSent = tenantAlertCooldowns.get(keyId) || 0;
+        if (Date.now() - lastSent < TENANT_ALERT_COOLDOWN_MS) {
+            return; // In cooldown
+        }
+
+        const key = await dbGet(`
+            SELECT k.*, u.name as userName, u.verifiedPhone 
+            FROM merchant_gateway_keys k 
+            JOIN users u ON k.userId = u.id 
+            WHERE k.id = ?
+        `, [keyId]);
+        if (!key) return;
+
+        const targetPhone = key.gopayPhone || key.verifiedPhone;
+        if (!targetPhone) return;
+
+        tenantAlertCooldowns.set(keyId, Date.now());
+
+        const waBot = require('../services/waBot');
+        const message = 
+            `🔔 *Pemberitahuan Ry-ITSolutions Gateway*
+
+` +
+            `Halo *${key.userName || 'Merchant'}*,
+` +
+            `Sesi login GoBiz untuk API Key *${key.name}* Anda telah *kedaluwarsa* dari sistem GoJek.
+
+` +
+            `⚠️ *Dampak:* Website / toko online Anda saat ini tidak dapat memverifikasi pembayaran QRIS otomatis pembeli.
+
+` +
+            `👉 *Solusi Instan:* Silakan buka dashboard akun Anda untuk login ulang via OTP (hanya 10 detik):
+` +
+            `https://ry-itsolutionts.web.id/gateway
+
+` +
+            `Terima kasih! Tim Ry-ITSolutions`;
+
+        const waRes = await waBot.sendTextMessage(targetPhone, message);
+        console.log(`[Gateway Tenant WA Alert] Notifikasi sesi expired terkirim ke ${targetPhone}:`, waRes?.status);
+    } catch (e) {
+        console.error('[Gateway Tenant WA Alert Error]', e.message);
+    }
+}
+
+/**
+ * POST /api/gateway/internal/notify-expired
+ * Internal endpoint called by gopay-gateway service when tenant session 401 is detected
+ */
+router.post('/gateway/internal/notify-expired', async (req, res) => {
+    try {
+        const { keyId, secret } = req.body;
+        if (secret !== GOPAY_GATEWAY_API_KEY && secret !== 'ryy-gopay-secret-key-2026') {
+            return res.status(403).json({ status: false, message: 'Unauthorized' });
+        }
+        if (!keyId) {
+            return res.status(400).json({ status: false, message: 'keyId is required' });
+        }
+        await notifyTenantSessionExpired(keyId);
+        res.json({ status: true, message: 'Notification queued/dispatched' });
+    } catch (err) {
+        res.status(500).json({ status: false, message: err.message });
+    }
+});
+
 module.exports = router;
 

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
+import jsQR from "jsqr";
 
 interface GatewayKey {
   id: string;
@@ -38,6 +39,103 @@ export default function GatewayDeveloperPage() {
   const [activeTab, setActiveTab] = useState<"keys" | "docs" | "tester">("keys");
   const [docLang, setDocLang] = useState<"php" | "nodejs" | "curl" | "python">("php");
   const [showRealKeyInDocs, setShowRealKeyInDocs] = useState(false);
+  const [isExtractingQr, setIsExtractingQr] = useState(false);
+  const [copiedPostmanCurl, setCopiedPostmanCurl] = useState(false);
+
+  // Otomatis arahkan ke Tab Dokumentasi Publik jika pengunjung belum login / AI
+  useEffect(() => {
+    if (!user) {
+      setActiveTab("docs");
+    }
+  }, [user]);
+
+  // Handler: Ekstraksi String QRIS Statis dari Upload Foto Gambar (PNG/JPG/WEBP)
+  const handleExtractQrisFromImage = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    target: "create" | "config"
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input value agar file yang sama bisa dipilih ulang jika perlu
+    e.target.value = "";
+
+    setIsExtractingQr(true);
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            Swal.fire("Error", "Gagal memproses gambar pada canvas browser.", "error");
+            setIsExtractingQr(false);
+            return;
+          }
+
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+          });
+
+          if (code && code.data) {
+            const rawQr = code.data.trim();
+            if (rawQr.startsWith("000201")) {
+              // Deteksi nama merchant dari tag 59 jika tersedia (format: 59XXName)
+              let detectedMerchant = "";
+              const match59 = rawQr.match(/59(\d{2})([A-Za-z0-9\s.,&'-]+)/);
+              if (match59) {
+                const len = parseInt(match59[1], 10);
+                detectedMerchant = match59[2].substring(0, len);
+              }
+
+              if (target === "create") {
+                setCreateQris(rawQr);
+              } else {
+                setConfigQris(rawQr);
+              }
+
+              Swal.fire({
+                icon: "success",
+                title: "QRIS Berhasil Diekstrak!",
+                html: `
+                  <p class="text-xs text-slate-600 dark:text-slate-300 mb-2">Kode string QRIS toko Anda berhasil dibaca otomatis:</p>
+                  <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">${detectedMerchant ? `Merchant: ${detectedMerchant}` : "Format QRIS EMVCo Standar Valid"}</p>
+                `,
+                confirmButtonColor: "#0066cc",
+              });
+            } else {
+              Swal.fire({
+                icon: "warning",
+                title: "Bukan Format QRIS Standar",
+                text: "QR Code berhasil dibaca, namun bukan format QRIS Nasional (harus berawalan '000201'). Pastikan yang diunggah adalah QRIS pembayaran.",
+              });
+            }
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "QR Code Tidak Terdeteksi",
+              text: "Pastikan foto atau screenshot QR code toko Anda jelas, terang, fokus, dan tidak terpotong.",
+            });
+          }
+        } catch (err: any) {
+          Swal.fire("Error", "Gagal membaca QR code: " + err.message, "error");
+        } finally {
+          setIsExtractingQr(false);
+        }
+      };
+
+      img.src = event.target?.result as string;
+    };
+
+    reader.readAsDataURL(file);
+  };
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -73,6 +171,10 @@ export default function GatewayDeveloperPage() {
   const [testResult, setTestResult] = useState<any>(null);
 
   const fetchKeys = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await fetch("/api/gateway/keys", { credentials: "include" });
@@ -513,6 +615,33 @@ export default function GatewayDeveloperPage() {
       {/* TAB 1: KEYS MANAGEMENT */}
       {activeTab === "keys" && (
         <div className="space-y-4">
+          {!user && (
+            <div className="p-8 sm:p-10 rounded-3xl bg-canvas border border-hairline text-center space-y-4 shadow-sm animate-in fade-in">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center text-3xl shadow-xs">
+                🔑
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-base sm:text-lg font-black text-ink">Mulai Kelola API Key Gateway GoPay &amp; QRIS</h3>
+                <p className="text-xs text-ink-muted max-w-md mx-auto leading-relaxed">
+                  Silakan masuk ke akun Ry-ITSolutions Anda untuk membuat API Key baru, menghubungkan GoBiz toko Anda, dan mengaktifkan webhook pembayaran otomatis.
+                </p>
+              </div>
+              <div className="flex justify-center items-center gap-3 pt-2">
+                <Link
+                  href="/login"
+                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-black text-xs shadow-md transition-transform hover:scale-105"
+                >
+                  Masuk / Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-5 py-2.5 rounded-xl bg-parchment hover:bg-hairline text-ink font-bold text-xs border border-hairline transition-colors"
+                >
+                  Daftar Akun Baru
+                </Link>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base sm:text-lg font-black text-ink">API Key Aktif Anda</h2>
@@ -921,6 +1050,111 @@ if ($res['paid'] === true) {
   "timestamp": "2026-09-07T14:30:00.000Z"
 }`}
               </pre>
+            </div>
+          </div>
+
+          {/* SECTION: PANDUAN PENGUJIAN POSTMAN & REST CLIENT */}
+          <div className="p-6 rounded-3xl bg-canvas border border-hairline shadow-sm space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-lg bg-orange-600 text-white font-black text-xs uppercase shadow-xs">
+                  POSTMAN &amp; REST
+                </span>
+                <h3 className="font-black text-sm sm:text-base text-ink">
+                  Panduan Pengujian di Postman, Thunder Client &amp; cURL
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const curlText = `curl -X POST "https://ry-itsolutionts.web.id/create-qris" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${docApiKey}" \
+  -d '{"amount": 50000}'`;
+                  navigator.clipboard.writeText(curlText);
+                  setCopiedPostmanCurl(true);
+                  setTimeout(() => setCopiedPostmanCurl(false), 2500);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500 hover:text-white text-orange-600 dark:text-orange-400 font-bold text-xs border border-orange-500/20 transition-all active:scale-95"
+              >
+                <span>{copiedPostmanCurl ? "✅ cURL Tersalin!" : "📋 Salin cURL untuk Import Postman"}</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-ink-muted leading-relaxed">
+              Anda dapat menguji transaksi pembayaran langsung di aplikasi <b>Postman</b>, <b>VS Code Thunder Client</b>, atau <b>Hoppscotch</b> tanpa perlu menulis kode terlebih dahulu:
+            </p>
+
+            {/* Quick Postman Import Tip */}
+            <div className="p-3.5 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-xs text-ink space-y-1">
+              <span className="font-bold text-orange-700 dark:text-orange-300 block">💡 Tips Cepat Import Postman:</span>
+              <p className="text-[11px] text-ink-muted leading-relaxed">
+                Di Postman, klik tombol <b>Import</b> di pojok kiri atas ➔ pilih tab <b>Raw text</b> ➔ paste cURL yang Anda salin dari tombol di atas ➔ klik <b>Continue &amp; Import</b>. Postman akan otomatis mengisi URL, Method, Header, dan Body secara instan!
+              </p>
+            </div>
+
+            {/* Step 1 in Postman */}
+            <div className="space-y-2 border-t border-hairline pt-3">
+              <h4 className="font-bold text-xs text-ink flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                <span>Request 1: Cetak QRIS Dinamis (POST /create-qris)</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                <div className="p-2.5 rounded-xl bg-parchment border border-hairline">
+                  <span className="font-bold block text-ink">Method &amp; URL:</span>
+                  <span className="font-mono text-blue-600 dark:text-sky-400 font-bold">POST https://ry-itsolutionts.web.id/create-qris</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-parchment border border-hairline">
+                  <span className="font-bold block text-ink">Headers:</span>
+                  <span className="font-mono text-ink-muted">Content-Type: application/json<br/>x-api-key: {docApiKey.substring(0, 14)}...</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-parchment border border-hairline">
+                  <span className="font-bold block text-ink">Body (raw JSON):</span>
+                  <span className="font-mono text-ink-muted">&#123; &quot;amount&quot;: 50000 &#125;</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2 in Postman */}
+            <div className="space-y-2 border-t border-hairline pt-3">
+              <h4 className="font-bold text-xs text-ink flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+                <span>Request 2: Cek Pembayaran Masuk (GET /check-payment)</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2.5 rounded-xl bg-parchment border border-hairline">
+                  <span className="font-bold block text-ink">Method &amp; URL:</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">GET https://ry-itsolutionts.web.id/check-payment?amount=50000&amp;trx_id=TRX-XXXXXX</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-parchment border border-hairline">
+                  <span className="font-bold block text-ink">Headers:</span>
+                  <span className="font-mono text-ink-muted">x-api-key: {docApiKey.substring(0, 14)}...</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Response Diagnostics Helper */}
+            <div className="space-y-2 border-t border-hairline pt-3">
+              <h4 className="font-bold text-xs text-ink">📖 Arti Status Kode Response:</h4>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-start gap-2">
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold font-mono shrink-0">200 OK</span>
+                  <span className="text-ink-muted">Berhasil membuat QRIS dinamis toko Anda atau pembayaran sukses terverifikasi.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold font-mono shrink-0">400 Bad Request</span>
+                  <span className="text-ink-muted">Akun GoBiz belum terhubung atau QRIS statis belum diatur pada API Key Anda. Silakan klik tombol <b>Hubungkan GoBiz (OTP)</b> atau <b>Upload Foto QRIS Toko</b> di dashboard.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold font-mono shrink-0">401 Unauthorized</span>
+                  <span className="text-ink-muted">Header <code>x-api-key</code> salah atau belum disertakan pada request.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Note for AI & Bot Developers */}
+            <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-ink leading-relaxed">
+              🤖 <b>Catatan untuk AI &amp; Bot Developer:</b> Seluruh endpoint API bersifat <i>stateless</i> dan terbuka untuk integrasi bot/serverless. Tidak membutuhkan sesi cookie browser ataupun reCAPTCHA, cukup sertakan header <code>x-api-key</code> pada setiap panggilan HTTP request.
             </div>
           </div>
         </div>

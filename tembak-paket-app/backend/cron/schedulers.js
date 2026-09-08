@@ -81,7 +81,105 @@ async function runResellerRetentionCheck() {
     return { downgraded, checkedAt: new Date().toISOString() };
 }
 
+
+// Gopay Merchant Partner Health Watchdog (Monitors GoPay session status every 10 minutes)
+let lastGopayAlertTime = 0;
+const GOPAY_ALERT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour cooldown between alerts
+
+async function checkAdminGopayHealthWatchdog() {
+    try {
+        const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
+        const activeGateway = gwRow ? gwRow.value : 'orkut';
+        if (activeGateway !== 'gopay') return; // Only alert if admin chose GoPay as active gateway
+
+        const gopayGatewayUrl = process.env.GOPAY_GATEWAY_URL || 'http://127.0.0.1:3002';
+        const apiKey = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
+
+        const res = await fetch(`${gopayGatewayUrl}/api/session-info`, {
+            headers: { 'x-api-key': apiKey },
+            timeout: 8000
+        });
+        const data = await res.json();
+        const isHealthy = data && data.success && data.data?.token_status === 'valid';
+
+        if (!isHealthy) {
+            const now = Date.now();
+            if (now - lastGopayAlertTime > GOPAY_ALERT_COOLDOWN_MS) {
+                lastGopayAlertTime = now;
+                const statusMsg = data?.data?.message || 'Sesi belum login / Server habis reboot';
+                console.warn(`[Watchdog] Sesi GoPay Merchant Admin terputus (${statusMsg})! Mengirim alert ke Telegram & WA Admin...`);
+
+                // 1. Alert to Telegram Admin
+                const alertHtml = 
+                    `⚠️ <b>PERINGATAN DARURAT: SESI GOPAY MERCHANT TERPUTUS!</b>
+` +
+                    `━━━━━━━━━━━━━━━━━━━━━━
+` +
+                    `Status Sesi: <b>${statusMsg}</b>
+` +
+                    `Pelanggan tidak bisa melakukan top-up otomatis via GoPay saat ini.
+
+` +
+                    `👉 <b>Tindakan:</b> Silakan buka Admin Panel di bawah untuk login OTP instan:
+` +
+                    `https://ry-itsolutionts.web.id/admin`;
+
+                try {
+                    await sendTelegramNotification(alertHtml);
+                } catch (tgErr) {
+                    console.error('[Watchdog TG Error]', tgErr.message);
+                }
+
+                // 2. Alert to WhatsApp Admin
+                try {
+                    const waBot = require('../services/waBot');
+                    const adminPhones = await waBot.getAdminPhoneNumbers();
+                    const waMsg = 
+                        `⚠️ *PERINGATAN DARURAT: SESI GOPAY TERPUTUS*
+
+` +
+                        `Status: *${statusMsg}*
+` +
+                        `Pelanggan tidak dapat top-up saldo via GoPay saat ini.
+
+` +
+                        `Silakan segera buka Dashboard Admin Panel untuk kirim OTP login GoBiz:
+` +
+                        `👉 https://ry-itsolutionts.web.id/admin`;
+
+                    for (const p of adminPhones) {
+                        await waBot.sendTextMessage(p, waMsg);
+                    }
+                } catch (waErr) {
+                    console.error('[Watchdog WA Error]', waErr.message);
+                }
+            }
+        }
+    } catch (e) {
+        // gopay-gateway service might be unreachable
+        const now = Date.now();
+        if (now - lastGopayAlertTime > GOPAY_ALERT_COOLDOWN_MS) {
+            lastGopayAlertTime = now;
+            console.error('[Watchdog Gopay Gateway Unreachable]', e.message);
+            try {
+                await sendTelegramNotification(
+                    `⚠️ <b>PERINGATAN: SERVICE GOPAY GATEWAY (PORT 3002) TIDAK MERESPON!</b>
+` +
+                    `Penyebab: <code>${e.message}</code>
+` +
+                    `Silakan periksa service di VPS via <code>pm2 status</code>.`
+                );
+            } catch (tgErr) {}
+        }
+    }
+}
+
 function initSchedulers() {
+    // Watchdog GoPay Health (Tiap 10 Menit)
+    cron.schedule('*/10 * * * *', async () => {
+        await checkAdminGopayHealthWatchdog();
+    });
+
     // 1. Check Balance & Process Queue every minute
     cron.schedule('*/1 * * * *', async () => {
         try {

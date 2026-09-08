@@ -925,6 +925,15 @@ async function verifyPayment(amount, startTime, merchantIdOverride = null, userA
     } catch (firstErr) {
         if (firstErr.response && firstErr.response.status === 401) {
             if (gatewayKey) {
+                // Trigger background WA notification to tenant
+                try {
+                    const mainBackendUrl = process.env.MAIN_BACKEND_URL || 'http://127.0.0.1:3001';
+                    axios.post(`${mainBackendUrl}/api/gateway/internal/notify-expired`, {
+                        keyId: gatewayKey.id,
+                        secret: process.env.API_KEY || 'ryy-gopay-secret-key-2026'
+                    }, { timeout: 4000 }).catch(() => {});
+                } catch (e) {}
+
                 throw new Error(`Sesi GoBiz pada API Key (${gatewayKey.name || gatewayKey.id}) telah kedaluwarsa dari pihak GoJek. Silakan hubungkan ulang GoBiz (OTP) di dashboard https://ry-itsolutionts.web.id/gateway.`);
             }
             logActivity('WARNING', 'Sesi expired (401) di verifyPayment. Memulai auto-refresh...');
