@@ -107,7 +107,9 @@ export function EcommerceHeader() {
     { title: "Isi Saldo (Top Up QRIS)", desc: "Deposit saldo instan otomatis 24 jam", href: "/topup", tag: "Instan" },
   ];
 
-  const filteredServices = searchQuery.trim()
+  const filteredServices = isGuestGateway
+    ? services.filter((s) => s.href === "/gateway")
+    : searchQuery.trim()
     ? services.filter(
         (s) =>
           s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -127,19 +129,23 @@ export function EcommerceHeader() {
     }
   };
 
-  const navLinks = [
-    { label: "Beranda", href: "/dashboard" },
-    { label: "Payment Gateway", href: "/gateway" },
-    { label: "AI Chat", href: "/ai" },
-    { label: "Buka IMEI", href: "/unblock-imei" },
-    { label: "Cek CEIR", href: "/cek-ceir" },
-    ...(showBarcodeMenu ? [{ label: "Create Barcode", href: "/barcode" }] : []),
-    { label: "Cek Garansi", href: "/cek-garansi" },
-    { label: "Klaim Voucher", href: "/vouchers" },
-    { label: "Game Koin", href: "/games" },
-    { label: "Riwayat Order", href: "/history" },
-    { label: "Bantuan & Tiket", href: "/tickets" },
-  ];
+  const isGuestGateway = !user && pathname.startsWith("/gateway");
+
+  const navLinks = isGuestGateway
+    ? [{ label: "Payment Gateway", href: "/gateway" }]
+    : [
+        { label: "Beranda", href: "/dashboard" },
+        { label: "Payment Gateway", href: "/gateway" },
+        { label: "AI Chat", href: "/ai" },
+        { label: "Buka IMEI", href: "/unblock-imei" },
+        { label: "Cek CEIR", href: "/cek-ceir" },
+        ...(showBarcodeMenu ? [{ label: "Create Barcode", href: "/barcode" }] : []),
+        { label: "Cek Garansi", href: "/cek-garansi" },
+        { label: "Klaim Voucher", href: "/vouchers" },
+        { label: "Game Koin", href: "/games" },
+        { label: "Riwayat Order", href: "/history" },
+        { label: "Bantuan & Tiket", href: "/tickets" },
+      ];
 
   return (
     <header className="sticky top-0 z-40 transition-all duration-200">
@@ -210,21 +216,23 @@ export function EcommerceHeader() {
           </svg>
         </button>
 
-        {/* Cart Icon with real Cart Count */}
-        <Link
-          href="/cart"
-          className="relative p-1.5 text-white hover:opacity-80 transition-opacity"
-          title="Keranjang Belanja"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-          </svg>
-          {cartCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
-              {cartCount}
-            </span>
-          )}
-        </Link>
+        {/* Cart Icon with real Cart Count (Only if logged in) */}
+        {user && (
+          <Link
+            href="/cart"
+            className="relative p-1.5 text-white hover:opacity-80 transition-opacity"
+            title="Keranjang Belanja"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+            </svg>
+            {cartCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+        )}
 
         {/* Theme Toggle (Mobile) */}
         <ThemeToggle className="bg-white/10 text-white border-white/20 hover:bg-white/20 !p-1.5 shrink-0" />
@@ -337,51 +345,55 @@ export function EcommerceHeader() {
 
           {/* Desktop Right Action Hub */}
           <div className="flex items-center gap-3 shrink-0">
-            {/* Desktop Cart Icon */}
-            <Link
-              href="/cart"
-              className="relative p-2 text-ink hover:text-primary transition-colors"
-              title="Keranjang Belanja"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-              {cartCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+            {/* Desktop Cart, Koin Ry & Saldo (Hanya jika user sudah login) */}
+            {user && (
+              <>
+                <Link
+                  href="/cart"
+                  className="relative p-2 text-ink hover:text-primary transition-colors"
+                  title="Keranjang Belanja"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                  </svg>
+                  {cartCount > 0 && (
+                    <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
 
-            <Link
-              href="/games"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 font-bold text-xs transition-all shadow-2xs group"
-            >
-              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center text-[10px] font-black shadow-xs group-hover:rotate-12 transition-transform">
-                🪙
-              </div>
-              <div>
-                <span className="text-[9px] text-amber-900 block leading-tight">Koin Ry</span>
-                <span className="text-xs font-black text-amber-700">
-                  {(user?.coins || 0).toLocaleString("id-ID")}
-                </span>
-              </div>
-            </Link>
+                <Link
+                  href="/games"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 font-bold text-xs transition-all shadow-2xs group"
+                >
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center text-[10px] font-black shadow-xs group-hover:rotate-12 transition-transform">
+                    🪙
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-amber-900 block leading-tight">Koin Ry</span>
+                    <span className="text-xs font-black text-amber-700">
+                      {(user?.coins || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </Link>
 
-            <Link
-              href="/topup"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary font-bold text-xs transition-all shadow-2xs group"
-            >
-              <svg className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
-              </svg>
-              <div className="text-left">
-                <span className="text-[9px] text-ink-muted block leading-tight">Saldo Akun</span>
-                <span className="text-xs font-black text-ink">
-                  Rp {(user?.balance || 0).toLocaleString("id-ID")}
-                </span>
-              </div>
-            </Link>
+                <Link
+                  href="/topup"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary font-bold text-xs transition-all shadow-2xs group"
+                >
+                  <svg className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                  </svg>
+                  <div className="text-left">
+                    <span className="text-[9px] text-ink-muted block leading-tight">Saldo Akun</span>
+                    <span className="text-xs font-black text-ink">
+                      Rp {(user?.balance || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </Link>
+              </>
+            )}
 
             {user?.role === "admin" && (
               <Link

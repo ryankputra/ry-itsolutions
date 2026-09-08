@@ -2,9 +2,16 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useApp } from "@/lib/store";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useApp();
+
+  // Sembunyikan bottom bar jika pengunjung belum login dan sedang berada di halaman gateway
+  if (!user && pathname.startsWith("/gateway")) {
+    return null;
+  }
 
   const navItems = [
     {
