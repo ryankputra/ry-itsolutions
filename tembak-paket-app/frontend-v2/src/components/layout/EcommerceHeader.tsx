@@ -128,7 +128,7 @@ export function EcommerceHeader() {
 
   const navLinks = [
     { label: "Beranda", href: "/dashboard" },
-    { label: "Video", href: "/videos" },
+    { label: "AI Chat", href: "/ai" },
     { label: "Buka IMEI", href: "/unblock-imei" },
     { label: "Cek CEIR", href: "/cek-ceir" },
     ...(showBarcodeMenu ? [{ label: "Create Barcode", href: "/barcode" }] : []),

@@ -9,6 +9,7 @@
   "/(auth)/register/page": "/register",
   "/page": "/",
   "/(main)/admin/page": "/admin",
+  "/(main)/ai/page": "/ai",
   "/(main)/barcode/page": "/barcode",
   "/(main)/beli-paket/page": "/beli-paket",
   "/(main)/cart/page": "/cart",

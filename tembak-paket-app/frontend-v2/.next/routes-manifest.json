@@ -125,6 +125,12 @@
       "namedRegex": "^/admin(?:/)?$"
     },
     {
+      "page": "/ai",
+      "regex": "^/ai(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ai(?:/)?$"
+    },
+    {
       "page": "/barcode",
       "regex": "^/barcode(?:/)?$",
       "routeKeys": {},

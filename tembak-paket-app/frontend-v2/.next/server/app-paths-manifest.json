@@ -9,6 +9,7 @@
   "/(auth)/register/page": "app/(auth)/register/page.js",
   "/page": "app/page.js",
   "/(main)/admin/page": "app/(main)/admin/page.js",
+  "/(main)/ai/page": "app/(main)/ai/page.js",
   "/(main)/barcode/page": "app/(main)/barcode/page.js",
   "/(main)/beli-paket/page": "app/(main)/beli-paket/page.js",
   "/(main)/cart/page": "app/(main)/cart/page.js",
