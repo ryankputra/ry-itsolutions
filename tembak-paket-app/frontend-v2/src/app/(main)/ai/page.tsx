@@ -19,11 +19,11 @@ interface Message {
 }
 
 const QUICK_PROMPTS = [
-  { label: '⚡ Buka Blokir IMEI', query: 'Bagaimana cara buka blokir IMEI All Operator dan berapa harganya?' },
-  { label: '💳 Payment Gateway GoPay', query: 'Jelaskan tentang fitur Payment Gateway GoPay & QRIS SaaS 10rb/bulan' },
+  { label: '⚡ Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan syarat buka blokir IMEI 3 Bulan?' },
+  { label: '⏱️ Unblock IMEI yang Fast ada?', query: 'Apakah ada unblock IMEI yang fast atau kilat?' },
+  { label: '💳 Payment Gateway GoPay 10rb', query: 'Jelaskan tentang fitur Payment Gateway GoPay & QRIS SaaS 10rb/bulan' },
   { label: '🔍 Cek Garansi Apple & CEIR', query: 'Bagaimana cara cek garansi Apple dan status CEIR gratis?' },
   { label: '💰 Cara Topup Saldo QRIS', query: 'Bagaimana cara isi saldo akun otomatis via QRIS tanpa admin?' },
-  { label: '🛠️ Integrasi API & Webhook', query: 'Bagaimana dokumentasi integrasi API webhook Ry-ITSolutions?' },
   { label: '💬 Hubungi CS Admin WhatsApp', query: 'Saya butuh bantuan customer support WhatsApp admin' },
 ];
 
@@ -34,8 +34,33 @@ export default function AiChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Live data from backend
+  const [livePackages, setLivePackages] = useState<any[]>([]);
+  const [livePricing, setLivePricing] = useState<any>({});
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch live package and pricing data
+  useEffect(() => {
+    fetch('/api/imei-packages', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.status && Array.isArray(data.data)) {
+          setLivePackages(data.data.filter((p: any) => p && p.isVisible !== false));
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/manual-services-pricing', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.status && data.data) {
+          setLivePricing(data.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Load chat history from localStorage
   useEffect(() => {
@@ -50,11 +75,11 @@ export default function AiChatPage() {
       }
     } catch {}
 
-    // Initial welcome message
+    // Initial welcome message (Accurate and truthful)
     const welcomeMsg: Message = {
       id: 'welcome_1',
       sender: 'ai',
-      text: 'Halo! Saya **Ry-AI**, asisten virtual cerdas resmi **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Tanyakan apa saja seputar:\n• **Buka Blokir IMEI All Operator** (iPhone & Android)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Langganan 10rb/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR** (Gratis)\n• **Top Up Saldo Akun Otomatis 24 Jam** (QRIS Bebas Admin)\n• **Integrasi API, Webhook, & Solusi IT**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!',
+      text: 'Halo! Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nAda yang bisa saya bantu hari ini? Anda dapat menanyakan seputar:\n• **Buka Blokir IMEI All Operator** (Tersedia Paket 3 Bulan, garansi aktif)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Langganan Rp 10.000/bln, Fee 0%)\n• **Cek Status Garansi Apple & Database CEIR** (100% Gratis)\n• **Top Up Saldo Akun Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Bantuan CS Admin WhatsApp**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!',
       timestamp: formatTime(new Date()),
       actions: [
         { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
@@ -84,34 +109,116 @@ export default function AiChatPage() {
     return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   }
 
-  // Generate Intelligent Contextual AI Response
+  // Generate Accurate & Truthful AI Response (No Hallucinations)
   const generateAiResponse = (userText: string): { reply: string; actions?: Message['actions'] } => {
     const q = userText.toLowerCase();
 
-    // 1. IMEI & Signal Unblock
-    if (q.includes('imei') || q.includes('sinyal') || q.includes('begal') || q.includes('kemenperin') || q.includes('unblock')) {
+    // Get live price for 3-month package if available
+    const pkg3Bulan = livePackages.find((p) => (p.name || p.duration || '').toLowerCase().includes('3 bulan'));
+    const price3Bulan = pkg3Bulan ? Number(pkg3Bulan.price || 155000) : 155000;
+    const formattedPrice3Bln = `Rp ${price3Bulan.toLocaleString('id-ID')}`;
+
+    // 1. QUESTION ABOUT FAST / KILAT / SPEED / ESTIMASI WAKTU
+    if (
+      q.includes('fast') ||
+      q.includes('kilat') ||
+      q.includes('cepat') ||
+      q.includes('express') ||
+      q.includes('berapa lama') ||
+      q.includes('selesai kapan') ||
+      q.includes('estimasi') ||
+      q.includes('jam berapa')
+    ) {
       return {
-        reply: '### 📶 Layanan Buka Blokir IMEI All Operator\n\nLayanan buka blokir IMEI di Ry-ITSolutions ditujukan untuk **iPhone (Inter / All Series) & Android** yang mengalami hilang sinyal (*No Service* / Terblokir Bea Cukai & Kemenperin).\n\n**Keunggulan Layanan:**\n• Mendukung **All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, dan Smartfren.\n• **Proses Kilat**: 15 - 45 Menit langsung ON.\n• **Terverifikasi Resmi Database CEIR** Kemenperin & Bea Cukai.\n• **Garansi 100%**: Jika sinyal gagal aktif, dana akan dikembalikan / diproses ulang.\n\n**Pilihan Durasi & Estimasi Tarif:**\n1. **Paket 1 Bulan**: Mulai Rp 60.000\n2. **Paket 3 Bulan**: Mulai Rp 120.000\n3. **Paket Garansi Resmi Permanen**: Mulai Rp 250.000\n\nAnda bisa langsung mendaftarkan 15 digit IMEI perangkat Anda di menu **Buka IMEI**.',
+        reply: '### ⏱️ Informasi Kecepatan & Estimasi Unblock IMEI\n\nUntuk saat ini, opsi **Fast / Kilat sedang TIDAK TERSEDIA (nonaktif)**.\n\nLayanan unblock IMEI yang aktif saat ini adalah jalur **Reguler** dengan ketentuan pengerjaan:\n• **Batas Pengiriman Pesanan**: Maksimal pukul **14:00 WIB** setiap harinya.\n• **Estimasi Selesai**: Selesai di hari yang sama, maksimal pukul **00:00 WIB** (tengah malam).\n• Pesanan yang masuk di atas pukul 14:00 WIB akan diproses dalam antrean hari berikutnya.\n\nSemua pengerjaan diproses sesuai antrean sistem harian secara aman dan terverifikasi.',
         actions: [
-          { label: 'Buka Form IMEI', href: '/unblock-imei', icon: '⚡' },
+          { label: 'Lihat Form Buka IMEI', href: '/unblock-imei', icon: '⚡' },
+          { label: 'Tanya CS WhatsApp', href: 'https://wa.me/6288706611370', isExternal: true, icon: '💬' },
+        ],
+      };
+    }
+
+    // 2. QUESTION ABOUT PERMANEN / RESMI / BEA CUKAI
+    if (
+      q.includes('permanen') ||
+      q.includes('permanent') ||
+      q.includes('resmi') ||
+      q.includes('bea cukai') ||
+      q.includes('pajak') ||
+      q.includes('kemenperin')
+    ) {
+      return {
+        reply: `### ℹ️ Ketentuan Paket Unblock IMEI\n\nDi Ry-ITSolutions **TIDAK ADA paket permanen maupun paket resmi Bea Cukai**.\n\nLayanan yang kami sediakan adalah:\n• **Paket 3 Bulan**: Mulai ${formattedPrice3Bln} per IMEI.\n• **Mendukung All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, dan Smartfren.\n• **Garansi Penuh 3 Bulan**: Jika sinyal hilang dalam masa 3 bulan, kami garansi proses ulang hingga sinyal aktif kembali.\n\nKami selalu transparan dan tidak menjanjikan paket permanen yang tidak realistis.`,
+        actions: [
+          { label: 'Order Paket 3 Bulan', href: '/unblock-imei', icon: '⚡' },
           { label: 'Cek Status CEIR', href: '/cek-ceir', icon: '🔍' },
         ],
       };
     }
 
-    // 2. GoPay Payment Gateway & QRIS
-    if (q.includes('gateway') || q.includes('gopay') || q.includes('qris') || q.includes('gobiz') || q.includes('pembayaran') || q.includes('saas')) {
+    // 3. QUESTION ABOUT HARGA / BIAYA / TARIF / PAKET IMEI
+    if (
+      q.includes('harga') ||
+      q.includes('tarif') ||
+      q.includes('biaya') ||
+      q.includes('berapa') ||
+      q.includes('paket imei') ||
+      q.includes('daftar harga') ||
+      q.includes('pricelist')
+    ) {
       return {
-        reply: '### 💳 Payment Gateway GoPay & Dynamic QRIS SaaS\n\nSolusi Payment Gateway otomatis yang dirancang khusus untuk pemilik website toko online, bot Telegram/WhatsApp, dan aplikasi digital.\n\n**Fitur Utama:**\n• **Biaya Langganan Super Murah**: Hanya **Rp 10.000 / 30 Hari**.\n• **Fee Transaksi 0%**: Bebas potongan pihak ketiga. 100% uang pembayaran masuk utuh ke akun GoPay Merchant / GoBiz Anda.\n• **Direct Settlement**: Uang langsung masuk ke GoPay Anda secara instan tanpa tertahan.\n• **Real-Time Webhook Callback**: Respon super cepat **0.2 - 0.5 detik** untuk approve pesanan otomatis.\n• **Pairing Sangat Mudah**: Cukup masukkan nomor HP GoBiz & OTP tanpa perlu ribet urus berkas legalitas PT/CV.\n• **Dokumentasi Lengkap**: Tersedia contoh integrasi cURL, PHP, Node.js, dan Python.',
+        reply: `### 💰 Daftar Paket & Tarif Unblock IMEI\n\nPaket buka blokir IMEI yang tersedia di Ry-ITSolutions:\n\n• **Paket 3 Bulan**: **${formattedPrice3Bln}** / IMEI\n\n*(Catatan: Kami **TIDAK** menyediakan paket 1 bulan ataupun paket permanen/resmi).*\n\n**Spesifikasi Layanan:**\n• All Operator (Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren)\n• Garansi aktif selama masa paket 3 bulan\n• Syarat wajib: IC Baseband normal (muncul "Tidak Ada Layanan / No Service", bukan "Tidak Ada SIM")\n• Estimasi pengerjaan: Submit sebelum 14:00 WIB, selesai maksimal 00:00 WIB (jalur reguler)`,
         actions: [
-          { label: 'Coba Gateway GoPay', href: '/gateway', icon: '💳' },
-          { label: 'Dokumentasi API', href: '/gateway', icon: '📚' },
+          { label: 'Buka Form IMEI', href: '/unblock-imei', icon: '⚡' },
+          { label: 'Isi Saldo Akun', href: '/topup', icon: '💰' },
         ],
       };
     }
 
-    // 3. Cek Garansi Apple & CEIR
-    if (q.includes('garansi') || q.includes('apple') || q.includes('coverage') || q.includes('serial') || q.includes('cek')) {
+    // 4. GENERAL IMEI / SINYAL QUESTION
+    if (
+      q.includes('imei') ||
+      q.includes('sinyal') ||
+      q.includes('begal') ||
+      q.includes('unblock') ||
+      q.includes('no service') ||
+      q.includes('buka imei')
+    ) {
+      return {
+        reply: `### 📶 Layanan Buka Blokir IMEI All Operator\n\nLayanan unblock IMEI Ry-ITSolutions memulihkan sinyal HP (iPhone / Android) yang hilang (*No Service*) akibat pemblokiran jaringan seluler.\n\n**Ketentuan & Paket Saat Ini:**\n• **Paket Tersedia**: Paket **3 Bulan** (**${formattedPrice3Bln}** per IMEI).\n• **Jalur Kecepatan**: Jalur **Reguler** (Kirim sebelum jam 14:00 WIB, selesai max jam 00:00 WIB). *Paket Fast sedang nonaktif.*\n• **All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren.\n• **Tanpa Paket Permanen**: Kami tidak menyediakan paket permanen / resmi bea cukai.\n• **Syarat Wajib**: Pastikan IC Baseband normal (muncul "Tidak Ada Layanan", bukan "Tidak Ada SIM").`,
+        actions: [
+          { label: 'Buka Form IMEI Sekarang', href: '/unblock-imei', icon: '⚡' },
+          { label: 'Cek Status CEIR', href: '/cek-ceir', icon: '🔍' },
+        ],
+      };
+    }
+
+    // 5. GOPAY PAYMENT GATEWAY & QRIS
+    if (
+      q.includes('gateway') ||
+      q.includes('gopay') ||
+      q.includes('qris') ||
+      q.includes('gobiz') ||
+      q.includes('pembayaran') ||
+      q.includes('saas')
+    ) {
+      return {
+        reply: '### 💳 Payment Gateway GoPay & Dynamic QRIS SaaS\n\nSolusi Payment Gateway otomatis yang dirancang khusus untuk pemilik website toko online, bot Telegram/WhatsApp, dan aplikasi digital.\n\n**Fitur Utama:**\n• **Biaya Langganan Super Murah**: Hanya **Rp 10.000 / 30 Hari**.\n• **Fee Transaksi 0%**: Bebas potongan pihak ketiga. 100% uang pembayaran masuk utuh ke akun GoPay Merchant / GoBiz Anda.\n• **Direct Settlement**: Uang langsung masuk ke GoPay Anda secara instan tanpa tertahan.\n• **Real-Time Webhook Callback**: Respon super cepat **0.2 - 0.5 detik** untuk approve pesanan otomatis.\n• **Pairing Sangat Mudah**: Cukup masukkan nomor HP GoBiz & OTP tanpa perlu ribet urus berkas legalitas PT/CV.\n• **Dokumentasi Lengkap**: Tersedia contoh integrasi cURL, PHP, Node.js, dan Python.',
+        actions: [
+          { label: 'Coba Gateway GoPay', href: '/gateway', icon: '💳' },
+          { label: 'Lihat Dokumentasi API', href: '/gateway', icon: '📚' },
+        ],
+      };
+    }
+
+    // 6. CEK GARANSI APPLE & CEIR
+    if (
+      q.includes('garansi') ||
+      q.includes('apple') ||
+      q.includes('coverage') ||
+      q.includes('serial') ||
+      q.includes('cek imei')
+    ) {
       return {
         reply: '### 🔍 Cek Status Garansi Apple & CEIR Gratis\n\nFitur diagnostik mandiri untuk memeriksa keaslian dan status legalitas perangkat gadget Anda secara instan dalam 3 detik.\n\n**Yang Dapat Diperiksa:**\n• **Apple Coverage Status**: Mengetahui apakah iPhone/iPad/Mac masih terlindungi garansi resmi AppleCare+ atau sudah expired.\n• **Validasi Serial Number**: Memastikan nomor seri terdaftar resmi di basis data Apple.\n• **Status Database CEIR**: Memastikan apakah nomor IMEI perangkat terdaftar resmi di Kemenperin atau berstatus blacklist.\n\n**Biaya**: **100% GRATIS** tanpa dipungut biaya sepeserpun.',
         actions: [
@@ -121,10 +228,16 @@ export default function AiChatPage() {
       };
     }
 
-    // 4. Top Up Saldo Akun
-    if (q.includes('topup') || q.includes('saldo') || q.includes('isi saldo') || q.includes('deposit')) {
+    // 7. TOP UP SALDO
+    if (
+      q.includes('topup') ||
+      q.includes('saldo') ||
+      q.includes('isi saldo') ||
+      q.includes('deposit') ||
+      q.includes('bayar')
+    ) {
       return {
-        reply: '### 💰 Top Up Saldo Akun Ry-ITSolutions\n\nIsi saldo akun Anda untuk bertransaksi berbagai layanan IT secara otomatis 24 jam nonstop.\n\n**Keunggulan Top Up:**\n• **Bebas Biaya Admin (0 Rupiah)**.\n• **Metode Pembayaran Lengkap via QRIS**: Mendukung semua Bank (BCA, Mandiri, BRI, BNI, BSI) & E-Wallet (GoPay, OVO, Dana, ShopeePay, LinkAja).\n• **Auto Approve Instan**: Saldo otomatis masuk ke akun Anda dalam 2 - 5 detik setelah pembayaran berhasil.\n• **Aktif 24 Jam Nonstop**: Bisa deposit kapan saja bahkan di tengah malam.',
+        reply: '### 💰 Top Up Saldo Akun Ry-ITSolutions\n\nIsi saldo akun Anda untuk bertransaksi berbagai layanan IT secara otomatis 24 jam nonstop.\n\n**Keunggulan Top Up:**\n• **Bebas Biaya Admin (0 Rupiah)**.\n• **Metode Pembayaran Lengkap via QRIS**: Mendukung semua Bank (BCA, Mandiri, BRI, BNI, BSI) & E-Wallet (GoPay, OVO, Dana, ShopeePay, LinkAja).\n• **Auto Approve Instan**: Saldo otomatis masuk ke akun Anda dalam 2 - 5 detik setelah pembayaran berhasil.\n• **Aktif 24 Jam Nonstop**: Bisa deposit kapan saja bahkan di tengah malam.\n• **Minimal Top Up**: Mulai dari Rp 10.000.',
         actions: [
           { label: 'Isi Saldo Akun', href: '/topup', icon: '💰' },
           { label: 'Riwayat Transaksi', href: '/history', icon: '📜' },
@@ -132,8 +245,14 @@ export default function AiChatPage() {
       };
     }
 
-    // 5. API & Developer Integration
-    if (q.includes('api') || q.includes('webhook') || q.includes('developer') || q.includes('coding') || q.includes('bot')) {
+    // 8. API & WEBHOOK
+    if (
+      q.includes('api') ||
+      q.includes('webhook') ||
+      q.includes('developer') ||
+      q.includes('coding') ||
+      q.includes('bot')
+    ) {
       return {
         reply: '### 🛠️ Integrasi API & Webhook Callback\n\nRy-ITSolutions menyediakan REST API berkecepatan tinggi untuk menghubungkan sistem transaksi Anda:\n\n• **Endpoint Pembuatan QRIS**: `POST /api/v1/gateway/create-qris`\n• **Webhook Event**: Menerima notifikasi instan saat pembayaran lunas `payment.success`\n• **Keamanan**: Dilengkapi HMAC-SHA256 signature verification untuk memastikan validitas data.\n• **Library**: Kompatibel dengan semua bahasa pemrograman (PHP Laravel/CodeIgniter, Node.js Express/Nest, Python Django/FastAPI, Go, dll).\n\nSilakan kunjungi halaman **Gateway** untuk mengaktifkan lisensi dan mengunduh sampel kode integrasi!',
         actions: [
@@ -142,18 +261,26 @@ export default function AiChatPage() {
       };
     }
 
-    // 6. Customer Support / WhatsApp
-    if (q.includes('cs') || q.includes('admin') || q.includes('wa') || q.includes('whatsapp') || q.includes('bantuan') || q.includes('hubungi') || q.includes('kontak')) {
+    // 9. CS / WHATSAPP ADMIN
+    if (
+      q.includes('cs') ||
+      q.includes('admin') ||
+      q.includes('wa') ||
+      q.includes('whatsapp') ||
+      q.includes('bantuan') ||
+      q.includes('hubungi') ||
+      q.includes('kontak')
+    ) {
       return {
         reply: '### 📞 Hubungi Layanan Pelanggan (CS Admin)\n\nTim Customer Support Ry-ITSolutions siap membantu kendala transaksi atau pertanyaan teknis Anda:\n\n• **Admin 1**: [088706611370](https://wa.me/6288706611370) *(Layanan IMEI & Gateway)*\n• **Admin 2**: [087767287284](https://wa.me/6287767287284) *(Bantuan Transaksi & Deposit)*\n\nJam Operasional CS: Setiap hari pukul **08.00 - 23.00 WIB**. Sistem pembayaran dan pemrosesan otomatis tetap aktif 24 jam nonstop.',
         actions: [
           { label: 'Chat WhatsApp Admin 1', href: 'https://wa.me/6288706611370', isExternal: true, icon: '💬' },
-          { label: 'Chat WhatsApp Admin 2', href: 'https://wa.me/6287767287284', isExternal: true, icon: '💬' },
+          { label: 'Chat WhatsApp Admin 2', href: 'https://wa.me/6288706611370', isExternal: true, icon: '💬' },
         ],
       };
     }
 
-    // 7. Reseller / Kemitraan
+    // 10. RESELLER / KEMITRAAN
     if (q.includes('reseller') || q.includes('mitra') || q.includes('agen')) {
       return {
         reply: '### 🤝 Kemitraan & Reseller\n\nSaat ini fitur pendaftaran reseller otomatis sedang kami optimasi untuk pembaruan sistem yang lebih baik.\n\nNamun, jika Anda memiliki konter HP, toko online, atau kebutuhan transaksi dalam volume besar (Grosir/Bulk IMEI/Gateway), Anda bisa langsung menghubungi CS Admin kami di WhatsApp untuk mendapatkan penawaran harga khusus mitra!',
@@ -163,10 +290,17 @@ export default function AiChatPage() {
       };
     }
 
-    // 8. Greetings
-    if (q.includes('halo') || q.includes('hai') || q.includes('hi') || q.includes('pagi') || q.includes('siang') || q.includes('malam')) {
+    // 11. GREETINGS
+    if (
+      q.includes('halo') ||
+      q.includes('hai') ||
+      q.includes('hi') ||
+      q.includes('pagi') ||
+      q.includes('siang') ||
+      q.includes('malam')
+    ) {
       return {
-        reply: 'Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten virtual cerdas dari **Ry-ITSolutions**.\n\nSaya siap membantu Anda memberikan informasi tarif, panduan aktivasi IMEI, integrasi payment gateway GoPay, cara cek garansi, hingga bantuan deposit saldo.\n\nAda layanan spesifik yang ingin Anda tanyakan?',
+        reply: 'Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten virtual cerdas dari **Ry-ITSolutions**.\n\nSaya siap memberikan informasi akurat mengenai:\n• Buka Blokir IMEI All Operator (Paket 3 Bulan)\n• Payment Gateway GoPay & Dynamic QRIS (Rp 10.000/bln)\n• Cek Garansi Apple & CEIR (Gratis)\n• Top Up Saldo Akun QRIS Otomatis (Bebas Admin)\n\nAda layanan spesifik yang ingin Anda tanyakan?',
         actions: [
           { label: 'Buka Blokir IMEI', href: '/unblock-imei', icon: '⚡' },
           { label: 'Payment Gateway GoPay', href: '/gateway', icon: '💳' },
@@ -174,9 +308,9 @@ export default function AiChatPage() {
       };
     }
 
-    // 9. Default Intelligent Fallback
+    // 12. DEFAULT FALLBACK
     return {
-      reply: `Terima kasih atas pertanyaannya mengenai: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat membantu Anda seputar:\n1. **Aktivasi & Buka Blokir IMEI All Operator** (iPhone/Android hilang sinyal).\n2. **SaaS Payment Gateway GoPay & QRIS Dinamis** (Langganan 10rb/bulan, fee 0%).\n3. **Cek Garansi Apple & Database CEIR** (Gratis dan instan).\n4. **Top Up Saldo Akun Otomatis** (QRIS bebas biaya admin 24 jam).\n\nSilakan klik salah satu menu di bawah atau jelaskan lebih detail kendala yang sedang Anda hadapi!`,
+      reply: `Terima kasih atas pertanyaannya mengenai: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat memberikan informasi akurat seputar:\n1. **Aktivasi & Buka Blokir IMEI All Operator** (Paket 3 Bulan, jalur reguler).\n2. **SaaS Payment Gateway GoPay & QRIS Dinamis** (Langganan 10rb/bulan, fee 0%).\n3. **Cek Garansi Apple & Database CEIR** (Gratis dan instan).\n4. **Top Up Saldo Akun Otomatis** (QRIS bebas biaya admin 24 jam).\n\nSilakan klik salah satu menu di bawah atau tanyakan langsung pada saya!`,
       actions: [
         { label: 'Lihat Layanan IMEI', href: '/unblock-imei', icon: '⚡' },
         { label: 'Lihat Gateway GoPay', href: '/gateway', icon: '💳' },
@@ -217,7 +351,7 @@ export default function AiChatPage() {
       setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
       try { playDingSound(); } catch {}
-    }, 500);
+    }, 450);
   };
 
   // Handle Copy Message Text
@@ -244,7 +378,7 @@ export default function AiChatPage() {
         const welcomeMsg: Message = {
           id: `welcome_${Date.now()}`,
           sender: 'ai',
-          text: 'Riwayat percakapan telah dibersihkan. Ada yang bisa **Ry-AI** bantu kembali?',
+          text: 'Riwayat percakapan telah dibersihkan. Ada yang bisa **Ry-AI** bantu kembali seputar layanan kami?',
           timestamp: formatTime(new Date()),
           actions: [
             { label: 'Buka Menu IMEI', href: '/unblock-imei', icon: '⚡' },
@@ -312,16 +446,15 @@ export default function AiChatPage() {
     <div className="flex-1 w-full h-full flex flex-col overflow-hidden bg-canvas select-none">
       
       {/* ============================================================ */}
-      {/* 1. TOP CHAT HEADER BAR (Pinned under top navigation)         */}
+      {/* 1. TOP CHAT HEADER BAR                                       */}
       {/* ============================================================ */}
       <div className="h-12 px-3.5 sm:px-4 flex items-center justify-between border-b border-hairline bg-canvas/90 backdrop-blur-md shrink-0 z-20">
         <div className="flex items-center gap-2.5">
-          {/* AI Avatar with subtle pulse dot */}
           <div className="relative w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-cyan-500 text-white flex items-center justify-center shadow-xs">
             <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
             </svg>
-            <span className="absolute 0 bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-canvas" />
+            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-canvas" />
           </div>
 
           <div>
@@ -331,7 +464,7 @@ export default function AiChatPage() {
             </div>
             <p className="text-[10px] text-ink-muted flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-              <span>Online • Konsultan IT 24/7</span>
+              <span>Online • Data Akurat 100%</span>
             </p>
           </div>
         </div>
@@ -357,7 +490,7 @@ export default function AiChatPage() {
           const isAi = msg.sender === 'ai';
 
           if (!isAi) {
-            // User message bubble (sleek modern right aligned)
+            // User bubble
             return (
               <div key={msg.id} className="flex justify-end animate-in fade-in duration-150">
                 <div className="bg-primary text-white rounded-2xl rounded-tr-xs px-3.5 py-2 max-w-[82%] sm:max-w-[75%] text-[13px] leading-relaxed shadow-xs">
@@ -370,7 +503,7 @@ export default function AiChatPage() {
             );
           }
 
-          // AI message bubble (clean modern card left aligned)
+          // AI bubble
           return (
             <div key={msg.id} className="flex items-start gap-2.5 animate-in fade-in duration-150">
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-cyan-500 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
@@ -443,7 +576,7 @@ export default function AiChatPage() {
               ✨
             </div>
             <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-xs bg-surface-pearl dark:bg-surface-tile border border-hairline text-xs text-ink-muted flex items-center gap-1.5 shadow-2xs">
-              <span>Ry-AI sedang mengetik</span>
+              <span>Ry-AI sedang memproses</span>
               <span className="flex gap-1 items-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -489,7 +622,7 @@ export default function AiChatPage() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Tanyakan layanan IT, aktivasi IMEI, gateway..."
+            placeholder="Tanyakan info layanan, aktivasi IMEI, gateway..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={isTyping}
