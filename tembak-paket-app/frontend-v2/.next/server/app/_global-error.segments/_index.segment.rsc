@@ -4,4 +4,4 @@
 4:I[57121,[],""]
 5:I[74581,[],""]
 6:[]
-0:{"rsc":["$","$L1",null,{"loading":[["$","$L2","l",{}],[],[]],"children":["$","$3","c",{"children":[null,["$","$L4",null,{"parallelRouterKey":"children","template":["$","$L5",null,{}]}]]}]}],"isPartial":false,"staleTime":300,"varyParams":"$W6","buildId":"o_h02r-SsRSMgTq8Q5dGY"}
+0:{"rsc":["$","$L1",null,{"loading":[["$","$L2","l",{}],[],[]],"children":["$","$3","c",{"children":[null,["$","$L4",null,{"parallelRouterKey":"children","template":["$","$L5",null,{}]}]]}]}],"isPartial":false,"staleTime":300,"varyParams":"$W6","buildId":"3vNe_bq3b_PRUjSri9fs_"}

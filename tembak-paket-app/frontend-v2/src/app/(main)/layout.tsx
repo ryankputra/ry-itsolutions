@@ -11,13 +11,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isAiPage = pathname === "/ai";
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : (pathname || "");
   const isPublicRoute = Boolean(
-    pathname && (
-      pathname === "/gateway" ||
-      pathname.startsWith("/gateway/") ||
-      pathname === "/cek-garansi" ||
-      pathname.startsWith("/cek-garansi/")
-    )
+    currentPath.startsWith("/gateway") ||
+    currentPath.startsWith("/cek-garansi") ||
+    (pathname && (pathname === "/gateway" || pathname.startsWith("/gateway/") || pathname === "/cek-garansi" || pathname.startsWith("/cek-garansi/")))
   );
   const [showWaMenu, setShowWaMenu] = useState(false);
   const [showTour, setShowTour] = useState(false);
@@ -41,6 +39,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const p = window.location.pathname;
+      if (p.startsWith("/gateway") || p.startsWith("/cek-garansi")) {
+        return;
+      }
+    }
     if (!loading && !user && !isPublicRoute) {
       router.push("/login");
     }
@@ -90,7 +94,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <ModernAppLoader text="Memuat Sistem & Layanan..." />;
   }
 
-  if (!user && !isPublicRoute) return null;
+  const canRender = Boolean(
+    user ||
+    isPublicRoute ||
+    (typeof window !== "undefined" && (window.location.pathname.startsWith("/gateway") || window.location.pathname.startsWith("/cek-garansi")))
+  );
+
+  if (!canRender) return null;
 
   return (
     <>
