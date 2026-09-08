@@ -779,6 +779,17 @@ export default function GatewayDeveloperPage() {
                             GoBiz Belum Terhubung
                           </span>
                         )}
+
+                        {k.qrisTemplate ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-black flex items-center gap-1 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            QRIS Terpasang
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-slate-500/10 text-slate-500 text-[10px] font-black flex items-center gap-1 border border-hairline">
+                            QRIS Belum Diatur
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -858,6 +869,27 @@ export default function GatewayDeveloperPage() {
                           </svg>
                           <span>Pengaturan QRIS &amp; Webhook</span>
                         </button>
+
+                        <label
+                          className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 dark:text-amber-300 font-bold text-xs transition-colors border border-amber-500/30 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          title="Upload foto QRIS toko untuk mengekstrak string otomatis"
+                        >
+                          <svg className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                          </svg>
+                          <span>📷 Upload Foto QRIS</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isExtractingQr}
+                            onChange={(e) => {
+                              handleOpenConfigModal(k);
+                              handleExtractQrisFromImage(e, "config");
+                            }}
+                            className="hidden"
+                          />
+                        </label>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -1300,17 +1332,43 @@ if ($res['paid'] === true) {
                   />
                 </div>
 
+                {/* FITUR GENERATE / EKSTRAK STRING QRIS DARI FOTO (CREATE) */}
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-ink text-xs flex items-center gap-1.5">
+                      <span>📷</span>
+                      <span>Generate String dari Foto QRIS (Opsional)</span>
+                    </span>
+                    <span className="text-[10px] bg-amber-400/20 text-amber-900 dark:text-amber-300 font-black px-2 py-0.5 rounded-full">
+                      Auto-Scan
+                    </span>
+                  </div>
+                  <label className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs cursor-pointer shadow-sm transition-all hover:scale-[1.01]">
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <span>{isExtractingQr ? "Memindai QR..." : "Upload Foto QRIS Toko"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isExtractingQr}
+                      onChange={(e) => handleExtractQrisFromImage(e, "create")}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
                 <div className="space-y-1">
                   <label className="font-bold text-ink">String QRIS Statis GoPay Anda (Opsional)</label>
                   <textarea
                     value={createQris}
                     onChange={(e) => setCreateQris(e.target.value)}
                     rows={2}
-                    placeholder="00020101021126610014COM.GO-JEK..."
+                    placeholder="00020101021126610014COM.GO-JEK... (Atau upload foto di atas)"
                     className="w-full p-2.5 rounded-xl border border-hairline bg-canvas font-mono text-[11px] text-ink focus:border-primary outline-none"
                   />
                   <span className="text-[10px] text-ink-muted block">
-                    String QRIS statis dari aplikasi GoBiz / banner toko Anda. Jika dikosongkan, bisa diisi nanti.
+                    String QRIS statis dari aplikasi GoBiz / banner toko Anda. Bisa diisi nanti jika belum ada.
                   </span>
                 </div>
 
@@ -1477,17 +1535,46 @@ if ($res['paid'] === true) {
                   />
                 </div>
 
+                {/* FITUR GENERATE / EKSTRAK STRING QRIS DARI FOTO */}
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-ink text-xs flex items-center gap-1.5">
+                      <span className="text-base">📷</span>
+                      <span>Generate / Ekstrak String dari Foto QRIS</span>
+                    </span>
+                    <span className="text-[10px] bg-amber-400/20 text-amber-900 dark:text-amber-300 font-black px-2 py-0.5 rounded-full">
+                      Scan Otomatis
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted leading-relaxed">
+                    Tinggal upload foto / screenshot QRIS GoPay toko Anda. Sistem akan otomatis memindai QR code dan mengisi kombinasi kode string teks QRIS di bawah ini!
+                  </p>
+                  <label className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs cursor-pointer shadow-sm transition-all hover:scale-[1.01]">
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <span>{isExtractingQr ? "Sedang Memindai Gambar QRIS..." : "Pilih File Foto QRIS Toko (PNG / JPG / WEBP)"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isExtractingQr}
+                      onChange={(e) => handleExtractQrisFromImage(e, "config")}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
                 <div className="space-y-1">
-                  <label className="font-bold text-ink">String Template QRIS Statis GoPay</label>
+                  <label className="font-bold text-ink">Hasil String Template QRIS Statis GoPay</label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     value={configQris}
                     onChange={(e) => setConfigQris(e.target.value)}
-                    placeholder="00020101021126610014COM.GO-JEK..."
+                    placeholder="00020101021126610014COM.GO-JEK... (Otomatis terisi jika upload foto di atas)"
                     className="w-full p-2.5 rounded-xl border border-hairline bg-canvas font-mono text-[11px] text-ink focus:border-primary outline-none"
                   />
                   <span className="text-[10px] text-ink-muted block">
-                    Cetak dinamis akan otomatis memakai QRIS statis ini untuk toko Anda.
+                    String QRIS statis toko Anda (kombinasi angka & huruf standar EMVCo). Dapat diisi manual atau otomatis via upload foto di atas.
                   </span>
                 </div>
 
