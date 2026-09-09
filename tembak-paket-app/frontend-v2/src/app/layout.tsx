@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AppProvider } from "@/lib/store";
+import { DynamicThemeProvider } from "@/lib/themeContext";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { NavigationProgressBar } from "@/components/ui/NavigationProgressBar";
 import { Suspense } from "react";
@@ -60,9 +61,11 @@ export default function RootLayout({
           <NavigationProgressBar />
         </Suspense>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-          <AppProvider>
-            {children}
-          </AppProvider>
+          <DynamicThemeProvider>
+            <AppProvider>
+              {children}
+            </AppProvider>
+          </DynamicThemeProvider>
         </GoogleOAuthProvider>
       </body>
     </html>

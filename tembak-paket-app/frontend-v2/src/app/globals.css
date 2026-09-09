@@ -25,6 +25,15 @@
   :root {
     --background: #f5f5f7;
     --foreground: #1d1d1f;
+    --theme-primary: #0071e3;
+    --theme-primary-hover: #0077ed;
+    --theme-accent: #34c759;
+    --theme-surface-glow: rgba(0, 113, 227, 0.08);
+    --theme-card-border: rgba(0, 0, 0, 0.08);
+    --theme-header-bg: #1d1d1f;
+    --theme-header-text: #ffffff;
+    --theme-badge-bg: #1d1d1f;
+    --theme-badge-text: #ffffff;
   }
 
   .dark {

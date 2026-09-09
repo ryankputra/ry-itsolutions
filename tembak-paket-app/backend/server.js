@@ -37,6 +37,7 @@ const telegramRoutes = require('./routes/telegram');
 const orderRoutes = require('./routes/orders');
 const webhookRoutes = require('./routes/webhook');
 const gatewayRoutes = require('./routes/gateway');
+const themeRoutes = require('./routes/theme');
 const waBot = require('./services/waBot');
 
 const app = express();
@@ -161,6 +162,7 @@ app.use('/api', telegramRoutes.router);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api', webhookRoutes);
 app.use('/api', gatewayRoutes);
+app.use('/api/theme', themeRoutes);
 
 // Public Payment Gateway Endpoints Proxy to GoPay Microservice
 const gopayGatewayServiceUrl = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';

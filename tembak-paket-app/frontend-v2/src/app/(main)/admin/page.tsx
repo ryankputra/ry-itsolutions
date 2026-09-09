@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
+import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -1822,6 +1823,7 @@ export default function AdminPage() {
             const diff = Math.ceil((new Date(k.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
             return diff >= 0 && diff <= 3;
           }).length : null, badgeColor: "bg-amber-500" },
+        { id: "tema-momentum", label: "Tema & Momentum Kalender", badge: null },
         { id: "pengaturan", label: "Pengaturan & Gateway", badge: null },
       ]
     }
@@ -4582,6 +4584,11 @@ export default function AdminPage() {
             )}
           </Card>
         </div>
+      )}
+
+      {/* TAB: TEMA & MOMENTUM KALENDER INDONESIA */}
+      {activeTab === "tema-momentum" && (
+        <AdminThemeManager />
       )}
 
       {/* ========================================================================= */}

@@ -276,6 +276,13 @@ async function initializeDatabase() {
                 await dbRun(`ALTER TABLE packages ADD COLUMN position INTEGER DEFAULT 0`);
             } catch (err) { }
 
+            try {
+                const { initThemeDb } = require("./themeDb");
+                await initThemeDb();
+            } catch (themeErr) {
+                console.error("Theme DB initialization error:", themeErr);
+            }
+
             console.log("✅ Database schema initialized successfully.");
         } catch (error) {
             console.error("Database initialization failed:", error);
