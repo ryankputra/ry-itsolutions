@@ -75,44 +75,44 @@ export default function VouchersPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-14">
-      {/* Header Banner Voucher Center */}
-      <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 text-white shadow-xl shadow-primary/20 overflow-hidden">
-        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 blur-2xl rounded-full"></div>
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-400/20 blur-xl rounded-full"></div>
+      {/* Header Banner Voucher Center (Apple Design System Style) */}
+      <div className="relative rounded-3xl p-6 sm:p-8 bg-[#1D1D1F] dark:bg-[#161617] text-white border border-black/10 dark:border-white/10 shadow-xl overflow-hidden">
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 blur-3xl rounded-full pointer-events-none"></div>
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/5 blur-2xl rounded-full pointer-events-none"></div>
 
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <div className="inline-block bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 border border-white/20">
-              Promo & Diskon Spesial
+            <div className="inline-block bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-2 border border-white/15 text-white/90">
+              Promo &amp; Diskon Spesial
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-sm">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               Pusat Klaim Voucher
             </h1>
-            <p className="text-white/90 text-xs sm:text-sm mt-1 max-w-md">
+            <p className="text-white/75 text-xs sm:text-sm mt-1 max-w-md leading-relaxed">
               Klaim voucher diskon spesial Anda sekarang dan nikmati potongan harga langsung saat checkout transaksi!
             </p>
           </div>
 
-          <div className="bg-white/15 backdrop-blur-md border border-white/20 p-3.5 rounded-2xl text-center shrink-0 w-full sm:w-auto">
-            <p className="text-[11px] font-semibold text-white/80 uppercase">Voucher Terklaim Anda</p>
-            <p className="text-2xl font-black">{claimedList.length} <span className="text-xs font-normal">Voucher</span></p>
+          <div className="bg-white/10 backdrop-blur-md border border-white/15 p-3.5 rounded-2xl text-center shrink-0 w-full sm:w-auto">
+            <p className="text-[11px] font-semibold text-white/70 uppercase tracking-wider">Voucher Terklaim Anda</p>
+            <p className="text-2xl font-black text-white">{claimedList.length} <span className="text-xs font-normal text-white/70">Voucher</span></p>
           </div>
         </div>
       </div>
 
-      {/* Tabs Filter */}
-      <div className="flex border-b border-hairline bg-canvas rounded-2xl p-1.5 shadow-2xs gap-1">
+      {/* Tabs Filter (Apple Segmented Control Style) */}
+      <div className="flex border border-hairline bg-slate-100/80 dark:bg-white/5 rounded-2xl p-1 shadow-2xs gap-1">
         <button
           onClick={() => setActiveTab("all")}
-          className={`flex-1 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 select-none ${
             activeTab === "all"
-              ? "bg-primary text-white shadow-xs"
-              : "text-ink-muted hover:text-ink hover:bg-parchment/60"
+              ? "bg-white dark:bg-[#2C2C2E] text-ink dark:text-white shadow-xs border border-black/5 dark:border-white/10"
+              : "text-ink-muted hover:text-ink hover:bg-white/40 dark:hover:bg-white/5"
           }`}
         >
           <span>Semua Voucher Promo</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-            activeTab === "all" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+            activeTab === "all" ? "bg-black/10 dark:bg-white/15 text-ink dark:text-white" : "bg-black/5 dark:bg-white/5 text-ink-muted"
           }`}>
             {vouchers.length}
           </span>
@@ -120,15 +120,15 @@ export default function VouchersPage() {
 
         <button
           onClick={() => setActiveTab("claimed")}
-          className={`flex-1 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 select-none ${
             activeTab === "claimed"
-              ? "bg-emerald-600 text-white shadow-xs"
-              : "text-ink-muted hover:text-ink hover:bg-parchment/60"
+              ? "bg-white dark:bg-[#2C2C2E] text-ink dark:text-white shadow-xs border border-black/5 dark:border-white/10"
+              : "text-ink-muted hover:text-ink hover:bg-white/40 dark:hover:bg-white/5"
           }`}
         >
           <span>Voucher Saya (Terklaim)</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-            activeTab === "claimed" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+            activeTab === "claimed" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-black/5 dark:bg-white/5 text-ink-muted"
           }`}>
             {claimedList.length}
           </span>

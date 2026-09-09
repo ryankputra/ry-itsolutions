@@ -400,29 +400,29 @@ export default function TopUpPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-300">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold border border-emerald-500/20">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
           QRIS Online
         </div>
       </div>
 
-      {/* ShopeePay Style Wallet Card */}
-      <div className="relative rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-primary via-blue-700 to-indigo-900 text-white shadow-lg shadow-primary/20 overflow-hidden">
-        <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 blur-2xl rounded-full translate-x-10 -translate-y-10"></div>
-        <div className="absolute bottom-0 left-0 w-28 h-28 bg-orange-400/20 blur-xl rounded-full -translate-x-10 translate-y-10"></div>
+      {/* Apple Wallet Style Luxury Obsidian Card */}
+      <div className="relative rounded-3xl p-5 sm:p-6 bg-[#1D1D1F] dark:bg-[#161617] text-white border border-black/10 dark:border-white/10 shadow-xl overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 blur-3xl rounded-full translate-x-12 -translate-y-12 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-36 h-36 bg-white/5 blur-2xl rounded-full -translate-x-10 translate-y-10 pointer-events-none"></div>
 
         <div className="relative z-10 flex flex-col justify-between gap-4">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs font-semibold text-white/80 uppercase tracking-wider">Saldo Dompet Anda</p>
-              <div className="flex items-center gap-2 mt-1">
-                <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-                  {showBalance ? `Rp ${(user?.balance || 0).toLocaleString("id-ID")}` : "******"}
+              <p className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">Saldo Dompet Anda</p>
+              <div className="flex items-center gap-2.5 mt-1.5">
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {showBalance ? `Rp ${(user?.balance || 0).toLocaleString("id-ID")}` : "Rp ••••••"}
                 </h2>
                 <button
                   type="button"
                   onClick={toggleShowBalance}
-                  className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+                  className="p-1 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
                   title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
                 >
                   {showBalance ? (
@@ -438,21 +438,21 @@ export default function TopUpPage() {
                 </button>
               </div>
             </div>
-            <div className="px-2.5 py-1 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 text-[11px] font-bold">
+            <div className="px-2.5 py-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-[11px] font-bold text-white/90">
               Bebas Admin (Rp 0)
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] text-white/90 pt-2 border-t border-white/15">
-            <span className="flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <div className="flex items-center gap-3 text-[11px] text-white/75 pt-3 border-t border-white/10">
+            <span className="flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
               Auto-Detect Masuk Instan
             </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <span className="text-white/30">•</span>
+            <span className="flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
               Aman Terenkripsi
@@ -536,7 +536,7 @@ export default function TopUpPage() {
                       }`}
                     >
                       {item.badge && (
-                        <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-orange-500 to-rose-500 text-white font-extrabold text-[9px] shadow-xs">
+                        <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-md bg-[#FF3B30] text-white font-bold text-[9px] shadow-xs uppercase tracking-wider">
                           {item.badge}
                         </span>
                       )}
@@ -801,7 +801,7 @@ export default function TopUpPage() {
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-bold text-ink flex items-center gap-1.5">
               <span>Voucher Diskon Siap Klaim</span>
-              <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
                 Promo Spesial
               </span>
             </h3>

@@ -639,7 +639,7 @@ export default function ProfilePage() {
         {/* ============================================================ */}
         <div
           onClick={() => router.push("/gateway")}
-          className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-primary text-white flex items-center justify-between cursor-pointer shadow-md hover:opacity-95 transition-all group"
+          className="p-3.5 rounded-2xl bg-[#1D1D1F] dark:bg-[#161617] text-white flex items-center justify-between cursor-pointer shadow-md hover:opacity-95 transition-all group border border-black/10 dark:border-white/10"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
@@ -667,7 +667,7 @@ export default function ProfilePage() {
         {/* Promo Reseller Banner */}
         <div
           onClick={() => router.push("/referral")}
-          className="p-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 flex items-center justify-between cursor-pointer hover:bg-blue-100/60 transition-colors"
+          className="p-2.5 rounded-xl bg-canvas border border-hairline flex items-center justify-between cursor-pointer hover:bg-parchment transition-colors"
         >
           <div className="flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-primary text-white font-black text-[10px] flex items-center justify-center">

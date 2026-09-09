@@ -287,7 +287,7 @@ export function InstantQrisPaymentModal({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-md bg-canvas rounded-3xl border border-hairline shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header Bar */}
-        <div className="p-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-between">
+        <div className="p-4 bg-[#1D1D1F] dark:bg-[#161617] text-white flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center font-bold">
               <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">

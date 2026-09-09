@@ -71,22 +71,22 @@ export function ShopeeVoucherCard({
           : "border-hairline hover:border-primary/40 shadow-xs"
       } ${compact ? "min-w-[280px] max-w-[320px]" : "w-full"}`}
     >
-      {/* Sisi Kiri: Badge Diskon Khas Voucher E-Commerce */}
-      <div className="w-[100px] sm:w-[115px] bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white flex flex-col items-center justify-center p-3 text-center shrink-0 relative overflow-hidden">
+      {/* Sisi Kiri: Apple Wallet Ticket Stub */}
+      <div className="w-[100px] sm:w-[115px] bg-[#1D1D1F] dark:bg-[#161617] text-white flex flex-col items-center justify-center p-3 text-center shrink-0 relative overflow-hidden border-r border-hairline">
         {/* Notch Potongan Tiket Kiri */}
         <div className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-canvas border border-hairline z-10"></div>
         <div className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-canvas border border-hairline z-10"></div>
 
         {/* Decorative Badge Pattern */}
-        <div className="absolute inset-0 bg-white/10 opacity-30 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-white/5 opacity-40 pointer-events-none"></div>
 
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/90 bg-black/20 px-1.5 py-0.5 rounded mb-1">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/90 bg-white/10 border border-white/15 px-1.5 py-0.5 rounded mb-1">
           Voucher
         </span>
-        <span className="text-xs sm:text-sm font-black leading-tight drop-shadow-sm">
+        <span className="text-xs sm:text-sm font-black leading-tight drop-shadow-sm text-white">
           {coupon.discount_type === "percent" ? `${coupon.discount_value}%` : `Rp ${coupon.discount_value >= 1000 ? `${coupon.discount_value / 1000}RB` : coupon.discount_value}`}
         </span>
-        <span className="text-[9px] font-bold text-white/90 mt-0.5">
+        <span className="text-[9px] font-bold text-white/70 mt-0.5">
           {coupon.discount_type === "percent" ? "OFF" : "POTONGAN"}
         </span>
       </div>
@@ -116,7 +116,7 @@ export function ShopeeVoucherCard({
             <div className="flex justify-between items-center text-[9px] text-ink-muted mb-0.5">
               <span>{isUsed ? "Sudah Terpakai" : isOutOfStock ? "Kuota Habis" : `${percentage}% Diklaim`}</span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-hairline">
+            <div className="w-full bg-slate-100 dark:bg-white/10 rounded-full h-1.5 overflow-hidden border border-hairline">
               <div
                 className={`h-full rounded-full transition-all ${
                   isUsed || isOutOfStock ? "bg-slate-400" : percentage > 80 ? "bg-rose-500" : "bg-primary"
@@ -140,7 +140,7 @@ export function ShopeeVoucherCard({
                 Gunakan
               </button>
             ) : (
-              <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0 flex items-center gap-1">
+              <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
