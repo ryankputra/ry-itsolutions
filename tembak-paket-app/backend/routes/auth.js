@@ -99,6 +99,24 @@ router.post('/auth/google', async (req, res) => {
 
             user = await dbGet('SELECT * FROM users WHERE id = ?', [newId]);
             sendTelegramNotification(`<b>🎉 User Baru Mendaftar</b>\n<b>Metode:</b> 🌐 Login via Google\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}`, 'admin');
+
+            // WhatsApp Notification to Admin
+            try {
+                const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+                const adminPhones = await getAdminPhoneNumbers();
+                const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+                const waAdminMsg = `*NOTIFIKASI PENGGUNA BARU (GOOGLE)*\n──────────────────────\n` +
+                    `*Nama:* ${name}\n` +
+                    `*Email:* ${email}\n` +
+                    `*Metode:* Login via Google (Otomatis Aktif)\n` +
+                    `*Waktu:* ${timeStr}\n──────────────────────\n` +
+                    `Panel Admin: https://ry-itsolutionts.web.id/admin`;
+                for (const admPhone of (adminPhones || [])) {
+                    sendTextMessage(admPhone, waAdminMsg).catch(e => console.error('[WA Admin Notify Google Error]', e.message));
+                }
+            } catch (waErr) {
+                console.error('[WA Admin Notify Google Error]', waErr.message);
+            }
         } else {
             if (user.status === 'pending') {
                 await dbRun('UPDATE users SET status = ? WHERE id = ?', ['approved', user.id]);
@@ -144,6 +162,24 @@ router.post('/auth/register', async (req, res) => {
         sendTelegramNotification(
             `<b>──────────────────────</b>\n<b>👤 Registrasi Baru Menunggu Persetujuan</b>\n<b>──────────────────────</b>\n<b>Metode:</b> 📝 Manual (Form Web)\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}\n<b>──────────────────────</b>\n<b>Harap setujui akun ini di Panel Admin.</b>`, 'admin'
         );
+
+        // WhatsApp Notification to Admin
+        try {
+            const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+            const adminPhones = await getAdminPhoneNumbers();
+            const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+            const waAdminMsg = `*REGISTRASI PENGGUNA BARU (PENDING)*\n──────────────────────\n` +
+                `*Nama:* ${name}\n` +
+                `*Email:* ${email}\n` +
+                `*Metode:* Form Registrasi Web\n` +
+                `*Waktu:* ${timeStr}\n──────────────────────\n` +
+                `Harap tinjau & setujui akun ini di Panel Admin:\nhttps://ry-itsolutionts.web.id/admin`;
+            for (const admPhone of (adminPhones || [])) {
+                sendTextMessage(admPhone, waAdminMsg).catch(e => console.error('[WA Admin Notify Register Error]', e.message));
+            }
+        } catch (waErr) {
+            console.error('[WA Admin Notify Register Error]', waErr.message);
+        }
 
         res.status(201).json({ status: true, message: "Registrasi berhasil! Akun Anda sedang menunggu persetujuan dari Admin." });
     } catch (error) {

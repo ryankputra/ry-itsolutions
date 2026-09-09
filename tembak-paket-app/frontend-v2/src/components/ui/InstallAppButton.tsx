@@ -111,7 +111,7 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
       <button
         type="button"
         onClick={handleInstallClick}
-        className={`px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-[11px] font-medium transition-colors flex items-center gap-1.5 shrink-0 ${className}`}
+        className={`px-3 py-1.5 rounded-full bg-[#E8E8ED] hover:bg-[#DEDEE3] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] text-[11px] font-medium transition-all flex items-center gap-1.5 shrink-0 active:scale-95 ${className}`}
         title="Install Aplikasi Ry-ITSolutions di HP / Laptop"
       >
         <Download className="w-3.5 h-3.5 shrink-0 text-slate-600 dark:text-slate-300" />

@@ -150,7 +150,7 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
       {/* ============================================================ */}
-      <div data-tour="wallet-card" className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none p-4 sm:p-5 transition-all">
+      <div data-tour="wallet-card" className="rounded-3xl bg-white dark:bg-[#161617] border border-black/[0.05] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-4 sm:p-5 transition-all">
         <div className="grid grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800 items-center text-center">
           {/* Section 1: Saldo Dompet */}
           <div
@@ -158,7 +158,7 @@ export default function DashboardPage() {
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
-              <span className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[#0071E3]/10 text-[#0071E3] flex items-center justify-center shrink-0">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
                 </svg>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
               <span className="text-[11px] sm:text-xs">Saldo Ry</span>
             </div>
             <div className="mt-1 flex items-center justify-center gap-1">
-              <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white tracking-tight">
+              <span className="text-xs sm:text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                 {showBalance ? `Rp ${(user?.balance || 0).toLocaleString("id-ID")}` : "Rp ••••••"}
               </span>
               <button
@@ -198,7 +198,7 @@ export default function DashboardPage() {
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
-              <span className="w-5 h-5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[#FF9500]/10 text-[#FF9500] flex items-center justify-center shrink-0">
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="9"/>
                   <path d="M14.5 9h-5v6h5"/>
@@ -221,7 +221,7 @@ export default function DashboardPage() {
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
-              <span className="w-5 h-5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[#FF2D55]/10 text-[#FF2D55] flex items-center justify-center shrink-0">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
                 </svg>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
             onClick={() => router.push("/topup")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 flex items-center justify-center shadow-xs transition-all active:scale-95">
+            <div className="w-9 h-9 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white flex items-center justify-center shadow-xs transition-all active:scale-95">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
@@ -256,14 +256,14 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
       {/* ============================================================ */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
+      <div className="bg-white dark:bg-[#161617] border border-black/[0.05] dark:border-white/[0.08] rounded-3xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)]">
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 text-center">
           {[
             {
               name: "Buka IMEI",
               href: "/unblock-imei",
               tourKey: "service-unblock",
-              iconBg: "bg-blue-50/90 dark:bg-blue-950/50 border-blue-100/90 dark:border-blue-900/50 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100/80 dark:group-hover:bg-blue-900/60",
+              iconBg: "bg-[#0071E3]/10 dark:bg-[#0071E3]/20 border border-[#0071E3]/20 dark:border-[#0071E3]/30 text-[#0071E3] dark:text-[#2997FF] group-hover:bg-[#0071E3]/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -274,7 +274,7 @@ export default function DashboardPage() {
               name: "Diagnostik",
               href: "/cek-ceir",
               tourKey: "service-ceir",
-              iconBg: "bg-emerald-50/90 dark:bg-emerald-950/50 border-emerald-100/90 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100/80 dark:group-hover:bg-emerald-900/60",
+              iconBg: "bg-[#34C759]/10 dark:bg-[#34C759]/20 border border-[#34C759]/20 dark:border-[#34C759]/30 text-[#34C759] dark:text-[#30D158] group-hover:bg-[#34C759]/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -285,7 +285,7 @@ export default function DashboardPage() {
               name: "Cek Garansi",
               href: "/cek-garansi",
               tourKey: "service-garansi",
-              iconBg: "bg-indigo-50/90 dark:bg-indigo-950/50 border-indigo-100/90 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100/80 dark:group-hover:bg-indigo-900/60",
+              iconBg: "bg-[#5856D6]/10 dark:bg-[#5856D6]/20 border border-[#5856D6]/20 dark:border-[#5856D6]/30 text-[#5856D6] dark:text-[#5E5CE6] group-hover:bg-[#5856D6]/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -296,7 +296,7 @@ export default function DashboardPage() {
               name: "Voucher",
               href: "/vouchers",
               tourKey: "service-voucher",
-              iconBg: "bg-rose-50/90 dark:bg-rose-950/50 border-rose-100/90 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 group-hover:bg-rose-100/80 dark:group-hover:bg-rose-900/60",
+              iconBg: "bg-[#FF2D55]/10 dark:bg-[#FF2D55]/20 border border-[#FF2D55]/20 dark:border-[#FF2D55]/30 text-[#FF2D55] dark:text-[#FF375F] group-hover:bg-[#FF2D55]/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
@@ -307,7 +307,7 @@ export default function DashboardPage() {
               name: "Game Koin",
               href: "/games",
               tourKey: "service-games",
-              iconBg: "bg-amber-50/90 dark:bg-amber-950/50 border-amber-100/90 dark:border-amber-900/50 text-amber-600 dark:text-amber-400 group-hover:bg-amber-100/80 dark:group-hover:bg-amber-900/60",
+              iconBg: "bg-[#FF9500]/10 dark:bg-[#FF9500]/20 border border-[#FF9500]/20 dark:border-[#FF9500]/30 text-[#FF9500] dark:text-[#FF9F0A] group-hover:bg-[#FF9500]/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 016.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
@@ -319,7 +319,7 @@ export default function DashboardPage() {
               badge: "Unoff",
               href: "/gateway",
               tourKey: "service-gateway",
-              iconBg: "bg-sky-50/90 dark:bg-sky-950/50 border-sky-100/90 dark:border-sky-900/50 text-sky-600 dark:text-sky-400 group-hover:bg-sky-100/80 dark:group-hover:bg-sky-900/60",
+              iconBg: "bg-[#30B0C7]/10 dark:bg-[#30B0C7]/20 border border-[#30B0C7]/20 dark:border-[#30B0C7]/30 text-[#30B0C7] dark:text-[#64D2FF] group-hover:bg-[#30B0C7]/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
@@ -331,7 +331,7 @@ export default function DashboardPage() {
               name: "Panduan",
               onClick: () => window.dispatchEvent(new Event("open_app_tour")),
               tourKey: "service-panduan",
-              iconBg: "bg-violet-50/90 dark:bg-violet-950/50 border-violet-100/90 dark:border-violet-900/50 text-violet-600 dark:text-violet-400 group-hover:bg-violet-100/80 dark:group-hover:bg-violet-900/60",
+              iconBg: "bg-[#AF52DE]/10 dark:bg-[#AF52DE]/20 border border-[#AF52DE]/20 dark:border-[#AF52DE]/30 text-[#AF52DE] dark:text-[#BF5AF2] group-hover:bg-[#AF52DE]/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -349,12 +349,12 @@ export default function DashboardPage() {
               <div className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform ${item.iconBg}`}>
                 {item.icon}
                 {(item as any).badge && (
-                  <span className="absolute -top-1.5 -right-1 px-1.5 py-0.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-[7.5px] rounded uppercase tracking-wider shadow-xs border border-white dark:border-slate-900">
+                  <span className="absolute -top-1.5 -right-1 px-1.5 py-0.2 bg-[#1D1D1F] text-white font-semibold text-[7px] rounded-full uppercase tracking-wider shadow-xs border border-white/40">
                     {(item as any).badge}
                   </span>
                 )}
               </div>
-              <span className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
+              <span className="text-[11px] sm:text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] group-hover:text-[#0071E3] transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
                 {item.name}
               </span>
             </button>

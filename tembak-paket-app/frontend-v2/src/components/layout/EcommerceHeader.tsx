@@ -150,11 +150,11 @@ export function EcommerceHeader() {
       {/* ============================================================ */}
       {/* MOBILE TOP HEADER (Signature Ry-ITSolutions Blue)            */}
       {/* ============================================================ */}
-      <div className="lg:hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-gray-900 dark:text-gray-100 border-b border-gray-200/80 dark:border-gray-800 px-3.5 py-2.5 flex items-center gap-2.5 relative transition-colors">
+      <div className="lg:hidden bg-white/80 dark:bg-[#161617]/80 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-black/[0.06] dark:border-white/[0.08] px-3.5 py-2.5 flex items-center gap-2.5 relative transition-colors">
                 {/* Search Bar (Clean White Input without Camera icon) */}
         <div ref={searchRef} data-tour="search-bar" className="flex-1 relative">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-            <div className="w-full h-9 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 flex items-center px-2.5">
+            <div className="w-full h-9 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] border border-transparent focus-within:border-[#0071E3]/40 focus-within:bg-white dark:focus-within:bg-[#1C1C1E] flex items-center px-3 transition-all">
               <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
@@ -506,7 +506,7 @@ export function EcommerceHeader() {
         </div>
 
         {/* 3. Sub-Header Category Tabs */}
-        <div className="border-t border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-slate-900/60">
+        <div className="border-t border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-[#161617]/70 backdrop-blur-md">
           <div className="max-w-7xl mx-auto px-8 flex items-center gap-6 overflow-x-auto text-xs py-2">
             {navLinks.map((item, idx) => {
               const isActive = pathname === item.href;
@@ -520,7 +520,7 @@ export function EcommerceHeader() {
                 >
                   <span>{item.label}</span>
                   {isActive && (
-                    <span className="absolute bottom-[-9px] left-0 right-0 h-[2px] bg-gray-900 dark:bg-white rounded-full"></span>
+                    <span className="absolute bottom-[-9px] left-0 right-0 h-[2px] bg-[#0071E3] rounded-full"></span>
                   )}
                 </Link>
               );

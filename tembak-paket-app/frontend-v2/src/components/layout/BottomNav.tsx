@@ -55,7 +55,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800 px-2 py-1 shadow-lg safe-area-pb select-none">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#161617]/80 backdrop-blur-2xl border-t border-black/[0.06] dark:border-white/[0.08] px-2 py-1 shadow-[0_-2px_10px_rgba(0,0,0,0.02)] safe-area-pb select-none">
       <div className="flex items-center justify-around">
         {navItems.map((item, idx) => {
           const isActive = pathname === item.href || (item.href === "/saya" && pathname === "/profile");
@@ -65,8 +65,8 @@ export function BottomNav() {
               href={item.href}
               className={`flex flex-col items-center justify-center py-1.5 px-3 transition-colors duration-150 relative touch-manipulation select-none ${
                 isActive
-                  ? "text-slate-900 dark:text-white font-semibold"
-                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium"
+                  ? "text-[#0071E3] dark:text-[#2997FF] font-semibold"
+                  : "text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] font-medium"
               }`}
             >
               {/* Icon */}
