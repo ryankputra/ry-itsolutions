@@ -618,11 +618,24 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             let price = 0;
             if (service_type === 'imei') {
                 const targetPkgId = price_key || req.body.package_id || req.body.packageId;
-                let pkg = targetPkgId ? await dbGet("SELECT price FROM imei_packages WHERE id = ?", [targetPkgId]) : null;
+                let pkg = targetPkgId ? await dbGet("SELECT * FROM imei_packages WHERE id = ?", [targetPkgId]) : null;
                 if (pkg) {
-                    price = pkg.price;
+                    price = Number(pkg.price) || 0;
                     const spOpt = speed_option || req.body.speed;
                     if (spOpt) {
+                        let allowedSpeeds = ['fast', 'semi', 'slow'];
+                        if (pkg.allowed_speeds) {
+                            try {
+                                const parsed = typeof pkg.allowed_speeds === 'string' ? JSON.parse(pkg.allowed_speeds) : pkg.allowed_speeds;
+                                if (Array.isArray(parsed) && parsed.length > 0) allowedSpeeds = parsed;
+                            } catch (e) {}
+                        }
+                        if (!allowedSpeeds.includes(spOpt)) {
+                            return res.status(400).json({
+                                status: false,
+                                message: `Opsi kecepatan '${spOpt}' tidak tersedia untuk paket ${pkg.duration || ''}.`
+                            });
+                        }
                         const speedPriceRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${spOpt}`]);
                         if (speedPriceRow && speedPriceRow.value !== 'disabled') {
                             price += parseInt(speedPriceRow.value) || 0;

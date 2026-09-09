@@ -1697,4 +1697,119 @@ router.post('/admin/gateway-keys/:id/remind-wa', isAuthenticated, isAdmin, async
     }
 });
 
+
+// ============================================================
+// CRUD PAKET DURASI UNBLOCK IMEI
+// ============================================================
+
+// 1. POST /api/admin/imei-packages
+router.post('/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { duration, price, allowed_speeds } = req.body;
+        if (!duration || price === undefined || price === null) {
+            return res.status(400).json({ status: false, message: "Durasi dan harga jual paket wajib diisi." });
+        }
+
+        const id = `imei_${Date.now()}`;
+        const numPrice = Number(price) || 0;
+        let speedsJson = '["fast","semi","slow"]';
+        if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {
+            speedsJson = JSON.stringify(allowed_speeds);
+        } else if (typeof allowed_speeds === 'string' && allowed_speeds.trim()) {
+            speedsJson = allowed_speeds.trim();
+        }
+
+        await dbRun(
+            "INSERT INTO imei_packages (id, duration, price, isVisible, allowed_speeds) VALUES (?, ?, ?, 1, ?)",
+            [id, duration.trim(), numPrice, speedsJson]
+        );
+
+        let parsedSpeeds = ['fast', 'semi', 'slow'];
+        try { parsedSpeeds = JSON.parse(speedsJson); } catch (e) {}
+
+        res.json({
+            status: true,
+            message: `Paket durasi '${duration.trim()}' berhasil ditambahkan!`,
+            data: { id, duration: duration.trim(), price: numPrice, isVisible: 1, allowed_speeds: parsedSpeeds }
+        });
+    } catch (e) {
+        console.error("Error adding imei package:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal menambahkan paket IMEI." });
+    }
+});
+
+// 2. PUT /api/admin/imei-packages/:id
+router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { duration, price, isVisible, allowed_speeds } = req.body;
+
+        const existing = await dbGet("SELECT * FROM imei_packages WHERE id = ?", [id]);
+        if (!existing) {
+            return res.status(404).json({ status: false, message: "Paket durasi tidak ditemukan." });
+        }
+
+        const updatedDuration = duration !== undefined ? duration.trim() : existing.duration;
+        const updatedPrice = price !== undefined ? Number(price) : existing.price;
+        const updatedVisible = isVisible !== undefined ? (isVisible === 1 || isVisible === true ? 1 : 0) : existing.isVisible;
+
+        let speedsJson = existing.allowed_speeds || '["fast","semi","slow"]';
+        if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {
+            speedsJson = JSON.stringify(allowed_speeds);
+        } else if (typeof allowed_speeds === 'string' && allowed_speeds.trim()) {
+            speedsJson = allowed_speeds.trim();
+        }
+
+        await dbRun(
+            "UPDATE imei_packages SET duration = ?, price = ?, isVisible = ?, allowed_speeds = ? WHERE id = ?",
+            [updatedDuration, updatedPrice, updatedVisible, speedsJson, id]
+        );
+
+        let parsedSpeeds = ['fast', 'semi', 'slow'];
+        try { parsedSpeeds = JSON.parse(speedsJson); } catch (e) {}
+
+        res.json({
+            status: true,
+            message: `Paket '${updatedDuration}' berhasil diperbarui!`,
+            data: { id, duration: updatedDuration, price: updatedPrice, isVisible: updatedVisible, allowed_speeds: parsedSpeeds }
+        });
+    } catch (e) {
+        console.error("Error updating imei package:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal memperbarui paket IMEI." });
+    }
+});
+
+// 3. PUT /api/admin/imei-packages/:id/toggle
+router.put('/admin/imei-packages/:id/toggle', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isVisible } = req.body;
+        const target = (isVisible === 1 || isVisible === true) ? 1 : 0;
+        await dbRun("UPDATE imei_packages SET isVisible = ? WHERE id = ?", [target, id]);
+        res.json({
+            status: true,
+            message: `Status paket berhasil diubah menjadi ${target === 1 ? 'Aktif' : 'Hidden'}.`
+        });
+    } catch (e) {
+        console.error("Error toggling imei package:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal mengubah status paket." });
+    }
+});
+
+// 4. DELETE /api/admin/imei-packages/:id
+router.delete('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await dbRun("DELETE FROM imei_packages WHERE id = ?", [id]);
+        res.json({
+            status: true,
+            message: "Paket durasi berhasil dihapus!"
+        });
+    } catch (e) {
+        console.error("Error deleting imei package:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal menghapus paket IMEI." });
+    }
+});
+
 module.exports = router;
+

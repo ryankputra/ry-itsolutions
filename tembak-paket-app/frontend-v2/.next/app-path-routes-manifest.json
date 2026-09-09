@@ -4,7 +4,6 @@
   "/icon.svg/route": "/icon.svg",
   "/qr/[id]/route": "/qr/[id]",
   "/check-payment/route": "/check-payment",
-  "/create-qris/route": "/create-qris",
   "/(auth)/login/page": "/login",
   "/(auth)/register/page": "/register",
   "/page": "/",
@@ -28,5 +27,6 @@
   "/(main)/topup/page": "/topup",
   "/(main)/unblock-imei/page": "/unblock-imei",
   "/(main)/videos/page": "/videos",
-  "/(main)/vouchers/page": "/vouchers"
+  "/(main)/vouchers/page": "/vouchers",
+  "/create-qris/route": "/create-qris"
 }

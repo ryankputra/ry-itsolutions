@@ -93,8 +93,26 @@ router.get('/user/packages', async (req, res) => {
 // 4. GET /api/imei-packages
 router.get('/imei-packages', async (req, res) => {
     try {
-        const rows = await dbAll("SELECT * FROM imei_packages ORDER BY price ASC");
-        res.json({ status: true, data: rows || [] });
+        const isAll = req.query.all === 'true';
+        const query = isAll
+            ? "SELECT * FROM imei_packages ORDER BY price ASC"
+            : "SELECT * FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL ORDER BY price ASC";
+        const rows = await dbAll(query);
+        const data = (rows || []).map(r => {
+            let allowed_speeds = ['fast', 'semi', 'slow'];
+            if (r.allowed_speeds) {
+                try {
+                    const parsed = typeof r.allowed_speeds === 'string' ? JSON.parse(r.allowed_speeds) : r.allowed_speeds;
+                    if (Array.isArray(parsed) && parsed.length > 0) allowed_speeds = parsed;
+                } catch (e) {}
+            }
+            return {
+                ...r,
+                isVisible: r.isVisible === undefined || r.isVisible === null ? 1 : Number(r.isVisible),
+                allowed_speeds
+            };
+        });
+        res.json({ status: true, data });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }

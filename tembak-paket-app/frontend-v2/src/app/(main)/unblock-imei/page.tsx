@@ -105,7 +105,7 @@ function UnblockImeiContent() {
   const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
   const selectedPkg = safePackages.find(p => p && p.id === selectedPkgId);
   const basePrice = selectedPkg ? Number(selectedPkg.price || 0) : 0;
-  const speedCost = selectedSpeed && speedPricing && speedPricing[selectedSpeed] ? Number(speedPricing[selectedSpeed] || 0) : 0;
+  const speedCost = selectedSpeed && speedPricing ? Number(speedPricing[`imei_speed_${selectedSpeed}`] || speedPricing[selectedSpeed] || 0) : 0;
   const pricePerImei = basePrice + speedCost;
   const rawTotalPrice = pricePerImei * imeiCount;
 
@@ -378,14 +378,26 @@ function UnblockImeiContent() {
     }
   };
 
+  const allowedSpeedsForPkg: string[] = (() => {
+    if (!selectedPkg || !selectedPkg.allowed_speeds) return ['fast', 'semi', 'slow'];
+    try {
+      const parsed = typeof selectedPkg.allowed_speeds === 'string'
+        ? JSON.parse(selectedPkg.allowed_speeds)
+        : selectedPkg.allowed_speeds;
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (e) {}
+    return ['fast', 'semi', 'slow'];
+  })();
+
   const speedOptions = [
     { id: 'fast', key: 'imei_speed_fast', label: 'Fast', defaultRange: '1-3 Jam' },
     { id: 'semi', key: 'imei_speed_semi', label: 'Semi Fast', defaultRange: '1-12 Jam' },
     { id: 'slow', key: 'imei_speed_slow', label: 'Slow', defaultRange: 'Max kirim 14:00, Selesai 00:00 WIB' }
   ]
     .filter(opt => {
+      if (!allowedSpeedsForPkg.includes(opt.id)) return false;
       const status = speedPricing ? speedPricing[`${opt.key}_status`] : null;
-      return status === 'visible' || status === 'active';
+      return status === 'visible' || status === 'active' || status !== 'hidden';
     })
     .map(opt => ({
       id: opt.id,
@@ -393,6 +405,17 @@ function UnblockImeiContent() {
       rangeText: (speedPricing && speedPricing[`${opt.key}_range`]) || opt.defaultRange,
       price: (speedPricing && parseInt(speedPricing[opt.key])) || 0
     }));
+
+  useEffect(() => {
+    if (speedOptions.length > 0) {
+      const exists = speedOptions.some(opt => opt.id === selectedSpeed);
+      if (!exists) {
+        setSelectedSpeed(speedOptions[0].id);
+      }
+    } else {
+      setSelectedSpeed('');
+    }
+  }, [selectedPkgId, speedOptions.map(o => o.id).join(','), selectedSpeed]);
 
   if (!mounted) {
     return (
