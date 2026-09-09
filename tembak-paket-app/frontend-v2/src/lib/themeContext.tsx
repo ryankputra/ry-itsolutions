@@ -175,6 +175,9 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
         --color-surface-tile: ${darkHeaderBg} !important;
         --color-hairline: ${darkHairline} !important;
         --background: ${darkCanvas} !important;
+        --theme-canvas: ${darkCanvas} !important;
+        --theme-parchment: ${darkParchment} !important;
+        --theme-header-bg: ${darkHeaderBg} !important;
       }
 
       /* 1. Global Page Background Transformation */
@@ -186,35 +189,60 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
         background-color: ${darkCanvas} !important;
       }
 
-      .bg-canvas {
+      html:not(.dark) .bg-canvas,
+      :not(.dark) .bg-canvas {
         background-color: ${canvas} !important;
       }
       .dark .bg-canvas {
         background-color: ${darkCanvas} !important;
       }
 
-      /* 2. Global Card & Container Surfaces */
-      .bg-parchment, .bg-white {
+      /* 2. Global Card & Container Surfaces: Light vs Dark Isolation */
+      html:not(.dark) .bg-parchment,
+      :not(.dark) .bg-parchment,
+      html:not(.dark) .bg-white,
+      :not(.dark) .bg-white {
         background-color: ${parchment} !important;
       }
-      .dark .bg-parchment, .dark .bg-\\[\\#161617\\], .dark .bg-\\[\\#1C1C1E\\], .dark .bg-\\[\\#1c1c1e\\] {
+      .dark .bg-parchment,
+      .dark .bg-white,
+      .dark .bg-slate-900,
+      .dark [class*="dark:bg-[#161617]"],
+      .dark [class*="dark:bg-[#1C1C1E]"],
+      .dark [class*="dark:bg-[#1c1c1e]"],
+      .dark [class*="dark:bg-[#2C2C2E]"] {
         background-color: ${darkParchment} !important;
       }
 
       /* 3. Global Hairlines & Borders */
-      .border-hairline, .border-black\\/\\[0\\.05\\], .border-black\\/\\[0\\.06\\], .divide-black\\/\\[0\\.05\\] > * + * {
+      html:not(.dark) .border-hairline,
+      :not(.dark) .border-hairline,
+      html:not(.dark) .divide-hairline > * + *,
+      :not(.dark) .divide-hairline > * + *,
+      :not(.dark) .border-black\/\[0\.05\],
+      :not(.dark) .border-black\/\[0\.06\],
+      :not(.dark) .divide-black\/\[0\.05\] > * + * {
         border-color: ${hairline} !important;
       }
-      .dark .border-hairline, .dark .border-white\\/\\[0\\.08\\], .dark .border-white\\/\\[0\\.06\\], .dark .divide-white\\/\\[0\\.06\\] > * + * {
+      .dark .border-hairline,
+      .dark .divide-hairline > * + *,
+      .dark .border-white\/\[0\.08\],
+      .dark .border-white\/\[0\.06\],
+      .dark .divide-white\/\[0\.06\] > * + * {
         border-color: ${darkHairline} !important;
       }
 
       /* 4. Luxury Obsidian Titanium Cards (Wallet, Voucher Banner, Profile Card) */
-      .bg-\\[\\#1D1D1F\\], .bg-\\[\\#1d1d1f\\], .bg-surface-tile {
+      html:not(.dark) .bg-\[\#1D1D1F\],
+      :not(.dark) .bg-\[\#1D1D1F\],
+      :not(.dark) .bg-\[\#1d1d1f\],
+      :not(.dark) .bg-surface-tile {
         background-color: ${headerBg} !important;
         border-color: ${cardBorder} !important;
       }
-      .dark .bg-\\[\\#1D1D1F\\], .dark .bg-\\[\\#1d1d1f\\], .dark .bg-surface-tile {
+      .dark .bg-\[\#1D1D1F\],
+      .dark .bg-\[\#1d1d1f\],
+      .dark .bg-surface-tile {
         background-color: ${darkHeaderBg} !important;
         border-color: ${darkHairline} !important;
       }

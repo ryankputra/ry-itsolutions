@@ -149,29 +149,29 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
       {/* ============================================================ */}
-      <div data-tour="wallet-card" className="rounded-3xl bg-white dark:bg-[#161617] border border-black/[0.05] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-4 sm:p-5 transition-all">
-        <div className="grid grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800 items-center text-center">
+      <div data-tour="wallet-card" className="rounded-3xl bg-parchment border border-hairline shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-4 sm:p-5 transition-all">
+        <div className="grid grid-cols-4 divide-x divide-hairline items-center text-center">
           {/* Section 1: Saldo Dompet */}
           <div
             onClick={() => router.push("/topup")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
+            <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
               <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
                 </svg>
               </span>
-              <span className="text-[11px] sm:text-xs">Saldo Ry</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-ink">Saldo Ry</span>
             </div>
             <div className="mt-1 flex items-center justify-center gap-1">
-              <span className="text-xs sm:text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+              <span className="text-xs sm:text-sm font-semibold text-ink tracking-tight">
                 {showBalance ? `Rp ${(user?.balance || 0).toLocaleString("id-ID")}` : "Rp ••••••"}
               </span>
               <button
                 type="button"
                 onClick={toggleShowBalance}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-0.5"
+                className="text-ink-muted hover:text-ink transition-colors p-0.5"
                 title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
               >
                 {showBalance ? (
@@ -186,7 +186,7 @@ export default function DashboardPage() {
                 )}
               </button>
             </div>
-            <span className="text-[10px] text-gray-400 font-medium mt-0.5 block group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+            <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
               + Isi Saldo
             </span>
           </div>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
             onClick={() => router.push("/games")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
+            <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
               <span className="w-6 h-6 rounded-full bg-[#FF9500]/10 text-[#FF9500] flex items-center justify-center shrink-0">
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="9"/>
@@ -204,12 +204,12 @@ export default function DashboardPage() {
                   <path d="M12 7v10"/>
                 </svg>
               </span>
-              <span className="text-[11px] sm:text-xs">Koin Ry</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-ink">Koin Ry</span>
             </div>
-            <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mt-1 tracking-tight">
+            <span className="text-xs sm:text-sm font-semibold text-ink mt-1 tracking-tight">
               {userCoins.toLocaleString("id-ID")}
             </span>
-            <span className="text-[10px] text-gray-400 font-medium mt-0.5 block group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+            <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
               Klaim Koin
             </span>
           </div>
@@ -219,18 +219,18 @@ export default function DashboardPage() {
             onClick={() => router.push("/vouchers")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
+            <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
               <span className="w-6 h-6 rounded-full bg-[#FF2D55]/10 text-[#FF2D55] flex items-center justify-center shrink-0">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
                 </svg>
               </span>
-              <span className="text-[11px] sm:text-xs">Voucher</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-ink">Voucher</span>
             </div>
-            <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mt-1 tracking-tight">
+            <span className="text-xs sm:text-sm font-semibold text-ink mt-1 tracking-tight">
               {vouchers.length > 0 ? `${vouchers.length} Kupon` : "Klaim"}
             </span>
-            <span className="text-[10px] text-gray-400 font-medium mt-0.5 block group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+            <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
               Cek Promo
             </span>
           </div>
@@ -245,7 +245,7 @@ export default function DashboardPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
             </div>
-            <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400 mt-1 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+            <span className="text-[10px] font-medium text-ink-muted mt-1 group-hover:text-ink transition-colors">
               Top Up
             </span>
           </div>
@@ -255,7 +255,7 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
       {/* ============================================================ */}
-      <div className="bg-white dark:bg-[#161617] border border-black/[0.05] dark:border-white/[0.08] rounded-3xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)]">
+      <div className="bg-parchment border border-hairline rounded-3xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)]">
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 text-center">
           {[
             {
@@ -353,7 +353,7 @@ export default function DashboardPage() {
                   </span>
                 )}
               </div>
-              <span className="text-[11px] sm:text-xs font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
+              <span className="text-[11px] sm:text-xs font-medium text-ink group-hover:text-primary transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
                 {item.name}
               </span>
             </button>

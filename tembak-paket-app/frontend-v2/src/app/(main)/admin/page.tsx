@@ -1981,12 +1981,13 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* 3. Re-organized Categorized Navigation System (Clean, No Emojis) */}
-      <div className="bg-canvas border border-hairline p-2 rounded-2xl shadow-xs space-y-2">
-        {/* Category Selector Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-parchment/60 rounded-xl border border-hairline">
+      {/* 3. Re-organized Categorized Navigation System (Responsive HP & Desktop, No Emojis) */}
+      <div className="bg-canvas border border-hairline p-2.5 sm:p-3 rounded-2xl shadow-xs space-y-2.5">
+        {/* Category Selector Tabs: 2x2 grid on mobile (spacious, never truncated), 4 columns on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-parchment/70 rounded-xl border border-hairline">
           {menuCategories.map(cat => {
             const isCatActive = currentCategory === cat.id;
+            const pendingInCat = cat.tabs.reduce((acc, t) => acc + (typeof t.badge === 'number' ? t.badge : 0), 0);
             return (
               <button
                 key={cat.id}
@@ -1996,18 +1997,49 @@ export default function AdminPage() {
                     setActiveTab(cat.tabs[0].id);
                   }
                 }}
-                className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all text-center ${isCatActive
-                  ? 'bg-canvas text-primary shadow-xs border border-hairline'
+                className={`py-2 px-2 sm:py-1.5 sm:px-1 rounded-lg text-xs sm:text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${isCatActive
+                  ? 'bg-canvas text-primary shadow-xs border border-primary/20 ring-1 ring-primary/20'
                   : 'text-ink-muted hover:text-ink hover:bg-canvas/50'}`}
               >
-                <span className="truncate">{cat.name}</span>
+                <span className="leading-snug">{cat.name}</span>
+                {pendingInCat > 0 && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Sub-Tabs Selector inside Selected Category */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-0.5 px-1 scrollbar-none">
+        {/* Sub-Tabs: Comfortable full-width segmented cards on Mobile (HP) */}
+        <div className="grid grid-cols-1 gap-1.5 pt-0.5 sm:hidden">
+          {menuCategories.find(c => c.id === currentCategory)?.tabs.map(tab => {
+            const isTabActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-between border ${
+                  isTabActive
+                    ? 'bg-primary text-white border-primary shadow-xs'
+                    : 'bg-parchment text-ink border-hairline hover:bg-canvas'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${isTabActive ? 'bg-white' : 'bg-primary'}`}></span>
+                  <span>{tab.label}</span>
+                </div>
+                {tab.badge !== null && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black text-white ${tab.badgeColor || 'bg-rose-500'}`}>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sub-Tabs: Sleek horizontal pills on Desktop / Tablet */}
+        <div className="hidden sm:flex sm:items-center gap-2 overflow-x-auto pt-1 pb-0.5 px-1 scrollbar-none">
           {menuCategories.find(c => c.id === currentCategory)?.tabs.map(tab => {
             const isTabActive = activeTab === tab.id;
             return (
