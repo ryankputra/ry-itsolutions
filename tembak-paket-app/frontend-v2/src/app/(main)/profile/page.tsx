@@ -209,7 +209,7 @@ export default function ProfilePage() {
               {user?.role === "admin" ? (
                 <Link
                   href="/admin"
-                  className="px-2.5 py-0.5 rounded-full bg-[#0071E3] text-white text-[10px] font-semibold uppercase tracking-wider shadow-xs hover:bg-[#0077ED] transition-colors shrink-0 flex items-center gap-1"
+                  className="px-2.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-semibold uppercase tracking-wider shadow-xs hover:bg-primary-hover transition-colors shrink-0 flex items-center gap-1"
                   title="Masuk ke Dashboard Admin"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -232,7 +232,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-[11px] text-[#0071E3] hover:underline font-medium inline-flex items-center gap-1 mt-0.5"
+              className="text-[11px] text-primary hover:underline font-medium inline-flex items-center gap-1 mt-0.5"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -333,7 +333,7 @@ export default function ProfilePage() {
         <div className="rounded-3xl bg-[#1C1C1E] text-white border border-white/[0.08] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] space-y-3.5">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-[#0071E3] text-white flex items-center justify-center shadow-xs">
+              <span className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shadow-xs">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                 </svg>
@@ -341,7 +341,7 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-semibold text-xs sm:text-sm text-white flex items-center gap-1.5">
                   <span>Panel Kontrol Admin (Owner)</span>
-                  <span className="px-2 py-0.2 rounded-full bg-[#0071E3]/20 text-[#2997FF] text-[9px] font-semibold">Aktif</span>
+                  <span className="px-2 py-0.2 rounded-full bg-primary/20 text-primary text-[9px] font-semibold">Aktif</span>
                 </h3>
                 <p className="text-[11px] text-[#86868B]">
                   Manajemen sistem, pengerjaan order manual &amp; pengaturan promo
@@ -350,7 +350,7 @@ export default function ProfilePage() {
             </div>
             <Link
               href="/admin"
-              className="px-3 py-1.5 bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold text-xs rounded-full shadow-xs transition-colors shrink-0 flex items-center gap-1"
+              className="px-3 py-1.5 bg-primary hover:bg-primary-hover text-white font-semibold text-xs rounded-full shadow-xs transition-colors shrink-0 flex items-center gap-1"
             >
               <span>Buka Panel</span>
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

@@ -127,7 +127,7 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
         className={`p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors ${className}`}
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[#0071E3]/10 border border-[#0071E3]/20 text-[#0071E3] dark:text-[#2997FF] flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
             <Smartphone className="w-4 h-4" />
           </div>
           <div>
@@ -135,7 +135,7 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
             <p className="text-[11px] text-[#86868B] font-normal">Akses transaksi cepat langsung dari layar utama</p>
           </div>
         </div>
-        <span className="px-3 py-1 rounded-full bg-[#0071E3] text-white font-semibold text-[10px] uppercase tracking-wider shrink-0 hover:bg-[#0077ED] transition-all active:scale-95 shadow-xs">
+        <span className="px-3 py-1 rounded-full bg-primary text-white font-semibold text-[10px] uppercase tracking-wider shrink-0 hover:bg-primary-hover transition-all active:scale-95 shadow-xs">
           Install
         </span>
       </div>

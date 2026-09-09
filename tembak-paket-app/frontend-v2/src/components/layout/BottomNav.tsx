@@ -65,7 +65,7 @@ export function BottomNav() {
               href={item.href}
               className={`flex flex-col items-center justify-center py-1.5 px-3 transition-colors duration-150 relative touch-manipulation select-none ${
                 isActive
-                  ? "text-[#0071E3] dark:text-[#2997FF] font-semibold"
+                  ? "text-primary font-bold"
                   : "text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] font-medium"
               }`}
             >
