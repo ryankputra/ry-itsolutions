@@ -2448,7 +2448,7 @@ export default function AdminPage() {
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
                           >
                             {retryingOrderId === o.id ? (
-                              <span className="animate-spin mr-1">⏳</span>
+                              <span className="animate-spin mr-1"></span>
                             ) : (
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -2596,7 +2596,7 @@ export default function AdminPage() {
                         : waBotStatus?.statusText || 'Menyiapkan QR Code WhatsApp...'}
                     </span>
                   </div>
-                  {loadingWaStatus && <span className="text-[10px] text-ink-muted animate-spin">⏳</span>}
+                  {loadingWaStatus && <span className="text-[10px] text-ink-muted animate-spin"></span>}
                 </div>
 
                 {/* Method Switcher Tab (QR Code vs Kode Pairing 8 Digit) */}
@@ -2747,7 +2747,7 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div className="text-center py-10 space-y-2">
-                    <div className="animate-spin text-2xl">⏳</div>
+                    <div className="animate-spin text-2xl"></div>
                     <p className="text-xs font-bold text-ink">Sedang menyiapkan sesi WhatsApp...</p>
                     <p className="text-[11px] text-ink-muted">Harap tunggu beberapa detik sementara server menyiapkan sesi Baileys.</p>
                   </div>
@@ -3166,7 +3166,7 @@ export default function AdminPage() {
                               )}
                               {speeds.includes('semi') && (
                                 <span className="px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-900 dark:text-blue-300 border border-blue-300/40 text-[10px] font-bold flex items-center gap-0.5">
-                                  ⏱️ Semi
+                                  Semi
                                 </span>
                               )}
                               {speeds.includes('slow') && (
@@ -5255,7 +5255,7 @@ export default function AdminPage() {
                 <div className="p-4 rounded-2xl bg-canvas border border-hairline shadow-xs">
                   <div className="flex items-center justify-between text-ink-muted mb-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider">Segera Expired (&le;3 Hari)</span>
-                    <span className="text-amber-500">⏳</span>
+                    <span className="text-amber-500"></span>
                   </div>
                   <p className="text-2xl font-black text-amber-600">{expiringSoonKeys}</p>
                   <p className="text-[11px] text-ink-muted mt-0.5">{expiredKeys} lisensi telah kedaluwarsa</p>

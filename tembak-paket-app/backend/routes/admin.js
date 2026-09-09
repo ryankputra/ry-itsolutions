@@ -250,10 +250,19 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
             }
 
             const newStatus = status || existingTrx.status;
-            const newNote = admin_note !== undefined ? admin_note : existingTrx.admin_note;
+            let newNote = admin_note !== undefined ? admin_note : existingTrx.admin_note;
+            const nowIso = new Date().toISOString();
 
-            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ? WHERE id = ?",
-                [newStatus, newNote, adminImagePath, trxId]);
+            if (newStatus === 'success' && (!newNote || newNote.includes('Sinyal aktif') || newNote === 'Pesanan berhasil diselesaikan oleh admin.')) {
+                const { calculateTransactionWarranty } = require('../utils/warrantyHelper');
+                const warranty = calculateTransactionWarranty(existingTrx);
+                if (warranty?.defaultSuccessNote) {
+                    newNote = warranty.defaultSuccessNote;
+                }
+            }
+
+            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, admin_image = ?, updatedAt = ? WHERE id = ?",
+                [newStatus, newNote, adminImagePath, nowIso, trxId]);
 
             let refundMsg = "";
             if (status === 'failed' && (existingTrx.status === 'pending' || existingTrx.status === 'processing' || existingTrx.status === 'in_queue')) {

@@ -1,3 +1,4 @@
+const { calculateTransactionWarranty } = require("../utils/warrantyHelper");
 /**
  * Transactions, Orders, Top-ups, and Payment Gateway Handlers
  */
@@ -1086,9 +1087,13 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
                 speedLabel = `${optName} (${rangeStr})`;
             }
 
+            const warranty = calculateTransactionWarranty({ ...item, status: effectiveStatus });
+
             return {
                 ...item,
                 status: effectiveStatus,
+                warranty,
+                remainingDays: warranty ? warranty.remainingDays : null,
                 admin_note: cleanAdminNote,
                 adminNote: cleanAdminNote,
                 api_response: cleanApiResponse,

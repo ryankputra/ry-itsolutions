@@ -727,7 +727,7 @@ function UnblockImeiContent() {
                           className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2"
                           style={{ color: '#d97706' }}
                         >
-                          ⏱️ {opt.rangeText}
+                          {opt.rangeText}
                         </div>
                       )}
                       <div className="text-[10px] font-semibold mt-0.5 text-ink-muted">

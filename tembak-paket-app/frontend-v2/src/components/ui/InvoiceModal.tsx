@@ -11,6 +11,8 @@ interface InvoiceData {
   packageName: string;
   serviceType?: string;
   createdAt: string;
+  completedAt?: string;
+  updatedAt?: string;
   amount?: number;
   status: string;
   user_image?: string;
@@ -29,6 +31,8 @@ interface InvoiceData {
   adminNote?: string;
   speed?: string;
   speed_option?: string;
+  speed_label?: string;
+  speedLabel?: string;
   ceirData?: {
     gateway?: string;
     status?: string;
@@ -73,11 +77,87 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   if (!isOpen || !data) return null;
 
-  const imeiAnalysis = data.imei ? analyzeImei(data.imei) : null;
+  const imeiAnalysis = data.imei && data.imei !== '-' ? analyzeImei(data.imei) : null;
   const warranty = data.warranty;
   const isSuccess = data.status === 'success' || data.status === 'completed';
   const isTopUp = data.serviceType === 'topup' || data.serviceType === 'topup_qris' || (data.packageName || '').toLowerCase().includes('top up') || (data.packageName || '').toLowerCase().includes('topup');
-  const isCeirService = !isTopUp && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || warranty?.hasWarranty === false);
+  const isGatewayService = !isTopUp && (data.serviceType === 'gateway' || data.serviceType === 'apikey' || (data.packageName || '').toLowerCase().includes('gateway') || (data.packageName || '').toLowerCase().includes('api key'));
+  const isCeirService = !isTopUp && !isGatewayService && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || (warranty?.hasWarranty === false && !isGatewayService));
+
+  // Dynamic Warranty & Duration Computation (Strictly matching product duration from completion date)
+  const computeDynamicWarranty = () => {
+    const pkg = (data.packageName || '').toLowerCase();
+    const doneDate = new Date(data.completedAt || data.updatedAt || data.createdAt || Date.now());
+
+    if (isGatewayService) {
+      const expiryDate = new Date(doneDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const diff = expiryDate.getTime() - Date.now();
+      const rem = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      return {
+        durationLabel: "30 Hari",
+        expiryDate: expiryDate.toISOString(),
+        remainingDays: rem,
+        isPermanent: false,
+        statusText: rem > 0 ? `Sisa ${rem} Hari (Aktif)` : "Langganan Berakhir"
+      };
+    }
+
+    if (isCeirService || isTopUp) {
+      return {
+        durationLabel: isTopUp ? "Saldo Akun" : "Non-Garansi",
+        expiryDate: null,
+        remainingDays: null,
+        isPermanent: false,
+        statusText: isTopUp ? "Saldo Berhasil Ditambahkan" : "Pengecekan Selesai"
+      };
+    }
+
+    // IMEI Services: parse months accurately
+    let durationMonths = 1;
+    let isPermanent = false;
+    if (pkg.includes("permanen") || pkg.includes("permanent") || pkg.includes("lifetime") || pkg.includes("seumur hidup")) {
+      isPermanent = true;
+    } else if (pkg.includes("12 bulan") || pkg.includes("1 tahun") || pkg.includes("12month") || pkg.includes("1year")) {
+      durationMonths = 12;
+    } else if (pkg.includes("6 bulan") || pkg.includes("6 month") || pkg.includes("6m")) {
+      durationMonths = 6;
+    } else if (pkg.includes("3 bulan") || pkg.includes("3 month") || pkg.includes("3m")) {
+      durationMonths = 3;
+    } else if (pkg.includes("2 bulan") || pkg.includes("2 month") || pkg.includes("2m")) {
+      durationMonths = 2;
+    } else if (pkg.includes("1 bulan") || pkg.includes("1 month") || pkg.includes("1m")) {
+      durationMonths = 1;
+    } else {
+      const m = pkg.match(/(\d+)\s*bulan/i);
+      if (m) durationMonths = parseInt(m[1], 10);
+    }
+
+    if (isPermanent) {
+      return {
+        durationLabel: "Permanen (Seumur Hidup)",
+        expiryDate: null,
+        remainingDays: "Permanen",
+        isPermanent: true,
+        statusText: "Aktif (Garansi Permanen)"
+      };
+    }
+
+    const durationDays = durationMonths * 30;
+    const expiryDate = new Date(doneDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const diff = expiryDate.getTime() - Date.now();
+    const rem = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    const durText = `${durationMonths} Bulan (${durationDays} Hari)`;
+
+    return {
+      durationLabel: durText,
+      expiryDate: expiryDate.toISOString(),
+      remainingDays: rem,
+      isPermanent: false,
+      statusText: rem > 0 ? `Sisa ${rem} Hari` : "Garansi Berakhir"
+    };
+  };
+
+  const dynWarranty = computeDynamicWarranty();
 
   const handleDownloadPng = async () => {
     if (!printRef.current) return;
@@ -216,14 +296,34 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     }
 
     const currentStore = customStoreName || 'Ry-ITSolutions';
-    const messageText = `Halo Kak, berikut bukti nota transaksi & surat garansi digital dari *${currentStore}*:\n\n` +
-      `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
-      `*Perangkat / IMEI:* ${imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : 'Smartphone'} (${data.imei})\n` +
-      `*Layanan:* ${data.packageName || 'Layanan Aktivasi IMEI'}\n` +
-      `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : data.status.toUpperCase()}\n` +
-      `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
-      `*Cek Nota & Status Garansi Online:* \n${verifyUrl}\n\n` +
-      `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
+    let messageText = "";
+    if (isGatewayService) {
+      messageText = `Halo Kak, berikut bukti nota transaksi & langganan API Key Gateway dari *${currentStore}*:\n\n` +
+        `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
+        `*Layanan:* ${data.packageName || 'Langganan API Key Gateway'}\n` +
+        `*Masa Aktif:* 30 Hari\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / AKTIF' : data.status.toUpperCase()}\n` +
+        `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
+        `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
+    } else if (isTopUp) {
+      messageText = `Halo Kak, berikut bukti nota top up saldo dari *${currentStore}*:\n\n` +
+        `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
+        `*Layanan:* ${data.packageName || 'Top Up Saldo'}\n` +
+        `*Nominal:* Rp ${(data.amount || 0).toLocaleString('id-ID')}\n` +
+        `*Status:* SUKSES / SALDO MASUK\n` +
+        `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
+        `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
+    } else {
+      messageText = `Halo Kak, berikut bukti nota transaksi & surat garansi digital dari *${currentStore}*:\n\n` +
+        `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
+        `*Perangkat / IMEI:* ${imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : 'Smartphone'} (${data.imei})\n` +
+        `*Layanan:* ${data.packageName || 'Layanan Aktivasi IMEI'}\n` +
+        `*Garansi Sinyal:* ${dynWarranty.durationLabel} (${dynWarranty.statusText})\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : data.status.toUpperCase()}\n` +
+        `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
+        `*Cek Nota & Status Garansi Online:* \n${verifyUrl}\n\n` +
+        `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
+    }
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
     window.open(waUrl, '_blank');
@@ -275,7 +375,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
               <span>Kembali</span>
             </button>
             <span className="text-xs font-bold text-ink truncate">
-              {isTopUp ? "Nota Top Up" : isCeirService ? "Nota CEIR" : "Nota & Garansi"}
+              {isTopUp ? "Nota Top Up" : isGatewayService ? "Nota Langganan Gateway" : isCeirService ? "Nota CEIR" : "Nota & Garansi"}
             </span>
           </div>
 
@@ -354,6 +454,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
                   {isTopUp
                     ? "Official Deposit / Top Up Digital Receipt"
+                    : isGatewayService
+                    ? "Official API Key Gateway Subscription Receipt"
                     : isCeirService 
                     ? "Official CEIR Status & IMEI Verification Report" 
                     : "Official IMEI Unblock & Warranty Certificate"}
@@ -370,7 +472,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   data.status === 'pending' || data.status === 'processing' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                   'bg-rose-100 text-rose-800 border border-rose-200'
                 }`}>
-                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : data.status.toUpperCase()}
+                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isGatewayService ? 'LANGGANAN AKTIF' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : data.status.toUpperCase()}
                 </span>
                 <p className="text-[10px] text-slate-400 font-mono mt-1">
                   TRX: #{data.trxId ? data.trxId.substring(0, 16) : 'N/A'}
@@ -378,17 +480,21 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
               </div>
             </div>
 
-            {/* Device & IMEI Highlights */}
+            {/* Device & Highlights Card */}
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {isTopUp ? "Jenis Transaksi" : "Target Perangkat"}
+                  {isTopUp ? "Jenis Transaksi" : isGatewayService ? "Target Layanan" : "Target Perangkat"}
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-sm shrink-0">
                     {isTopUp ? (
                       <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                      </svg>
+                    ) : isGatewayService ? (
+                      <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
                       </svg>
                     ) : (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -398,18 +504,31 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   </div>
                   <div>
                     <h3 className="font-black text-sm text-slate-900">
-                      {isTopUp ? (data.packageName || "Top Up via QRIS") : (imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : "Smartphone Device")}
+                      {isTopUp 
+                        ? (data.packageName || "Top Up Deposit Digital") 
+                        : isGatewayService 
+                        ? (data.packageName || "Langganan API Key Gateway") 
+                        : (imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : "Smartphone Device")}
                     </h3>
                     <p className="text-xs font-mono font-bold text-slate-700 tracking-wider">
-                      {isTopUp ? "Metode: Top Up Deposit Digital" : `IMEI: ${data.imei}`}
+                      {isTopUp 
+                        ? "Metode: Top Up Deposit Digital" 
+                        : isGatewayService 
+                        ? "Akses: Integrasi API QRIS Otomatis" 
+                        : `IMEI: ${data.imei}`}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {!isTopUp && imeiAnalysis?.isValidLuhn && (
+              {!isTopUp && !isGatewayService && imeiAnalysis?.isValidLuhn && (
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-200">
                   GSMA Verified
+                </span>
+              )}
+              {isGatewayService && (
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
+                  Masa Aktif 30 Hari
                 </span>
               )}
               {isTopUp && (
@@ -512,21 +631,45 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                     Saldo Berhasil Ditambahkan
                   </span>
                 </div>
-              ) : !isCeirService ? (
+              ) : isGatewayService ? (
                 <>
-                  {warranty?.expiryDate && (
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
+                    <span className="text-slate-500 font-medium">Masa Aktif Layanan</span>
+                    <span className="font-bold text-slate-800">30 Hari</span>
+                  </div>
+                  {dynWarranty.expiryDate && (
                     <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-500 font-medium">Garansi Sinyal Hingga</span>
+                      <span className="text-slate-500 font-medium">Berlaku Hingga</span>
                       <span className="font-bold text-blue-700">
-                        {formatDate(warranty.expiryDate)}
+                        {formatDate(dynWarranty.expiryDate)}
                       </span>
                     </div>
                   )}
-
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
+                    <span className="text-slate-500 font-medium">Status Langganan</span>
+                    <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                      {dynWarranty.statusText}
+                    </span>
+                  </div>
+                </>
+              ) : !isCeirService ? (
+                <>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
+                    <span className="text-slate-500 font-medium">Masa Garansi Layanan</span>
+                    <span className="font-bold text-slate-800">{dynWarranty.durationLabel}</span>
+                  </div>
+                  {dynWarranty.expiryDate && (
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium">Garansi Sinyal Hingga</span>
+                      <span className="font-bold text-blue-700">
+                        {formatDate(dynWarranty.expiryDate)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
                     <span className="text-slate-500 font-medium">Status Garansi Sinyal</span>
                     <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
-                      {`Sisa ${warranty?.remainingDays || 0} Hari`}
+                      {dynWarranty.statusText}
                     </span>
                   </div>
                 </>
@@ -541,7 +684,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
                     <span className="text-slate-500 font-medium">Waktu Pengerjaan</span>
                     <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px]">
-                      Proses Instant (Otomatis System)
+                      Proses Instant (Otomatis Sistem)
                     </span>
                   </div>
                 </>

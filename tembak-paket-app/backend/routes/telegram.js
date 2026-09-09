@@ -584,10 +584,16 @@ async function handleTelegramCallbackQuery(cb) {
             else if (status === 'pending') apiRes = 'Menunggu Proses';
             else if (status === 'processing') apiRes = 'Sedang diproses';
 
-            const updatedNote = `Status diperbarui menjadi ${status.toUpperCase()} via Telegram`;
+            const { calculateTransactionWarranty } = require('../utils/warrantyHelper');
+            const warranty = calculateTransactionWarranty(trx);
+            let updatedNote = `Status diperbarui menjadi ${status.toUpperCase()} via Telegram`;
+            if (status === 'success' && warranty?.defaultSuccessNote) {
+                updatedNote = warranty.defaultSuccessNote;
+            }
+            const nowIso = new Date().toISOString();
 
-            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ? WHERE id = ?",
-                [status, updatedNote, apiRes, trxId]);
+            await dbRun("UPDATE transactions SET status = ?, admin_note = ?, api_response = ?, updatedAt = ? WHERE id = ?",
+                [status, updatedNote, apiRes, nowIso, trxId]);
 
             // Refund if failed and previously was pending/processing/in_queue
             if (status === 'failed' && (trx.status === 'pending' || trx.status === 'processing' || trx.status === 'in_queue' || trx.status === 'menunggu_saldo_provider')) {

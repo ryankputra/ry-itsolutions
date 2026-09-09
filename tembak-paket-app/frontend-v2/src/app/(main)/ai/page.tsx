@@ -22,7 +22,7 @@ const STORAGE_KEY = 'ry_ai_chat_history_v4';
 
 const QUICK_PROMPTS = [
   { label: 'Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan syarat buka blokir IMEI 3 Bulan?' },
-  { label: '⏱️ Unblock IMEI yang Fast ada?', query: 'Apakah ada unblock IMEI yang fast atau kilat?' },
+  { label: 'Unblock IMEI yang Fast ada?', query: 'Apakah ada unblock IMEI yang fast atau kilat?' },
   { label: 'Gateway GoPay & QRIS', query: 'Jelaskan tentang fitur Payment Gateway GoPay & QRIS SaaS serta biaya aktivasinya' },
   { label: 'Cek Garansi Apple & CEIR', query: 'Bagaimana cara cek garansi Apple dan status CEIR gratis?' },
   { label: 'Cara Topup Saldo QRIS', query: 'Bagaimana cara isi saldo akun otomatis via QRIS tanpa admin?' },
@@ -148,7 +148,7 @@ export default function AiChatPage() {
       q.includes('jam berapa')
     ) {
       return {
-        reply: '### ⏱️ Informasi Kecepatan & Estimasi Unblock IMEI\n\nUntuk saat ini, opsi **Fast / Kilat sedang TIDAK TERSEDIA (nonaktif)**.\n\nLayanan unblock IMEI yang aktif saat ini adalah jalur **Reguler** dengan ketentuan pengerjaan:\n• **Batas Pengiriman Pesanan**: Maksimal pukul **14:00 WIB** setiap harinya.\n• **Estimasi Selesai**: Selesai di hari yang sama, maksimal pukul **00:00 WIB** (tengah malam).\n• Pesanan yang masuk di atas pukul 14:00 WIB akan diproses dalam antrean hari berikutnya.\n\nSemua pengerjaan diproses sesuai antrean sistem harian secara aman dan terverifikasi.',
+        reply: '### Informasi Kecepatan & Estimasi Unblock IMEI\n\nUntuk saat ini, opsi **Fast / Kilat sedang TIDAK TERSEDIA (nonaktif)**.\n\nLayanan unblock IMEI yang aktif saat ini adalah jalur **Reguler** dengan ketentuan pengerjaan:\n• **Batas Pengiriman Pesanan**: Maksimal pukul **14:00 WIB** setiap harinya.\n• **Estimasi Selesai**: Selesai di hari yang sama, maksimal pukul **00:00 WIB** (tengah malam).\n• Pesanan yang masuk di atas pukul 14:00 WIB akan diproses dalam antrean hari berikutnya.\n\nSemua pengerjaan diproses sesuai antrean sistem harian secara aman dan terverifikasi.',
         actions: [
           { label: 'Buka Form IMEI', href: '/unblock-imei'},
           { label: 'Tanya CS WhatsApp', href: 'https://wa.me/6288706611370', isExternal: true},
@@ -166,7 +166,7 @@ export default function AiChatPage() {
       q.includes('kemenperin')
     ) {
       return {
-        reply: `### ℹ️ Ketentuan Paket Unblock IMEI\n\nDi Ry-ITSolutions **TIDAK ADA paket permanen maupun paket resmi Bea Cukai**.\n\nLayanan yang kami sediakan adalah:\n• **Paket 3 Bulan**: Mulai ${formattedPrice3Bln} per IMEI.\n• **Mendukung All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, dan Smartfren.\n• **Garansi Penuh 3 Bulan**: Jika sinyal hilang dalam masa 3 bulan, kami garansi proses ulang hingga sinyal aktif kembali.\n\nKami selalu transparan dan tidak menjanjikan paket permanen yang tidak realistis.`,
+        reply: `### Ketentuan Paket Unblock IMEI\n\nDi Ry-ITSolutions **TIDAK ADA paket permanen maupun paket resmi Bea Cukai**.\n\nLayanan yang kami sediakan adalah:\n• **Paket 3 Bulan**: Mulai ${formattedPrice3Bln} per IMEI.\n• **Mendukung All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, dan Smartfren.\n• **Garansi Penuh 3 Bulan**: Jika sinyal hilang dalam masa 3 bulan, kami garansi proses ulang hingga sinyal aktif kembali.\n\nKami selalu transparan dan tidak menjanjikan paket permanen yang tidak realistis.`,
         actions: [
           { label: 'Order Paket 3 Bulan', href: '/unblock-imei'},
           { label: 'Cek Status CEIR', href: '/cek-ceir'},

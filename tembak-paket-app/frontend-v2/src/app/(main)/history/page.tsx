@@ -270,9 +270,17 @@ function HistoryContent() {
     const s = status?.toLowerCase() || "";
     const isTopUp = serviceType === "topup" || serviceType === "topup_qris" || (packageName || "").toLowerCase().includes("top up") || (packageName || "").toLowerCase().includes("topup");
 
+    const isGateway = serviceType === "gateway" || serviceType === "apikey" || (packageName || "").toLowerCase().includes("gateway") || (packageName || "").toLowerCase().includes("api key");
+    const isCeir = serviceType === "ceir" || serviceType === "barcode" || (packageName || "").toLowerCase().includes("ceir") || (packageName || "").toLowerCase().includes("barcode");
+
     if (s === "success" || s === "completed") {
+      let label = "Selesai (Garansi Aktif)";
+      if (isTopUp) label = "Selesai (Saldo Masuk)";
+      else if (isGateway) label = "Selesai (Langganan Aktif)";
+      else if (isCeir) label = "Selesai (Terverifikasi)";
+
       return {
-        label: isTopUp ? "Selesai (Saldo Masuk)" : "Selesai (Garansi Aktif)",
+        label,
         textColor: "text-emerald-600 font-bold",
         badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
       };
@@ -702,7 +710,7 @@ function HistoryContent() {
                           onClick={() => setReviewTarget(trx)}
                           className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
                         >
-                          <span>⭐ Beri Ulasan (+500 Koin)</span>
+                          <span>Beri Ulasan (+500 Koin)</span>
                         </button>
 
                         <button
@@ -781,6 +789,9 @@ function HistoryContent() {
                 createdAt: selectedInvoiceTrx.createdAt || new Date().toISOString(),
                 amount: selectedInvoiceTrx.amount || selectedInvoiceTrx.totalAmount,
                 status: selectedInvoiceTrx.status || "completed",
+                completedAt: selectedInvoiceTrx.updatedAt || selectedInvoiceTrx.completedAt || selectedInvoiceTrx.createdAt,
+                updatedAt: selectedInvoiceTrx.updatedAt,
+                speed_label: selectedInvoiceTrx.speed_label || selectedInvoiceTrx.speedLabel,
                 warranty: selectedInvoiceTrx.warranty || {
                   hasWarranty: !selectedInvoiceTrx.service_type?.includes("ceir"),
                   remainingDays: selectedInvoiceTrx.remainingDays,

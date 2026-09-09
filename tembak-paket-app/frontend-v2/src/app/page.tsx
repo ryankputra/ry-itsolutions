@@ -512,7 +512,7 @@ export default function LandingPage() {
                   className="p-6 sm:p-8 rounded-3xl bg-canvas border-2 border-primary shadow-md relative space-y-5 flex flex-col justify-between"
                 >
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-primary text-white font-bold text-[10px] uppercase tracking-wider shadow-sm">
-                    Paket Utama ⭐
+                    Paket Utama
                   </div>
                   <div className="space-y-3.5">
                     <span className="text-[11px] font-bold text-primary uppercase">Durasi {pkg?.duration || "1 Bulan"}</span>

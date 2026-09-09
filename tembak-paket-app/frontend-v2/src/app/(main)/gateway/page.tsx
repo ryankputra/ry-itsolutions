@@ -684,7 +684,7 @@ export default function GatewayDeveloperPage() {
             <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
               <div className="flex items-start sm:items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 text-xl font-bold">
-                  ⏳
+                  
                 </div>
                 <div>
                   <h3 className="font-black text-xs sm:text-sm text-amber-900 dark:text-amber-200">
