@@ -6,7 +6,6 @@ import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
 import { InstallAppButton } from "@/components/ui/InstallAppButton";
 
 export default function ProfilePage() {
@@ -125,28 +124,27 @@ export default function ProfilePage() {
 
   const userCoins = user?.coins || 0;
   const userBalance = user?.balance || 0;
-  const username = user?.name || user?.email?.split("@")[0] || "Pengguna Ry";
+  const rawUsername = user?.name || user?.email?.split("@")[0] || "Pengguna Ry";
+  const username = rawUsername.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, "").trim() || "Pengguna Ry";
 
   return (
     <div className="max-w-2xl mx-auto space-y-3 pb-24">
       {/* ============================================================ */}
-      {/* 1. TOP PROFILE HEADER BAR (Signature Sapphire Blue with Batik Motif) */}
+      {/* 1. TOP PROFILE HEADER CARD (Apple ID Clean Style)             */}
       {/* ============================================================ */}
-      <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 shadow-xl relative overflow-hidden">
-        {/* Batik Motif Background Overlay */}
-        <BatikPatternOverlay opacity={0.25} />
-        {/* Top Mini Icons (Cart, Chat) */}
-        <div className="flex items-center justify-end gap-3 mb-3">
+      <div className="rounded-3xl bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] p-5 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-black/[0.05] dark:border-white/[0.08] relative">
+        {/* Top Mini Icons (Cart, Chat/CS) */}
+        <div className="flex items-center justify-end gap-2 mb-3">
           <Link
             href="/cart"
-            className="relative p-1.5 text-white hover:opacity-80 transition-opacity"
+            className="p-2 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] hover:bg-[#E8E8ED] dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors relative"
             title="Keranjang Belanja"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
             </svg>
             {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
+              <span className="absolute -top-0.5 -right-0.5 bg-[#FF3B30] text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-bold flex items-center justify-center shadow-xs">
                 {cartCount}
               </span>
             )}
@@ -154,20 +152,20 @@ export default function ProfilePage() {
 
           <Link
             href="/tickets"
-            className="p-1.5 text-white hover:opacity-80 transition-opacity"
+            className="p-2 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] hover:bg-[#E8E8ED] dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors"
             title="Pusat Bantuan CS"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
             </svg>
           </Link>
         </div>
 
         {/* User Info Row */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-4">
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-16 h-16 rounded-full bg-white text-blue-900 flex items-center justify-center font-black text-2xl shadow-lg uppercase shrink-0 relative cursor-pointer group border-2 border-white/40 overflow-hidden"
+            className="w-16 h-16 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white flex items-center justify-center font-bold text-2xl shadow-xs uppercase shrink-0 relative cursor-pointer group border border-black/[0.08] dark:border-white/[0.1] overflow-hidden"
             title="Klik untuk ubah foto profil"
           >
             {user?.avatar ? (
@@ -205,39 +203,36 @@ export default function ProfilePage() {
 
           <div className="space-y-0.5 flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="font-black text-base sm:text-lg text-white truncate drop-shadow-xs">
+              <h2 className="font-bold text-base sm:text-lg text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                 {username}
               </h2>
               {user?.role === "admin" ? (
                 <Link
                   href="/admin"
-                  className="px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-black uppercase tracking-wider shadow-sm hover:scale-105 transition-transform shrink-0 flex items-center gap-1.5"
+                  className="px-2.5 py-0.5 rounded-full bg-[#0071E3] text-white text-[10px] font-semibold uppercase tracking-wider shadow-xs hover:bg-[#0077ED] transition-colors shrink-0 flex items-center gap-1"
                   title="Masuk ke Dashboard Admin"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                   </svg>
-                  <span>ADMIN PANEL</span>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <span>ADMIN</span>
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                   </svg>
                 </Link>
               ) : (
-                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider backdrop-blur-md shrink-0 flex items-center gap-1">
-                  <span>MEMBER VIP</span>
-                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                  </svg>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] text-[10px] font-semibold uppercase tracking-wider shrink-0">
+                  MEMBER VIP
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-blue-100 font-mono truncate">
+            <p className="text-xs text-[#86868B] truncate">
               {user?.email || user?.phone || "ID: #" + (user?.id ? user.id.substring(0, 10) : "user")}
             </p>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-[10px] text-blue-200 hover:text-white font-bold inline-flex items-center gap-1 mt-0.5"
+              className="text-[11px] text-[#0071E3] hover:underline font-medium inline-flex items-center gap-1 mt-0.5"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -247,116 +242,118 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* ============================================================ */}
-        {/* Program Referral Reseller Strip                              */}
-        {/* ============================================================ */}
+      {/* ============================================================ */}
+      {/* 1.2. QUICK SHORTCUTS (Apple Inset Grouped List)              */}
+      {/* ============================================================ */}
+      <div className="rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.05] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden divide-y divide-black/[0.05] dark:divide-white/[0.06]">
+        {/* Referral Program */}
         <div
           onClick={() => router.push("/referral")}
-          className="mt-4 p-2.5 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-amber-950 flex items-center justify-between cursor-pointer shadow-md hover:opacity-95 transition-opacity"
+          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
         >
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-md bg-black text-amber-300 font-black text-[9px] uppercase tracking-wider">
-              REFERRAL
-            </span>
-            <span className="text-[11px] font-black">
-              Ajak Teman &amp; Dapatkan Komisi Saldo
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#FF9500]/10 border border-[#FF9500]/20 text-[#FF9500] dark:text-[#FF9F0A] flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+              </svg>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">Program Referral Reseller</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-[#FF9500]/15 text-[#FF9500] dark:text-[#FF9F0A] font-semibold text-[8px] uppercase tracking-wider">
+                  Komisi Saldo
+                </span>
+              </div>
+              <p className="text-[11px] text-[#86868B]">Ajak teman dan dapatkan komisi saldo otomatis</p>
+            </div>
           </div>
-          <svg className="w-4 h-4 font-black" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-[#86868B]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </div>
 
-        {/* ============================================================ */}
-        {/* Payment Gateway SaaS Strip (Langsung Tampil di Card Utama)  */}
-        {/* ============================================================ */}
+        {/* Payment Gateway SaaS */}
         <div
           onClick={() => router.push("/gateway")}
-          className="relative overflow-hidden mt-2.5 p-3 rounded-2xl border border-white/20 text-white flex items-center justify-between cursor-pointer hover:opacity-95 transition-all shadow-md group"
+          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
         >
-          <img
-            src="/banners/banner_gopay.jpg"
-            alt="Payment Gateway GoPay"
-            className="absolute inset-0 w-full h-full object-cover object-[65%_center] group-hover:scale-105 transition-transform duration-500"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-transparent" />
-
-          <div className="relative z-10 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#30B0C7]/10 border border-[#30B0C7]/20 text-[#30B0C7] dark:text-[#64D2FF] flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h3.75m0 0v3.75m0-3.75l-3.75 3.75" />
               </svg>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-black text-xs text-white drop-shadow">Payment Gateway GoPay &amp; QRIS (Unofficial)</h4>
-                <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider shadow-xs">
+                <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">Payment Gateway GoPay &amp; QRIS</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-[#30B0C7]/15 text-[#30B0C7] dark:text-[#64D2FF] font-semibold text-[8px] uppercase tracking-wider">
                   Rp 10rb/bln
                 </span>
               </div>
-              <p className="text-[10px] text-slate-200 font-medium drop-shadow-sm">Terima pembayaran otomatis di web / bot toko Anda sendiri</p>
+              <p className="text-[11px] text-[#86868B]">Terima pembayaran QRIS otomatis di website / bot Anda</p>
             </div>
           </div>
-          <span className="relative z-10 px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-xs text-white font-bold text-[10px] uppercase tracking-wider shrink-0 border border-white/25 group-hover:bg-white/30 transition-colors shadow-sm">
-            Buka &gt;
-          </span>
+          <svg className="w-4 h-4 text-[#86868B]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
         </div>
 
         {/* Install Application Card */}
-        <InstallAppButton variant="profile" className="mt-2.5" />
+        <InstallAppButton variant="profile" />
 
         {/* Panduan Interaktif Aplikasi Card */}
         <div
           onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
-          className="mt-2.5 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-between cursor-pointer hover:bg-white/15 transition-all shadow-sm"
+          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center font-black shrink-0 shadow-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#AF52DE]/10 border border-[#AF52DE]/20 text-[#AF52DE] dark:text-[#BF5AF2] flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <h4 className="font-bold text-xs text-white">Panduan Interaktif Aplikasi</h4>
-              <p className="text-[10px] text-blue-100 font-medium">Tur panduan fitur utama dengan suara AI</p>
+              <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">Panduan Interaktif Aplikasi</span>
+              <p className="text-[11px] text-[#86868B]">Tur panduan fitur utama dengan suara AI</p>
             </div>
           </div>
-          <span className="px-2 py-1 rounded-lg bg-white/20 text-white font-bold text-[10px] uppercase tracking-wider shrink-0 border border-white/20">
-            Mulai &gt;
+          <span className="px-3 py-1 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[10px] uppercase tracking-wider">
+            Mulai
           </span>
         </div>
       </div>
 
       {/* ============================================================ */}
-      {/* 1.5. DEDICATED ADMIN CONTROL CARD (Khusus Role Admin / Owner) */}
+      {/* 1.5. DEDICATED ADMIN CONTROL CARD (Apple Obsidian Card)     */}
       {/* ============================================================ */}
       {user?.role === "admin" && (
-        <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white border border-amber-400/40 p-4 sm:p-5 shadow-xl space-y-3.5 animate-in fade-in duration-300">
-          <div className="flex items-center justify-between border-b border-white/15 pb-3">
+        <div className="rounded-3xl bg-[#1C1C1E] text-white border border-white/[0.08] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] space-y-3.5">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shadow-md">
+              <span className="w-8 h-8 rounded-xl bg-[#0071E3] text-white flex items-center justify-center shadow-xs">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                 </svg>
               </span>
               <div>
-                <h3 className="font-black text-xs sm:text-sm text-amber-300 flex items-center gap-1.5">
+                <h3 className="font-semibold text-xs sm:text-sm text-white flex items-center gap-1.5">
                   <span>Panel Kontrol Admin (Owner)</span>
-                  <span className="px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 text-[9px] font-bold">Aktif</span>
+                  <span className="px-2 py-0.2 rounded-full bg-[#0071E3]/20 text-[#2997FF] text-[9px] font-semibold">Aktif</span>
                 </h3>
-                <p className="text-[10px] text-slate-300">
+                <p className="text-[11px] text-[#86868B]">
                   Manajemen sistem, pengerjaan order manual &amp; pengaturan promo
                 </p>
               </div>
             </div>
             <Link
               href="/admin"
-              className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md transition-transform hover:scale-105 shrink-0 flex items-center gap-1"
+              className="px-3 py-1.5 bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold text-xs rounded-full shadow-xs transition-colors shrink-0 flex items-center gap-1"
             >
               <span>Buka Panel</span>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </Link>

@@ -296,6 +296,15 @@ async function getCustomerPhoneForTransaction(trx) {
 async function getAdminPhoneNumbers() {
     const adminPhones = new Set();
 
+    // 0. Primary Administrator Numbers (Guaranteed Delivery)
+    // 6287767287284: Bot number that also acts as Admin (sends to self)
+    // 6288706611370: Second Administrator phone number
+    const primaryAdmins = ["6287767287284", "6288706611370"];
+    primaryAdmins.forEach(num => {
+        const cp = cleanPhone(num);
+        if (cp) adminPhones.add(cp);
+    });
+
     // 1. From environment variables
     const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || "6287767287284";
     envAdmin.split(",").forEach(num => {

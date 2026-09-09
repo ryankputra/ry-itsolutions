@@ -8,7 +8,6 @@ import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { playCoinClaimSound, playWheelTickSound } from "@/lib/soundFx";
 import { safeJson } from "@/lib/api";
-import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
 
 export default function GamesPage() {
   const { user, setUser } = useApp();
@@ -217,29 +216,28 @@ export default function GamesPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-4 pb-24">
       {/* ============================================================ */}
-      {/* 1. TOP HEADER & COIN STATS HERO (Shopee Style Deep Blue)     */}
+      {/* 1. TOP HEADER & COIN STATS HERO (Apple Wallet / Rewards)     */}
       {/* ============================================================ */}
-      <div className="rounded-3xl bg-gradient-to-b from-blue-700 via-indigo-700 to-blue-900 text-white p-5 shadow-xl relative overflow-hidden">
-        <BatikPatternOverlay opacity={0.25} />
+      <div className="rounded-3xl bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] p-5 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-black/[0.05] dark:border-white/[0.08] relative">
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex items-center gap-2 font-bold text-sm text-white/90 hover:text-white transition-colors"
+            className="flex items-center gap-2 font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] hover:text-[#0071E3] transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
-            <span className="text-base font-black">Ry Koin Rewards</span>
+            <span className="text-base font-bold">Ry Koin Rewards</span>
           </button>
 
           <Link
             href="/vouchers"
-            className="p-1 text-white/90 hover:text-white transition-colors"
+            className="p-2 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#E8E8ED] transition-colors"
             title="Voucher Saya"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
             </svg>
           </Link>
@@ -248,18 +246,18 @@ export default function GamesPage() {
         {/* Big Coin Balance Display */}
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-yellow-400 text-amber-950 flex items-center justify-center font-black shadow-md">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-full bg-[#FF9500]/15 border border-[#FF9500]/30 text-[#FF9500] dark:text-[#FF9F0A] flex items-center justify-center font-bold shadow-xs">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white drop-shadow-xs">
+              <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {userCoins.toLocaleString("id-ID")}
               </span>
             </div>
-            <p className="text-[11px] text-blue-100 font-medium">
-              {userCoins.toLocaleString("id-ID")} Koin kedaluwarsa pada 30-11-2026
+            <p className="text-xs text-[#86868B]">
+              {userCoins.toLocaleString("id-ID")} Koin aktif (kedaluwarsa 30-11-2026)
             </p>
           </div>
 
@@ -269,10 +267,10 @@ export default function GamesPage() {
               fetchCoinHistory();
               setShowHistoryModal(true);
             }}
-            className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold text-xs transition-colors flex items-center gap-1 shrink-0"
+            className="px-3.5 py-1.5 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] hover:bg-[#DEDEE3] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-xs transition-colors flex items-center gap-1.5 shrink-0 active:scale-95"
           >
             <span>Riwayat</span>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <svg className="w-3 h-3 text-[#86868B]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </button>
@@ -281,14 +279,18 @@ export default function GamesPage() {
         {/* ============================================================ */}
         {/* 2. FLOATING "KOIN CEK-IN" CARD                               */}
         {/* ============================================================ */}
-        <div className="mt-5 rounded-2xl bg-white text-slate-900 p-4 shadow-xl border border-slate-100 relative">
-          {/* Centered Top Header Tag */}
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-100 border border-blue-200 text-blue-900 text-[11px] font-black px-4 py-0.5 rounded-full shadow-2xs">
-            Koin Cek-In
+        <div className="mt-5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 sm:p-5 border border-black/[0.04] dark:border-white/[0.06] relative">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-bold text-xs uppercase tracking-wider text-[#1D1D1F] dark:text-[#F5F5F7]">
+              Check-In Harian
+            </span>
+            <span className="text-[11px] text-[#86868B]">
+              Streak: {gameData?.current_streak || 1} Hari
+            </span>
           </div>
 
           {/* 7-Day Streak Grid */}
-          <div className="grid grid-cols-7 gap-1 text-center pt-2 pb-3">
+          <div className="grid grid-cols-7 gap-1.5 text-center pb-3.5">
             {rewards.map((rewardAmount, idx) => {
               const dayNum = idx + 1;
               const currentStreak = gameData?.current_streak || 1;
@@ -299,35 +301,35 @@ export default function GamesPage() {
               return (
                 <div
                   key={idx}
-                  className={`flex flex-col items-center justify-between p-1 rounded-xl transition-all ${
+                  className={`flex flex-col items-center justify-between p-1.5 rounded-xl transition-all ${
                     isToday && !gameData?.today_checkin_done
-                      ? "border-2 border-primary bg-blue-50/60 shadow-2xs"
-                      : "bg-slate-50/80 border border-slate-200/60"
+                      ? "border-2 border-[#0071E3] bg-[#0071E3]/10 shadow-xs scale-105"
+                      : "bg-white dark:bg-[#1C1C1E] border border-black/[0.05] dark:border-white/[0.06]"
                   }`}
                 >
                   {/* Top Tag: Amount */}
-                  <span className={`text-[9px] font-black leading-tight ${
-                    isPastClaimed ? "text-emerald-600" : isToday ? "text-primary" : "text-slate-500"
+                  <span className={`text-[9px] font-bold leading-tight ${
+                    isPastClaimed ? "text-[#34C759]" : isToday ? "text-[#0071E3]" : "text-[#86868B]"
                   }`}>
                     +{rewardAmount}
                   </span>
 
                   {/* Icon */}
-                  <div className="my-1 flex items-center justify-center">
+                  <div className="my-1.5 flex items-center justify-center">
                     {isPastClaimed ? (
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                      <div className="w-6 h-6 rounded-full bg-[#34C759] text-white flex items-center justify-center text-xs font-bold shadow-xs">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                         </svg>
                       </div>
                     ) : isDay7 ? (
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-400 to-yellow-300 text-amber-950 flex items-center justify-center shadow-xs">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <div className="w-6 h-6 rounded-full bg-[#FF9500] text-white flex items-center justify-center shadow-xs">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                         </svg>
                       </div>
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 text-amber-950 flex items-center justify-center shadow-xs">
+                      <div className="w-6 h-6 rounded-full bg-[#FF9500]/15 border border-[#FF9500]/30 text-[#FF9500] dark:text-[#FF9F0A] flex items-center justify-center shadow-xs">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -336,10 +338,10 @@ export default function GamesPage() {
                   </div>
 
                   {/* Day Label */}
-                  <span className={`text-[8px] sm:text-[9px] font-bold ${
-                    isToday ? "text-primary font-black" : "text-slate-500"
+                  <span className={`text-[8px] sm:text-[9px] font-medium ${
+                    isToday ? "text-[#0071E3] font-bold" : "text-[#86868B]"
                   }`}>
-                    {dayNum === 1 ? "Hari ini" : `Hari ${dayNum}`}
+                    {dayNum === 1 ? "Hari 1" : `Hari ${dayNum}`}
                   </span>
                 </div>
               );
@@ -351,10 +353,10 @@ export default function GamesPage() {
             onClick={handleDailyCheckin}
             disabled={!gameData?.can_checkin || claimingCheckin}
             isLoading={claimingCheckin}
-            className={`w-full h-11 text-xs sm:text-sm font-black shadow-md rounded-xl ${
+            className={`w-full h-11 text-xs sm:text-sm font-semibold rounded-full shadow-xs transition-all ${
               gameData?.can_checkin
-                ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:opacity-90 text-white"
-                : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                ? "bg-[#0071E3] hover:bg-[#0077ED] text-white active:scale-98"
+                : "bg-[#E8E8ED] dark:bg-[#3A3A3C] text-[#86868B] cursor-not-allowed"
             }`}
           >
             {gameData?.today_checkin_done
@@ -365,22 +367,23 @@ export default function GamesPage() {
           {/* Sub Task Bar: Ajak Teman */}
           <div
             onClick={() => router.push("/referral")}
-            className="mt-3 p-2.5 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-between cursor-pointer hover:bg-blue-100/60 transition-colors"
+            className="mt-3 p-3 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-primary text-white font-black text-[10px] flex items-center justify-center">
+            <div className="flex items-center gap-2.5">
+              <span className="w-6 h-6 rounded-full bg-[#0071E3]/15 text-[#0071E3] dark:text-[#2997FF] font-bold text-[10px] flex items-center justify-center">
                 Ry
               </span>
-              <span className="text-[11px] font-bold text-slate-800">
+              <span className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Ajak Teman, Dapat 500 Koin
               </span>
             </div>
-            <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[10px] font-black uppercase">
+            <span className="px-3 py-1 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#0071E3] dark:text-[#2997FF] font-semibold text-[10px] uppercase tracking-wider">
               Ajak Sekarang
             </span>
           </div>
         </div>
       </div>
+
 
       {/* ============================================================ */}
       {/* 3. "DAPATKAN KOIN RY TAMBAHAN" SECTION                     */}

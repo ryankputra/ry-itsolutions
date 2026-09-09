@@ -124,18 +124,18 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
     return (
       <div
         onClick={handleInstallClick}
-        className={`p-3.5 rounded-xl bg-slate-900 text-white flex items-center justify-between cursor-pointer shadow-sm hover:bg-slate-800 transition-colors ${className}`}
+        className={`p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors ${className}`}
       >
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-slate-800 text-white flex items-center justify-center font-semibold shrink-0 border border-slate-700 shadow-xs">
-            <Smartphone className="w-5 h-5" />
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-[#0071E3]/10 border border-[#0071E3]/20 text-[#0071E3] dark:text-[#2997FF] flex items-center justify-center shrink-0">
+            <Smartphone className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-semibold text-xs text-white">Install Aplikasi Official</h4>
-            <p className="text-[10px] text-slate-400 font-medium">Akses transaksi cepat langsung dari layar utama</p>
+            <h4 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">Install Aplikasi Official</h4>
+            <p className="text-[11px] text-[#86868B] font-normal">Akses transaksi cepat langsung dari layar utama</p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-lg bg-white/10 text-white font-medium text-[10px] uppercase tracking-wider shrink-0 border border-white/10">
+        <span className="px-3 py-1 rounded-full bg-[#0071E3] text-white font-semibold text-[10px] uppercase tracking-wider shrink-0 hover:bg-[#0077ED] transition-all active:scale-95 shadow-xs">
           Install
         </span>
       </div>

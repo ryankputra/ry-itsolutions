@@ -8,7 +8,6 @@ import { CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { safeJson } from "@/lib/api";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
-import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
 
 export default function DashboardPage() {
   const { user } = useApp();
@@ -539,8 +538,7 @@ export default function DashboardPage() {
           onClick={() => router.push("/vouchers")}
           className="rounded-xl p-4 bg-gray-900 text-white border border-gray-800 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:bg-gray-800 transition-colors"
         >
-          <BatikPatternOverlay opacity={0.35} />
-          <div className="space-y-1 relative z-10">
+                    <div className="space-y-1 relative z-10">
             <span className="inline-block bg-white text-primary text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">
               VOUCHER DISKON
             </span>
@@ -598,8 +596,7 @@ export default function DashboardPage() {
         onClick={() => router.push("/referral")}
         className="rounded-2xl p-3.5 sm:p-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-md flex items-center justify-between cursor-pointer group hover:opacity-95 transition-opacity relative overflow-hidden"
       >
-        <BatikPatternOverlay opacity={0.3} />
-        <div className="space-y-0.5 relative z-10">
+                <div className="space-y-0.5 relative z-10">
           <span className="inline-block bg-white text-amber-900 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
             BONUS REFERRAL
           </span>
