@@ -148,29 +148,29 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-16">
       {/* ============================================================ */}
-      {/* 1. FLOATING WALLET STRIP (Clean & Functional)                */}
+      {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
       {/* ============================================================ */}
-      <div data-tour="wallet-card" className="rounded-2xl bg-canvas border border-hairline shadow-sm p-3.5 sm:p-4 transition-all">
-        <div className="grid grid-cols-4 divide-x divide-hairline items-center text-center">
+      <div data-tour="wallet-card" className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3.5 sm:p-4 transition-all">
+        <div className="grid grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800 items-center text-center">
           {/* Section 1: Saldo Dompet */}
           <div
             onClick={() => router.push("/topup")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group hover:opacity-85 transition-opacity"
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1 text-primary font-bold text-xs">
-              <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium text-xs">
+              <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
               </svg>
-              <span className="font-bold text-[11px] sm:text-xs">Saldo Ry</span>
+              <span className="text-[11px] sm:text-xs">Saldo Ry</span>
             </div>
-            <div className="mt-0.5 flex items-center justify-center gap-1">
-              <span className="text-xs sm:text-sm font-black text-ink">
+            <div className="mt-1 flex items-center justify-center gap-1">
+              <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white tracking-tight">
                 {showBalance ? `Rp ${(user?.balance || 0).toLocaleString("id-ID")}` : "Rp ••••••"}
               </span>
               <button
                 type="button"
                 onClick={toggleShowBalance}
-                className="text-ink-muted hover:text-ink transition-colors p-0.5"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-0.5"
                 title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
               >
                 {showBalance ? (
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                 )}
               </button>
             </div>
-            <span className="text-[9px] text-primary font-bold mt-0.5 block">
+            <span className="text-[10px] text-gray-400 font-medium mt-0.5 block group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
               + Isi Saldo
             </span>
           </div>
@@ -193,37 +193,35 @@ export default function DashboardPage() {
           {/* Section 2: Koin Ry */}
           <div
             onClick={() => router.push("/games")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group hover:opacity-85 transition-opacity"
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1 text-amber-600 font-bold text-xs">
-              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-bold text-[11px] sm:text-xs text-amber-700">Koin Ry</span>
+            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium text-xs">
+              <span className="text-xs">🪙</span>
+              <span className="text-[11px] sm:text-xs">Koin Ry</span>
             </div>
-            <span className="text-xs sm:text-sm font-black text-ink mt-0.5">
+            <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mt-1 tracking-tight">
               {userCoins.toLocaleString("id-ID")}
             </span>
-            <span className="text-[9px] text-amber-600 font-bold mt-0.5 block">
-              Klaim &amp; Main
+            <span className="text-[10px] text-gray-400 font-medium mt-0.5 block group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+              Klaim Koin
             </span>
           </div>
 
           {/* Section 3: Voucher Promo */}
           <div
             onClick={() => router.push("/vouchers")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group hover:opacity-85 transition-opacity"
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1 text-indigo-600 font-bold text-xs">
-              <svg className="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium text-xs">
+              <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
               </svg>
-              <span className="font-bold text-[11px] sm:text-xs">Voucher</span>
+              <span className="text-[11px] sm:text-xs">Voucher</span>
             </div>
-            <span className="text-xs sm:text-sm font-black text-indigo-600 mt-0.5">
-              {vouchers.length > 0 ? `${vouchers.length} Kupon` : "Klaim Kupon"}
+            <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mt-1 tracking-tight">
+              {vouchers.length > 0 ? `${vouchers.length} Kupon` : "Klaim"}
             </span>
-            <span className="text-[9px] text-indigo-500 font-bold mt-0.5 block">
+            <span className="text-[10px] text-gray-400 font-medium mt-0.5 block group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
               Cek Promo
             </span>
           </div>
@@ -231,13 +229,13 @@ export default function DashboardPage() {
           {/* Section 4: Instant Top Up Button */}
           <div
             onClick={() => router.push("/topup")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group hover:opacity-85 transition-opacity"
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs group-hover:scale-105 transition-transform">
+            <div className="w-7 h-7 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center font-medium text-xs shadow-xs group-hover:bg-gray-800 transition-colors">
               Rp
             </div>
-            <span className="text-[9px] font-bold text-ink mt-1">
-              Top Up Cepat
+            <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 mt-1">
+              Top Up
             </span>
           </div>
         </div>
@@ -246,14 +244,14 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
       {/* ============================================================ */}
-      <div className="bg-canvas border border-hairline rounded-2xl p-3 sm:p-4 shadow-2xs">
+      <div className="bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 text-center">
           {[
             {
               name: "Buka IMEI",
               href: "/unblock-imei",
               tourKey: "service-unblock",
-              iconBg: "bg-blue-50 border-blue-200/80 text-primary",
+              iconBg: "bg-gray-50 dark:bg-gray-800 border-gray-200/80 dark:border-gray-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-100 dark:group-hover:bg-gray-700",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -264,7 +262,7 @@ export default function DashboardPage() {
               name: "Diagnostik",
               href: "/cek-ceir",
               tourKey: "service-ceir",
-              iconBg: "bg-emerald-50 border-emerald-200/80 text-emerald-600",
+              iconBg: "bg-gray-50 dark:bg-gray-800 border-gray-200/80 dark:border-gray-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-100 dark:group-hover:bg-gray-700",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -275,7 +273,7 @@ export default function DashboardPage() {
               name: "Cek Garansi",
               href: "/cek-garansi",
               tourKey: "service-garansi",
-              iconBg: "bg-indigo-50 border-indigo-200/80 text-indigo-600",
+              iconBg: "bg-gray-50 dark:bg-gray-800 border-gray-200/80 dark:border-gray-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-100 dark:group-hover:bg-gray-700",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -297,7 +295,7 @@ export default function DashboardPage() {
               name: "Game Koin",
               href: "/games",
               tourKey: "service-games",
-              iconBg: "bg-amber-50 border-amber-200/80 text-amber-600",
+              iconBg: "bg-gray-50 dark:bg-gray-800 border-gray-200/80 dark:border-gray-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-100 dark:group-hover:bg-gray-700",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 016.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
@@ -461,7 +459,7 @@ export default function DashboardPage() {
         {/* Left Discovery: Sinyal Live & Layanan */}
         <div
           onClick={() => router.push("/unblock-imei")}
-          className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs flex flex-col justify-between cursor-pointer hover:border-primary/40 transition-all"
+          className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer hover:border-gray-400 transition-all"
         >
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-ink flex items-center gap-1">
@@ -524,10 +522,10 @@ export default function DashboardPage() {
       {/* 5. VOUCHER & BEST SELLER PRODUCT SECTION                    */}
       {/* ============================================================ */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Left Column: VOUCHER CARD */}
+        {/* Left Column: VOUCHER CARD (Clean Obsidian Accent) */}
         <div
           onClick={() => router.push("/vouchers")}
-          className="rounded-2xl p-3.5 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white shadow-md flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:opacity-95 transition-opacity"
+          className="rounded-xl p-4 bg-gray-900 text-white border border-gray-800 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:bg-gray-800 transition-colors"
         >
           <BatikPatternOverlay opacity={0.35} />
           <div className="space-y-1 relative z-10">
@@ -611,7 +609,7 @@ export default function DashboardPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari cepat: Ketik/Paste IMEI (15 digit) atau ID Transaksi..."
-            className="w-full pl-11 pr-10 py-3 rounded-2xl bg-canvas border border-hairline shadow-sm text-xs sm:text-sm text-ink placeholder:text-ink-muted outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+            className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-300 transition-all"
           />
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -721,23 +719,27 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-2">
             {recentTrx.map((trx, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-canvas border border-hairline rounded-2xl hover:border-primary/30 transition-all shadow-2xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-primary font-bold shrink-0">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <div key={idx} className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 rounded-xl hover:border-gray-300 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200/70 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 font-medium shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
                     </svg>
                   </div>
                   <div>
-                    <p className="font-bold text-xs text-ink line-clamp-1">{trx.packageName || "Layanan IMEI"}</p>
-                    <p className="text-[10px] text-ink-muted mt-0.5 font-mono">
+                    <p className="font-semibold text-xs text-gray-900 dark:text-white line-clamp-1">{trx.packageName || "Layanan IMEI"}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5 font-mono">
                       {trx.imei ? (trx.imei.split(',').length > 1 ? `${trx.imei.split(',')[0]} (+${trx.imei.split(',').length - 1})` : trx.imei) : trx.targetPhone}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-xs text-ink">Rp {(trx.amount || trx.price || trx.totalAmount || trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
-                  <span className={`inline-block mt-0.5 px-2 py-0.5 text-[8px] font-bold rounded-md uppercase ${trx.status === 'success' || trx.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : trx.status === 'failed' || trx.status === 'canceled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                  <p className="font-semibold text-xs text-gray-900 dark:text-white">Rp {(trx.amount || trx.price || trx.totalAmount || trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
+                  <span className={`inline-block mt-0.5 px-2 py-0.5 text-[9px] font-medium rounded ${
+                    trx.status === 'success' || trx.status === 'completed' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200/60' :
+                    trx.status === 'failed' || trx.status === 'canceled' ? 'bg-red-50 text-red-700 border border-red-200/50' :
+                    'bg-amber-50 text-amber-700 border border-amber-200/50'
+                  }`}>
                     {trx.status === 'completed' ? 'success' : trx.status}
                   </span>
                 </div>

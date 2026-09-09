@@ -15,21 +15,21 @@ export function Button({
   disabled,
   ...props 
 }: ButtonProps) {
-  const baseStyles = "inline-flex items-center justify-center font-normal transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-focus disabled:pointer-events-none disabled:opacity-50 active:scale-[0.95]";
+  const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]";
   
   const variants = {
-    primary: "bg-primary text-white hover:bg-primary-focus rounded-full shadow-none",
-    secondary: "bg-transparent text-primary border border-primary rounded-full hover:bg-primary/5",
-    outline: "border border-hairline bg-transparent hover:bg-parchment text-ink rounded-lg",
-    ghost: "hover:bg-parchment text-ink rounded-lg",
-    danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg",
-    pearl: "bg-surface-pearl text-ink-muted border-[3px] border-divider rounded-[11px] hover:bg-divider"
+    primary: "bg-gray-900 text-white hover:bg-gray-800 rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-transparent",
+    secondary: "bg-white text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 shadow-[0_1px_2px_rgba(0,0,0,0.02)]",
+    outline: "border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.02)]",
+    ghost: "hover:bg-gray-100/70 text-gray-600 hover:text-gray-900 rounded-lg",
+    danger: "bg-red-50 text-red-600 hover:bg-red-100/80 border border-red-200/60 rounded-lg",
+    pearl: "bg-gray-50 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-100"
   };
 
   const sizes = {
-    sm: "h-9 px-4 text-xs",
-    md: "h-11 px-6 text-sm",
-    lg: "h-14 px-8 text-base"
+    sm: "h-8 px-3 text-xs tracking-tight",
+    md: "h-10 px-4 text-sm tracking-tight",
+    lg: "h-12 px-6 text-sm tracking-tight"
   };
 
   return (

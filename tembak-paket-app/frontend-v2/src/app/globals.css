@@ -3,32 +3,32 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #0066cc;
-  --color-primary-focus: #0071e3;
-  --color-primary-on-dark: #2997ff;
-  --color-ink: #1d1d1f;
-  --color-ink-muted: #7a7a7a;
-  --color-divider: #f0f0f0;
-  --color-hairline: #e0e0e0;
+  --color-primary: #0f172a;
+  --color-primary-focus: #1e293b;
+  --color-primary-on-dark: #f8fafc;
+  --color-ink: #111827;
+  --color-ink-muted: #4b5563;
+  --color-divider: #f3f4f6;
+  --color-hairline: #e5e7eb;
   --color-canvas: #ffffff;
-  --color-parchment: #f5f5f7;
-  --color-surface-pearl: #fafafc;
-  --color-surface-tile: #272729;
+  --color-parchment: #fafafa;
+  --color-surface-pearl: #f3f4f6;
+  --color-surface-tile: #1e293b;
   
-  --font-sans: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
-  --font-display: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 @layer base {
   :root {
-    --background: #ffffff;
-    --foreground: #1d1d1f;
+    --background: #fafafa;
+    --foreground: #111827;
   }
 
   .dark {
-    --color-primary: #38bdf8;
-    --color-primary-focus: #0ea5e9;
-    --color-primary-on-dark: #60a5fa;
+    --color-primary: #f8fafc;
+    --color-primary-focus: #e2e8f0;
+    --color-primary-on-dark: #0f172a;
     --color-ink: #f8fafc;
     --color-ink-muted: #94a3b8;
     --color-divider: #1e293b;
@@ -45,9 +45,9 @@
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
-    font-size: 17px;
-    line-height: 1.47;
-    letter-spacing: -0.022em;
+    font-size: 15px;
+    line-height: 1.55;
+    letter-spacing: -0.015em;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.2s ease, color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
@@ -61,7 +61,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    letter-spacing: -0.022em;
+    letter-spacing: -0.02em;
   }
 }
 

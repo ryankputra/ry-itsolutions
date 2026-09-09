@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
-import { BatikPatternOverlay } from "@/components/ui/BatikPattern";
 import { InstallAppButton } from "@/components/ui/InstallAppButton";
 
 export function EcommerceHeader() {
@@ -150,13 +149,12 @@ export function EcommerceHeader() {
       {/* ============================================================ */}
       {/* MOBILE TOP HEADER (Signature Ry-ITSolutions Blue)            */}
       {/* ============================================================ */}
-      <div className="lg:hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 py-2 shadow-md flex items-center gap-2.5 relative overflow-hidden">
-        <BatikPatternOverlay opacity={0.2} />
-        {/* Search Bar (Clean White Input without Camera icon) */}
+      <div className="lg:hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-gray-900 dark:text-gray-100 border-b border-gray-200/80 dark:border-gray-800 px-3.5 py-2.5 flex items-center gap-2.5 relative transition-colors">
+                {/* Search Bar (Clean White Input without Camera icon) */}
         <div ref={searchRef} data-tour="search-bar" className="flex-1 relative">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-            <div className="w-full h-9 rounded-xl bg-white flex items-center px-2.5 shadow-xs">
-              <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <div className="w-full h-9 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 flex items-center px-2.5">
+              <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
               <input
@@ -206,7 +204,7 @@ export function EcommerceHeader() {
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
-          className="p-1 text-amber-300 hover:text-amber-200 transition-colors shrink-0 flex items-center gap-1 font-bold text-[11px]"
+          className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0 flex items-center gap-1 font-medium text-[11px]"
           title="Panduan Aplikasi Interaktif"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
@@ -217,26 +215,26 @@ export function EcommerceHeader() {
         {/* Cart Icon with real Cart Count */}
         <Link
           href="/cart"
-          className="relative p-1.5 text-white hover:opacity-80 transition-opacity"
+          className="relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
           title="Keranjang Belanja"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
           </svg>
           {cartCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
+            <span className="absolute -top-0.5 -right-0.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full min-w-[15px] h-3.5 px-1 text-[8px] font-bold flex items-center justify-center">
               {cartCount}
             </span>
           )}
         </Link>
 
         {/* Theme Toggle (Mobile) */}
-        <ThemeToggle className="bg-white/10 text-white border-white/20 hover:bg-white/20 !p-1.5 shrink-0" />
+        <ThemeToggle className="text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 !p-1.5 shrink-0 rounded-lg" />
 
         {/* Chat / CS WhatsApp Icon */}
         <Link
           href="/tickets"
-          className="p-1.5 text-white hover:opacity-80 transition-opacity"
+          className="p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
           title="Pusat Bantuan CS"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -250,11 +248,11 @@ export function EcommerceHeader() {
       {/* ============================================================ */}
       <div className="hidden lg:block bg-canvas/95 backdrop-blur-md border-b border-hairline">
         {/* 1. Top Sub-Bar */}
-        <div className="bg-slate-900 text-slate-300 text-[11px] py-1.5 px-8">
+        <div className="bg-gray-50/90 dark:bg-slate-950/80 border-b border-gray-200/60 dark:border-gray-800/60 text-gray-500 text-[11px] py-1 px-8">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 Server Aktif 24 Jam • QRIS Otomatis
               </span>
               <span className="text-slate-500">|</span>
@@ -267,7 +265,7 @@ export function EcommerceHeader() {
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
-                className="hover:text-amber-300 transition-colors font-bold text-amber-400 flex items-center gap-1 cursor-pointer"
+                className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -300,16 +298,16 @@ export function EcommerceHeader() {
         {/* 2. Main Desktop Header Bar */}
         <div className="max-w-7xl mx-auto px-8 py-3 flex items-center gap-8 justify-between">
           <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 flex items-center justify-center text-white font-black text-lg shadow-md shadow-primary/20 group-hover:scale-105 transition-transform">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+            <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900 font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
               </svg>
             </div>
             <div>
-              <span className="font-black text-base tracking-tight text-ink block leading-none">
+              <span className="font-semibold text-sm tracking-tight text-gray-900 dark:text-white block leading-none">
                 Ry-ITSolutions
               </span>
-              <span className="text-[10px] text-ink-muted font-semibold tracking-wider uppercase">
+              <span className="text-[10px] text-gray-400 font-medium tracking-wide uppercase mt-0.5 block">
                 Digital Marketplace
               </span>
             </div>
@@ -325,13 +323,13 @@ export function EcommerceHeader() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setShowSearchDropdown(true)}
                   placeholder="Cari layanan, ketik IMEI, atau cek garansi..."
-                  className="w-full h-11 pl-4 pr-11 rounded-2xl bg-parchment/60 hover:bg-parchment border border-hairline focus:border-primary focus:bg-canvas focus:ring-2 focus:ring-primary/20 text-sm text-ink outline-none transition-all shadow-2xs"
+                  className="w-full h-9 pl-3.5 pr-10 rounded-lg bg-gray-50/80 hover:bg-gray-50 border border-gray-200/80 focus:border-gray-400 focus:bg-white focus:ring-1 focus:ring-gray-300 text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
                 />
                 <button
                   type="submit"
-                  className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center font-bold text-xs shadow-xs"
+                  className="absolute right-1 top-1 bottom-1 px-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center font-medium text-xs"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                   </svg>
                 </button>
@@ -351,7 +349,7 @@ export function EcommerceHeader() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
               </svg>
               {cartCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black flex items-center justify-center shadow-xs">
+                <span className="absolute top-0.5 right-0.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full min-w-[15px] h-3.5 px-1 text-[8px] font-bold flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
@@ -359,14 +357,12 @@ export function EcommerceHeader() {
 
             <Link
               href="/games"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 font-bold text-xs transition-all shadow-2xs group"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100/80 border border-gray-200/80 text-gray-700 text-xs transition-all group"
             >
-              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center text-[10px] font-black shadow-xs group-hover:rotate-12 transition-transform">
-                🪙
-              </div>
+              <span className="text-xs">🪙</span>
               <div>
-                <span className="text-[9px] text-amber-900 block leading-tight">Koin Ry</span>
-                <span className="text-xs font-black text-amber-700">
+                <span className="text-[9px] text-gray-400 font-medium block leading-tight">Koin Ry</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">
                   {(user?.coins || 0).toLocaleString("id-ID")}
                 </span>
               </div>
@@ -374,14 +370,14 @@ export function EcommerceHeader() {
 
             <Link
               href="/topup"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary font-bold text-xs transition-all shadow-2xs group"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100/80 border border-gray-200/80 text-gray-700 text-xs transition-all group"
             >
-              <svg className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-900" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
               </svg>
               <div className="text-left">
-                <span className="text-[9px] text-ink-muted block leading-tight">Saldo Akun</span>
-                <span className="text-xs font-black text-ink">
+                <span className="text-[9px] text-gray-400 font-medium block leading-tight">Saldo</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">
                   Rp {(user?.balance || 0).toLocaleString("id-ID")}
                 </span>
               </div>
@@ -390,13 +386,13 @@ export function EcommerceHeader() {
             {user?.role === "admin" && (
               <Link
                 href="/admin"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shadow-md hover:bg-amber-300 transition-all hover:scale-105"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-xs hover:bg-gray-800 transition-colors shadow-xs"
                 title="Buka Panel Admin (Owner)"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
-                <span>ADMIN PANEL</span>
+                <span>Admin</span>
               </Link>
             )}
 
@@ -500,7 +496,7 @@ export function EcommerceHeader() {
             ) : (
               <Link
                 href="/login"
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-xs shadow-md hover:opacity-90 transition-opacity"
+                className="px-3.5 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium text-xs hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-xs"
               >
                 Masuk / Daftar
               </Link>
@@ -509,7 +505,7 @@ export function EcommerceHeader() {
         </div>
 
         {/* 3. Sub-Header Category Tabs */}
-        <div className="border-t border-hairline/80 bg-canvas/50">
+        <div className="border-t border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-slate-900/60">
           <div className="max-w-7xl mx-auto px-8 flex items-center gap-6 overflow-x-auto text-xs py-2">
             {navLinks.map((item, idx) => {
               const isActive = pathname === item.href;
@@ -517,13 +513,13 @@ export function EcommerceHeader() {
                 <Link
                   key={idx}
                   href={item.href}
-                  className={`py-1 font-bold whitespace-nowrap transition-colors relative flex items-center gap-1.5 ${
-                    isActive ? "text-primary font-black" : "text-ink-muted hover:text-ink"
+                  className={`py-1 font-medium whitespace-nowrap transition-colors relative flex items-center gap-1.5 ${
+                    isActive ? "text-gray-900 dark:text-white font-semibold" : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                   }`}
                 >
                   <span>{item.label}</span>
                   {isActive && (
-                    <span className="absolute bottom-[-9px] left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+                    <span className="absolute bottom-[-9px] left-0 right-0 h-[2px] bg-gray-900 dark:bg-white rounded-full"></span>
                   )}
                 </Link>
               );

@@ -5,9 +5,8 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function Card({ children, className = "", glass, ...props }: CardProps) {
-  // Apple store-utility-card: rounded 18px (lg), 1px solid hairline, bg white, no shadow by default
-  const baseStyles = "rounded-[18px] border border-hairline bg-canvas p-6";
-  const glassStyles = "rounded-[18px] border border-hairline bg-parchment/80 backdrop-blur-md p-6";
+  const baseStyles = "rounded-xl border border-gray-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]";
+  const glassStyles = "rounded-xl border border-gray-200/60 bg-white/80 backdrop-blur-md p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]";
   
   return (
     <div className={`${glass ? glassStyles : baseStyles} ${className}`} {...props}>
