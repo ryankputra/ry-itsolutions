@@ -42,20 +42,20 @@ export function FloatingOrnaments({ config }: { config?: OrnamentConfig }) {
 
     const isMobile = window.innerWidth < 640;
     const count = isMobile
-      ? (config.particle_count_mobile || 5)
-      : (config.particle_count_desktop || 12);
+      ? (config.particle_count_mobile || 4)
+      : (config.particle_count_desktop || 8);
 
-    const baseDuration = config.speed === 'fast' ? 7 : config.speed === 'medium' ? 10 : 14;
+    const baseDuration = config.speed === 'fast' ? 8 : config.speed === 'medium' ? 12 : 16;
 
     const generated: Particle[] = Array.from({ length: count }, (_, i) => ({
       id: i,
       svgUrl: config.particle_svgs![i % config.particle_svgs!.length],
-      left: Math.round(Math.random() * 92 + 4), // 4% to 96% of screen
-      size: Math.round(Math.random() * 12 + 18), // 18px to 30px
+      left: Math.round(Math.random() * 90 + 5), // 5% to 95% of screen
+      size: Math.round(Math.random() * 5 + 11), // 11px to 16px (delicate celebratory flakes)
       duration: Math.round((baseDuration + Math.random() * 6) * 10) / 10,
       delay: Math.round(Math.random() * 8 * 10) / 10,
       rotation: Math.round(Math.random() * 360),
-      drift: Math.round((Math.random() - 0.5) * 40),
+      drift: Math.round((Math.random() - 0.5) * 30),
     }));
 
     setParticles(generated);
@@ -65,7 +65,7 @@ export function FloatingOrnaments({ config }: { config?: OrnamentConfig }) {
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none overflow-hidden z-30"
+      className="fixed inset-0 pointer-events-none overflow-hidden z-20 select-none"
       aria-hidden="true"
     >
       {particles.map((p) => (
@@ -73,10 +73,10 @@ export function FloatingOrnaments({ config }: { config?: OrnamentConfig }) {
           key={p.id}
           src={p.svgUrl}
           alt=""
-          className="absolute will-change-transform opacity-35 dark:opacity-25 select-none"
+          className="absolute will-change-transform opacity-25 dark:opacity-20 select-none pointer-events-none"
           style={{
             left: `${p.left}%`,
-            top: '-35px',
+            top: '-24px',
             width: `${p.size}px`,
             height: `${p.size}px`,
             animation: `floatingDriftDown ${p.duration}s cubic-bezier(0.4, 0, 0.2, 1) infinite`,
@@ -89,17 +89,17 @@ export function FloatingOrnaments({ config }: { config?: OrnamentConfig }) {
       <style jsx global>{`
         @keyframes floatingDriftDown {
           0% {
-            transform: translateY(-35px) rotate(0deg) translateX(0);
+            transform: translateY(-24px) rotate(0deg) translateX(0);
             opacity: 0;
           }
           15% {
-            opacity: 0.4;
+            opacity: 0.28;
           }
           85% {
-            opacity: 0.4;
+            opacity: 0.28;
           }
           100% {
-            transform: translateY(105vh) rotate(360deg) translateX(24px);
+            transform: translateY(105vh) rotate(360deg) translateX(20px);
             opacity: 0;
           }
         }

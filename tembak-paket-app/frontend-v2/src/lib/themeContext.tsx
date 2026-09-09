@@ -197,42 +197,48 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
       .bg-parchment, .bg-white {
         background-color: ${parchment} !important;
       }
-      .dark .bg-parchment, .dark .bg-\[\#161617\], .dark .bg-\[\#1C1C1E\], .dark .bg-\[\#1c1c1e\] {
+      .dark .bg-parchment, .dark .bg-\\[\\#161617\\], .dark .bg-\\[\\#1C1C1E\\], .dark .bg-\\[\\#1c1c1e\\] {
         background-color: ${darkParchment} !important;
       }
 
       /* 3. Global Hairlines & Borders */
-      .border-hairline, .border-black\/\[0\.05\], .border-black\/\[0\.06\], .divide-black\/\[0\.05\] > * + * {
+      .border-hairline, .border-black\\/\\[0\\.05\\], .border-black\\/\\[0\\.06\\], .divide-black\\/\\[0\\.05\\] > * + * {
         border-color: ${hairline} !important;
       }
-      .dark .border-hairline, .dark .border-white\/\[0\.08\], .dark .border-white\/\[0\.06\], .dark .divide-white\/\[0\.06\] > * + * {
+      .dark .border-hairline, .dark .border-white\\/\\[0\\.08\\], .dark .border-white\\/\\[0\\.06\\], .dark .divide-white\\/\\[0\\.06\\] > * + * {
         border-color: ${darkHairline} !important;
       }
 
       /* 4. Luxury Obsidian Titanium Cards (Wallet, Voucher Banner, Profile Card) */
-      .bg-\[\#1D1D1F\], .bg-\[\#1d1d1f\], .bg-surface-tile {
+      .bg-\\[\\#1D1D1F\\], .bg-\\[\\#1d1d1f\\], .bg-surface-tile {
         background-color: ${headerBg} !important;
         border-color: ${cardBorder} !important;
       }
-      .dark .bg-\[\#1D1D1F\], .dark .bg-\[\#1d1d1f\], .dark .bg-surface-tile {
+      .dark .bg-\\[\\#1D1D1F\\], .dark .bg-\\[\\#1d1d1f\\], .dark .bg-surface-tile {
         background-color: ${darkHeaderBg} !important;
         border-color: ${darkHairline} !important;
       }
 
-      /* 5. Interactive Buttons, Badges, Tabs, & Active Elements */
-      .bg-primary, [class*="bg-[#0071E3]"], [class*="bg-[#0071e3]"] {
+      /* 5. Primary Semantic Colors */
+      .bg-primary {
         background-color: ${primary} !important;
       }
-      .hover\\:bg-primary-hover:hover, [class*="hover:bg-[#0077ED]"]:hover, [class*="hover:bg-[#0077ed]"]:hover {
+      .hover\\:bg-primary-hover:hover {
         background-color: ${primaryHover} !important;
       }
-      .text-primary, [class*="text-[#0071E3]"], [class*="text-[#0071e3]"], [class*="text-[#2997FF]"], [class*="text-[#2997ff]"] {
+      .text-primary {
         color: ${primary} !important;
       }
-      .border-primary, [class*="border-[#0071E3]"], [class*="border-[#0071e3]"] {
+      .hover\\:text-primary:hover {
+        color: ${primaryHover} !important;
+      }
+      .group:hover .group-hover\\:text-primary {
+        color: ${primary} !important;
+      }
+      .border-primary {
         border-color: ${primary} !important;
       }
-      .ring-primary, [class*="ring-[#0071E3]"], [class*="ring-[#0071e3]"] {
+      .ring-primary {
         --tw-ring-color: ${primary} !important;
       }
       .bg-primary\\/5 {
@@ -247,6 +253,9 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
       .bg-primary\\/20 {
         background-color: color-mix(in srgb, ${primary} 20%, transparent) !important;
       }
+      .group:hover .group-hover\\:bg-primary\\/20 {
+        background-color: color-mix(in srgb, ${primary} 20%, transparent) !important;
+      }
       .border-primary\\/20 {
         border-color: color-mix(in srgb, ${primary} 20%, transparent) !important;
       }
@@ -257,12 +266,47 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
         border-color: color-mix(in srgb, ${primary} 40%, transparent) !important;
       }
 
-      /* 6. Navigation Bar Active Highlights */
-      .bg-white\\/80, .dark .bg-\[\#161617\]\\/80 {
+      /* 6. Strict Fallback for Legacy Hardcoded Hex Selectors (Exact match [class~="..."] to never clobber /10 or group-hover) */
+      [class~="bg-[#0071E3]"], [class~="bg-[#0071e3]"] {
+        background-color: ${primary} !important;
+      }
+      [class~="bg-[#0071E3]/10"], [class~="bg-[#0071e3]/10"] {
+        background-color: color-mix(in srgb, ${primary} 10%, transparent) !important;
+      }
+      [class~="bg-[#0071E3]/15"], [class~="bg-[#0071e3]/15"] {
+        background-color: color-mix(in srgb, ${primary} 15%, transparent) !important;
+      }
+      [class~="bg-[#0071E3]/20"], [class~="bg-[#0071e3]/20"] {
+        background-color: color-mix(in srgb, ${primary} 20%, transparent) !important;
+      }
+      [class~="text-[#0071E3]"], [class~="text-[#0071e3]"], [class~="text-[#2997FF]"], [class~="text-[#2997ff]"] {
+        color: ${primary} !important;
+      }
+      [class~="border-[#0071E3]"], [class~="border-[#0071e3]"] {
+        border-color: ${primary} !important;
+      }
+      [class~="border-[#0071E3]/20"], [class~="border-[#0071e3]/20"] {
+        border-color: color-mix(in srgb, ${primary} 20%, transparent) !important;
+      }
+      [class~="border-[#0071E3]/30"], [class~="border-[#0071e3]/30"] {
+        border-color: color-mix(in srgb, ${primary} 30%, transparent) !important;
+      }
+      [class~="hover:bg-[#0077ED]"]:hover, [class~="hover:bg-[#0071E3]"]:hover {
+        background-color: ${primaryHover} !important;
+      }
+      .group:hover [class~="group-hover:text-[#0071E3]"] {
+        color: ${primary} !important;
+      }
+      .group:hover [class~="group-hover:bg-[#0071E3]/20"] {
+        background-color: color-mix(in srgb, ${primary} 20%, transparent) !important;
+      }
+
+      /* 7. Navigation Bar Active Highlights */
+      .bg-white\\/80, .dark .bg-\\[\\#161617\\]\\/80 {
         border-color: ${hairline} !important;
       }
 
-      /* 7. Ambient Glowing Shadows */
+      /* 8. Ambient Glowing Shadows */
       .theme-glow {
         box-shadow: 0 4px 28px ${surfaceGlow} !important;
       }
@@ -286,12 +330,12 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
         }}
       />
 
-      {/* Atmospheric Top Glow Aura */}
+      {/* Atmospheric Top Glow Aura (Subtle & Elegant) */}
       {activeTheme?.id !== 'default-obsidian' && (
         <div
-          className="fixed top-0 left-0 right-0 h-[450px] pointer-events-none z-0 opacity-25 dark:opacity-30 transition-opacity duration-700 select-none"
+          className="fixed top-0 left-0 right-0 h-64 pointer-events-none z-0 opacity-15 dark:opacity-20 transition-opacity duration-700 select-none"
           style={{
-            background: `radial-gradient(ellipse 130% 80% at 50% -20%, ${activeTheme.tokens['--theme-primary']}, transparent 75%)`
+            background: `radial-gradient(ellipse 110% 70% at 50% -20%, ${activeTheme.tokens['--theme-primary']}, transparent 75%)`
           }}
           aria-hidden="true"
         />
@@ -300,7 +344,7 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
       {/* Atmospheric Bottom Reflection */}
       {activeTheme?.id !== 'default-obsidian' && (
         <div
-          className="fixed bottom-0 left-0 right-0 h-48 pointer-events-none z-0 opacity-15 dark:opacity-20 transition-opacity duration-700 select-none"
+          className="fixed bottom-0 left-0 right-0 h-40 pointer-events-none z-0 opacity-10 dark:opacity-15 transition-opacity duration-700 select-none"
           style={{
             background: `radial-gradient(ellipse 100% 70% at 50% 120%, ${activeTheme.tokens['--theme-primary']}, transparent 75%)`
           }}
@@ -313,19 +357,29 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
         <FloatingOrnaments config={activeTheme.ornaments} />
       )}
 
-      {/* Momentum Special Edition Top Announcement Ribbon */}
+      {/* Momentum Special Edition Top Announcement Ribbon (Apple Glass Style) */}
       {activeTheme?.id !== 'default-obsidian' && (
         <aside
-          className="w-full text-center py-1.5 px-4 text-xs font-bold text-white flex items-center justify-center gap-2 select-none relative z-40 transition-colors shadow-xs"
+          className="w-full py-1.5 px-4 text-xs font-medium text-white flex items-center justify-center gap-2.5 select-none relative z-40 transition-colors border-b border-white/10 backdrop-blur-md"
           style={{
-            backgroundColor: activeTheme.tokens['--theme-primary'],
-            backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.12), rgba(255,255,255,0.08), rgba(0,0,0,0.12))'
+            background: `linear-gradient(90deg, rgba(20,20,22,0.95) 0%, color-mix(in srgb, ${activeTheme.tokens['--theme-primary']} 22%, rgba(20,20,22,0.95)) 50%, rgba(20,20,22,0.95) 100%)`
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-          <span>{activeTheme.name}</span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 uppercase tracking-widest font-black">
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${activeTheme.tokens['--theme-primary']} 35%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${activeTheme.tokens['--theme-primary']} 50%, transparent)`
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ backgroundColor: activeTheme.tokens['--theme-primary'] }}
+            />
             {activeTheme.meta?.event_name || 'Edisi Perayaan'}
+          </span>
+          <span className="text-xs text-white/90 font-medium tracking-tight">
+            {activeTheme.name}
           </span>
         </aside>
       )}

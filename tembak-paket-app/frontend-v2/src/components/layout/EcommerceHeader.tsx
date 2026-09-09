@@ -282,7 +282,7 @@ export function EcommerceHeader() {
               {user?.role === "admin" && (
                 <Link
                   href="/admin"
-                  className="bg-primary/20 text-primary hover:bg-primary/30 px-2 py-0.5 rounded font-bold transition-colors flex items-center gap-1"
+                  className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-85 px-2.5 py-0.5 rounded-full font-semibold transition-opacity flex items-center gap-1 text-[10px]"
                 >
                   <span>Admin Panel</span>
                   {pendingOrders > 0 && (
@@ -520,7 +520,7 @@ export function EcommerceHeader() {
                 >
                   <span>{item.label}</span>
                   {isActive && (
-                    <span className="absolute bottom-[-9px] left-0 right-0 h-[2px] bg-[#0071E3] rounded-full"></span>
+                    <span className="absolute bottom-[-9px] left-0 right-0 h-[2px] bg-primary rounded-full"></span>
                   )}
                 </Link>
               );

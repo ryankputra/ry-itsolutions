@@ -157,7 +157,7 @@ export default function DashboardPage() {
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
-              <span className="w-6 h-6 rounded-full bg-[#0071E3]/10 text-[#0071E3] flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
                 </svg>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
             onClick={() => router.push("/topup")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white flex items-center justify-center shadow-xs transition-all active:scale-95">
+            <div className="w-9 h-9 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xs transition-all active:scale-95">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
@@ -262,7 +262,7 @@ export default function DashboardPage() {
               name: "Buka IMEI",
               href: "/unblock-imei",
               tourKey: "service-unblock",
-              iconBg: "bg-[#0071E3]/10 dark:bg-[#0071E3]/20 border border-[#0071E3]/20 dark:border-[#0071E3]/30 text-[#0071E3] dark:text-[#2997FF] group-hover:bg-[#0071E3]/20",
+              iconBg: "bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary group-hover:bg-primary/20",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -353,7 +353,7 @@ export default function DashboardPage() {
                   </span>
                 )}
               </div>
-              <span className="text-[11px] sm:text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] group-hover:text-[#0071E3] transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
+              <span className="text-[11px] sm:text-xs font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
                 {item.name}
               </span>
             </button>
