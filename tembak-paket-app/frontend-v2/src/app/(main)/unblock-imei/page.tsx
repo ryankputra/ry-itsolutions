@@ -390,9 +390,9 @@ function UnblockImeiContent() {
   })();
 
   const speedOptions = [
-    { id: 'fast', key: 'imei_speed_fast', label: 'Fast', defaultRange: '1-3 Jam' },
-    { id: 'semi', key: 'imei_speed_semi', label: 'Semi Fast', defaultRange: '1-12 Jam' },
-    { id: 'slow', key: 'imei_speed_slow', label: 'Slow', defaultRange: 'Max kirim 14:00, Selesai 00:00 WIB' }
+    { id: 'fast', key: 'imei_speed_fast', label: 'Fast', defaultRange: '' },
+    { id: 'semi', key: 'imei_speed_semi', label: 'Semi Fast', defaultRange: '' },
+    { id: 'slow', key: 'imei_speed_slow', label: 'Slow', defaultRange: '' }
   ]
     .filter(opt => {
       if (!allowedSpeedsForPkg.includes(opt.id)) return false;

@@ -358,9 +358,9 @@ function CekGaransiContent() {
                   <span className="text-ink-muted block text-[11px]">Kecepatan Proses Server</span>
                   <span className="font-bold text-ink text-sm text-primary">
                     {result.speed_label || (
-                      result.speed_option === 'fast' ? 'Fast (1-3 Jam)' :
-                      result.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' :
-                      'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                      result.speed_option === 'fast' ? 'Fast' :
+                      result.speed_option === 'semi' ? 'Semi Fast' :
+                      'Slow'
                     )}
                   </span>
                 </div>

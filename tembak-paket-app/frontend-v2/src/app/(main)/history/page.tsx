@@ -525,9 +525,9 @@ function HistoryContent() {
                           <p className="text-[10px] text-ink-muted mt-1">
                             Opsi Kecepatan: <strong className="text-ink font-bold">
                               {trx.speed_label || (
-                                trx.speed_option === 'fast' ? 'Fast (1-3 Jam)' :
-                                trx.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' :
-                                'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                                trx.speed_option === 'fast' ? 'Fast' :
+                                trx.speed_option === 'semi' ? 'Semi Fast' :
+                                'Slow'
                               )}
                             </strong>
                           </p>

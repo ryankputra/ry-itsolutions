@@ -2256,9 +2256,9 @@ export default function AdminPage() {
                             <p className="text-xs font-semibold text-primary mt-1">
                               Opsi Kecepatan: <span className="font-bold">
                                 {o.speed_label || (
-                                  o.speed_option === 'fast' ? 'Fast (1-3 Jam)' :
-                                  o.speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' :
-                                  'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                                  o.speed_option === 'fast' ? 'Fast' :
+                                  o.speed_option === 'semi' ? 'Semi Fast' :
+                                  'Slow'
                                 )}
                               </span>
                             </p>
@@ -3247,9 +3247,9 @@ export default function AdminPage() {
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: 'fast', label: 'Fast (1-3 Jam)', icon: '⚡', desc: 'Prioritas Tertinggi' },
-                      { id: 'semi', label: 'Semi Fast (1-12 Jam)', icon: '⏱️', desc: 'Standar Cepat' },
-                      { id: 'slow', label: 'Slow (Normal)', icon: '🐢', desc: 'Antrian Reguler' }
+                      { id: 'fast', label: 'Fast', icon: '⚡' },
+                      { id: 'semi', label: 'Semi Fast', icon: '⏱️' },
+                      { id: 'slow', label: 'Slow', icon: '🐢' }
                     ].map(speed => {
                       const isSelected = (newImeiPkg.allowed_speeds || []).includes(speed.id);
                       return (
@@ -3267,21 +3267,20 @@ export default function AdminPage() {
                               setNewImeiPkg({ ...newImeiPkg, allowed_speeds: [...current, speed.id] });
                             }
                           }}
-                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                          className={`p-3 rounded-xl border text-left transition-all ${
                             isSelected
                               ? 'border-primary bg-primary/10 shadow-xs text-primary ring-1 ring-primary/40'
                               : 'border-hairline bg-canvas/70 text-ink-muted hover:border-ink-muted'
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-black text-xs">{speed.icon} {speed.label}</span>
-                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black ${
+                            <span className="font-black text-xs sm:text-sm">{speed.icon} {speed.label}</span>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black ${
                               isSelected ? 'bg-primary text-white' : 'border border-hairline bg-canvas'
                             }`}>
                               {isSelected ? '✓' : ''}
                             </span>
                           </div>
-                          <p className="text-[10px] opacity-75 mt-0.5 truncate">{speed.desc}</p>
                         </button>
                       );
                     })}
