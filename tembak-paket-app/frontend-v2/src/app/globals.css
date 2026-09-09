@@ -10,7 +10,7 @@
   --color-ink-muted: #4b5563;
   --color-divider: #f3f4f6;
   --color-hairline: #e5e7eb;
-  --color-canvas: #ffffff;
+  --color-canvas: #f8fafc;
   --color-parchment: #fafafa;
   --color-surface-pearl: #f3f4f6;
   --color-surface-tile: #1e293b;
@@ -21,7 +21,7 @@
 
 @layer base {
   :root {
-    --background: #fafafa;
+    --background: #f8fafc;
     --foreground: #111827;
   }
 

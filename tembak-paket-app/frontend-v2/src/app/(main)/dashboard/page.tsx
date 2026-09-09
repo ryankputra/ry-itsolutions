@@ -150,17 +150,19 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
       {/* ============================================================ */}
-      <div data-tour="wallet-card" className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3.5 sm:p-4 transition-all">
+      <div data-tour="wallet-card" className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none p-4 sm:p-5 transition-all">
         <div className="grid grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800 items-center text-center">
           {/* Section 1: Saldo Dompet */}
           <div
             onClick={() => router.push("/topup")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium text-xs">
-              <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
-              </svg>
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
+              <span className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                </svg>
+              </span>
               <span className="text-[11px] sm:text-xs">Saldo Ry</span>
             </div>
             <div className="mt-1 flex items-center justify-center gap-1">
@@ -196,11 +198,13 @@ export default function DashboardPage() {
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
-              <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="9"/>
-                <path d="M14.5 9h-5v6h5"/>
-                <path d="M12 7v10"/>
-              </svg>
+              <span className="w-5 h-5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M14.5 9h-5v6h5"/>
+                  <path d="M12 7v10"/>
+                </svg>
+              </span>
               <span className="text-[11px] sm:text-xs">Koin Ry</span>
             </div>
             <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mt-1 tracking-tight">
@@ -216,10 +220,12 @@ export default function DashboardPage() {
             onClick={() => router.push("/vouchers")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium text-xs">
-              <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
-              </svg>
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium text-xs">
+              <span className="w-5 h-5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+              </span>
               <span className="text-[11px] sm:text-xs">Voucher</span>
             </div>
             <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mt-1 tracking-tight">
@@ -250,14 +256,14 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
       {/* ============================================================ */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 text-center">
           {[
             {
               name: "Buka IMEI",
               href: "/unblock-imei",
               tourKey: "service-unblock",
-              iconBg: "bg-slate-50 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600",
+              iconBg: "bg-blue-50/90 dark:bg-blue-950/50 border-blue-100/90 dark:border-blue-900/50 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100/80 dark:group-hover:bg-blue-900/60",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -268,7 +274,7 @@ export default function DashboardPage() {
               name: "Diagnostik",
               href: "/cek-ceir",
               tourKey: "service-ceir",
-              iconBg: "bg-slate-50 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600",
+              iconBg: "bg-emerald-50/90 dark:bg-emerald-950/50 border-emerald-100/90 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100/80 dark:group-hover:bg-emerald-900/60",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -279,7 +285,7 @@ export default function DashboardPage() {
               name: "Cek Garansi",
               href: "/cek-garansi",
               tourKey: "service-garansi",
-              iconBg: "bg-slate-50 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600",
+              iconBg: "bg-indigo-50/90 dark:bg-indigo-950/50 border-indigo-100/90 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100/80 dark:group-hover:bg-indigo-900/60",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -290,7 +296,7 @@ export default function DashboardPage() {
               name: "Voucher",
               href: "/vouchers",
               tourKey: "service-voucher",
-              iconBg: "bg-slate-50 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600",
+              iconBg: "bg-rose-50/90 dark:bg-rose-950/50 border-rose-100/90 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 group-hover:bg-rose-100/80 dark:group-hover:bg-rose-900/60",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
@@ -301,7 +307,7 @@ export default function DashboardPage() {
               name: "Game Koin",
               href: "/games",
               tourKey: "service-games",
-              iconBg: "bg-slate-50 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600",
+              iconBg: "bg-amber-50/90 dark:bg-amber-950/50 border-amber-100/90 dark:border-amber-900/50 text-amber-600 dark:text-amber-400 group-hover:bg-amber-100/80 dark:group-hover:bg-amber-900/60",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 016.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
@@ -313,7 +319,7 @@ export default function DashboardPage() {
               badge: "Unoff",
               href: "/gateway",
               tourKey: "service-gateway",
-              iconBg: "bg-slate-50 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600",
+              iconBg: "bg-sky-50/90 dark:bg-sky-950/50 border-sky-100/90 dark:border-sky-900/50 text-sky-600 dark:text-sky-400 group-hover:bg-sky-100/80 dark:group-hover:bg-sky-900/60",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
@@ -325,7 +331,7 @@ export default function DashboardPage() {
               name: "Panduan",
               onClick: () => window.dispatchEvent(new Event("open_app_tour")),
               tourKey: "service-panduan",
-              iconBg: "bg-slate-50 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600",
+              iconBg: "bg-violet-50/90 dark:bg-violet-950/50 border-violet-100/90 dark:border-violet-900/50 text-violet-600 dark:text-violet-400 group-hover:bg-violet-100/80 dark:group-hover:bg-violet-900/60",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

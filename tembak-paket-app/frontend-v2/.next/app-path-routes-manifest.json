@@ -3,7 +3,6 @@
   "/_global-error/page": "/_global-error",
   "/icon.svg/route": "/icon.svg",
   "/qr/[id]/route": "/qr/[id]",
-  "/check-payment/route": "/check-payment",
   "/(auth)/login/page": "/login",
   "/(auth)/register/page": "/register",
   "/page": "/",
@@ -28,5 +27,6 @@
   "/(main)/unblock-imei/page": "/unblock-imei",
   "/(main)/videos/page": "/videos",
   "/(main)/vouchers/page": "/vouchers",
-  "/create-qris/route": "/create-qris"
+  "/create-qris/route": "/create-qris",
+  "/check-payment/route": "/check-payment"
 }

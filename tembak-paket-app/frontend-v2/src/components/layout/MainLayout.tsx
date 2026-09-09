@@ -9,7 +9,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const isAiPage = pathname === "/ai";
 
   return (
-    <div className={`min-h-screen bg-canvas flex flex-col transition-colors duration-200 ${isAiPage ? "h-[100dvh] max-h-[100dvh] overflow-hidden" : ""}`}>
+    <div className={`min-h-screen bg-slate-100/60 dark:bg-[#090d16] flex flex-col transition-colors duration-200 ${isAiPage ? "h-[100dvh] max-h-[100dvh] overflow-hidden" : ""}`}>
       {/* 1. Full E-Commerce Header (Top Nav) */}
       <EcommerceHeader />
 
