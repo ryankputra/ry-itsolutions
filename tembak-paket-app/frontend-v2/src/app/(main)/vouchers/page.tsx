@@ -43,7 +43,7 @@ export default function VouchersPage() {
       const data = await safeJson(res);
       if (res.ok && data?.status) {
         Swal.fire({
-          title: "Voucher Berhasil Diklaim! 🎉",
+          title: "Voucher Berhasil Diklaim!",
           text: data.message || `Voucher ${coupon.code} siap digunakan saat checkout order.`,
           icon: "success",
           timer: 2000,
@@ -83,7 +83,7 @@ export default function VouchersPage() {
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <div className="inline-block bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 border border-white/20">
-              ⚡ Promo & Diskon Spesial
+              Promo & Diskon Spesial
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-sm">
               Pusat Klaim Voucher
@@ -144,7 +144,9 @@ export default function VouchersPage() {
         </div>
       ) : displayedList.length === 0 ? (
         <Card glass className="text-center py-16 px-6 space-y-3">
-          <p className="text-4xl">🎫</p>
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center mb-2">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"/></svg>
+          </div>
           <h3 className="text-base font-bold text-ink">
             {activeTab === "claimed" ? "Belum Ada Voucher yang Diklaim" : "Belum Ada Voucher Promo"}
           </h3>
@@ -159,7 +161,7 @@ export default function VouchersPage() {
               onClick={() => setActiveTab("all")}
               className="mt-2 px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-xs"
             >
-              Klaim Voucher Sekarang ➔
+              Klaim Voucher Sekarang
             </button>
           )}
         </Card>

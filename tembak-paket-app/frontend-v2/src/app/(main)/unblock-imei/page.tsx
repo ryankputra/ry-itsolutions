@@ -142,7 +142,7 @@ function UnblockImeiContent() {
 
     if (missing.length > 0) {
       Swal.fire({
-        title: "Mohon Lengkapi Data Pesanan ⚠️",
+        title: "Mohon Lengkapi Data Pesanan",
         html: `
           <div class="text-left text-xs space-y-2 py-1">
             <p class="font-bold text-slate-700 dark:text-slate-200">Pesanan belum dapat diproses karena ada data yang belum lengkap:</p>
@@ -152,7 +152,7 @@ function UnblockImeiContent() {
           </div>
         `,
         icon: "warning",
-        confirmButtonText: "Siap, Lengkapi Sekarang 👍",
+        confirmButtonText: "Siap, Lengkapi Sekarang",
         confirmButtonColor: "#0066cc",
       });
       return false;
@@ -181,7 +181,7 @@ function UnblockImeiContent() {
 
     Swal.fire({
       icon: "success",
-      title: "Masuk Keranjang! 🛒",
+      title: "Masuk Keranjang!",
       text: `${pkg.name || "Paket Buka IMEI"} berhasil ditambahkan ke keranjang belanja.`,
       showCancelButton: true,
       confirmButtonText: "Lihat Keranjang",
@@ -349,7 +349,7 @@ function UnblockImeiContent() {
         }
         setShowInstantQris(false);
         Swal.fire({
-          title: "Pembayaran & Pesanan Berhasil! 🚀",
+          title: "Pembayaran & Pesanan Berhasil!",
           text: "Pesanan Buka Gembok IMEI Anda telah terbuat dan diteruskan ke Admin untuk diproses.",
           icon: "success",
           confirmButtonText: "Lihat Riwayat Pesanan",
@@ -583,7 +583,7 @@ function UnblockImeiContent() {
                               className="w-5 h-5 rounded-full bg-slate-200/80 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center text-[10px] text-slate-600 transition-colors"
                               title="Hapus IMEI ini"
                             >
-                              ✕
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                           </div>
                         </div>
@@ -903,7 +903,7 @@ function UnblockImeiContent() {
                     </div>
                     <div>
                       <h5 className="font-extrabold text-xs text-ink flex items-center gap-1.5">
-                        <span>⚡</span> Direct QRIS Otomatis
+                        <svg className="w-3.5 h-3.5 text-amber-500 inline mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg> Direct QRIS Otomatis
                       </h5>
                       <p className="text-[10px] text-emerald-700 font-bold">Semua Bank &amp; E-Wallet (Realtime 24 Jam)</p>
                     </div>
@@ -964,7 +964,7 @@ function UnblockImeiContent() {
                 disabled={submitting}
                 className="w-full h-12 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md shadow-primary/20 transition-all"
               >
-                {paymentMethod === "qris" ? "Bayar via QRIS Langsung ➔" : "Bayar dengan Saldo ➔"}
+                {paymentMethod === "qris" ? "Bayar via QRIS Langsung" : "Bayar dengan Saldo"}
               </Button>
             </div>
           </form>

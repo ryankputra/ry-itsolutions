@@ -303,7 +303,7 @@ export function InstantQrisPaymentModal({
             onClick={onClose}
             className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold transition-colors"
           >
-            ✕
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
 
@@ -332,12 +332,12 @@ export function InstantQrisPaymentModal({
                 </div>
               </div>
 
-              {/* Single Unified Gateway Card: ⚡ Direct QRIS Otomatis (Semua Bank & E-Wallet) */}
+              {/* Single Unified Gateway Card: Direct QRIS Otomatis (Semua Bank & E-Wallet) */}
               <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-left flex items-center justify-between shadow-xs">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-black text-emerald-900 flex items-center gap-1">
-                      <span>⚡</span> Direct QRIS Otomatis
+                      <svg className="w-3.5 h-3.5 text-amber-500 inline mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg> Direct QRIS Otomatis
                     </span>
                     <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold tracking-wider">
                       SEMUA BANK &amp; E-WALLET
@@ -348,7 +348,7 @@ export function InstantQrisPaymentModal({
                   </p>
                 </div>
                 <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">
-                  ✓
+                  <svg className="w-2.5 h-2.5 text-white inline" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                 </div>
               </div>
 

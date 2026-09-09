@@ -244,14 +244,14 @@ export default function CekCeirPage() {
           type="button"
           className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-primary text-white shadow-xs flex items-center justify-center gap-1.5 transition-all"
         >
-          <span>🔍</span> Diagnostik IMEI
+          <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg> Diagnostik IMEI
         </button>
         <button
           type="button"
           onClick={() => router.push('/barcode')}
           className="flex-1 py-2 px-3 text-xs font-semibold text-ink-muted hover:text-ink rounded-xl flex items-center justify-center gap-1.5 transition-all"
         >
-          <span>🏷️</span> Generator Barcode
+          <svg className="w-3.5 h-3.5 inline mr-1 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.386l3.962-2.327c.827-.486 1.109-1.54.492-2.285L11.16 3.66A2.25 2.25 0 009.568 3z"/><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z"/></svg> Generator Barcode
         </button>
       </div>
 
@@ -261,7 +261,7 @@ export default function CekCeirPage() {
         </button>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-primary/10 text-primary">🔍</span>
+            <span className="p-1.5 rounded-xl bg-primary/10 text-primary"><svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg></span>
             Cek Status & Diagnostik IMEI
           </h1>
           <p className="text-xs sm:text-sm text-ink-muted">Pemeriksaan database CEIR Kemenperin, Bea Cukai, Masa Aktif Sinyal, DIGI & Smartfren.</p>
@@ -371,7 +371,7 @@ export default function CekCeirPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-ink flex items-center gap-1.5">
-                    <span>💳</span> Saldo Akun
+                    <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-6-10.5H20.25a2.25 2.25 0 012.25 2.25v10.5a2.25 2.25 0 01-2.25 2.25H3.75a2.25 2.25 0 01-2.25-2.25V6.75A2.25 2.25 0 013.75 4.5z"/></svg> Saldo Akun
                   </span>
                   <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-primary" />
                 </div>
@@ -392,7 +392,7 @@ export default function CekCeirPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-ink flex items-center gap-1.5">
-                    <span>⚡</span> Direct QRIS Otomatis
+                    <svg className="w-3.5 h-3.5 inline mr-1 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg> Direct QRIS Otomatis
                   </span>
                   <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-primary" />
                 </div>
@@ -408,8 +408,8 @@ export default function CekCeirPage() {
             {submitting
               ? "Memproses Server..."
               : paymentMethod === "qris" || (user && user.balance < getPrice(option))
-              ? `Bayar via QRIS Direct (Rp ${getPrice(option).toLocaleString('id-ID')}) ➔`
-              : `Bayar Sekarang (Rp ${getPrice(option).toLocaleString('id-ID')}) ➔`}
+              ? `Bayar via QRIS Direct (Rp ${getPrice(option).toLocaleString('id-ID')})`
+              : `Bayar Sekarang (Rp ${getPrice(option).toLocaleString('id-ID')})`}
           </Button>
         </form>
       </Card>
@@ -417,7 +417,7 @@ export default function CekCeirPage() {
       {ceirResult && (
         <Card className="mt-4 p-5 border border-primary/30 bg-primary/5 animate-fade-in space-y-3">
           <h3 className="font-bold text-sm text-primary flex items-center gap-2">
-            <span>🎉</span> Hasil Pemeriksaan Server:
+            <svg className="w-3.5 h-3.5 inline mr-1 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg> Hasil Pemeriksaan Server:
           </h3>
           <p className="text-xs text-ink font-medium leading-relaxed bg-canvas p-3 rounded-xl border border-hairline whitespace-pre-line">
             {ceirResult.note}

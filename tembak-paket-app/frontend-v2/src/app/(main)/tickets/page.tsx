@@ -115,7 +115,7 @@ export default function UserTicketsPage() {
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Pusat Bantuan 💬</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Pusat Bantuan</h1>
           <p className="text-sm text-ink-muted">Tanyakan masalah atau kendala Anda di sini.</p>
         </div>
         {!activeTicket && !showCreate && (
@@ -202,7 +202,9 @@ export default function UserTicketsPage() {
         <Card glass className="p-6">
           {loading ? <p className="text-sm">Memuat tiket...</p> : tickets.length === 0 ? (
             <div className="text-center py-10 space-y-3">
-              <div className="text-4xl">📭</div>
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.375v4.5A2.25 2.25 0 004.5 21h15a2.25 2.25 0 002.25-2.25v-4.5M2.25 13.5l3.86-7.72A2.25 2.25 0 018.122 4.5h7.756a2.25 2.25 0 012.012 1.28l3.86 7.72"/></svg>
+              </div>
               <p className="text-ink-muted">Belum ada tiket bantuan yang Anda buat.</p>
             </div>
           ) : (

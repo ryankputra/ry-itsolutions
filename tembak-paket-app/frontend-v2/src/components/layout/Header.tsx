@@ -81,7 +81,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
               setUnread(true);
 
               if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                new Notification('Info Terkini Ry-ITSolutions 📢', {
+                new Notification('Info Terkini Ry-ITSolutions', {
                   body: ann.message
                 });
               }
@@ -195,7 +195,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                   <div className="p-4 hover:bg-parchment transition-colors border-b border-hairline cursor-pointer" onClick={() => window.location.href = '/admin'}>
                     <div className="flex gap-3">
                       <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                        📦
+                        
                       </div>
                       <div>
                         <h4 className="font-bold text-sm text-ink">Pesanan Manual</h4>
@@ -215,7 +215,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                 )) : (
                   <div className="p-4 border-b border-hairline hover:bg-parchment/50 transition-colors cursor-pointer">
                     <p className="text-xs font-bold text-primary mb-1">SELAMAT DATANG</p>
-                    <p className="text-sm font-semibold text-ink leading-tight">Hai {user?.name?.split(' ')[0]} 👋</p>
+                    <p className="text-sm font-semibold text-ink leading-tight">Hai {user?.name?.split(' ')[0]} </p>
                     <p className="text-xs text-ink-muted mt-1">Platform PPOB dan Unblock IMEI Terpercaya. Gunakan layanan kami dengan bijak.</p>
                   </div>
                 )}

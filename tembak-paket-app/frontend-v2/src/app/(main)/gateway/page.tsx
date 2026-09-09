@@ -529,7 +529,7 @@ export default function GatewayDeveloperPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-wider">
-              <span>⚡ Payment Gateway GoPay &amp; QRIS Unofficial (SaaS)</span>
+              <span>Payment Gateway GoPay &amp; QRIS Unofficial (SaaS)</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center flex-wrap gap-2">
               <span>GoPay &amp; QRIS Merchant Hub</span>
@@ -539,7 +539,7 @@ export default function GatewayDeveloperPage() {
               Terima pembayaran QRIS otomatis di website, bot, atau aplikasi toko Anda sendiri. Uang langsung masuk ke rekening GoPay Anda tanpa perantara.
             </p>
             <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-200 text-xs flex items-center gap-2">
-              <span className="text-sm shrink-0">⚠️</span>
+              <svg className="w-4 h-4 text-amber-500 shrink-0 inline mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
               <span><strong>Catatan Unofficial:</strong> Layanan ini adalah integrasi payment gateway mandiri berbasis akun GoBiz merchant, tidak terafiliasi resmi dengan PT GoTo Gojek Tokopedia Tbk.</span>
             </div>
             <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-300 font-medium">
@@ -639,7 +639,7 @@ export default function GatewayDeveloperPage() {
           {!user && (
             <div className="p-8 sm:p-10 rounded-3xl bg-canvas border border-hairline text-center space-y-4 shadow-sm animate-in fade-in">
               <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center text-3xl shadow-xs">
-                🔑
+                <svg className="w-4 h-4 text-amber-500 inline" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/></svg>
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-base sm:text-lg font-black text-ink">Mulai Kelola API Key Gateway GoPay &amp; QRIS</h3>
@@ -702,7 +702,7 @@ export default function GatewayDeveloperPage() {
                 }}
                 className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-xs transition-transform hover:scale-105"
               >
-                ⚡ Perpanjang Sekarang
+                Perpanjang Sekarang
               </button>
             </div>
           )}
@@ -880,7 +880,7 @@ export default function GatewayDeveloperPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
                           </svg>
-                          <span>📷 Upload Foto QRIS</span>
+                          <span>Upload Foto QRIS</span>
                           <input
                             type="file"
                             accept="image/*"
@@ -981,7 +981,7 @@ export default function GatewayDeveloperPage() {
                   onClick={() => setShowRealKeyInDocs(!showRealKeyInDocs)}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-canvas border border-hairline hover:bg-parchment text-ink transition-colors shadow-2xs"
                 >
-                  <span>{showRealKeyInDocs ? "🔒 Sensor API Key" : "👁️ Sisipkan API Key Saya"}</span>
+                  <span>{showRealKeyInDocs ? "Sensor API Key" : "Sisipkan API Key Saya"}</span>
                 </button>
               )}
             </div>
@@ -1130,7 +1130,7 @@ if ($res['paid'] === true) {
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500 hover:text-white text-orange-600 dark:text-orange-400 font-bold text-xs border border-orange-500/20 transition-all active:scale-95"
               >
-                <span>{copiedPostmanCurl ? "✅ cURL Tersalin!" : "📋 Salin cURL untuk Import Postman"}</span>
+                <span>{copiedPostmanCurl ? "cURL Tersalin!" : "Salin cURL untuk Import Postman"}</span>
               </button>
             </div>
 
@@ -1140,9 +1140,9 @@ if ($res['paid'] === true) {
 
             {/* Quick Postman Import Tip */}
             <div className="p-3.5 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-xs text-ink space-y-1">
-              <span className="font-bold text-orange-700 dark:text-orange-300 block">💡 Tips Cepat Import Postman:</span>
+              <span className="font-bold text-orange-700 dark:text-orange-300 block">Tips Cepat Import Postman:</span>
               <p className="text-[11px] text-ink-muted leading-relaxed">
-                Di Postman, klik tombol <b>Import</b> di pojok kiri atas ➔ pilih tab <b>Raw text</b> ➔ paste cURL yang Anda salin dari tombol di atas ➔ klik <b>Continue &amp; Import</b>. Postman akan otomatis mengisi URL, Method, Header, dan Body secara instan!
+                Di Postman, klik tombol <b>Import</b> di pojok kiri atas &rarr; pilih tab <b>Raw text</b> &rarr; paste cURL yang Anda salin dari tombol di atas &rarr; klik <b>Continue &amp; Import</b>. Postman akan otomatis mengisi URL, Method, Header, dan Body secara instan!
               </p>
             </div>
 
@@ -1188,7 +1188,7 @@ if ($res['paid'] === true) {
 
             {/* Response Diagnostics Helper */}
             <div className="space-y-2 border-t border-hairline pt-3">
-              <h4 className="font-bold text-xs text-ink">📖 Arti Status Kode Response:</h4>
+              <h4 className="font-bold text-xs text-ink">Arti Status Kode Response:</h4>
               <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-start gap-2">
                   <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold font-mono shrink-0">200 OK</span>
@@ -1207,7 +1207,7 @@ if ($res['paid'] === true) {
 
             {/* Note for AI & Bot Developers */}
             <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-ink leading-relaxed">
-              🤖 <b>Catatan untuk AI &amp; Bot Developer:</b> Seluruh endpoint API bersifat <i>stateless</i> dan terbuka untuk integrasi bot/serverless. Tidak membutuhkan sesi cookie browser ataupun reCAPTCHA, cukup sertakan header <code>x-api-key</code> pada setiap panggilan HTTP request.
+              <b>Catatan untuk AI &amp; Bot Developer:</b> Seluruh endpoint API bersifat <i>stateless</i> dan terbuka untuk integrasi bot/serverless. Tidak membutuhkan sesi cookie browser ataupun reCAPTCHA, cukup sertakan header <code>x-api-key</code> pada setiap panggilan HTTP request.
             </div>
           </div>
         </div>
@@ -1309,7 +1309,7 @@ if ($res['paid'] === true) {
                 onClick={() => setShowCreateModal(false)}
                 className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-parchment"
               >
-                ✕
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
 
@@ -1341,7 +1341,7 @@ if ($res['paid'] === true) {
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-black text-ink text-xs flex items-center gap-1.5">
-                      <span>📷</span>
+                      <svg className="w-4 h-4 text-slate-500 inline" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/></svg>
                       <span>Generate String dari Foto QRIS (Opsional)</span>
                     </span>
                     <span className="text-[10px] bg-amber-400/20 text-amber-900 dark:text-amber-300 font-black px-2 py-0.5 rounded-full">
@@ -1440,7 +1440,7 @@ if ($res['paid'] === true) {
                 onClick={() => setSelectedKeyForOtp(null)}
                 className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-parchment"
               >
-                ✕
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
 
@@ -1523,7 +1523,7 @@ if ($res['paid'] === true) {
                 onClick={() => setSelectedKeyForConfig(null)}
                 className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-parchment"
               >
-                ✕
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
 
@@ -1544,7 +1544,7 @@ if ($res['paid'] === true) {
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-black text-ink text-xs flex items-center gap-1.5">
-                      <span className="text-base">📷</span>
+                      <svg className="w-4 h-4 text-slate-500 inline" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/></svg>
                       <span>Generate / Ekstrak String dari Foto QRIS</span>
                     </span>
                     <span className="text-[10px] bg-amber-400/20 text-amber-900 dark:text-amber-300 font-black px-2 py-0.5 rounded-full">

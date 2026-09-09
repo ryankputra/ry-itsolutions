@@ -155,7 +155,6 @@ export default function AdminPage() {
     const confirm = await Swal.fire({
       title: "Putus Koneksi WhatsApp?",
       text: "WhatsApp Bot akan logout dari server Anda.",
-      icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Ya, Putus",
       cancelButtonText: "Batal"
@@ -167,15 +166,15 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/baileys/logout', { method: 'POST', credentials: 'include' });
       const d = await safeJson(res);
       if (d?.status || d?.success) {
-        Swal.fire({ title: "Terputus", text: d?.message || "WhatsApp bot telah logout.", icon: "info", timer: 1500 });
+        Swal.fire({ title: "Terputus", text: d?.message || "WhatsApp bot telah logout.", timer: 1500 });
         setBaileysStatus({ isConnected: false, connected: false, state: 'disconnected', connectedPhone: null, qrCode: null });
         setWaBotStatus({ isConnected: false, connected: false, state: 'disconnected', qrCode: null });
         await loadBaileysStatus();
       } else {
-        Swal.fire({ title: "Gagal", text: d?.message || "Gagal logout WhatsApp.", icon: "error" });
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal logout WhatsApp."});
       }
     } catch (e: any) {
-      Swal.fire({ title: "Error", text: e?.message || "Gagal menghubungi server.", icon: "error" });
+      Swal.fire({ title: "Error", text: e?.message || "Gagal menghubungi server."});
     } finally {
       setLoadingBaileys(false);
     }
@@ -230,9 +229,7 @@ export default function AdminPage() {
         setGopayOtpSent(true);
         Swal.fire({
           title: "OTP Berhasil Dikirim!",
-          text: d?.message || "Kode OTP 4 digit telah dikirim via SMS ke nomor HP Anda.",
-          icon: "success"
-        });
+          text: d?.message || "Kode OTP 4 digit telah dikirim via SMS ke nomor HP Anda."});
       } else {
         Swal.fire("Gagal", d?.message || "GoPay Gateway Port 3002 tidak merespon. Pastikan service aktif.", "error");
       }
@@ -262,9 +259,7 @@ export default function AdminPage() {
         setGopayOtp("");
         Swal.fire({
           title: "Login GoPay Berhasil!",
-          text: d?.message || "Sesi GoPay Merchant telah aktif dan tersimpan.",
-          icon: "success"
-        });
+          text: d?.message || "Sesi GoPay Merchant telah aktif dan tersimpan."});
         loadGopayStatus();
       } else {
         Swal.fire("Verifikasi Gagal", d?.message || "Kode OTP salah, kadaluarsa, atau gateway offline.", "error");
@@ -288,7 +283,6 @@ export default function AdminPage() {
     const confirm = await Swal.fire({
       title: "Putus Sesi GoPay Merchant?",
       text: "Setelah logout, top-up otomatis QRIS GoPay tidak akan berfungsi sampai Anda login OTP ulang.",
-      icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Ya, Putus Sesi",
       cancelButtonText: "Batal"
@@ -302,9 +296,7 @@ export default function AdminPage() {
       if (d?.status || d?.success) {
         Swal.fire({
           title: "Sesi Diputus",
-          text: d?.message || "Sesi GoPay Merchant berhasil diputus (Logout).",
-          icon: "success"
-        });
+          text: d?.message || "Sesi GoPay Merchant berhasil diputus (Logout)."});
         setGopayStatus({
           is_configured: false,
           token_status: 'invalid',
@@ -487,7 +479,6 @@ export default function AdminPage() {
     const confirmRes = await Swal.fire({
       title: "Kirim Broadcast Promo?",
       text: "Pesan promo akan dipublikasikan ke WhatsApp (semua user terdaftar), Telegram, dan/atau Banner In-App.",
-      icon: "question",
       showCancelButton: true,
       confirmButtonText: "Ya, Kirim Sekarang!",
       cancelButtonText: "Batal"
@@ -505,7 +496,7 @@ export default function AdminPage() {
       });
       const d = await res.json();
       if (res.ok && d.status) {
-        Swal.fire("Sukses! 🚀", d.message, "success");
+        Swal.fire("Sukses!", d.message, "success");
         setBroadcastData(prev => ({ ...prev, message: "", voucherCode: "" }));
       } else {
         Swal.fire("Gagal", d.message || "Gagal mengirim broadcast.", "error");
@@ -593,7 +584,6 @@ export default function AdminPage() {
     const confirm = await Swal.fire({
       title: "Hapus Kupon?",
       text: "Kupon yang dihapus tidak bisa digunakan lagi.",
-      icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       confirmButtonText: "Ya, Hapus"
@@ -699,7 +689,7 @@ export default function AdminPage() {
   const handleCreateDummyReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dummyReviewForm.userName.trim() || !dummyReviewForm.comment.trim()) {
-      Swal.fire({ title: "Form Kurang Lengkap", text: "Nama Pengguna dan Komentar Ulasan wajib diisi.", icon: "warning" });
+      Swal.fire({ title: "Form Kurang Lengkap", text: "Nama Pengguna dan Komentar Ulasan wajib diisi."});
       return;
     }
     try {
@@ -711,7 +701,7 @@ export default function AdminPage() {
       });
       const data = await safeJson(res);
       if (res.ok && data.status) {
-        Swal.fire({ title: "Berhasil!", text: "Ulasan dummy baru berhasil ditambahkan ke web.", icon: "success", timer: 1500, showConfirmButton: false });
+        Swal.fire({ title: "Berhasil!", text: "Ulasan dummy baru berhasil ditambahkan ke web.", timer: 1500, showConfirmButton: false });
         setDummyReviewForm({
           userName: "",
           userAvatar: "",
@@ -729,10 +719,10 @@ export default function AdminPage() {
         });
         loadAdminReviews();
       } else {
-        Swal.fire({ title: "Gagal", text: data?.message || "Gagal menyimpan ulasan dummy.", icon: "error" });
+        Swal.fire({ title: "Gagal", text: data?.message || "Gagal menyimpan ulasan dummy."});
       }
     } catch (e) {
-      Swal.fire({ title: "Error Jaringan", text: "Gagal menghubungi server.", icon: "error" });
+      Swal.fire({ title: "Error Jaringan", text: "Gagal menghubungi server."});
     }
   };
 
@@ -740,7 +730,6 @@ export default function AdminPage() {
     const confirm = await Swal.fire({
       title: "Hapus Ulasan Ini?",
       text: "Ulasan akan dihapus permanen dari sistem.",
-      icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Ya, Hapus",
       cancelButtonText: "Batal",
@@ -753,13 +742,13 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin/reviews/${reviewId}`, { method: "DELETE", credentials: "include" });
       const data = await safeJson(res);
       if (res.ok && data.status) {
-        Swal.fire({ title: "Dihapus!", text: "Ulasan berhasil dihapus.", icon: "success", timer: 1200, showConfirmButton: false });
+        Swal.fire({ title: "Dihapus!", text: "Ulasan berhasil dihapus.", timer: 1200, showConfirmButton: false });
         loadAdminReviews();
       } else {
-        Swal.fire({ title: "Gagal", text: data?.message || "Gagal menghapus ulasan.", icon: "error" });
+        Swal.fire({ title: "Gagal", text: data?.message || "Gagal menghapus ulasan."});
       }
     } catch (e) {
-      Swal.fire({ title: "Error Jaringan", text: "Gagal menghapus ulasan.", icon: "error" });
+      Swal.fire({ title: "Error Jaringan", text: "Gagal menghapus ulasan."});
     }
   };
 
@@ -780,7 +769,6 @@ export default function AdminPage() {
                   Swal.fire({
                     title: 'Pesanan Manual Baru!',
                     text: 'Ada pesanan manual baru yang perlu diproses.',
-                    icon: 'info',
                     toast: true,
                     position: 'top-end',
                     showConfirmButton: false,
@@ -972,7 +960,6 @@ export default function AdminPage() {
     const confirm = await Swal.fire({
       title: keyItem.isActive ? 'Nonaktifkan API Key?' : 'Aktifkan API Key?',
       text: `Apakah Anda yakin ingin ${keyItem.isActive ? 'menonaktifkan' : 'mengaktifkan kembali'} API Key ini?`,
-      icon: 'question',
       showCancelButton: true,
       confirmButtonText: keyItem.isActive ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan',
       cancelButtonText: 'Batal'
@@ -1011,7 +998,6 @@ export default function AdminPage() {
       html: `<div class="text-xs text-left space-y-1">
         <p>Kirim notifikasi pengingat masa aktif ke WhatsApp pelanggan <b>${phone}</b> (@${keyItem.username})?</p>
       </div>`,
-      icon: 'info',
       showCancelButton: true,
       confirmButtonText: 'Kirim Notifikasi WA',
       cancelButtonText: 'Batal'
@@ -1205,8 +1191,8 @@ export default function AdminPage() {
       if (res.ok) {
         await loadPackages();
         setSelectedPkgIndex(null);
-        Swal.fire({ title: "Info", text: 'Sinkronisasi KMSP berhasil!', icon: "info" });
-      } else Swal.fire({ title: "Info", text: 'Gagal sinkronisasi', icon: "info" });
+        Swal.fire({ title: "Info", text: 'Sinkronisasi KMSP berhasil!'});
+      } else Swal.fire({ title: "Info", text: 'Gagal sinkronisasi'});
     } finally { setSyncing(false); }
   };
 
@@ -1220,8 +1206,8 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packages: [packages[selectedPkgIndex!]] })
       });
-      if (res.ok) Swal.fire({ title: "Info", text: 'Tersimpan!', icon: "info" });
-      else Swal.fire({ title: "Info", text: 'Gagal menyimpan', icon: "info" });
+      if (res.ok) Swal.fire({ title: "Info", text: 'Tersimpan!'});
+      else Swal.fire({ title: "Info", text: 'Gagal menyimpan'});
     } finally { setSavingImeiPkg(false); }
   };
 
@@ -1235,19 +1221,18 @@ export default function AdminPage() {
         body: JSON.stringify({ userId, amount: parseInt(balAmount) })
       });
       if (res.ok) {
-        Swal.fire({ title: "Info", text: "Saldo berhasil diperbarui!", icon: "info" });
+        Swal.fire({ title: "Info", text: "Saldo berhasil diperbarui!"});
         loadUsers();
         setBalAmount("");
         setSelectedUserId(null);
       }
-    } catch (e) { Swal.fire({ title: "Info", text: "Error update balance", icon: "info" }); }
+    } catch (e) { Swal.fire({ title: "Info", text: "Error update balance"}); }
   };
 
   const handleDeleteZeroBalance = async () => {
     const res = await Swal.fire({
       title: 'Hapus Semua Akun Saldo 0?',
       text: 'Semua user (kecuali admin) dengan saldo Rp 0 akan dihapus permanen! Ini tidak bisa dibatalkan.',
-      icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Ya, Hapus Semua!',
       cancelButtonText: 'Batal',
@@ -1284,12 +1269,12 @@ export default function AdminPage() {
       });
       if (res.ok) {
         updateMenuSettings({ showBeliPaket });
-        Swal.fire({ title: "Info", text: "Pengaturan menu disimpan!", icon: "info" });
+        Swal.fire({ title: "Info", text: "Pengaturan menu disimpan!"});
       } else {
-        Swal.fire({ title: "Info", text: "Gagal menyimpan pengaturan menu", icon: "info" });
+        Swal.fire({ title: "Info", text: "Gagal menyimpan pengaturan menu"});
       }
     } catch (e) {
-      Swal.fire({ title: "Info", text: "Error menyimpan pengaturan menu", icon: "info" });
+      Swal.fire({ title: "Info", text: "Error menyimpan pengaturan menu"});
     } finally {
       setSavingMenuSettings(false);
     }
@@ -1315,7 +1300,7 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: announcement, isEnabled: true })
       });
-      if (res.ok) Swal.fire({ title: "Info", text: "Pengumuman disimpan!", icon: "info" });
+      if (res.ok) Swal.fire({ title: "Info", text: "Pengumuman disimpan!"});
     } finally { setSavingAnn(false); }
   };
 
@@ -1330,12 +1315,12 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
-        Swal.fire({ title: "Berhasil!", text: data.message || "Pengaturan WhatsApp Gateway disimpan!", icon: "success" });
+        Swal.fire({ title: "Berhasil!", text: data.message || "Pengaturan WhatsApp Gateway disimpan!"});
       } else {
-        Swal.fire({ title: "Gagal", text: data.message || "Gagal menyimpan pengaturan WhatsApp", icon: "error" });
+        Swal.fire({ title: "Gagal", text: data.message || "Gagal menyimpan pengaturan WhatsApp"});
       }
     } catch (e) {
-      Swal.fire({ title: "Error", text: "Terjadi kesalahan saat menyimpan pengaturan", icon: "error" });
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan saat menyimpan pengaturan"});
     } finally {
       setSavingWhatsApp(false);
     }
@@ -1386,7 +1371,6 @@ export default function AdminPage() {
     const res = await Swal.fire({
       title: "Tutup Tiket?",
       text: "Apakah masalah pelanggan sudah selesai diatasi?",
-      icon: "question",
       showCancelButton: true,
       confirmButtonText: "Ya, Tutup Tiket",
       cancelButtonText: "Batal"
@@ -1402,7 +1386,7 @@ export default function AdminPage() {
       });
       const data = await r.json();
       if (data.status) {
-        Swal.fire({ title: "Selesai", text: "Tiket telah ditutup.", icon: "success", timer: 1500 });
+        Swal.fire({ title: "Selesai", text: "Tiket telah ditutup.", timer: 1500 });
         setAdminActiveTicket(null);
         loadAdminTickets();
       }
@@ -1418,7 +1402,7 @@ export default function AdminPage() {
       inputValue: defaultPhone,
       inputPlaceholder: "08xxxxxxxxxx",
       showCancelButton: true,
-      confirmButtonText: "Buka WhatsApp 🚀",
+      confirmButtonText: "Buka WhatsApp",
       cancelButtonText: "Batal",
       inputValidator: (val: string | null) => {
         if (!val || val.replace(/\D/g, '').length < 9) {
@@ -1437,14 +1421,14 @@ export default function AdminPage() {
     const verifyUrl = `${window.location.origin}/cek-garansi?imei=${primaryImei}`;
 
     const text = `Halo Kak, berikut bukti transaksi dari *Ry-ITSolutions*:\n\n` +
-      `🧾 *ID Transaksi:* #${(trx.id || '').substring(0, 14)}\n` +
-      `📱 *IMEI:* ${trx.imei || '-'}\n` +
-      `📦 *Layanan:* ${trx.packageName || trx.service_type || 'Aktivasi IMEI'}\n` +
-      `🛡️ *Status:* ${trx.status.toUpperCase()} ✅\n` +
-      (trx.admin_note ? `📝 *Catatan:* ${trx.admin_note}\n` : '') +
-      `📅 *Tanggal:* ${new Date(trx.createdAt).toLocaleDateString('id-ID')}\n\n` +
-      `🔗 *Cek Nota & Garansi Digital:* \n${verifyUrl}\n\n` +
-      `Terima kasih atas kepercayaannya! 🙏`;
+      `*ID Transaksi:* #${(trx.id || '').substring(0, 14)}\n` +
+      `*IMEI:* ${trx.imei || '-'}\n` +
+      `*Layanan:* ${trx.packageName || trx.service_type || 'Aktivasi IMEI'}\n` +
+      `*Status:* ${trx.status.toUpperCase()}\n` +
+      (trx.admin_note ? `*Catatan:* ${trx.admin_note}\n` : '') +
+      `*Tanggal:* ${new Date(trx.createdAt).toLocaleDateString('id-ID')}\n\n` +
+      `*Cek Nota & Garansi Digital:* \n${verifyUrl}\n\n` +
+      `Terima kasih atas kepercayaannya!`;
 
     window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -1629,7 +1613,6 @@ export default function AdminPage() {
         Swal.fire({
           title: "Enkripsi Diperbarui!",
           text: d.message || "Cache sesi lama kontak dibersihkan. Pesan WhatsApp tidak akan lagi pending/menunggu.",
-          icon: "success",
           timer: 3000
         });
         fetchWaBotStatus();
@@ -1647,7 +1630,6 @@ export default function AdminPage() {
     const confirm = await Swal.fire({
       title: "Reset Sesi WhatsApp?",
       text: "Folder sesi akan dihapus dan QR Code baru akan dibuat. Pastikan HP Anda siap untuk scan ulang.",
-      icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#e11d48",
       confirmButtonText: "Ya, Reset Sesi",
@@ -1666,7 +1648,6 @@ export default function AdminPage() {
         Swal.fire({
           title: "Berhasil!",
           text: d.message || "Sesi berhasil direset. Menunggu QR Code baru...",
-          icon: "success",
           timer: 2000
         });
         fetchWaBotStatus();
@@ -1720,7 +1701,6 @@ export default function AdminPage() {
     const confirm = await Swal.fire({
       title: 'Submit Ulang ke CeirGO?',
       text: 'Sistem akan mengeksekusi order ulang ke server pusat CeirGO untuk pesanan ini.',
-      icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Ya, Submit Ulang',
       cancelButtonText: 'Batal',
@@ -1739,24 +1719,19 @@ export default function AdminPage() {
         Swal.fire({
           title: 'Berhasil!',
           text: data.message || 'Pesanan berhasil disubmit ulang ke CeirGO.',
-          icon: 'success',
           timer: 2000
         });
         loadManualData();
       } else {
         Swal.fire({
           title: 'Gagal Submit Ulang',
-          text: data.message || 'Terjadi kesalahan saat memanggil server CeirGO.',
-          icon: 'error'
-        });
+          text: data.message || 'Terjadi kesalahan saat memanggil server CeirGO.'});
         loadManualData();
       }
     } catch (err: any) {
       Swal.fire({
         title: 'Error',
-        text: err?.message || 'Gagal menghubungi server.',
-        icon: 'error'
-      });
+        text: err?.message || 'Gagal menghubungi server.'});
     } finally {
       setRetryingOrderId(null);
     }
@@ -1883,7 +1858,7 @@ export default function AdminPage() {
               loadManualData();
               loadUsers();
               loadAdminTickets();
-              Swal.fire({ title: "Segar!", text: "Data antrean & pengguna berhasil diperbarui.", icon: "success", timer: 1500, showConfirmButton: false });
+              Swal.fire({ title: "Segar!", text: "Data antrean & pengguna berhasil diperbarui.", timer: 1500, showConfirmButton: false });
             }}
           >
             Muat Ulang Data
@@ -1995,7 +1970,7 @@ export default function AdminPage() {
             </p>
             {ceirgoStatus.error && !ceirgoStatus.connected ? (
               <p className="text-[10px] text-rose-500 font-medium truncate" title={ceirgoStatus.error}>
-                ⚠️ {ceirgoStatus.error}
+                {ceirgoStatus.error}
               </p>
             ) : (
               <p className="text-[11px] text-ink-muted">Gateway & Database</p>
@@ -2075,7 +2050,7 @@ export default function AdminPage() {
                   title="Jalan pintas untuk memindai QR Code WhatsApp Bot tanpa harus ke tab Pengaturan"
                 >
                   <span className={`w-2 h-2 rounded-full ${waBotStatus?.connected || waBotStatus?.isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                  <span>📱 Koneksi WhatsApp Bot</span>
+                  <span>Koneksi WhatsApp Bot</span>
                   {(waBotStatus?.connected || waBotStatus?.isConnected) ? (
                     <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-black">ON</span>
                   ) : (
@@ -2084,7 +2059,7 @@ export default function AdminPage() {
                 </Button>
 
                 <Button size="sm" variant="outline" onClick={loadManualData} className="text-xs flex items-center gap-1.5 font-medium" title="Perbarui tabel data antrean pesanan dari server">
-                  <span>🔄 Refresh Antrean</span>
+                  <span>Refresh Antrean</span>
                 </Button>
               </div>
             </div>
@@ -2102,7 +2077,7 @@ export default function AdminPage() {
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${orderQueueSubTab === 'manual' ? 'bg-primary text-white shadow-sm' : 'bg-parchment text-ink'}`}>
-                    🛠️
+                    
                   </div>
                   <div>
                     <p className={`font-black text-xs sm:text-sm ${orderQueueSubTab === 'manual' ? 'text-primary' : 'text-ink'}`}>
@@ -2135,7 +2110,7 @@ export default function AdminPage() {
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${orderQueueSubTab === 'automated' ? 'bg-amber-500 text-white shadow-sm' : 'bg-parchment text-ink'}`}>
-                    ⚡
+                    
                   </div>
                   <div>
                     <p className={`font-black text-xs sm:text-sm ${orderQueueSubTab === 'automated' ? 'text-amber-700' : 'text-ink'}`}>
@@ -2435,14 +2410,14 @@ export default function AdminPage() {
                                 const res = await fetch(`/api/admin/manual-orders/${o.id}`, { method: 'PUT', credentials: 'include', body: formData });
                                 const d = await res.json().catch(() => null);
                                 if (res.ok && d?.status) {
-                                  Swal.fire({ title: "Tersimpan!", text: d.message || "Status pesanan berhasil diperbarui.", icon: "success", timer: 1500 });
+                                  Swal.fire({ title: "Tersimpan!", text: d.message || "Status pesanan berhasil diperbarui.", timer: 1500 });
                                   setManualActionData(null);
                                   loadManualData();
                                 } else {
-                                  Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui status pesanan.", icon: "error" });
+                                  Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui status pesanan."});
                                 }
                               } catch (e: any) {
-                                Swal.fire({ title: "Error", text: e.message || "Gagal menghubungi server.", icon: "error" });
+                                Swal.fire({ title: "Error", text: e.message || "Gagal menghubungi server."});
                               }
                             }}
                           >
@@ -2492,7 +2467,6 @@ export default function AdminPage() {
                               const confirm = await Swal.fire({
                                 title: 'Re-check Server Pusat?',
                                 text: `Kueri ulang status order ${o.id} ke Server Pusat.`,
-                                icon: 'question',
                                 showCancelButton: true,
                                 confirmButtonText: 'Ya, Re-check',
                                 cancelButtonText: 'Batal'
@@ -2502,12 +2476,12 @@ export default function AdminPage() {
                                 const res = await fetch(`/api/admin/manual-orders/${o.id}/recheck`, { method: 'POST', credentials: 'include' });
                                 const data = await res.json();
                                 if (res.ok && data.status) {
-                                  Swal.fire({ title: 'Berhasil!', text: data.data?.note || 'Data berhasil disinkronkan.', icon: 'success' });
+                                  Swal.fire({ title: 'Berhasil!', text: data.data?.note || 'Data berhasil disinkronkan.'});
                                   loadManualData();
                                 } else {
-                                  Swal.fire({ title: 'Gagal', text: data.message || 'Re-check gagal', icon: 'error' });
+                                  Swal.fire({ title: 'Gagal', text: data.message || 'Re-check gagal'});
                                 }
-                              } catch (e) { Swal.fire({ title: 'Error', text: 'Kesalahan jaringan', icon: 'error' }); }
+                              } catch (e) { Swal.fire({ title: 'Error', text: 'Kesalahan jaringan'}); }
                             }}
                           >
                             Cek Ulang Server
@@ -2558,7 +2532,7 @@ export default function AdminPage() {
                 <div className="flex items-center justify-between pb-3 border-b border-hairline shrink-0">
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-xl">
-                      📱
+                      
                     </div>
                     <div>
                       <h3 className="font-bold text-base text-ink">Koneksi WhatsApp Bot</h3>
@@ -2569,7 +2543,7 @@ export default function AdminPage() {
                     onClick={() => setShowWaModal(false)}
                     className="text-ink-muted hover:text-ink w-8 h-8 rounded-full flex items-center justify-center bg-parchment text-sm font-bold transition-colors"
                   >
-                    ✕
+                    
                   </button>
                 </div>
 
@@ -2590,7 +2564,7 @@ export default function AdminPage() {
                       onClick={handleUpgradeBaileys}
                       className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all disabled:opacity-50 shrink-0 ml-2"
                     >
-                      {upgradingBaileys ? "Updating..." : "⚡ Upgrade 6.7.24"}
+                      {upgradingBaileys ? "Updating..." : "Upgrade 6.7.24"}
                     </button>
                   </div>
                 )}
@@ -2637,7 +2611,7 @@ export default function AdminPage() {
                           : "text-ink-muted hover:text-ink"
                       }`}
                     >
-                      📷 Scan QR Code
+                      Scan QR Code
                     </button>
                     <button
                       type="button"
@@ -2648,7 +2622,7 @@ export default function AdminPage() {
                           : "text-ink-muted hover:text-ink"
                       }`}
                     >
-                      🔢 Kode Pairing (8 Digit)
+                      Kode Pairing (8 Digit)
                     </button>
                   </div>
                 )}
@@ -2657,7 +2631,7 @@ export default function AdminPage() {
                 {waBotStatus?.connected || waBotStatus?.isConnected ? (
                   <div className="text-center py-6 space-y-3 bg-emerald-50/50 rounded-2xl border border-emerald-100 p-4">
                     <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl font-black shadow-sm">
-                      ✓
+                      
                     </div>
                     <div className="space-y-1">
                       <h4 className="font-bold text-sm text-emerald-900">WhatsApp Bot Aktif & Terhubung!</h4>
@@ -2674,7 +2648,7 @@ export default function AdminPage() {
                 ) : waBotStatus?.state === "pairing" ? (
                   <div className="text-center py-10 space-y-3 bg-blue-50/50 rounded-2xl border border-blue-200 p-6 animate-pulse">
                     <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl font-bold">
-                      🔄
+                      
                     </div>
                     <div className="space-y-1">
                       <h4 className="font-bold text-sm text-blue-900">Sedang Menautkan Perangkat WhatsApp...</h4>
@@ -2732,14 +2706,14 @@ export default function AdminPage() {
                           }}
                           className="text-xs text-emerald-800 font-bold hover:bg-emerald-200/50"
                         >
-                          {copiedPairingCode ? "✓ Berhasil Disalin!" : "📋 Salin Kode"}
+                          {copiedPairingCode ? "Berhasil Disalin!" : "Salin Kode"}
                         </Button>
                       </div>
                     )}
 
                     <div className="space-y-2 text-left bg-amber-50 p-3 rounded-2xl border border-amber-200">
                       <p className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                        <span>💡</span>
+                        
                         <span>Cara Memasukkan Kode di WhatsApp HP:</span>
                       </p>
                       <ol className="text-[11px] text-amber-900 list-decimal list-inside space-y-1.5 leading-relaxed">
@@ -2811,7 +2785,7 @@ export default function AdminPage() {
                     className="flex-1 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 font-bold shadow-xs"
                     title="Perbaiki pesan 'Menunggu pesan ini' tanpa perlu scan ulang QR"
                   >
-                    {fixingWa ? "Memproses..." : "⚡ Perbaiki Enkripsi (Anti-Pending)"}
+                    {fixingWa ? "Memproses..." : "Perbaiki Enkripsi (Anti-Pending)"}
                   </Button>
                   <Button
                     variant="outline"
@@ -2820,7 +2794,7 @@ export default function AdminPage() {
                     onClick={handleResetWaSession}
                     className="flex-1 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 font-bold"
                   >
-                    {resettingWa ? "Mereset..." : "🔄 Reset Sesi WA"}
+                    {resettingWa ? "Mereset..." : "Reset Sesi WA"}
                   </Button>
                   <Button
                     variant="outline"
@@ -2863,7 +2837,7 @@ export default function AdminPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ isOpen: newStatus, note: imeiServiceNote })
                     });
-                    Swal.fire({ title: 'Tersimpan', text: `Layanan IMEI sekarang ${newStatus ? 'BUKA' : 'TUTUP'}`, icon: 'success', timer: 2000 });
+                    Swal.fire({ title: 'Tersimpan', text: `Layanan IMEI sekarang ${newStatus ? 'BUKA' : 'TUTUP'}`, timer: 2000 });
                   }}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${imeiServiceOpen ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}
                 >
@@ -2887,7 +2861,7 @@ export default function AdminPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ isOpen: imeiServiceOpen, note: imeiServiceNote })
                     });
-                    Swal.fire({ title: 'Berhasil', text: 'Catatan status IMEI berhasil disimpan!', icon: 'success', timer: 2000 });
+                    Swal.fire({ title: 'Berhasil', text: 'Catatan status IMEI berhasil disimpan!', timer: 2000 });
                   }}
                 >
                   Simpan
@@ -2923,7 +2897,7 @@ export default function AdminPage() {
                           : 'bg-slate-100 text-slate-500 border border-slate-200'
                       }`}
                     >
-                      {pricing.imei_speed_fast_status !== 'hidden' ? '✓ Aktif' : 'Hidden'}
+                      {pricing.imei_speed_fast_status !== 'hidden' ? 'Aktif' : 'Hidden'}
                     </button>
                   </div>
 
@@ -2976,7 +2950,7 @@ export default function AdminPage() {
                           : 'bg-slate-100 text-slate-500 border border-slate-200'
                       }`}
                     >
-                      {pricing.imei_speed_semi_status !== 'hidden' ? '✓ Aktif' : 'Hidden'}
+                      {pricing.imei_speed_semi_status !== 'hidden' ? 'Aktif' : 'Hidden'}
                     </button>
                   </div>
 
@@ -3029,7 +3003,7 @@ export default function AdminPage() {
                           : 'bg-slate-100 text-slate-500 border border-slate-200'
                       }`}
                     >
-                      {pricing.imei_speed_slow_status !== 'hidden' ? '✓ Aktif' : 'Hidden'}
+                      {pricing.imei_speed_slow_status !== 'hidden' ? 'Aktif' : 'Hidden'}
                     </button>
                   </div>
 
@@ -3131,7 +3105,7 @@ export default function AdminPage() {
                               }`}
                               title="Klik untuk ubah status tampil di web pembeli"
                             >
-                              {isVisible ? '✓ Aktif' : 'Hidden'}
+                              {isVisible ? 'Aktif' : 'Hidden'}
                             </button>
                             <button
                               type="button"
@@ -3146,7 +3120,6 @@ export default function AdminPage() {
                                 const res = await Swal.fire({
                                   title: "Hapus Paket?",
                                   text: `Yakin ingin menghapus paket durasi "${pkg.duration}"?`,
-                                  icon: "warning",
                                   showCancelButton: true,
                                   confirmButtonText: "Ya, Hapus",
                                   cancelButtonText: "Batal",
@@ -3188,7 +3161,7 @@ export default function AdminPage() {
                             <>
                               {speeds.includes('fast') && (
                                 <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-300/40 text-[10px] font-extrabold flex items-center gap-0.5">
-                                  ⚡ Fast
+                                  Fast
                                 </span>
                               )}
                               {speeds.includes('semi') && (
@@ -3198,7 +3171,7 @@ export default function AdminPage() {
                               )}
                               {speeds.includes('slow') && (
                                 <span className="px-1.5 py-0.5 rounded-md bg-slate-500/15 text-slate-800 dark:text-slate-300 border border-slate-300/40 text-[10px] font-medium flex items-center gap-0.5">
-                                  🐢 Slow
+                                  Slow
                                 </span>
                               )}
                             </>
@@ -3214,7 +3187,7 @@ export default function AdminPage() {
               <div className="p-4 rounded-2xl bg-parchment/30 border border-hairline space-y-3 pt-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-ink flex items-center gap-1.5">
-                    <span>➕</span> Tambah Paket Durasi Baru
+                    <span>+</span> Tambah Paket Durasi Baru
                   </span>
                   <span className="text-[10px] text-ink-muted">
                     Atur durasi, harga jual &amp; batasan kecepatan
@@ -3241,15 +3214,15 @@ export default function AdminPage() {
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-ink flex items-center gap-1.5">
-                      <span>⚡</span> Pilihan Kecepatan yang Diizinkan untuk Paket Ini:
+                      <span>Pilihan Kecepatan</span> yang Diizinkan untuk Paket Ini:
                     </label>
                     <span className="text-[10px] text-ink-muted">Klik untuk memilih (minimal 1)</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: 'fast', label: 'Fast', icon: '⚡' },
-                      { id: 'semi', label: 'Semi Fast', icon: '⏱️' },
-                      { id: 'slow', label: 'Slow', icon: '🐢' }
+                      { id: 'fast', label: 'Fast'},
+                      { id: 'semi', label: 'Semi Fast'},
+                      { id: 'slow', label: 'Slow'}
                     ].map(speed => {
                       const isSelected = (newImeiPkg.allowed_speeds || []).includes(speed.id);
                       return (
@@ -3278,7 +3251,7 @@ export default function AdminPage() {
                             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black ${
                               isSelected ? 'bg-primary text-white' : 'border border-hairline bg-canvas'
                             }`}>
-                              {isSelected ? '✓' : ''}
+                              {isSelected ? '' : ''}
                             </span>
                           </div>
                         </button>
@@ -3286,7 +3259,7 @@ export default function AdminPage() {
                     })}
                   </div>
                   <p className="text-[10px] text-ink-muted italic">
-                    💡 Contoh: Jika Anda memasukkan paket "1 Bulan" dan hanya mencentang "Fast", maka pelanggan yang memilih paket 1 Bulan hanya akan melihat opsi pengerjaan Fast saja.
+                    Contoh: Jika Anda memasukkan paket "1 Bulan" dan hanya mencentang "Fast", maka pelanggan yang memilih paket 1 Bulan hanya akan melihat opsi pengerjaan Fast saja.
                   </p>
                 </div>
 
@@ -3296,10 +3269,10 @@ export default function AdminPage() {
                     disabled={savingImeiPkg}
                     onClick={async () => {
                       if (!newImeiPkg.duration.trim() || !newImeiPkg.price) {
-                        return Swal.fire({ title: "Perhatian", text: "Mohon isi nama durasi dan harga jual paket.", icon: "info" });
+                        return Swal.fire({ title: "Perhatian", text: "Mohon isi nama durasi dan harga jual paket."});
                       }
                       if (!newImeiPkg.allowed_speeds || newImeiPkg.allowed_speeds.length === 0) {
-                        return Swal.fire({ title: "Perhatian", text: "Pilih minimal 1 kecepatan pengerjaan yang diizinkan.", icon: "info" });
+                        return Swal.fire({ title: "Perhatian", text: "Pilih minimal 1 kecepatan pengerjaan yang diizinkan."});
                       }
                       setSavingImeiPkg(true);
                       try {
@@ -3316,9 +3289,8 @@ export default function AdminPage() {
                         const d = await res.json();
                         if (d.status) {
                           Swal.fire({
-                            title: "Berhasil! 🎉",
+                            title: "Berhasil!",
                             text: d.message || "Paket durasi baru berhasil disimpan.",
-                            icon: "success",
                             timer: 2000,
                             showConfirmButton: false
                           });
@@ -3353,7 +3325,7 @@ export default function AdminPage() {
                         onClick={() => setEditingPkg(null)}
                         className="w-8 h-8 rounded-full bg-parchment hover:bg-hairline flex items-center justify-center text-ink text-xs font-bold"
                       >
-                        ✕
+                        
                       </button>
                     </div>
 
@@ -3385,9 +3357,9 @@ export default function AdminPage() {
                         <label className="font-bold text-ink block">Pilihan Kecepatan yang Diizinkan:</label>
                         <div className="grid grid-cols-3 gap-2">
                           {[
-                            { id: 'fast', label: 'Fast', icon: '⚡' },
-                            { id: 'semi', label: 'Semi Fast', icon: '⏱️' },
-                            { id: 'slow', label: 'Slow', icon: '🐢' }
+                            { id: 'fast', label: 'Fast'},
+                            { id: 'semi', label: 'Semi Fast'},
+                            { id: 'slow', label: 'Slow'}
                           ].map(s => {
                             const curSpeeds: string[] = editingPkg.allowed_speeds || [];
                             const isSel = curSpeeds.includes(s.id);
@@ -3459,7 +3431,7 @@ export default function AdminPage() {
                             });
                             const d = await res.json();
                             if (d.status) {
-                              Swal.fire({ title: "Berhasil!", text: "Paket berhasil diperbarui", icon: "success", timer: 1500, showConfirmButton: false });
+                              Swal.fire({ title: "Berhasil!", text: "Paket berhasil diperbarui", timer: 1500, showConfirmButton: false });
                               setEditingPkg(null);
                               loadManualData();
                             } else {
@@ -3510,7 +3482,7 @@ export default function AdminPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-ink flex items-center gap-1.5">
-                        <span>🔍</span> Cek Status & Diagnostik IMEI
+                        <span>Cek Status & Diagnostik IMEI</span>
                       </span>
                       <span className="text-[10px] bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
                         {ceirgoServices.filter(s => !/barcode|create/i.test(`${s.code} ${s.name}`) && ceirgoDisplayCodes.has(s.code)).length} Aktif
@@ -3557,7 +3529,7 @@ export default function AdminPage() {
                   <div className="space-y-2 pt-2 border-t border-hairline">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-ink flex items-center gap-1.5">
-                        <span>🏷️</span> Generator Barcode Device
+                        <span>Generator Barcode Device</span>
                       </span>
                       <span className="text-[10px] bg-purple-500/10 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
                         {ceirgoServices.filter(s => /barcode|create/i.test(`${s.code} ${s.name}`) && ceirgoDisplayCodes.has(s.code)).length} Aktif
@@ -3619,8 +3591,8 @@ export default function AdminPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(ceirgoPricing)
                         });
-                        if (res.ok) Swal.fire({ title: "Sukses", text: "Harga dan tampilan layanan berhasil disimpan!", icon: "success" });
-                      } catch (e) { Swal.fire({ title: "Error", text: "Error menyimpan pengaturan", icon: "error" }); }
+                        if (res.ok) Swal.fire({ title: "Sukses", text: "Harga dan tampilan layanan berhasil disimpan!"});
+                      } catch (e) { Swal.fire({ title: "Error", text: "Error menyimpan pengaturan"}); }
                     }}
                     className="w-full text-xs font-bold"
                   >
@@ -3818,10 +3790,10 @@ export default function AdminPage() {
                             body: JSON.stringify({ userId: u.id, newRole: e.target.value })
                           });
                           if (res.ok) {
-                            Swal.fire({ title: "Info", text: "Role diubah!", icon: "info" });
+                            Swal.fire({ title: "Info", text: "Role diubah!"});
                             loadUsers();
-                          } else Swal.fire({ title: "Info", text: "Gagal mengubah role", icon: "info" });
-                        } catch (err) { Swal.fire({ title: "Info", text: "Error ubah role", icon: "info" }); }
+                          } else Swal.fire({ title: "Info", text: "Gagal mengubah role"});
+                        } catch (err) { Swal.fire({ title: "Info", text: "Error ubah role"}); }
                       }}
                     >
                       <option value="user">Member (User)</option>
@@ -3833,7 +3805,7 @@ export default function AdminPage() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Input type="number" placeholder="Gunakan - untuk kurangi" className="w-44 text-xs" value={balAmount} onChange={(e) => setBalAmount(e.target.value)} />
                         <Button size="sm" className="text-xs h-8" onClick={() => handleUpdateBalance(u.id)}>Simpan</Button>
-                        <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => { setSelectedUserId(null); setBalAmount(""); }}>✕</Button>
+                        <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => { setSelectedUserId(null); setBalAmount(""); }}><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></Button>
                       </div>
                     ) : (
                       <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => setSelectedUserId(u.id)}>Edit Saldo</Button>
@@ -3842,14 +3814,14 @@ export default function AdminPage() {
                     {u.status === 'pending' && (
                       <div className="flex gap-1.5">
                         <Button size="sm" className="bg-emerald-600 text-white text-xs h-8" onClick={async () => {
-                          const res = await Swal.fire({ title: "Konfirmasi", text: "Setujui pendaftaran user ini?", icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
+                          const res = await Swal.fire({ title: "Konfirmasi", text: "Setujui pendaftaran user ini?", showCancelButton: true }); if (!res.isConfirmed) return;
                           try {
                             const res = await fetch('/api/admin/approve-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id }) });
                             if (res.ok) loadUsers();
                           } catch (e) { }
                         }}>Setujui</Button>
                         <Button variant="danger" size="sm" className="text-xs h-8" onClick={async () => {
-                          const res = await Swal.fire({ title: "Konfirmasi", text: "Tolak user ini?", icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
+                          const res = await Swal.fire({ title: "Konfirmasi", text: "Tolak user ini?", showCancelButton: true }); if (!res.isConfirmed) return;
                           try {
                             const res = await fetch('/api/admin/reject-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id }) });
                             if (res.ok) loadUsers();
@@ -3859,12 +3831,12 @@ export default function AdminPage() {
                     )}
 
                     <Button variant="danger" size="sm" className="text-xs h-8" onClick={async () => {
-                      const res = await Swal.fire({ title: "Konfirmasi", text: `Yakin ingin menghapus pengguna ${u.name}?`, icon: "warning", showCancelButton: true }); if (!res.isConfirmed) return;
+                      const res = await Swal.fire({ title: "Konfirmasi", text: `Yakin ingin menghapus pengguna ${u.name}?`, showCancelButton: true }); if (!res.isConfirmed) return;
                       try {
                         const res = await fetch('/api/admin/delete-user', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id }) });
                         if (res.ok) loadUsers();
-                        else Swal.fire({ title: "Info", text: "Gagal hapus pengguna.", icon: "info" });
-                      } catch (e) { Swal.fire({ title: "Info", text: "Error", icon: "info" }); }
+                        else Swal.fire({ title: "Info", text: "Gagal hapus pengguna."});
+                      } catch (e) { Swal.fire({ title: "Info", text: "Error"}); }
                     }}>Hapus</Button>
                   </div>
                 </div>
@@ -4531,7 +4503,7 @@ export default function AdminPage() {
                         }
                         className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold"
                       >
-                        ✕
+                        
                       </button>
                     </div>
                   ))}
@@ -4588,7 +4560,7 @@ export default function AdminPage() {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={r.userAvatar} alt={r.userName} className="w-6 h-6 rounded-full border border-hairline object-cover" />
                         <span className="font-bold text-ink">{r.userName}</span>
-                        <span className="text-amber-500 font-bold">★ {r.rating}</span>
+                        <span className="text-amber-500 font-bold">{r.rating}</span>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">{r.userRole}</span>
                       </div>
                       <p className="text-ink-muted leading-snug">{r.comment}</p>
@@ -4685,12 +4657,12 @@ export default function AdminPage() {
                           });
                           const d = await res.json();
                           if (res.ok && d.status) {
-                            Swal.fire({ title: "Berhasil!", text: d.message, icon: "success" });
+                            Swal.fire({ title: "Berhasil!", text: d.message});
                           } else {
-                            Swal.fire({ title: "Gagal", text: d.message || "Gagal mengirim pesan tes.", icon: "error" });
+                            Swal.fire({ title: "Gagal", text: d.message || "Gagal mengirim pesan tes."});
                           }
                         } catch (e) {
-                          Swal.fire({ title: "Error", text: "Kesalahan jaringan", icon: "error" });
+                          Swal.fire({ title: "Error", text: "Kesalahan jaringan"});
                         }
                       }}
                     >
@@ -4794,7 +4766,7 @@ export default function AdminPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ token: waToken, url: waUrl, autoSend: newAuto })
                       });
-                      Swal.fire({ title: "Tersimpan", text: `Auto-send WhatsApp ${newAuto ? 'AKTIF' : 'NONAKTIF'}`, icon: "success", timer: 1500 });
+                      Swal.fire({ title: "Tersimpan", text: `Auto-send WhatsApp ${newAuto ? 'AKTIF' : 'NONAKTIF'}`, timer: 1500 });
                     }}
                   />
                   <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -4844,9 +4816,9 @@ export default function AdminPage() {
                       body: JSON.stringify({ gateway: paymentGateway })
                     });
                     const data = await res.json();
-                    if (res.ok && data.status) Swal.fire({ title: "Info", text: data.message, icon: "info" });
-                    else Swal.fire({ title: "Info", text: data.message || 'Gagal menyimpan', icon: "info" });
-                  } catch (e) { Swal.fire({ title: "Info", text: 'Error menyimpan gateway', icon: "info" }); }
+                    if (res.ok && data.status) Swal.fire({ title: "Info", text: data.message});
+                    else Swal.fire({ title: "Info", text: data.message || 'Gagal menyimpan'});
+                  } catch (e) { Swal.fire({ title: "Info", text: 'Error menyimpan gateway'}); }
                   finally { setSavingGateway(false); }
                 }}
               >
@@ -4982,7 +4954,7 @@ export default function AdminPage() {
                         isLoading={gopayRequestingOtp}
                         className="w-full text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
                       >
-                        Kirim Kode OTP via SMS ➔
+                        Kirim Kode OTP via SMS
                       </Button>
                     </form>
                   ) : (
@@ -5013,7 +4985,7 @@ export default function AdminPage() {
                           isLoading={gopayVerifyingOtp}
                           className="flex-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                         >
-                          Verifikasi & Aktifkan Sesi ✓
+                          Verifikasi & Aktifkan Sesi
                         </Button>
                         <Button
                           type="button"
@@ -5063,7 +5035,7 @@ export default function AdminPage() {
                     </div>
                     {ceirgoStatus.error && !ceirgoStatus.connected && (
                       <p className="text-[10px] text-rose-500 font-normal mt-0.5 max-w-xs truncate" title={ceirgoStatus.error}>
-                        ⚠️ {ceirgoStatus.error}
+                        {ceirgoStatus.error}
                       </p>
                     )}
                   </div>
@@ -5192,7 +5164,6 @@ export default function AdminPage() {
                     Swal.fire({
                       title: 'Mulai Auto Deploy?',
                       text: 'Server akan menarik commit & bundle produksi terbaru dari GitHub lalu restart PM2 secara instan (Tanpa Rebuild).',
-                      icon: 'question',
                       showCancelButton: true,
                       confirmButtonText: 'Ya, Jalankan Deploy',
                       cancelButtonText: 'Batal'
@@ -5266,7 +5237,7 @@ export default function AdminPage() {
                 <div className="p-4 rounded-2xl bg-canvas border border-hairline shadow-xs">
                   <div className="flex items-center justify-between text-ink-muted mb-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider">Total Lisensi</span>
-                    <span className="text-blue-500">🔑</span>
+                    <svg className="w-3.5 h-3.5 text-blue-500 inline" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/></svg>
                   </div>
                   <p className="text-2xl font-black text-ink">{totalKeys}</p>
                   <p className="text-[11px] text-ink-muted mt-0.5">Semua API Key terdaftar</p>
@@ -5293,7 +5264,7 @@ export default function AdminPage() {
                 <div className="p-4 rounded-2xl bg-canvas border border-hairline shadow-xs">
                   <div className="flex items-center justify-between text-ink-muted mb-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider">Estimasi Omset</span>
-                    <span className="text-emerald-500">💰</span>
+                    <svg className="w-3.5 h-3.5 text-emerald-500 inline" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   </div>
                   <p className="text-2xl font-black text-primary">Rp {totalRevenue.toLocaleString('id-ID')}</p>
                   <p className="text-[11px] text-ink-muted mt-0.5">Dari biaya langganan API</p>
@@ -5432,7 +5403,7 @@ export default function AdminPage() {
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-[10px] text-emerald-600 hover:text-emerald-700 font-semibold mt-1"
                                 >
-                                  <span>🟢 {phone}</span>
+                                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>{phone}</span>
                                 </a>
                               ) : (
                                 <span className="text-[10px] text-ink-muted">No WA: -</span>
@@ -5455,12 +5426,12 @@ export default function AdminPage() {
                                   type="button"
                                   onClick={() => {
                                     navigator.clipboard.writeText(k.apiKey);
-                                    Swal.fire({ title: 'Tersalin!', text: 'API Key berhasil disalin ke clipboard', icon: 'success', timer: 1500, showConfirmButton: false });
+                                    Swal.fire({ title: 'Tersalin!', text: 'API Key berhasil disalin ke clipboard', timer: 1500, showConfirmButton: false });
                                   }}
                                   className="text-[9px] text-ink-muted hover:text-ink font-sans ml-0.5"
                                   title="Salin API Key"
                                 >
-                                  📋
+                                  
                                 </button>
                               </div>
                             </td>
@@ -5508,7 +5479,7 @@ export default function AdminPage() {
                                     </span>
                                   ) : isExpiringSoon ? (
                                     <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 text-[10px] font-black border border-amber-500/30 inline-flex items-center gap-1 animate-pulse">
-                                      <span>⚠️ Sisa {daysLeft} Hari Lagi</span>
+                                      <span>Sisa {daysLeft} Hari Lagi</span>
                                     </span>
                                   ) : (
                                     <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold border border-emerald-500/20 inline-flex items-center gap-1">
@@ -5548,7 +5519,7 @@ export default function AdminPage() {
                                     disabled={isActionLoading}
                                     title="Kirim Pesan Pengingat Masa Aktif ke WhatsApp"
                                   >
-                                    💬 Kirim WA
+                                    Kirim WA
                                   </Button>
                                 )}
 

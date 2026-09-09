@@ -570,7 +570,7 @@ export default function TopUpPage() {
               </div>
             </div>
 
-            {/* Pilihan Pembayaran Tunggal: ⚡ Direct QRIS Otomatis (Semua Bank & E-Wallet) */}
+            {/* Pilihan Pembayaran Tunggal: Direct QRIS Otomatis (Semua Bank & E-Wallet) */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-ink flex items-center justify-between">
                 <span>Metode Pembayaran</span>
@@ -583,7 +583,7 @@ export default function TopUpPage() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
-                      <span className="text-sm">⚡</span> Direct QRIS Otomatis (Semua Bank &amp; E-Wallet)
+                      <svg className="w-3.5 h-3.5 text-amber-500 inline mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg> Direct QRIS Otomatis (Semua Bank &amp; E-Wallet)
                     </span>
                   </div>
                   <p className="text-[11px] text-emerald-800 font-medium">
@@ -594,7 +594,7 @@ export default function TopUpPage() {
                   </p>
                 </div>
                 <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">
-                  ✓
+                  <svg className="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                 </div>
               </div>
             </div>
@@ -613,7 +613,7 @@ export default function TopUpPage() {
             >
               {gatewayInfo && !gatewayInfo.is_ready
                 ? "Pembayaran Otomatis Offline (Hubungi Admin)"
-                : `Lanjut Bayar (Rp ${selectedNum.toLocaleString("id-ID")}) ➔`}
+                : `Lanjut Bayar (Rp ${selectedNum.toLocaleString("id-ID")})`}
             </Button>
           </form>
         ) : (

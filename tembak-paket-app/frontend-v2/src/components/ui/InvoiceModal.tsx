@@ -197,7 +197,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       inputLabel: "Nomor WhatsApp Pelanggan (contoh: 08123456789):",
       inputPlaceholder: "08xxxxxxxxxx",
       showCancelButton: true,
-      confirmButtonText: "Buka WhatsApp 🚀",
+      confirmButtonText: "Buka WhatsApp",
       cancelButtonText: "Batal",
       inputValidator: (value: string | null) => {
         if (!value || value.replace(/\D/g, '').length < 9) {
@@ -217,13 +217,13 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
     const currentStore = customStoreName || 'Ry-ITSolutions';
     const messageText = `Halo Kak, berikut bukti nota transaksi & surat garansi digital dari *${currentStore}*:\n\n` +
-      `🧾 *ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
-      `📱 *Perangkat / IMEI:* ${imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : 'Smartphone'} (${data.imei})\n` +
-      `📦 *Layanan:* ${data.packageName || 'Layanan Aktivasi IMEI'}\n` +
-      `🛡️ *Status:* ${isSuccess ? 'SUKSES / SELESAI ✅' : data.status.toUpperCase()}\n` +
-      `📅 *Tanggal:* ${formatDate(data.createdAt)}\n\n` +
-      `🔗 *Cek Nota & Status Garansi Online:* \n${verifyUrl}\n\n` +
-      `Terima kasih atas kepercayaannya kepada *${currentStore}*! 🙏`;
+      `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
+      `*Perangkat / IMEI:* ${imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : 'Smartphone'} (${data.imei})\n` +
+      `*Layanan:* ${data.packageName || 'Layanan Aktivasi IMEI'}\n` +
+      `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : data.status.toUpperCase()}\n` +
+      `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
+      `*Cek Nota & Status Garansi Online:* \n${verifyUrl}\n\n` +
+      `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
 
     const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
     window.open(waUrl, '_blank');
@@ -425,7 +425,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                 <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                      ✓
+                      <svg className="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                     </div>
                     <div>
                       <p className="font-black text-emerald-950 text-xs uppercase tracking-wider">Laporan Pengecekan Database CEIR</p>
@@ -541,7 +541,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
                     <span className="text-slate-500 font-medium">Waktu Pengerjaan</span>
                     <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px]">
-                      ⚡ Proses Instant (Otomatis System)
+                      Proses Instant (Otomatis System)
                     </span>
                   </div>
                 </>

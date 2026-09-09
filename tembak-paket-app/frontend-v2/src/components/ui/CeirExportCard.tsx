@@ -280,7 +280,7 @@ export function CeirExportCard({
         <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] text-slate-500">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">
-              ✓
+              <svg className="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
             </div>
             <span>
               Dokumen ini dihasilkan secara otomatis oleh sistem <strong>{storeName || "Ry-IT Solutions"}</strong> dan terverifikasi secara digital.

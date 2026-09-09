@@ -57,7 +57,7 @@ export function PaymentLogosGrid() {
       </div>
 
       <p className="text-[10.5px] text-ink-muted text-center pt-0.5">
-        ⚡ Scan menggunakan aplikasi bank atau e-wallet apapun di atas, saldo otomatis masuk detik ini juga.
+        Scan menggunakan aplikasi bank atau e-wallet apapun di atas, saldo otomatis masuk detik ini juga.
       </p>
     </div>
   );

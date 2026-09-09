@@ -48,7 +48,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       });
     } else {
       Swal.fire({
-        title: 'Yah, gabisa install 🥲',
+        title: 'Tidak Dapat Menginstall Aplikasi',
         text: 'Kayaknya aplikasi ini udah ter-install di HP lo, atau browser lo emang kurang support (coba pake Chrome/Edge ya!).',
         icon: 'info',
         confirmButtonText: 'Oke Ngab',

@@ -248,7 +248,7 @@ export default function LandingPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-slate-800 font-bold shadow-xs">
-                        📱
+                        <svg className="w-5 h-5 text-slate-700 dark:text-slate-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
                       </div>
                       <div>
                         <h4 className="font-bold text-xs text-emerald-950">{analyzed.brand} {analyzed.model}</h4>
@@ -305,9 +305,9 @@ export default function LandingPage() {
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Garansi sinyal aktif sesuai paket</li>
-                <li className="flex items-center gap-2">✓ Support semua tipe iPhone &amp; Android</li>
-                <li className="flex items-center gap-2">✓ Update progres transparan via WA</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Garansi sinyal aktif sesuai paket</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Support semua tipe iPhone &amp; Android</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Update progres transparan via WA</li>
               </ul>
             </div>
             <Link
@@ -336,9 +336,9 @@ export default function LandingPage() {
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Aktivasi Rp 35.000 (Perpanjang Rp 10.000 / bln)</li>
-                <li className="flex items-center gap-2">✓ Uang langsung masuk rekening GoPay</li>
-                <li className="flex items-center gap-2">✓ Auto-check mutasi &amp; HTTP Webhook</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Aktivasi Rp 35.000 (Perpanjang Rp 10.000 / bln)</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Uang langsung masuk rekening GoPay</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Auto-check mutasi &amp; HTTP Webhook</li>
               </ul>
             </div>
             <Link
@@ -364,9 +364,9 @@ export default function LandingPage() {
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Terkoneksi gateway server CEIR</li>
-                <li className="flex items-center gap-2">✓ Riwayat log query lengkap &amp; akurat</li>
-                <li className="flex items-center gap-2">✓ Hasil cek instan dalam hitungan detik</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Terkoneksi gateway server CEIR</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Riwayat log query lengkap &amp; akurat</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Hasil cek instan dalam hitungan detik</li>
               </ul>
             </div>
             <Link
@@ -392,9 +392,9 @@ export default function LandingPage() {
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Cetak nota custom nama toko Anda</li>
-                <li className="flex items-center gap-2">✓ QR verifikasi masa aktif sinyal</li>
-                <li className="flex items-center gap-2">✓ Desain profesional siap kirim ke customer</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Cetak nota custom nama toko Anda</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> QR verifikasi masa aktif sinyal</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Desain profesional siap kirim ke customer</li>
               </ul>
             </div>
             <Link
@@ -420,9 +420,9 @@ export default function LandingPage() {
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Integrasi WhatsApp Baileys 24/7</li>
-                <li className="flex items-center gap-2">✓ Bot Telegram antrean admin</li>
-                <li className="flex items-center gap-2">✓ Notifikasi instan pembayaran sukses</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Integrasi WhatsApp Baileys 24/7</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Bot Telegram antrean admin</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Notifikasi instan pembayaran sukses</li>
               </ul>
             </div>
             <Link
@@ -448,9 +448,9 @@ export default function LandingPage() {
                 </p>
               </div>
               <ul className="text-xs space-y-1.5 text-ink-muted pt-1">
-                <li className="flex items-center gap-2">✓ Layanan bantuan CS responsif 24/7</li>
-                <li className="flex items-center gap-2">✓ Panduan setup API &amp; Webhook</li>
-                <li className="flex items-center gap-2">✓ Pantauan kendala database CEIR realtime</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Layanan bantuan CS responsif 24/7</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Panduan setup API &amp; Webhook</li>
+                <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Pantauan kendala database CEIR realtime</li>
               </ul>
             </div>
             <a
@@ -491,9 +491,9 @@ export default function LandingPage() {
                   Pengecekan data pendaftaran server CEIR & Bea Cukai lengkap dengan log query.
                 </p>
                 <ul className="text-xs space-y-2 text-ink-muted pt-1">
-                  <li className="flex items-center gap-2">✓ Terkoneksi Database Pusat CEIR</li>
-                  <li className="flex items-center gap-2">✓ Cek Bea Cukai: Rp {(ceirgoPricing?.cek_imei_beacukai || 1500).toLocaleString('id-ID')}</li>
-                  <li className="flex items-center gap-2">✓ Cetak Barcode: Rp {(ceirgoPricing?.create_barcode || 5000).toLocaleString('id-ID')}</li>
+                  <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Terkoneksi Database Pusat CEIR</li>
+                  <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Cek Bea Cukai: Rp {(ceirgoPricing?.cek_imei_beacukai || 1500).toLocaleString('id-ID')}</li>
+                  <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Cetak Barcode: Rp {(ceirgoPricing?.create_barcode || 5000).toLocaleString('id-ID')}</li>
                 </ul>
               </div>
               <Link
@@ -527,9 +527,9 @@ export default function LandingPage() {
                       Aktivasi sinyal seluler iPhone & Android semua operator dengan masa garansi aktif {pkg?.duration || "Garansi Aktif"}.
                     </p>
                     <ul className="text-xs space-y-2 text-ink-muted pt-1">
-                      <li className="flex items-center gap-2">✓ Sinyal All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)</li>
-                      <li className="flex items-center gap-2 font-bold text-emerald-600">✓ Masa Garansi Sinyal {pkg?.duration || "Sinyal Aktif"}</li>
-                      <li className="flex items-center gap-2">✓ Surat Garansi Digital + QR Verifikasi</li>
+                      <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Sinyal All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)</li>
+                      <li className="flex items-center gap-2 font-bold text-emerald-600"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Masa Garansi Sinyal {pkg?.duration || "Sinyal Aktif"}</li>
+                      <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Surat Garansi Digital + QR Verifikasi</li>
                     </ul>
                   </div>
                   <Link
@@ -571,9 +571,9 @@ export default function LandingPage() {
                   Integrasi pembayaran QRIS otomatis untuk website atau bot Anda dengan mutasi real-time langsung ke rekening GoPay.
                 </p>
                 <ul className="text-xs space-y-2 text-ink-muted pt-1">
-                  <li className="flex items-center gap-2">✓ Auto Check Mutasi 24 Jam Non-stop</li>
-                  <li className="flex items-center gap-2">✓ Webhook Notifikasi Instan ke Server</li>
-                  <li className="flex items-center gap-2">✓ Token API Key &amp; Sandbox Tester</li>
+                  <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Auto Check Mutasi 24 Jam Non-stop</li>
+                  <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Webhook Notifikasi Instan ke Server</li>
+                  <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Token API Key &amp; Sandbox Tester</li>
                 </ul>
               </div>
               <Link
@@ -593,7 +593,7 @@ export default function LandingPage() {
         <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-[#004080] via-[#005bb5] to-[#0066cc] text-white relative overflow-hidden shadow-xl">
           <div className="max-w-2xl space-y-4 relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white font-bold text-xs">
-              🛡️ Perlindungan & Transparansi
+              <svg className="w-5 h-5 text-emerald-600 inline shrink-0 mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg> Perlindungan & Transparansi
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
               Layanan Bergaransi Sinyal & Verifikasi QR Realtime

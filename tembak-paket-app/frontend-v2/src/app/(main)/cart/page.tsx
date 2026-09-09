@@ -529,7 +529,7 @@ export default function CartPage() {
                   </div>
                   <div>
                     <h5 className="font-extrabold text-xs text-ink flex items-center gap-1.5">
-                      <span>⚡</span> Direct QRIS Otomatis
+                      <svg className="w-3.5 h-3.5 text-amber-500 inline mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg> Direct QRIS Otomatis
                     </h5>
                     <p className="text-[10px] text-emerald-700 font-bold">Semua Bank &amp; E-Wallet (Realtime 24 Jam)</p>
                   </div>

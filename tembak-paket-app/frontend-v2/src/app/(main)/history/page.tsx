@@ -552,7 +552,7 @@ function HistoryContent() {
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md border border-primary/20 transition-colors"
                                 >
-                                  <span>📷 Foto IMEI {count > 1 ? `#${idx + 1}` : ''}</span>
+                                  <span className="flex items-center gap-1"><svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/></svg> Foto IMEI {count > 1 ? `#${idx + 1}` : ''}</span>
                                 </a>
                               );
                             })}
@@ -568,7 +568,7 @@ function HistoryContent() {
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200 transition-colors"
                                 >
-                                  <span>🔍 Cek CEIR {count > 1 ? `#${idx + 1}` : ''}</span>
+                                  <span className="flex items-center gap-1"><svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg> Cek CEIR {count > 1 ? `#${idx + 1}` : ''}</span>
                                 </a>
                               );
                             })}
@@ -583,7 +583,7 @@ function HistoryContent() {
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors"
                                 >
-                                  <span>✅ Bukti Admin</span>
+                                  <span className="flex items-center gap-1"><svg className="w-3.5 h-3.5 inline mr-1 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Bukti Admin</span>
                                 </a>
                               );
                             })}
@@ -802,7 +802,7 @@ function HistoryContent() {
             setResumeQrisModal(null);
             fetchHistory();
             Swal.fire({
-              title: "Pembayaran Berhasil! 🎉",
+              title: "Pembayaran Berhasil!",
               text: "Pembayaran QRIS Anda telah terverifikasi oleh sistem.",
               icon: "success",
               timer: 2500,

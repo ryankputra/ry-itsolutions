@@ -311,7 +311,7 @@ function CekGaransiContent() {
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
                         st.done ? 'bg-primary text-white shadow-sm' : 'bg-parchment text-ink-muted border border-hairline'
                       }`}>
-                        {st.done ? "✓" : st.step}
+                        {st.done ? <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> : st.step}
                       </div>
                       <span className={`text-[11px] font-semibold leading-tight ${st.done ? 'text-ink' : 'text-ink-muted'}`}>
                         {st.label}
@@ -330,7 +330,7 @@ function CekGaransiContent() {
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
                         st.done ? 'bg-primary text-white shadow-sm' : 'bg-parchment text-ink-muted border border-hairline'
                       }`}>
-                        {st.done ? "✓" : st.step}
+                        {st.done ? <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> : st.step}
                       </div>
                       <span className={`text-[11px] font-semibold leading-tight ${st.done ? 'text-ink' : 'text-ink-muted'}`}>
                         {st.label}
@@ -406,7 +406,7 @@ function CekGaransiContent() {
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-ink">Foto IMEI Pelanggan {totalImgs > 1 ? `#${idx + 1}` : ''}</span>
-                          <span className="text-[10px] text-primary group-hover:underline">Buka ↗</span>
+                          <span className="text-[10px] text-primary group-hover:underline">Buka </span>
                         </div>
                         <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-hairline relative">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -434,7 +434,7 @@ function CekGaransiContent() {
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-ink">Screenshot CEIR Pelanggan {totalImgs > 1 ? `#${idx + 1}` : ''}</span>
-                          <span className="text-[10px] text-primary group-hover:underline">Buka ↗</span>
+                          <span className="text-[10px] text-primary group-hover:underline">Buka </span>
                         </div>
                         <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-hairline relative">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -466,7 +466,7 @@ function CekGaransiContent() {
                             </svg>
                             Bukti Selesai Admin
                           </span>
-                          <span className="text-[10px] text-emerald-700 group-hover:underline">Buka ↗</span>
+                          <span className="text-[10px] text-emerald-700 group-hover:underline">Buka </span>
                         </div>
                         <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-emerald-200 relative">
                           {/* eslint-disable-next-line @next/next/no-img-element */}

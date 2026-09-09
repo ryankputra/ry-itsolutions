@@ -259,7 +259,7 @@ export default function BeliPaketPage() {
     return (
       <div className="space-y-6 max-w-2xl mx-auto pb-12">
         <div className="flex flex-col gap-1 mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Suntik Kuota 🚀</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Suntik Kuota</h1>
           <p className="text-sm text-ink-muted">Pilih provider yang mau lo inject kuotanya.</p>
         </div>
 
@@ -311,7 +311,7 @@ export default function BeliPaketPage() {
         </button>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-ink">
-            {selectedPkg ? "Checkout Kuy 🛒" : `Katalog ${activeProvider?.name}`}
+            {selectedPkg ? "Checkout Sekarang" : `Katalog ${activeProvider?.name}`}
           </h1>
           <p className="text-sm text-ink-muted">
             {selectedPkg ? "Lengkapin data trus gass bayar." : "Pilih paket yang paling pas buat lo."}
@@ -372,7 +372,7 @@ export default function BeliPaketPage() {
             
             {requiresOtp && (
               <div className="mt-3 text-xs font-medium bg-amber-100 text-amber-800 px-2 py-1 rounded inline-block">
-                ⚠️ Paket ini memerlukan Verifikasi OTP
+                <svg className="w-3.5 h-3.5 text-amber-500 inline mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg> Paket ini memerlukan Verifikasi OTP
               </div>
             )}
 
@@ -464,7 +464,7 @@ export default function BeliPaketPage() {
                             className="bg-white hover:bg-parchment border border-hairline text-ink text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
                             disabled={purchasing}
                           >
-                            📱 {t.msisdn}
+                            <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg> {t.msisdn}
                           </button>
                         ))}
                       </div>
