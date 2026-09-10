@@ -23,7 +23,8 @@ export default function ReferralPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const referralCode = referralData?.referral_code || "RYY...";
+  const referralCode = referralData?.referralCode || referralData?.referral_code || "RYY...";
+  const downlinesList: any[] = referralData?.downlines || referralData?.referredUsers || [];
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ry-itsolutionts.web.id';
   const referralLink = `${origin}/register?ref=${referralCode}`;
 
@@ -84,7 +85,7 @@ export default function ReferralPage() {
           <div className="space-y-1">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">Total Komisi Didapat</span>
             <p className="text-2xl sm:text-3xl font-black text-ink">
-              Rp {Number(referralData?.totalEarnings || 0).toLocaleString('id-ID')}
+              Rp {Number(referralData?.totalEarned ?? referralData?.totalEarnings ?? 0).toLocaleString('id-ID')}
             </p>
             <p className="text-[11px] text-ink-muted">Langsung masuk ke saldo akun Anda</p>
           </div>
@@ -99,7 +100,7 @@ export default function ReferralPage() {
           <div className="space-y-1">
             <span className="text-xs font-bold text-ink-muted uppercase tracking-wider">Teman Terdaftar</span>
             <p className="text-2xl sm:text-3xl font-black text-ink">
-              {referralData?.referredUsersCount || 0} <span className="text-base font-normal text-ink-muted">Orang</span>
+              {referralData?.totalDownlines ?? referralData?.referredUsersCount ?? 0} <span className="text-base font-normal text-ink-muted">Orang</span>
             </p>
             <p className="text-[11px] text-ink-muted">Menggunakan link referral Anda</p>
           </div>
@@ -114,7 +115,7 @@ export default function ReferralPage() {
           <div className="space-y-1">
             <span className="text-xs font-bold text-ink-muted uppercase tracking-wider">Komisi Per Transaksi</span>
             <p className="text-2xl sm:text-3xl font-black text-emerald-600">
-              Rp {Number(referralData?.commissionValue || 5000).toLocaleString('id-ID')}
+              Rp {Number(referralData?.commissionValue ?? referralData?.settings?.referral_commission_value ?? 5000).toLocaleString('id-ID')}
             </p>
             <p className="text-[11px] text-ink-muted">Otomatis per transaksi downline</p>
           </div>
@@ -232,13 +233,13 @@ export default function ReferralPage() {
             <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
             </svg>
-            Teman Yang Anda Ajak ({referralData?.referredUsers?.length || 0})
+            Teman Yang Anda Ajak ({downlinesList.length})
           </h3>
         </div>
 
-        {referralData?.referredUsers && referralData.referredUsers.length > 0 ? (
+        {downlinesList.length > 0 ? (
           <div className="space-y-2">
-            {referralData.referredUsers.map((u: any, idx: number) => (
+            {downlinesList.map((u: any, idx: number) => (
               <div
                 key={u.id || idx}
                 className="p-3.5 rounded-xl bg-canvas border border-hairline flex justify-between items-center text-xs"

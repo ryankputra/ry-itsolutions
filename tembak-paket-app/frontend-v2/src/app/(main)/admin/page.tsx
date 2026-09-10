@@ -495,8 +495,8 @@ export default function AdminPage() {
         credentials: "include",
         body: JSON.stringify(broadcastData)
       });
-      const d = await res.json();
-      if (res.ok && d.status) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
         Swal.fire("Sukses!", d.message, "success");
         setBroadcastData(prev => ({ ...prev, message: "", voucherCode: "" }));
       } else {
@@ -539,8 +539,8 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify(newCoupon)
       });
-      const d = await res.json();
-      if (res.ok && d.status) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
         Swal.fire("Sukses", d.message, "success");
         setNewCoupon({
           code: "",
@@ -574,8 +574,8 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify({ is_active: currentStatus === 1 ? 0 : 1 })
       });
-      const d = await res.json();
-      if (res.ok && d.status) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
         loadCoupons();
       }
     } catch (e) { }
@@ -592,8 +592,8 @@ export default function AdminPage() {
     if (!confirm.isConfirmed) return;
     try {
       const res = await fetch(`/api/admin/coupons/${id}`, { method: 'DELETE', credentials: 'include' });
-      const d = await res.json();
-      if (res.ok && d.status) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
         Swal.fire("Terhapus", d.message, "success");
         loadCoupons();
       }
@@ -626,8 +626,8 @@ export default function AdminPage() {
           referral_new_user_discount: refSettings.referral_new_user_discount
         })
       });
-      const d = await res.json();
-      if (res.ok && d.status) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
         Swal.fire("Sukses", "Pengaturan referral berhasil disimpan!", "success");
       } else {
         Swal.fire("Gagal", d.message, "error");
@@ -1609,8 +1609,8 @@ export default function AdminPage() {
         method: 'POST',
         credentials: 'include'
       });
-      const d = await res.json();
-      if (res.ok && d.status) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
         Swal.fire({
           title: "Enkripsi Diperbarui!",
           text: d.message || "Cache sesi lama kontak dibersihkan. Pesan WhatsApp tidak akan lagi pending/menunggu.",
@@ -1644,8 +1644,8 @@ export default function AdminPage() {
         method: 'POST',
         credentials: 'include'
       });
-      const d = await res.json();
-      if (res.ok && d.status) {
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
         Swal.fire({
           title: "Berhasil!",
           text: d.message || "Sesi berhasil direset. Menunggu QR Code baru...",

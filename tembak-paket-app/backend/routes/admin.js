@@ -286,6 +286,14 @@ router.put('/admin/manual-orders/:id', isAuthenticated, isAdmin, (req, res) => {
                 sseBroadcast('transaction_status', { id: trxId, status: newStatus, message: newNote });
             }
 
+            // Process referral reward if transaction completed successfully
+            if (newStatus === 'success' && existingTrx.status !== 'success') {
+                try {
+                    const { processReferralReward } = require('../services/referralService');
+                    processReferralReward(trxId).catch(e => console.error('[Referral Reward Error]', e.message));
+                } catch (e) {}
+            }
+
             // WhatsApp notification to customer on status change
             if (newStatus !== existingTrx.status && (newStatus === 'processing' || newStatus === 'success' || newStatus === 'failed')) {
                 try {
@@ -689,7 +697,8 @@ router.post('/admin/announcement', isAuthenticated, isAdmin, async (req, res) =>
     try {
         const { message, bgColor, isEnabled } = req.body;
         if (message !== undefined) {
-            await dbRun("INSERT INTO announcements (message, createdAt) VALUES (?, ?)", [message, new Date().toISOString()]);
+            const annId = `ann_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+            await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, message, new Date().toISOString()]);
         }
         if (bgColor) {
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [bgColor]);
@@ -854,19 +863,35 @@ router.get('/admin/provider-balances', isAuthenticated, isAdmin, async (req, res
 // 15. Broadcast System
 router.post('/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { title, message, voucherCode, targetTelegram, targetInApp, bgColor } = req.body;
+        const { title, message, voucherCode, targetTelegram, targetWhatsApp, targetInApp, bgColor } = req.body;
         if (!message) return res.status(400).json({ status: false, message: "Pesan broadcast wajib diisi." });
 
         if (targetInApp) {
-            await dbRun("INSERT INTO announcements (message, createdAt) VALUES (?, ?)", [message, new Date().toISOString()]);
+            const annId = `ann_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+            const inAppMessage = title ? `[${title}] ${message}${voucherCode ? ' (Gunakan Kupon: ' + voucherCode + ')' : ''}` : message;
+            await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, inAppMessage, new Date().toISOString()]);
             if (bgColor) await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [bgColor]);
-            sseBroadcast('announcement', { message, bgColor });
+            sseBroadcast('announcement', { message: inAppMessage, bgColor });
         }
 
         if (targetTelegram) {
-            let tgMsg = `<b>📢 ${title || 'INFORMASI TERBARU'}</b>\n──────────────────────\n${message}`;
-            if (voucherCode) tgMsg += `\n\n🎟️ <b>KODE VOUCHER:</b> <code>${voucherCode}</code>`;
+            let tgMsg = `<b>${title || 'INFORMASI PROMO TERBARU'}</b>\n──────────────────────\n${message}`;
+            if (voucherCode) tgMsg += `\n\n<b>KODE VOUCHER:</b> <code>${voucherCode}</code>`;
             sendTelegramNotification(tgMsg, 'group');
+        }
+
+        if (targetWhatsApp) {
+            try {
+                const waBot = require('../services/waBot');
+                let waMsg = `*${title || 'INFORMASI PROMO TERBARU'}*\n──────────────────────\n${message}`;
+                if (voucherCode) waMsg += `\n\n*KODE VOUCHER:* ${voucherCode}`;
+                waMsg += `\n\nKunjungi: https://tembakpaket.ry-itsolutions.web.id`;
+                if (typeof waBot.testAdminNotification === 'function') {
+                    waBot.testAdminNotification(waMsg).catch(() => {});
+                }
+            } catch (wErr) {
+                console.error('[Broadcast WA Error]', wErr.message);
+            }
         }
 
         res.json({ status: true, message: "Pesan broadcast berhasil dikirimkan!" });

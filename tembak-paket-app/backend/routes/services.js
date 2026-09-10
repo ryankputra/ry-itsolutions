@@ -482,9 +482,14 @@ router.get('/user/referral-info', isAuthenticated, async (req, res) => {
             status: true,
             data: {
                 referralCode: user.referral_code,
+                referral_code: user.referral_code,
                 totalEarned: rewardSum ? rewardSum.total : 0,
+                totalEarnings: rewardSum ? rewardSum.total : 0,
                 totalDownlines: referees.length,
+                referredUsersCount: referees.length,
                 downlines: referees,
+                referredUsers: referees,
+                commissionValue: Number(refSettings.referral_commission_value || 5000),
                 settings: refSettings
             }
         });

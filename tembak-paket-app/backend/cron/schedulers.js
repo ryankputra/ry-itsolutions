@@ -256,6 +256,10 @@ function initSchedulers() {
                             await dbRun("UPDATE transactions SET status = 'success', admin_note = ?, api_response = ? WHERE id = ?",
                                 [note, JSON.stringify(ceirData.result || ceirData), order.id]);
                             sseSend(order.userId, 'transaction_update', { id: order.id, status: 'success', note });
+                            try {
+                                const { processReferralReward } = require('../services/referralService');
+                                processReferralReward(order.id).catch(() => {});
+                            } catch (e) {}
                         } else if (remoteStatus === 'failed' || remoteStatus === 'cancelled' || remoteStatus === 'rejected') {
                             const reason = ceirData.reason || ceirData.error || 'Gagal dari server CeirGO';
                             await dbRun("UPDATE transactions SET status = 'failed', admin_note = ?, api_response = ? WHERE id = ?",

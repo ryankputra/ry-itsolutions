@@ -176,7 +176,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             const validQuota = coupon.used_count < coupon.max_usage_limit;
 
             if (validStart && validEnd && validQuota && baseSellingPrice >= (coupon.min_order_amount || 0)) {
-                if (coupon.discount_type === 'percentage') {
+                if (coupon.discount_type === 'percentage' || coupon.discount_type === 'percent') {
                     discountAmount = Math.round((baseSellingPrice * coupon.discount_value) / 100);
                     if (coupon.max_discount_amount && discountAmount > coupon.max_discount_amount) {
                         discountAmount = coupon.max_discount_amount;
@@ -213,6 +213,10 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
     // Record Coupon usage if applied
     if (appliedCoupon) {
         await dbRun("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [appliedCoupon.id]).catch(() => {});
+        const usgId = `usg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await dbRun("INSERT INTO coupon_usages (id, coupon_id, userId, trxId, discount_amount, used_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [usgId, appliedCoupon.id, userId, trxId, discountAmount, new Date().toISOString()]
+        ).catch(() => {});
     }
 
     // Dispatch Order to CeirGO API
