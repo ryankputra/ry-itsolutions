@@ -147,11 +147,14 @@ export default function GamesPage() {
         method: "POST",
         credentials: "include",
       });
-      const data = await res.json();
+      const data = await safeJson(res);
 
-      if (data.status) {
+      if (data?.status) {
         const prizeIdx = data.prize_index !== undefined ? data.prize_index : 0;
-        const targetAngle = wheelRotation + (360 * 5) + ((6 - prizeIdx) % 6) * 60;
+        // Accurate target angle to stop needle right at the center of the winning slice (prizeIdx * 60 + 30 deg)
+        const sliceCenter = prizeIdx * 60 + 30;
+        const targetOffset = ((360 - sliceCenter - (wheelRotation % 360)) % 360 + 360) % 360;
+        const targetAngle = wheelRotation + (360 * 5) + targetOffset;
         setWheelRotation(targetAngle);
 
         // Play realistic wheel ticking sound
@@ -211,7 +214,7 @@ export default function GamesPage() {
   };
 
   const userCoins = user?.coins || gameData.coins || 0;
-  const rewards = [100, 150, 200, 250, 350, 500, 1000];
+  const rewards = [100, 200, 300, 400, 500, 750, 1000];
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 pb-24">
@@ -486,7 +489,7 @@ export default function GamesPage() {
               <div className={`w-12 h-12 rounded-2xl ${item.bg} flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform`}>
                 {item.icon}
               </div>
-              <span className="text-[10px] font-bold text-slate-800 mt-1.5 leading-tight">
+              <span className="text-[10px] font-bold text-ink mt-1.5 leading-tight">
                 {item.name}
               </span>
             </button>
@@ -516,7 +519,7 @@ export default function GamesPage() {
             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
               gameData.can_spin
                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                : "bg-slate-100 text-slate-500"
+                : "bg-parchment text-ink-muted border border-hairline"
             }`}>
               {gameData.can_spin ? "1 Tiket Tersedia" : "Tiket Habis"}
             </span>
@@ -574,9 +577,9 @@ export default function GamesPage() {
               {/* Center Hub Button */}
               <div
                 onClick={handleLuckySpin}
-                className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white text-blue-900 border-4 border-amber-400 shadow-xl flex flex-col items-center justify-center z-10 cursor-pointer hover:scale-105 active:scale-95 transition-transform select-none"
+                className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-canvas text-ink border-4 border-amber-400 shadow-xl flex flex-col items-center justify-center z-10 cursor-pointer hover:scale-105 active:scale-95 transition-transform select-none"
               >
-                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-900">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-ink">
                   {spinningWheel ? "..." : "PUTAR"}
                 </span>
                 <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -593,7 +596,7 @@ export default function GamesPage() {
             className={`w-full h-11 text-xs sm:text-sm font-bold shadow-lg rounded-2xl ${
               gameData.can_spin
                 ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:opacity-90 text-white"
-                : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                : "bg-parchment text-ink-muted border border-hairline cursor-not-allowed"
             }`}
           >
             {gameData.can_spin ? "Putar Roda Keberuntungan Sekarang" : "Tiket Habis • Kembali Besok"}
@@ -605,7 +608,7 @@ export default function GamesPage() {
       {/* 5. "RAIH BANYAK KOIN" TASK LIST SECTION                     */}
       {/* ============================================================ */}
       <div className="space-y-3 px-1">
-        <h2 className="text-sm sm:text-base font-black text-slate-800">
+        <h2 className="text-sm sm:text-base font-black text-ink">
           Raih Banyak Koin
         </h2>
 
@@ -674,7 +677,7 @@ export default function GamesPage() {
               <button
                 type="button"
                 onClick={() => setShowHistoryModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-xs text-slate-600"
+                className="w-7 h-7 rounded-full bg-parchment hover:bg-parchment/80 border border-hairline flex items-center justify-center text-xs text-ink"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

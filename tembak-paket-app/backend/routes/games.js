@@ -12,6 +12,12 @@ function getWIBDate(date = new Date()) {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(d);
 }
 
+function getYesterdayWIBDate(todayWIBStr) {
+    const [y, m, d] = todayWIBStr.split('-').map(Number);
+    const yesterday = new Date(Date.UTC(y, m - 1, d - 1));
+    return yesterday.toISOString().split('T')[0];
+}
+
 // 1. GET /api/games/status
 router.get('/games/status', isAuthenticated, async (req, res) => {
     try {
@@ -24,8 +30,8 @@ router.get('/games/status', isAuthenticated, async (req, res) => {
         const todayCheckin = await dbGet(`
             SELECT * FROM user_coin_claims 
             WHERE userId = ? AND claim_type = 'daily_checkin' 
-              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
-        `, [userId, todayWIB, todayWIB, todayWIB]);
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
+        `, [userId, todayWIB, todayWIB]);
 
         const lastCheckin = await dbGet(`
             SELECT * FROM user_coin_claims 
@@ -35,9 +41,8 @@ router.get('/games/status', isAuthenticated, async (req, res) => {
 
         let streak = 1;
         if (lastCheckin) {
-            const lastDate = lastCheckin.claim_date || lastCheckin.claimed_at.split('T')[0];
-            const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const yesterdayWIB = getWIBDate(yesterdayDate);
+            const lastDate = lastCheckin.claim_date || getWIBDate(lastCheckin.claimed_at);
+            const yesterdayWIB = getYesterdayWIBDate(todayWIB);
 
             if (lastDate === todayWIB) {
                 streak = lastCheckin.streak_count || 1;
@@ -51,8 +56,8 @@ router.get('/games/status', isAuthenticated, async (req, res) => {
         const todaySpin = await dbGet(`
             SELECT * FROM user_coin_claims 
             WHERE userId = ? AND claim_type = 'lucky_spin' 
-              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
-        `, [userId, todayWIB, todayWIB, todayWIB]);
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
+        `, [userId, todayWIB, todayWIB]);
 
         const rewards = [100, 200, 300, 400, 500, 750, 1000];
         const gamePayload = {
@@ -106,8 +111,8 @@ router.post('/games/daily-checkin', isAuthenticated, async (req, res) => {
         const todayCheckin = await dbGet(`
             SELECT id FROM user_coin_claims 
             WHERE userId = ? AND claim_type = 'daily_checkin' 
-              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
-        `, [userId, todayWIB, todayWIB, todayWIB]);
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
+        `, [userId, todayWIB, todayWIB]);
 
         if (todayCheckin) {
             return res.status(400).json({ status: false, message: "Anda sudah melakukan check-in hari ini! Coba lagi besok ya." });
@@ -121,9 +126,8 @@ router.post('/games/daily-checkin', isAuthenticated, async (req, res) => {
 
         let streak = 1;
         if (lastCheckin) {
-            const lastDate = lastCheckin.claim_date || lastCheckin.claimed_at.split('T')[0];
-            const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const yesterdayWIB = getWIBDate(yesterdayDate);
+            const lastDate = lastCheckin.claim_date || getWIBDate(lastCheckin.claimed_at);
+            const yesterdayWIB = getYesterdayWIBDate(todayWIB);
 
             if (lastDate === yesterdayWIB) {
                 streak = ((lastCheckin.streak_count || 1) % 7) + 1;
@@ -166,8 +170,8 @@ router.post('/games/lucky-spin', isAuthenticated, async (req, res) => {
         const todaySpin = await dbGet(`
             SELECT id FROM user_coin_claims 
             WHERE userId = ? AND claim_type = 'lucky_spin' 
-              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ? OR substr(claimed_at, 1, 10) = ?)
-        `, [userId, todayWIB, todayWIB, todayWIB]);
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
+        `, [userId, todayWIB, todayWIB]);
 
         if (todaySpin) {
             return res.status(400).json({ status: false, message: "Tiket putar gratis hari ini sudah terpakai. Coba lagi besok ya!" });
