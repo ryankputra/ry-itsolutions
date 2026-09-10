@@ -9,6 +9,7 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
+import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server } from "lucide-react";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -1835,156 +1836,189 @@ export default function AdminPage() {
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-16">
       
-      {/* 1. Header Control Hub & Status Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-canvas p-5 rounded-2xl border border-hairline shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider bg-primary/10 text-primary rounded-full border border-primary/20">
-              Admin Control Panel
-            </span>
-            <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Sistem Aktif
-            </span>
+      {/* 1. Header Control Hub (Minimalist, Clean, Compact) */}
+      <div className="flex items-center justify-between gap-3 bg-canvas px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border border-hairline shadow-xs">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary">
+            <Sliders className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Panel Manajemen Administrator</h1>
-          <p className="text-xs text-ink-muted mt-0.5">Kelola antrean pesanan, harga layanan, tiket pelanggan, dan konfigurasi server.</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-ink truncate">Admin Panel</h1>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Aktif
+              </span>
+            </div>
+            <p className="text-[11px] text-ink-muted truncate hidden sm:block">Kelola antrean pesanan, harga layanan, tiket, dan server</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             variant="outline"
-            className="text-xs bg-canvas"
+            className="h-8 px-2.5 sm:px-3 text-xs font-medium rounded-xl border-hairline bg-canvas hover:bg-parchment text-ink gap-1.5 shadow-none"
             onClick={() => {
               loadManualData();
               loadUsers();
               loadAdminTickets();
-              Swal.fire({ title: "Segar!", text: "Data antrean & pengguna berhasil diperbarui.", timer: 1500, showConfirmButton: false });
+              Swal.fire({ title: "Segar!", text: "Data antrean & pengguna berhasil diperbarui.", timer: 1200, showConfirmButton: false });
             }}
+            title="Muat Ulang Data"
           >
-            Muat Ulang Data
+            <RotateCw className="w-3.5 h-3.5 text-ink-muted" />
+            <span className="hidden sm:inline">Segarkan</span>
           </Button>
 
           <Button
             size="sm"
-            className="text-xs bg-primary hover:bg-primary/90 text-white shadow-xs"
+            className="h-8 px-3 text-xs font-medium rounded-xl bg-primary hover:bg-primary/90 text-white shadow-xs gap-1.5"
             onClick={() => setShowCeirgoTopUp(true)}
           >
-            + Isi Saldo Pusat
+            <Wallet className="w-3.5 h-3.5" />
+            <span>+ Saldo Pusat</span>
           </Button>
         </div>
       </div>
 
-      {/* 2. Quick Action KPI Metric Cards (Clean, No Emojis) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* 2. Quick Action KPI Metric Cards (Clean, Minimalist SaaS Style) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        {/* Metric 1: Antrean Pesanan */}
         <button
           onClick={() => { setActiveCategory("operasional"); setActiveTab("pesanan-manual"); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pesanan-manual'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+            activeTab === 'pesanan-manual'
+              ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
+              : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
+          }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Antrean Pesanan</span>
+          {activeTab === 'pesanan-manual' && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" />
+          )}
+          <div className="flex items-center justify-between gap-1 w-full">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Clock className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+              <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider truncate">Pesanan</span>
+            </div>
             {pendingOrdersCount > 0 ? (
-              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-500 text-white">
-                {pendingOrdersCount} Menunggu
+              <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0">
+                {pendingOrdersCount} antre
               </span>
             ) : (
-              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600">
-                Bersih
-              </span>
+              <span className="text-[10px] text-ink-muted/60 font-medium">Beres</span>
             )}
           </div>
-          <div className="mt-2">
-            <p className="text-xl font-bold text-ink leading-tight">{manualOrders.length}</p>
-            <p className="text-[11px] text-ink-muted">Total transaksi tercatat</p>
+          <div className="mt-2.5 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold tracking-tight text-ink leading-none">{manualOrders.length}</p>
+            <p className="text-[11px] text-ink-muted mt-1 truncate">
+              {pendingOrdersCount > 0 ? `${pendingOrdersCount} butuh verifikasi` : 'Total transaksi'}
+            </p>
           </div>
         </button>
 
+        {/* Metric 2: Pusat Bantuan CS */}
         <button
           onClick={() => { setActiveCategory("operasional"); setActiveTab("tiket-bantuan"); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'tiket-bantuan'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+            activeTab === 'tiket-bantuan'
+              ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
+              : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
+          }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Pusat Bantuan CS</span>
+          {activeTab === 'tiket-bantuan' && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" />
+          )}
+          <div className="flex items-center justify-between gap-1 w-full">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Headphones className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+              <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider truncate">Bantuan CS</span>
+            </div>
             {openTicketsCount > 0 ? (
-              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-white">
-                {openTicketsCount} Aktif
+              <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                {openTicketsCount} aktif
               </span>
             ) : (
-              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600">
-                0 Terbuka
-              </span>
+              <span className="text-[10px] text-ink-muted/60 font-medium">Beres</span>
             )}
           </div>
-          <div className="mt-2">
-            <p className="text-xl font-bold text-ink leading-tight">{adminTickets.length}</p>
-            <p className="text-[11px] text-ink-muted">Total tiket keluhan</p>
+          <div className="mt-2.5 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold tracking-tight text-ink leading-none">{adminTickets.length}</p>
+            <p className="text-[11px] text-ink-muted mt-1 truncate">
+              {openTicketsCount > 0 ? `${openTicketsCount} tiket terbuka` : 'Total tiket'}
+            </p>
           </div>
         </button>
 
+        {/* Metric 3: Pengguna & Mitra */}
         <button
           onClick={() => { setActiveCategory("operasional"); setActiveTab("pengguna"); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pengguna'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+            activeTab === 'pengguna'
+              ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
+              : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
+          }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Pengguna & Mitra</span>
-            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary">
-              {users.length} Akun Terdaftar
-            </span>
+          {activeTab === 'pengguna' && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" />
+          )}
+          <div className="flex items-center justify-between gap-1 w-full">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Users className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+              <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider truncate">Pengguna</span>
+            </div>
+            <span className="text-[10px] text-ink-muted/60 font-medium">Akun</span>
           </div>
-          <div className="mt-2">
-            <p className="text-xl font-bold text-ink leading-tight">{users.length}</p>
-            <p className="text-[11px] text-ink-muted">Pengguna terdaftar</p>
+          <div className="mt-2.5 sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold tracking-tight text-ink leading-none">{users.length}</p>
+            <p className="text-[11px] text-ink-muted mt-1 truncate">Member & reseller</p>
           </div>
         </button>
 
+        {/* Metric 4: Saldo Server Pusat */}
         <button
           onClick={() => { setActiveCategory("sistem"); setActiveTab("pengaturan"); }}
-          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${activeTab === 'pengaturan'
-            ? 'bg-canvas border-primary ring-2 ring-primary shadow-xs'
-            : 'bg-canvas border-hairline hover:border-primary/40 hover:bg-parchment/40'}`}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+            activeTab === 'pengaturan'
+              ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
+              : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
+          }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Saldo Server Pusat</span>
+          {activeTab === 'pengaturan' && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" />
+          )}
+          <div className="flex items-center justify-between gap-1 w-full">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Server className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+              <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider truncate">Saldo Server</span>
+            </div>
             {ceirgoStatus.loading ? (
-              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 animate-pulse">
-                Memuat...
-              </span>
+              <span className="text-[10px] text-ink-muted animate-pulse shrink-0">Cek...</span>
             ) : ceirgoStatus.connected ? (
-              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 Terkoneksi
               </span>
             ) : (
-              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-rose-100 text-rose-800" title={ceirgoStatus.error || "Gagal terhubung"}>
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-rose-500 shrink-0" title={ceirgoStatus.error || "Gagal terhubung"}>
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                 Terputus
               </span>
             )}
           </div>
-          <div className="mt-2">
-            <p className="text-lg font-bold text-primary leading-tight truncate">
+          <div className="mt-2.5 sm:mt-3">
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-primary leading-none truncate">
               Rp {Number(providerBalances?.ceirgo ?? 0).toLocaleString('id-ID')}
             </p>
-            {ceirgoStatus.error && !ceirgoStatus.connected ? (
-              <p className="text-[10px] text-rose-500 font-medium truncate" title={ceirgoStatus.error}>
-                {ceirgoStatus.error}
-              </p>
-            ) : (
-              <p className="text-[11px] text-ink-muted">Gateway & Database</p>
-            )}
+            <p className="text-[11px] text-ink-muted mt-1 truncate">Gateway & CEIR</p>
           </div>
         </button>
       </div>
 
-      {/* 3. Re-organized Categorized Navigation System (Responsive HP & Desktop, No Emojis) */}
-      <div className="bg-canvas border border-hairline p-2.5 sm:p-3 rounded-2xl shadow-xs space-y-2.5">
-        {/* Category Selector Tabs: 2x2 grid on mobile (spacious, never truncated), 4 columns on desktop */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-parchment/70 rounded-xl border border-hairline">
+      {/* 3. Re-organized Categorized Navigation System (Minimalist & Responsive) */}
+      <div className="bg-canvas border border-hairline p-2 sm:p-2.5 rounded-2xl shadow-xs space-y-2">
+        {/* Category Selector Tabs: 2x2 grid on mobile, 4 columns on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-parchment/60 rounded-xl border border-hairline">
           {menuCategories.map(cat => {
             const isCatActive = currentCategory === cat.id;
             const pendingInCat = cat.tabs.reduce((acc, t) => acc + (typeof t.badge === 'number' ? t.badge : 0), 0);
@@ -1997,9 +2031,11 @@ export default function AdminPage() {
                     setActiveTab(cat.tabs[0].id);
                   }
                 }}
-                className={`py-2 px-2 sm:py-1.5 sm:px-1 rounded-lg text-xs sm:text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${isCatActive
-                  ? 'bg-canvas text-primary shadow-xs border border-primary/20 ring-1 ring-primary/20'
-                  : 'text-ink-muted hover:text-ink hover:bg-canvas/50'}`}
+                className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 ${
+                  isCatActive
+                    ? 'bg-canvas text-ink shadow-xs border border-hairline font-bold'
+                    : 'text-ink-muted hover:text-ink hover:bg-canvas/50'
+                }`}
               >
                 <span className="leading-snug">{cat.name}</span>
                 {pendingInCat > 0 && (
@@ -2010,49 +2046,23 @@ export default function AdminPage() {
           })}
         </div>
 
-        {/* Sub-Tabs: Comfortable full-width segmented cards on Mobile (HP) */}
-        <div className="grid grid-cols-1 gap-1.5 pt-0.5 sm:hidden">
+        {/* Sub-Tabs: Clean horizontal pills (Responsive on both mobile & desktop with smooth scrolling) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-0.5 pb-0.5 px-0.5">
           {menuCategories.find(c => c.id === currentCategory)?.tabs.map(tab => {
             const isTabActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-between border ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0 border ${
                   isTabActive
                     ? 'bg-primary text-white border-primary shadow-xs'
-                    : 'bg-parchment text-ink border-hairline hover:bg-canvas'
+                    : 'bg-canvas text-ink-muted border-hairline hover:bg-parchment hover:text-ink'
                 }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${isTabActive ? 'bg-white' : 'bg-primary'}`}></span>
-                  <span>{tab.label}</span>
-                </div>
-                {tab.badge !== null && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black text-white ${tab.badgeColor || 'bg-rose-500'}`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Sub-Tabs: Sleek horizontal pills on Desktop / Tablet */}
-        <div className="hidden sm:flex sm:items-center gap-2 overflow-x-auto pt-1 pb-0.5 px-1 scrollbar-none">
-          {menuCategories.find(c => c.id === currentCategory)?.tabs.map(tab => {
-            const isTabActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 border ${isTabActive
-                  ? 'bg-primary text-white border-primary shadow-xs'
-                  : 'bg-canvas text-ink-muted border-hairline hover:bg-parchment hover:text-ink'}`}
               >
                 <span>{tab.label}</span>
                 {tab.badge !== null && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black text-white ${tab.badgeColor || 'bg-rose-500'}`}>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold text-white ${tab.badgeColor || 'bg-rose-500'}`}>
                     {tab.badge}
                   </span>
                 )}
