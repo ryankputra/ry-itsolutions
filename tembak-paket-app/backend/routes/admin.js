@@ -1419,6 +1419,32 @@ router.post(['/admin/baileys/logout', '/admin/wabot/logout', '/admin/whatsapp/lo
     }
 });
 
+// 23b. POST /api/admin/test-warranty-claim-wa
+router.post('/admin/test-warranty-claim-wa', (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
+    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
+        return next();
+    }
+    return isAuthenticated(req, res, () => isAdmin(req, res, next));
+}, async (req, res) => {
+    try {
+        const { notifyWarrantyClaim } = require('../services/waBot');
+        const results = await notifyWarrantyClaim({
+            imei: req.body?.imei || '356789123456789',
+            packageName: req.body?.packageName || 'Unblock IMEI 3 Bulan (All Operator)',
+            customerName: req.body?.customerName || 'Ryan (Uji Coba Klaim Garansi)',
+            customerPhone: req.body?.customerPhone || '6287767287284',
+            issueDescription: req.body?.issueDescription || 'Sinyal tiba-tiba hilang / No Service setelah 1 bulan pemakaian.',
+            warrantyText: req.body?.warrantyText || 'Garansi Aktif 3 Bulan (Sisa 48 Hari)',
+            ticketId: req.body?.ticketId || 'GRS-TEST-99',
+            trxId: req.body?.trxId || 'TRX-SAMPLE-001'
+        });
+        res.json({ status: true, success: true, message: "Pesan klaim garansi uji coba berhasil dikirim ke nomor WhatsApp admin.", data: results });
+    } catch (err) {
+        res.status(500).json({ status: false, error: err.message });
+    }
+});
+
 router.post(['/admin/baileys/test', '/admin/wabot/test', '/admin/whatsapp/test'], (req, res, next) => {
     const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
     if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
