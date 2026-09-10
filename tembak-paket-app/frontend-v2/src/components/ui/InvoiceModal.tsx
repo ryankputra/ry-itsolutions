@@ -756,6 +756,19 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
           </button>
 
           <div className="w-full sm:w-auto flex items-center gap-2 order-1 sm:order-2">
+            {data?.imei && !isCeirService && !isTopUp && !isGatewayService && dynWarranty.hasWarranty && dynWarranty.warrantyStatus === 'active' && (
+              <a
+                href={`/cek-garansi?imei=${data.imei}&action=claim`}
+                className="px-3 py-2.5 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                title="Ajukan Klaim Garansi Sinyal jika No Service"
+              >
+                <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285zM12 16.5h.008v.008H12v-.008z" />
+                </svg>
+                <span>Klaim Garansi</span>
+              </a>
+            )}
+
             <button
               onClick={handleShareWhatsApp}
               className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"

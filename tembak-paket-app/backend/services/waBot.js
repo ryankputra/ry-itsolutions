@@ -1672,6 +1672,73 @@ async function testAdminNotification(customMessage) {
     return results;
 }
 
+
+/**
+ * Send Warranty Claim Notification to Admin WhatsApp numbers
+ */
+async function notifyWarrantyClaim({ imei, packageName, customerName, customerPhone, issueDescription, warrantyText, ticketId, trxId }) {
+    const adminPhones = await getAdminPhoneNumbers();
+    const results = [];
+    const timestampWIB = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    const cleanCustPhone = cleanPhone(customerPhone);
+    const waCustLink = cleanCustPhone ? `https://wa.me/${cleanCustPhone}` : '-';
+
+    const message = 
+        `🚨 *KLAIM GARANSI SINYAL MASUK (PRIORITAS)*
+` +
+        `──────────────────────━━━━
+` +
+        `Halo Admin, seorang pelanggan baru saja mengajukan klaim garansi karena sinyal perangkatnya terputus/hilang.
+
+` +
+        `📱 *Nomor IMEI:* ${imei}
+` +
+        `📦 *Paket Layanan:* ${packageName || 'Unblock IMEI'}
+` +
+        `🛡️ *Status Garansi:* ${warrantyText || 'Garansi Aktif'}
+` +
+        `👤 *Nama Pelanggan:* ${customerName || 'Pelanggan'}
+` +
+        `📞 *WhatsApp Pelanggan:* ${cleanCustPhone || '-'}
+` +
+        `📝 *Kendala:* ${issueDescription || 'Sinyal hilang / Tidak ada layanan'}
+` +
+        `🆔 *ID Ref Transaksi:* ${trxId || '-'}
+` +
+        `🎫 *ID Tiket Antrean:* #${ticketId || '-'}
+` +
+        `⏱️ *Waktu Klaim:* ${timestampWIB} WIB
+` +
+        `──────────────────────━━━━
+` +
+        `*Instruksi Tindakan Admin:*
+` +
+        `1. Cek status IMEI di server pusat CeirGO / KMSP.
+` +
+        `2. Lakukan tembak ulang sinyal (garansi).
+` +
+        `3. Hubungi pembeli jika sinyal sudah aktif kembali:
+👉 ${waCustLink}
+
+` +
+        `_Ry-ITSolutions Automated Operational Engine_`;
+
+    for (const phone of adminPhones) {
+        const clean = cleanPhone(phone);
+        if (!clean || clean.length < 8) continue;
+        const jid = `${clean}@s.whatsapp.net`;
+        try {
+            const sent = await sendAndStoreMessage(jid, { text: message });
+            results.push({ phone: clean, success: true, id: sent?.key?.id });
+            console.log(`[WABot Warranty] Berhasil mengirim notifikasi garansi ke ${clean} (ID: ${sent?.key?.id})`);
+        } catch (e) {
+            results.push({ phone: clean, success: false, error: e.message });
+            console.error(`[WABot Warranty] Gagal mengirim notifikasi garansi ke ${clean}:`, e.message);
+        }
+    }
+    return results;
+}
+
 module.exports = {
     getWALogs,
     initWABot,
@@ -1686,5 +1753,6 @@ module.exports = {
     requestPairingCode,
     purgeStalePeerSessions,
     getAdminPhoneNumbers,
-    testAdminNotification
+    testAdminNotification,
+    notifyWarrantyClaim
 };

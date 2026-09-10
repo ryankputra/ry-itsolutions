@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
+import Swal from "@/lib/sweetalert";
 
 function CekGaransiContent() {
   const searchParams = useSearchParams();
@@ -17,6 +18,66 @@ function CekGaransiContent() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimName, setClaimName] = useState("");
+  const [claimPhone, setClaimPhone] = useState("");
+  const [claimIssue, setClaimIssue] = useState("Sinyal tiba-tiba hilang (No Service / Tidak Ada Layanan)");
+  const [submittingClaim, setSubmittingClaim] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("action") === "claim" && result) {
+      setShowClaimModal(true);
+    }
+  }, [searchParams, result]);
+
+  const handleSubmitClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimName.trim()) {
+      Swal.fire({ title: "Perhatian", text: "Mohon masukkan nama lengkap Anda." });
+      return;
+    }
+    const cleanPhone = claimPhone.replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length < 9) {
+      Swal.fire({ title: "Perhatian", text: "Mohon masukkan nomor WhatsApp yang aktif untuk konfirmasi." });
+      return;
+    }
+
+    setSubmittingClaim(true);
+    try {
+      const res = await fetch("/api/public/claim-warranty", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imei: result.imei,
+          customerName: claimName.trim(),
+          customerPhone: cleanPhone,
+          issueDescription: claimIssue.trim()
+        })
+      });
+      const d = await res.json();
+      if (res.ok && d.status) {
+        setShowClaimModal(false);
+        setClaimName("");
+        setClaimPhone("");
+        Swal.fire({
+          title: "Klaim Garansi Terkirim!",
+          html: `<div class="text-left text-xs space-y-2 mt-2">
+            <p>Tiket antrean: <b>#${d.ticketId}</b></p>
+            <p>Notifikasi prioritas telah dikirimkan langsung ke <b>WhatsApp Tim Admin</b> kami.</p>
+            <p class="text-slate-500">Perangkat Anda akan segera diperiksa dan ditembak ulang sinyalnya. Admin kami akan menghubungi nomor WA Anda begitu sinyal aktif kembali.</p>
+          </div>`,
+          icon: "success",
+          confirmButtonText: "Selesai"
+        });
+      } else {
+        Swal.fire({ title: "Gagal Mengajukan Klaim", text: d.message || "Terjadi kesalahan saat mengajukan klaim.", icon: "error" });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error", text: "Gagal menghubungi server. Silakan periksa koneksi internet Anda.", icon: "error" });
+    } finally {
+      setSubmittingClaim(false);
+    }
+  };
 
   const doCheck = async (imeiToCheck: string) => {
     const clean = (imeiToCheck || "").replace(/\D/g, "");
@@ -247,16 +308,34 @@ function CekGaransiContent() {
                   </div>
                 </div>
 
-                <Button
-                  type="button"
-                  onClick={() => setShowInvoice(true)}
-                  className="w-full sm:w-auto font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow-md flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl shrink-0"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                  Cetak Nota &amp; Garansi
-                </Button>
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto shrink-0">
+                  {isCompleted && (warranty?.warrantyStatus === 'permanent' || warranty?.warrantyStatus === 'active') && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setClaimName(result?.userName || "");
+                        setShowClaimModal(true);
+                      }}
+                      className="w-full sm:w-auto font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow-md flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl shrink-0 transition-all"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285zM12 16.5h.008v.008H12v-.008z" />
+                      </svg>
+                      Klaim Garansi Sinyal
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    onClick={() => setShowInvoice(true)}
+                    className="w-full sm:w-auto font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow-md flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl shrink-0"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    Cetak Nota &amp; Garansi
+                  </Button>
+                </div>
               </div>
             ) : (
               // Cek CEIR (Non-Warranty Service)

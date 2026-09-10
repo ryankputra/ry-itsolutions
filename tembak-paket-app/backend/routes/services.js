@@ -1,3 +1,5 @@
+const { calculateTransactionWarranty } = require('../utils/warrantyHelper');
+const { notifyWarrantyClaim } = require('../services/waBot');
 /**
  * Public Services, Packages, Coupons, and Warranty Endpoints
  */
@@ -285,6 +287,142 @@ router.get('/public/check-warranty', async (req, res) => {
     } catch (e) {
         console.error("[CHECK_WARRANTY_ERR]", e.message);
         res.status(500).json({ status: false, message: "Gagal memeriksa garansi." });
+    }
+});
+
+
+// 8b. POST /api/public/claim-warranty
+router.post('/public/claim-warranty', async (req, res) => {
+    try {
+        const { imei, customerName, customerPhone, issueDescription } = req.body;
+        const cleanImei = (imei || '').trim().replace(/\D/g, '');
+        if (!cleanImei || cleanImei.length < 8) {
+            return res.status(400).json({ status: false, message: 'Nomor IMEI minimal 8 digit valid.' });
+        }
+        if (!customerName || !customerName.trim()) {
+            return res.status(400).json({ status: false, message: 'Mohon cantumkan nama lengkap Anda.' });
+        }
+        const cleanCustPhone = (customerPhone || '').trim().replace(/\D/g, '');
+        if (!cleanCustPhone || cleanCustPhone.length < 9) {
+            return res.status(400).json({ status: false, message: 'Mohon cantumkan nomor WhatsApp yang aktif untuk konfirmasi.' });
+        }
+
+        // 1. Find the latest completed transaction for this IMEI
+        const trx = await dbGet(`
+            SELECT id, userId, userName, packageName, status, createdAt, updatedAt, service_type, imei
+            FROM transactions
+            WHERE imei LIKE ? AND service_type = 'imei'
+            ORDER BY datetime(createdAt) DESC
+            LIMIT 1
+        `, [`%${cleanImei}%`]);
+
+        if (!trx) {
+            return res.status(404).json({
+                status: false,
+                message: `Tidak ditemukan riwayat pesanan unblock IMEI untuk nomor ${cleanImei}. Pastikan nomor IMEI telah benar.`
+            });
+        }
+
+        if (trx.status !== 'success' && trx.status !== 'completed') {
+            return res.status(400).json({
+                status: false,
+                message: `Pesanan IMEI ini saat ini masih berstatus '${trx.status}', belum selesai. Klaim garansi hanya berlaku untuk pesanan yang sudah berhasil diproses.`
+            });
+        }
+
+        // 2. Calculate warranty
+        const warranty = calculateTransactionWarranty(trx);
+        if (!warranty || !warranty.hasWarranty) {
+            return res.status(400).json({
+                status: false,
+                message: 'Layanan ini tidak memiliki cakupan garansi sinyal.'
+            });
+        }
+
+        if (warranty.warrantyStatus !== 'active') {
+            return res.status(400).json({
+                status: false,
+                message: `Masa garansi untuk IMEI ini telah berakhir pada tanggal ${warranty.expiryDate ? new Date(warranty.expiryDate).toLocaleDateString('id-ID') : '-'}.`
+            });
+        }
+
+        // 3. Prevent duplicate active ticket
+        const existingTicket = await dbGet(`
+            SELECT id, status, createdAt FROM tickets
+            WHERE subject LIKE ? AND status IN ('open', 'in_progress')
+            ORDER BY datetime(createdAt) DESC
+            LIMIT 1
+        `, [`%${cleanImei}%`]);
+
+        if (existingTicket) {
+            return res.status(400).json({
+                status: false,
+                message: `Klaim garansi untuk IMEI ${cleanImei} sudah ada dalam antrean tiket (#${existingTicket.id}) dan sedang diproses oleh admin.`
+            });
+        }
+
+        // 4. Create support ticket in DB
+        const ticketId = `GRS-${Date.now().toString().slice(-6)}`;
+        const nowIso = new Date().toISOString();
+        const subject = `[Klaim Garansi Sinyal] IMEI: ${cleanImei} - ${trx.packageName || 'Unblock IMEI'}`;
+        const detailMsg = `Klaim Garansi Sinyal Diajukan:\n` +
+            `- Nama Pelanggan: ${customerName.trim()}\n` +
+            `- WhatsApp: ${cleanCustPhone}\n` +
+            `- IMEI: ${cleanImei}\n` +
+            `- Layanan: ${trx.packageName || 'Unblock IMEI'}\n` +
+            `- ID Transaksi: ${trx.id}\n` +
+            `- Kendala: ${issueDescription || 'Sinyal hilang / Tidak ada layanan'}\n` +
+            `- Status Garansi: ${warranty.durationLabel} (${warranty.isPermanent ? 'Permanen' : 'Sisa ' + warranty.remainingDays + ' Hari'})`;
+
+        await dbRun(
+            "INSERT INTO tickets (id, userId, subject, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+            [ticketId, trx.userId || 0, subject, 'open', nowIso, nowIso]
+        );
+        await dbRun(
+            "INSERT INTO ticket_messages (id, ticketId, senderId, senderRole, message, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
+            [`MSG-${Date.now()}`, ticketId, trx.userId || 0, 'user', detailMsg, nowIso]
+        );
+
+        // 5. Real-time SSE to admin panel
+        try {
+            const { sseBroadcast } = require('../middleware/auth');
+            if (typeof sseBroadcast === 'function') {
+                sseBroadcast('ticket_status', { id: ticketId, subject, status: 'open', type: 'warranty_claim' });
+            }
+        } catch (e) {}
+
+        // 6. WhatsApp Notification to BOTH Admins
+        const warrantyText = warranty.isPermanent 
+            ? 'Garansi Permanen Seumur Hidup' 
+            : `${warranty.durationLabel} (Sisa ${warranty.remainingDays} Hari)`;
+
+        let waResults = [];
+        try {
+            if (typeof notifyWarrantyClaim === 'function') {
+                waResults = await notifyWarrantyClaim({
+                    imei: cleanImei,
+                    packageName: trx.packageName,
+                    customerName: customerName.trim(),
+                    customerPhone: cleanCustPhone,
+                    issueDescription: issueDescription || 'Sinyal hilang / Tidak ada layanan',
+                    warrantyText,
+                    ticketId,
+                    trxId: trx.id
+                });
+            }
+        } catch (e) {
+            console.error('[Warranty Claim] Error sending WhatsApp notification:', e);
+        }
+
+        res.status(200).json({
+            status: true,
+            message: 'Klaim garansi berhasil diajukan! Notifikasi prioritas telah dikirimkan ke WhatsApp Admin untuk segera dilakukan tembak ulang sinyal.',
+            ticketId,
+            waResults
+        });
+    } catch (error) {
+        console.error('Error claiming warranty:', error);
+        res.status(500).json({ status: false, message: 'Terjadi kesalahan sistem saat memproses klaim garansi.' });
     }
 });
 
