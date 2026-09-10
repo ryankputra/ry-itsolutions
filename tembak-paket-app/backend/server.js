@@ -218,6 +218,14 @@ app.post('/api/admin/whatsapp/logout', isAuthenticated, isAdmin, async (req, res
     const ok = await waBot.logoutWABot();
     res.json({ status: ok, message: ok ? "WhatsApp Bot berhasil logout dan sesi dihapus." : "Gagal logout WhatsApp." });
 });
+app.post('/api/admin/whatsapp/test', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const results = await waBot.testAdminNotification(req.body?.message);
+        res.json({ status: true, message: "Pesan uji coba telah dikirim ke nomor admin.", data: results });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
 
 // 9. Initialize Cron Schedulers
 initSchedulers();

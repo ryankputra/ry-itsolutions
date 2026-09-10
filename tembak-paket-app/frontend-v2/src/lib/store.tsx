@@ -51,6 +51,7 @@ interface AppContextType {
   removeFromCart: (id: string) => void;
   updateCartQty: (id: string, qty: number) => void;
   clearCart: () => void;
+  updateCartItem: (id: string, updates: Partial<CartItem>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -126,6 +127,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     saveCart([]);
+  };
+
+  const updateCartItem = (id: string, updates: Partial<CartItem>) => {
+    const updated = cart.map((item) => (item.id === id ? { ...item, ...updates } : item));
+    saveCart(updated);
   };
 
   const cartCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
@@ -274,6 +280,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         removeFromCart,
         updateCartQty,
         clearCart,
+        updateCartItem,
       }}
     >
       {children}

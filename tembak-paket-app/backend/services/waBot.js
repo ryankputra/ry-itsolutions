@@ -1221,11 +1221,43 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         }
     }
 
-    const sent = await sock.sendMessage(finalJid, content, options);
-    if (sent?.key?.id && sent?.message) {
-        await storeMessage(sent.key.id, finalJid, sent.message);
+    // Explicitly enforce viewOnce: false for media payloads to allow viewing on WhatsApp Web
+    const finalContent = { ...content };
+    if (finalContent.image || finalContent.video || finalContent.document) {
+        if (!('viewOnce' in finalContent)) {
+            finalContent.viewOnce = false;
+        }
     }
-    return sent;
+
+    try {
+        const sent = await sock.sendMessage(finalJid, finalContent, options);
+        if (sent?.key?.id && sent?.message) {
+            await storeMessage(sent.key.id, finalJid, sent.message);
+        }
+        return sent;
+    } catch (sendErr) {
+        // Self-healing: if session ratchet error occurs, purge stale session for this contact & retry once
+        const targetNumber = finalJid.split("@")[0].split(":")[0];
+        if (targetNumber && targetNumber.length >= 8 && fs.existsSync(SESSIONS_DIR)) {
+            try {
+                const files = fs.readdirSync(SESSIONS_DIR).filter(f => f.startsWith(`session-${targetNumber}`));
+                if (files.length > 0) {
+                    console.warn(`[WABot] Purging stale sessions for ${targetNumber} due to send error: ${sendErr.message}`);
+                    files.forEach(f => {
+                        try { fs.unlinkSync(path.join(SESSIONS_DIR, f)); } catch (e) {}
+                    });
+                    const retried = await sock.sendMessage(finalJid, finalContent, options);
+                    if (retried?.key?.id && retried?.message) {
+                        await storeMessage(retried.key.id, finalJid, retried.message);
+                    }
+                    return retried;
+                }
+            } catch (retryErr) {
+                console.warn(`[WABot] Retry send after session purge failed for ${finalJid}: ${retryErr.message}`);
+            }
+        }
+        throw sendErr;
+    }
 }
 
 /**
@@ -1422,30 +1454,27 @@ async function notifyNewOrder(orderData) {
         }
 
         const shortId = id.slice(-4);
+        const photoPath = (userImage || userImageCeir || "").split(",")[0].trim();
+        const webProofUrl = photoPath ? `https://ry-itsolutionts.web.id${photoPath.startsWith('/') ? '' : '/'}${photoPath}` : null;
+        let proofTextLine = "";
+        if (webProofUrl) {
+            proofTextLine = `*Bukti Struk/IMEI:* ${webProofUrl}\n`;
+        }
+
         const messageBody = 
-            `*PESANAN BARU MASUK*
-` +
-            `──────────────────────━━━━
-` +
-            `*Order ID:* \`${id}\`
-` +
-            `*Pelanggan:* ${userName || "Pelanggan"}
-` +
+            `*PESANAN BARU MASUK*\n` +
+            `──────────────────────━━━━\n` +
+            `*Order ID:* \`${id}\`\n` +
+            `*Pelanggan:* ${userName || "Pelanggan"}\n` +
             serviceDetailLines +
-            `*Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}
-` +
-            `──────────────────────━━━━
-` +
-            `*CARA CEPAT PROSES (BALAS PESAN INI):*
-` +
-            `• Ketik *1* atau *.proses* : Mulai proses
-` +
-            `• Ketik *2* atau *.sukses* : Selesaikan
-` +
-            `• Ketik *3* atau *.gagal* : Tolak & refund
-` +
-            `_(Bisa juga manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)\_
-` +
+            proofTextLine +
+            `*Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
+            `──────────────────────━━━━\n` +
+            `*CARA CEPAT PROSES (BALAS PESAN INI):*\n` +
+            `• Ketik *1* atau *.proses* : Mulai proses\n` +
+            `• Ketik *2* atau *.sukses* : Selesaikan\n` +
+            `• Ketik *3* atau *.gagal* : Tolak & refund\n` +
+            `_(Bisa juga manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)_\n` +
             `──────────────────────━━━━`;
 
         // 1. Send text notification to all admin numbers immediately (instant delivery)
@@ -1463,8 +1492,7 @@ async function notifyNewOrder(orderData) {
                 console.warn(`[WABot] Gagal mengirim pesan ke admin ${cleanAdmin}:`, adminErr.message);
             }
 
-            // If user attached screenshot photo, send in background non-blocking promise
-            const photoPath = (userImage || userImageCeir || "").split(",")[0].trim();
+            // If user attached screenshot photo, send in background non-blocking promise with viewOnce: false & proof link
             if (photoPath) {
                 const fullPath = path.join(__dirname, "..", photoPath);
                 if (fs.existsSync(fullPath)) {
@@ -1472,7 +1500,8 @@ async function notifyNewOrder(orderData) {
                         try {
                             await sendAndStoreMessage(adminJid, {
                                 image: fs.readFileSync(fullPath),
-                                caption: `*Lampiran Bukti Pesanan #${id}*\nLayanan: ${packageName || "Layanan"}\nIMEI: \`${imei || "-"}\``
+                                caption: `*Lampiran Bukti Pesanan #${id}*\nLayanan: ${packageName || "Layanan"}\nIMEI: \`${imei || "-"}\`${webProofUrl ? `\n\nTautan Bukti: ${webProofUrl}` : ""}`,
+                                viewOnce: false
                             });
                         } catch (imgErr) {
                             console.warn("[WABot] Notice: Gagal mengirim lampiran gambar:", imgErr.message);
@@ -1609,6 +1638,40 @@ function getWAStatus() {
 
 // Auto start handled exclusively by server.js
 
+/**
+ * Send test message to all registered admin phone numbers
+ */
+async function testAdminNotification(customMessage) {
+    const adminPhones = await getAdminPhoneNumbers();
+    const results = [];
+    const timestampWIB = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    const message = customMessage || (
+        `*TEST NOTIFIKASI BOT SISTEM RY-ITSOLUTIONS*\n` +
+        `──────────────────────━━━━\n` +
+        `*Waktu:* ${timestampWIB} WIB\n` +
+        `*Status:* Enkripsi E2EE Signal Terverifikasi\n` +
+        `*Mode:* Pesan Teks Standar (Tanpa View-Once)\n` +
+        `──────────────────────━━━━\n` +
+        `Pesan ini dikirim resmi dari server untuk memastikan bahwa kedua nomor WhatsApp admin menerima notifikasi secara lancar tanpa tulisan 'Menunggu pesan ini' atau 'Pesan sekali lihat'.\n\n` +
+        `_Ry-ITSolutions Automated Operational Engine_`
+    );
+
+    for (const phone of adminPhones) {
+        const clean = cleanPhone(phone);
+        if (!clean || clean.length < 8) continue;
+        const jid = `${clean}@s.whatsapp.net`;
+        try {
+            const sent = await sendAndStoreMessage(jid, { text: message });
+            results.push({ phone: clean, success: true, id: sent?.key?.id });
+            console.log(`[WABot Test] Berhasil mengirim pesan uji ke ${clean} (ID: ${sent?.key?.id})`);
+        } catch (e) {
+            results.push({ phone: clean, success: false, error: e.message });
+            console.error(`[WABot Test] Gagal mengirim pesan uji ke ${clean}:`, e.message);
+        }
+    }
+    return results;
+}
+
 module.exports = {
     getWALogs,
     initWABot,
@@ -1622,5 +1685,6 @@ module.exports = {
     isValidIndonesianMobile,
     requestPairingCode,
     purgeStalePeerSessions,
-    getAdminPhoneNumbers
+    getAdminPhoneNumbers,
+    testAdminNotification
 };

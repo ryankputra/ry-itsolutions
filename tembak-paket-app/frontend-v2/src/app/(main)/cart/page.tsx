@@ -12,7 +12,7 @@ import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { safeJson } from "@/lib/api";
 
 export default function CartPage() {
-  const { user, cart, removeFromCart, updateCartQty, clearCart, setUser } = useApp();
+  const { user, cart, removeFromCart, updateCartQty, clearCart, updateCartItem, setUser } = useApp();
   const router = useRouter();
 
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -149,12 +149,25 @@ export default function CartPage() {
     }
   };
 
+  // Helper to identify IMEI / CEIR services
+  const isImeiService = (item: CartItem) => {
+    const sType = (item.serviceType || "").toLowerCase();
+    const pName = (item.packageName || "").toLowerCase();
+    return sType.includes("imei") || sType.includes("ceir") || pName.includes("imei") || pName.includes("ceir") || pName.includes("buka blokir");
+  };
+
   // Price calculations
   const activeCartItems = cart.filter((item) => selectedItems.includes(item.id));
   const subtotal = activeCartItems.reduce((sum, item) => {
-    const itemPrice = (item.price + (item.speedPrice || 0)) * (item.quantity || 1);
+    const effectiveQty = isImeiService(item) ? 1 : (item.quantity || 1);
+    const itemPrice = (item.price + (item.speedPrice || 0)) * effectiveQty;
     return sum + itemPrice;
   }, 0);
+
+  // Check if any selected IMEI item lacks a valid 15-digit IMEI
+  const hasInvalidImei = activeCartItems.some((item) => {
+    return isImeiService(item) && (!item.imei || item.imei.replace(/\D/g, "").length < 15);
+  });
 
   let discountAmount = 0;
   if (appliedCoupon && subtotal > 0) {
@@ -180,6 +193,16 @@ export default function CartPage() {
   const handleCheckout = async () => {
     if (activeCartItems.length === 0) {
       Swal.fire({ icon: "warning", title: "Pilih Item", text: "Pilih minimal 1 layanan di keranjang untuk checkout." });
+      return;
+    }
+
+    if (hasInvalidImei) {
+      Swal.fire({
+        icon: "warning",
+        title: "Lengkapi Nomor IMEI",
+        text: "Terdapat layanan IMEI di keranjang yang belum memiliki nomor IMEI 15 digit valid. Silakan isi nomor IMEI terlebih dahulu.",
+        confirmButtonColor: "#0066cc",
+      });
       return;
     }
 
@@ -225,16 +248,18 @@ export default function CartPage() {
 
         const formData = new FormData();
         formData.append("service_type", item.serviceType === "ceir" ? "ceir" : "imei");
-        formData.append("imei", item.imei || "111111111111111");
+        const cleanImei = (item.imei || "").replace(/\D/g, "");
+        formData.append("imei", cleanImei);
         formData.append("duration", item.duration || "1 Bulan");
         formData.append("amount", itemPrice.toString());
         formData.append("package_id", pkgKey);
         formData.append("price_key", pkgKey);
         formData.append("speed", item.speed || "regular");
         formData.append("speed_option", item.speed || "regular");
+        formData.append("payment_method", "balance");
         const custPhone = item.targetPhone || user?.phone || user?.verifiedPhone || "";
-      formData.append("target_phone", custPhone);
-      formData.append("targetPhone", custPhone);
+        formData.append("target_phone", custPhone);
+        formData.append("targetPhone", custPhone);
 
         // Apply coupon & coins on first applicable item to prevent duplicate coupon reuse error
         if (idx === 0 && appliedCoupon) {
@@ -367,86 +392,162 @@ export default function CartPage() {
           <div className="space-y-2.5">
             {cart.map((item) => {
               const isSelected = selectedItems.includes(item.id);
-              const itemTotal = (item.price + (item.speedPrice || 0)) * (item.quantity || 1);
+              const isImei = isImeiService(item);
+              const effectiveQty = isImei ? 1 : (item.quantity || 1);
+              const itemTotal = (item.price + (item.speedPrice || 0)) * effectiveQty;
+              const cleanImei = (item.imei || "").replace(/\D/g, "");
+              const isImeiValid = cleanImei.length >= 15;
 
               return (
                 <div
                   key={item.id}
-                  className={`p-3.5 sm:p-4 rounded-2xl bg-canvas border transition-all flex items-start gap-3 shadow-2xs ${
+                  className={`p-3.5 sm:p-4 rounded-2xl bg-canvas border transition-all flex flex-col gap-3 shadow-2xs ${
                     isSelected ? "border-primary/50 ring-1 ring-primary/20" : "border-hairline"
                   }`}
                 >
-                  {/* Checkbox */}
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelect(item.id)}
-                    className="w-4 h-4 rounded text-primary accent-primary cursor-pointer mt-1"
-                  />
+                  <div className="flex items-start gap-3">
+                    {/* Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(item.id)}
+                      className="w-4 h-4 rounded text-primary accent-primary cursor-pointer mt-1"
+                    />
 
-                  {/* Icon */}
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 text-primary flex items-center justify-center shrink-0">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                    </svg>
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-bold text-xs sm:text-sm text-ink line-clamp-1">{item.packageName}</h4>
-                        {item.imei && (
-                          <p className="text-[10px] font-mono text-ink-muted mt-0.5">
-                            IMEI: {item.imei}
-                          </p>
-                        )}
-                        {item.duration && (
-                          <span className="inline-block px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 text-[9px] font-bold mt-1">
-                            Garansi {item.duration}
-                          </span>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removeFromCart(item.id)}
-                        className="text-ink-muted hover:text-rose-600 transition-colors p-1"
-                        title="Hapus dari keranjang"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                        </svg>
-                      </button>
+                    {/* Icon */}
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                      </svg>
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <span className="font-black text-xs sm:text-sm text-primary">
-                        Rp {itemTotal.toLocaleString("id-ID")}
-                      </span>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-xs sm:text-sm text-ink line-clamp-1">{item.packageName}</h4>
+                          {item.duration && (
+                            <span className="inline-block px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold mt-1 border border-emerald-500/20">
+                              Garansi {item.duration}
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Quantity control */}
-                      <div className="flex items-center gap-2 border border-hairline rounded-xl p-0.5 bg-parchment">
                         <button
                           type="button"
-                          onClick={() => updateCartQty(item.id, (item.quantity || 1) - 1)}
-                          className="w-6 h-6 rounded-lg bg-canvas hover:bg-slate-200 flex items-center justify-center font-bold text-xs text-ink transition-colors"
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-ink-muted hover:text-rose-600 transition-colors p-1"
+                          title="Hapus dari keranjang"
                         >
-                          -
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                          </svg>
                         </button>
-                        <span className="text-xs font-bold text-ink px-1 min-w-[16px] text-center">
-                          {item.quantity || 1}
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="font-black text-xs sm:text-sm text-primary">
+                          Rp {itemTotal.toLocaleString("id-ID")}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => updateCartQty(item.id, (item.quantity || 1) + 1)}
-                          className="w-6 h-6 rounded-lg bg-canvas hover:bg-slate-200 flex items-center justify-center font-bold text-xs text-ink transition-colors"
-                        >
-                          +
-                        </button>
+
+                        {/* Quantity control or 1 Unit Badge */}
+                        {isImei ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                            1 Unit / IMEI
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2 border border-hairline rounded-xl p-0.5 bg-parchment">
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(item.id, (item.quantity || 1) - 1)}
+                              className="w-6 h-6 rounded-lg bg-canvas hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center font-bold text-xs text-ink transition-colors"
+                            >
+                              -
+                            </button>
+                            <span className="text-xs font-bold text-ink px-1 min-w-[16px] text-center">
+                              {item.quantity || 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(item.id, (item.quantity || 1) + 1)}
+                              className="w-6 h-6 rounded-lg bg-canvas hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center font-bold text-xs text-ink transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
+
+                  {/* Inline IMEI Management Box */}
+                  {isImei && (
+                    <div className="pt-2 border-t border-hairline">
+                      {!isImeiValid ? (
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                              <svg className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                              Wajib Diisi: Nomor IMEI 15 Digit
+                            </span>
+                            <span className="text-[10px] font-mono text-ink-muted font-bold">
+                              {cleanImei.length}/15 Digit
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            maxLength={15}
+                            placeholder="Ketik 15 digit IMEI ponsel Anda"
+                            value={cleanImei}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, "").slice(0, 15);
+                              updateCartItem(item.id, { imei: val });
+                            }}
+                            className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-lg border border-hairline bg-canvas text-ink placeholder:text-ink-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between bg-parchment/60 p-2 rounded-xl border border-hairline">
+                          <div className="flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                            <span className="text-[10px] text-ink-muted">IMEI:</span>
+                            <span className="text-[11px] font-mono font-black text-ink">{cleanImei}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              Swal.fire({
+                                title: "Ubah Nomor IMEI",
+                                text: "Masukkan 15 digit angka IMEI perangkat Anda:",
+                                input: "text",
+                                inputValue: cleanImei,
+                                inputAttributes: { maxlength: "15", autocapitalize: "off", autocorrect: "off" },
+                                showCancelButton: true,
+                                confirmButtonText: "Simpan",
+                                confirmButtonColor: "#0066cc",
+                                cancelButtonText: "Batal",
+                                preConfirm: (val) => {
+                                  const clean = (val || "").replace(/\D/g, "");
+                                  if (clean.length < 15) {
+                                    Swal.showValidationMessage("Nomor IMEI harus terdiri dari 15 digit angka.");
+                                    return false;
+                                  }
+                                  return clean;
+                                }
+                              }).then((res) => {
+                                if (res.isConfirmed && res.value) {
+                                  updateCartItem(item.id, { imei: res.value });
+                                }
+                              });
+                            }}
+                            className="text-[10px] font-bold text-primary hover:underline cursor-pointer px-1.5 py-0.5 rounded hover:bg-primary/10 transition-colors"
+                          >
+                            Ubah
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -576,7 +677,7 @@ export default function CartPage() {
 
             <Button
               onClick={handleCheckout}
-              disabled={activeCartItems.length === 0 || checkingOut}
+              disabled={activeCartItems.length === 0 || checkingOut || hasInvalidImei}
               isLoading={checkingOut}
               className="bg-primary hover:bg-primary-focus text-white font-black text-xs sm:text-sm px-6 h-11 rounded-2xl shadow-md shrink-0"
             >
@@ -609,9 +710,18 @@ export default function CartPage() {
         amount={grandTotal}
         orderTitle={`Pembayaran Direct Keranjang (${activeCartItems.length} Layanan)`}
         preferredGateway="auto"
-        onSuccess={() => {
+        onSuccess={async () => {
           setShowInstantQris(false);
-          executeCartCheckout();
+          try {
+            const userRes = await fetch("/api/user", { credentials: "include" });
+            const userData = await safeJson(userRes);
+            if (userData?.status && userData?.data) {
+              setUser(userData.data);
+            }
+          } catch (e) {}
+          setTimeout(() => {
+            executeCartCheckout();
+          }, 600);
         }}
       />
     </div>
