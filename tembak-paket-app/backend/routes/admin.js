@@ -46,7 +46,7 @@ const manualOrderUpload = multer({
 // 1. GET /api/admin/users
 router.get('/admin/users', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const users = await dbAll('SELECT id, name, email, balance, role, status, createdAt, verifiedPhone FROM users ORDER BY createdAt DESC');
+        const users = await dbAll('SELECT id, name, email, balance, COALESCE(coins, 0) AS coins, role, status, createdAt, verifiedPhone FROM users ORDER BY createdAt DESC');
         res.status(200).json({ status: true, data: users });
     } catch (e) {
         res.status(500).json({ status: false, message: "Gagal mengambil data pengguna." });
@@ -54,6 +54,40 @@ router.get('/admin/users', isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // 2. POST /api/admin/update-balance
+// 2b. POST /api/admin/update-coins
+router.post('/admin/update-coins', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { userId, amount } = req.body;
+        const parsedAmount = parseInt(amount, 10);
+        if (!userId || isNaN(parsedAmount) || parsedAmount === 0) {
+            return res.status(400).json({ status: false, message: "Input koin tidak valid atau bernilai 0." });
+        }
+
+        const targetUser = await dbGet('SELECT name, coins FROM users WHERE id = ?', [userId]);
+        if (!targetUser) {
+            return res.status(404).json({ status: false, message: "Pengguna target tidak ditemukan." });
+        }
+
+        await dbRun('UPDATE users SET coins = MAX(0, COALESCE(coins, 0) + ?) WHERE id = ?', [parsedAmount, userId]);
+        const updatedUser = await dbGet('SELECT coins FROM users WHERE id = ?', [userId]);
+
+        try {
+            if (typeof sseSend === 'function') {
+                sseSend(userId, 'balance_update', { coins: updatedUser.coins, source: 'admin' });
+            }
+        } catch (e) {}
+
+        res.status(200).json({
+            status: true,
+            message: `Koin ${targetUser.name} berhasil diubah (${parsedAmount > 0 ? '+' : ''}${parsedAmount}). Total koin: ${updatedUser.coins}.`,
+            coins: updatedUser.coins
+        });
+    } catch (e) {
+        console.error("Error updating user coins:", e);
+        res.status(500).json({ status: false, message: "Gagal memperbarui koin pengguna." });
+    }
+});
+
 router.post('/admin/update-balance', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { userId, amount } = req.body;

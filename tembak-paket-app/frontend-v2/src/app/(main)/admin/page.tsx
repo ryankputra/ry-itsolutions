@@ -9,7 +9,7 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
-import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server } from "lucide-react";
+import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins } from "lucide-react";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -42,6 +42,8 @@ export default function AdminPage() {
   const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [balAmount, setBalAmount] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [coinAmount, setCoinAmount] = useState("");
+  const [selectedCoinUserId, setSelectedCoinUserId] = useState<number | null>(null);
   const [userPage, setUserPage] = useState(1);
 
   // Settings State
@@ -1229,6 +1231,29 @@ export default function AdminPage() {
         setSelectedUserId(null);
       }
     } catch (e) { Swal.fire({ title: "Info", text: "Error update balance"}); }
+  };
+
+  const handleUpdateCoins = async (userId: number) => {
+    if (!coinAmount || isNaN(Number(coinAmount))) return;
+    try {
+      const res = await fetch('/api/admin/update-coins', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, amount: parseInt(coinAmount, 10) })
+      });
+      const data = await safeJson(res);
+      if (res.ok && data?.status) {
+        Swal.fire({ title: "Berhasil", text: data?.message || "Koin berhasil diperbarui!", timer: 1500, showConfirmButton: false });
+        loadUsers();
+        setCoinAmount("");
+        setSelectedCoinUserId(null);
+      } else {
+        Swal.fire({ title: "Gagal", text: data?.message || "Gagal mengubah koin pengguna." });
+      }
+    } catch (e) {
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan sistem saat update koin." });
+    }
   };
 
   const handleDeleteZeroBalance = async () => {
@@ -3818,7 +3843,13 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <p className="text-[11px] text-ink-muted mt-0.5">{u.email} {u.phone && `• ${u.phone}`}</p>
-                    <p className="text-xs font-bold text-primary mt-1">Saldo: Rp {u.balance?.toLocaleString('id-ID')}</p>
+                    <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                      <p className="text-xs font-bold text-primary">Saldo: Rp {Number(u.balance || 0).toLocaleString('id-ID')}</p>
+                      <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 text-[11px]">
+                        <Coins className="w-3 h-3 text-amber-500 shrink-0" />
+                        <span>{Number(u.coins || 0).toLocaleString('id-ID')} Koin</span>
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
@@ -3852,7 +3883,17 @@ export default function AdminPage() {
                         <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => { setSelectedUserId(null); setBalAmount(""); }}><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></Button>
                       </div>
                     ) : (
-                      <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => setSelectedUserId(u.id)}>Edit Saldo</Button>
+                      <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => { setSelectedUserId(u.id); setSelectedCoinUserId(null); }}>Edit Saldo</Button>
+                    )}
+
+                    {selectedCoinUserId === u.id ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Input type="number" placeholder="+/- Koin" className="w-32 text-xs" value={coinAmount} onChange={(e) => setCoinAmount(e.target.value)} />
+                        <Button size="sm" className="text-xs h-8 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => handleUpdateCoins(u.id)}>Simpan</Button>
+                        <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => { setSelectedCoinUserId(null); setCoinAmount(""); }}><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="text-xs h-8 text-amber-600 border-amber-200 hover:bg-amber-50 dark:border-amber-800/40 dark:hover:bg-amber-950/30" onClick={() => { setSelectedCoinUserId(u.id); setSelectedUserId(null); }}>Edit Koin</Button>
                     )}
 
                     {u.status === 'pending' && (
