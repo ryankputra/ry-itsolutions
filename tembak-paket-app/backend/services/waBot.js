@@ -693,7 +693,28 @@ async function initWABot(forceNew = false) {
                 if (!msg.message) continue;
 
                 const remoteJid = msg.key.remoteJid;
-                if (!remoteJid || remoteJid.includes("@g.us")) continue; // Ignore groups
+                // Ignore empty JID, group chats (@g.us), broadcast channels, and newsletters
+                if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast") || remoteJid.includes("@newsletter")) continue;
+
+                // Determine sender phone number cleanly
+                const cleanRemotePhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", "").split(":")[0]);
+                const adminPhones = await getAdminPhoneNumbers();
+                const cleanAdminList = adminPhones.map(p => cleanPhone(p)).filter(Boolean);
+
+                // STRICT ADMIN CHECK:
+                // Only authorized if message was sent from the bot's own account (fromMe)
+                // OR the sender's phone number is explicitly in the admin list.
+                const isSenderAdmin = Boolean(
+                    msg.key.fromMe ||
+                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone))
+                );
+
+                // IF SENDER IS NOT AN ADMIN:
+                // SILENTLY IGNORE! NO REPLY, NO COMMANDS, NO MESSAGES WHATSOEVER!
+                if (!isSenderAdmin) {
+                    // Do not respond to regular users under any circumstances
+                    continue;
+                }
 
                 const messageText = (
                     msg.message.conversation ||
@@ -711,25 +732,7 @@ async function initWABot(forceNew = false) {
                 );
                 if (!isCommand) continue;
 
-                // Determine sender phone
-                let senderPhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", ""));
-                const myJid = sock?.user?.id || "";
-                const myPhone = cleanPhone(myJid.split(":")[0].replace("@s.whatsapp.net", ""));
-
-                if (msg.key.fromMe) {
-                    senderPhone = myPhone || senderPhone;
-                }
-
-                // Authorization check: Only configured admin numbers can execute commands
-                const adminPhones = await getAdminPhoneNumbers();
-                const isAuthorized = msg.key.fromMe || (senderPhone && adminPhones.includes(senderPhone)) || (myPhone && adminPhones.includes(myPhone));
-
-                if (!isAuthorized) {
-                    console.warn(`[WABot Security] Pesan ditolak dari nomor non-admin: ${senderPhone}`);
-                    continue;
-                }
-
-                logWABot(`[WABot Command] Memproses: "${messageText}" dari ${senderPhone || remoteJid}`, "info");
+                logWABot(`[WABot Command] Memproses perintah Admin "${messageText}" dari ${cleanRemotePhone || remoteJid}`, "info");
                 await handleAdminCommand(remoteJid, messageText, msg);
             }
         });
