@@ -9,7 +9,7 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
-import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins } from "lucide-react";
+import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown } from "lucide-react";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -1461,7 +1461,14 @@ export default function AdminPage() {
   };
 
   // KPI Calculations
-  const pendingOrdersCount = manualOrders.filter(o => o.status === 'pending' || o.status === 'processing' || o.status === 'in_queue').length;
+  const pendingOrdersCount = manualOrders.filter(o => {
+    const s = String(o.status || '').toLowerCase().trim();
+    return s === 'pending' || s === 'in_queue';
+  }).length;
+  const processingOrdersCount = manualOrders.filter(o => {
+    const s = String(o.status || '').toLowerCase().trim();
+    return s === 'processing';
+  }).length;
   const openTicketsCount = adminTickets.filter(t => t.status === 'open' || t.status === 'replied').length;
   const totalResellersCount = users.filter(u => u.role === 'reseller').length;
 
@@ -1714,14 +1721,23 @@ export default function AdminPage() {
   const manualOrdersList = manualOrders.filter(o => !isAutomatedOrder(o));
   const automatedOrdersList = manualOrders.filter(o => isAutomatedOrder(o));
 
-  // Accurate Admin Queue Counter: Strictly counts unfinished orders (PENDING or PROCESSING)
-  const manualPendingCount = manualOrdersList.filter(o => {
-    const s = String(o.status || '').toUpperCase().trim();
-    return s === 'PENDING' || s === 'PROCESSING';
+  // Accurate distinct queue counters: Antrean (Pending) vs Sedang Diproses (Processing)
+  const manualPendingQueueCount = manualOrdersList.filter(o => {
+    const s = String(o.status || '').toLowerCase().trim();
+    return s === 'pending' || s === 'in_queue';
   }).length;
-  const automatedPendingCount = automatedOrdersList.filter(o => {
-    const s = String(o.status || '').toUpperCase().trim();
-    return s === 'PENDING' || s === 'PROCESSING';
+  const manualProcessingCount = manualOrdersList.filter(o => {
+    const s = String(o.status || '').toLowerCase().trim();
+    return s === 'processing';
+  }).length;
+
+  const automatedPendingQueueCount = automatedOrdersList.filter(o => {
+    const s = String(o.status || '').toLowerCase().trim();
+    return s === 'pending' || s === 'in_queue';
+  }).length;
+  const automatedProcessingCount = automatedOrdersList.filter(o => {
+    const s = String(o.status || '').toLowerCase().trim();
+    return s === 'processing';
   }).length;
 
   const handleRetryCeirgoOrder = async (orderId: string) => {
@@ -1803,60 +1819,92 @@ export default function AdminPage() {
     return true;
   });
 
-  // Menu Groups Definition (Clean & Professional - No Emojis)
-  const menuCategories = [
+  // Flat Unified Admin Menu (Optimized for Mobile & Desktop)
+  const adminMenuList = [
     {
-      id: "operasional",
-      name: "Operasional & CS",
-      description: "Pesanan, Tiket, & Pengguna",
-      tabs: [
-        { id: "pesanan-manual", label: "Antrean Pesanan", badge: pendingOrdersCount > 0 ? pendingOrdersCount : null, badgeColor: "bg-rose-500" },
-        { id: "tiket-bantuan", label: "Pusat Bantuan CS", badge: openTicketsCount > 0 ? openTicketsCount : null, badgeColor: "bg-amber-500" },
-        { id: "pengguna", label: "Kelola Pengguna", badge: null },
-      ]
+      id: "pesanan-manual",
+      label: "Antrean Pesanan",
+      icon: Clock,
+      badge: pendingOrdersCount > 0 ? `${pendingOrdersCount} Antre` : processingOrdersCount > 0 ? `${processingOrdersCount} Proses` : null,
+      badgeColor: pendingOrdersCount > 0 ? "bg-rose-500" : "bg-blue-600"
     },
     {
-      id: "produk",
-      name: "Produk & Harga",
-      description: "Harga IMEI, CEIR, & Kuota",
-      tabs: [
-        { id: "layanan-imei", label: "Layanan & Harga IMEI/CEIR", badge: null },
-        { id: "paket", label: "Paket Kuota KMSP", badge: null },
-      ]
+      id: "tiket-bantuan",
+      label: "Pusat Bantuan CS",
+      icon: Headphones,
+      badge: openTicketsCount > 0 ? openTicketsCount : null,
+      badgeColor: "bg-amber-500"
     },
     {
-      id: "marketing",
-      name: "Promosi & Marketing",
-      description: "Broadcast, Kupon, Referral, & Ulasan",
-      tabs: [
-        { id: "broadcast-promo", label: "Broadcast Promo", badge: null },
-        { id: "kupon-promo", label: "Kupon Diskon", badge: null },
-        { id: "referral", label: "Program Referral", badge: null },
-        { id: "ulasan-dummy", label: "Ulasan Dummy Pelanggan", badge: null },
-      ]
+      id: "pengguna",
+      label: "Kelola Pengguna",
+      icon: Users,
+      badge: null
     },
     {
-      id: "sistem",
-      name: "Sistem & Server",
-      description: "Gateway, Database, & Server",
-      tabs: [
-        { id: "gateway-saas", label: "Langganan Gateway GoPay", badge: adminGatewayKeys.filter(k => {
-            if (!k.isActive || !k.expiresAt) return false;
-            const diff = Math.ceil((new Date(k.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-            return diff >= 0 && diff <= 3;
-          }).length > 0 ? adminGatewayKeys.filter(k => {
-            if (!k.isActive || !k.expiresAt) return false;
-            const diff = Math.ceil((new Date(k.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-            return diff >= 0 && diff <= 3;
-          }).length : null, badgeColor: "bg-amber-500" },
-        { id: "tema-momentum", label: "Tema & Momentum Kalender", badge: null },
-        { id: "pengaturan", label: "Pengaturan & Gateway", badge: null },
-      ]
+      id: "layanan-imei",
+      label: "Layanan IMEI & CEIR",
+      icon: Smartphone,
+      badge: null
+    },
+    {
+      id: "paket",
+      label: "Paket Kuota KMSP",
+      icon: Package,
+      badge: null
+    },
+    {
+      id: "gateway-saas",
+      label: "Langganan Gateway GoPay",
+      icon: QrCode,
+      badge: adminGatewayKeys.filter(k => {
+        if (!k.isActive || !k.expiresAt) return false;
+        const diff = Math.ceil((new Date(k.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 3;
+      }).length > 0 ? adminGatewayKeys.filter(k => {
+        if (!k.isActive || !k.expiresAt) return false;
+        const diff = Math.ceil((new Date(k.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 3;
+      }).length : null,
+      badgeColor: "bg-amber-500"
+    },
+    {
+      id: "kupon-promo",
+      label: "Kupon Diskon",
+      icon: Ticket,
+      badge: null
+    },
+    {
+      id: "broadcast-promo",
+      label: "Broadcast Promo",
+      icon: Megaphone,
+      badge: null
+    },
+    {
+      id: "referral",
+      label: "Program Referral",
+      icon: Share2,
+      badge: null
+    },
+    {
+      id: "tema-momentum",
+      label: "Tema & Momentum",
+      icon: Palette,
+      badge: null
+    },
+    {
+      id: "pengaturan",
+      label: "Pengaturan & Server",
+      icon: Settings,
+      badge: null
+    },
+    {
+      id: "ulasan-dummy",
+      label: "Ulasan Pelanggan",
+      icon: MessageSquare,
+      badge: null
     }
   ];
-
-  // Auto switch category if activeTab changes
-  const currentCategory = menuCategories.find(c => c.tabs.some(t => t.id === activeTab))?.id || activeCategory;
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-16">
@@ -1907,12 +1955,12 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* 2. Quick Action KPI Metric Cards (Clean, Minimalist SaaS Style) */}
+      {/* 2. Quick Action KPI Metric Cards (Accurate Antrean vs Diproses Counts) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Metric 1: Antrean Pesanan */}
         <button
-          onClick={() => { setActiveCategory("operasional"); setActiveTab("pesanan-manual"); }}
-          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+          onClick={() => setActiveTab("pesanan-manual")}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden cursor-pointer ${
             activeTab === 'pesanan-manual'
               ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
               : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
@@ -1926,26 +1974,40 @@ export default function AdminPage() {
               <Clock className="w-3.5 h-3.5 text-ink-muted shrink-0" />
               <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider truncate">Pesanan</span>
             </div>
-            {pendingOrdersCount > 0 ? (
-              <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0">
+            {pendingOrdersCount > 0 && processingOrdersCount > 0 ? (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 shrink-0">
+                {pendingOrdersCount} antre • {processingOrdersCount} proses
+              </span>
+            ) : pendingOrdersCount > 0 ? (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25 shrink-0 animate-pulse">
                 {pendingOrdersCount} antre
               </span>
+            ) : processingOrdersCount > 0 ? (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25 shrink-0">
+                {processingOrdersCount} diproses
+              </span>
             ) : (
-              <span className="text-[10px] text-ink-muted/60 font-medium">Beres</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Beres</span>
             )}
           </div>
           <div className="mt-2.5 sm:mt-3">
             <p className="text-xl sm:text-2xl font-bold tracking-tight text-ink leading-none">{manualOrders.length}</p>
             <p className="text-[11px] text-ink-muted mt-1 truncate">
-              {pendingOrdersCount > 0 ? `${pendingOrdersCount} butuh verifikasi` : 'Total transaksi'}
+              {pendingOrdersCount > 0 && processingOrdersCount > 0
+                ? `${pendingOrdersCount} antre, ${processingOrdersCount} sedang diproses`
+                : pendingOrdersCount > 0
+                ? `${pendingOrdersCount} butuh verifikasi admin`
+                : processingOrdersCount > 0
+                ? `${processingOrdersCount} sedang dikerjakan admin`
+                : 'Semua pesanan selesai'}
             </p>
           </div>
         </button>
 
         {/* Metric 2: Pusat Bantuan CS */}
         <button
-          onClick={() => { setActiveCategory("operasional"); setActiveTab("tiket-bantuan"); }}
-          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+          onClick={() => setActiveTab("tiket-bantuan")}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden cursor-pointer ${
             activeTab === 'tiket-bantuan'
               ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
               : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
@@ -1961,7 +2023,7 @@ export default function AdminPage() {
             </div>
             {openTicketsCount > 0 ? (
               <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
-                {openTicketsCount} aktif
+                {openTicketsCount} tiket
               </span>
             ) : (
               <span className="text-[10px] text-ink-muted/60 font-medium">Beres</span>
@@ -1970,15 +2032,15 @@ export default function AdminPage() {
           <div className="mt-2.5 sm:mt-3">
             <p className="text-xl sm:text-2xl font-bold tracking-tight text-ink leading-none">{adminTickets.length}</p>
             <p className="text-[11px] text-ink-muted mt-1 truncate">
-              {openTicketsCount > 0 ? `${openTicketsCount} tiket terbuka` : 'Total tiket'}
+              {openTicketsCount > 0 ? `${openTicketsCount} butuh balasan` : 'Total tiket'}
             </p>
           </div>
         </button>
 
-        {/* Metric 3: Pengguna & Mitra */}
+        {/* Metric 3: Total Pengguna */}
         <button
-          onClick={() => { setActiveCategory("operasional"); setActiveTab("pengguna"); }}
-          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+          onClick={() => setActiveTab("pengguna")}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden cursor-pointer ${
             activeTab === 'pengguna'
               ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
               : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
@@ -2002,8 +2064,8 @@ export default function AdminPage() {
 
         {/* Metric 4: Saldo Server Pusat */}
         <button
-          onClick={() => { setActiveCategory("sistem"); setActiveTab("pengaturan"); }}
-          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+          onClick={() => setActiveTab("pengaturan")}
+          className={`group relative p-3 sm:p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between overflow-hidden cursor-pointer ${
             activeTab === 'pengaturan'
               ? 'bg-canvas border-primary/50 shadow-xs ring-1 ring-primary/20'
               : 'bg-canvas border-hairline hover:border-ink/20 hover:bg-parchment/40'
@@ -2040,55 +2102,48 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* 3. Re-organized Categorized Navigation System (Minimalist & Responsive) */}
+      {/* 3. Unified Flat Navigation Menu (Optimized for Mobile & Desktop - No Nested Categories) */}
       <div className="bg-canvas border border-hairline p-2 sm:p-2.5 rounded-2xl shadow-xs space-y-2">
-        {/* Category Selector Tabs: 2x2 grid on mobile, 4 columns on desktop */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-parchment/60 rounded-xl border border-hairline">
-          {menuCategories.map(cat => {
-            const isCatActive = currentCategory === cat.id;
-            const pendingInCat = cat.tabs.reduce((acc, t) => acc + (typeof t.badge === 'number' ? t.badge : 0), 0);
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  if (!cat.tabs.some(t => t.id === activeTab)) {
-                    setActiveTab(cat.tabs[0].id);
-                  }
-                }}
-                className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 ${
-                  isCatActive
-                    ? 'bg-canvas text-ink shadow-xs border border-hairline font-bold'
-                    : 'text-ink-muted hover:text-ink hover:bg-canvas/50'
-                }`}
-              >
-                <span className="leading-snug">{cat.name}</span>
-                {pendingInCat > 0 && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
-                )}
-              </button>
-            );
-          })}
+        {/* Mobile Dropdown Quick Selector (1-tap direct menu jump on phones) */}
+        <div className="block sm:hidden">
+          <div className="relative">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full h-11 pl-3.5 pr-10 rounded-xl bg-parchment/80 border border-hairline text-xs font-bold text-ink focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 appearance-none transition-all cursor-pointer"
+            >
+              {adminMenuList.map(item => (
+                <option key={item.id} value={item.id}>
+                  {item.label} {item.badge ? `(${item.badge})` : ''}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-ink-muted">
+              <ChevronDown className="w-4 h-4" />
+            </div>
+          </div>
         </div>
 
-        {/* Sub-Tabs: Clean horizontal pills (Responsive on both mobile & desktop with smooth scrolling) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-0.5 pb-0.5 px-0.5">
-          {menuCategories.find(c => c.id === currentCategory)?.tabs.map(tab => {
-            const isTabActive = activeTab === tab.id;
+        {/* Scrollable Pills Menu (Touch-friendly & Smooth on Mobile, Sleek on Desktop) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 pt-0.5 px-0.5 -mx-0.5">
+          {adminMenuList.map((menu) => {
+            const isActive = activeTab === menu.id;
+            const Icon = menu.icon;
             return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0 border ${
-                  isTabActive
+                key={menu.id}
+                onClick={() => setActiveTab(menu.id)}
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0 border cursor-pointer ${
+                  isActive
                     ? 'bg-primary text-white border-primary shadow-xs'
                     : 'bg-canvas text-ink-muted border-hairline hover:bg-parchment hover:text-ink'
                 }`}
               >
-                <span>{tab.label}</span>
-                {tab.badge !== null && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold text-white ${tab.badgeColor || 'bg-rose-500'}`}>
-                    {tab.badge}
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-ink-muted'}`} />
+                <span>{menu.label}</span>
+                {menu.badge && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black text-white ${menu.badgeColor || 'bg-rose-500'} shrink-0 shadow-xs`}>
+                    {menu.badge}
                   </span>
                 )}
               </button>
@@ -2155,14 +2210,20 @@ export default function AdminPage() {
                     <p className="text-[11px] text-ink-muted">Khusus order manual: verifikasi IMEI, foto, & upload hasil.</p>
                   </div>
                 </div>
-                <div>
-                  {manualPendingCount > 0 ? (
-                    <span className="bg-amber-100 text-amber-800 border border-amber-300 font-bold px-2 py-0.5 rounded-full text-xs animate-pulse whitespace-nowrap shadow-xs">
-                      {manualPendingCount} Pending
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {manualPendingQueueCount > 0 && (
+                    <span className="bg-rose-100 text-rose-800 border border-rose-300 font-bold px-2.5 py-0.5 rounded-full text-xs animate-pulse whitespace-nowrap shadow-xs">
+                      {manualPendingQueueCount} Antre (Pending)
                     </span>
-                  ) : (
-                    <span className="bg-slate-100 text-slate-600 border border-slate-200 font-bold px-2 py-0.5 rounded-full text-xs whitespace-nowrap">
-                      0 Pending
+                  )}
+                  {manualProcessingCount > 0 && (
+                    <span className="bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap shadow-xs">
+                      {manualProcessingCount} Diproses
+                    </span>
+                  )}
+                  {manualPendingQueueCount === 0 && manualProcessingCount === 0 && (
+                    <span className="bg-slate-100 text-slate-600 border border-slate-200 font-bold px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap">
+                      0 Antre (Beres)
                     </span>
                   )}
                 </div>
@@ -2188,13 +2249,19 @@ export default function AdminPage() {
                     <p className="text-[11px] text-ink-muted">Layanan instan CEIR & Generator Barcode: Monitoring log API.</p>
                   </div>
                 </div>
-                <div>
-                  {automatedPendingCount > 0 ? (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-500 text-white shadow-sm whitespace-nowrap">
-                      {automatedPendingCount} Tertunda
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {automatedPendingQueueCount > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white shadow-sm whitespace-nowrap">
+                      {automatedPendingQueueCount} Tertunda
                     </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-700 whitespace-nowrap">
+                  )}
+                  {automatedProcessingCount > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm whitespace-nowrap">
+                      {automatedProcessingCount} Diproses
+                    </span>
+                  )}
+                  {automatedPendingQueueCount === 0 && automatedProcessingCount === 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700 whitespace-nowrap">
                       {automatedOrdersList.length} Total
                     </span>
                   )}
