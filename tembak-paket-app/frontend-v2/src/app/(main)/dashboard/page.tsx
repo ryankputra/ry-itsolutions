@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useApp } from "@/lib/store";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { useRouter } from "next/navigation";
-import { BroadcastBanner } from "@/components/ui/BroadcastBanner";
+import { PromoPopupModal } from "@/components/ui/PromoPopupModal";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import { CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { safeJson } from "@/lib/api";
@@ -150,8 +150,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-16">
-      {/* Broadcast & Announcement Multi-Item Banner Feed */}
-      <BroadcastBanner />
+      {/* Promo Announcement Popup Modal (Mobile & Desktop) */}
+      <PromoPopupModal />
 
       {/* ============================================================ */}
       {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
