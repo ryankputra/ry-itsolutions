@@ -947,10 +947,12 @@ router.post('/ai/chat', async (req, res) => {
         let userCoins = 0;
         let userRecentOrders = [];
 
-        if (req.session?.userId) {
+        const activeUserId = req.session?.userId || req.headers['x-user-id'] || null;
+
+        if (activeUserId) {
             const user = await dbGet(
                 "SELECT id, name, email, verifiedPhone as phone, role, balance, coins, createdAt FROM users WHERE id = ?",
-                [req.session.userId]
+                [activeUserId]
             );
 
             if (user) {
