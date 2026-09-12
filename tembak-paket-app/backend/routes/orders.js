@@ -15,6 +15,7 @@ const { isAuthenticated } = require('../middleware/auth');
 const ceirgoClient = require('../ceirgoClient');
 const { sendTelegramNotification } = require('../telegramService');
 const { notifyNewOrder } = require('../services/waBot');
+const { logUserActivity } = require('../utils/activityLogger');
 
 // Categorized service codes mapping
 const DIAGNOSTIC_SERVICE_CODES = new Set([
@@ -271,6 +272,16 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
     const serviceDuration = duration || SERVICE_NAMES[rawCode] || (isBarcode ? 'Cetak Barcode' : 'Cek CEIR');
 
     try {
+        logUserActivity({
+            userId,
+            userName: user.name,
+            userEmail: user.email,
+            action: 'ORDER',
+            description: `Membuat pesanan ${serviceDuration} (Rp ${Math.round(finalPrice).toLocaleString('id-ID')})`,
+            path: '/unblock-imei',
+            req
+        });
+
         await dbRun(
             `INSERT INTO transactions (
                 id, userId, userName, packageId, packageName, originalPrice,

@@ -286,6 +286,30 @@ async function initializeDatabase() {
                 console.error("Theme DB initialization error:", themeErr);
             }
 
+            // User Activity Logs & Online Presence
+            try {
+                await dbRun(`CREATE TABLE IF NOT EXISTS user_activity_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    userId TEXT,
+                    userName TEXT,
+                    userEmail TEXT,
+                    action TEXT NOT NULL,
+                    description TEXT,
+                    path TEXT,
+                    ip TEXT,
+                    userAgent TEXT,
+                    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                )`);
+                await dbRun(`CREATE INDEX IF NOT EXISTS idx_user_logs_userId ON user_activity_logs(userId)`);
+                await dbRun(`CREATE INDEX IF NOT EXISTS idx_user_logs_action ON user_activity_logs(action)`);
+                await dbRun(`CREATE INDEX IF NOT EXISTS idx_user_logs_createdAt ON user_activity_logs(createdAt)`);
+                await dbRun(`ALTER TABLE users ADD COLUMN lastSeen TEXT`);
+            } catch (logErr) {}
+
+            try {
+                await dbRun(`ALTER TABLE users ADD COLUMN lastLogin TEXT`);
+            } catch (loginErr) {}
+
             console.log("✅ Database schema initialized successfully.");
         } catch (error) {
             console.error("Database initialization failed:", error);

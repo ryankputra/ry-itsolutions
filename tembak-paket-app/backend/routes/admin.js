@@ -17,6 +17,7 @@ const { sendTelegramNotification } = require('../telegramService');
 const { getKmspAdminBalance } = require('./transactions');
 const ceirgoClient = require('../ceirgoClient');
 const waBot = require('../services/waBot');
+const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
@@ -46,10 +47,115 @@ const manualOrderUpload = multer({
 // 1. GET /api/admin/users
 router.get('/admin/users', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const users = await dbAll('SELECT id, name, email, balance, COALESCE(coins, 0) AS coins, role, status, createdAt, verifiedPhone FROM users ORDER BY createdAt DESC');
-        res.status(200).json({ status: true, data: users });
+        const users = await dbAll('SELECT id, name, email, balance, COALESCE(coins, 0) AS coins, role, status, createdAt, verifiedPhone, lastSeen FROM users ORDER BY createdAt DESC');
+        const mapped = (users || []).map(u => ({
+            ...u,
+            isOnline: isUserOnline(u.id)
+        }));
+        res.status(200).json({ status: true, data: mapped });
     } catch (e) {
         res.status(500).json({ status: false, message: "Gagal mengambil data pengguna." });
+    }
+});
+
+// 1b. GET /api/admin/presence (Real-time Online Users & Total Online)
+router.get('/admin/presence', isAuthenticated, isAdmin, (req, res) => {
+    try {
+        const stats = getOnlineStats();
+        res.status(200).json({ status: true, ...stats });
+    } catch (e) {
+        res.status(500).json({ status: false, message: "Gagal mengambil data pengguna online." });
+    }
+});
+
+// 1c. GET /api/admin/user-logs (Paginated & Filterable Activity Logs)
+router.get('/admin/user-logs', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { userId, action, search, page = 1, limit = 30 } = req.query;
+        const pageNum = Math.max(1, parseInt(page, 10) || 1);
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 30));
+        const offset = (pageNum - 1) * limitNum;
+
+        let whereClauses = [];
+        let params = [];
+
+        if (userId) {
+            whereClauses.push("userId = ?");
+            params.push(String(userId));
+        }
+
+        if (action && action !== 'ALL') {
+            whereClauses.push("action = ?");
+            params.push(String(action).toUpperCase());
+        }
+
+        if (search && String(search).trim()) {
+            const s = `%${String(search).trim()}%`;
+            whereClauses.push("(userName LIKE ? OR userEmail LIKE ? OR description LIKE ? OR ip LIKE ? OR path LIKE ?)");
+            params.push(s, s, s, s, s);
+        }
+
+        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+        const countRow = await dbGet(`SELECT COUNT(*) as total FROM user_activity_logs ${whereSql}`, params);
+        const total = countRow ? countRow.total : 0;
+
+        const logs = await dbAll(
+            `SELECT id, userId, userName, userEmail, action, description, path, ip, userAgent, createdAt 
+             FROM user_activity_logs ${whereSql} 
+             ORDER BY id DESC LIMIT ? OFFSET ?`,
+            [...params, limitNum, offset]
+        );
+
+        res.status(200).json({
+            status: true,
+            data: logs,
+            total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum) || 1
+        });
+    } catch (e) {
+        console.error("Error fetching user logs:", e);
+        res.status(500).json({ status: false, message: "Gagal mengambil log aktivitas." });
+    }
+});
+
+// 1d. GET /api/admin/user-logs/:userId (Logs for Specific User)
+router.get('/admin/user-logs/:userId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const logs = await dbAll(
+            `SELECT id, userId, userName, userEmail, action, description, path, ip, userAgent, createdAt 
+             FROM user_activity_logs WHERE userId = ? 
+             ORDER BY id DESC LIMIT 100`,
+            [userId]
+        );
+        res.status(200).json({ status: true, data: logs });
+    } catch (e) {
+        res.status(500).json({ status: false, message: "Gagal mengambil log pengguna." });
+    }
+});
+
+// 1e. DELETE /api/admin/user-logs (Clear Logs)
+router.delete('/admin/user-logs', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { olderThanDays, userId } = req.body || {};
+        if (userId) {
+            await dbRun("DELETE FROM user_activity_logs WHERE userId = ?", [userId]);
+            return res.json({ status: true, message: `Log untuk pengguna ${userId} berhasil dibersihkan.` });
+        }
+        if (olderThanDays) {
+            const days = parseInt(olderThanDays, 10);
+            if (!isNaN(days) && days > 0) {
+                await dbRun("DELETE FROM user_activity_logs WHERE createdAt < datetime('now', '-' || ? || ' days')", [days]);
+                return res.json({ status: true, message: `Log lebih lama dari ${days} hari berhasil dibersihkan.` });
+            }
+        }
+        await dbRun("DELETE FROM user_activity_logs");
+        res.json({ status: true, message: "Seluruh log aktivitas berhasil dibersihkan." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: "Gagal membersihkan log aktivitas." });
     }
 });
 
@@ -939,6 +1045,7 @@ router.post('/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
         if (targetWhatsApp) {
             try {
                 const waBot = require('../services/waBot');
+const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 const targetMode = req.body.targetMode === 'admin_only' ? 'admin_only' : 'all';
                 let coupon = null;
                 if (voucherCode) {
@@ -1026,6 +1133,7 @@ router.post('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
         if (req.body.notify_wa || req.body.send_notification) {
             const targetMode = req.body.notify_target === 'all' ? 'all' : 'admin_only';
             const waBot = require('../services/waBot');
+const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
             if (typeof waBot.notifyPromoBroadcast === 'function') {
                 waBot.notifyPromoBroadcast({
                     coupon: {
@@ -1185,6 +1293,7 @@ router.post('/admin/coupons/:id/broadcast', isAuthenticated, isAdmin, async (req
         };
 
         const waBot = require('../services/waBot');
+const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
         let waResult = null;
         if (typeof waBot.notifyPromoBroadcast === 'function') {
             waResult = await waBot.notifyPromoBroadcast({
@@ -1226,6 +1335,7 @@ router.post('/admin/products/broadcast', isAuthenticated, isAdmin, async (req, r
         }
 
         const waBot = require('../services/waBot');
+const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
         let waResult = null;
         if (typeof waBot.notifyNewProductBroadcast === 'function') {
             waResult = await waBot.notifyNewProductBroadcast({
@@ -2050,6 +2160,7 @@ router.post('/admin/gateway-keys/:id/remind-wa', isAuthenticated, isAdmin, async
         const expDateFormatted = new Date(key.expiresAt).toLocaleDateString('id-ID', { dateStyle: 'long' });
 
         const waBot = require('../services/waBot');
+const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
         const reminderMsg = `⚠️ *PENGINGAT MASA AKTIF PAYMENT GATEWAY GOPAY* ⚡\n\n` +
             `Halo Kak *${key.username || key.name}*! 👋\n\n` +
             `Masa aktif API Key Payment Gateway Anda (*${key.name}*) tersisa *${daysLeft > 0 ? daysLeft + ' hari lagi' : 'sudah berakhir'}* (pada ${expDateFormatted}).\n\n` +
@@ -2102,6 +2213,7 @@ router.post('/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) =
         if (req.body.notify_wa || req.body.send_notification) {
             const targetMode = req.body.notify_target === 'all' ? 'all' : 'admin_only';
             const waBot = require('../services/waBot');
+const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
             if (typeof waBot.notifyNewProductBroadcast === 'function') {
                 waBot.notifyNewProductBroadcast({
                     product: {

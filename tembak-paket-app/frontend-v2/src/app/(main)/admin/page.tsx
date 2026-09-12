@@ -9,7 +9,10 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
-import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { AdminOnlineUsersModal, OnlineUser } from "@/components/admin/AdminOnlineUsersModal";
+import { AdminUserActivityModal } from "@/components/admin/AdminUserActivityModal";
+import { AdminActivityLogsTab } from "@/components/admin/AdminActivityLogsTab";
+import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Trash2, Activity, FileText } from "lucide-react";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -31,6 +34,25 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchUser, setSearchUser] = useState("");
+
+  // Online Presence & User Activity Logs State
+  const [presenceStats, setPresenceStats] = useState<{ totalOnline: number; onlineUsers: OnlineUser[] }>({ totalOnline: 0, onlineUsers: [] });
+  const [showOnlineModal, setShowOnlineModal] = useState(false);
+  const [inspectLogUser, setInspectLogUser] = useState<{ id: string; name: string; email: string; role?: string } | null>(null);
+  const [showUserLogModal, setShowUserLogModal] = useState(false);
+
+  const loadPresenceStats = async () => {
+    try {
+      const res = await fetch('/api/admin/presence', { credentials: 'include' });
+      const data = await safeJson(res);
+      if (data?.status) {
+        setPresenceStats({
+          totalOnline: Number(data.totalOnline) || 0,
+          onlineUsers: Array.isArray(data.onlineUsers) ? data.onlineUsers : []
+        });
+      }
+    } catch (e) {}
+  };
 
   // Payment Gateway SaaS Subscription State
   const [adminGatewayKeys, setAdminGatewayKeys] = useState<any[]>([]);
@@ -1324,6 +1346,8 @@ export default function AdminPage() {
       loadUsers();
       loadAdminTickets();
       loadGatewayKeys();
+      loadPresenceStats();
+      const presenceTimer = setInterval(loadPresenceStats, 15000);
 
       const fetchBalances = () => {
         fetch('/api/admin/ceirgo-balance', { credentials: 'include' })
@@ -2165,6 +2189,12 @@ export default function AdminPage() {
       badge: null
     },
     {
+      id: "log-aktivitas",
+      label: "Log Aktivitas",
+      icon: Activity,
+      badge: null
+    },
+    {
       id: "pengaturan",
       label: "Pengaturan & Server",
       icon: Settings,
@@ -2295,6 +2325,19 @@ export default function AdminPage() {
             <span className="hidden sm:inline">Segarkan</span>
           </Button>
 
+          <button
+            type="button"
+            onClick={() => setShowOnlineModal(true)}
+            className="h-8 px-2.5 sm:px-3 text-xs font-bold rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 transition-all cursor-pointer shadow-none"
+            title="Klik untuk melihat siapa saja yang sedang online"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>{presenceStats.totalOnline} Online</span>
+          </button>
+
           <Button
             size="sm"
             className="h-8 px-3 text-xs font-medium rounded-xl bg-primary hover:bg-primary/90 text-white shadow-xs gap-1.5"
@@ -2405,7 +2448,10 @@ export default function AdminPage() {
               <Users className="w-3.5 h-3.5 text-ink-muted shrink-0" />
               <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider truncate">Pengguna</span>
             </div>
-            <span className="text-[10px] text-ink-muted/60 font-medium">Akun</span>
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              {presenceStats.totalOnline} online
+            </span>
           </div>
           <div className="mt-2.5 sm:mt-3">
             <p className="text-xl sm:text-2xl font-bold tracking-tight text-ink leading-none">{users.length}</p>
@@ -4318,6 +4364,20 @@ export default function AdminPage() {
                       <span className={`px-2 py-0.5 text-[9px] font-black rounded-full uppercase ${u.role === 'admin' ? 'bg-rose-100 text-rose-800' : u.role === 'reseller' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-700'}`}>
                         {u.role || 'User'}
                       </span>
+                      {u.isOnline || presenceStats.onlineUsers.some(ou => ou.userId === u.id) ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                          </span>
+                          Online
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-parchment text-ink-muted border border-hairline">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                          Offline
+                        </span>
+                      )}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-0.5">{u.email} {u.phone && `• ${u.phone}`}</p>
                     <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
@@ -4372,6 +4432,20 @@ export default function AdminPage() {
                     ) : (
                       <Button variant="outline" size="sm" className="text-xs h-8 text-amber-600 border-amber-200 hover:bg-amber-50 dark:border-amber-800/40 dark:hover:bg-amber-950/30" onClick={() => { setSelectedCoinUserId(u.id); setSelectedUserId(null); }}>Edit Koin</Button>
                     )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8 gap-1 border-hairline text-ink hover:bg-parchment"
+                      onClick={() => {
+                        setInspectLogUser({ id: u.id, name: u.name, email: u.email, role: u.role });
+                        setShowUserLogModal(true);
+                      }}
+                      title="Lihat log audit aktivitas pengguna ini"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-primary" />
+                      <span>Log</span>
+                    </Button>
 
                     {u.status === 'pending' && (
                       <div className="flex gap-1.5">
@@ -6560,6 +6634,38 @@ export default function AdminPage() {
           </Card>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* TAB: LOG AKTIVITAS SELURUH PENGGUNA                                      */}
+      {/* ========================================================================= */}
+      {activeTab === 'log-aktivitas' && (
+        <AdminActivityLogsTab
+          onInspectUser={(target) => {
+            setInspectLogUser(target);
+            setShowUserLogModal(true);
+          }}
+        />
+      )}
+
+      {/* MODAL DAFTAR PENGGUNA ONLINE REAL-TIME */}
+      <AdminOnlineUsersModal
+        isOpen={showOnlineModal}
+        onClose={() => setShowOnlineModal(false)}
+        onlineUsers={presenceStats.onlineUsers}
+        totalOnline={presenceStats.totalOnline}
+        onRefresh={loadPresenceStats}
+        onViewUserLogs={(target) => {
+          setInspectLogUser(target);
+          setShowUserLogModal(true);
+        }}
+      />
+
+      {/* MODAL RIWAYAT AUDIT LOG PENGGUNA TERTENTU */}
+      <AdminUserActivityModal
+        isOpen={showUserLogModal}
+        onClose={() => setShowUserLogModal(false)}
+        targetUser={inspectLogUser}
+      />
     </div>
   );
 }

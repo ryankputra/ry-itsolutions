@@ -271,6 +271,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id]);
 
+  // Real-time Online Presence Heartbeat
+  useEffect(() => {
+    if (!user) return;
+
+    const sendHeartbeat = () => {
+      if (typeof window === "undefined") return;
+      try {
+        fetch(`${API_URL}/presence/heartbeat`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: window.location.pathname }),
+        }).catch(() => {});
+      } catch (e) {}
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 25000);
+
+    const handleFocus = () => sendHeartbeat();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [user?.id]);
+
   const updateBalance = (balance: number) => {
     setUser(prev => prev ? { ...prev, balance } : null);
   };

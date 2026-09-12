@@ -7,6 +7,7 @@ const { notifyWarrantyClaim } = require('../services/waBot');
 const express = require('express');
 const router = express.Router();
 const { dbGet, dbAll, dbRun } = require('../config/db');
+const { logUserActivity } = require('../utils/activityLogger');
 const { isAuthenticated } = require('../middleware/auth');
 const { getEffectiveMaintenanceStatus } = require('./auth');
 
@@ -954,6 +955,17 @@ router.post('/ai/chat', async (req, res) => {
                 "SELECT id, name, email, verifiedPhone as phone, role, balance, coins, createdAt FROM users WHERE id = ?",
                 [activeUserId]
             );
+            if (user) {
+                logUserActivity({
+                    userId: user.id,
+                    userName: user.name,
+                    userEmail: user.email,
+                    action: 'AI_CHAT',
+                    description: `Tanya Ry-AI: "${userQuery.slice(0, 80)}"`,
+                    path: '/ai',
+                    req
+                });
+            }
 
             if (user) {
                 isUserLoggedIn = true;

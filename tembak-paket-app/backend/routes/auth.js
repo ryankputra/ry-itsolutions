@@ -16,6 +16,8 @@ const { dbGet, dbRun, dbAll } = require('../config/db');
 const { isAuthenticated } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
 const { validateEmailActive, sendRegistrationOtpEmail, sendPasswordResetOtpEmail } = require('../services/emailService');
+const { logUserActivity } = require('../utils/activityLogger');
+const { updatePresence, removePresence } = require('../utils/presenceManager');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
@@ -143,6 +145,8 @@ router.post('/auth/google', async (req, res) => {
         }
 
         req.session.userId = user.id;
+        logUserActivity({ userId: user.id, userName: user.name, userEmail: user.email, action: 'LOGIN', description: 'Login berhasil via Akun Google', req });
+        updatePresence(user, req, '/');
         const { password: _, ...userWithoutPassword } = user;
         if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
 
@@ -279,6 +283,8 @@ router.post('/auth/register-verify-otp', async (req, res) => {
         await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'register']);
 
         req.session.userId = newUserId;
+        logUserActivity({ userId: newUserId, userName: validName, userEmail: validEmail, action: 'REGISTER', description: 'Pendaftaran akun baru berhasil', req });
+        updatePresence({ id: newUserId, name: validName, email: validEmail, role: 'user' }, req, '/');
 
         sendTelegramNotification(
             `<b>──────────────────────</b>\n` +
@@ -428,6 +434,8 @@ router.post('/auth/login', async (req, res) => {
         if (user.role !== 'admin' && user.status !== 'approved') return res.status(403).json({ status: false, message: "Akun Anda belum disetujui oleh Admin." });
 
         req.session.userId = user.id;
+        logUserActivity({ userId: user.id, userName: user.name, userEmail: user.email, action: 'LOGIN', description: 'Login berhasil via Email/Password', req });
+        updatePresence(user, req, '/');
         const { password: _, ...userWithoutPassword } = user;
         if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
         res.status(200).json({ status: true, message: "Login berhasil!", user: userWithoutPassword });
@@ -560,6 +568,11 @@ router.post('/auth/reset-password', async (req, res) => {
 
 // 6. User Logout
 router.post('/auth/logout', (req, res) => {
+    const leavingUserId = req.session?.userId;
+    if (leavingUserId) {
+        logUserActivity({ userId: leavingUserId, action: 'LOGOUT', description: 'Pengguna keluar (logout)', req });
+        removePresence(leavingUserId);
+    }
     req.session.destroy(err => {
         if (err) return res.status(500).json({ status: false, message: "Gagal logout." });
         res.clearCookie('connect.sid');
@@ -585,6 +598,13 @@ router.get('/auth/me', async (req, res) => {
         const { password, ...userWithoutPassword } = user;
         if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
         userWithoutPassword.phone = userWithoutPassword.verifiedPhone || '';
+        try {
+            let refPath = '/';
+            if (req.headers['referer']) {
+                try { refPath = new URL(req.headers['referer']).pathname; } catch (e) {}
+            }
+            updatePresence(user, req, refPath);
+        } catch (presErr) {}
         res.status(200).json({ status: true, user: userWithoutPassword, maintenanceMode });
     } catch (error) {
         console.error("Error in /api/auth/me:", error);

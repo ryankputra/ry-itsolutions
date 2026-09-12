@@ -17,6 +17,7 @@ const { isAuthenticated, sseSend } = require('../middleware/auth');
 const { escapeHtml, sendTelegramNotification } = require('../telegramService');
 const { sendManualOrderNotification } = require('./telegram');
 const { notifyNewOrder } = require('../services/waBot');
+const { logUserActivity } = require('../utils/activityLogger');
 const ceirgoClient = require('../ceirgoClient');
 const { DEFAULT_QRIS_NOBU, DEFAULT_QRIS_GOPAY, generateDynamicQRIS, generateQrisDataUrl } = require('../config/qrisGenerator');
 
@@ -1262,6 +1263,15 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 } catch (e) {}
             }
 
+            logUserActivity({
+                userId,
+                userName: user.name,
+                userEmail: user.email,
+                action: 'TOPUP',
+                description: `Permintaan topup saldo Rp ${Math.round(baseAmount).toLocaleString('id-ID')} via GoPay QRIS`,
+                path: '/topup',
+                req
+            });
             await dbRun(
                 "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', new Date().toISOString(), qrisImg]
@@ -1303,6 +1313,15 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
             const dynamicRawCode = typeof nobuGen === 'string' ? '' : (nobuGen?.dynamicCode || '');
             const expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
 
+            logUserActivity({
+                userId,
+                userName: user.name,
+                userEmail: user.email,
+                action: 'TOPUP',
+                description: `Permintaan topup saldo Rp ${Math.round(uniqueAmount).toLocaleString('id-ID')} via Nobu QRIS`,
+                path: '/topup',
+                req
+            });
             await dbRun(
                 "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [topUpId, userId, user.name, baseAmount, uniqueAmount, 'pending', new Date().toISOString(), qrisBase64Image]
