@@ -102,6 +102,60 @@ export default function ProfilePage() {
     }
   };
 
+  const handleEditPhone = async () => {
+    const currentPhone = user?.phone || user?.verifiedPhone || "";
+    const { value: phoneVal } = await Swal.fire({
+      title: "Nomor WhatsApp Notifikasi",
+      input: "text",
+      inputLabel: "Masukkan nomor WhatsApp aktif Anda untuk menerima invoice nota, link garansi, dan promo voucher spesial.",
+      inputValue: currentPhone,
+      inputPlaceholder: "Contoh: 081234567890",
+      showCancelButton: true,
+      confirmButtonText: "Simpan Nomor 💾",
+      cancelButtonText: "Batal",
+      inputValidator: (value) => {
+        if (!value || value.replace(/\D/g, "").length < 9) {
+          return "Nomor WhatsApp minimal 9 digit angka!";
+        }
+        return null;
+      },
+    });
+
+    if (phoneVal) {
+      Swal.fire({
+        title: "Menyimpan...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      try {
+        const res = await fetch("/api/user/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ phone: phoneVal }),
+        });
+        const data = await safeJson(res);
+        if (data?.status) {
+          if (user) {
+            setUser({ ...user, phone: data.user?.phone || phoneVal, verifiedPhone: data.user?.verifiedPhone || phoneVal });
+          }
+          Swal.fire({
+            icon: "success",
+            title: "Berhasil Disimpan!",
+            text: "Nomor WhatsApp Anda aktif untuk menerima invoice dan promo eksklusif.",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+        } else {
+          Swal.fire("Gagal", data?.message || "Gagal menyimpan nomor.", "error");
+        }
+      } catch (e: any) {
+        Swal.fire("Error", e.message || "Gagal menyimpan nomor.", "error");
+      }
+    }
+  };
+
   const handleLogout = async () => {
     const { isConfirmed } = await Swal.fire({
       title: "Konfirmasi Keluar",
@@ -248,6 +302,42 @@ export default function ProfilePage() {
       {/* 1.2. QUICK SHORTCUTS (Apple Inset Grouped List)              */}
       {/* ============================================================ */}
       <div className="rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.05] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden divide-y divide-black/[0.05] dark:divide-white/[0.06]">
+        {/* WhatsApp Notification Phone Card */}
+        <div
+          onClick={handleEditPhone}
+          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#34C759]/10 border border-[#34C759]/20 text-[#34C759] dark:text-[#30D158] flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+              </svg>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">Nomor WhatsApp Notifikasi</span>
+                {user?.phone || user?.verifiedPhone ? (
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#34C759]/15 text-[#34C759] dark:text-[#30D158] font-semibold text-[8px] uppercase tracking-wider">
+                    Aktif
+                  </span>
+                ) : (
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#FF9500]/15 text-[#FF9500] dark:text-[#FF9F0A] font-semibold text-[8px] uppercase tracking-wider">
+                    Belum Diatur
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#86868B]">
+                {user?.phone || user?.verifiedPhone ? `Terhubung: ${user.phone || user.verifiedPhone}` : "Hubungkan untuk terima nota, link garansi & promo"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-primary font-medium">Ubah</span>
+            <svg className="w-4 h-4 text-[#86868B]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </div>
+        </div>
         {/* Referral Program */}
         <div
           onClick={() => router.push("/referral")}

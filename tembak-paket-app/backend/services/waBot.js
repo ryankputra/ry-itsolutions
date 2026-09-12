@@ -1747,6 +1747,74 @@ async function notifyWarrantyClaim({ imei, packageName, customerName, customerPh
  * Broadcast Promo / Voucher Diskon to WhatsApp (Admin & Users)
  * Features rich formatting, banner image attachment, and 1-click auto claim & apply links.
  */
+/**
+ * Dapatkan daftar nomor WhatsApp penerima broadcast secara akurat & aman:
+ * - Admin selalu disertakan
+ * - Jika targetMode === "all":
+ *    1. Ambil nomor dari pelanggan riil yang pernah melakukan order di sistem aktif (2026 ke atas):
+ *       SELECT DISTINCT targetPhone FROM transactions WHERE createdAt >= "2026-01-01" AND targetPhone IS NOT NULL AND TRIM(targetPhone) != ""
+ *    2. Ambil nomor dari user aktif yang terdaftar di sistem (2026 ke atas) dengan nomor WhatsApp terverifikasi:
+ *       SELECT verifiedPhone FROM users WHERE createdAt >= "2026-01-01" AND verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ""
+ *    3. Exclude semua data/nomor legacy 2025 (dari sistem lama sebelum website ini ada).
+ *    4. Exclude nomor bot sendiri agar tidak looping.
+ *    5. Validasi format nomor HP Indonesia (628...).
+ */
+async function getBroadcastRecipients(targetMode = "admin_only") {
+    const targetPhones = new Set();
+
+    // Nomor bot sendiri (agar tidak mengirim pesan broadcast ke nomor bot sendiri)
+    const myBotPhone = sock?.user?.id ? cleanPhone(sock.user.id.split(":")[0]) : null;
+
+    // 1. Admin Phone Numbers
+    const adminPhones = await getAdminPhoneNumbers();
+    adminPhones.forEach(p => {
+        const c = cleanPhone(p);
+        if (c && isValidIndonesianMobile(c) && c !== myBotPhone) {
+            targetPhones.add(c);
+        }
+    });
+
+    if (targetMode === "all") {
+        // 2. Real Customers who placed orders in 2026+
+        try {
+            const trxRows = await dbAll(
+                "SELECT DISTINCT targetPhone FROM transactions WHERE createdAt >= '2026-01-01' AND targetPhone IS NOT NULL AND TRIM(targetPhone) != ''"
+            );
+            if (trxRows && trxRows.length > 0) {
+                trxRows.forEach(t => {
+                    const c = cleanPhone(t.targetPhone);
+                    if (c && isValidIndonesianMobile(c) && c !== myBotPhone) {
+                        targetPhones.add(c);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("[getBroadcastRecipients] Gagal query transactions:", e.message);
+        }
+
+        // 3. Registered Users from 2026+ with verified phone
+        try {
+            const userRows = await dbAll(
+                "SELECT verifiedPhone FROM users WHERE createdAt >= '2026-01-01' AND verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ''"
+            );
+            if (userRows && userRows.length > 0) {
+                userRows.forEach(u => {
+                    const c = cleanPhone(u.verifiedPhone);
+                    if (c && isValidIndonesianMobile(c) && c !== myBotPhone) {
+                        targetPhones.add(c);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("[getBroadcastRecipients] Gagal query users:", e.message);
+        }
+    }
+
+    const list = Array.from(targetPhones);
+    console.log(`[getBroadcastRecipients] Target mode '${targetMode}': ${list.length} penerima terdeteksi:`, list);
+    return list;
+}
+
 async function notifyPromoBroadcast({ coupon, customMessage, targetMode = 'admin_only' }) {
     if (!coupon || !coupon.code) throw new Error("Data kupon tidak valid");
 
@@ -1845,14 +1913,14 @@ _Ry-ITSolutions Official Support & Store_`;
             console.error(`[WABot Promo] Gagal kirim promo voucher ${code} ke ${phone}:`, err.message);
         }
 
-        if (targetPhones.size > 1) {
+        if (targetPhones.length > 1) {
             await new Promise(r => setTimeout(r, 1000));
         }
     }
 
     return {
         success: sentCount > 0,
-        totalTarget: targetPhones.size,
+        totalTarget: targetPhones.length,
         totalSent: sentCount,
         totalFailed: failedCount,
         details: results
@@ -1984,14 +2052,14 @@ _Ry-ITSolutions Official Support & Store_`;
             console.error(`[WABot Product] Gagal kirim info produk '${product.name}' ke ${phone}:`, err.message);
         }
 
-        if (targetPhones.size > 1) {
+        if (targetPhones.length > 1) {
             await new Promise(r => setTimeout(r, 1000));
         }
     }
 
     return {
         success: sentCount > 0,
-        totalTarget: targetPhones.size,
+        totalTarget: targetPhones.length,
         totalSent: sentCount,
         totalFailed: failedCount,
         details: results
@@ -2000,6 +2068,7 @@ _Ry-ITSolutions Official Support & Store_`;
 
 module.exports = {
     notifyPromoBroadcast,
+    getBroadcastRecipients,
     notifyNewProductBroadcast,
 
     getWALogs,

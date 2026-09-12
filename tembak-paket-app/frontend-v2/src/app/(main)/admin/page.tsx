@@ -532,6 +532,14 @@ export default function AdminPage() {
   };
 
   const handleBroadcastCoupon = async (coupon: any) => {
+    let targetCountText = "Pelanggan & Pengguna Aktif";
+    try {
+      const recRes = await fetch("/api/admin/broadcast-recipients?mode=all");
+      const recData = await safeJson(recRes);
+      if (recData?.status && typeof recData.count === "number") {
+        targetCountText = `${recData.count} Nomor Pelanggan Riil`;
+      }
+    } catch (e) {}
     const isPercent = coupon.discount_type === 'percent';
     const discStr = isPercent ? `${coupon.discount_value}%` : `Rp ${Number(coupon.discount_value).toLocaleString('id-ID')}`;
 
@@ -553,7 +561,8 @@ export default function AdminPage() {
               </label>
               <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
                 <input type="radio" name="broadcast_target" value="all" class="text-primary" />
-                <span class="font-medium text-slate-800 dark:text-slate-200">🚀 Sebar ke Seluruh Pengguna WA (65 Pengguna)</span>
+                <span class="font-medium text-slate-800 dark:text-slate-200">🚀 Sebar ke Seluruh Pelanggan & Pengguna Aktif (${targetCountText})</span>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 ml-6">Hanya menyasar pelanggan yang pernah order (2026+) & nomor terverifikasi. Nomor lama 2025 otomatis difilter.</p>
               </label>
             </div>
           </div>
@@ -613,6 +622,14 @@ export default function AdminPage() {
   };
 
   const handleBroadcastProduct = async (pkg: any) => {
+    let targetCountText = "Pelanggan & Pengguna Aktif";
+    try {
+      const recRes = await fetch("/api/admin/broadcast-recipients?mode=all");
+      const recData = await safeJson(recRes);
+      if (recData?.status && typeof recData.count === "number") {
+        targetCountText = `${recData.count} Nomor Pelanggan Riil`;
+      }
+    } catch (e) {}
     let speeds: string[] = ['fast', 'semi', 'slow'];
     if (pkg.allowed_speeds) {
       try {
@@ -639,7 +656,8 @@ export default function AdminPage() {
               </label>
               <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
                 <input type="radio" name="prod_broadcast_target" value="all" class="text-primary" />
-                <span class="font-medium text-slate-800 dark:text-slate-200">🚀 Sebar ke Seluruh Pengguna WA (65 Pengguna)</span>
+                <span class="font-medium text-slate-800 dark:text-slate-200">🚀 Sebar ke Seluruh Pelanggan & Pengguna Aktif (${targetCountText})</span>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 ml-6">Hanya menyasar pelanggan yang pernah order (2026+) & nomor terverifikasi. Nomor lama 2025 otomatis difilter.</p>
               </label>
             </div>
           </div>

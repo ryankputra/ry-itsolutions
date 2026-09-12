@@ -1105,6 +1105,25 @@ router.delete('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) =
     }
 });
 
+// Preview daftar & jumlah target broadcast WhatsApp aktif (Exclude 2025 legacy)
+router.get("/admin/broadcast-recipients", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const waBot = require("../services/waBot");
+        const mode = req.query.mode === "admin_only" ? "admin_only" : "all";
+        const recipients = typeof waBot.getBroadcastRecipients === "function"
+            ? await waBot.getBroadcastRecipients(mode)
+            : [];
+        res.json({
+            status: true,
+            mode,
+            count: recipients.length,
+            recipients
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // Broadcast Promo Kupon via WhatsApp & Web
 router.post('/admin/coupons/:id/broadcast', isAuthenticated, isAdmin, async (req, res) => {
     try {

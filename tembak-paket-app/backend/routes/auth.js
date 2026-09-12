@@ -614,6 +614,54 @@ router.post('/user/avatar', isAuthenticated, avatarUpload.single('avatar'), asyn
     }
 });
 
+// 8.5. User Profile & WhatsApp Phone Update
+router.put("/user/profile", isAuthenticated, async (req, res) => {
+    try {
+        const { name, phone } = req.body;
+        const updates = [];
+        const params = [];
+
+        if (name && typeof name === "string" && name.trim().length > 0) {
+            updates.push("name = ?");
+            params.push(name.trim());
+        }
+
+        if (phone !== undefined) {
+            let cleanP = null;
+            if (phone && String(phone).trim().length > 0) {
+                cleanP = String(phone).replace(/\D/g, "");
+                if (cleanP.startsWith("0")) cleanP = "62" + cleanP.substring(1);
+                else if (!cleanP.startsWith("62")) cleanP = "62" + cleanP;
+                if (!/^628\d{7,11}$/.test(cleanP)) {
+                    return res.status(400).json({ status: false, message: "Format nomor WhatsApp tidak valid. Gunakan format contoh: 081234567890" });
+                }
+            }
+            updates.push("verifiedPhone = ?");
+            params.push(cleanP);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ status: false, message: "Tidak ada data yang diperbarui." });
+        }
+
+        params.push(req.session.userId);
+        await dbRun(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, params);
+
+        const updatedUser = await dbGet("SELECT id, name, email, role, balance, coins, avatar, verifiedPhone FROM users WHERE id = ?", [req.session.userId]);
+        res.json({
+            status: true,
+            message: "Profil dan nomor WhatsApp berhasil disimpan!",
+            user: {
+                ...updatedUser,
+                phone: updatedUser.verifiedPhone || ""
+            }
+        });
+    } catch (e) {
+        console.error("Error updating profile:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal memperbarui profil." });
+    }
+});
+
 // 9. Phone OTP Request
 router.post('/phone/request-otp', isAuthenticated, async (req, res) => {
     const { phone } = req.body;
