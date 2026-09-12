@@ -9,7 +9,7 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
-import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown } from "lucide-react";
+import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -2131,6 +2131,85 @@ export default function AdminPage() {
     }
   ];
 
+  // Horizontal scroll & drag navigation state for Admin menu tabs (Desktop & Mobile)
+  const menuScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragScrollLeft, setDragScrollLeft] = useState(0);
+  const isDraggingRef = useRef(false);
+
+  const checkScroll = () => {
+    if (menuScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = menuScrollRef.current;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+    }
+  };
+
+  const scrollMenu = (direction: 'left' | 'right') => {
+    if (menuScrollRef.current) {
+      const amount = 280;
+      menuScrollRef.current.scrollBy({
+        left: direction === 'left' ? -amount : amount,
+        behavior: 'smooth',
+      });
+      setTimeout(checkScroll, 350);
+    }
+  };
+
+  const handleMenuWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (menuScrollRef.current) {
+      if (e.deltaY !== 0) {
+        menuScrollRef.current.scrollLeft += e.deltaY;
+        checkScroll();
+      }
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!menuScrollRef.current) return;
+    setIsMouseDown(true);
+    isDraggingRef.current = false;
+    setDragStartX(e.pageX - menuScrollRef.current.offsetLeft);
+    setDragScrollLeft(menuScrollRef.current.scrollLeft);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isMouseDown || !menuScrollRef.current) return;
+    const x = e.pageX - menuScrollRef.current.offsetLeft;
+    const walk = (x - dragStartX) * 1.2;
+    if (Math.abs(walk) > 5) {
+      isDraggingRef.current = true;
+    }
+    menuScrollRef.current.scrollLeft = dragScrollLeft - walk;
+    checkScroll();
+  };
+
+  const handleMouseUp = () => {
+    setIsMouseDown(false);
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 80);
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, []);
+
+  useEffect(() => {
+    if (menuScrollRef.current) {
+      const activeEl = menuScrollRef.current.querySelector<HTMLButtonElement>('[data-active="true"]');
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+      setTimeout(checkScroll, 350);
+    }
+  }, [activeTab]);
+
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-16">
       
@@ -2349,31 +2428,81 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Scrollable Pills Menu (Touch-friendly & Smooth on Mobile, Sleek on Desktop) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 pt-0.5 px-0.5 -mx-0.5">
-          {adminMenuList.map((menu) => {
-            const isActive = activeTab === menu.id;
-            const Icon = menu.icon;
-            return (
-              <button
-                key={menu.id}
-                onClick={() => setActiveTab(menu.id)}
-                className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0 border cursor-pointer ${
-                  isActive
-                    ? 'bg-primary text-white border-primary shadow-xs'
-                    : 'bg-canvas text-ink-muted border-hairline hover:bg-parchment hover:text-ink'
-                }`}
-              >
-                <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-ink-muted'}`} />
-                <span>{menu.label}</span>
-                {menu.badge && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black text-white ${menu.badgeColor || 'bg-rose-500'} shrink-0 shadow-xs`}>
-                    {menu.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Scrollable Pills Menu (Touch-friendly & Smooth on Mobile, Sleek on Desktop with Drag & Wheel) */}
+        <div className="relative flex items-center gap-1 sm:gap-2 group">
+          {/* Desktop Left Navigation Chevron */}
+          <button
+            type="button"
+            onClick={() => scrollMenu('left')}
+            disabled={!canScrollLeft}
+            aria-label="Geser menu tab ke kiri"
+            className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-xl border border-hairline bg-canvas shrink-0 shadow-xs transition-all ${
+              canScrollLeft
+                ? 'text-ink hover:bg-parchment hover:border-ink/20 cursor-pointer active:scale-95'
+                : 'text-ink-muted/30 border-transparent cursor-not-allowed opacity-25'
+            }`}
+            title="Geser menu ke kiri"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Tab items list */}
+          <div
+            ref={menuScrollRef}
+            onWheel={handleMenuWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onScroll={checkScroll}
+            className={`flex-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 pt-0.5 px-0.5 -mx-0.5 select-none ${
+              isMouseDown ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+          >
+            {adminMenuList.map((menu) => {
+              const isActive = activeTab === menu.id;
+              const Icon = menu.icon;
+              return (
+                <button
+                  key={menu.id}
+                  data-active={isActive ? "true" : "false"}
+                  onClick={() => {
+                    if (isDraggingRef.current) return;
+                    setActiveTab(menu.id);
+                  }}
+                  className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0 border select-none cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-white border-primary shadow-xs'
+                      : 'bg-canvas text-ink-muted border-hairline hover:bg-parchment hover:text-ink'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-ink-muted'}`} />
+                  <span>{menu.label}</span>
+                  {menu.badge && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black text-white ${menu.badgeColor || 'bg-rose-500'} shrink-0 shadow-xs`}>
+                      {menu.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop Right Navigation Chevron */}
+          <button
+            type="button"
+            onClick={() => scrollMenu('right')}
+            disabled={!canScrollRight}
+            aria-label="Geser menu tab ke kanan"
+            className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-xl border border-hairline bg-canvas shrink-0 shadow-xs transition-all ${
+              canScrollRight
+                ? 'text-ink hover:bg-parchment hover:border-ink/20 cursor-pointer active:scale-95'
+                : 'text-ink-muted/30 border-transparent cursor-not-allowed opacity-25'
+            }`}
+            title="Geser menu ke kanan"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
