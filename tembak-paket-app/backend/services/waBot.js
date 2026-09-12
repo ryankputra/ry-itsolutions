@@ -1846,25 +1846,35 @@ async function notifyPromoBroadcast({ coupon, customMessage, targetMode = 'admin
     const orderUrl = `https://ry-itsolutionts.web.id/unblock-imei?coupon=${encodeURIComponent(code)}`;
 
     const caption = 
-`🎉 *PROMO SPESIAL RY-ITSOLUTIONS* 🎉
-━━━━━━━━━━━━━━━━━━━━━━━
-Dapatkan potongan harga eksklusif untuk pesanan aktivasi sinyal IMEI & layanan digital Anda!
+`*Ry-IT Solutions Official*
+_Pemberitahuan Voucher & Potongan Khusus_
 
-🎟️ *KODE VOUCHER:* *${code}*
-💰 *Besar Diskon:* *${discountStr}*
-📌 *Syarat Belanja:* ${minOrderStr}
-⏳ *Masa Berlaku:* Hingga ${expiredStr}
-🎫 *Ketersediaan:* ${quotaStr}
-━━━━━━━━━━━━━━━━━━━━━━━
-${customMessage ? `${customMessage}\n━━━━━━━━━━━━━━━━━━━━━━━\n` : ''}⚡ *KLAIM VOUCHER INSTAN (1 KLIK):*
-👉 ${claimUrl}
+Halo Kak,
 
-🛒 *ORDER LANGSUNG DENGAN DISKON:*
-👉 ${orderUrl}
+Sebagai bentuk apresiasi bagi pelanggan setia Ry-IT Solutions, kami menyediakan voucher potongan biaya layanan untuk aktivasi sinyal IMEI dan solusi digital Anda.
 
-_Buka link di atas, voucher otomatis terklaim dan terpasang saat checkout order._
-━━━━━━━━━━━━━━━━━━━━━━━
-_Ry-ITSolutions Official Support & Store_`;
+*Detail Penawaran:*
+• Kode Voucher : *${code}*
+• Nilai Diskon : *${discountStr}*
+• Minimal Transaksi : ${minOrderStr}
+• Masa Berlaku : s/d ${expiredStr}
+• Ketersediaan : ${quotaStr}
+${customMessage ? `\n*Catatan Khusus:*\n${customMessage}\n` : ''}
+Voucher dapat langsung Anda simpan ke akun atau otomatis diaplikasikan saat checkout melalui tautan resmi berikut:
+
+🔗 *Klaim Voucher:*
+${claimUrl}
+
+🔗 *Pemesanan Layanan:*
+${orderUrl}
+
+_Petunjuk: Buka salah satu tautan di atas, voucher akan otomatis terklaim dan terpasang pada halaman checkout pesanan Anda._
+
+Terima kasih telah mempercayakan kebutuhan layanan Anda kepada Ry-IT Solutions.
+
+Salam hangat,
+*Customer Care Ry-IT Solutions*
+https://ry-itsolutionts.web.id`;
 
     const bannerPath = path.resolve(__dirname, '../../frontend-v2/public/banners/banner_voucher.jpg');
     let imageBuffer = null;

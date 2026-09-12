@@ -1106,6 +1106,31 @@ router.delete('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) =
 });
 
 // Preview daftar & jumlah target broadcast WhatsApp aktif (Exclude 2025 legacy)
+// Internal trigger to test promo broadcast to Admin WhatsApp
+router.post("/admin/test-promo-to-admin", async (req, res) => {
+    const remoteIp = req.socket.remoteAddress;
+    const isLocal = remoteIp === "127.0.0.1" || remoteIp === "::1" || remoteIp === "::ffff:127.0.0.1";
+    if (!isLocal && (!req.session || !req.session.userId)) {
+        return res.status(403).json({ status: false, message: "Forbidden" });
+    }
+
+    try {
+        const couponCode = req.body.code || "SEPTEMBERCERAH";
+        const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [couponCode.toUpperCase()]);
+        if (!coupon) return res.status(404).json({ status: false, message: "Kupon tidak ditemukan" });
+
+        const waBot = require("../services/waBot");
+        const result = await waBot.notifyPromoBroadcast({
+            coupon,
+            customMessage: req.body.customMessage || "",
+            targetMode: "admin_only"
+        });
+        res.json({ status: true, result });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 router.get("/admin/broadcast-recipients", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const waBot = require("../services/waBot");
