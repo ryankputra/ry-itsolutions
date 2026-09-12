@@ -917,11 +917,30 @@ router.post('/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
         if (targetWhatsApp) {
             try {
                 const waBot = require('../services/waBot');
-                let waMsg = `*${title || 'INFORMASI PROMO TERBARU'}*\n──────────────────────\n${message}`;
-                if (voucherCode) waMsg += `\n\n*KODE VOUCHER:* ${voucherCode}`;
-                waMsg += `\n\nKunjungi: https://tembakpaket.ry-itsolutions.web.id`;
-                if (typeof waBot.testAdminNotification === 'function') {
-                    waBot.testAdminNotification(waMsg).catch(() => {});
+                const targetMode = req.body.targetMode === 'admin_only' ? 'admin_only' : 'all';
+                let coupon = null;
+                if (voucherCode) {
+                    coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [voucherCode.trim().toUpperCase()]);
+                }
+
+                if (coupon && typeof waBot.notifyPromoBroadcast === 'function') {
+                    waBot.notifyPromoBroadcast({
+                        coupon,
+                        customMessage: message,
+                        targetMode
+                    }).catch(e => console.error('[Broadcast WA Promo Error]', e.message));
+                } else if (typeof waBot.notifyPromoBroadcast === 'function') {
+                    // General promo broadcast with banner
+                    waBot.notifyPromoBroadcast({
+                        coupon: {
+                            code: voucherCode || 'RYPROMO',
+                            discount_type: 'percent',
+                            discount_value: 10,
+                            end_date: null
+                        },
+                        customMessage: `${title ? `*${title}*\n` : ''}${message}`,
+                        targetMode
+                    }).catch(e => console.error('[Broadcast WA Error]', e.message));
                 }
             } catch (wErr) {
                 console.error('[Broadcast WA Error]', wErr.message);
@@ -981,6 +1000,37 @@ router.post('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
             Number(max_per_user) || 1,
             new Date().toISOString()
         ]);
+
+        if (req.body.notify_wa || req.body.send_notification) {
+            const targetMode = req.body.notify_target === 'all' ? 'all' : 'admin_only';
+            const waBot = require('../services/waBot');
+            if (typeof waBot.notifyPromoBroadcast === 'function') {
+                waBot.notifyPromoBroadcast({
+                    coupon: {
+                        id: couponId,
+                        code: cleanCode,
+                        discount_type: discount_type || 'fixed',
+                        discount_value: Number(discount_value),
+                        min_order_amount: Number(min_order_amount) || 0,
+                        max_discount_amount: Number(max_discount_amount) || 0,
+                        max_claim_limit: Number(max_claim_limit) || 100,
+                        end_date: end_date || null,
+                        total_claimed_count: 0
+                    },
+                    customMessage: req.body.custom_message || '',
+                    targetMode
+                }).catch(err => console.error('[Auto Promo WA Broadcast Error]', err));
+            }
+
+            if (req.body.send_web_notification !== false) {
+                const isPercent = discount_type === 'percent';
+                const discText = isPercent ? `${discount_value}%` : `Rp ${Number(discount_value).toLocaleString('id-ID')}`;
+                const annId = `ann_promo_${Date.now()}`;
+                const annMsg = `[PROMO SPESIAL] Gunakan Voucher "${cleanCode}" dan nikmati potongan ${discText}! Klik menu Klaim Voucher untuk mengklaim.`;
+                dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, annMsg, new Date().toISOString()]).catch(() => {});
+                sseBroadcast('announcement', { message: annMsg, bgColor: '#2563eb' });
+            }
+        }
 
         res.json({ status: true, message: "Kupon promo berhasil dibuat." });
     } catch (e) {
@@ -1052,6 +1102,90 @@ router.delete('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) =
         res.json({ status: true, message: "Kupon berhasil dihapus." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// Broadcast Promo Kupon via WhatsApp & Web
+router.post('/admin/coupons/:id/broadcast', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const coupon = await dbGet("SELECT * FROM coupons WHERE id = ?", [req.params.id]);
+        if (!coupon) return res.status(404).json({ status: false, message: "Kupon tidak ditemukan." });
+
+        const { targetMode = 'admin_only', customMessage = '', sendWebNotification = true } = req.body;
+        const claimRow = await dbGet("SELECT COUNT(*) as count FROM user_claimed_coupons WHERE coupon_id = ?", [coupon.id]);
+        const enrichedCoupon = {
+            ...coupon,
+            total_claimed_count: claimRow?.count || 0
+        };
+
+        const waBot = require('../services/waBot');
+        let waResult = null;
+        if (typeof waBot.notifyPromoBroadcast === 'function') {
+            waResult = await waBot.notifyPromoBroadcast({
+                coupon: enrichedCoupon,
+                customMessage,
+                targetMode
+            });
+        }
+
+        // Web In-App announcement
+        if (sendWebNotification) {
+            const isPercent = coupon.discount_type === 'percent';
+            const discText = isPercent ? `${coupon.discount_value}%` : `Rp ${Number(coupon.discount_value).toLocaleString('id-ID')}`;
+            const annId = `ann_promo_${Date.now()}`;
+            const annMsg = `[PROMO SPESIAL] Gunakan Voucher "${coupon.code}" dan nikmati potongan ${discText}! Klik menu Klaim Voucher untuk mengklaim.`;
+            await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, annMsg, new Date().toISOString()]);
+            sseBroadcast('announcement', { message: annMsg, bgColor: '#2563eb' });
+        }
+
+        res.json({
+            status: true,
+            message: targetMode === 'all' 
+                ? `Promo voucher ${coupon.code} berhasil disebarkan ke ${waResult?.totalSent || 0} nomor WhatsApp!` 
+                : `Uji coba notifikasi promo ${coupon.code} berhasil dikirim ke WhatsApp Admin!`,
+            data: waResult
+        });
+    } catch (e) {
+        console.error("Error broadcasting coupon promo:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal menyebarkan promo voucher." });
+    }
+});
+
+// Broadcast Produk Baru via WhatsApp & Web
+router.post('/admin/products/broadcast', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { product, targetMode = 'admin_only', customMessage = '', sendWebNotification = true } = req.body;
+        if (!product || !product.name) {
+            return res.status(400).json({ status: false, message: "Data produk wajib diisi." });
+        }
+
+        const waBot = require('../services/waBot');
+        let waResult = null;
+        if (typeof waBot.notifyNewProductBroadcast === 'function') {
+            waResult = await waBot.notifyNewProductBroadcast({
+                product,
+                customMessage,
+                targetMode
+            });
+        }
+
+        if (sendWebNotification) {
+            const annId = `ann_prod_${Date.now()}`;
+            const annMsg = `[PRODUK BARU] ${product.name} kini telah tersedia dengan harga mulai Rp ${Number(product.price || 0).toLocaleString('id-ID')}! Cek sekarang.`;
+            await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, annMsg, new Date().toISOString()]);
+            sseBroadcast('announcement', { message: annMsg, bgColor: '#059669' });
+        }
+
+        res.json({
+            status: true,
+            message: targetMode === 'all'
+                ? `Notifikasi produk baru '${product.name}' berhasil disebarkan ke ${waResult?.totalSent || 0} nomor WhatsApp!`
+                : `Uji coba notifikasi produk baru '${product.name}' berhasil dikirim ke WhatsApp Admin!`,
+            data: waResult
+        });
+    } catch (e) {
+        console.error("Error broadcasting product:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal menyebarkan notifikasi produk." });
     }
 });
 
@@ -1898,6 +2032,32 @@ router.post('/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) =
 
         let parsedSpeeds = ['fast', 'semi', 'slow'];
         try { parsedSpeeds = JSON.parse(speedsJson); } catch (e) {}
+
+        if (req.body.notify_wa || req.body.send_notification) {
+            const targetMode = req.body.notify_target === 'all' ? 'all' : 'admin_only';
+            const waBot = require('../services/waBot');
+            if (typeof waBot.notifyNewProductBroadcast === 'function') {
+                waBot.notifyNewProductBroadcast({
+                    product: {
+                        type: 'imei',
+                        name: `Paket Unblock IMEI ${duration.trim()}`,
+                        duration: duration.trim(),
+                        price: numPrice,
+                        speeds: parsedSpeeds,
+                        description: req.body.description || 'Aktivasi sinyal resmi All Operator bergaransi anti begal sinyal.'
+                    },
+                    customMessage: req.body.custom_message || '',
+                    targetMode
+                }).catch(err => console.error('[Auto IMEI Product WA Broadcast Error]', err));
+            }
+
+            if (req.body.send_web_notification !== false) {
+                const annId = `ann_prod_${Date.now()}`;
+                const annMsg = `[PRODUK BARU] Paket Unblock IMEI ${duration.trim()} kini telah tersedia seharga Rp ${numPrice.toLocaleString('id-ID')}! Cek sekarang di menu Buka IMEI.`;
+                dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, annMsg, new Date().toISOString()]).catch(() => {});
+                sseBroadcast('announcement', { message: annMsg, bgColor: '#059669' });
+            }
+        }
 
         res.json({
             status: true,

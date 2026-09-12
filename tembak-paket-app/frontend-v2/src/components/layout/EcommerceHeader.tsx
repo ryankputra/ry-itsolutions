@@ -213,6 +213,20 @@ export function EcommerceHeader() {
           </svg>
         </button>
 
+        {/* Notification Bell (Mobile) */}
+        <Link
+          href="/notifications"
+          className="relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+          title="Notifikasi & Promo"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+          </svg>
+          {unread && (
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse ring-2 ring-white dark:ring-black"></span>
+          )}
+        </Link>
+
         {/* Cart Icon with real Cart Count */}
         <Link
           href="/cart"
@@ -340,6 +354,20 @@ export function EcommerceHeader() {
 
           {/* Desktop Right Action Hub */}
           <div className="flex items-center gap-3 shrink-0">
+            {/* Desktop Notification Bell */}
+            <Link
+              href="/notifications"
+              className="relative p-2 text-ink hover:text-primary transition-colors"
+              title="Notifikasi & Promo"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+              </svg>
+              {unread && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse ring-2 ring-white dark:ring-black"></span>
+              )}
+            </Link>
+
             {/* Desktop Cart Icon */}
             <Link
               href="/cart"

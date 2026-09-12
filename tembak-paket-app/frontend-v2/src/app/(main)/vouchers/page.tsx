@@ -1,17 +1,19 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { Card } from "@/components/ui/Card";
 import { ShopeeVoucherCard, CouponItem } from "@/components/ui/ShopeeVoucherCard";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { safeJson } from "@/lib/api";
 import Swal from "@/lib/sweetalert";
 
-export default function VouchersPage() {
+function VouchersContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [vouchers, setVouchers] = useState<CouponItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "claimed">("all");
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const autoClaimedRef = useRef(false);
 
   const loadVouchers = async () => {
     try {
@@ -30,6 +32,55 @@ export default function VouchersPage() {
   useEffect(() => {
     loadVouchers();
   }, []);
+
+  // 1-Click Auto Claim Listener from WhatsApp Broadcast Link (?claim=CODE)
+  useEffect(() => {
+    const claimCode = searchParams ? (searchParams.get("claim") || searchParams.get("coupon") || searchParams.get("code")) : null;
+    if (claimCode && !autoClaimedRef.current) {
+      autoClaimedRef.current = true;
+      const clean = claimCode.trim().toUpperCase();
+      (async () => {
+        try {
+          const res = await fetch("/api/coupons/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ code: clean }),
+          });
+          const data = await safeJson(res);
+          if (res.ok && data?.status) {
+            Swal.fire({
+              title: "🎉 Voucher Berhasil Diklaim!",
+              text: data.message || `Kode voucher ${clean} telah masuk ke akun Anda. Siap dipakai saat checkout!`,
+              icon: "success",
+              timer: 3000,
+              showConfirmButton: true,
+              confirmButtonText: "Lihat Voucher Saya",
+            });
+            setActiveTab("claimed");
+          } else if (data?.message && (data.message.includes("sudah") || data.message.includes("klaim"))) {
+            Swal.fire({
+              title: "Voucher Sudah Anda Klaim",
+              text: data.message || `Kode ${clean} sudah aktif di akun Anda dan siap digunakan saat checkout.`,
+              icon: "info",
+              timer: 2500,
+            });
+            setActiveTab("claimed");
+          } else {
+            Swal.fire({
+              title: "Info Klaim Voucher",
+              text: data?.message || "Tidak dapat mengklaim voucher ini saat ini.",
+              icon: "warning",
+            });
+          }
+          loadVouchers();
+          router.replace("/vouchers");
+        } catch (e) {
+          console.error(e);
+        }
+      })();
+    }
+  }, [searchParams, router]);
 
   const handleClaim = async (coupon: CouponItem) => {
     setClaimingId(coupon.id);
@@ -186,5 +237,13 @@ export default function VouchersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function VouchersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm font-bold text-ink-muted">Memuat Voucher...</div>}>
+      <VouchersContent />
+    </Suspense>
   );
 }

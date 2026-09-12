@@ -1742,7 +1742,266 @@ async function notifyWarrantyClaim({ imei, packageName, customerName, customerPh
     return results;
 }
 
+
+/**
+ * Broadcast Promo / Voucher Diskon to WhatsApp (Admin & Users)
+ * Features rich formatting, banner image attachment, and 1-click auto claim & apply links.
+ */
+async function notifyPromoBroadcast({ coupon, customMessage, targetMode = 'admin_only' }) {
+    if (!coupon || !coupon.code) throw new Error("Data kupon tidak valid");
+
+    const code = String(coupon.code).toUpperCase();
+    const isPercent = coupon.discount_type === 'percent';
+    const discountStr = isPercent
+        ? `${coupon.discount_value}%` + (coupon.max_discount_amount ? ` (Maks. Rp ${Number(coupon.max_discount_amount).toLocaleString('id-ID')})` : '')
+        : `Rp ${Number(coupon.discount_value).toLocaleString('id-ID')}`;
+    const minOrderStr = coupon.min_order_amount && Number(coupon.min_order_amount) > 0
+        ? `Rp ${Number(coupon.min_order_amount).toLocaleString('id-ID')}`
+        : 'Tanpa Minimal Belanja';
+    
+    let expiredStr = 'Promo Terbatas';
+    if (coupon.end_date) {
+        try {
+            expiredStr = new Date(coupon.end_date).toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'long', year: 'numeric'
+            });
+        } catch (e) {
+            expiredStr = String(coupon.end_date);
+        }
+    }
+
+    const claimLimit = coupon.max_claim_limit ? Number(coupon.max_claim_limit) : null;
+    const claimedCount = coupon.total_claimed_count ? Number(coupon.total_claimed_count) : (coupon.used_count || 0);
+    const quotaStr = claimLimit ? `${Math.max(0, claimLimit - claimedCount)} Kuota Tersisa` : 'Kuota Terbuka';
+
+    const claimUrl = `https://ry-itsolutionts.web.id/vouchers?claim=${encodeURIComponent(code)}`;
+    const orderUrl = `https://ry-itsolutionts.web.id/unblock-imei?coupon=${encodeURIComponent(code)}`;
+
+    const caption = 
+`🎉 *PROMO SPESIAL RY-ITSOLUTIONS* 🎉
+━━━━━━━━━━━━━━━━━━━━━━━
+Dapatkan potongan harga eksklusif untuk pesanan aktivasi sinyal IMEI & layanan digital Anda!
+
+🎟️ *KODE VOUCHER:* *${code}*
+💰 *Besar Diskon:* *${discountStr}*
+📌 *Syarat Belanja:* ${minOrderStr}
+⏳ *Masa Berlaku:* Hingga ${expiredStr}
+🎫 *Ketersediaan:* ${quotaStr}
+━━━━━━━━━━━━━━━━━━━━━━━
+${customMessage ? `${customMessage}\n━━━━━━━━━━━━━━━━━━━━━━━\n` : ''}⚡ *KLAIM VOUCHER INSTAN (1 KLIK):*
+👉 ${claimUrl}
+
+🛒 *ORDER LANGSUNG DENGAN DISKON:*
+👉 ${orderUrl}
+
+_Buka link di atas, voucher otomatis terklaim dan terpasang saat checkout order._
+━━━━━━━━━━━━━━━━━━━━━━━
+_Ry-ITSolutions Official Support & Store_`;
+
+    const bannerPath = path.resolve(__dirname, '../../frontend-v2/public/banners/banner_voucher.jpg');
+    let imageBuffer = null;
+    if (fs.existsSync(bannerPath)) {
+        try {
+            imageBuffer = fs.readFileSync(bannerPath);
+        } catch (e) {
+            console.warn('[notifyPromoBroadcast] Gagal membaca banner image:', e.message);
+        }
+    }
+
+    const payload = imageBuffer 
+        ? { image: imageBuffer, caption, viewOnce: false }
+        : { text: caption };
+
+    const adminPhones = await getAdminPhoneNumbers();
+    const targetPhones = new Set();
+    
+    adminPhones.forEach(p => {
+        const c = cleanPhone(p);
+        if (c && c.length >= 8) targetPhones.add(c);
+    });
+
+    if (targetMode === 'all') {
+        const userRows = await dbAll("SELECT verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ''");
+        userRows.forEach(u => {
+            const c = cleanPhone(u.verifiedPhone);
+            if (c && c.length >= 8) targetPhones.add(c);
+        });
+    }
+
+    const results = [];
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const phone of targetPhones) {
+        const jid = `${phone}@s.whatsapp.net`;
+        try {
+            const sent = await sendAndStoreMessage(jid, payload);
+            results.push({ phone, success: true, id: sent?.key?.id });
+            sentCount++;
+            console.log(`[WABot Promo] Berhasil kirim promo voucher ${code} ke ${phone}`);
+        } catch (err) {
+            results.push({ phone, success: false, error: err.message });
+            failedCount++;
+            console.error(`[WABot Promo] Gagal kirim promo voucher ${code} ke ${phone}:`, err.message);
+        }
+
+        if (targetPhones.size > 1) {
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    return {
+        success: sentCount > 0,
+        totalTarget: targetPhones.size,
+        totalSent: sentCount,
+        totalFailed: failedCount,
+        details: results
+    };
+}
+
+/**
+ * Broadcast New Product Notification to WhatsApp (Admin & Users)
+ * Dynamically tailored message based on product category/type.
+ */
+async function notifyNewProductBroadcast({ product, customMessage, targetMode = 'admin_only' }) {
+    if (!product || !product.name) throw new Error("Data produk tidak valid");
+
+    const pType = (product.type || 'imei').toLowerCase();
+    const priceStr = `Rp ${Number(product.price || 0).toLocaleString('id-ID')}`;
+
+    let bannerFileName = 'banner_imei.jpg';
+    let headerTitle = '🚀 *PRODUK BARU TERSEDIA DI RY-ITSOLUTIONS* 🚀';
+    let detailSection = '';
+    let directLink = 'https://ry-itsolutionts.web.id/unblock-imei';
+
+    if (pType === 'imei') {
+        bannerFileName = 'banner_imei.jpg';
+        headerTitle = '📱 *LAYANAN BARU: UNBLOCK IMEI RESMI* 📱';
+        directLink = product.link || 'https://ry-itsolutionts.web.id/unblock-imei';
+        
+        let speedList = ['Instant (Fast)', 'Semi-Fast', 'Hemat'];
+        if (Array.isArray(product.speeds) && product.speeds.length > 0) {
+            speedList = product.speeds.map(s => String(s).toUpperCase());
+        }
+        
+        detailSection = 
+`📦 *Nama Paket:* *${product.duration || product.name}*
+💰 *Harga Spesial:* *${priceStr}*
+📶 *Jaringan:* All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)
+🛡️ *Jaminan Garansi:* Resmi Anti Begal Sinyal / Hilang Sinyal
+⚡ *Pilihan Server:* ${speedList.join(' • ')}
+━━━━━━━━━━━━━━━━━━━━━━━
+📝 *Informasi Layanan:*
+${product.description || "Solusi aktivasi sinyal bypass CEIR & Bea Cukai untuk iPhone & Android Inter. Sinyal langsung aktif stabil tanpa takut hilang!"}`;
+    } else if (pType === 'package') {
+        bannerFileName = 'banner_voucher.jpg';
+        headerTitle = '⚡ *PRODUK BARU: PAKET DATA & KUOTA INTERNET* ⚡';
+        directLink = product.link || 'https://ry-itsolutionts.web.id/beli-paket';
+        detailSection = 
+`📦 *Nama Paket:* *${product.name}*
+💰 *Harga:* *${priceStr}*
+📂 *Kategori:* ${product.category || 'Paket Internet'}
+⚡ *Metode Masuk:* Otomatis Masuk / Inject No-OTP
+━━━━━━━━━━━━━━━━━━━━━━━
+📝 *Deskripsi:*
+${product.description || "Paket data kuota internet super hemat langsung aktif masuk ke nomor Anda."}`;
+    } else if (pType === 'gateway') {
+        bannerFileName = 'banner_gopay.jpg';
+        headerTitle = '💳 *FITUR BARU: PAYMENT GATEWAY & MERCHANT* 💳';
+        directLink = product.link || 'https://ry-itsolutionts.web.id/gateway';
+        detailSection = 
+`🛠️ *Layanan:* *${product.name}*
+💰 *Biaya / Fee:* *${priceStr}*
+━━━━━━━━━━━━━━━━━━━━━━━
+📝 *Deskripsi:*
+${product.description || "Terima pembayaran QRIS & GoPay otomatis untuk website atau bot Anda dengan integrasi API mudah!"}`;
+    } else {
+        bannerFileName = 'banner_voucher.jpg';
+        headerTitle = '✨ *PRODUK TERBARU RY-ITSOLUTIONS* ✨';
+        directLink = product.link || 'https://ry-itsolutionts.web.id/dashboard';
+        detailSection = 
+`📦 *Produk:* *${product.name}*
+💰 *Harga:* *${priceStr}*
+━━━━━━━━━━━━━━━━━━━━━━━
+📝 *Deskripsi:*
+${product.description || "Layanan digital terbaru dari Ry-ITSolutions kini siap dipesan!"}`;
+    }
+
+    const caption = 
+`${headerTitle}
+━━━━━━━━━━━━━━━━━━━━━━━
+${detailSection}
+${customMessage ? `\n━━━━━━━━━━━━━━━━━━━━━━━\n📢 *Pesan Tambahan:* ${customMessage}\n` : ''}
+👉 *PESAN & CEK DETAIL SEKARANG:*
+${directLink}
+━━━━━━━━━━━━━━━━━━━━━━━
+_Ry-ITSolutions Official Support & Store_`;
+
+    const bannerPath = path.resolve(__dirname, `../../frontend-v2/public/banners/${bannerFileName}`);
+    let imageBuffer = null;
+    if (fs.existsSync(bannerPath)) {
+        try {
+            imageBuffer = fs.readFileSync(bannerPath);
+        } catch (e) {
+            console.warn('[notifyNewProductBroadcast] Gagal membaca banner image:', e.message);
+        }
+    }
+
+    const payload = imageBuffer 
+        ? { image: imageBuffer, caption, viewOnce: false }
+        : { text: caption };
+
+    const adminPhones = await getAdminPhoneNumbers();
+    const targetPhones = new Set();
+    
+    adminPhones.forEach(p => {
+        const c = cleanPhone(p);
+        if (c && c.length >= 8) targetPhones.add(c);
+    });
+
+    if (targetMode === 'all') {
+        const userRows = await dbAll("SELECT verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ''");
+        userRows.forEach(u => {
+            const c = cleanPhone(u.verifiedPhone);
+            if (c && c.length >= 8) targetPhones.add(c);
+        });
+    }
+
+    const results = [];
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const phone of targetPhones) {
+        const jid = `${phone}@s.whatsapp.net`;
+        try {
+            const sent = await sendAndStoreMessage(jid, payload);
+            results.push({ phone, success: true, id: sent?.key?.id });
+            sentCount++;
+            console.log(`[WABot Product] Berhasil kirim info produk '${product.name}' ke ${phone}`);
+        } catch (err) {
+            results.push({ phone, success: false, error: err.message });
+            failedCount++;
+            console.error(`[WABot Product] Gagal kirim info produk '${product.name}' ke ${phone}:`, err.message);
+        }
+
+        if (targetPhones.size > 1) {
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    return {
+        success: sentCount > 0,
+        totalTarget: targetPhones.size,
+        totalSent: sentCount,
+        totalFailed: failedCount,
+        details: results
+    };
+}
+
 module.exports = {
+    notifyPromoBroadcast,
+    notifyNewProductBroadcast,
+
     getWALogs,
     initWABot,
     logoutWABot,

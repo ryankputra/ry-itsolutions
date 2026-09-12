@@ -531,6 +531,185 @@ export default function AdminPage() {
     }
   };
 
+  const handleBroadcastCoupon = async (coupon: any) => {
+    const isPercent = coupon.discount_type === 'percent';
+    const discStr = isPercent ? `${coupon.discount_value}%` : `Rp ${Number(coupon.discount_value).toLocaleString('id-ID')}`;
+
+    const { value: formValues } = await Swal.fire({
+      title: `📢 Sebar Promo: ${coupon.code}`,
+      html: `
+        <div class="text-left text-xs space-y-3 pt-1">
+          <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <p class="font-bold text-slate-800 dark:text-slate-200">Voucher: <span class="font-mono text-primary">${coupon.code}</span> (${discStr})</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Disertai banner voucher resmi & tautan 1-klik auto claim.</p>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1 text-slate-700 dark:text-slate-300">Pilih Target Kirim:</label>
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                <input type="radio" name="broadcast_target" value="admin_only" checked class="text-primary" />
+                <span class="font-medium text-slate-800 dark:text-slate-200">🧪 Uji Coba ke WA Admin Saja</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                <input type="radio" name="broadcast_target" value="all" class="text-primary" />
+                <span class="font-medium text-slate-800 dark:text-slate-200">🚀 Sebar ke Seluruh Pengguna WA (65 Pengguna)</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1 text-slate-700 dark:text-slate-300">Ucapan / Pesan Tambahan (Opsional):</label>
+            <textarea id="swal-custom-msg" rows="2" class="w-full p-2 text-xs border rounded-lg dark:bg-slate-900 dark:border-slate-700" placeholder="Contoh: Jangan lewatkan promo spesial minggu ini!"></textarea>
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer pt-1">
+            <input type="checkbox" id="swal-web-notif" checked class="text-primary rounded" />
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Tampilkan juga di Notifikasi Web In-App</span>
+          </label>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Kirim Sekarang 🚀",
+      cancelButtonText: "Batal",
+      preConfirm: () => {
+        const radios = document.getElementsByName('broadcast_target') as NodeListOf<HTMLInputElement>;
+        let target = 'admin_only';
+        for (let r of radios) {
+          if (r.checked) target = r.value;
+        }
+        const customMsg = (document.getElementById('swal-custom-msg') as HTMLTextAreaElement)?.value || '';
+        const webNotif = (document.getElementById('swal-web-notif') as HTMLInputElement)?.checked ?? true;
+        return { targetMode: target, customMessage: customMsg, sendWebNotification: webNotif };
+      }
+    });
+
+    if (!formValues) return;
+
+    Swal.fire({
+      title: "Mengirim Notifikasi...",
+      text: "Mohon tunggu proses pengiriman pesan WhatsApp.",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const res = await fetch(`/api/admin/coupons/${coupon.id}/broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(formValues)
+      });
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
+        Swal.fire("Berhasil!", d.message || "Pesan broadcast promo berhasil dikirimkan.", "success");
+      } else {
+        Swal.fire("Gagal", d?.message || "Gagal menyebarkan promo.", "error");
+      }
+    } catch (e: any) {
+      Swal.fire("Error", e.message || "Terjadi kesalahan sistem.", "error");
+    }
+  };
+
+  const handleBroadcastProduct = async (pkg: any) => {
+    let speeds: string[] = ['fast', 'semi', 'slow'];
+    if (pkg.allowed_speeds) {
+      try {
+        const parsed = typeof pkg.allowed_speeds === 'string' ? JSON.parse(pkg.allowed_speeds) : pkg.allowed_speeds;
+        if (Array.isArray(parsed) && parsed.length > 0) speeds = parsed;
+      } catch (e) {}
+    }
+
+    const { value: formValues } = await Swal.fire({
+      title: `📢 Notifikasi Produk: ${pkg.duration}`,
+      html: `
+        <div class="text-left text-xs space-y-3 pt-1">
+          <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <p class="font-bold text-slate-800 dark:text-slate-200">Paket: <span class="text-primary font-bold">${pkg.duration}</span> (Rp ${Number(pkg.price || 0).toLocaleString('id-ID')})</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Format pesan otomatis disesuaikan dengan spek sinyal All Operator & garansi resmi.</p>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1 text-slate-700 dark:text-slate-300">Pilih Target Kirim:</label>
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                <input type="radio" name="prod_broadcast_target" value="admin_only" checked class="text-primary" />
+                <span class="font-medium text-slate-800 dark:text-slate-200">🧪 Uji Coba ke WA Admin Saja</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                <input type="radio" name="prod_broadcast_target" value="all" class="text-primary" />
+                <span class="font-medium text-slate-800 dark:text-slate-200">🚀 Sebar ke Seluruh Pengguna WA (65 Pengguna)</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1 text-slate-700 dark:text-slate-300">Pesan Tambahan (Opsional):</label>
+            <textarea id="swal-prod-msg" rows="2" class="w-full p-2 text-xs border rounded-lg dark:bg-slate-900 dark:border-slate-700" placeholder="Contoh: Server baru saja dibuka, slot terbatas!"></textarea>
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer pt-1">
+            <input type="checkbox" id="swal-prod-web" checked class="text-primary rounded" />
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Tampilkan juga di Notifikasi Web In-App</span>
+          </label>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Kirim Sekarang 🚀",
+      cancelButtonText: "Batal",
+      preConfirm: () => {
+        const radios = document.getElementsByName('prod_broadcast_target') as NodeListOf<HTMLInputElement>;
+        let target = 'admin_only';
+        for (let r of radios) {
+          if (r.checked) target = r.value;
+        }
+        const customMsg = (document.getElementById('swal-prod-msg') as HTMLTextAreaElement)?.value || '';
+        const webNotif = (document.getElementById('swal-prod-web') as HTMLInputElement)?.checked ?? true;
+        return { targetMode: target, customMessage: customMsg, sendWebNotification: webNotif };
+      }
+    });
+
+    if (!formValues) return;
+
+    Swal.fire({
+      title: "Mengirim Notifikasi Produk...",
+      text: "Mohon tunggu proses pengiriman pesan WhatsApp.",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const res = await fetch('/api/admin/products/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          product: {
+            type: 'imei',
+            name: `Paket Unblock IMEI ${pkg.duration}`,
+            duration: pkg.duration,
+            price: Number(pkg.price || 0),
+            speeds,
+            description: 'Layanan unblock IMEI resmi All Operator aktif stabil anti begal sinyal.'
+          },
+          targetMode: formValues.targetMode,
+          customMessage: formValues.customMessage,
+          sendWebNotification: formValues.sendWebNotification
+        })
+      });
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
+        Swal.fire("Berhasil!", d.message || "Notifikasi produk baru berhasil disebarkan.", "success");
+      } else {
+        Swal.fire("Gagal", d?.message || "Gagal menyebarkan info produk.", "error");
+      }
+    } catch (e: any) {
+      Swal.fire("Error", e.message || "Terjadi kesalahan sistem.", "error");
+    }
+  };
+
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCoupon.code.trim() || !newCoupon.discount_value) {
@@ -3273,6 +3452,15 @@ export default function AdminPage() {
                             </button>
                             <button
                               type="button"
+                              onClick={() => handleBroadcastProduct(pkg)}
+                              className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 transition-colors flex items-center gap-1"
+                              title="Kirim notifikasi paket IMEI ini ke WA & Web"
+                            >
+                              <Megaphone className="w-2.5 h-2.5" />
+                              <span>Notif WA</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setEditingPkg({ ...pkg, allowed_speeds: speeds })}
                               className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors"
                             >
@@ -4433,6 +4621,22 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  <label className="flex items-center gap-2 p-2.5 rounded-xl border border-hairline bg-canvas hover:bg-parchment/40 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(newCoupon.notify_wa)}
+                      onChange={e => setNewCoupon({ ...newCoupon, notify_wa: e.target.checked })}
+                      className="rounded text-primary focus:ring-primary w-4 h-4"
+                    />
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-ink flex items-center gap-1.5">
+                        <span>Kirim Notifikasi WhatsApp &amp; Web</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 font-bold">Auto</span>
+                      </p>
+                      <p className="text-[10px] text-ink-muted">Sebarkan voucher otomatis via WhatsApp (bergambar banner) &amp; Web saat kupon diterbitkan.</p>
+                    </div>
+                  </label>
+
                   <Button type="submit" isLoading={creatingCoupon} className="w-full text-xs font-bold h-11 mt-1 shadow-sm">
                     + Terbitkan Kupon Promo
                   </Button>
@@ -4484,6 +4688,15 @@ export default function AdminPage() {
 
                           {/* Action Buttons */}
                           <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleBroadcastCoupon(c)}
+                              className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 transition-colors flex items-center gap-1"
+                              title="Kirim notifikasi promo voucher ke WhatsApp & Web"
+                            >
+                              <Megaphone className="w-3 h-3" />
+                              <span>Sebar Promo</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => setEditingCoupon({ ...c })}

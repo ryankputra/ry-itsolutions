@@ -133,6 +133,17 @@ export default function CartPage() {
       .catch(() => {});
   }, []);
 
+  // Auto-apply coupon from URL query param (?coupon=CODE or ?claim=CODE)
+  useEffect(() => {
+    if (typeof window !== "undefined" && !appliedCoupon) {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("coupon") || params.get("claim");
+      if (code) {
+        handleApplyCoupon(code);
+      }
+    }
+  }, []);
+
   const toggleSelect = (id: string) => {
     if (selectedItems.includes(id)) {
       setSelectedItems(selectedItems.filter((i) => i !== id));

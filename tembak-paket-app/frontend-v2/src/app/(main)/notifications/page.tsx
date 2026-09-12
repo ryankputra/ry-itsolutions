@@ -7,26 +7,29 @@ import { safeJson } from "@/lib/api";
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"all" | "orders" | "promo" | "rewards" | "system">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "orders" | "promo" | "products" | "rewards" | "system">("all");
   const [transactions, setTransactions] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [announcement, setAnnouncement] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
+  const [imeiPackages, setImeiPackages] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [trxRes, voucherRes, configRes] = await Promise.all([
+        const [trxRes, voucherRes, configRes, imeiRes] = await Promise.all([
           fetch("/api/user/transactions", { credentials: "include" }),
           fetch("/api/coupons/public", { credentials: "include" }),
           fetch("/api/admin/config/public", { credentials: "include" }),
+          fetch("/api/imei-packages", { credentials: "include" }).catch(() => null),
         ]);
 
-        const [trxData, voucherData, configData] = await Promise.all([
+        const [trxData, voucherData, configData, imeiData] = await Promise.all([
           safeJson(trxRes),
           safeJson(voucherRes),
           safeJson(configRes),
+          imeiRes ? safeJson(imeiRes) : null,
         ]);
 
         if (trxData?.status && Array.isArray(trxData.data)) {
@@ -37,6 +40,9 @@ export default function NotificationsPage() {
         }
         if (configData?.status && configData.data?.announcement) {
           setAnnouncement(configData.data.announcement);
+        }
+        if (imeiData?.status && Array.isArray(imeiData.data)) {
+          setImeiPackages(imeiData.data);
         }
       } catch (e) {
       } finally {
@@ -49,7 +55,7 @@ export default function NotificationsPage() {
   // Build Unified Notification Stream
   const notifications: Array<{
     id: string;
-    type: "orders" | "promo" | "rewards" | "system";
+    type: "orders" | "promo" | "products" | "rewards" | "system";
     title: string;
     description: string;
     time: string;
@@ -109,6 +115,25 @@ export default function NotificationsPage() {
       iconBg: "bg-blue-50 border-blue-200",
       actionText: "Klaim Voucher",
       action: () => router.push("/vouchers"),
+    });
+  });
+
+  // 2.5 New Products & IMEI Services
+  imeiPackages.filter(p => p && p.isVisible !== false).forEach((pkg) => {
+    notifications.push({
+      id: `prod-${pkg.id}`,
+      type: "products",
+      title: `Layanan Baru: Paket Unblock IMEI ${pkg.duration}`,
+      description: `Aktivasi sinyal resmi All Operator (Garansi Sinyal Anti Begal). Mulai Rp ${Number(pkg.price || 0).toLocaleString("id-ID")}.`,
+      time: "Tersedia",
+      icon: (
+        <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+        </svg>
+      ),
+      iconBg: "bg-emerald-50 border-emerald-200",
+      actionText: "Beli Sekarang",
+      action: () => router.push("/unblock-imei"),
     });
   });
 
@@ -175,6 +200,7 @@ export default function NotificationsPage() {
           { key: "all", label: "Semua" },
           { key: "orders", label: "Status Pesanan" },
           { key: "promo", label: "Promo & Kupon" },
+          { key: "products", label: "Produk Baru" },
           { key: "rewards", label: "Reward Koin" },
           { key: "system", label: "Info Server" },
         ].map((tab) => (

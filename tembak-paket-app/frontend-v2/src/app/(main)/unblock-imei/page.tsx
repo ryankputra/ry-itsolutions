@@ -303,6 +303,16 @@ function UnblockImeiContent() {
     setCouponError("");
   };
 
+  // 1-Click Auto Apply Coupon from WhatsApp Broadcast Link (?coupon=CODE or ?claim=CODE)
+  useEffect(() => {
+    if (searchParams && !appliedCoupon && !loading) {
+      const couponParam = searchParams.get("coupon") || searchParams.get("claim");
+      if (couponParam) {
+        handleApplyCoupon(couponParam);
+      }
+    }
+  }, [searchParams, loading]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateFormInputs()) return;
