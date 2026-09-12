@@ -254,6 +254,38 @@ function UnblockImeiContent() {
           timer: 2000,
           showConfirmButton: false
         });
+      } else if (d?.require_claim) {
+        const claimRes = await fetch("/api/coupons/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code: targetCode, coupon_id: d.coupon_id })
+        });
+        const claimData = await safeJson(claimRes);
+        if (claimData?.status) {
+          const retryRes = await fetch("/api/coupon/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ code: targetCode, order_amount: rawTotalPrice })
+          });
+          const retryData = await safeJson(retryRes);
+          if (retryData?.status && retryData.data) {
+            setAppliedCoupon(retryData.data);
+            setCouponCode(retryData.data.code);
+            setPublicCoupons(prev => (Array.isArray(prev) ? prev : []).map(c => c.id === d.coupon_id ? { ...c, is_claimed: true } : c));
+            Swal.fire({
+              title: "Voucher Berhasil Diklaim & Terpasang!",
+              text: `Hemat Rp ${Number(retryData.data.discount_amount || 0).toLocaleString('id-ID')} dengan kode ${retryData.data.code}`,
+              icon: "success",
+              timer: 2000,
+              showConfirmButton: false
+            });
+            return;
+          }
+        }
+        setAppliedCoupon(null);
+        setCouponError(d?.message || "Voucher perlu diklaim terlebih dahulu.");
       } else {
         setAppliedCoupon(null);
         setCouponError(d?.message || "Gagal menerapkan kupon promo.");

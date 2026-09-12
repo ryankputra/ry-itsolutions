@@ -451,6 +451,10 @@ router.get('/coupons/public', async (req, res) => {
             ORDER BY created_at DESC
         `, [todayWIB, todayWIB]);
 
+        const claimCounts = await dbAll("SELECT coupon_id, COUNT(*) as count FROM user_claimed_coupons GROUP BY coupon_id");
+        const totalClaimedMap = {};
+        claimCounts.forEach(c => { totalClaimedMap[c.coupon_id] = c.count; });
+
         let userClaimedMap = {};
         let userUsageMap = {};
 
@@ -466,6 +470,8 @@ router.get('/coupons/public', async (req, res) => {
             const maxPerUser = c.max_per_user || 1;
             const currentUsage = userUsageMap[c.id] || 0;
             const isUserQuotaExhausted = currentUsage >= maxPerUser;
+            const maxClaimLimit = c.max_claim_limit || c.max_usage_limit || 100;
+            const totalClaims = totalClaimedMap[c.id] || 0;
 
             return {
                 id: c.id,
@@ -475,13 +481,15 @@ router.get('/coupons/public', async (req, res) => {
                 min_order_amount: c.min_order_amount,
                 max_discount_amount: c.max_discount_amount,
                 max_usage_limit: c.max_usage_limit,
+                max_claim_limit: maxClaimLimit,
+                total_claimed_count: totalClaims,
                 used_count: c.used_count,
                 start_date: c.start_date,
                 end_date: c.end_date,
                 max_per_user: maxPerUser,
                 is_claimed: !!userClaimedMap[c.id],
                 user_used_count: currentUsage,
-                is_usable: !isUserQuotaExhausted && (c.used_count < c.max_usage_limit)
+                is_usable: !isUserQuotaExhausted && (c.used_count < c.max_usage_limit) && (totalClaims < maxClaimLimit || !!userClaimedMap[c.id])
             };
         });
 
@@ -495,18 +503,42 @@ router.get('/coupons/public', async (req, res) => {
 // 11. POST /api/coupons/claim & /api/coupon/claim
 router.post(['/coupons/claim', '/coupon/claim'], isAuthenticated, async (req, res) => {
     try {
-        const { coupon_id } = req.body;
+        const { coupon_id, couponId, code } = req.body;
+        const identifier = coupon_id || couponId || code;
         const userId = req.session.userId;
 
-        if (!coupon_id) return res.status(400).json({ status: false, message: "Coupon ID diperlukan." });
+        if (!identifier) return res.status(400).json({ status: false, message: "ID atau Kode Voucher diperlukan." });
 
-        const coupon = await dbGet("SELECT * FROM coupons WHERE id = ? OR code = ?", [coupon_id, coupon_id]);
+        const coupon = await dbGet("SELECT * FROM coupons WHERE id = ? OR UPPER(code) = UPPER(?)", [identifier, String(identifier).trim()]);
         if (!coupon) return res.status(400).json({ status: false, message: "Voucher promo tidak ditemukan." });
         if (coupon.is_active !== 1) return res.status(400).json({ status: false, message: "Voucher promo ini sedang tidak aktif." });
 
+        const todayWIB = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+        if (coupon.end_date && coupon.end_date.trim() && coupon.end_date.trim().split('T')[0] < todayWIB) {
+            return res.status(400).json({ status: false, message: "Voucher promo telah kedaluwarsa." });
+        }
+        if (coupon.start_date && coupon.start_date.trim() && coupon.start_date.trim().split('T')[0] > todayWIB) {
+            return res.status(400).json({ status: false, message: `Voucher promo baru dapat diklaim mulai ${coupon.start_date.trim().split('T')[0]}.` });
+        }
+        if (coupon.used_count >= coupon.max_usage_limit) {
+            return res.status(400).json({ status: false, message: "Kuota pemakaian voucher promo ini sudah habis." });
+        }
+
         const existingClaim = await dbGet("SELECT id FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
         if (existingClaim) {
-            return res.json({ status: true, message: "Voucher sudah ada di koleksi akun Anda!" });
+            return res.json({ status: true, message: "Voucher sudah ada di koleksi akun Anda!", coupon_id: coupon.id, code: coupon.code });
+        }
+
+        const maxClaimLimit = coupon.max_claim_limit || coupon.max_usage_limit || 100;
+        const claimCountRow = await dbGet("SELECT COUNT(*) as count FROM user_claimed_coupons WHERE coupon_id = ?", [coupon.id]);
+        if (claimCountRow && claimCountRow.count >= maxClaimLimit) {
+            return res.status(400).json({ status: false, message: "Kuota klaim voucher promo ini sudah penuh/habis." });
+        }
+
+        const maxPerUser = coupon.max_per_user || 1;
+        const userUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, userId]);
+        if (userUsage && userUsage.count >= maxPerUser) {
+            return res.status(400).json({ status: false, message: `Anda sudah mencapai batas penggunaan kupon ini (${maxPerUser}x per akun).` });
         }
 
         const claimId = `claim_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -515,7 +547,8 @@ router.post(['/coupons/claim', '/coupon/claim'], isAuthenticated, async (req, re
         res.json({
             status: true,
             message: `Voucher ${coupon.code} berhasil diklaim! Gunakan saat checkout.`,
-            coupon_id: coupon.id
+            coupon_id: coupon.id,
+            code: coupon.code
         });
     } catch (e) {
         res.status(500).json({ status: false, message: "Gagal mengklaim voucher promo." });

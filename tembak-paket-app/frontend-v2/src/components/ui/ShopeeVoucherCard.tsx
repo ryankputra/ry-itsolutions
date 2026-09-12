@@ -69,78 +69,84 @@ export function ShopeeVoucherCard({
         selected
           ? "border-primary ring-2 ring-primary/30 shadow-md"
           : "border-hairline hover:border-primary/40 shadow-xs"
-      } ${compact ? "min-w-[280px] max-w-[320px]" : "w-full"}`}
+      } ${compact ? "min-w-[270px] max-w-[320px]" : "w-full"}`}
     >
       {/* Sisi Kiri: Apple Wallet Ticket Stub */}
-      <div className="w-[100px] sm:w-[115px] bg-[#1D1D1F] dark:bg-[#161617] text-white flex flex-col items-center justify-center p-3 text-center shrink-0 relative overflow-hidden border-r border-hairline">
+      <div className="w-[88px] sm:w-[115px] bg-[#1D1D1F] dark:bg-[#161617] text-white flex flex-col items-center justify-center p-2.5 sm:p-3 text-center shrink-0 relative overflow-hidden border-r border-hairline">
         {/* Notch Potongan Tiket Kiri */}
-        <div className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-canvas border border-hairline z-10"></div>
-        <div className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-canvas border border-hairline z-10"></div>
+        <div className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-slate-50 dark:bg-[#0A0A0C] border border-hairline z-10"></div>
+        <div className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-slate-50 dark:bg-[#0A0A0C] border border-hairline z-10"></div>
 
         {/* Decorative Badge Pattern */}
         <div className="absolute inset-0 bg-white/5 opacity-40 pointer-events-none"></div>
 
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/90 bg-white/10 border border-white/15 px-1.5 py-0.5 rounded mb-1">
+        <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-white/90 bg-white/10 border border-white/15 px-1.5 py-0.5 rounded mb-1">
           Voucher
         </span>
         <span className="text-xs sm:text-sm font-black leading-tight drop-shadow-sm text-white">
           {coupon.discount_type === "percent" ? `${coupon.discount_value}%` : `Rp ${coupon.discount_value >= 1000 ? `${coupon.discount_value / 1000}RB` : coupon.discount_value}`}
         </span>
-        <span className="text-[9px] font-bold text-white/70 mt-0.5">
+        <span className="text-[8px] sm:text-[9px] font-bold text-white/70 mt-0.5">
           {coupon.discount_type === "percent" ? "OFF" : "POTONGAN"}
         </span>
       </div>
 
       {/* Sisi Kanan: Detail & Tombol Klaim (Shopee Style) */}
-      <div className="flex-1 p-3 sm:p-3.5 flex flex-col justify-between gap-2 bg-canvas relative pl-4">
+      <div className="flex-1 p-2.5 sm:p-3.5 flex flex-col justify-between gap-1.5 sm:gap-2 bg-canvas relative pl-3 sm:pl-4 min-w-0">
         {/* Garis Putus-putus Tiket */}
         <div className="absolute left-0 top-3 bottom-3 border-l border-dashed border-hairline"></div>
 
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center justify-between gap-1.5">
-            <span className="font-mono font-black text-[11px] text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
+            <span className="font-mono font-black text-[10px] sm:text-[11px] text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 truncate">
               {coupon.code}
             </span>
-            <span className="text-[9px] font-semibold text-ink-muted">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted shrink-0">
               {expiryText}
             </span>
           </div>
 
-          <h4 className="font-bold text-xs text-ink mt-1 line-clamp-1">{formattedDiscount}</h4>
-          <p className="text-[10px] text-ink-muted line-clamp-1">{minOrderText}</p>
+          <h4 className="font-bold text-xs sm:text-sm text-ink mt-1 truncate">{formattedDiscount}</h4>
+          <p className="text-[10px] sm:text-[11px] text-ink-muted truncate">{minOrderText}</p>
         </div>
 
         {/* Bar Kuota Klaim & Tombol Aksi */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-hairline/60">
+        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-hairline/60">
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-center text-[9px] text-ink-muted mb-0.5">
-              <span>{isUsed ? "Sudah Terpakai" : isOutOfStock ? "Kuota Habis" : `${percentage}% Diklaim`}</span>
+              <span className="truncate">
+                {isUsed
+                  ? "Sudah Terpakai"
+                  : isOutOfStock
+                  ? "Kuota Habis"
+                  : `${percentage}% Klaim (${claimedCount}/${maxClaims})`}
+              </span>
             </div>
             <div className="w-full bg-slate-100 dark:bg-white/10 rounded-full h-1.5 overflow-hidden border border-hairline">
               <div
-                className={`h-full rounded-full transition-all ${
+                className={`h-full rounded-full transition-all duration-300 ${
                   isUsed || isOutOfStock ? "bg-slate-400" : percentage > 80 ? "bg-rose-500" : "bg-primary"
                 }`}
-                style={{ width: `${percentage}%` }}
+                style={{ width: `${Math.max(4, percentage)}%` }}
               />
             </div>
           </div>
 
           {isUsed ? (
-            <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shrink-0">
-              Sudah Digunakan
+            <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-white/10 shrink-0 min-h-[30px] flex items-center">
+              Digunakan
             </span>
           ) : isClaimed ? (
             onUse ? (
               <button
                 type="button"
                 onClick={() => onUse(coupon)}
-                className="px-3 py-1 rounded-xl text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors shrink-0"
+                className="px-3 py-1 rounded-xl text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors shrink-0 min-h-[30px] flex items-center justify-center"
               >
                 Gunakan
               </button>
             ) : (
-              <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
+              <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1 min-h-[30px]">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
@@ -151,7 +157,7 @@ export function ShopeeVoucherCard({
             <button
               type="button"
               disabled
-              className="px-3 py-1 rounded-xl text-[11px] font-bold bg-slate-200 text-slate-500 cursor-not-allowed shrink-0"
+              className="px-3 py-1 rounded-xl text-[11px] font-bold bg-slate-200 text-slate-500 cursor-not-allowed shrink-0 min-h-[30px] flex items-center justify-center"
             >
               Habis
             </button>
@@ -160,7 +166,7 @@ export function ShopeeVoucherCard({
               type="button"
               disabled={isClaiming}
               onClick={() => onClaim && onClaim(coupon)}
-              className="px-3.5 py-1 rounded-xl text-[11px] font-bold bg-primary hover:bg-primary-focus text-white shadow-xs transition-all active:scale-95 shrink-0 flex items-center gap-1"
+              className="px-3.5 py-1 rounded-xl text-[11px] font-bold bg-primary hover:bg-primary-focus text-white shadow-xs transition-all active:scale-95 shrink-0 flex items-center justify-center min-h-[30px]"
             >
               {isClaiming ? "..." : "Klaim"}
             </button>

@@ -938,7 +938,14 @@ router.post('/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
 router.get('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const coupons = await dbAll("SELECT * FROM coupons ORDER BY created_at DESC");
-        res.json({ status: true, data: coupons });
+        const claimCounts = await dbAll("SELECT coupon_id, COUNT(*) as count FROM user_claimed_coupons GROUP BY coupon_id");
+        const claimMap = {};
+        claimCounts.forEach(c => { claimMap[c.coupon_id] = c.count; });
+        const enriched = coupons.map(c => ({
+            ...c,
+            total_claimed_count: claimMap[c.id] || 0
+        }));
+        res.json({ status: true, data: enriched });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
@@ -946,14 +953,34 @@ router.get('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
 
 router.post('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, is_public, start_date, end_date, max_per_user } = req.body;
+        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_claim_limit, is_public, start_date, end_date, max_per_user } = req.body;
         if (!code || !discount_value) return res.status(400).json({ status: false, message: "Kode dan nilai diskon wajib diisi." });
+
+        const cleanCode = code.trim().toUpperCase();
+        const existing = await dbGet("SELECT id FROM coupons WHERE UPPER(code) = ?", [cleanCode]);
+        if (existing) {
+            return res.status(400).json({ status: false, message: `Kode kupon "${cleanCode}" sudah digunakan. Silakan gunakan kode lain.` });
+        }
 
         const couponId = `cpn_${Date.now()}`;
         await dbRun(`
-            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, used_count, is_active, is_public, start_date, end_date, max_per_user, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, ?, ?, ?)
-        `, [couponId, code.trim().toUpperCase(), discount_type || 'fixed', Number(discount_value), Number(min_order_amount) || 0, Number(max_discount_amount) || 0, Number(max_usage_limit) || 100, is_public !== undefined ? Number(is_public) : 1, start_date || null, end_date || null, Number(max_per_user) || 1, new Date().toISOString()]);
+            INSERT INTO coupons (id, code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_claim_limit, used_count, is_active, is_public, start_date, end_date, max_per_user, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, ?, ?, ?)
+        `, [
+            couponId,
+            cleanCode,
+            discount_type || 'fixed',
+            Number(discount_value),
+            Number(min_order_amount) || 0,
+            Number(max_discount_amount) || 0,
+            Number(max_usage_limit) || 100,
+            Number(max_claim_limit) || Number(max_usage_limit) || 100,
+            is_public !== undefined ? Number(is_public) : 1,
+            start_date || null,
+            end_date || null,
+            Number(max_per_user) || 1,
+            new Date().toISOString()
+        ]);
 
         res.json({ status: true, message: "Kupon promo berhasil dibuat." });
     } catch (e) {
@@ -963,9 +990,56 @@ router.post('/admin/coupons', isAuthenticated, isAdmin, async (req, res) => {
 
 router.put('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { is_active } = req.body;
-        await dbRun("UPDATE coupons SET is_active = ? WHERE id = ?", [is_active, req.params.id]);
-        res.json({ status: true, message: "Status kupon berhasil diubah." });
+        const coupon = await dbGet("SELECT * FROM coupons WHERE id = ?", [req.params.id]);
+        if (!coupon) return res.status(404).json({ status: false, message: "Kupon tidak ditemukan." });
+
+        if (Object.keys(req.body).length === 1 && req.body.is_active !== undefined) {
+            await dbRun("UPDATE coupons SET is_active = ? WHERE id = ?", [Number(req.body.is_active), req.params.id]);
+            return res.json({ status: true, message: "Status kupon berhasil diubah." });
+        }
+
+        const { code, discount_type, discount_value, min_order_amount, max_discount_amount, max_usage_limit, max_claim_limit, is_public, start_date, end_date, max_per_user, is_active } = req.body;
+
+        if (code) {
+            const cleanCode = code.trim().toUpperCase();
+            const existing = await dbGet("SELECT id FROM coupons WHERE UPPER(code) = ? AND id != ?", [cleanCode, req.params.id]);
+            if (existing) {
+                return res.status(400).json({ status: false, message: `Kode kupon "${cleanCode}" sudah digunakan oleh kupon lain.` });
+            }
+        }
+
+        await dbRun(`
+            UPDATE coupons SET
+                code = COALESCE(?, code),
+                discount_type = COALESCE(?, discount_type),
+                discount_value = COALESCE(?, discount_value),
+                min_order_amount = COALESCE(?, min_order_amount),
+                max_discount_amount = COALESCE(?, max_discount_amount),
+                max_usage_limit = COALESCE(?, max_usage_limit),
+                max_claim_limit = COALESCE(?, max_claim_limit),
+                is_public = COALESCE(?, is_public),
+                start_date = ?,
+                end_date = ?,
+                max_per_user = COALESCE(?, max_per_user),
+                is_active = COALESCE(?, is_active)
+            WHERE id = ?
+        `, [
+            code ? code.trim().toUpperCase() : null,
+            discount_type || null,
+            discount_value !== undefined ? Number(discount_value) : null,
+            min_order_amount !== undefined ? Number(min_order_amount) : null,
+            max_discount_amount !== undefined ? Number(max_discount_amount) : null,
+            max_usage_limit !== undefined ? Number(max_usage_limit) : null,
+            max_claim_limit !== undefined ? Number(max_claim_limit) : null,
+            is_public !== undefined ? Number(is_public) : null,
+            start_date !== undefined ? (start_date || null) : coupon.start_date,
+            end_date !== undefined ? (end_date || null) : coupon.end_date,
+            max_per_user !== undefined ? Number(max_per_user) : null,
+            is_active !== undefined ? Number(is_active) : null,
+            req.params.id
+        ]);
+
+        res.json({ status: true, message: "Kupon promo berhasil diperbarui." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
@@ -973,6 +1047,7 @@ router.put('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
 
 router.delete('/admin/coupons/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
+        await dbRun("DELETE FROM user_claimed_coupons WHERE coupon_id = ?", [req.params.id]).catch(() => {});
         await dbRun("DELETE FROM coupons WHERE id = ?", [req.params.id]);
         res.json({ status: true, message: "Kupon berhasil dihapus." });
     } catch (e) {

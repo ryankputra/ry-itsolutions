@@ -398,6 +398,8 @@ export default function AdminPage() {
     end_date: ""
   });
   const [creatingCoupon, setCreatingCoupon] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
+  const [updatingCoupon, setUpdatingCoupon] = useState(false);
 
   // Referral Settings State
   const [refSettings, setRefSettings] = useState<any>({
@@ -601,6 +603,32 @@ export default function AdminPage() {
         loadCoupons();
       }
     } catch (e) { }
+  };
+
+  const handleUpdateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCoupon) return;
+    setUpdatingCoupon(true);
+    try {
+      const res = await fetch(`/api/admin/coupons/${editingCoupon.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(editingCoupon)
+      });
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
+        Swal.fire("Sukses", d.message, "success");
+        setEditingCoupon(null);
+        loadCoupons();
+      } else {
+        Swal.fire("Gagal", d?.message || "Gagal memperbarui kupon", "error");
+      }
+    } catch (e) {
+      Swal.fire("Error", "Gagal memperbarui kupon", "error");
+    } finally {
+      setUpdatingCoupon(false);
+    }
   };
 
   const loadRefSettings = async () => {
@@ -4257,187 +4285,398 @@ export default function AdminPage() {
       {/* TAB 7: KUPON PROMO DISKON                                                 */}
       {/* ========================================================================= */}
       {activeTab === 'kupon-promo' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          <div className="lg:col-span-6 space-y-4">
-            <Card glass className="p-5 space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-ink">Buat Kupon Diskon Baru</h2>
-                <p className="text-xs text-ink-muted mt-0.5">Atur kode voucher potongan harga dan batas pemakaian.</p>
-              </div>
-
-              <form onSubmit={handleCreateCoupon} className="space-y-3">
-                <div className="grid grid-cols-2 gap-2.5">
-                  <Input
-                    label="Kode Kupon"
-                    placeholder="Misal: PROMO1212"
-                    value={newCoupon.code}
-                    onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                    required
-                  />
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-ink/80">Tipe Visibilitas</label>
-                    <select
-                      className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
-                      value={newCoupon.is_public}
-                      onChange={e => setNewCoupon({ ...newCoupon, is_public: e.target.value })}
-                    >
-                      <option value="1">Publik (Bisa Dipilih & Diklaim)</option>
-                      <option value="0">Rahasia (Ketik Manual)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-ink/80">Tipe Potongan</label>
-                    <select
-                      className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
-                      value={newCoupon.discount_type}
-                      onChange={e => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
-                    >
-                      <option value="fixed">Nominal Tetap (Rp)</option>
-                      <option value="percent">Persentase (%)</option>
-                    </select>
-                  </div>
-                  <Input
-                    label={newCoupon.discount_type === 'percent' ? "Nilai Diskon (%)" : "Nilai Diskon (Rp)"}
-                    type="number"
-                    placeholder={newCoupon.discount_type === 'percent' ? "10" : "20000"}
-                    value={newCoupon.discount_value}
-                    onChange={e => setNewCoupon({ ...newCoupon, discount_value: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <Input
-                    label="Min. Order (Rp)"
-                    type="number"
-                    placeholder="0"
-                    value={newCoupon.min_order_amount}
-                    onChange={e => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
-                  />
-                  <Input
-                    label="Maks. Diskon (Rp)"
-                    type="number"
-                    placeholder="0"
-                    value={newCoupon.max_discount_amount}
-                    onChange={e => setNewCoupon({ ...newCoupon, max_discount_amount: e.target.value })}
-                  />
-                  <Input
-                    label="Batas/User"
-                    type="number"
-                    placeholder="1"
-                    value={newCoupon.max_per_user}
-                    onChange={e => setNewCoupon({ ...newCoupon, max_per_user: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <Input
-                    label="Maksimal User yang Klaim"
-                    type="number"
-                    placeholder="100"
-                    value={newCoupon.max_claim_limit}
-                    onChange={e => setNewCoupon({ ...newCoupon, max_claim_limit: e.target.value })}
-                    required
-                  />
-                  <Input
-                    label="Total Kuota Pemakaian (Stok)"
-                    type="number"
-                    placeholder="100"
-                    value={newCoupon.max_usage_limit}
-                    onChange={e => setNewCoupon({ ...newCoupon, max_usage_limit: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[11px] font-semibold text-ink/80 block mb-1">Mulai (Opsional)</label>
-                    <input
-                      type="date"
-                      className="w-full h-10 rounded-lg border border-hairline px-2 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
-                      value={newCoupon.start_date}
-                      onChange={e => setNewCoupon({ ...newCoupon, start_date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-ink/80 block mb-1">Berakhir (Opsional)</label>
-                    <input
-                      type="date"
-                      className="w-full h-10 rounded-lg border border-hairline px-2 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
-                      value={newCoupon.end_date}
-                      onChange={e => setNewCoupon({ ...newCoupon, end_date: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" isLoading={creatingCoupon} className="w-full text-xs font-bold h-10 mt-1">
-                  + Terbitkan Kupon Promo
-                </Button>
-              </form>
-            </Card>
+        <div className="space-y-4">
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-canvas border border-hairline shadow-2xs">
+              <span className="text-[11px] font-semibold text-ink-muted block">Total Kupon</span>
+              <span className="text-lg sm:text-xl font-black text-ink">{coupons.length}</span>
+            </div>
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-canvas border border-hairline shadow-2xs">
+              <span className="text-[11px] font-semibold text-ink-muted block">Kupon Aktif</span>
+              <span className="text-lg sm:text-xl font-black text-emerald-600">
+                {coupons.filter(c => c.is_active === 1).length}
+              </span>
+            </div>
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-canvas border border-hairline shadow-2xs">
+              <span className="text-[11px] font-semibold text-ink-muted block">Total Terklaim</span>
+              <span className="text-lg sm:text-xl font-black text-blue-600">
+                {coupons.reduce((acc, c) => acc + (Number(c.total_claimed_count) || 0), 0)} User
+              </span>
+            </div>
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-canvas border border-hairline shadow-2xs">
+              <span className="text-[11px] font-semibold text-ink-muted block">Total Dipakai</span>
+              <span className="text-lg sm:text-xl font-black text-primary">
+                {coupons.reduce((acc, c) => acc + (Number(c.used_count) || 0), 0)} Order
+              </span>
+            </div>
           </div>
 
-          <div className="lg:col-span-6 space-y-4">
-            <Card glass className="p-5 space-y-3.5">
-              <h2 className="text-base font-bold text-ink">Daftar Kupon Promo Aktif</h2>
-              {loadingCoupons ? <p className="text-xs text-ink-muted">Memuat kupon...</p> : coupons.length === 0 ? (
-                <p className="text-xs text-ink-muted py-6 text-center border border-dashed rounded-xl">Belum ada kupon promo yang dibuat.</p>
-              ) : (
-                <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
-                  {coupons.map(c => (
-                    <div key={c.id} className={`p-3 rounded-xl border bg-canvas flex flex-col justify-between gap-2 ${c.is_active ? 'border-primary/40' : 'border-hairline opacity-60'}`}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-xs text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+            {/* Form Terbitkan Kupon */}
+            <div className="lg:col-span-5 space-y-4">
+              <Card glass className="p-4 sm:p-5 space-y-4">
+                <div>
+                  <h2 className="text-base font-bold text-ink flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary"></span>
+                    Buat Kupon Diskon Baru
+                  </h2>
+                  <p className="text-xs text-ink-muted mt-0.5">Atur kode voucher potongan harga dan batas pemakaian.</p>
+                </div>
+
+                <form onSubmit={handleCreateCoupon} className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <Input
+                      label="Kode Kupon"
+                      placeholder="Misal: PROMOHEMAT"
+                      value={newCoupon.code}
+                      onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                      required
+                    />
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-ink/80">Tipe Visibilitas</label>
+                      <select
+                        className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
+                        value={newCoupon.is_public}
+                        onChange={e => setNewCoupon({ ...newCoupon, is_public: e.target.value })}
+                      >
+                        <option value="1">Publik (Bisa Diklaim Pengguna)</option>
+                        <option value="0">Rahasia (Ketik Manual Saat Checkout)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-ink/80">Tipe Potongan</label>
+                      <select
+                        className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
+                        value={newCoupon.discount_type}
+                        onChange={e => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
+                      >
+                        <option value="fixed">Nominal Tetap (Rp)</option>
+                        <option value="percent">Persentase (%)</option>
+                      </select>
+                    </div>
+                    <Input
+                      label={newCoupon.discount_type === 'percent' ? "Nilai Diskon (%)" : "Nilai Diskon (Rp)"}
+                      type="number"
+                      placeholder={newCoupon.discount_type === 'percent' ? "10" : "20000"}
+                      value={newCoupon.discount_value}
+                      onChange={e => setNewCoupon({ ...newCoupon, discount_value: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Input
+                      label="Min. Order (Rp)"
+                      type="number"
+                      placeholder="0"
+                      value={newCoupon.min_order_amount}
+                      onChange={e => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
+                    />
+                    <Input
+                      label="Maks. Diskon (Rp)"
+                      type="number"
+                      placeholder="0 (unlimited)"
+                      value={newCoupon.max_discount_amount}
+                      onChange={e => setNewCoupon({ ...newCoupon, max_discount_amount: e.target.value })}
+                    />
+                    <Input
+                      label="Batas/User (x)"
+                      type="number"
+                      placeholder="1"
+                      value={newCoupon.max_per_user}
+                      onChange={e => setNewCoupon({ ...newCoupon, max_per_user: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <Input
+                      label="Maksimal User Klaim"
+                      type="number"
+                      placeholder="100"
+                      value={newCoupon.max_claim_limit}
+                      onChange={e => setNewCoupon({ ...newCoupon, max_claim_limit: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="Total Kuota Stok (Pakai)"
+                      type="number"
+                      placeholder="100"
+                      value={newCoupon.max_usage_limit}
+                      onChange={e => setNewCoupon({ ...newCoupon, max_usage_limit: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[11px] font-semibold text-ink/80 block mb-1">Mulai Berlaku (Opsional)</label>
+                      <input
+                        type="date"
+                        className="w-full h-10 rounded-xl border border-hairline px-2.5 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                        value={newCoupon.start_date}
+                        onChange={e => setNewCoupon({ ...newCoupon, start_date: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-ink/80 block mb-1">Berakhir Pada (Opsional)</label>
+                      <input
+                        type="date"
+                        className="w-full h-10 rounded-xl border border-hairline px-2.5 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                        value={newCoupon.end_date}
+                        onChange={e => setNewCoupon({ ...newCoupon, end_date: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <Button type="submit" isLoading={creatingCoupon} className="w-full text-xs font-bold h-11 mt-1 shadow-sm">
+                    + Terbitkan Kupon Promo
+                  </Button>
+                </form>
+              </Card>
+            </div>
+
+            {/* Daftar Kupon Aktif */}
+            <div className="lg:col-span-7 space-y-4">
+              <Card glass className="p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-ink">Daftar Kupon Promo</h2>
+                  <span className="text-xs text-ink-muted font-medium">{coupons.length} kupon terdaftar</span>
+                </div>
+
+                {loadingCoupons ? (
+                  <p className="text-xs text-ink-muted py-6 text-center">Memuat kupon...</p>
+                ) : coupons.length === 0 ? (
+                  <p className="text-xs text-ink-muted py-8 text-center border border-dashed border-hairline rounded-2xl">
+                    Belum ada kupon promo yang dibuat.
+                  </p>
+                ) : (
+                  <div className="space-y-3 max-h-[640px] overflow-y-auto pr-0.5">
+                    {coupons.map(c => (
+                      <div
+                        key={c.id}
+                        className={`p-3.5 rounded-2xl border bg-canvas transition-all flex flex-col gap-2.5 ${
+                          c.is_active ? 'border-primary/30 shadow-xs' : 'border-hairline opacity-65'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center flex-wrap gap-1.5">
+                            <span className="font-mono font-black text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
                               {c.code}
                             </span>
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               c.is_public === 1 || c.is_public === true || c.is_public === '1'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
                             }`}>
-                              {c.is_public === 1 || c.is_public === true || c.is_public === '1' ? 'Publik (Wajib Klaim)' : 'Kode Rahasia'}
+                              {c.is_public === 1 || c.is_public === true || c.is_public === '1' ? 'Publik' : 'Rahasia'}
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              c.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-slate-200 text-slate-600'
+                            }`}>
+                              {c.is_active ? 'Aktif' : 'Nonaktif'}
                             </span>
                           </div>
-                          <p className="font-bold text-xs text-ink mt-1.5">
-                            Diskon: {c.discount_type === 'percent' ? `${c.discount_value}%` : `Rp ${Number(c.discount_value).toLocaleString('id-ID')}`}
-                          </p>
-                          <p className="text-[11px] text-ink-muted mt-0.5">
-                            Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Batas/User: {c.max_per_user || 1}x
-                          </p>
-                          <div className="flex flex-wrap gap-2 text-[11px] text-ink-muted mt-1">
-                            <span className="bg-primary/5 px-2 py-0.5 rounded border border-primary/10 font-medium">
-                              Maks. Klaim: <b className="text-primary">{c.max_claim_limit || 100}</b> User
-                            </span>
-                            <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-medium">
-                              Terpakai: <b className="text-ink">{c.used_count}</b>/{c.max_usage_limit}
-                            </span>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingCoupon({ ...c })}
+                              className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCoupon(c.id, c.is_active)}
+                              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                                c.is_active
+                                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
+                                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                              }`}
+                            >
+                              {c.is_active ? 'Matikan' : 'Aktifkan'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCoupon(c.id)}
+                              className="px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors"
+                            >
+                              Hapus
+                            </button>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleToggleCoupon(c.id, c.is_active)}
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${c.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
-                          >
-                            {c.is_active ? 'Aktif' : 'Nonaktif'}
-                          </button>
-                          <button onClick={() => handleDeleteCoupon(c.id)} className="text-xs font-bold text-rose-600 hover:text-rose-800 p-1">
-                            Hapus
-                          </button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <p className="font-bold text-ink">
+                              Diskon: {c.discount_type === 'percent' ? `${c.discount_value}%` : `Rp ${Number(c.discount_value).toLocaleString('id-ID')}`}
+                              {c.max_discount_amount > 0 && <span className="text-[10px] font-normal text-ink-muted ml-1">(Maks Rp {Number(c.max_discount_amount).toLocaleString('id-ID')})</span>}
+                            </p>
+                            <p className="text-[11px] text-ink-muted mt-0.5">
+                              Min. Order: Rp {Number(c.min_order_amount || 0).toLocaleString('id-ID')} • Batas/User: {c.max_per_user || 1}x
+                            </p>
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap gap-1.5 text-[11px]">
+                              <span className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10 font-medium text-ink">
+                                Klaim: <b className="text-primary">{c.total_claimed_count || 0}</b>/{c.max_claim_limit || 100} User
+                              </span>
+                              <span className="bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-md border border-hairline font-medium text-ink">
+                                Pakai: <b className="text-ink">{c.used_count || 0}</b>/{c.max_usage_limit || 100} Trx
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-ink-muted mt-1">
+                              Periode: {c.start_date ? c.start_date.split('T')[0] : 'Kapan saja'} s/d {c.end_date ? c.end_date.split('T')[0] : 'Selamanya'}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </div>
           </div>
+
+          {/* Modal Edit Kupon */}
+          {editingCoupon && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+              <div className="bg-canvas border border-hairline w-full max-w-md rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+                  <h3 className="font-bold text-sm sm:text-base text-ink">Edit Kupon Promo</h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCoupon(null)}
+                    className="text-xs font-bold text-ink-muted hover:text-ink p-1"
+                  >
+                    Batal
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdateCoupon} className="space-y-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Input
+                      label="Kode Kupon"
+                      value={editingCoupon.code}
+                      onChange={e => setEditingCoupon({ ...editingCoupon, code: e.target.value.toUpperCase() })}
+                      required
+                    />
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-ink/80">Tipe Visibilitas</label>
+                      <select
+                        className="w-full h-10 rounded-xl border border-hairline px-2.5 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                        value={editingCoupon.is_public}
+                        onChange={e => setEditingCoupon({ ...editingCoupon, is_public: Number(e.target.value) })}
+                      >
+                        <option value="1">Publik</option>
+                        <option value="0">Rahasia</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-ink/80">Tipe Diskon</label>
+                      <select
+                        className="w-full h-10 rounded-xl border border-hairline px-2.5 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                        value={editingCoupon.discount_type}
+                        onChange={e => setEditingCoupon({ ...editingCoupon, discount_type: e.target.value })}
+                      >
+                        <option value="fixed">Nominal (Rp)</option>
+                        <option value="percent">Persen (%)</option>
+                      </select>
+                    </div>
+                    <Input
+                      label="Nilai Diskon"
+                      type="number"
+                      value={editingCoupon.discount_value}
+                      onChange={e => setEditingCoupon({ ...editingCoupon, discount_value: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Input
+                      label="Min. Order"
+                      type="number"
+                      value={editingCoupon.min_order_amount}
+                      onChange={e => setEditingCoupon({ ...editingCoupon, min_order_amount: e.target.value })}
+                    />
+                    <Input
+                      label="Maks. Diskon"
+                      type="number"
+                      value={editingCoupon.max_discount_amount}
+                      onChange={e => setEditingCoupon({ ...editingCoupon, max_discount_amount: e.target.value })}
+                    />
+                    <Input
+                      label="Batas/User"
+                      type="number"
+                      value={editingCoupon.max_per_user}
+                      onChange={e => setEditingCoupon({ ...editingCoupon, max_per_user: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Input
+                      label="Maks. Klaim"
+                      type="number"
+                      value={editingCoupon.max_claim_limit}
+                      onChange={e => setEditingCoupon({ ...editingCoupon, max_claim_limit: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="Kuota Stok"
+                      type="number"
+                      value={editingCoupon.max_usage_limit}
+                      onChange={e => setEditingCoupon({ ...editingCoupon, max_usage_limit: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-ink/80 block mb-1">Mulai</label>
+                      <input
+                        type="date"
+                        className="w-full h-10 rounded-xl border border-hairline px-2.5 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                        value={editingCoupon.start_date ? editingCoupon.start_date.split('T')[0] : ''}
+                        onChange={e => setEditingCoupon({ ...editingCoupon, start_date: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-ink/80 block mb-1">Berakhir</label>
+                      <input
+                        type="date"
+                        className="w-full h-10 rounded-xl border border-hairline px-2.5 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                        value={editingCoupon.end_date ? editingCoupon.end_date.split('T')[0] : ''}
+                        onChange={e => setEditingCoupon({ ...editingCoupon, end_date: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingCoupon(null)}
+                      className="px-3.5 py-2 rounded-xl border border-hairline text-xs font-bold text-ink hover:bg-canvas"
+                    >
+                      Batal
+                    </button>
+                    <Button type="submit" isLoading={updatingCoupon} className="px-4 py-2 text-xs font-bold">
+                      Simpan Perubahan
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

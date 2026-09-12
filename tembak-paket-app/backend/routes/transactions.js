@@ -276,6 +276,33 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
             }).catch(() => {});
         } catch (e) {}
     }
+
+    // Record Coupon usage if applied on this QRIS transaction
+    if (trx.coupon_code) {
+        try {
+            const cleanCouponCode = trx.coupon_code.trim().toUpperCase();
+            const coupon = await dbGet("SELECT * FROM coupons WHERE UPPER(code) = ?", [cleanCouponCode]);
+            if (coupon) {
+                await dbRun("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [coupon.id]);
+                const usgId = `usg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+                await dbRun("INSERT INTO coupon_usages (id, coupon_id, userId, trxId, discount_amount, used_at) VALUES (?, ?, ?, ?, ?, ?)", [
+                    usgId,
+                    coupon.id,
+                    trx.userId,
+                    trx.id,
+                    trx.discount_amount || 0,
+                    new Date().toISOString()
+                ]);
+                const currentUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [coupon.id, trx.userId]);
+                if (currentUsage && currentUsage.count >= (coupon.max_per_user || 1)) {
+                    await dbRun("DELETE FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [coupon.id, trx.userId]);
+                }
+            }
+        } catch (couponErr) {
+            console.error("[QRIS Coupon Usage Error]", couponErr.message);
+        }
+    }
+
     return true;
 }
 
@@ -748,7 +775,10 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 try {
                     await dbRun("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?", [appliedCoupon.id]);
                     await dbRun("INSERT INTO coupon_usages (id, coupon_id, userId, trxId, discount_amount, used_at) VALUES (?, ?, ?, ?, ?, ?)", [`usg_${Date.now()}`, appliedCoupon.id, req.session.userId, trxId, discountAmount, new Date().toISOString()]);
-                    await dbRun("DELETE FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [appliedCoupon.id, req.session.userId]);
+                    const currentUsage = await dbGet("SELECT COUNT(*) as count FROM coupon_usages WHERE coupon_id = ? AND userId = ?", [appliedCoupon.id, req.session.userId]);
+                    if (currentUsage && currentUsage.count >= (appliedCoupon.max_per_user || 1)) {
+                        await dbRun("DELETE FROM user_claimed_coupons WHERE coupon_id = ? AND userId = ?", [appliedCoupon.id, req.session.userId]);
+                    }
                 } catch (e) {}
             }
 
