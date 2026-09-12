@@ -23,10 +23,16 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
     try {
+      const activeRef = typeof window !== "undefined"
+        ? (new URLSearchParams(window.location.search).get("ref") || localStorage.getItem("ryy_ref_code") || "")
+        : "";
       const res = await fetch(`${API_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential: credentialResponse.credential }),
+        body: JSON.stringify({
+          credential: credentialResponse.credential,
+          referral_code: activeRef ? activeRef.toUpperCase() : undefined,
+        }),
         credentials: "include",
       });
       const data = await res.json();

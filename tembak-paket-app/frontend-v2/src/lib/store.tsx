@@ -80,6 +80,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
   const [ceirgoDisplaySettings, setCeirgoDisplaySettings] = useState({ cekCeir: [] as string[], barcode: [] as string[] });
 
+  // Capture & persist referral code from URL query (?ref=...)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get("ref");
+      if (ref && ref.trim()) {
+        window.localStorage.setItem("ryy_ref_code", ref.trim().toUpperCase());
+      }
+    } catch {}
+  }, []);
+
   // Auto recovery for ChunkLoadError (stale Next.js build cache in browser tab)
   useEffect(() => {
     if (typeof window === "undefined") return;

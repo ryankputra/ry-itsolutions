@@ -27,6 +27,6 @@
   "/(main)/unblock-imei/page": "app/(main)/unblock-imei/page.js",
   "/(main)/videos/page": "app/(main)/videos/page.js",
   "/(main)/vouchers/page": "app/(main)/vouchers/page.js",
-  "/check-payment/route": "app/check-payment/route.js",
-  "/create-qris/route": "app/create-qris/route.js"
+  "/create-qris/route": "app/create-qris/route.js",
+  "/check-payment/route": "app/check-payment/route.js"
 }

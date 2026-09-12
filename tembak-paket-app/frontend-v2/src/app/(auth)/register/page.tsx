@@ -24,17 +24,27 @@ function RegisterForm() {
   const { setUser } = useApp();
 
   useEffect(() => {
-    if (refParam) setReferralCode(refParam.toUpperCase());
+    const initialRef = refParam || (typeof window !== "undefined" ? localStorage.getItem("ryy_ref_code") || "" : "");
+    if (initialRef) {
+      setReferralCode(initialRef.toUpperCase());
+      if (typeof window !== "undefined") {
+        localStorage.setItem("ryy_ref_code", initialRef.toUpperCase());
+      }
+    }
   }, [refParam]);
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     setError("");
     try {
+      const activeRef = referralCode.trim() || (typeof window !== "undefined" ? localStorage.getItem("ryy_ref_code") || "" : "");
       const res = await fetch(`${API_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential: credentialResponse.credential }),
+        body: JSON.stringify({
+          credential: credentialResponse.credential,
+          referral_code: activeRef ? activeRef.toUpperCase() : undefined,
+        }),
         credentials: "include",
       });
       const data = await res.json();

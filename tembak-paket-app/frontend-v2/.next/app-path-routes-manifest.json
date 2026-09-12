@@ -27,6 +27,6 @@
   "/(main)/unblock-imei/page": "/unblock-imei",
   "/(main)/videos/page": "/videos",
   "/(main)/vouchers/page": "/vouchers",
-  "/check-payment/route": "/check-payment",
-  "/create-qris/route": "/create-qris"
+  "/create-qris/route": "/create-qris",
+  "/check-payment/route": "/check-payment"
 }
