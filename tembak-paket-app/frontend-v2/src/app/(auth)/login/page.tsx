@@ -100,7 +100,12 @@ export default function LoginPage() {
         }),
         credentials: "include",
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error("Server sedang dalam proses sinkronisasi. Silakan coba sesaat lagi.");
+      }
       if (res.ok && data.status) {
         setUser(data.user);
         router.push("/dashboard");
@@ -108,7 +113,8 @@ export default function LoginPage() {
         setError(data.message || "Gagal masuk menggunakan Google.");
       }
     } catch (err: any) {
-      setError("Terjadi kesalahan saat otentikasi Google.");
+      console.error("Google Auth Error:", err);
+      setError(err?.message || "Terjadi kesalahan saat otentikasi Google.");
     } finally {
       setIsLoading(false);
     }
@@ -242,6 +248,7 @@ export default function LoginPage() {
             <label className="text-xs font-semibold text-slate-700">Email</label>
             <input
               type="email"
+              autoComplete="username email"
               placeholder="nama@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -265,6 +272,7 @@ export default function LoginPage() {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
