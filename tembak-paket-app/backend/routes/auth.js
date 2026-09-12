@@ -15,6 +15,7 @@ const SibApiV3Sdk = require('sib-api-v3-sdk');
 const { dbGet, dbRun, dbAll } = require('../config/db');
 const { isAuthenticated } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
+const { validateEmailActive } = require('../services/emailService');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
@@ -157,23 +158,54 @@ router.post('/auth/register', async (req, res) => {
     try {
         const { name, email, password, referral_code } = req.body;
         if (!name || !email || !password) return res.status(400).json({ status: false, message: "Nama, email, dan password wajib diisi." });
-        if (await dbGet('SELECT id FROM users WHERE email = ?', [email])) return res.status(409).json({ status: false, message: "Email sudah terdaftar." });
+
+        // Validasi format email, tolak domain disposable/palsu, dan pastikan MX server aktif
+        const emailCheck = await validateEmailActive(email);
+        if (!emailCheck.valid) {
+            return res.status(400).json({ status: false, message: emailCheck.message });
+        }
+
+        const validEmail = emailCheck.trimmedEmail;
+        if (await dbGet('SELECT id FROM users WHERE email = ?', [validEmail])) {
+            return res.status(409).json({ status: false, message: "Email sudah terdaftar." });
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const cleanName = (name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'RYY';
         const generatedRefCode = `${cleanName}${Math.floor(1000 + Math.random() * 9000)}`;
 
         let referredById = null;
+        let referrerName = null;
         if (referral_code) {
-            const referrer = await dbGet('SELECT id FROM users WHERE UPPER(referral_code) = ?', [referral_code.trim().toUpperCase()]);
-            if (referrer) referredById = referrer.id;
+            const referrer = await dbGet('SELECT id, name FROM users WHERE UPPER(referral_code) = ?', [referral_code.trim().toUpperCase()]);
+            if (referrer) {
+                referredById = referrer.id;
+                referrerName = referrer.name;
+            }
         }
 
-        const newUser = { id: `user_${Date.now()}`, name, email, password: hashedPassword, balance: 0, role: 'user', verifiedPhone: null, savedPhones: '[]', status: 'pending', createdAt: new Date().toISOString(), referral_code: generatedRefCode, referred_by: referredById };
+        // Pengguna baru via form langsung disetujui (status: 'approved')
+        const newUser = { id: `user_${Date.now()}`, name, email: validEmail, password: hashedPassword, balance: 0, role: 'user', verifiedPhone: null, savedPhones: '[]', status: 'approved', createdAt: new Date().toISOString(), referral_code: generatedRefCode, referred_by: referredById };
         await dbRun('INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', Object.values(newUser));
 
         sendTelegramNotification(
-            `<b>──────────────────────</b>\n<b>👤 Registrasi Baru Menunggu Persetujuan</b>\n<b>──────────────────────</b>\n<b>Metode:</b> 📝 Manual (Form Web)\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}\n<b>──────────────────────</b>\n<b>Harap setujui akun ini di Panel Admin.</b>`, 'admin'
+            `<b>──────────────────────</b>
+` +
+            `<b>🎉 Registrasi Pengguna Baru (Aktif)</b>
+` +
+            `<b>──────────────────────</b>
+` +
+            `<b>Metode:</b> 📝 Form Registrasi Web
+` +
+            `<b>Nama:</b> ${name}
+` +
+            `<b>Email:</b> ${validEmail}
+` +
+            `<b>Status:</b> ✅ Otomatis Aktif (Terverifikasi)
+` +
+            (referrerName ? `<b>Referral Dari:</b> ${referrerName} (ID: ${referredById})
+` : '') +
+            `<b>──────────────────────</b>`, 'admin'
         );
 
         // WhatsApp Notification to Admin
@@ -181,12 +213,23 @@ router.post('/auth/register', async (req, res) => {
             const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
             const adminPhones = await getAdminPhoneNumbers();
             const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-            const waAdminMsg = `*REGISTRASI PENGGUNA BARU (PENDING)*\n──────────────────────\n` +
-                `*Nama:* ${name}\n` +
-                `*Email:* ${email}\n` +
-                `*Metode:* Form Registrasi Web\n` +
-                `*Waktu:* ${timeStr}\n──────────────────────\n` +
-                `Harap tinjau & setujui akun ini di Panel Admin:\nhttps://ry-itsolutionts.web.id/admin`;
+            const waAdminMsg = `*NOTIFIKASI PENGGUNA BARU (WEB FORM)*
+──────────────────────
+` +
+                `*Nama:* ${name}
+` +
+                `*Email:* ${validEmail}
+` +
+                `*Status:* Otomatis Aktif (Terverifikasi)
+` +
+                `*Metode:* Form Registrasi Web
+` +
+                (referrerName ? `*Referral:* ${referrerName}
+` : '') +
+                `*Waktu:* ${timeStr}
+──────────────────────
+` +
+                `Panel Admin: https://ry-itsolutionts.web.id/admin`;
             for (const admPhone of (adminPhones || [])) {
                 sendTextMessage(admPhone, waAdminMsg).catch(e => console.error('[WA Admin Notify Register Error]', e.message));
             }
@@ -194,7 +237,7 @@ router.post('/auth/register', async (req, res) => {
             console.error('[WA Admin Notify Register Error]', waErr.message);
         }
 
-        res.status(201).json({ status: true, message: "Registrasi berhasil! Akun Anda sedang menunggu persetujuan dari Admin." });
+        res.status(201).json({ status: true, message: "Registrasi berhasil! Akun Anda telah aktif dan siap digunakan." });
     } catch (error) {
         console.error("Register error:", error);
         res.status(500).json({ status: false, message: "Terjadi kesalahan pada server." });
