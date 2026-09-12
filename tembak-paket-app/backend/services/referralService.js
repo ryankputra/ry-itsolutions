@@ -14,6 +14,9 @@ async function processReferralReward(trxId) {
         const buyer = await dbGet('SELECT id, name, referred_by FROM users WHERE id = ?', [trx.userId]);
         if (!buyer || !buyer.referred_by) return null;
 
+        // Prevent self-referral
+        if (buyer.referred_by === buyer.id) return null;
+
         // Prevent duplicate reward for the same transaction
         const existingReward = await dbGet('SELECT id FROM referral_rewards WHERE trx_id = ?', [trxId]);
         if (existingReward) return null;

@@ -72,7 +72,7 @@ async function getEffectiveMaintenanceStatus() {
 // 1. Google OAuth
 router.post('/auth/google', async (req, res) => {
     try {
-        const { credential } = req.body;
+        const { credential, referral_code } = req.body;
         if (!credential) return res.status(400).json({ status: false, message: 'Google Token diperlukan.' });
         if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'GANTI_DENGAN_GOOGLE_CLIENT_ID_ANDA') {
             return res.status(500).json({ status: false, message: 'Google Login belum dikonfigurasi oleh Admin.' });
@@ -94,11 +94,24 @@ router.post('/auth/google', async (req, res) => {
         if (!user) {
             const defaultPassword = await bcrypt.hash(crypto.randomBytes(8).toString('hex'), 10);
             const newId = `user_${Date.now()}`;
-            await dbRun('INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [newId, name, email, defaultPassword, 0, 'user', null, '[]', 'approved', new Date().toISOString()]);
+            const cleanName = (name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'RYY';
+            const generatedRefCode = `${cleanName}${Math.floor(1000 + Math.random() * 9000)}`;
+
+            let referredById = null;
+            let referrerName = null;
+            if (referral_code && typeof referral_code === 'string') {
+                const referrer = await dbGet('SELECT id, name FROM users WHERE UPPER(referral_code) = ?', [referral_code.trim().toUpperCase()]);
+                if (referrer) {
+                    referredById = referrer.id;
+                    referrerName = referrer.name;
+                }
+            }
+
+            await dbRun('INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [newId, name, email, defaultPassword, 0, 'user', null, '[]', 'approved', new Date().toISOString(), generatedRefCode, referredById]);
 
             user = await dbGet('SELECT * FROM users WHERE id = ?', [newId]);
-            sendTelegramNotification(`<b>🎉 User Baru Mendaftar</b>\n<b>Metode:</b> 🌐 Login via Google\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}`, 'admin');
+            sendTelegramNotification(`<b>🎉 User Baru Mendaftar</b>\n<b>Metode:</b> 🌐 Login via Google\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}${referrerName ? `\n<b>Referral Dari:</b> ${referrerName} (ID: ${referredById})` : ''}`, 'admin');
 
             // WhatsApp Notification to Admin
             try {

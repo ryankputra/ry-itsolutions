@@ -229,6 +229,13 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         await dbRun("UPDATE transactions SET status = ?, accessToken = ?, admin_note = ?, api_response = ? WHERE id = ?",
             [finalStatus, refId, adminNote, apiResponse, trx.id]);
 
+        if (finalStatus === "success") {
+            try {
+                const { processReferralReward } = require("../services/referralService");
+                processReferralReward(trx.id).catch(e => console.error("[Referral Error]", e.message));
+            } catch (e) {}
+        }
+
         sseSend(trx.userId, 'transaction_status', { id: trx.id, status: finalStatus, message: adminNote });
         sseSend(trx.userId, 'transaction_update', { id: trx.id, status: finalStatus, note: adminNote });
         sendTelegramNotification(`<b>⚡ Direct QRIS Paid & Auto CeirGO!</b>\n<b>Layanan:</b> ${trx.packageName}\n<b>IMEI:</b> <code>${trx.imei}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`, 'group');
@@ -569,6 +576,11 @@ router.post(['/purchase', '/purchase/non-otp'], isAuthenticated, async (req, res
             }
 
             await dbRun("UPDATE transactions SET status = ?, api_response = ?, kmspTrxId = ?, paymentDetails = ? WHERE id = ?", ['success', purchaseData.message || 'Sukses', purchaseData.data?.trx_id || null, paymentDetails, trxId]);
+
+            try {
+                const { processReferralReward } = require("../services/referralService");
+                processReferralReward(trxId).catch(e => console.error("[Referral Error]", e.message));
+            } catch (e) {}
 
             const maskedPhone = phone.slice(0, 4) + '****' + phone.slice(-3);
             sendTelegramNotification(`<b>✅ Transaksi Paket Baru!</b>\n──────────────────────\n<b>Pengguna:</b> ${user.name}\n<b>Paket:</b> ${pkg.name}\n<b>Nomor:</b> ${maskedPhone}\n<b>Status: Sukses</b>`);
