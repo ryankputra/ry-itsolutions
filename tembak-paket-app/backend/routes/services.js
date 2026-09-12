@@ -1011,7 +1011,7 @@ ${userRecentOrders.join('\n') || 'Belum ada pesanan'}
         // 2. Fetch Live Site Knowledge
         const imeiPackages = await dbAll("SELECT duration, price FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL ORDER BY price ASC");
         const coupons = await dbAll("SELECT code, discount_type, discount_value, min_order_amount FROM coupons WHERE is_active = 1");
-        const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('show_beli_paket', 'wa_admin_number', 'imei_speed_fast_status', 'imei_speed_slow_range', 'openai_api_key')");
+        const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('show_beli_paket', 'wa_admin_number', 'imei_speed_fast_status', 'imei_speed_slow_range', 'openai_api_key', 'gemini_api_key')");
         const settingsMap = {};
         (settingsRows || []).forEach(s => { settingsMap[s.key] = s.value; });
 
@@ -1040,52 +1040,100 @@ PANDUAN MENJAWAB:
 - Jika pengguna bertanya apakah kamu bisa ditanya di luar konteks, jawab dengan ramah dan antusias bahwa kamu adalah AI serba bisa yang siap diajak diskusi topik apa saja!
 - Format dengan markdown yang rapi (bolding, bullet points).`;
 
-        // 4. Try OpenAI API
+        // 4. Try Google Gemini API First (Preferred high-intelligence engine)
+        const geminiApiKey = settingsMap['gemini_api_key'] || process.env.GEMINI_API_KEY || '';
         const openaiApiKey = settingsMap['openai_api_key'] || process.env.OPENAI_API_KEY || '';
 
-        const messagesPayload = [{ role: 'system', content: systemPrompt }];
-        if (Array.isArray(history)) {
-            history.slice(-6).forEach(h => {
-                if (h && h.role && h.content) {
-                    messagesPayload.push({ role: h.role === 'user' ? 'user' : 'assistant', content: String(h.content) });
+        let aiReply = null;
+        let aiProvider = null;
+
+        if (geminiApiKey) {
+            try {
+                const contents = [];
+                if (Array.isArray(history)) {
+                    history.slice(-8).forEach(h => {
+                        if (h && h.role && h.content) {
+                            contents.push({
+                                role: h.role === 'user' ? 'user' : 'model',
+                                parts: [{ text: String(h.content) }]
+                            });
+                        }
+                    });
                 }
-            });
-        }
-        messagesPayload.push({ role: 'user', content: userQuery });
+                contents.push({
+                    role: 'user',
+                    parts: [{ text: userQuery }]
+                });
 
-        let openAiReply = null;
-        let quotaExhausted = false;
+                const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        systemInstruction: {
+                            parts: [{ text: systemPrompt }]
+                        },
+                        contents,
+                        generationConfig: {
+                            temperature: 0.7,
+                            maxOutputTokens: 1000
+                        }
+                    })
+                });
 
-        try {
-            const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${openaiApiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    messages: messagesPayload,
-                    temperature: 0.7,
-                    max_tokens: 800
-                })
-            });
-
-            const openAiData = await openAiRes.json();
-            if (openAiData?.choices?.[0]?.message?.content) {
-                openAiReply = openAiData.choices[0].message.content;
-            } else if (openAiData?.error?.code === 'credit_balance_exhausted' || openAiData?.error?.type === 'insufficient_quota') {
-                quotaExhausted = true;
+                const geminiData = await geminiRes.json();
+                if (geminiData?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    aiReply = geminiData.candidates[0].content.parts[0].text;
+                    aiProvider = 'gemini';
+                } else {
+                    console.warn('[Gemini] Response issue:', geminiData?.error || geminiData);
+                }
+            } catch (gErr) {
+                console.error('[Gemini] Fetch exception:', gErr.message);
             }
-        } catch (fetchErr) {
-            console.error('[OpenAI] Request error:', fetchErr.message);
         }
 
-        if (openAiReply) {
+        // Secondary: Try OpenAI API if Gemini was not available or failed
+        if (!aiReply && openaiApiKey) {
+            try {
+                const messagesPayload = [{ role: 'system', content: systemPrompt }];
+                if (Array.isArray(history)) {
+                    history.slice(-6).forEach(h => {
+                        if (h && h.role && h.content) {
+                            messagesPayload.push({ role: h.role === 'user' ? 'user' : 'assistant', content: String(h.content) });
+                        }
+                    });
+                }
+                messagesPayload.push({ role: 'user', content: userQuery });
+
+                const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openaiApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: messagesPayload,
+                        temperature: 0.7,
+                        max_tokens: 800
+                    })
+                });
+
+                const openAiData = await openAiRes.json();
+                if (openAiData?.choices?.[0]?.message?.content) {
+                    aiReply = openAiData.choices[0].message.content;
+                    aiProvider = 'openai';
+                }
+            } catch (fetchErr) {
+                console.error('[OpenAI] Request error:', fetchErr.message);
+            }
+        }
+
+        if (aiReply) {
             return res.json({
                 status: true,
-                provider: 'openai',
-                reply: openAiReply,
+                provider: aiProvider,
+                reply: aiReply,
                 isLoggedIn: isUserLoggedIn
             });
         }
