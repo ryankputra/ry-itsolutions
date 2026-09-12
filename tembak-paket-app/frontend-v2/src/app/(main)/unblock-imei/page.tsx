@@ -1,4 +1,5 @@
 "use client";
+import { BroadcastBanner } from "@/components/ui/BroadcastBanner";
 import React, { useState, useEffect, Suspense } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -37,7 +38,7 @@ function UnblockImeiContent() {
   const [success, setSuccess] = useState("");
   const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: "" });
-  const [announcement, setAnnouncement] = useState<{ message: string, bgColor?: string } | null>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
 
   // Coupon Promo & Voucher Modal State (Shopee Style)
   const [couponCode, setCouponCode] = useState("");
@@ -94,7 +95,13 @@ function UnblockImeiContent() {
         const isOpen = (typeof statusData.isOpen === 'boolean') ? statusData.isOpen : (statusData.service_status !== 'closed');
         setServiceStatus({ isOpen, note: statusData.note || "" });
       }
-      if (annData?.status && annData?.data?.message) setAnnouncement(annData.data);
+      if (annData?.status) {
+        if (Array.isArray(annData.announcements) && annData.announcements.length > 0) {
+          setAnnouncements(annData.announcements);
+        } else if (annData.data && annData.data.message) {
+          setAnnouncements([annData.data]);
+        }
+      }
       if (couponData?.status && Array.isArray(couponData.data)) setPublicCoupons(couponData.data);
       setLoading(false);
     });
@@ -487,17 +494,8 @@ function UnblockImeiContent() {
       </div>
 
       <Card glass className="p-6 space-y-6">
-        {announcement && (
-          <div
-            className="rounded-2xl p-4 text-white text-sm font-medium flex items-center gap-2"
-            style={{ backgroundColor: announcement.bgColor || '#0066cc' }}
-          >
-            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.455a20.89 20.89 0 01-1.503-3.819m3.165-.4c.594-.05 1.189-.125 1.78-.226a11.956 11.956 0 004.832-2.016m-6.612 2.642a12.02 12.02 0 01-1.78-.226m10.172-4.432A11.96 11.96 0 0013.91 5.34m0 0a11.97 11.97 0 00-3.57-1.22m3.57 1.22c.594.05 1.189.125 1.78.226m-1.78-.226c-1.19.1-2.38.25-3.57.446" />
-            </svg>
-            <span>{announcement.message}</span>
-          </div>
-        )}
+        {/* Broadcast & Announcement Multi-Item Carousel / Stack */}
+        <BroadcastBanner initialAnnouncements={announcements} />
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
           <h3 className="font-bold flex items-center gap-1.5 text-base">
             <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

@@ -168,14 +168,25 @@ router.get('/speed-pricing', async (req, res) => {
     res.redirect('/api/manual-services-pricing');
 });
 
-// 7. GET /api/user/announcement & /api/admin/config/public
-router.get('/user/announcement', async (req, res) => {
+// 7. GET /api/user/announcement & /api/user/announcements & /api/admin/config/public
+router.get(['/user/announcement', '/user/announcements'], async (req, res) => {
     try {
-        const announcement = await dbGet('SELECT * FROM announcements ORDER BY datetime(createdAt) DESC LIMIT 1');
+        const announcements = await dbAll('SELECT * FROM announcements WHERE is_active IS NULL OR is_active = 1 ORDER BY datetime(createdAt) DESC LIMIT 10');
         const bgRow = await dbGet("SELECT value FROM settings WHERE key = 'announcementBgColor'");
+        const defaultBg = bgRow && bgRow.value ? bgRow.value : '#0066cc';
+
+        const list = (announcements || []).map(a => ({
+            id: a.id || `ann_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            message: a.message,
+            bgColor: a.bgColor || defaultBg,
+            createdAt: a.createdAt
+        }));
+
         res.status(200).json({
             status: true,
-            data: announcement ? { message: announcement.message, bgColor: bgRow ? bgRow.value : '#dc2626' } : null
+            data: list.length > 0 ? list[0] : null,
+            announcements: list,
+            items: list
         });
     } catch (error) {
         res.status(500).json({ status: false, message: "Gagal mengambil pengumuman." });
@@ -184,13 +195,23 @@ router.get('/user/announcement', async (req, res) => {
 
 router.get(['/admin/config/public', '/config/public'], async (req, res) => {
     try {
-        const announcement = await dbGet('SELECT * FROM announcements ORDER BY datetime(createdAt) DESC LIMIT 1');
+        const announcements = await dbAll('SELECT * FROM announcements WHERE is_active IS NULL OR is_active = 1 ORDER BY datetime(createdAt) DESC LIMIT 10');
         const bgRow = await dbGet("SELECT value FROM settings WHERE key = 'announcementBgColor'");
         const maintenanceRow = await dbGet("SELECT value FROM settings WHERE key = 'maintenanceMode'");
+        const defaultBg = bgRow && bgRow.value ? bgRow.value : '#0066cc';
+
+        const list = (announcements || []).map(a => ({
+            id: a.id || `ann_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            message: a.message,
+            bgColor: a.bgColor || defaultBg,
+            createdAt: a.createdAt
+        }));
+
         res.status(200).json({
             status: true,
             data: {
-                announcement: announcement ? { message: announcement.message, bgColor: bgRow ? bgRow.value : '#dc2626' } : null,
+                announcement: list.length > 0 ? list[0] : null,
+                announcements: list,
                 maintenance: maintenanceRow ? maintenanceRow.value === 'true' : false
             }
         });

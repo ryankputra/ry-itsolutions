@@ -729,15 +729,36 @@ router.put('/admin/menu-settings', isAuthenticated, isAdmin, async (req, res) =>
 
 router.post('/admin/announcement', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { message, bgColor, isEnabled } = req.body;
-        if (message !== undefined) {
+        const { message, bgColor } = req.body;
+        if (message !== undefined && message.trim()) {
             const annId = `ann_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-            await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, message, new Date().toISOString()]);
-        }
-        if (bgColor) {
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [bgColor]);
+            const chosenBg = bgColor || '#0066cc';
+            await dbRun("INSERT INTO announcements (id, message, createdAt, bgColor, is_active) VALUES (?, ?, ?, ?, 1)", [annId, message.trim(), new Date().toISOString(), chosenBg]);
+            if (bgColor) {
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [chosenBg]);
+            }
+            sseBroadcast('announcement', { id: annId, message: message.trim(), bgColor: chosenBg });
         }
         res.json({ status: true, message: "Pengumuman berhasil diperbarui." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.get('/admin/announcements', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const list = await dbAll('SELECT * FROM announcements ORDER BY datetime(createdAt) DESC LIMIT 50');
+        res.json({ status: true, data: list });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.delete('/admin/announcement/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await dbRun('DELETE FROM announcements WHERE id = ?', [id]);
+        res.json({ status: true, message: 'Broadcast pengumuman berhasil dihapus.' });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
@@ -903,9 +924,10 @@ router.post('/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
         if (targetInApp) {
             const annId = `ann_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
             const inAppMessage = title ? `[${title}] ${message}${voucherCode ? ' (Gunakan Kupon: ' + voucherCode + ')' : ''}` : message;
-            await dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, inAppMessage, new Date().toISOString()]);
-            if (bgColor) await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [bgColor]);
-            sseBroadcast('announcement', { message: inAppMessage, bgColor });
+            const chosenBg = bgColor || '#0066cc';
+            await dbRun("INSERT INTO announcements (id, message, createdAt, bgColor, is_active) VALUES (?, ?, ?, ?, 1)", [annId, inAppMessage, new Date().toISOString(), chosenBg]);
+            if (bgColor) await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('announcementBgColor', ?)", [chosenBg]);
+            sseBroadcast('announcement', { id: annId, message: inAppMessage, bgColor: chosenBg });
         }
 
         if (targetTelegram) {

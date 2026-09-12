@@ -46,6 +46,8 @@ async function initializeDatabase() {
             await dbRun(`CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, packageId TEXT, packageName TEXT, platformFee REAL, originalPrice REAL, targetPhone TEXT, accessToken TEXT, paymentMethod TEXT, ewalletNumber TEXT, kmspTrxId TEXT, status TEXT NOT NULL, api_response TEXT, createdAt TEXT NOT NULL, paymentDetails TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
             await dbRun(`CREATE TABLE IF NOT EXISTS topups (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, baseAmount REAL NOT NULL, uniqueAmount REAL NOT NULL, status TEXT NOT NULL, createdAt TEXT NOT NULL, qrisBase64Image TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
             await dbRun(`CREATE TABLE IF NOT EXISTS announcements (id TEXT PRIMARY KEY, message TEXT NOT NULL, createdAt TEXT NOT NULL)`);
+            try { await dbRun("ALTER TABLE announcements ADD COLUMN bgColor TEXT"); } catch (e) { }
+            try { await dbRun("ALTER TABLE announcements ADD COLUMN is_active INTEGER DEFAULT 1"); } catch (e) { }
             await dbRun(`CREATE TABLE IF NOT EXISTS tutorialContent (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, content TEXT, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL, position INTEGER DEFAULT 0)`);
             await dbRun(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
 

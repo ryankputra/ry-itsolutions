@@ -10,7 +10,7 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "orders" | "promo" | "products" | "rewards" | "system">("all");
   const [transactions, setTransactions] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<any[]>([]);
-  const [announcement, setAnnouncement] = useState<any>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvoiceTrx, setSelectedInvoiceTrx] = useState<any>(null);
   const [imeiPackages, setImeiPackages] = useState<any[]>([]);
@@ -38,8 +38,12 @@ export default function NotificationsPage() {
         if (voucherData?.status && Array.isArray(voucherData.data)) {
           setVouchers(voucherData.data);
         }
-        if (configData?.status && configData.data?.announcement) {
-          setAnnouncement(configData.data.announcement);
+        if (configData?.status) {
+          if (Array.isArray(configData.data?.announcements) && configData.data.announcements.length > 0) {
+            setAnnouncements(configData.data.announcements);
+          } else if (configData.data?.announcement) {
+            setAnnouncements([configData.data.announcement]);
+          }
         }
         if (imeiData?.status && Array.isArray(imeiData.data)) {
           setImeiPackages(imeiData.data);
@@ -154,22 +158,24 @@ export default function NotificationsPage() {
     action: () => router.push("/games"),
   });
 
-  // 4. Server Announcement
-  if (announcement) {
-    notifications.push({
-      id: "announcement",
-      type: "system",
-      title: "Pengumuman Server Ry-ITSolutions",
-      description: announcement.message,
-      time: "Info Resmi",
-      icon: (
-        <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.455a20.89 20.89 0 01-1.503-3.819m3.165-.4c.594-.05 1.189-.125 1.78-.226a11.956 11.956 0 004.832-2.016m-6.612 2.642a12.02 12.02 0 01-1.78-.226m10.172-4.432A11.96 11.96 0 0013.91 5.34m0 0a11.97 11.97 0 00-3.57-1.22m3.57 1.22c.594.05 1.189.125 1.78.226m-1.78-.226c-1.19.1-2.38.25-3.57.446" />
-        </svg>
-      ),
-      iconBg: "bg-indigo-50 border-indigo-200",
-      actionText: "Cek Layanan",
-      action: () => router.push("/unblock-imei"),
+  // 4. Server Announcements (Multiple Broadcast Support)
+  if (announcements && announcements.length > 0) {
+    announcements.forEach((ann, idx) => {
+      notifications.push({
+        id: ann.id || `announcement_${idx}`,
+        type: "system",
+        title: "Pengumuman & Promo Ry-ITSolutions",
+        description: ann.message,
+        time: ann.createdAt ? new Date(ann.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Info Resmi",
+        icon: (
+          <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.455a20.89 20.89 0 01-1.503-3.819m3.165-.4c.594-.05 1.189-.125 1.78-.226a11.956 11.956 0 004.832-2.016m-6.612 2.642a12.02 12.02 0 01-1.78-.226m10.172-4.432A11.96 11.96 0 0013.91 5.34m0 0a11.97 11.97 0 00-3.57-1.22m3.57 1.22c.594.05 1.189.125 1.78.226m-1.78-.226c-1.19.1-2.38.25-3.57.446" />
+          </svg>
+        ),
+        iconBg: "bg-indigo-50 border-indigo-200",
+        actionText: "Cek Layanan",
+        action: () => router.push("/unblock-imei"),
+      });
     });
   }
 

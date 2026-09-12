@@ -9,7 +9,7 @@ import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
-import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -422,6 +422,51 @@ export default function AdminPage() {
     bgColor: "#0066cc"
   });
   const [broadcasting, setBroadcasting] = useState(false);
+  const [webBroadcasts, setWebBroadcasts] = useState<any[]>([]);
+  const [loadingWebBroadcasts, setLoadingWebBroadcasts] = useState(false);
+
+  const fetchWebBroadcasts = async () => {
+    setLoadingWebBroadcasts(true);
+    try {
+      const res = await fetch("/api/admin/announcements", { credentials: "include" });
+      const d = await safeJson(res);
+      if (d && d.status && Array.isArray(d.data)) {
+        setWebBroadcasts(d.data);
+      }
+    } catch (e) {
+    } finally {
+      setLoadingWebBroadcasts(false);
+    }
+  };
+
+  const handleDeleteWebBroadcast = async (id: string) => {
+    const resConfirm = await Swal.fire({
+      title: "Hapus Broadcast Web?",
+      text: "Pengumuman ini tidak akan ditampilkan lagi di website.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444"
+    });
+    if (!resConfirm.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/announcement/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      const d = await safeJson(res);
+      if (d && d.status) {
+        Swal.fire("Berhasil", "Broadcast pengumuman berhasil dihapus.", "success");
+        fetchWebBroadcasts();
+      } else {
+        Swal.fire("Gagal", d?.message || "Gagal menghapus pengumuman.", "error");
+      }
+    } catch (e) {
+      Swal.fire("Error", "Gagal menghubungi server.", "error");
+    }
+  };
 
   // Auto Deploy Trigger
   const startDeploy = async () => {
@@ -504,6 +549,7 @@ export default function AdminPage() {
       if (res.ok && d?.status) {
         Swal.fire("Sukses!", d.message, "success");
         setBroadcastData(prev => ({ ...prev, message: "", voucherCode: "" }));
+        fetchWebBroadcasts();
       } else {
         Swal.fire("Gagal", d.message || "Gagal mengirim broadcast.", "error");
       }
@@ -1388,6 +1434,7 @@ export default function AdminPage() {
         loadGatewayKeys();
       }
       if (activeTab === "tiket-bantuan") loadAdminTickets();
+      if (activeTab === "broadcast-promo") fetchWebBroadcasts();
       if (activeTab === "kupon-promo") loadCoupons();
       if (activeTab === "referral") loadRefSettings();
       if (activeTab === "ulasan-dummy") loadAdminReviews();
@@ -4612,6 +4659,76 @@ export default function AdminPage() {
                 Kirim Broadcast Promo
               </Button>
             </form>
+          </Card>
+
+          {/* Active In-App Broadcasts Manager */}
+          <Card glass className="p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-hairline pb-3">
+              <div>
+                <h3 className="text-base font-bold text-ink flex items-center gap-2">
+                  <Megaphone className="w-4 h-4 text-primary" />
+                  <span>Daftar Broadcast In-App Aktif di Website</span>
+                </h3>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Semua broadcast berikut ditampilkan di banner website user (bisa lebih dari 1 pengumuman dalam bentuk slider & daftar).
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchWebBroadcasts}
+                isLoading={loadingWebBroadcasts}
+                className="text-xs"
+              >
+                <RotateCw className="w-3.5 h-3.5 mr-1" />
+                Segarkan
+              </Button>
+            </div>
+
+            {webBroadcasts.length === 0 ? (
+              <div className="py-8 text-center text-ink-muted text-xs">
+                Belum ada broadcast in-app aktif di website.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {webBroadcasts.map((item, idx) => (
+                  <div
+                    key={item.id || idx}
+                    className="p-3.5 rounded-xl border border-hairline bg-canvas flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-ink/20 transition-all"
+                  >
+                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                      <div
+                        className="w-7 h-7 rounded-lg text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-black shadow-xs"
+                        style={{ backgroundColor: item.bgColor || '#0066cc' }}
+                      >
+                        {idx + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-ink leading-relaxed break-words">
+                          {item.message}
+                        </p>
+                        <div className="flex items-center gap-2 text-[10px] text-ink-muted mt-1">
+                          <span>
+                            {item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Baru saja'}
+                          </span>
+                          <span>•</span>
+                          <span className="font-mono text-primary font-bold">ID: {item.id}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteWebBroadcast(item.id)}
+                      className="text-xs shrink-0 self-end sm:self-center"
+                    >
+                      Hapus Dari Web
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       )}
