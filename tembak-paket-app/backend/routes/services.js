@@ -17,7 +17,129 @@ router.get('/system-version', (req, res) => {
     res.json({ status: true, version: APP_START_TIME });
 });
 
-// GET /api/services/status (Dynamic feature/service toggles)
+// GET /api/ai/knowledge (Autonomous Live Knowledge Engine for Ry-AI)
+router.get('/ai/knowledge', async (req, res) => {
+    try {
+        // 1. Live Packages (data, masa aktif, etc.)
+        const rawPackages = await dbAll(
+            "SELECT package_code, name, description, original_price, platform_fee, category, isVisible, payment_methods, isResellerOnly FROM packages WHERE isVisible = 1 ORDER BY position ASC, rowid ASC"
+        );
+        const packages = (rawPackages || []).map(pkg => {
+            const platformFee = pkg.platform_fee || 0;
+            const totalPrice = (pkg.original_price || 0) + platformFee;
+            
+            let carrier = 'Lainnya';
+            const upperName = (pkg.name || '').toUpperCase();
+            const upperCode = (pkg.package_code || '').toUpperCase();
+            if (upperName.includes('XL') || upperCode.startsWith('XL')) carrier = 'XL';
+            else if (upperName.includes('TELKOMSEL') || upperName.includes('TSEL') || upperCode.startsWith('TSEL')) carrier = 'Telkomsel';
+            else if (upperName.includes('TRI') || upperName.includes('THREE') || upperCode.startsWith('TRI')) carrier = 'Tri';
+            else if (upperName.includes('INDOSAT') || upperName.includes('ISAT') || upperCode.startsWith('ISAT')) carrier = 'Indosat';
+            else if (upperName.includes('AXIS') || upperCode.startsWith('AXIS')) carrier = 'Axis';
+            else if (upperName.includes('SMARTFREN') || upperCode.startsWith('SF')) carrier = 'Smartfren';
+
+            let type = 'data';
+            if (upperName.includes('MASA AKTIF')) type = 'masa_aktif';
+            else if (upperName.includes('AKRAB')) type = 'akrab';
+            else if (upperName.includes('EDUKASI') || upperName.includes('CONFERENCE') || upperName.includes('BELAJAR')) type = 'kuota_belajar';
+            else if (upperName.includes('BONUS')) type = 'bonus';
+
+            return {
+                code: pkg.package_code,
+                name: pkg.name,
+                description: pkg.description || '',
+                price: totalPrice,
+                carrier,
+                type,
+                category: pkg.category || 'reguler'
+            };
+        });
+
+        // 2. Live IMEI Packages
+        const rawImei = await dbAll(
+            "SELECT id, duration, price, isVisible, allowed_speeds FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL ORDER BY price ASC"
+        );
+        const imeiPackages = (rawImei || []).map(ip => {
+            let allowedSpeeds = ['slow'];
+            if (ip.allowed_speeds) {
+                try {
+                    const parsed = typeof ip.allowed_speeds === 'string' ? JSON.parse(ip.allowed_speeds) : ip.allowed_speeds;
+                    if (Array.isArray(parsed) && parsed.length > 0) allowedSpeeds = parsed;
+                } catch (e) {}
+            }
+            return {
+                id: ip.id,
+                duration: ip.duration,
+                price: ip.price || 0,
+                allowedSpeeds
+            };
+        });
+
+        // 3. Live Active Coupons
+        const rawCoupons = await dbAll(
+            "SELECT code, discount_type, discount_value, min_order_amount, max_discount_amount FROM coupons WHERE is_active = 1"
+        );
+        const coupons = (rawCoupons || []).map(c => ({
+            code: c.code,
+            discountType: c.discount_type,
+            discountValue: c.discount_value,
+            minOrder: c.min_order_amount || 0,
+            maxDiscount: c.max_discount_amount || 0
+        }));
+
+        // 4. Live Announcements
+        const rawAnnouncements = await dbAll(
+            "SELECT id, message, bgColor, createdAt FROM announcements WHERE is_active = 1 ORDER BY createdAt DESC LIMIT 5"
+        );
+
+        // 5. Relevant Settings
+        const rawSettings = await dbAll(
+            "SELECT key, value FROM settings WHERE key IN ('wa_admin_number', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'price_imei_1_bln', 'price_imei_3_bln', 'price_imei_permanen', 'topupOptions')"
+        );
+        const settingsMap = {};
+        (rawSettings || []).forEach(s => { settingsMap[s.key] = s.value; });
+
+        res.setHeader('Cache-Control', 'public, max-age=30');
+        return res.json({
+            status: true,
+            updatedAt: new Date().toISOString(),
+            packages,
+            imeiPackages,
+            coupons,
+            announcements: rawAnnouncements || [],
+            gateway: {
+                name: 'Payment Gateway GoPay & Dynamic QRIS SaaS',
+                activationFee: 35000,
+                renewalFee: 10000,
+                transactionFee: 0,
+                settlement: 'Direct Settlement Instan ke Rekening GoPay/GoBiz Pemilik',
+                features: ['Dynamic QRIS', 'Webhook Real-time (0.2-0.5s)', 'HMAC Security', 'No PT/CV Required']
+            },
+            topup: {
+                minDeposit: 10000,
+                adminFee: 0,
+                methods: 'Dynamic QRIS Otomatis 24 Jam (Semua Bank & E-Wallet)',
+                speed: '2 - 5 Detik Otomatis Masuk'
+            },
+            speeds: {
+                fast: { status: settingsMap['imei_speed_fast_status'] || 'hidden', range: settingsMap['imei_speed_fast_range'] || 'menitan' },
+                semi: { status: settingsMap['imei_speed_semi_status'] || 'hidden', range: settingsMap['imei_speed_semi_range'] || '1-12 Jam' },
+                slow: { status: settingsMap['imei_speed_slow_status'] || 'active', range: settingsMap['imei_speed_slow_range'] || 'Max kirim 14:00 WIB, selesai max 00:00 WIB' }
+            },
+            cs: {
+                admin1: '088706611370',
+                admin2: settingsMap['wa_admin_number'] || '087767287284',
+                hours: '08.00 - 23.00 WIB'
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching AI knowledge:', error);
+        return res.status(500).json({ status: false, message: 'Gagal mengambil data knowledge base AI' });
+    }
+});
+
+
+// 2. GET /api/services/status
 router.get('/services/status', async (req, res) => {
     try {
         const rows = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'ceirgo_display_%' OR key LIKE 'imei_speed_%' OR key LIKE 'service_%'");
