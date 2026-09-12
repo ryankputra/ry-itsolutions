@@ -18,7 +18,7 @@ interface Message {
   }[];
 }
 
-const STORAGE_KEY = 'ry_ai_chat_history_v4';
+const STORAGE_KEY = 'ry_ai_chat_history_v5';
 
 const QUICK_PROMPTS = [
   { label: 'Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan syarat buka blokir IMEI 3 Bulan?' },
@@ -127,213 +127,271 @@ export default function AiChatPage() {
     return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   }
 
-  // Generate Accurate & Truthful AI Response (Strictly grounded in real DB)
+  // Generate Accurate, Domain-First AI Response (Weighted Multi-Intent Classifier)
   const generateAiResponse = (userText: string): { reply: string; actions?: Message['actions'] } => {
-    const q = userText.toLowerCase();
+    const q = userText.toLowerCase().trim();
 
     // Get live price for 3-month package if available
-    const pkg3Bulan = livePackages.find((p) => (p.name || p.duration || '').toLowerCase().includes('3 bulan'));
+    const pkg3Bulan = livePackages.find((p) => (p.name || p.duration || "").toLowerCase().includes("3 bulan"));
     const price3Bulan = pkg3Bulan ? Number(pkg3Bulan.price || 155000) : 155000;
-    const formattedPrice3Bln = `Rp ${price3Bulan.toLocaleString('id-ID')}`;
+    const formattedPrice3Bln = `Rp ${price3Bulan.toLocaleString("id-ID")}`;
 
-    // 1. QUESTION ABOUT FAST / KILAT / SPEED / ESTIMASI WAKTU
-    if (
-      q.includes('fast') ||
-      q.includes('kilat') ||
-      q.includes('cepat') ||
-      q.includes('express') ||
-      q.includes('berapa lama') ||
-      q.includes('selesai kapan') ||
-      q.includes('estimasi') ||
-      q.includes('jam berapa')
-    ) {
+    // -------------------------------------------------------------
+    // 1. CALCULATE WEIGHTED TOPIC SCORES
+    // -------------------------------------------------------------
+    const scores = {
+      gateway: 0,
+      imei: 0,
+      topup: 0,
+      voucher: 0,
+      rypoints: 0,
+      ceir: 0,
+      apple: 0,
+      cs: 0,
+      reseller: 0,
+      greetings: 0
+    };
+
+    // GATEWAY KEYWORDS
+    if (q.includes("payment gateway") || q.includes("gateway")) scores.gateway += 15;
+    if (q.includes("gopay") || q.includes("gobiz")) scores.gateway += 15;
+    if (q.includes("qris dinamis") || q.includes("dynamic qris")) scores.gateway += 14;
+    if (q.includes("saas")) scores.gateway += 10;
+    if (q.includes("webhook") || q.includes("api key") || q.includes("integrasi")) scores.gateway += 8;
+    if (q.includes("qris") && !q.includes("isi saldo") && !q.includes("topup") && !q.includes("deposit")) scores.gateway += 6;
+    if (scores.gateway > 0 && (q.includes("biaya") || q.includes("aktivasi") || q.includes("perpanjang") || q.includes("tarif") || q.includes("harga"))) {
+      scores.gateway += 10;
+    }
+
+    // TOPUP & RYPAY KEYWORDS
+    if (q.includes("topup") || q.includes("top up") || q.includes("isi saldo") || q.includes("deposit") || q.includes("tambah saldo")) scores.topup += 15;
+    if (q.includes("rypay") && !q.includes("potong")) scores.topup += 10;
+    if (q.includes("saldo") && !q.includes("gopay") && !q.includes("gateway")) scores.topup += 8;
+
+    // VOUCHER KEYWORDS
+    if (q.includes("voucher") || q.includes("kupon") || q.includes("diskon") || q.includes("promo") || q.includes("septembercerah")) scores.voucher += 15;
+
+    // RYPOINTS & KOIN KEYWORDS
+    if (q.includes("rypoints") || q.includes("koin") || q.includes("roda hoki") || q.includes("spin") || q.includes("trivia") || q.includes("tukar poin") || q.includes("poin")) scores.rypoints += 15;
+
+    // CEIR KEYWORDS
+    if (q.includes("ceir") || q.includes("kemenperin") || q.includes("database ceir") || q.includes("blacklist")) scores.ceir += 15;
+
+    // APPLE GARANSI KEYWORDS
+    if (q.includes("garansi apple") || q.includes("apple coverage") || q.includes("serial number") || q.includes("applecare") || q.includes("cek garansi")) scores.apple += 15;
+
+    // IMEI & SINYAL KEYWORDS
+    if (q.includes("unblock imei") || q.includes("buka imei") || q.includes("paket imei") || q.includes("buka blokir")) scores.imei += 15;
+    if (q.includes("imei") || q.includes("sinyal") || q.includes("no service") || q.includes("tidak ada layanan") || q.includes("baseband") || q.includes("begal")) scores.imei += 12;
+    if (q.includes("fast") || q.includes("kilat") || q.includes("permanen") || q.includes("bea cukai")) scores.imei += 8;
+
+    // CS & BANTUAN KEYWORDS
+    if (q.includes("cs") || q.includes("admin") || q.includes("customer support") || q.includes("whatsapp") || q.includes("wa admin") || q.includes("bantuan cs")) scores.cs += 12;
+
+    // RESELLER KEYWORDS
+    if (q.includes("reseller") || q.includes("mitra") || q.includes("agen") || q.includes("grosir") || q.includes("bulk")) scores.reseller += 15;
+
+    // GREETINGS
+    if (/^(halo|hai|hi|pagi|siang|sore|malam|assalamualaikum|ping|p)/i.test(q)) scores.greetings += 10;
+
+    // FIND HIGHEST SCORING DOMAIN
+    let bestDomain = "default";
+    let maxScore = 0;
+    for (const [dom, sc] of Object.entries(scores)) {
+      if (sc > maxScore) {
+        maxScore = sc;
+        bestDomain = dom;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 2. DISPATCH ACCORDING TO DETERMINED DOMAIN & SUB-INTENT
+    // -------------------------------------------------------------
+
+    // DOMAIN A: PAYMENT GATEWAY (GoPay & Dynamic QRIS SaaS)
+    if (bestDomain === "gateway") {
+      const isPricing = q.includes("biaya") || q.includes("harga") || q.includes("tarif") || q.includes("aktivasi") || q.includes("perpanjang") || q.includes("berapa");
+      const isApi = q.includes("api") || q.includes("webhook") || q.includes("curl") || q.includes("php") || q.includes("node") || q.includes("integrasi");
+
+      if (isPricing) {
+        return {
+          reply: `### Biaya & Ketentuan Payment Gateway GoPay & QRIS SaaS\n\nSolusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/WhatsApp, dan aplikasi Anda:\n\n• **Biaya Aktivasi Perdana**: **Rp 35.000** (Langsung aktif dan sudah termasuk masa aktif lisensi 30 hari penuh).\n• **Perpanjangan Bulanan**: Sangat terjangkau, hanya **Rp 10.000 / bulan** (bisa perpanjang manual atau auto-renew potong saldo RyPay).\n• **Fee Transaksi 0% (GRATIS)**: Tanpa potongan persenan per transaksi. 100% uang pembayaran pembeli masuk utuh ke rekening GoPay/GoBiz Anda.\n• **Direct Settlement Instan**: Uang langsung masuk detik itu juga ke akun GoPay pemilik tanpa perlu withdraw / mengendap di pihak ketiga.\n• **Pairing Tanpa Ribet**: Cukup masukkan nomor HP GoBiz & verifikasi OTP tanpa berkas legalitas PT/CV.`,
+          actions: [
+            { label: "Aktivasi Gateway (Rp 35.000)", href: "/gateway" },
+            { label: "Lihat Dokumentasi API", href: "/gateway" },
+          ],
+        };
+      }
+
+      if (isApi) {
+        return {
+          reply: `### Integrasi API & Webhook Callback Gateway\n\nRy-ITSolutions menyediakan REST API berkecepatan tinggi untuk menghubungkan pembayaran otomatis ke sistem Anda:\n\n• **Endpoint Buat QRIS**: \`POST /api/v1/gateway/create-qris\`\n• **Webhook Notification**: Mengirim notifikasi webhook secara real-time (\`0.2 - 0.5 detik\`) saat pembayaran sukses (\`payment.success\`).\n• **Keamanan Tinggi**: Dilengkapi HMAC-SHA256 signature verification.\n• **Contoh Kode**: Tersedia dokumentasi dan sampel integrasi siap pakai untuk cURL, PHP (Laravel/CI), Node.js, dan Python.\n\nSilakan kunjungi menu **Gateway** untuk mengaktifkan API Key Anda!`,
+          actions: [
+            { label: "Kelola API Key & Webhook", href: "/gateway" },
+          ],
+        };
+      }
+
       return {
-        reply: '### Informasi Kecepatan & Estimasi Unblock IMEI\n\nUntuk saat ini, opsi **Fast / Kilat sedang TIDAK TERSEDIA (nonaktif)**.\n\nLayanan unblock IMEI yang aktif saat ini adalah jalur **Reguler** dengan ketentuan pengerjaan:\n• **Batas Pengiriman Pesanan**: Maksimal pukul **14:00 WIB** setiap harinya.\n• **Estimasi Selesai**: Selesai di hari yang sama, maksimal pukul **00:00 WIB** (tengah malam).\n• Pesanan yang masuk di atas pukul 14:00 WIB akan diproses dalam antrean hari berikutnya.\n\nSemua pengerjaan diproses sesuai antrean sistem harian secara aman dan terverifikasi.',
+        reply: `### Fitur & Keunggulan Payment Gateway GoPay & QRIS\n\nSolusi otomatisasi transaksi digital tanpa biaya admin transaksi (0% Fee):\n\n1. **Aktivasi Terjangkau**: Biaya perdana **Rp 35.000** (aktif 30 hari), perpanjangan hanya **Rp 10.000 / bulan**.\n2. **Direct Settlement**: Pembayaran langsung masuk ke akun GoPay Merchant/GoBiz Anda secara real-time.\n3. **Webhook Super Cepat**: Callback webhook 0.2 - 0.5 detik untuk memproses order secara instan.\n4. **Dynamic QRIS**: Generate QRIS otomatis sesuai nominal unik transaksi.\n5. **Setup Cepat**: Tanpa persyaratan dokumen perusahaan PT/CV yang rumit.`,
         actions: [
-          { label: 'Buka Form IMEI', href: '/unblock-imei'},
-          { label: 'Tanya CS WhatsApp', href: 'https://wa.me/6288706611370', isExternal: true},
+          { label: "Buka Menu Gateway", href: "/gateway" },
+          { label: "Dokumentasi API", href: "/gateway" },
         ],
       };
     }
 
-    // 2. QUESTION ABOUT PERMANEN / RESMI / BEA CUKAI
-    if (
-      q.includes('permanen') ||
-      q.includes('permanent') ||
-      q.includes('resmi') ||
-      q.includes('bea cukai') ||
-      q.includes('pajak') ||
-      q.includes('kemenperin')
-    ) {
+    // DOMAIN B: TOP UP SALDO & RYPAY
+    if (bestDomain === "topup") {
+      const isFee = q.includes("biaya") || q.includes("admin") || q.includes("fee") || q.includes("gratis") || q.includes("potongan");
+
+      if (isFee) {
+        return {
+          reply: `### Biaya & Ketentuan Top Up RyPay\n\n• **Biaya Admin: Rp 0 (BEBAS BIAYA ADMIN)**.\n• **Minimal Top Up**: Mulai dari **Rp 10.000**.\n• **Metode Pembayaran**: Menggunakan **Dynamic QRIS Otomatis** yang mendukung seluruh Bank (BCA, Mandiri, BRI, BNI, BSI) & E-Wallet (GoPay, OVO, DANA, ShopeePay, LinkAja).\n• **Kecepatan Masuk**: Saldo RyPay otomatis bertambah dalam **2 - 5 detik** setelah QRIS dibayar (sistem aktif 24 jam nonstop).`,
+          actions: [
+            { label: "Top Up RyPay Sekarang", href: "/topup" },
+            { label: "Cek Riwayat Saldo", href: "/history" },
+          ],
+        };
+      }
+
       return {
-        reply: `### Ketentuan Paket Unblock IMEI\n\nDi Ry-ITSolutions **TIDAK ADA paket permanen maupun paket resmi Bea Cukai**.\n\nLayanan yang kami sediakan adalah:\n• **Paket 3 Bulan**: Mulai ${formattedPrice3Bln} per IMEI.\n• **Mendukung All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, dan Smartfren.\n• **Garansi Penuh 3 Bulan**: Jika sinyal hilang dalam masa 3 bulan, kami garansi proses ulang hingga sinyal aktif kembali.\n\nKami selalu transparan dan tidak menjanjikan paket permanen yang tidak realistis.`,
+        reply: `### Panduan Isi Saldo RyPay Otomatis (QRIS 24 Jam)\n\nRyPay adalah saldo dompet digital Anda di Ry-ITSolutions untuk memesan Unblock IMEI, aktivasi Gateway, dan layanan digital lainnya secara instan.\n\n**Cara Top Up:**\n1. Buka menu **Top Up** (\`/topup\`).\n2. Masukkan nominal deposit yang diinginkan (minimal Rp 10.000).\n3. Klik **Lanjut Pembayaran** untuk menampilkan kode QRIS dinamis.\n4. Scan QRIS dengan aplikasi m-Banking atau e-Wallet pilihan Anda.\n5. Selesai! Saldo otomatis masuk dalam 2-5 detik tanpa perlu konfirmasi manual ke admin.`,
         actions: [
-          { label: 'Order Paket 3 Bulan', href: '/unblock-imei'},
-          { label: 'Cek Status CEIR', href: '/cek-ceir'},
+          { label: "Isi Saldo RyPay", href: "/topup" },
+          { label: "Lihat Riwayat Transaksi", href: "/history" },
         ],
       };
     }
 
-    // 3. QUESTION ABOUT HARGA / BIAYA / TARIF / PAKET IMEI
-    if (
-      q.includes('harga') ||
-      q.includes('tarif') ||
-      q.includes('biaya') ||
-      q.includes('berapa') ||
-      q.includes('paket imei') ||
-      q.includes('daftar harga') ||
-      q.includes('pricelist')
-    ) {
+    // DOMAIN C: VOUCHER & KODE KUPON PROMO
+    if (bestDomain === "voucher") {
       return {
-        reply: `### Daftar Paket & Tarif Unblock IMEI\n\nPaket buka blokir IMEI yang tersedia di Ry-ITSolutions:\n\n• **Paket 3 Bulan**: **${formattedPrice3Bln}** / IMEI\n\n*(Catatan: Kami **TIDAK** menyediakan paket 1 bulan ataupun paket permanen/resmi).*\n\n**Spesifikasi Layanan:**\n• All Operator (Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren)\n• Garansi aktif selama masa paket 3 bulan\n• Syarat wajib: IC Baseband normal (muncul "Tidak Ada Layanan / No Service", bukan "Tidak Ada SIM")\n• Estimasi pengerjaan: Submit sebelum 14:00 WIB, selesai maksimal 00:00 WIB (jalur reguler)`,
+        reply: `### Kupon Promo & Voucher Diskon Aktif\n\nDapatkan potongan harga khusus untuk pesanan Anda di Ry-ITSolutions!\n\n🎟️ **KODE VOUCHER: \`SEPTEMBERCERAH\`**\n• **Besar Diskon**: Potongan langsung **Rp 5.000**.\n• **Syarat Belanja**: Minimal transaksi Rp 155.000.\n• **Ketersediaan**: Kuota promo terbatas per hari.\n\n**Cara Menggunakan:**\n1. Buka menu **Voucher** (\`/vouchers\`) lalu klik tombol **Klaim Voucher**.\n2. Atau masukkan kode \`SEPTEMBERCERAH\` langsung di kolom voucher saat checkout di halaman **Unblock IMEI** (\`/unblock-imei\`).`,
         actions: [
-          { label: 'Buka Form IMEI', href: '/unblock-imei'},
-          { label: 'Isi Saldo Akun', href: '/topup'},
+          { label: "Klaim Voucher di Menu", href: "/vouchers" },
+          { label: "Gunakan Saat Order IMEI", href: "/unblock-imei" },
         ],
       };
     }
 
-    // 4. GENERAL IMEI / SINYAL QUESTION
-    if (
-      q.includes('imei') ||
-      q.includes('sinyal') ||
-      q.includes('begal') ||
-      q.includes('unblock') ||
-      q.includes('no service') ||
-      q.includes('buka imei')
-    ) {
+    // DOMAIN D: RYPOINTS & KOIN REWARD
+    if (bestDomain === "rypoints") {
       return {
-        reply: `### Layanan Buka Blokir IMEI All Operator\n\nLayanan unblock IMEI Ry-ITSolutions memulihkan sinyal HP (iPhone / Android) yang hilang (*No Service*) akibat pemblokiran jaringan seluler.\n\n**Ketentuan & Paket Saat Ini:**\n• **Paket Tersedia**: Paket **3 Bulan** (**${formattedPrice3Bln}** per IMEI).\n• **Jalur Kecepatan**: Jalur **Reguler** (Kirim sebelum jam 14:00 WIB, selesai max jam 00:00 WIB). *Paket Fast sedang nonaktif.*\n• **All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren.\n• **Tanpa Paket Permanen**: Kami tidak menyediakan paket permanen / resmi bea cukai.\n• **Syarat Wajib**: Pastikan IC Baseband normal (muncul "Tidak Ada Layanan", bukan "Tidak Ada SIM").`,
+        reply: `### RyPoints (Koin Reward Loyalitas)\n\nRyPoints adalah program poin loyalitas dari Ry-ITSolutions yang bisa Anda tukarkan langsung menjadi potongan harga belanja saat checkout!\n\n💰 **Nilai Tukar**: **1 RyPoints = Rp 1** (Potong langsung ke total tagihan pesanan).\n\n**Cara Mengumpulkan RyPoints Gratis Setiap Hari:**\n1. **Check-In Harian**: Buka menu Game Koin (\`/games\`) dan klaim poin login harian.\n2. **Putar Roda Hoki**: Mainkan spin roda keberuntungan untuk memenangkan hingga ribuan RyPoints.\n3. **Kuis Trivia Harian**: Jawab pertanyaan seputar teknologi untuk mendapatkan bonus poin harian.\n4. **Ulasan Produk Bintang 5**: Berikan ulasan di halaman ulasan produk dan dapatkan bonus **+500 RyPoints** instan!`,
         actions: [
-          { label: 'Buka Form IMEI Sekarang', href: '/unblock-imei'},
-          { label: 'Cek Status CEIR', href: '/cek-ceir'},
+          { label: "Main Game & Koin", href: "/games" },
+          { label: "Belanja dengan RyPoints", href: "/unblock-imei" },
         ],
       };
     }
 
-    // 5. GOPAY PAYMENT GATEWAY & QRIS
-    if (
-      q.includes('gateway') ||
-      q.includes('gopay') ||
-      q.includes('qris') ||
-      q.includes('gobiz') ||
-      q.includes('pembayaran') ||
-      q.includes('saas')
-    ) {
+    // DOMAIN E: CEIR & GARANSI APPLE
+    if (bestDomain === "ceir" || bestDomain === "apple") {
+      if (bestDomain === "ceir" || q.includes("ceir") || q.includes("kemenperin")) {
+        return {
+          reply: `### Cek Status Database CEIR Kemenperin (100% Gratis)\n\nFitur diagnostik mandiri untuk mengecek apakah nomor IMEI HP Anda terdaftar resmi di basis data CEIR Kemenperin atau berstatus blokir (No Service):\n\n• **Biaya**: **100% GRATIS** tanpa biaya apapun.\n• **Proses**: Instan dalam 3 detik.\n• **Cara Cek**: Buka menu **Cek CEIR** (\`/cek-ceir\`), masukkan 15 digit nomor IMEI perangkat Anda, lalu klik Periksa.`,
+          actions: [
+            { label: "Cek Status CEIR Sekarang", href: "/cek-ceir" },
+            { label: "Buka Blokir IMEI", href: "/unblock-imei" },
+          ],
+        };
+      }
+
       return {
-        reply: '### Payment Gateway GoPay & Dynamic QRIS SaaS\n\nSolusi Payment Gateway otomatis yang dirancang khusus untuk pemilik website toko online, bot Telegram/WhatsApp, dan aplikasi digital.\n\n**Skema Biaya & Fitur Utama:**\n• **Biaya Aktivasi Perdana**: **Rp 35.000** (sudah termasuk masa aktif 30 hari penuh).\n• **Perpanjangan Bulanan**: Sangat terjangkau, hanya **Rp 10.000 / bulan** (tersedia manual & auto-renew potong saldo).\n• **Fee Transaksi 0%**: Bebas potongan pihak ketiga. 100% uang pembayaran masuk utuh ke akun GoPay Merchant / GoBiz Anda.\n• **Direct Settlement**: Uang langsung masuk ke GoPay Anda secara instan tanpa tertahan.\n• **Real-Time Webhook Callback**: Respon super cepat **0.2 - 0.5 detik** untuk approve pesanan otomatis.\n• **Pairing Sangat Mudah**: Cukup masukkan nomor HP GoBiz & OTP tanpa perlu ribet urus berkas legalitas PT/CV.\n• **Dokumentasi Lengkap**: Tersedia contoh integrasi cURL, PHP, Node.js, dan Python.',
+        reply: `### Cek Status Garansi AppleCare & Serial Number\n\nLayanan diagnostik resmi untuk memeriksa data garansi perangkat Apple Anda (iPhone, iPad, Mac, Apple Watch):\n\n• **Yang Diperiksa**: Masa aktif perlindungan AppleCare+, tanggal aktivasi perangkat, dan keaslian unit.\n• **Biaya**: **100% GRATIS**.\n• **Cara Cek**: Buka menu **Cek Garansi** (\`/cek-garansi\`), ketik Serial Number perangkat Anda, dan hasil laporan diagnostik langsung tampil.`,
         actions: [
-          { label: 'Coba Gateway GoPay', href: '/gateway'},
-          { label: 'Lihat Dokumentasi API', href: '/gateway'},
+          { label: "Cek Garansi Apple Sekarang", href: "/cek-garansi" },
+          { label: "Cek Status CEIR", href: "/cek-ceir" },
         ],
       };
     }
 
-    // 6. CEK GARANSI APPLE & CEIR
-    if (
-      q.includes('garansi') ||
-      q.includes('apple') ||
-      q.includes('coverage') ||
-      q.includes('serial') ||
-      q.includes('cek imei')
-    ) {
+    // DOMAIN F: UNBLOCK IMEI & SINYAL
+    if (bestDomain === "imei") {
+      const isSpeed = q.includes("fast") || q.includes("kilat") || q.includes("cepat") || q.includes("express") || q.includes("berapa lama") || q.includes("selesai kapan") || q.includes("estimasi") || q.includes("jam berapa");
+      const isPermanent = q.includes("permanen") || q.includes("permanent") || q.includes("resmi") || q.includes("bea cukai") || q.includes("pajak");
+      const isPrice = q.includes("harga") || q.includes("tarif") || q.includes("biaya") || q.includes("berapa") || q.includes("paket imei") || q.includes("pricelist");
+
+      if (isSpeed) {
+        return {
+          reply: `### Ketentuan Kecepatan & Estimasi Selesai Unblock IMEI\n\n• **Opsi Fast / Kilat**: Untuk saat ini sedang **NONAKTIF (TIDAK TERSEDIA)** demi menjaga kestabilan sistem antrean.\n• **Jalur Reguler (Aktif)**:\n  - **Batas Pengiriman Order**: Maksimal pukul **14:00 WIB** setiap hari.\n  - **Estimasi Selesai**: Selesai di hari yang sama, maksimal pukul **00:00 WIB** (tengah malam).\n  - Pesanan yang masuk di atas pukul 14:00 WIB akan diproses dalam antrean hari berikutnya.`,
+          actions: [
+            { label: "Buka Form Order IMEI", href: "/unblock-imei" },
+            { label: "Tanya CS WhatsApp", href: "https://wa.me/6288706611370", isExternal: true },
+          ],
+        };
+      }
+
+      if (isPermanent) {
+        return {
+          reply: `### Transparansi Layanan: Tidak Ada Paket Permanen / Bea Cukai\n\nDi Ry-ITSolutions kami selalu transparan:\n• Kami **TIDAK MENYEDIAKAN paket permanen ataupun paket resmi Bea Cukai**.\n• Layanan yang tersedia adalah **Paket 3 Bulan** (mulai ${formattedPrice3Bln} per IMEI) dengan **Garansi Penuh 3 Bulan**.\n• Jika sinyal hilang dalam masa aktif 3 bulan, kami garansi proses ulang secara gratis hingga sinyal aktif kembali.\n• Mendukung **All Operator**: Telkomsel, Indosat Ooredoo, XL Axiata, Tri, dan Smartfren.`,
+          actions: [
+            { label: "Order Paket 3 Bulan", href: "/unblock-imei" },
+            { label: "Cek Status CEIR", href: "/cek-ceir" },
+          ],
+        };
+      }
+
+      if (isPrice) {
+        return {
+          reply: `### Daftar Paket & Tarif Unblock IMEI\n\nPaket buka blokir IMEI yang tersedia di Ry-ITSolutions:\n\n• **Paket 3 Bulan**: **${formattedPrice3Bln}** / IMEI\n\n*(Catatan: Kami TIDAK menyediakan paket 1 bulan ataupun paket permanen/resmi).*\n\n**Spesifikasi Layanan:**\n• All Operator (Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren)\n• Garansi penuh selama masa paket 3 bulan\n• Syarat wajib: IC Baseband normal (muncul \"Tidak Ada Layanan / No Service\", bukan \"Tidak Ada SIM\")\n• Estimasi pengerjaan: Kirim sebelum 14:00 WIB, selesai maksimal 00:00 WIB (jalur reguler)`,
+          actions: [
+            { label: "Buka Form IMEI", href: "/unblock-imei" },
+            { label: "Isi Saldo RyPay", href: "/topup" },
+          ],
+        };
+      }
+
       return {
-        reply: '### Cek Status Garansi Apple & CEIR Gratis\n\nFitur diagnostik mandiri untuk memeriksa keaslian dan status legalitas perangkat gadget Anda secara instan dalam 3 detik.\n\n**Yang Dapat Diperiksa:**\n• **Apple Coverage Status**: Mengetahui apakah iPhone/iPad/Mac masih terlindungi garansi resmi AppleCare+ atau sudah expired.\n• **Validasi Serial Number**: Memastikan nomor seri terdaftar resmi di basis data Apple.\n• **Status Database CEIR**: Memastikan apakah nomor IMEI perangkat terdaftar resmi di Kemenperin atau berstatus blacklist.\n\n**Biaya**: **100% GRATIS** tanpa dipungut biaya sepeserpun.',
+        reply: `### Layanan Buka Blokir IMEI All Operator\n\nLayanan unblock IMEI Ry-ITSolutions memulihkan sinyal HP (iPhone / Android) yang hilang (*No Service*) akibat pemblokiran jaringan seluler.\n\n**Ketentuan & Paket Saat Ini:**\n• **Paket Tersedia**: Paket **3 Bulan** (**${formattedPrice3Bln}** per IMEI).\n• **Jalur Kecepatan**: Jalur **Reguler** (Kirim sebelum jam 14:00 WIB, selesai max jam 00:00 WIB).\n• **All Operator**: Telkomsel, Indosat, XL, Tri, Smartfren.\n• **Garansi**: Garansi 3 bulan penuh.\n• **Syarat Wajib**: Pastikan IC Baseband normal (muncul status \"Tidak Ada Layanan / No Service\", bukan \"Tidak Ada SIM\").`,
         actions: [
-          { label: 'Cek Garansi Sekarang', href: '/cek-garansi'},
-          { label: 'Cek Database CEIR', href: '/cek-ceir'},
+          { label: "Buka Form IMEI Sekarang", href: "/unblock-imei" },
+          { label: "Cek Status CEIR", href: "/cek-ceir" },
         ],
       };
     }
 
-    // 7. TOP UP SALDO
-    if (
-      q.includes('topup') ||
-      q.includes('saldo') ||
-      q.includes('isi saldo') ||
-      q.includes('deposit') ||
-      q.includes('bayar')
-    ) {
+    // DOMAIN G: RESELLER / MITRA
+    if (bestDomain === "reseller") {
       return {
-        reply: '### Top Up Saldo Akun Ry-ITSolutions\n\nIsi saldo akun Anda untuk bertransaksi berbagai layanan IT secara otomatis 24 jam nonstop.\n\n**Keunggulan Top Up:**\n• **Bebas Biaya Admin (0 Rupiah)**.\n• **Metode Pembayaran Lengkap via QRIS**: Mendukung semua Bank (BCA, Mandiri, BRI, BNI, BSI) & E-Wallet (GoPay, OVO, Dana, ShopeePay, LinkAja).\n• **Auto Approve Instan**: Saldo otomatis masuk ke akun Anda dalam 2 - 5 detik setelah pembayaran berhasil.\n• **Aktif 24 Jam Nonstop**: Bisa deposit kapan saja bahkan di tengah malam.\n• **Minimal Top Up**: Mulai dari Rp 10.000.',
+        reply: `### Program Kemitraan & Reseller Grosir\n\nBagi Anda pemilik konter HP, toko handphone, atau pelaku usaha yang membutuhkan transaksi dalam jumlah banyak (Bulk IMEI / Gateway Payment):\n\n• Kami menyediakan **penawaran harga khusus mitra grosir**.\n• Prioritas pemrosesan pesanan dan jalur support khusus.\n• Silakan hubungi langsung WhatsApp Admin Kemitraan kami untuk berdiskusi lebih lanjut!`,
         actions: [
-          { label: 'Isi Saldo Akun', href: '/topup'},
-          { label: 'Riwayat Transaksi', href: '/history'},
+          { label: "Hubungi Admin Kemitraan", href: "https://wa.me/6288706611370", isExternal: true },
         ],
       };
     }
 
-    // 8. API & WEBHOOK
-    if (
-      q.includes('api') ||
-      q.includes('webhook') ||
-      q.includes('developer') ||
-      q.includes('coding') ||
-      q.includes('bot')
-    ) {
+    // DOMAIN H: CS & WHATSAPP ADMIN
+    if (bestDomain === "cs") {
       return {
-        reply: '### Integrasi API & Webhook Callback\n\nRy-ITSolutions menyediakan REST API berkecepatan tinggi untuk menghubungkan sistem transaksi Anda:\n\n• **Endpoint Pembuatan QRIS**: `POST /api/v1/gateway/create-qris`\n• **Webhook Event**: Menerima notifikasi instan saat pembayaran lunas `payment.success`\n• **Keamanan**: Dilengkapi HMAC-SHA256 signature verification untuk memastikan validitas data.\n• **Library**: Kompatibel dengan semua bahasa pemrograman (PHP Laravel/CodeIgniter, Node.js Express/Nest, Python Django/FastAPI, Go, dll).\n\nSilakan kunjungi halaman **Gateway** untuk mengaktifkan lisensi dan mengunduh sampel kode integrasi!',
+        reply: `### Kontak Layanan Pelanggan (CS Admin)\n\nTim Customer Support Ry-ITSolutions siap membantu kendala transaksi atau pertanyaan teknis Anda:\n\n• **Admin 1**: [088706611370](https://wa.me/6288706611370) *(Layanan IMEI & Gateway)*\n• **Admin 2**: [087767287284](https://wa.me/6287767287284) *(Bantuan Transaksi & Deposit)*\n\nJam Operasional CS: Setiap hari pukul **08.00 - 23.00 WIB**.\n*Sistem deposit dan pemesanan di website tetap aktif 24 jam nonstop.*`,
         actions: [
-          { label: 'Kelola API Key & Lisensi', href: '/gateway'},
+          { label: "Chat WhatsApp Admin 1", href: "https://wa.me/6288706611370", isExternal: true },
+          { label: "Chat WhatsApp Admin 2", href: "https://wa.me/6287767287284", isExternal: true },
         ],
       };
     }
 
-    // 9. CS / WHATSAPP ADMIN
-    if (
-      q.includes('cs') ||
-      q.includes('admin') ||
-      q.includes('wa') ||
-      q.includes('whatsapp') ||
-      q.includes('bantuan') ||
-      q.includes('hubungi') ||
-      q.includes('kontak')
-    ) {
+    // DOMAIN I: GREETINGS
+    if (bestDomain === "greetings") {
       return {
-        reply: '### Hubungi Layanan Pelanggan (CS Admin)\n\nTim Customer Support Ry-ITSolutions siap membantu kendala transaksi atau pertanyaan teknis Anda:\n\n• **Admin 1**: [088706611370](https://wa.me/6288706611370) *(Layanan IMEI & Gateway)*\n• **Admin 2**: [087767287284](https://wa.me/6287767287284) *(Bantuan Transaksi & Deposit)*\n\nJam Operasional CS: Setiap hari pukul **08.00 - 23.00 WIB**. Sistem pembayaran dan pemrosesan otomatis tetap aktif 24 jam nonstop.',
+        reply: `Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten virtual cerdas dari **Ry-ITSolutions**.\n\nSaya siap memberikan informasi akurat mengenai:\n• **Buka Blokir IMEI All Operator** (Paket 3 Bulan: ${formattedPrice3Bln})\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Aktivasi Rp 35.000, Perpanjang Rp 10.000/bln)\n• **Top Up Saldo RyPay Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Voucher Diskon & RyPoints Koin Reward**\n• **Cek Status Garansi Apple & Database CEIR** (Gratis)\n\nAda layanan spesifik yang ingin Anda tanyakan?`,
         actions: [
-          { label: 'Chat WhatsApp Admin 1', href: 'https://wa.me/6288706611370', isExternal: true},
-          { label: 'Chat WhatsApp Admin 2', href: 'https://wa.me/6288706611370', isExternal: true},
+          { label: "Buka Blokir IMEI", href: "/unblock-imei" },
+          { label: "Payment Gateway GoPay", href: "/gateway" },
+          { label: "Top Up RyPay", href: "/topup" },
         ],
       };
     }
 
-    // 10. RESELLER / KEMITRAAN
-    if (q.includes('reseller') || q.includes('mitra') || q.includes('agen')) {
-      return {
-        reply: '### Kemitraan & Reseller\n\nSaat ini fitur pendaftaran reseller otomatis sedang kami optimasi untuk pembaruan sistem yang lebih baik.\n\nNamun, jika Anda memiliki konter HP, toko online, atau kebutuhan transaksi dalam volume besar (Grosir/Bulk IMEI/Gateway), Anda bisa langsung menghubungi CS Admin kami di WhatsApp untuk mendapatkan penawaran harga khusus mitra!',
-        actions: [
-          { label: 'Hubungi Admin Kemitraan', href: 'https://wa.me/6288706611370', isExternal: true},
-        ],
-      };
-    }
-
-    // 11. GREETINGS
-    if (
-      q.includes('halo') ||
-      q.includes('hai') ||
-      q.includes('hi') ||
-      q.includes('pagi') ||
-      q.includes('siang') ||
-      q.includes('malam')
-    ) {
-      return {
-        reply: 'Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten virtual cerdas dari **Ry-ITSolutions**.\n\nSaya siap memberikan informasi akurat mengenai:\n• Buka Blokir IMEI All Operator (Paket 3 Bulan)\n• Payment Gateway GoPay & Dynamic QRIS (Aktivasi Rp 35.000, Perpanjang Rp 10.000/bln)\n• Cek Garansi Apple & CEIR (Gratis)\n• Top Up Saldo Akun QRIS Otomatis (Bebas Admin)\n\nAda layanan spesifik yang ingin Anda tanyakan?',
-        actions: [
-          { label: 'Buka Blokir IMEI', href: '/unblock-imei'},
-          { label: 'Payment Gateway GoPay', href: '/gateway'},
-          { label: 'Cek Garansi Apple', href: '/cek-garansi'},
-        ],
-      };
-    }
-
-    // 12. DEFAULT FALLBACK
+    // DEFAULT FALLBACK
     return {
-      reply: `Terima kasih atas pertanyaannya mengenai: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat memberikan informasi akurat seputar:\n1. **Aktivasi & Buka Blokir IMEI All Operator** (Paket 3 Bulan, jalur reguler).\n2. **SaaS Payment Gateway GoPay & QRIS Dinamis** (Aktivasi Rp 35.000, Perpanjang Rp 10.000/bln, fee 0%).\n3. **Cek Garansi Apple & Database CEIR** (Gratis dan instan).\n4. **Top Up Saldo Akun Otomatis** (QRIS bebas biaya admin 24 jam).\n\nSilakan klik salah satu menu di bawah atau tanyakan langsung pada saya!`,
+      reply: `Terima kasih atas pertanyaan Anda seputar: **\"${userText}\"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya siap memberikan panduan akurat untuk:\n1. **Aktivasi & Buka Blokir IMEI All Operator** (Paket 3 Bulan, garansi penuh).\n2. **SaaS Payment Gateway GoPay & QRIS Dinamis** (Aktivasi Rp 35.000, perpanjang Rp 10.000/bln, 0% fee).\n3. **Top Up Saldo RyPay Otomatis** (QRIS bebas biaya admin 24 jam).\n4. **Voucher Diskon & Koin RyPoints Reward**.\n5. **Cek Garansi Apple & Database CEIR Gratis**.\n\nSilakan pilih menu di bawah atau tanyakan hal spesifik lainnya!`,
       actions: [
-        { label: 'Lihat Layanan IMEI', href: '/unblock-imei'},
-        { label: 'Lihat Gateway GoPay', href: '/gateway'},
-        { label: 'Cek Garansi Gratis', href: '/cek-garansi'},
+        { label: "Layanan Unblock IMEI", href: "/unblock-imei" },
+        { label: "Gateway GoPay & QRIS", href: "/gateway" },
+        { label: "Top Up Saldo RyPay", href: "/topup" },
       ],
     };
   };
