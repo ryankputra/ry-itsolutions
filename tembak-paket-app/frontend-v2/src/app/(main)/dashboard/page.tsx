@@ -150,7 +150,119 @@ export default function DashboardPage() {
       {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
       {/* ============================================================ */}
       <div data-tour="wallet-card" className="rounded-3xl bg-parchment border border-hairline shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-4 sm:p-5 transition-all">
-        <div className="grid grid-cols-4 divide-x divide-hairline items-center text-center">
+        {/* MOBILE VIEW (< sm): Clean, Modern Fintech Split Layout */}
+        <div className="block sm:hidden space-y-3.5">
+          {/* Top Row: Saldo Ry (Spacious & Never Wraps) + Direct Top Up Button */}
+          <div className="flex items-center justify-between gap-3">
+            <div
+              onClick={() => router.push("/topup")}
+              className="flex-1 min-w-0 cursor-pointer group"
+            >
+              <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
+                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                  </svg>
+                </span>
+                <span className="text-xs font-semibold text-ink">Saldo Ry</span>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-base font-bold text-ink tracking-tight font-mono whitespace-nowrap">
+                  {showBalance ? `Rp ${(user?.balance || 0).toLocaleString("id-ID")}` : "Rp ••••••••"}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleShowBalance();
+                  }}
+                  className="text-ink-muted hover:text-ink transition-colors p-1 -m-1"
+                  title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+                >
+                  {showBalance ? (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Top Up Pill Button */}
+            <button
+              type="button"
+              onClick={() => router.push("/topup")}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              <span>Top Up</span>
+            </button>
+          </div>
+
+          {/* Subtle Hairline Divider */}
+          <div className="h-px bg-hairline w-full" />
+
+          {/* Bottom Row: Koin Ry & Voucher Promo (Clean 50-50 Split) */}
+          <div className="grid grid-cols-2 divide-x divide-hairline items-center pt-0.5">
+            {/* Koin Ry */}
+            <div
+              onClick={() => router.push("/games")}
+              className="flex items-center justify-between pr-3 cursor-pointer group"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-7 h-7 rounded-lg bg-[#FF9500]/10 text-[#FF9500] flex items-center justify-center shrink-0">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M14.5 9h-5v6h5"/>
+                    <path d="M12 7v10"/>
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-ink-muted font-medium block truncate">Koin Ry</span>
+                  <span className="text-xs font-bold text-ink tracking-tight font-mono block truncate">
+                    {userCoins.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold text-primary group-hover:underline shrink-0 ml-1">
+                Klaim &rarr;
+              </span>
+            </div>
+
+            {/* Voucher Promo */}
+            <div
+              onClick={() => router.push("/vouchers")}
+              className="flex items-center justify-between pl-3 cursor-pointer group"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-7 h-7 rounded-lg bg-[#FF2D55]/10 text-[#FF2D55] flex items-center justify-center shrink-0">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <span className="text-[10px] text-ink-muted font-medium block truncate">Voucher</span>
+                  <span className="text-xs font-bold text-ink tracking-tight font-mono block truncate">
+                    {vouchers.length > 0 ? `${vouchers.length} Kupon` : "Klaim"}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold text-primary group-hover:underline shrink-0 ml-1">
+                Promo &rarr;
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* DESKTOP VIEW (sm:grid): Original sleek 4-column strip */}
+        <div className="hidden sm:grid sm:grid-cols-4 divide-x divide-hairline items-center text-center">
           {/* Section 1: Saldo Dompet */}
           <div
             onClick={() => router.push("/topup")}
@@ -165,12 +277,15 @@ export default function DashboardPage() {
               <span className="text-[11px] sm:text-xs font-semibold text-ink">Saldo Ry</span>
             </div>
             <div className="mt-1 flex items-center justify-center gap-1">
-              <span className="text-xs sm:text-sm font-semibold text-ink tracking-tight">
+              <span className="text-xs sm:text-sm font-semibold text-ink tracking-tight whitespace-nowrap font-mono">
                 {showBalance ? `Rp ${(user?.balance || 0).toLocaleString("id-ID")}` : "Rp ••••••"}
               </span>
               <button
                 type="button"
-                onClick={toggleShowBalance}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleShowBalance();
+                }}
                 className="text-ink-muted hover:text-ink transition-colors p-0.5"
                 title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
               >
@@ -206,7 +321,7 @@ export default function DashboardPage() {
               </span>
               <span className="text-[11px] sm:text-xs font-semibold text-ink">Koin Ry</span>
             </div>
-            <span className="text-xs sm:text-sm font-semibold text-ink mt-1 tracking-tight">
+            <span className="text-xs sm:text-sm font-semibold text-ink mt-1 tracking-tight font-mono">
               {userCoins.toLocaleString("id-ID")}
             </span>
             <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
@@ -227,7 +342,7 @@ export default function DashboardPage() {
               </span>
               <span className="text-[11px] sm:text-xs font-semibold text-ink">Voucher</span>
             </div>
-            <span className="text-xs sm:text-sm font-semibold text-ink mt-1 tracking-tight">
+            <span className="text-xs sm:text-sm font-semibold text-ink mt-1 tracking-tight font-mono">
               {vouchers.length > 0 ? `${vouchers.length} Kupon` : "Klaim"}
             </span>
             <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
@@ -251,6 +366,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
 
       {/* ============================================================ */}
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
