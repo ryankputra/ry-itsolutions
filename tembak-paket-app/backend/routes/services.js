@@ -828,7 +828,7 @@ router.get('/user/analytics', async (req, res) => {
         }
 
         const user = await dbGet(
-            "SELECT id, name, email, phone, role, balance, coins, createdAt FROM users WHERE id = ?",
+            "SELECT id, name, email, verifiedPhone as phone, role, balance, coins, createdAt FROM users WHERE id = ?",
             [req.session.userId]
         );
 
@@ -949,7 +949,7 @@ router.post('/ai/chat', async (req, res) => {
 
         if (req.session?.userId) {
             const user = await dbGet(
-                "SELECT id, name, email, phone, role, balance, coins, createdAt FROM users WHERE id = ?",
+                "SELECT id, name, email, verifiedPhone as phone, role, balance, coins, createdAt FROM users WHERE id = ?",
                 [req.session.userId]
             );
 
