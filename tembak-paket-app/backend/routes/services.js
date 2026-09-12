@@ -94,16 +94,19 @@ router.get('/ai/knowledge', async (req, res) => {
 
         // 5. Relevant Settings
         const rawSettings = await dbAll(
-            "SELECT key, value FROM settings WHERE key IN ('wa_admin_number', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'price_imei_1_bln', 'price_imei_3_bln', 'price_imei_permanen', 'topupOptions')"
+            "SELECT key, value FROM settings WHERE key IN ('wa_admin_number', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'price_imei_1_bln', 'price_imei_3_bln', 'price_imei_permanen', 'topupOptions', 'show_beli_paket')"
         );
         const settingsMap = {};
         (rawSettings || []).forEach(s => { settingsMap[s.key] = s.value; });
+
+        const showBeliPaket = settingsMap['show_beli_paket'] === 'true' || settingsMap['show_beli_paket'] === true || settingsMap['show_beli_paket'] === '1' || settingsMap['show_beli_paket'] === 1;
 
         res.setHeader('Cache-Control', 'public, max-age=30');
         return res.json({
             status: true,
             updatedAt: new Date().toISOString(),
-            packages,
+            showBeliPaket,
+            packages: showBeliPaket ? packages : [],
             imeiPackages,
             coupons,
             announcements: rawAnnouncements || [],
