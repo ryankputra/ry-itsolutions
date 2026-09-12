@@ -22,10 +22,10 @@
     "id": 88637,
     "files": []
   },
-  "components/ui/InvoiceModal.tsx -> html2canvas": {
-    "id": 82201,
+  "components/ui/InvoiceModal.tsx -> html-to-image": {
+    "id": 28634,
     "files": [
-      "static/chunks/ad2866b8.6c51983a1eb56136.js"
+      "static/chunks/8634.cdfd58357841eff9.js"
     ]
   },
   "components/ui/InvoiceModal.tsx -> jspdf": {

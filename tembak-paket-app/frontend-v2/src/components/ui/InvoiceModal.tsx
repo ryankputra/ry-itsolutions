@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { parseCeirResponse } from "@/lib/ceirParser";
 import Swal from "@/lib/sweetalert";
+import QRCode from "qrcode";
 import { playPopSound } from "@/lib/soundFx";
 
 interface InvoiceData {
@@ -94,6 +95,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       const diff = expiryDate.getTime() - Date.now();
       const rem = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
       return {
+        hasWarranty: false,
+        warrantyStatus: "subscription",
         durationLabel: "30 Hari",
         expiryDate: expiryDate.toISOString(),
         remainingDays: rem,
@@ -104,6 +107,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
     if (isCeirService || isTopUp) {
       return {
+        hasWarranty: false,
+        warrantyStatus: "none",
         durationLabel: isTopUp ? "Saldo Akun" : "Non-Garansi",
         expiryDate: null,
         remainingDays: null,
@@ -134,6 +139,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
     if (isPermanent) {
       return {
+        hasWarranty: true,
+        warrantyStatus: "active",
         durationLabel: "Permanen (Seumur Hidup)",
         expiryDate: null,
         remainingDays: "Permanen",
@@ -149,6 +156,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     const durText = `${durationMonths} Bulan (${durationDays} Hari)`;
 
     return {
+      hasWarranty: rem > 0,
+      warrantyStatus: rem > 0 ? "active" : "expired",
       durationLabel: durText,
       expiryDate: expiryDate.toISOString(),
       remainingDays: rem,
@@ -163,14 +172,12 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     if (!printRef.current) return;
     try {
       setIsExporting(true);
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2.5,
-        useCORS: true,
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(printRef.current, {
+        pixelRatio: 2.5,
         backgroundColor: "#ffffff",
-        logging: false
+        cacheBust: true,
       });
-      const dataUrl = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.download = `Invoice-${data.trxId || data.imei || "Ry-ITSolutions"}.png`;
       link.href = dataUrl;
@@ -198,17 +205,22 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     if (!printRef.current) return;
     try {
       setIsExporting(true);
-      const html2canvas = (await import("html2canvas")).default;
+      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
 
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2.5,
-        useCORS: true,
+      const dataUrl = await toPng(printRef.current, {
+        pixelRatio: 2.5,
         backgroundColor: "#ffffff",
-        logging: false
+        cacheBust: true,
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Gagal merender gambar sertifikat untuk PDF"));
+        img.src = dataUrl;
+      });
+
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -218,14 +230,14 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = pageWidth - 20; // 10mm margins
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgHeight = (img.naturalHeight * imgWidth) / img.naturalWidth;
 
       let yPos = 10;
       if (imgHeight < pageHeight - 20) {
         yPos = (pageHeight - imgHeight) / 2;
       }
 
-      pdf.addImage(imgData, "PNG", 10, yPos, imgWidth, imgHeight);
+      pdf.addImage(dataUrl, "PNG", 10, yPos, imgWidth, imgHeight);
       pdf.save(`Certificate-${data.trxId || data.imei || "Ry-ITSolutions"}.pdf`);
 
       Swal.fire({
@@ -256,6 +268,15 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     : `https://ry-itsolutionts.web.id/cek-garansi?imei=${data.imei}`;
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(verifyUrl)}`;
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (verifyUrl) {
+      QRCode.toDataURL(verifyUrl, { width: 160, margin: 1 })
+        .then((url: string) => setQrCodeDataUrl(url))
+        .catch(() => setQrCodeDataUrl(qrImageUrl));
+    }
+  }, [verifyUrl, qrImageUrl]);
 
   const formatDate = (isoString: string) => {
     try {
@@ -718,7 +739,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
             <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={qrImageUrl}
+                src={qrCodeDataUrl || qrImageUrl}
                 alt="QR Verifikasi"
                 className="w-20 h-20 rounded-lg border border-slate-200 bg-white p-1 shrink-0"
               />

@@ -31,14 +31,12 @@ export function CeirExportCard({
     if (!cardRef.current) return;
     try {
       setIsExporting(true);
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2.5,
-        useCORS: true,
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(cardRef.current, {
+        pixelRatio: 2.5,
         backgroundColor: "#ffffff",
-        logging: false
+        cacheBust: true,
       });
-      const dataUrl = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.download = `CEIR-Report-${imei || trxId}.png`;
       link.href = dataUrl;
@@ -66,17 +64,22 @@ export function CeirExportCard({
     if (!cardRef.current) return;
     try {
       setIsExporting(true);
-      const html2canvas = (await import("html2canvas")).default;
+      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
 
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2.5,
-        useCORS: true,
+      const dataUrl = await toPng(cardRef.current, {
+        pixelRatio: 2.5,
         backgroundColor: "#ffffff",
-        logging: false
+        cacheBust: true,
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Gagal memuat gambar untuk konversi PDF"));
+        img.src = dataUrl;
+      });
+
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -86,14 +89,14 @@ export function CeirExportCard({
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = pageWidth - 20; // 10mm margins
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgHeight = (img.naturalHeight * imgWidth) / img.naturalWidth;
 
       let yPos = 10;
       if (imgHeight < pageHeight - 20) {
         yPos = (pageHeight - imgHeight) / 2; // vertically center if fits
       }
 
-      pdf.addImage(imgData, "PNG", 10, yPos, imgWidth, imgHeight);
+      pdf.addImage(dataUrl, "PNG", 10, yPos, imgWidth, imgHeight);
       pdf.save(`CEIR-Certificate-${imei || trxId}.pdf`);
 
       Swal.fire({
