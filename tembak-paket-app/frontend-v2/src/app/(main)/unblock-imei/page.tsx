@@ -493,9 +493,10 @@ function UnblockImeiContent() {
         </div>
       </div>
 
+      {/* Broadcast Announcement Banner */}
+      <BroadcastBanner initialAnnouncements={announcements} />
+
       <Card glass className="p-6 space-y-6">
-        {/* Broadcast & Announcement Multi-Item Carousel / Stack */}
-        <BroadcastBanner initialAnnouncements={announcements} />
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
           <h3 className="font-bold flex items-center gap-1.5 text-base">
             <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -856,7 +857,7 @@ function UnblockImeiContent() {
               )}
             </div>
 
-            {/* Koin Ry Deduction Bar */}
+            {/* RyPoints Deduction Bar */}
             <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
@@ -866,7 +867,7 @@ function UnblockImeiContent() {
                 </div>
                 <div>
                   <p className="font-bold text-ink text-xs">
-                    Tukarkan Koin Ry ({userCoins.toLocaleString("id-ID")} Koin)
+                    Tukarkan RyPoints ({userCoins.toLocaleString("id-ID")} Koin)
                   </p>
                   <p className="text-[10px] text-ink-muted">
                     {priceAfterCoupon < 50000
@@ -913,7 +914,7 @@ function UnblockImeiContent() {
               )}
               {useCoins && coinsDiscount > 0 && (
                 <div className="flex justify-between text-amber-700 font-semibold">
-                  <span>Potongan Koin Ry ({coinsDiscount.toLocaleString("id-ID")} Koin)</span>
+                  <span>Potongan RyPoints ({coinsDiscount.toLocaleString("id-ID")} Koin)</span>
                   <span>- Rp {coinsDiscount.toLocaleString("id-ID")}</span>
                 </div>
               )}
@@ -966,7 +967,7 @@ function UnblockImeiContent() {
                       </svg>
                     </div>
                     <div>
-                      <h5 className="font-extrabold text-xs text-ink">Saldo Ry</h5>
+                      <h5 className="font-extrabold text-xs text-ink">RyPay</h5>
                       <p className="text-[10px] text-ink-muted">Rp {userBalance.toLocaleString("id-ID")}</p>
                     </div>
                   </div>

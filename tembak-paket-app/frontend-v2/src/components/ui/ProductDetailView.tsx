@@ -292,7 +292,7 @@ export function ProductDetailView({
           <div className="flex items-center justify-between text-slate-700 dark:text-slate-300 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-1.5 font-medium">
               <svg aria-hidden="true" className="h-4 w-4 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><rect width="18" height="13" x="3" y="5.5" rx="2" /><path strokeLinecap="round" d="M3 10h18" /></svg>
-              <span>SPayLater / QRIS Instant 24 Jam / Potong Saldo Ry</span>
+              <span>SPayLater / QRIS Instant 24 Jam / Potong RyPay</span>
             </div>
             <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />

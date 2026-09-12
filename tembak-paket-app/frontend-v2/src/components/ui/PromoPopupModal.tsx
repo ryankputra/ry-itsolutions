@@ -16,23 +16,8 @@ export function PromoPopupModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [dontShowToday, setDontShowToday] = useState(false);
 
   useEffect(() => {
-    // Check if dismissed for today
-    try {
-      const dismissedDate = localStorage.getItem("promo_popup_dismissed_date");
-      const today = new Date().toISOString().slice(0, 10);
-      if (dismissedDate === today) {
-        return;
-      }
-      const sessionDismissed = sessionStorage.getItem("promo_popup_session_dismissed");
-      if (sessionDismissed === "true") {
-        return;
-      }
-    } catch (e) {}
-
-    // Fetch announcements
     let isMounted = true;
     async function loadData() {
       try {
@@ -40,6 +25,7 @@ export function PromoPopupModal() {
           cache: "no-store",
           headers: { "Cache-Control": "no-cache" }
         });
+        if (!res.ok) return;
         const data = await res.json();
         if (!isMounted) return;
 
@@ -57,11 +43,8 @@ export function PromoPopupModal() {
 
         if (list.length > 0) {
           setAnnouncements(list);
-          // Show with small delay so page feels smooth
-          const timer = setTimeout(() => {
-            if (isMounted) setIsOpen(true);
-          }, 700);
-          return () => clearTimeout(timer);
+          // Selalu muncul ketika masuk ke dashboard
+          setIsOpen(true);
         }
       } catch (err) {
         // silent error
@@ -74,13 +57,6 @@ export function PromoPopupModal() {
 
   const handleClose = () => {
     setIsOpen(false);
-    try {
-      sessionStorage.setItem("promo_popup_session_dismissed", "true");
-      if (dontShowToday) {
-        const today = new Date().toISOString().slice(0, 10);
-        localStorage.setItem("promo_popup_dismissed_date", today);
-      }
-    } catch (e) {}
   };
 
   if (!isOpen || announcements.length === 0) {
@@ -91,7 +67,7 @@ export function PromoPopupModal() {
   const total = announcements.length;
   const msgLower = (current.message || "").toLowerCase();
 
-  // Pick suitable banner image based on text content
+  // Banner image selection
   let bannerImg = "/banners/banner_voucher.jpg";
   let defaultAction = { label: "Klaim Voucher Sekarang", href: "/vouchers" };
 
@@ -100,10 +76,10 @@ export function PromoPopupModal() {
     defaultAction = { label: "Order Unblock IMEI", href: "/unblock-imei" };
   } else if (msgLower.includes("koin") || msgLower.includes("game") || msgLower.includes("reward")) {
     bannerImg = "/banners/banner_rewards.jpg";
-    defaultAction = { label: "Main Game & Koin", href: "/games" };
-  } else if (msgLower.includes("gopay") || msgLower.includes("topup") || msgLower.includes("saldo")) {
+    defaultAction = { label: "Main Game & RyPoints", href: "/games" };
+  } else if (msgLower.includes("gopay") || msgLower.includes("topup") || msgLower.includes("saldo") || msgLower.includes("rypay")) {
     bannerImg = "/banners/banner_gopay.jpg";
-    defaultAction = { label: "Top Up Saldo Sekarang", href: "/topup" };
+    defaultAction = { label: "Top Up RyPay Sekarang", href: "/topup" };
   }
 
   // Extract promo voucher code if present
@@ -129,13 +105,13 @@ export function PromoPopupModal() {
             className="w-full h-full object-cover select-none"
           />
           {/* Subtle gradient vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40 pointer-events-none" />
 
           {/* Floating Close Button (Silang) */}
           <button
             onClick={handleClose}
             aria-label="Tutup pengumuman"
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-lg active:scale-95 transition-all z-20 cursor-pointer"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 active:scale-90 backdrop-blur-md text-white flex items-center justify-center border border-white/30 shadow-lg transition-all z-20 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -143,15 +119,16 @@ export function PromoPopupModal() {
           </button>
 
           {/* Top Badge */}
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white text-[11px] font-semibold select-none">
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white text-[11px] font-semibold select-none">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>Pengumuman &amp; Promo</span>
+            <span>Info &amp; Promo Spesial</span>
           </div>
 
           {/* Slide Navigation controls (if multiple announcements) */}
           {total > 1 && (
             <div className="absolute bottom-2.5 right-3 flex items-center gap-1.5 z-10">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentIndex((prev) => (prev > 0 ? prev - 1 : total - 1));
@@ -165,6 +142,7 @@ export function PromoPopupModal() {
                 {currentIndex + 1} / {total}
               </span>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentIndex((prev) => (prev < total - 1 ? prev + 1 : 0));
@@ -186,7 +164,7 @@ export function PromoPopupModal() {
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-base">🎟️</span>
                 <div className="min-w-0">
-                  <div className="text-[10px] font-medium text-amber-950/70 dark:text-amber-300/80 uppercase tracking-wider">Kupon Spesial Tersedia</div>
+                  <div className="text-[10px] font-medium text-amber-950/70 dark:text-amber-300/80 uppercase tracking-wider">Kupon Promo Tersedia</div>
                   <div className="text-xs font-black font-mono tracking-wider truncate">{detectedCode}</div>
                 </div>
               </div>
@@ -209,7 +187,7 @@ export function PromoPopupModal() {
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 pt-2 sm:p-5 sm:pt-2 border-t border-hairline/60 bg-muted/20 space-y-2.5 shrink-0">
+        <div className="p-4 pt-2 sm:p-5 sm:pt-2 border-t border-hairline/60 bg-muted/20 space-y-2 shrink-0">
           <button
             onClick={() => {
               handleClose();
@@ -223,24 +201,12 @@ export function PromoPopupModal() {
             </svg>
           </button>
 
-          {/* Do Not Show Again Today Option */}
-          <div className="flex items-center justify-between pt-1 text-[11px] text-ink-muted select-none">
-            <label className="flex items-center gap-2 cursor-pointer hover:text-ink transition-colors">
-              <input
-                type="checkbox"
-                checked={dontShowToday}
-                onChange={(e) => setDontShowToday(e.target.checked)}
-                className="rounded border-hairline text-primary focus:ring-0 w-3.5 h-3.5"
-              />
-              <span>Jangan tampilkan lagi hari ini</span>
-            </label>
-            <button
-              onClick={handleClose}
-              className="hover:text-ink hover:underline cursor-pointer font-medium"
-            >
-              Tutup
-            </button>
-          </div>
+          <button
+            onClick={handleClose}
+            className="w-full py-1.5 text-center text-xs text-ink-muted hover:text-ink font-medium transition-colors cursor-pointer"
+          >
+            Tutup
+          </button>
         </div>
 
       </div>

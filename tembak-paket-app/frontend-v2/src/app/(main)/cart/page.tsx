@@ -600,7 +600,7 @@ export default function CartPage() {
               </div>
               <div>
                 <div className="flex items-center gap-1">
-                  <span className="font-bold text-xs text-ink">Tukarkan Koin Ry</span>
+                  <span className="font-bold text-xs text-ink">Tukarkan RyPoints</span>
                   <span className="text-[10px] font-bold text-amber-600">({userCoins} Koin)</span>
                 </div>
                 <p className="text-[10px] text-ink-muted">
@@ -664,7 +664,7 @@ export default function CartPage() {
                     </svg>
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-xs text-ink">Saldo Ry</h5>
+                    <h5 className="font-extrabold text-xs text-ink">RyPay</h5>
                     <p className="text-[10px] text-ink-muted">Rp {(user?.balance || 0).toLocaleString("id-ID")}</p>
                   </div>
                 </div>

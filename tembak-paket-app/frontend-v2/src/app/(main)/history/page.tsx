@@ -146,7 +146,7 @@ function HistoryContent() {
     if (isPaidWithBalance) {
       Swal.fire({
         title: "Pesanan Sudah Terbayar",
-        text: "Pesanan ini sudah dibayar menggunakan Saldo Ry dan saat ini sedang diproses oleh admin/server.",
+        text: "Pesanan ini sudah dibayar menggunakan RyPay dan saat ini sedang diproses oleh admin/server.",
         icon: "info",
       });
       return;

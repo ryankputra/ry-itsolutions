@@ -504,7 +504,7 @@ export default function GamesPage() {
     Swal.fire({
       icon: "success",
       title: "Kartu Terbuka Penuh",
-      text: `Selamat! Anda berhasil menemukan 3 petak cocok dan memenangkan +${(scratchWonAmount || 0).toLocaleString("id-ID")} Koin Ry!`,
+      text: `Selamat! Anda berhasil menemukan 3 petak cocok dan memenangkan +${(scratchWonAmount || 0).toLocaleString("id-ID")} RyPoints!`,
       confirmButtonColor: "#0066cc",
       confirmButtonText: "Kumpulkan Koin",
       timer: 3200,
@@ -1212,7 +1212,7 @@ export default function GamesPage() {
                 <div>
                   <h3 className="font-bold text-sm text-ink">Kuis Hari Ini Sudah Selesai</h3>
                   <p className="text-[11px] text-ink-muted mt-1">
-                    Anda telah mendapatkan bonus Koin Ry dari kuis hari ini. Pertanyaan baru akan tersedia besok!
+                    Anda telah mendapatkan bonus RyPoints dari kuis hari ini. Pertanyaan baru akan tersedia besok!
                   </p>
                 </div>
               </div>
@@ -1225,7 +1225,7 @@ export default function GamesPage() {
                     Skor: {triviaResult.score} / {triviaResult.total} Benar
                   </h3>
                   <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs">
-                    +{triviaResult.coins_earned} Koin Ry Diterima
+                    +{triviaResult.coins_earned} RyPoints Diterima
                   </div>
                 </div>
 
@@ -1409,7 +1409,7 @@ export default function GamesPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="font-black text-base text-ink">Riwayat Koin Ry</h3>
+                <h3 className="font-black text-base text-ink">Riwayat RyPoints</h3>
               </div>
               <button
                 type="button"

@@ -21,7 +21,7 @@ export function SuccessModal({
   statusText = "Pesanan Anda telah berhasil dibuat!",
   recipientLabel = "Tujuan",
   recipientValue,
-  methodValue = "Saldo Ry-ITSolutions",
+  methodValue = "RyPay",
 }: SuccessModalProps) {
   useEffect(() => {
     if (isOpen) {

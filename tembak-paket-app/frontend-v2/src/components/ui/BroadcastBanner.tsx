@@ -22,13 +22,22 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
+  // Sync if initialAnnouncements prop updates
   useEffect(() => {
-    if (initialAnnouncements && initialAnnouncements.length > 0) return;
+    if (Array.isArray(initialAnnouncements) && initialAnnouncements.length > 0) {
+      setAnnouncements(initialAnnouncements);
+    }
+  }, [initialAnnouncements]);
 
+  // Fetch from API to ensure always up to date
+  useEffect(() => {
     let isMounted = true;
     const fetchAnnouncements = async () => {
       try {
-        const res = await fetch("/api/user/announcement", { credentials: "include" });
+        const res = await fetch("/api/user/announcement", {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" }
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.status && isMounted) {
@@ -36,8 +45,6 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
             setAnnouncements(data.announcements);
           } else if (data.data && data.data.message) {
             setAnnouncements([data.data]);
-          } else {
-            setAnnouncements([]);
           }
         }
       } catch (err) {
@@ -46,14 +53,14 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
     };
 
     fetchAnnouncements();
-    const interval = setInterval(fetchAnnouncements, 60000); // refresh every 1 min
+    const interval = setInterval(fetchAnnouncements, 30000);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [initialAnnouncements]);
+  }, []);
 
-  // Auto rotate when there are multiple announcements and not paused
+  // Auto rotate when multiple announcements
   useEffect(() => {
     if (announcements.length <= 1 || isExpanded || isPaused) return;
 
@@ -87,20 +94,17 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
     const diff = touchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 40) {
       if (diff > 0) {
-        // swipe left -> next
         setCurrentIndex((prev) => (prev + 1) % announcements.length);
       } else {
-        // swipe right -> prev
         setCurrentIndex((prev) => (prev - 1 + announcements.length) % announcements.length);
       }
     }
     touchStartX.current = null;
   };
 
-  // Helper to extract voucher code if present
   const renderMessageContent = (message: string) => {
     return (
-      <span className="leading-relaxed select-text">
+      <span className="leading-relaxed select-text font-medium">
         {message}
       </span>
     );
@@ -112,13 +116,11 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
     const bg = item.bgColor || "#0066cc";
     return (
       <div
-        className={`rounded-2xl p-3.5 sm:p-4 text-white text-xs sm:text-sm font-medium flex items-center gap-3 shadow-xs transition-all ${className}`}
+        className={`rounded-2xl p-3.5 sm:p-4 text-white text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm transition-all ${className}`}
         style={{ backgroundColor: bg }}
       >
-        <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-          <svg className="w-4.5 h-4.5 shrink-0 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.455a20.89 20.89 0 01-1.503-3.819m3.165-.4c.594-.05 1.189-.125 1.78-.226a11.956 11.956 0 004.832-2.016m-6.612 2.642a12.02 12.02 0 01-1.78-.226m10.172-4.432A11.96 11.96 0 0013.91 5.34m0 0a11.97 11.97 0 00-3.57-1.22m3.57 1.22c.594.05 1.189.125 1.78.226m-1.78-.226c-1.19.1-2.38.25-3.57.446" />
-          </svg>
+        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+          <Megaphone className="w-4.5 h-4.5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           {renderMessageContent(item.message)}
@@ -134,7 +136,7 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
             <Megaphone className="w-3.5 h-3.5 text-primary" />
-            <span>Semua Pengumuman & Promo ({announcements.length})</span>
+            <span>Semua Pengumuman &amp; Promo ({announcements.length})</span>
           </div>
           <button
             type="button"
@@ -150,11 +152,11 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
           {announcements.map((item, idx) => (
             <div
               key={item.id || idx}
-              className="rounded-2xl p-3.5 sm:p-4 text-white text-xs sm:text-sm font-medium flex items-start sm:items-center gap-3 shadow-xs transition-all"
+              className="rounded-2xl p-3.5 sm:p-4 text-white text-xs sm:text-sm font-medium flex items-start sm:items-center gap-3 shadow-sm transition-all"
               style={{ backgroundColor: item.bgColor || "#0066cc" }}
             >
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                <span className="text-[11px] font-black">{idx + 1}</span>
+              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 font-black text-xs">
+                {idx + 1}
               </div>
               <div className="flex-1 min-w-0">
                 {renderMessageContent(item.message)}
@@ -176,7 +178,7 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className={`relative rounded-2xl p-3.5 sm:p-4 text-white shadow-xs transition-all duration-300 overflow-hidden ${className}`}
+      className={`relative rounded-2xl p-3.5 sm:p-4 text-white shadow-sm transition-all duration-300 overflow-hidden ${className}`}
       style={{ backgroundColor: bg }}
     >
       {/* Top Header Controls: Badge, Slide Counter & Arrow Buttons */}
@@ -185,7 +187,7 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
           <div className="w-4.5 h-4.5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
             <Megaphone className="w-2.5 h-2.5 text-white" />
           </div>
-          <span className="uppercase tracking-wider text-[10px]">Info & Promo Web</span>
+          <span className="uppercase tracking-wider text-[10px]">Info &amp; Promo Web</span>
           <span className="px-1.5 py-0.2 rounded-full bg-white/25 text-[10px] font-mono font-bold">
             {currentIndex + 1} / {announcements.length}
           </span>
@@ -226,10 +228,6 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
 
       {/* Main Broadcast Message */}
       <div className="flex items-start sm:items-center gap-3 min-h-[38px]">
-        <svg className="w-5 h-5 shrink-0 text-white mt-0.5 sm:mt-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.455a20.89 20.89 0 01-1.503-3.819m3.165-.4c.594-.05 1.189-.125 1.78-.226a11.956 11.956 0 004.832-2.016m-6.612 2.642a12.02 12.02 0 01-1.78-.226m10.172-4.432A11.96 11.96 0 0013.91 5.34m0 0a11.97 11.97 0 00-3.57-1.22m3.57 1.22c.594.05 1.189.125 1.78.226m-1.78-.226c-1.19.1-2.38.25-3.57.446" />
-        </svg>
-
         <div className="flex-1 min-w-0 text-xs sm:text-sm font-medium">
           {renderMessageContent(currentItem.message)}
         </div>

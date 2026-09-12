@@ -48,7 +48,7 @@ export default function DashboardPage() {
     },
     {
       title: "CHECK-IN HARIAN & PUTAR RODA HOKI",
-      subtitle: "Kumpulkan Koin Ry gratis setiap hari untuk potongan harga saat order.",
+      subtitle: "Kumpulkan RyPoints gratis setiap hari untuk potongan harga saat order.",
       badge: "REWARD KOIN",
       ctaText: "MAIN SEKARANG >",
       ctaLink: "/games",
@@ -159,7 +159,7 @@ export default function DashboardPage() {
       <div data-tour="wallet-card" className="rounded-3xl bg-parchment border border-hairline shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-4 sm:p-5 transition-all">
         {/* MOBILE VIEW (< sm): Clean, Modern Fintech Split Layout */}
         <div className="block sm:hidden space-y-3.5">
-          {/* Top Row: Saldo Ry (Spacious & Never Wraps) + Direct Top Up Button */}
+          {/* Top Row: RyPay (Spacious & Never Wraps) + Direct Top Up Button */}
           <div className="flex items-center justify-between gap-3">
             <div
               onClick={() => router.push("/topup")}
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
                   </svg>
                 </span>
-                <span className="text-xs font-semibold text-ink">Saldo Ry</span>
+                <span className="text-xs font-semibold text-ink">RyPay</span>
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <span className="text-base font-bold text-ink tracking-tight font-mono whitespace-nowrap">
@@ -214,9 +214,9 @@ export default function DashboardPage() {
           {/* Subtle Hairline Divider */}
           <div className="h-px bg-hairline w-full" />
 
-          {/* Bottom Row: Koin Ry & Voucher Promo (Clean 50-50 Split) */}
+          {/* Bottom Row: RyPoints & Voucher Promo (Clean 50-50 Split) */}
           <div className="grid grid-cols-2 divide-x divide-hairline items-center pt-0.5">
-            {/* Koin Ry */}
+            {/* RyPoints */}
             <div
               onClick={() => router.push("/games")}
               className="flex items-center justify-between pr-3 cursor-pointer group"
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                   </svg>
                 </span>
                 <div className="min-w-0">
-                  <span className="text-[10px] text-ink-muted font-medium block truncate">Koin Ry</span>
+                  <span className="text-[10px] text-ink-muted font-medium block truncate">RyPoints</span>
                   <span className="text-xs font-bold text-ink tracking-tight font-mono block truncate">
                     {userCoins.toLocaleString("id-ID")}
                   </span>
@@ -279,7 +279,7 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
                 </svg>
               </span>
-              <span className="text-[11px] sm:text-xs font-semibold text-ink">Saldo Ry</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-ink">RyPay</span>
             </div>
             <div className="mt-1 flex items-center justify-center gap-1">
               <span className="text-xs sm:text-sm font-semibold text-ink tracking-tight whitespace-nowrap font-mono">
@@ -309,7 +309,7 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Section 2: Koin Ry */}
+          {/* Section 2: RyPoints */}
           <div
             onClick={() => router.push("/games")}
             className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
@@ -322,7 +322,7 @@ export default function DashboardPage() {
                   <path d="M12 7v10"/>
                 </svg>
               </span>
-              <span className="text-[11px] sm:text-xs font-semibold text-ink">Koin Ry</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-ink">RyPoints</span>
             </div>
             <span className="text-xs sm:text-sm font-semibold text-ink mt-1 tracking-tight font-mono">
               {userCoins.toLocaleString("id-ID")}

@@ -409,7 +409,7 @@ export function EcommerceHeader() {
             >
               <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9h-5v6h5"/><path d="M12 7v10"/></svg>
               <div>
-                <span className="text-[9px] text-gray-400 font-medium block leading-tight">Koin Ry</span>
+                <span className="text-[9px] text-gray-400 font-medium block leading-tight">RyPoints</span>
                 <span className="text-xs font-semibold text-gray-900 dark:text-white">
                   {(user?.coins || 0).toLocaleString("id-ID")}
                 </span>
@@ -517,7 +517,7 @@ export function EcommerceHeader() {
                         <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>Game &amp; Koin Ry</span>
+                        <span>Game &amp; RyPoints</span>
                       </Link>
                       <Link href="/history" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

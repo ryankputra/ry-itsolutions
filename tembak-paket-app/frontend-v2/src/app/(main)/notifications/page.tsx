@@ -146,7 +146,7 @@ export default function NotificationsPage() {
     id: "game-koin-reminder",
     type: "rewards",
     title: "Check-in Harian & Putar Roda Hoki",
-    description: "Klaim koin gratis hari ini dan putar roda hoki untuk kesempatan menang hingga 2.500 Koin Ry.",
+    description: "Klaim koin gratis hari ini dan putar roda hoki untuk kesempatan menang hingga 2.500 RyPoints.",
     time: "Setiap Hari",
     icon: (
       <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

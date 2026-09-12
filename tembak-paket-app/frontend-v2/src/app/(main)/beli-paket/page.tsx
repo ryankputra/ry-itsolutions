@@ -427,7 +427,7 @@ export default function BeliPaketPage() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       disabled={otpRequested}
                     >
-                      <option value="balance">Saldo Ry-ITSolutions</option>
+                      <option value="balance">RyPay</option>
                       <option value="QRIS">QRIS</option>
                       <option value="OVO">OVO</option>
                       <option value="DANA">DANA</option>
