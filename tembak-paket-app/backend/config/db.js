@@ -40,6 +40,7 @@ async function initializeDatabase() {
     db.serialize(async () => {
         try {
             await dbRun("PRAGMA foreign_keys = ON;");
+            await dbRun(`CREATE TABLE IF NOT EXISTS email_verifications (email TEXT, otp TEXT NOT NULL, type TEXT NOT NULL, payload TEXT, expires_at INTEGER NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (email, type))`);
             await dbRun(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, balance REAL DEFAULT 0, role TEXT DEFAULT 'user', upgradedToResellerAt TEXT, verifiedPhone TEXT, savedPhones TEXT, status TEXT DEFAULT 'pending', createdAt TEXT NOT NULL, resetPasswordToken TEXT, resetPasswordExpires INTEGER)`);
             await dbRun(`CREATE TABLE IF NOT EXISTS packages (package_code TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, original_price REAL DEFAULT 0, platform_fee REAL DEFAULT 0, reseller_fee REAL DEFAULT 0, isVisible INTEGER DEFAULT 0, category TEXT DEFAULT 'reguler', isMultiPurchase INTEGER DEFAULT 0, payment_methods TEXT, position INTEGER DEFAULT 0)`);
             await dbRun(`CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, userId TEXT NOT NULL, userName TEXT, packageId TEXT, packageName TEXT, platformFee REAL, originalPrice REAL, targetPhone TEXT, accessToken TEXT, paymentMethod TEXT, ewalletNumber TEXT, kmspTrxId TEXT, status TEXT NOT NULL, api_response TEXT, createdAt TEXT NOT NULL, paymentDetails TEXT, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);

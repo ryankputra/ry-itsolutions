@@ -15,7 +15,7 @@ const SibApiV3Sdk = require('sib-api-v3-sdk');
 const { dbGet, dbRun, dbAll } = require('../config/db');
 const { isAuthenticated } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
-const { validateEmailActive } = require('../services/emailService');
+const { validateEmailActive, sendRegistrationOtpEmail, sendPasswordResetOtpEmail } = require('../services/emailService');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
@@ -153,7 +153,180 @@ router.post('/auth/google', async (req, res) => {
     }
 });
 
-// 2. User Registration
+// 2a. Request Registration OTP (Option 1)
+router.post('/auth/register-request-otp', async (req, res) => {
+    try {
+        const { name, email, password, referral_code } = req.body;
+        if (!name || !email || !password) {
+            return res.status(400).json({ status: false, message: "Nama, email, dan password wajib diisi." });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ status: false, message: "Password minimal 6 karakter." });
+        }
+
+        // Validasi domain aktif & tolak disposable mail
+        const emailCheck = await validateEmailActive(email);
+        if (!emailCheck.valid) {
+            return res.status(400).json({ status: false, message: emailCheck.message });
+        }
+
+        const validEmail = emailCheck.trimmedEmail;
+        if (await dbGet('SELECT id FROM users WHERE email = ?', [validEmail])) {
+            return res.status(409).json({ status: false, message: "Email ini sudah terdaftar. Silakan masuk atau gunakan email lain." });
+        }
+
+        let referredById = null;
+        let referrerName = null;
+        if (referral_code) {
+            const referrer = await dbGet('SELECT id, name FROM users WHERE UPPER(referral_code) = ?', [referral_code.trim().toUpperCase()]);
+            if (referrer) {
+                referredById = referrer.id;
+                referrerName = referrer.name;
+            }
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 menit
+        const payload = JSON.stringify({
+            name,
+            email: validEmail,
+            hashedPassword,
+            referral_code: referral_code ? referral_code.trim().toUpperCase() : null,
+            referredById,
+            referrerName
+        });
+
+        await dbRun(
+            'INSERT OR REPLACE INTO email_verifications (email, otp, type, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [validEmail, otp, 'register', payload, expiresAt, new Date().toISOString()]
+        );
+
+        const emailSent = await sendRegistrationOtpEmail(validEmail, otp, name);
+        if (!emailSent.success) {
+            console.error('[Register OTP Send Failed]', emailSent.error);
+            return res.status(500).json({ status: false, message: "Gagal mengirimkan kode OTP ke email. Pastikan email valid." });
+        }
+
+        res.status(200).json({
+            status: true,
+            message: `Kode verifikasi 6 digit telah dikirim ke ${validEmail}. Silakan cek kotak masuk atau folder spam Anda.`,
+            email: validEmail
+        });
+    } catch (error) {
+        console.error("[Register Request OTP Error]:", error);
+        res.status(500).json({ status: false, message: "Terjadi kesalahan pada server saat memproses kode verifikasi." });
+    }
+});
+
+// 2b. Verify Registration OTP & Complete Registration
+router.post('/auth/register-verify-otp', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ status: false, message: "Email dan kode OTP wajib diisi." });
+        }
+
+        const validEmail = email.trim().toLowerCase();
+        const record = await dbGet(
+            'SELECT * FROM email_verifications WHERE email = ? AND type = ?',
+            [validEmail, 'register']
+        );
+
+        if (!record) {
+            return res.status(400).json({ status: false, message: "Permintaan verifikasi tidak ditemukan. Silakan kirim ulang kode OTP." });
+        }
+
+        if (Number(record.expires_at) < Date.now()) {
+            await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'register']);
+            return res.status(400).json({ status: false, message: "Kode verifikasi telah kedaluwarsa. Silakan minta kode baru." });
+        }
+
+        if (record.otp !== otp.trim()) {
+            return res.status(400).json({ status: false, message: "Kode verifikasi OTP salah. Silakan periksa kembali email Anda." });
+        }
+
+        const data = JSON.parse(record.payload);
+        if (await dbGet('SELECT id FROM users WHERE email = ?', [validEmail])) {
+            await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'register']);
+            return res.status(409).json({ status: false, message: "Email sudah terdaftar. Silakan login." });
+        }
+
+        const cleanName = (data.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'RYY';
+        const generatedRefCode = `${cleanName}${Math.floor(1000 + Math.random() * 9000)}`;
+        const newUserId = `user_${Date.now()}`;
+
+        const newUser = {
+            id: newUserId,
+            name: data.name,
+            email: validEmail,
+            password: data.hashedPassword,
+            balance: 0,
+            role: 'user',
+            verifiedPhone: null,
+            savedPhones: '[]',
+            status: 'approved',
+            createdAt: new Date().toISOString(),
+            referral_code: generatedRefCode,
+            referred_by: data.referredById
+        };
+
+        await dbRun(
+            'INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            Object.values(newUser)
+        );
+
+        await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'register']);
+
+        req.session.userId = newUserId;
+
+        sendTelegramNotification(
+            `<b>──────────────────────</b>\n` +
+            `<b>🎉 Registrasi Pengguna Baru (Terverifikasi OTP)</b>\n` +
+            `<b>──────────────────────</b>\n` +
+            `<b>Metode:</b> 📝 Form Registrasi Web (Email OTP)\n` +
+            `<b>Nama:</b> ${data.name}\n` +
+            `<b>Email:</b> ${validEmail}\n` +
+            `<b>Status:</b> ✅ Otomatis Aktif (Terverifikasi)\n` +
+            (data.referrerName ? `<b>Referral Dari:</b> ${data.referrerName} (ID: ${data.referredById})\n` : '') +
+            `<b>──────────────────────</b>`, 'admin'
+        );
+
+        try {
+            const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+            const adminPhones = await getAdminPhoneNumbers();
+            const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+            const waAdminMsg = `*NOTIFIKASI PENGGUNA BARU (OTP AKTIF)*\n──────────────────────\n` +
+                `*Nama:* ${data.name}\n` +
+                `*Email:* ${validEmail}\n` +
+                `*Status:* Otomatis Aktif (Terverifikasi OTP)\n` +
+                `*Metode:* Form Registrasi Web\n` +
+                (data.referrerName ? `*Referral:* ${data.referrerName}\n` : '') +
+                `*Waktu:* ${timeStr}\n──────────────────────\n` +
+                `Panel Admin: https://ry-itsolutionts.web.id/admin`;
+            for (const admPhone of (adminPhones || [])) {
+                sendTextMessage(admPhone, waAdminMsg).catch(e => console.error('[WA Admin Notify Register Error]', e.message));
+            }
+        } catch (waErr) {
+            console.error('[WA Admin Notify Register Error]', waErr.message);
+        }
+
+        const { password: _, ...userWithoutPassword } = newUser;
+        userWithoutPassword.savedPhones = [];
+
+        res.status(201).json({
+            status: true,
+            message: "Registrasi dan verifikasi email berhasil! Selamat datang di Ry-ITSolutions.",
+            user: userWithoutPassword
+        });
+    } catch (error) {
+        console.error("[Register Verify OTP Error]:", error);
+        res.status(500).json({ status: false, message: "Terjadi kesalahan saat memverifikasi kode OTP." });
+    }
+});
+
+// 2c. Direct Fallback Registration
+
 router.post('/auth/register', async (req, res) => {
     try {
         const { name, email, password, referral_code } = req.body;
@@ -264,7 +437,88 @@ router.post('/auth/login', async (req, res) => {
     }
 });
 
-// 4. Forgot Password
+// 4a. Forgot Password Request (Kirim OTP ke Email)
+router.post('/auth/forgot-password-request', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ status: false, message: "Alamat email wajib diisi." });
+
+        const validEmail = email.trim().toLowerCase();
+        const user = await dbGet('SELECT id, name, email FROM users WHERE email = ?', [validEmail]);
+        if (!user) {
+            return res.status(404).json({ status: false, message: "Alamat email tidak ditemukan dalam sistem kami." });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 menit
+
+        await dbRun(
+            'INSERT OR REPLACE INTO email_verifications (email, otp, type, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [validEmail, otp, 'forgot_password', JSON.stringify({ userId: user.id }), expiresAt, new Date().toISOString()]
+        );
+
+        const emailSent = await sendPasswordResetOtpEmail(validEmail, otp, user.name);
+        if (!emailSent.success) {
+            return res.status(500).json({ status: false, message: "Gagal mengirim kode reset ke email. Silakan coba beberapa saat lagi." });
+        }
+
+        res.status(200).json({
+            status: true,
+            message: `Kode verifikasi reset password telah dikirim ke ${validEmail}. Silakan cek kotak masuk Anda.`
+        });
+    } catch (error) {
+        console.error("[Forgot Password Request Error]:", error);
+        res.status(500).json({ status: false, message: "Terjadi kesalahan saat memproses permintaan reset password." });
+    }
+});
+
+// 4b. Forgot Password Verify & Set New Password
+router.post('/auth/forgot-password-verify', async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ status: false, message: "Email, kode OTP, dan password baru wajib diisi." });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ status: false, message: "Password baru minimal 6 karakter." });
+        }
+
+        const validEmail = email.trim().toLowerCase();
+        const record = await dbGet(
+            'SELECT * FROM email_verifications WHERE email = ? AND type = ?',
+            [validEmail, 'forgot_password']
+        );
+
+        if (!record) {
+            return res.status(400).json({ status: false, message: "Permintaan reset password tidak ditemukan. Silakan minta kode baru." });
+        }
+
+        if (Number(record.expires_at) < Date.now()) {
+            await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'forgot_password']);
+            return res.status(400).json({ status: false, message: "Kode verifikasi telah kedaluwarsa. Silakan minta kode baru." });
+        }
+
+        if (record.otp !== otp.trim()) {
+            return res.status(400).json({ status: false, message: "Kode verifikasi OTP salah." });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await dbRun('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, validEmail]);
+        await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'forgot_password']);
+
+        sendTelegramNotification(`🔑 Password untuk akun <b>${validEmail}</b> telah berhasil diperbarui via sistem otomatis.`, 'admin');
+
+        res.status(200).json({
+            status: true,
+            message: "Password berhasil diperbarui! Silakan masuk dengan password baru Anda."
+        });
+    } catch (error) {
+        console.error("[Forgot Password Verify Error]:", error);
+        res.status(500).json({ status: false, message: "Terjadi kesalahan saat mereset password." });
+    }
+});
+
+// 4. Legacy Forgot Password
 router.post('/auth/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;

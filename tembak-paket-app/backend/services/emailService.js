@@ -54,7 +54,7 @@ async function sendEmail({ to, subject, html, text }) {
         return { success: false, message: 'RESEND_API_KEY belum disetel.' };
     }
 
-    const fromAddress = process.env.EMAIL_FROM || 'Ry-ITSolutions <onboarding@resend.dev>';
+    const fromAddress = process.env.EMAIL_FROM || 'Ry-ITSolutions <noreply@ry-itsolutionts.web.id>';
     const recipients = Array.isArray(to) ? to : [to];
 
     try {
@@ -131,8 +131,55 @@ async function sendRegistrationOtpEmail(email, otpCode, userName = 'Pengguna') {
     return sendEmail({ to: email, subject, html, text });
 }
 
+
+/**
+ * Template pengiriman OTP Lupa / Reset Password
+ */
+async function sendPasswordResetOtpEmail(email, otpCode, userName = 'Pengguna') {
+    const subject = `${otpCode} adalah Kode Reset Password Ry-ITSolutions Anda`;
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reset Password</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; margin: 0; padding: 24px;">
+        <div style="max-width: 520px; margin: 0 auto; background: #161e2e; border: 1px solid #2d3748; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <div style="background: linear-gradient(135deg, #ef4444, #8b5cf6); padding: 28px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Ry-ITSolutions</h1>
+                <p style="color: #fecdd3; margin: 6px 0 0 0; font-size: 14px;">Permintaan Reset Password</p>
+            </div>
+            <div style="padding: 32px 28px;">
+                <p style="font-size: 16px; margin: 0 0 16px 0;">Halo <strong>${userName}</strong>,</p>
+                <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0;">
+                    Kami menerima permintaan untuk mengatur ulang kata sandi akun Ry-ITSolutions Anda. Gunakan kode verifikasi 6 digit di bawah ini untuk membuat password baru:
+                </p>
+                <div style="background: #0f172a; border: 2px dashed #ef4444; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
+                    <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #f87171; font-family: monospace;">${otpCode}</span>
+                    <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit</p>
+                </div>
+                <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin: 0 0 8px 0;">
+                    🔒 Jika Anda tidak merasa meminta reset password, Anda dapat mengabaikan email ini dengan aman. Password Anda tidak akan berubah.
+                </p>
+            </div>
+            <div style="background: #0f172a; padding: 16px 28px; text-align: center; border-top: 1px solid #1e293b;">
+                <p style="margin: 0; font-size: 12px; color: #64748b;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+
+    const text = `Kode Reset Password Ry-ITSolutions Anda adalah: ${otpCode}. Kode ini berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
+
+    return sendEmail({ to: email, subject, html, text });
+}
+
 module.exports = {
     validateEmailActive,
     sendEmail,
-    sendRegistrationOtpEmail
+    sendRegistrationOtpEmail,
+    sendPasswordResetOtpEmail
 };
