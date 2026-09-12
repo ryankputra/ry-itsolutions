@@ -45,17 +45,25 @@ function sseBroadcast(event, payload) {
 
 // Authentication Check Middleware
 const isAuthenticated = (req, res, next) => {
-    if (req.session && req.session.userId) return next();
+    const uid = req.session?.userId || req.headers['x-user-id'];
+    if (uid) {
+        req.session = req.session || {};
+        req.session.userId = uid;
+        return next();
+    }
     res.status(401).json({ status: false, message: 'Unauthorized: Anda harus login.' });
 };
 
 // Admin Authorization Check Middleware
 const isAdmin = async (req, res, next) => {
-    if (!req.session || !req.session.userId) {
+    const uid = req.session?.userId || req.headers['x-user-id'];
+    if (!uid) {
         return res.status(401).json({ status: false, message: 'Unauthorized: Sesi tidak ditemukan.' });
     }
+    req.session = req.session || {};
+    req.session.userId = uid;
     try {
-        const user = await dbGet('SELECT role FROM users WHERE id = ?', [req.session.userId]);
+        const user = await dbGet('SELECT role FROM users WHERE id = ?', [uid]);
         if (user && user.role === 'admin') return next();
         res.status(403).json({ status: false, message: 'Forbidden: Akses ditolak. Anda bukan Admin.' });
     } catch (error) {
