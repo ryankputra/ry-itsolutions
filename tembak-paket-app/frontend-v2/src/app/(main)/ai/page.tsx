@@ -76,15 +76,45 @@ interface LiveKnowledge {
   };
 }
 
-const STORAGE_KEY = 'ry_ai_chat_history_v7';
+interface UserAnalyticsData {
+  user: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    role: string;
+    balance: number;
+    coins: number;
+    memberSince?: string;
+  };
+  stats: {
+    totalSpent: number;
+    totalOrders: number;
+    successfulOrders: number;
+    pendingOrders: number;
+    failedOrders: number;
+    totalTopup: number;
+    topupCount: number;
+    recentOrders: {
+      id: string;
+      name: string;
+      amount: number;
+      status: string;
+      date: string;
+    }[];
+  };
+}
+
+const STORAGE_KEY = 'ry_ai_chat_history_v8';
 
 const QUICK_PROMPTS = [
-  { label: 'Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan ketentuan buka blokir IMEI 3 Bulan?' },
-  { label: 'Unblock IMEI Jalur Fast?', query: 'Apakah ada unblock IMEI yang fast atau kilat?' },
-  { label: 'Gateway GoPay & QRIS', query: 'Jelaskan fitur Payment Gateway GoPay & QRIS SaaS serta biaya aktivasinya' },
-  { label: 'Voucher & Promo Aktif', query: 'Apakah ada kode kupon diskon atau voucher promo yang aktif saat ini?' },
-  { label: 'Cek Garansi Apple & CEIR', query: 'Bagaimana cara cek garansi Apple dan status CEIR gratis?' },
-  { label: 'Top Up Saldo RyPay', query: 'Bagaimana cara isi saldo RyPay otomatis via QRIS tanpa admin?' },
+  { label: '📊 Berapa Pengeluaran Saya?', query: 'Berapa total pengeluaran saya selama ini dan riwayat pesanan saya?' },
+  { label: '📦 Total Order Saya', query: 'Berapa total order yang sudah saya lakukan dan berapa yang sukses?' },
+  { label: '📡 Kenapa Sinyal HP Hilang?', query: 'Jelaskan kenapa sinyal iPhone atau smartphone luar negeri bisa hilang atau terkena begal?' },
+  { label: '📱 Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan ketentuan buka blokir IMEI 3 Bulan?' },
+  { label: '⚡ Gateway GoPay & QRIS', query: 'Jelaskan fitur Payment Gateway GoPay & QRIS SaaS serta biaya aktivasinya' },
+  { label: '🎟️ Voucher & Promo Aktif', query: 'Apakah ada kode kupon diskon atau voucher promo yang aktif saat ini?' },
+  { label: '🔋 Tips Rawat Battery Health', query: 'Bagaimana tips merawat kesehatan baterai (battery health) iPhone agar awet?' },
 ];
 
 function formatRupiah(val: number): string {
@@ -94,6 +124,61 @@ function formatRupiah(val: number): string {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Smart Math & Calculator Evaluator
+function tryCalculateMath(rawQuery: string): { expression: string; result: string; details?: string } | null {
+  const q = rawQuery.toLowerCase().replace(/,/g, '.');
+
+  // Percentage discount: e.g. "diskon 10% dari 155000" or "potongan 10% dari 150.000"
+  const discMatch = q.match(/(?:diskon|potongan|hemat)\s*(\d+(?:\.\d+)?)\s*%\s*(?:dari|of)?\s*(\d+[\d\.]*)/i);
+  if (discMatch) {
+    const percent = parseFloat(discMatch[1]);
+    const amount = parseFloat(discMatch[2].replace(/\./g, ''));
+    if (!isNaN(percent) && !isNaN(amount) && amount > 0) {
+      const discountVal = (percent / 100) * amount;
+      const finalVal = amount - discountVal;
+      return {
+        expression: `Diskon ${percent}% dari ${formatRupiah(amount)}`,
+        result: formatRupiah(finalVal),
+        details: `Potongan hemat: **${formatRupiah(discountVal)}** (Harga setelah diskon: **${formatRupiah(finalVal)}**)`
+      };
+    }
+  }
+
+  // Arithmetic matching: e.g. "25000 + 35000", "155.000 - 10.000", "50000 * 3", "155000 x 2", "300000 / 2"
+  // Normalize words to operators
+  let cleaned = q
+    .replace(/(?:berapa|hitung|hasil|total)\s*/gi, '')
+    .replace(/\s*tambah\s*/gi, ' + ')
+    .replace(/\s*plus\s*/gi, ' + ')
+    .replace(/\s*kurang\s*/gi, ' - ')
+    .replace(/\s*minus\s*/gi, ' - ')
+    .replace(/\s*kali\s*/gi, ' * ')
+    .replace(/\s*x\s*/gi, ' * ')
+    .replace(/\s*bagi\s*/gi, ' / ')
+    .replace(/rp\.?\s*/gi, '')
+    .trim();
+
+  // Check if string consists of valid math tokens (digits, dots, operators, parentheses)
+  if (/^[0-9\.\s\+\-\*\/\(\)]+$/.test(cleaned) && /[0-9]/.test(cleaned) && /[\+\-\*\/]/.test(cleaned)) {
+    try {
+      // Normalize dots used as thousand separators vs decimals
+      // If dot followed by 3 digits at end or before operator, treat as thousand separator
+      const sanitized = cleaned.replace(/\.(?=\d{3}(?:[\s\+\-\*\/\)]|$))/g, '');
+      // Evaluate using Function (safe given strict regex validation above)
+      const resVal = Function(`'use strict'; return (${sanitized});`)();
+      if (typeof resVal === 'number' && !isNaN(resVal) && isFinite(resVal)) {
+        return {
+          expression: cleaned,
+          result: formatRupiah(resVal),
+          details: `Angka murni: **${resVal.toLocaleString('id-ID')}**`
+        };
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 export default function AiChatPage() {
@@ -107,29 +192,45 @@ export default function AiChatPage() {
   const [knowledge, setKnowledge] = useState<LiveKnowledge | null>(null);
   const [isKnowledgeReady, setIsKnowledgeReady] = useState(false);
 
+  // Live User Analytics & Spending Data
+  const [userAnalytics, setUserAnalytics] = useState<UserAnalyticsData | null>(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Initial welcome message (clean and accurate with active services)
-  const getWelcomeMessage = (k?: LiveKnowledge | null): Message => {
+  // Welcome message
+  const getWelcomeMessage = (k?: LiveKnowledge | null, u?: UserAnalyticsData | null): Message => {
     const imei3Bln = k?.imeiPackages?.find((p) => p.duration?.includes('3'))?.price || 155000;
     const activeCoupon = k?.coupons?.[0]?.code ? ` (Promo: \`${k.coupons[0].code}\`)` : '';
+    const userName = u?.user?.name ? ` **${u.user.name}**` : '';
 
     return {
       id: 'welcome_init',
       sender: 'ai',
-      text: `Halo! Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nSaya terhubung langsung ke **database sistem** secara *real-time*. Anda dapat menanyakan informasi terkini seputar:\n\n• **Buka Blokir IMEI All Operator** (Mulai ${formatRupiah(imei3Bln)}, garansi aktif 3 bulan)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Aktivasi Rp 35.000, 0% Fee Transaksi)\n• **Cek Status Garansi Apple & Database CEIR** (100% Gratis)\n• **Top Up Saldo RyPay Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Kupon Diskon & Koin RyPoints Reward**${activeCoupon}\n• **Bantuan CS Admin WhatsApp**\n\nSilakan pilih topik cepat di bawah atau ketik langsung pertanyaan Anda!`,
+      text: `Halo${userName}! Saya **Ry-AI**, asisten kecerdasan buatan resmi dari **Ry-ITSolutions**.
+
+Saya dilengkapi kemampuan cerdas dan terhubung langsung ke **database sistem** secara *real-time*. Anda dapat menanyakan apapun kepada saya:
+
+• 📊 **Statistik Akun Anda**: Menghitung total pengeluaran belanja, jumlah order sukses, saldo RyPay, dan poin.
+• 📱 **Layanan Unblock IMEI All Operator**: Tarif paket 3 Bulan (mulai ${formatRupiah(imei3Bln)}), cek garansi, dan syarat teknis.
+• ⚡ **Payment Gateway GoPay & Dynamic QRIS SaaS**: Biaya aktivasi Rp 35.000, 0% fee, dan integrasi API webhook.
+• 💡 **Wawasan Teknologi & Smartphone**: Cara rawat battery health, penyebab sinyal hilang/begal, cek IMEI, dan tips beli HP second.
+• 🧮 **Kalkulator Cerdas**: Hitung cepat biaya, diskon promo, atau operasi matematika.
+• 🎟️ **Promo & Diskon Aktif**${activeCoupon}
+
+Silakan pilih topik cepat di bawah atau tanyakan apapun yang ingin Anda ketahui!`,
       timestamp: formatTime(new Date()),
       actions: [
-        { label: 'Buka Menu IMEI', href: '/unblock-imei' },
-        { label: 'Gateway GoPay', href: '/gateway' },
-        { label: 'Cek Garansi', href: '/cek-garansi' },
-        { label: 'Top Up Saldo', href: '/topup' },
+        { label: '📊 Cek Pengeluaran Saya', href: '/history' },
+        { label: '📱 Layanan IMEI', href: '/unblock-imei' },
+        { label: '⚡ Gateway GoPay', href: '/gateway' },
+        { label: '💳 Top Up Saldo', href: '/topup' },
       ],
     };
   };
 
-  // 1. Fetch Real-time Database Knowledge on Mount
+  // 1. Fetch Live Database Knowledge
   useEffect(() => {
     const fetchLiveKnowledge = async () => {
       try {
@@ -146,7 +247,24 @@ export default function AiChatPage() {
     fetchLiveKnowledge();
   }, []);
 
-  // 2. Load chat history from localStorage
+  // 2. Fetch User Analytics & Spending History
+  useEffect(() => {
+    const fetchUserAnalytics = async () => {
+      try {
+        const res = await fetch('/api/user/analytics', { credentials: 'include' });
+        const json = await res.json();
+        if (json?.status && json.isLoggedIn && json.data) {
+          setUserAnalytics(json.data);
+          setIsUserLoaded(true);
+        }
+      } catch (err) {
+        console.error('Gagal memuat user analytics AI:', err);
+      }
+    };
+    fetchUserAnalytics();
+  }, []);
+
+  // 3. Load chat history from localStorage
   useEffect(() => {
     try {
       localStorage.removeItem('ry_ai_chat_history');
@@ -154,6 +272,7 @@ export default function AiChatPage() {
       localStorage.removeItem('ry_ai_chat_history_v3');
       localStorage.removeItem('ry_ai_chat_history_v5');
       localStorage.removeItem('ry_ai_chat_history_v6');
+      localStorage.removeItem('ry_ai_chat_history_v7');
 
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -165,10 +284,10 @@ export default function AiChatPage() {
       }
     } catch {}
 
-    setMessages([getWelcomeMessage(knowledge)]);
-  }, [knowledge]);
+    setMessages([getWelcomeMessage(knowledge, userAnalytics)]);
+  }, [knowledge, userAnalytics]);
 
-  // 3. Save chat history to localStorage
+  // 4. Save chat history to localStorage
   useEffect(() => {
     if (messages.length > 0) {
       try {
@@ -177,7 +296,7 @@ export default function AiChatPage() {
     }
   }, [messages]);
 
-  // 4. Auto scroll to latest message
+  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
@@ -188,13 +307,14 @@ export default function AiChatPage() {
   }, []);
 
   // =========================================================================
-  // DYNAMIC SELF-LEARNING INTELLIGENCE & INTENT ENGINE
+  // DYNAMIC INTELLIGENCE, USER ANALYTICS, & OUT-OF-CONTEXT QA ENGINE
   // =========================================================================
   const generateAiResponse = (userText: string): { reply: string; actions?: Message['actions'] } => {
     const q = userText.toLowerCase().trim();
     const k = knowledge;
+    const ua = userAnalytics;
 
-    // Fallback constants if knowledge is still loading
+    // Fallback constants
     const gwActivationFee = k?.gateway?.activationFee || 35000;
     const gwRenewalFee = k?.gateway?.renewalFee || 10000;
     const topupMin = k?.topup?.minDeposit || 10000;
@@ -202,169 +322,316 @@ export default function AiChatPage() {
     const csAdmin2 = k?.cs?.admin2 || '087767287284';
 
     // -------------------------------------------------------------
-    // INTENT SCORING
+    // 1. SMART MATH & CALCULATION ENGINE
     // -------------------------------------------------------------
-    const scores = {
-      product: 0,
-      gateway: 0,
-      topup: 0,
-      voucher: 0,
-      rypoints: 0,
-      ceir: 0,
-      apple: 0,
-      imei: 0,
-      cs: 0,
-      announcement: 0,
-      reseller: 0,
-      greetings: 0,
-    };
-
-    // PRODUCT / PACKAGES KEYWORDS (HANDLED ACCORDING TO SHOW_BELI_PAKET)
-    if (q.includes('paket data') || q.includes('kuota') || q.includes('beli paket') || q.includes('tembak paket')) scores.product += 15;
-    if (q.includes('masa aktif') || q.includes('perpanjang masa aktif') || q.includes('tambah masa aktif')) scores.product += 20;
-    if (q.includes('akrab') || q.includes('super mini') || q.includes('jumbo') || q.includes('mega big') || q.includes('big extra')) scores.product += 20;
-    if (q.includes('telkomsel') || q.includes('tsel') || q.includes('tri') || q.includes('three') || q.includes('indosat') || q.includes('isat') || q.includes('im3')) {
-      if (!q.includes('unblock') && !q.includes('imei')) scores.product += 15;
-    }
-    if (q.includes('edukasi') || q.includes('conference') || q.includes('freedom') || q.includes('hifi') || q.includes('flexmax') || q.includes('xtra on') || q.includes('iflix')) {
-      scores.product += 20;
-    }
-
-    // PAYMENT GATEWAY KEYWORDS
-    if (q.includes('gateway') || q.includes('payment gateway') || q.includes('gobiz') || q.includes('merchant')) scores.gateway += 20;
-    if (q.includes('saas')) scores.gateway += 10;
-    if (q.includes('webhook') || q.includes('api key') || q.includes('integrasi') || q.includes('rest api')) scores.gateway += 10;
-    if (q.includes('gopay') && !q.includes('topup') && !q.includes('saldo')) scores.gateway += 15;
-    if (q.includes('qris') && !q.includes('isi saldo') && !q.includes('topup') && !q.includes('deposit')) scores.gateway += 6;
-    if (scores.gateway > 0 && (q.includes('biaya') || q.includes('aktivasi') || q.includes('perpanjang') || q.includes('tarif') || q.includes('harga'))) {
-      scores.gateway += 10;
-    }
-
-    // TOPUP & RYPAY KEYWORDS
-    if (q.includes('topup') || q.includes('top up') || q.includes('isi saldo') || q.includes('deposit') || q.includes('tambah saldo')) scores.topup += 18;
-    if (q.includes('rypay') && !q.includes('potong')) scores.topup += 10;
-    if (q.includes('saldo') && !q.includes('gopay') && !q.includes('gateway')) scores.topup += 8;
-
-    // VOUCHER KEYWORDS
-    if (q.includes('voucher') || q.includes('kupon') || q.includes('diskon') || q.includes('promo') || q.includes('promoopening') || q.includes('septembercerah')) scores.voucher += 18;
-
-    // ANNOUNCEMENTS
-    if (q.includes('pengumuman') || q.includes('broadcast') || q.includes('berita') || q.includes('info web') || q.includes('update')) scores.announcement += 15;
-
-    // RYPOINTS & KOIN
-    if (q.includes('rypoints') || q.includes('koin') || q.includes('roda hoki') || q.includes('spin') || q.includes('trivia') || q.includes('tukar poin') || q.includes('poin')) scores.rypoints += 15;
-
-    // CEIR
-    if (q.includes('ceir') || q.includes('kemenperin') || q.includes('database ceir') || q.includes('blacklist')) scores.ceir += 15;
-
-    // APPLE GARANSI
-    if (q.includes('garansi apple') || q.includes('apple coverage') || q.includes('serial number') || q.includes('applecare') || q.includes('cek garansi')) scores.apple += 15;
-
-    // IMEI & SINYAL
-    if (q.includes('unblock imei') || q.includes('buka imei') || q.includes('paket imei') || q.includes('buka blokir')) scores.imei += 18;
-    if (q.includes('imei') || q.includes('sinyal') || q.includes('no service') || q.includes('tidak ada layanan') || q.includes('baseband') || q.includes('begal')) scores.imei += 12;
-
-    // CS & BANTUAN
-    if (q.includes('cs') || q.includes('admin') || q.includes('customer support') || q.includes('whatsapp') || q.includes('wa admin') || q.includes('hubungi')) scores.cs += 12;
-
-    // RESELLER
-    if (q.includes('reseller') || q.includes('mitra') || q.includes('agen') || q.includes('grosir') || q.includes('bulk')) scores.reseller += 15;
-
-    // GREETINGS
-    if (/^(halo|hai|hi|pagi|siang|sore|malam|assalamualaikum|ping|p)$/i.test(q) || /^(halo|hai|hi|pagi|siang|sore|malam) /i.test(q)) scores.greetings += 10;
-
-    // FIND HIGHEST SCORING DOMAIN
-    let bestDomain = 'default';
-    let maxScore = 0;
-    for (const [dom, sc] of Object.entries(scores)) {
-      if (sc > maxScore) {
-        maxScore = sc;
-        bestDomain = dom;
-      }
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 1: PRODUCT / PACKAGE INQUIRY
-    // -------------------------------------------------------------
-    if (bestDomain === 'product') {
-      // Respect the hide/show toggle: if showBeliPaket is not true, inform that it is temporarily in maintenance
-      if (!k?.showBeliPaket) {
-        return {
-          reply: `### Layanan Paket Data Sedang Dinonaktifkan\n\nMohon maaf, saat ini menu pembelian/tembak paket data dan masa aktif kartu sedang **dinonaktifkan sementara (dalam pemeliharaan)** sampai waktu yang belum ditentukan.\n\nLayanan utama kami yang aktif dan siap melayani Anda 24 jam nonstop:\n1. **Buka Blokir IMEI All Operator** (Garansi 3 bulan penuh)\n2. **Payment Gateway GoPay & Dynamic QRIS SaaS** (Aktivasi Rp 35.000, 0% Fee Transaksi)\n3. **Cek Status Garansi Apple & Database CEIR** (100% Gratis)\n4. **Top Up Saldo RyPay Otomatis 24 Jam**\n\nSilakan gunakan menu layanan aktif yang tersedia di bawah!`,
-          actions: [
-            { label: 'Buka Menu IMEI', href: '/unblock-imei' },
-            { label: 'Gateway GoPay', href: '/gateway' },
-            { label: 'Cek Garansi Apple', href: '/cek-garansi' },
-            { label: 'Top Up Saldo RyPay', href: '/topup' },
-          ],
-        };
-      }
-
-      // If showBeliPaket is true (enabled in future):
-      const allPkgs: LivePackage[] = k?.packages || [];
-      let filterCarrier: string | null = null;
-      if (q.includes('xl') || q.includes('axiata')) filterCarrier = 'XL';
-      else if (q.includes('telkomsel') || q.includes('tsel')) filterCarrier = 'Telkomsel';
-      else if (q.includes('tri') || q.includes('three') || q.includes(' 3 ')) filterCarrier = 'Tri';
-      else if (q.includes('indosat') || q.includes('isat') || q.includes('im3')) filterCarrier = 'Indosat';
-
-      const isMasaAktif = q.includes('masa aktif') || q.includes('perpanjang');
-      const isAkrab = q.includes('akrab');
-
-      let matches = allPkgs.filter((pkg) => {
-        if (filterCarrier && pkg.carrier !== filterCarrier) return false;
-        if (isMasaAktif && pkg.type !== 'masa_aktif' && !pkg.name.toLowerCase().includes('masa aktif')) return false;
-        if (isAkrab && pkg.type !== 'akrab' && !pkg.name.toLowerCase().includes('akrab')) return false;
-        return true;
-      });
-
-      const topMatches = (matches.length > 0 ? matches : allPkgs).slice(0, 6);
-      const pkgListText = topMatches.map((pkg) => {
-        const cleanName = pkg.name.replace(/\[.*?\]/g, '').trim();
-        return `• **${cleanName || pkg.name}**\n  - Provider: **${pkg.carrier}**\n  - Harga: **${formatRupiah(pkg.price)}**`;
-      }).join('\n\n');
-
+    const mathResult = tryCalculateMath(q);
+    if (mathResult) {
       return {
-        reply: `### Hasil Pencarian Paket Real-Time\n\nBerikut daftar harga paket yang terhubung langsung dengan sistem database:\n\n${pkgListText}`,
+        reply: `### 🧮 Hasil Perhitungan Cerdas
+
+• **Perhitungan**: \`${mathResult.expression}\`
+• **Hasil**: **${mathResult.result}**
+${mathResult.details ? `• **Keterangan**: ${mathResult.details}
+` : ''}
+*Apakah ada nominal atau estimasi biaya pesanan lainnya yang ingin Anda hitung?*`,
         actions: [
-          { label: 'Buka Halaman Beli Paket', href: '/beli-paket' },
           { label: 'Isi Saldo RyPay', href: '/topup' },
+          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
         ],
       };
     }
 
     // -------------------------------------------------------------
-    // DOMAIN 2: DYNAMIC UNBLOCK IMEI
+    // 2. USER ANALYTICS: PENGELUARAN, TOTAL ORDER & DATA PENGGUNA
     // -------------------------------------------------------------
-    if (bestDomain === 'imei') {
+    const isSpendingQuery = q.includes('pengeluaran') || q.includes('total belanja') || q.includes('habis berapa') || q.includes('biaya belanja') || q.includes('uang keluar') || q.includes('riwayat belanja');
+    const isOrderQuery = q.includes('total order') || q.includes('berapa order') || q.includes('berapa kali order') || q.includes('pesanan saya') || q.includes('order saya') || q.includes('transaksi saya');
+    const isUserAccountQuery = q.includes('saldo saya') || q.includes('sisa saldo') || q.includes('koin saya') || q.includes('poin saya') || q.includes('akun saya') || q.includes('profil saya');
+    const isRecentTrxQuery = q.includes('transaksi terakhir') || q.includes('order terakhir') || q.includes('pesanan terakhir');
+
+    if (isSpendingQuery || isOrderQuery || isUserAccountQuery || isRecentTrxQuery) {
+      if (!ua || !ua.user) {
+        return {
+          reply: `### 🔒 Akses Riwayat Pengeluaran & Pesanan
+
+Untuk menghitung total pengeluaran, jumlah order yang berhasil, serta status saldo Anda secara otomatis, Anda perlu **login** terlebih dahulu ke akun Ry-ITSolutions.
+
+Setelah login, saya dapat langsung menganalisis seluruh data transaksi Anda secara real-time!`,
+          actions: [
+            { label: 'Login ke Akun', href: '/login' },
+            { label: 'Daftar Akun Baru', href: '/register' },
+          ],
+        };
+      }
+
+      const u = ua.user;
+      const s = ua.stats;
+      const recentList = s.recentOrders && s.recentOrders.length > 0
+        ? s.recentOrders.map((ro, i) => `${i + 1}. **${ro.name}** - ${formatRupiah(ro.amount)} (${ro.status.toUpperCase()})`).join('\n')
+        : 'Belum ada catatan pesanan.';
+
+      // A. SPENDING FOCUS
+      if (isSpendingQuery) {
+        return {
+          reply: `### 📊 Laporan Total Pengeluaran Akun Anda
+
+Halo **${u.name}**! Berikut audit pengeluaran yang tercatat di database Ry-ITSolutions:
+
+• **Total Pengeluaran Selesai**: **${formatRupiah(s.totalSpent)}**
+• **Total Transaksi Berhasil**: **${s.successfulOrders} pesanan**
+• **Pesanan Sedang Diproses**: **${s.pendingOrders} order**
+• **Saldo RyPay Saat Ini**: **${formatRupiah(u.balance)}**
+• **Koin RyPoints**: **${u.coins} Koin**
+• **Total Deposit/Top Up**: **${formatRupiah(s.totalTopup)}** (${s.topupCount}x deposit sukses)
+
+**3 Pesanan Terakhir Anda:**
+${recentList}`,
+          actions: [
+            { label: 'Lihat Semua Riwayat', href: '/history' },
+            { label: 'Top Up Saldo RyPay', href: '/topup' },
+          ],
+        };
+      }
+
+      // B. ORDER COUNT FOCUS
+      if (isOrderQuery || isRecentTrxQuery) {
+        return {
+          reply: `### 📦 Statistik Total Pesanan Anda
+
+Halo **${u.name}**! Berikut rincian seluruh pesanan yang pernah Anda lakukan:
+
+• **Total Seluruh Pesanan**: **${s.totalOrders} Order**
+• **Pesanan Sukses Selesai**: **${s.successfulOrders} Order**
+• **Pesanan Sedang Diproses**: **${s.pendingOrders} Order**
+• **Pesanan Gagal / Dibatalkan**: **${s.failedOrders} Order**
+• **Akumulasi Belanja Sukses**: **${formatRupiah(s.totalSpent)}**
+
+**Pesanan Terbaru:**
+${recentList}`,
+          actions: [
+            { label: 'Buka Menu Riwayat Order', href: '/history' },
+            { label: 'Pesan Layanan Baru', href: '/unblock-imei' },
+          ],
+        };
+      }
+
+      // C. ACCOUNT & BALANCE FOCUS
+      return {
+        reply: `### 👤 Informasi Akun & Saldo Anda
+
+• **Nama Pengguna**: **${u.name}**
+• **Status Keanggotaan**: **${u.role === 'admin' ? '👑 Administrator' : u.role === 'reseller' ? '💎 Reseller Mitra' : '👤 Pengguna Terverifikasi'}**
+• **Saldo Dompet RyPay**: **${formatRupiah(u.balance)}**
+• **Koin Reward RyPoints**: **${u.coins} Poin**
+• **Total Pengeluaran**: **${formatRupiah(s.totalSpent)}** (dari ${s.successfulOrders} order sukses)`,
+        actions: [
+          { label: 'Top Up Saldo RyPay', href: '/topup' },
+          { label: 'Klaim Koin (Games)', href: '/games' },
+          { label: 'Riwayat Transaksi', href: '/history' },
+        ],
+      };
+    }
+
+    // -------------------------------------------------------------
+    // 3. OUT-OF-CONTEXT TECH & SMARTPHONE EDUCATION
+    // -------------------------------------------------------------
+
+    // A. APA ITU IMEI & CARA CEK
+    if (q.includes('apa itu imei') || q.includes('arti imei') || q.includes('fungsi imei') || q.includes('pengertian imei')) {
+      return {
+        reply: `### 📱 Apa Itu Nomor IMEI & Fungsinya?
+
+**IMEI** (*International Mobile Equipment Identity*) adalah kode unik 15 digit yang menjadi identitas resmi setiap perangkat telepon seluler di dunia (seperti nomor KTP bagi smartphone).
+
+**Fungsi Utama IMEI:**
+1. **Identifikasi Perangkat ke BTS**: Mengidentifikasi tipe, merk, dan negara asal smartphone saat tersambung ke pemancar jaringan seluler operator.
+2. **Pengendalian Legalitas (CEIR)**: Di Indonesia, sistem CEIR (*Central Equipment Identity Register*) mencocokkan IMEI HP dengan database Kemenperin/Bea Cukai.
+3. **Keamanan & Pelacakan**: Membantu memblokir akses jaringan ponsel yang hilang atau dicuri.
+
+*Cara Cek IMEI Cepat:* Buka dial telepon dan tekan \`*#06#\`.`,
+        actions: [
+          { label: 'Cek Status Database CEIR', href: '/cek-ceir' },
+          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
+        ],
+      };
+    }
+
+    // B. KENAPA SINYAL HILANG / BEGAL
+    if (q.includes('kenapa sinyal hilang') || q.includes('sinyal begal') || q.includes('kenapa no service') || q.includes('hilang sinyal') || q.includes('kenapa iphone hilang sinyal') || q.includes('kenapa sinyal keblokir')) {
+      return {
+        reply: `### 📶 Penyebab Sinyal Smartphone Hilang (No Service)
+
+Ada dua kemungkinan utama mengapa sinyal HP (khususnya iPhone/Android) hilang:
+
+1. **Pemblokiran Regulasi IMEI (CEIR)**:
+   - Sejak **15 September 2020**, pemerintah Indonesia memberlakukan aturan validasi IMEI.
+   - HP unit luar negeri (Inter) yang tidak didaftarkan pajaknya melalui Bea Cukai akan diblokir akses sinyalnya oleh seluruh operator seluler (Telkomsel, Indosat, XL, Tri, Smartfren).
+   - *Ciri khas:* Muncul nama operator beberapa detik lalu berubah menjadi **"Tidak Ada Layanan / No Service"**.
+
+2. **Kerusakan Komponen IC Baseband (Hardware)**:
+   - Jika chip IC Baseband di motherboard rusak, HP tidak dapat membaca kartu SIM sama sekali.
+   - *Ciri khas:* Muncul status "Tidak Ada SIM" padahal SIM terpasang, atau dial \`*#06#\` kosong tidak memunculkan nomor.
+
+*Solusi:* Jika saat dial \`*#06#\` nomor IMEI 15 digit Anda tetap muncul jelas, berarti mesin HP Anda sehat dan sinyal dapat dipulihkan dengan layanan **Unblock IMEI** kami!`,
+        actions: [
+          { label: 'Pulihkan Sinyal (Unblock IMEI)', href: '/unblock-imei' },
+          { label: 'Cek Status CEIR Gratis', href: '/cek-ceir' },
+        ],
+      };
+    }
+
+    // C. BEDA IBOX vs INTER
+    if (q.includes('ibox') || q.includes('unit inter') || q.includes('beda inter dan ibox') || q.includes('perbedaan ibox')) {
+      return {
+        reply: `### ⚖️ Perbedaan iPhone Unit Resmi (iBox/Digimap) vs Unit Inter
+
+• **Unit Resmi Indonesia (iBox, Digimap, Erafone, GDN)**:
+  - Memiliki kode model negara: **PA/A, ID/A, atau SA/A**.
+  - Pajak PPN & PPh impor telah dilunasi oleh distributor resmi.
+  - IMEI terdaftar permanen seumur hidup di database Kemenperin/Bea Cukai (bebas risiko pemblokiran sinyal).
+
+• **Unit Inter (Impor Luar Negeri)**:
+  - Memiliki kode model luar negeri seperti **LL/A (USA), J/A (Jepang), ZP/A (Singapura)**.
+  - Biasanya masuk tanpa deklarasi pabean resmi, sehingga rentan mengalami pemblokiran sinyal sewaktu-waktu jika regulasi jaringan diperketat.
+  - Harga belinya lebih terjangkau dibanding unit resmi.
+
+*Jika Anda memiliki unit Inter yang hilang sinyal, Ry-ITSolutions menyediakan aktivasi Unblock IMEI All Operator bergaransi penuh.*`,
+        actions: [
+          { label: 'Buka Blokir Sinyal Inter', href: '/unblock-imei' },
+          { label: 'Cek Garansi Apple', href: '/cek-garansi' },
+        ],
+      };
+    }
+
+    // D. TIPS RAWAT BATTERY HEALTH
+    if (q.includes('battery health') || q.includes('baterai') || q.includes('merawat baterai') || q.includes('awet baterai') || q.includes('kesehatan baterai')) {
+      return {
+        reply: `### 🔋 Tips Efektif Merawat Battery Health Smartphone
+
+Kesehatan baterai lithium-ion dipengaruhi oleh suhu panas dan siklus pengisian daya. Berikut tips praktis agar Battery Health awet:
+
+1. **Gunakan Rule 20% - 80%**: Usahakan mulai mengisi daya saat baterai menyentuh 20%, dan cabut di kisaran 80%-85%. Siklus pengisian 0-100% terus-menerus lebih cepat mengikis kapasitas maksimal.
+2. **Hindari Panas Berlebih (Musuh Utama Baterai)**: Lepaskan casing tebal saat mengecas jika HP terasa hangat, dan hindari bermain game berat saat HP sedang dicolok charger.
+3. **Gunakan Charger Berkualitas**: Selalu gunakan adaptor dan kabel bersertifikasi resmi MFi (*Made for iPhone*) atau charger original yang memiliki proteksi arus stabil.
+4. **Aktifkan Pengisian Daya Optimal**: Buka *Pengaturan > Baterai > Kesehatan Baterai* dan aktifkan **Optimized Battery Charging**.`,
+        actions: [
+          { label: 'Cek Garansi Apple', href: '/cek-garansi' },
+          { label: 'Kembali ke Menu Utama', href: '/dashboard' },
+        ],
+      };
+    }
+
+    // E. CARA CEK IMEI
+    if (q.includes('cara cek imei') || q.includes('cek nomor imei') || q.includes('melihat imei')) {
+      return {
+        reply: `### 🔍 Cara Mudah Mengecek 15 Digit Nomor IMEI
+
+1. **Melalui Dial Telepon (Paling Cepat)**:
+   - Buka aplikasi **Telepon**.
+   - Ketik kode: \`*#06#\`
+   - Nomor IMEI 15 digit (IMEI 1 dan IMEI 2) akan langsung muncul otomatis di layar.
+
+2. **Melalui Menu Pengaturan**:
+   - **iPhone (iOS)**: Buka *Pengaturan > Umum > Mengenai* lalu gulir ke bawah pada kolom IMEI.
+   - **Android**: Buka *Pengaturan > Tentang Ponsel > Status Informasi IMEI*.
+
+3. **Fisik Smartphone**:
+   - Cek tulisan kecil pada tray kartu SIM (SIM tray slot).
+   - Cek stiker barcode di bagian belakang kotak kemasan box asli HP.`,
+        actions: [
+          { label: 'Cek Database CEIR', href: '/cek-ceir' },
+          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
+        ],
+      };
+    }
+
+    // F. TIPS BELI HP BEKAS / SECOND
+    if (q.includes('beli hp bekas') || q.includes('hp second') || q.includes('tips beli hp') || q.includes('beli iphone bekas')) {
+      return {
+        reply: `### 🛡️ Panduan Aman Membeli Smartphone Second / Bekas
+
+1. **Uji Sinyal dengan 2 Kartu Berbeda**: Masukkan kartu SIM dari 2 provider berbeda (misal Telkomsel & XL) untuk memastikan sinyal muncul lancar dan bukan unit bypass jaringan.
+2. **Cek Hardware dengan 3uTools**: Hubungkan iPhone ke laptop menggunakan 3uTools untuk memeriksa keaslian layar, kamera, baterai, dan apakah ada sparepart yang pernah diganti.
+3. **Cek Fitur Kunci**: Pastikan Face ID / Touch ID berfungsi, True Tone aktif, kamera tidak bergetar (OIS normal), serta speaker atas dan bawah jernih.
+4. **Wajib Reset Pabrik di Depan Penjual**: Lakukan *Hapus Semua Konten & Pengaturan* untuk memastikan akun iCloud / Google bersih dan perangkat bukan unit curian/terkunci bypass.`,
+        actions: [
+          { label: 'Cek Status IMEI di CEIR', href: '/cek-ceir' },
+          { label: 'Cek Garansi Apple', href: '/cek-garansi' },
+        ],
+      };
+    }
+
+    // G. TEKNOLOGI QRIS DINAMIS
+    if (q.includes('apa itu qris') || q.includes('qris dinamis') || q.includes('beda qris')) {
+      return {
+        reply: `### 💳 Mengenal QRIS Dinamis & Keunggulannya
+
+**QRIS Dinamis** adalah teknologi pembayaran digital Bank Indonesia yang otomatis membuat barcode QR unik untuk setiap transaksi:
+
+• **Nominal Otomatis**: Pembeli tidak perlu mengetik nominal pembayaran secara manual. Saat discan, jumlah tagihan sudah terisi otomatis.
+• **Kode Unik Verifikasi**: Dilengkapi dengan nominal acak (misal Rp 50.124) sehingga server toko online dapat langsung mengenali siapa yang membayar dalam 0.5 detik.
+• **Tanpa Struk Manual**: Transaksi diproses instan 24 jam nonstop tanpa perlu kirim bukti screenshot transfer ke admin.
+
+*Ry-ITSolutions menyediakan integrasi Payment Gateway GoPay & QRIS Dinamis SaaS untuk website dan bot toko Anda.*`,
+        actions: [
+          { label: 'Info Gateway GoPay & QRIS', href: '/gateway' },
+          { label: 'Coba Top Up QRIS', href: '/topup' },
+        ],
+      };
+    }
+
+    // H. CHIT-CHAT, PUJIAN & TERIMA KASIH
+    if (q.includes('makasih') || q.includes('terima kasih') || q.includes('thanks') || q.includes('tengkyu') || q.includes('matur nuwun')) {
+      return {
+        reply: `Sama-sama! Senang sekali bisa membantu Anda. 😊
+
+Jika masih ada yang ingin Anda tanyakan seputar layanan IMEI, gateway pembayaran, saldo akun, atau panduan smartphone, jangan ragu untuk bertanya lagi ya!`,
+        actions: [
+          { label: 'Buka Menu IMEI', href: '/unblock-imei' },
+          { label: 'Gateway GoPay', href: '/gateway' },
+        ],
+      };
+    }
+
+    if (q.includes('kamu pintar') || q.includes('hebat') || q.includes('keren') || q.includes('mantap') || q.includes('top markotop') || q.includes('cerdas')) {
+      return {
+        reply: `Terima kasih banyak atas apresiasinya! 🚀
+
+Saya terus belajar mandiri dan tersinkronisasi langsung dengan sistem Ry-ITSolutions agar selalu dapat memberikan jawaban yang akurat, cepat, dan bermanfaat bagi Anda. Ada hal lain yang bisa saya bantu hari ini?`,
+        actions: [
+          { label: 'Cek Pengeluaran Saya', href: '/history' },
+          { label: 'Buka Menu IMEI', href: '/unblock-imei' },
+        ],
+      };
+    }
+
+    if (q.includes('siapa kamu') || q.includes('siapa namamu') || q.includes('kamu siapa') || q.includes('siapa yang buat kamu')) {
+      return {
+        reply: `Saya adalah **Ry-AI**, asisten kecerdasan buatan resmi dari **Ry-ITSolutions**.
+
+Saya dirancang untuk:
+1. Memberikan informasi real-time seputar layanan Unblock IMEI, Payment Gateway GoPay & QRIS, dan cek garansi.
+2. Menghitung pengeluaran belanja dan rekap riwayat pesanan akun Anda secara instan.
+3. Menjawab pertanyaan teknis seputar smartphone, teknologi seluler, dan perhitungan matematika.
+
+Ada yang ingin Anda diskusikan bersama saya?`,
+        actions: [
+          { label: 'Cek Pengeluaran Saya', href: '/history' },
+          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
+        ],
+      };
+    }
+
+    // -------------------------------------------------------------
+    // 4. CORE SERVICES: IMEI, GATEWAY, TOPUP, VOUCHER, CS, RESELLER
+    // -------------------------------------------------------------
+
+    // DOMAIN: UNBLOCK IMEI
+    if (q.includes('imei') || q.includes('sinyal') || q.includes('unblock') || q.includes('buka blokir')) {
       const imeiPkgs: LiveImeiPackage[] = k?.imeiPackages || [];
       const slowRange = k?.speeds?.slow?.range || 'Max kirim 14:00 WIB, selesai max 00:00 WIB';
       const fastStatus = k?.speeds?.fast?.status || 'hidden';
 
-      const isSpeed = q.includes('fast') || q.includes('kilat') || q.includes('cepat') || q.includes('express') || q.includes('berapa lama') || q.includes('selesai kapan');
-      const isPermanent = q.includes('permanen') || q.includes('permanent') || q.includes('resmi') || q.includes('bea cukai');
-
-      if (isSpeed) {
-        return {
-          reply: `### Kecepatan & Estimasi Pengerjaan Unblock IMEI\n\n• **Jalur Reguler (Aktif)**:\n  - Ketentuan: ${slowRange}.\n  - Estimasi pengerjaan: Selesai di hari yang sama maksimal pukul 00:00 WIB untuk pesanan sebelum batas kirim.\n• **Jalur Fast / Kilat**: Status saat ini **${fastStatus === 'active' ? 'TERSEDIA' : 'NONAKTIF'}** demi menjaga kestabilan antrean jaringan.`,
-          actions: [
-            { label: 'Form Order IMEI', href: '/unblock-imei' },
-            { label: 'Hubungi Admin CS', href: `https://wa.me/${csAdmin1.replace(/[^0-9]/g, '')}`, isExternal: true },
-          ],
-        };
-      }
-
-      if (isPermanent) {
-        return {
-          reply: `### Transparansi Layanan IMEI Ry-ITSolutions\n\n• Kami **TIDAK MENYEDIAKAN paket permanen ataupun bea cukai**.\n• Layanan yang aktif di sistem adalah paket tergaransi resmi selama masa aktif.\n• Selama masa aktif paket, jika sinyal sempat terputus maka **DIGARANSI proses ulang GRATIS** hingga aktif kembali.\n• Mendukung seluruh kartu: Telkomsel, Indosat, XL, Tri, dan Smartfren.`,
-          actions: [
-            { label: 'Buka Form IMEI', href: '/unblock-imei' },
-            { label: 'Cek Status CEIR', href: '/cek-ceir' },
-          ],
-        };
-      }
-
-      // Build live package list
       let imeiListText = '';
       if (imeiPkgs.length > 0) {
         imeiListText = imeiPkgs.map((p) => `• **Paket ${p.duration}**: **${formatRupiah(p.price)}** / IMEI (Garansi Penuh ${p.duration})`).join('\n');
@@ -373,7 +640,17 @@ export default function AiChatPage() {
       }
 
       return {
-        reply: `### Daftar Paket & Tarif Unblock IMEI Real-Time\n\nBerikut paket buka blokir sinyal IMEI yang aktif di database sistem:\n\n${imeiListText}\n\n**Spesifikasi & Ketentuan:**\n• All Operator (Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren)\n• Garansi penuh selama durasi paket 3 bulan\n• Syarat wajib: IC Baseband normal (muncul status \"Tidak Ada Layanan / No Service\", bukan \"Tidak Ada SIM\")\n• Estimasi pengerjaan: ${slowRange}`,
+        reply: `### Daftar Paket & Tarif Unblock IMEI Real-Time
+
+Berikut paket buka blokir sinyal IMEI yang aktif di database sistem:
+
+${imeiListText}
+
+**Spesifikasi & Ketentuan:**
+• All Operator (Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren)
+• Garansi penuh selama masa aktif paket
+• Syarat wajib: IC Baseband normal (muncul "Tidak Ada Layanan / No Service", bukan "Tidak Ada SIM")
+• Estimasi pengerjaan reguler: ${slowRange}`,
         actions: [
           { label: 'Order Unblock IMEI', href: '/unblock-imei' },
           { label: 'Isi Saldo RyPay', href: '/topup' },
@@ -381,12 +658,44 @@ export default function AiChatPage() {
       };
     }
 
-    // -------------------------------------------------------------
-    // DOMAIN 3: DYNAMIC VOUCHERS & PROMOS
-    // -------------------------------------------------------------
-    if (bestDomain === 'voucher') {
-      const liveCoupons: LiveCoupon[] = k?.coupons || [];
+    // DOMAIN: PAYMENT GATEWAY GOPAY & QRIS
+    if (q.includes('gateway') || q.includes('gopay') || q.includes('gobiz') || q.includes('saas') || (q.includes('qris') && !q.includes('topup'))) {
+      return {
+        reply: `### Biaya & Fitur Payment Gateway GoPay & QRIS SaaS
 
+Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/WhatsApp, dan aplikasi Anda:
+
+• **Biaya Aktivasi Perdana**: **${formatRupiah(gwActivationFee)}** (Termasuk lisensi 30 hari penuh).
+• **Perpanjangan Bulanan**: Sangat hemat, hanya **${formatRupiah(gwRenewalFee)} / bulan**.
+• **0% Fee Transaksi (GRATIS)**: Tanpa potongan persenan per transaksi. 100% pembayaran masuk utuh ke rekening GoPay/GoBiz Anda.
+• **Direct Settlement**: Dana langsung detik itu juga masuk ke saldo pemilik tanpa perlu withdraw pihak ketiga.
+• **Webhook Super Cepat**: Notifikasi pembayaran otomatis 0.2 - 0.5 detik.`,
+        actions: [
+          { label: `Aktivasi Gateway (${formatRupiah(gwActivationFee)})`, href: '/gateway' },
+          { label: 'Dokumentasi API', href: '/gateway' },
+        ],
+      };
+    }
+
+    // DOMAIN: TOP UP SALDO RYPAY
+    if (q.includes('topup') || q.includes('top up') || q.includes('isi saldo') || q.includes('deposit') || q.includes('rypay')) {
+      return {
+        reply: `### Panduan & Ketentuan Top Up Saldo RyPay
+
+• **Biaya Admin: Rp 0 (BEBAS BIAYA ADMIN)**.
+• **Minimal Top Up**: Mulai dari **${formatRupiah(topupMin)}**.
+• **Metode Pembayaran**: Menggunakan **Dynamic QRIS Otomatis 24 Jam** yang mendukung seluruh Bank (BCA, Mandiri, BRI, BNI, BSI) & E-Wallet (GoPay, OVO, DANA, ShopeePay, LinkAja).
+• **Kecepatan Masuk**: Saldo RyPay otomatis bertambah dalam **2 - 5 detik** setelah pembayaran sukses.`,
+        actions: [
+          { label: 'Top Up RyPay Sekarang', href: '/topup' },
+          { label: 'Cek Riwayat Saldo', href: '/history' },
+        ],
+      };
+    }
+
+    // DOMAIN: VOUCHER & PROMO
+    if (q.includes('voucher') || q.includes('kupon') || q.includes('diskon') || q.includes('promo')) {
+      const liveCoupons: LiveCoupon[] = k?.coupons || [];
       if (liveCoupons.length > 0) {
         const couponList = liveCoupons.map((c) => {
           const pot = c.discountType === 'percent' ? `${c.discountValue}%` : formatRupiah(c.discountValue);
@@ -394,162 +703,25 @@ export default function AiChatPage() {
         }).join('\n\n');
 
         return {
-          reply: `### Kode Voucher & Promo Diskon Aktif\n\nBerikut kode promo yang sedang **AKTIF** di database sistem Ry-ITSolutions:\n\n${couponList}\n\n*Masukkan kode kupon di atas pada kolom Voucher saat melakukan checkout pesanan!*`,
+          reply: `### Kode Voucher & Promo Diskon Aktif\n\nBerikut kode promo yang sedang **AKTIF** di sistem database kami:\n\n${couponList}\n\n*Masukkan kode kupon di atas pada kolom Voucher saat melakukan checkout!*`,
           actions: [
             { label: 'Klaim di Menu Voucher', href: '/vouchers' },
             { label: 'Order Layanan Sekarang', href: '/unblock-imei' },
           ],
         };
       }
-
       return {
-        reply: `### Informasi Promo & Voucher Diskon\n\nSaat ini belum ada kode kupon voucher publik yang aktif di sistem. Pantau terus halaman **Voucher** atau pengumuman dashboard untuk promo berikutnya!`,
+        reply: `### Informasi Promo & Voucher Diskon\n\nSaat ini belum ada kode voucher publik yang aktif di sistem. Pantau terus halaman **Voucher** atau pengumuman dashboard untuk promo berikutnya!`,
         actions: [
           { label: 'Buka Halaman Voucher', href: '/vouchers' },
-          { label: 'Main Games RyPoints', href: '/games' },
         ],
       };
     }
 
-    // -------------------------------------------------------------
-    // DOMAIN 4: PAYMENT GATEWAY (GOPAY & DYNAMIC QRIS SAAS)
-    // -------------------------------------------------------------
-    if (bestDomain === 'gateway') {
-      const isPricing = q.includes('biaya') || q.includes('harga') || q.includes('tarif') || q.includes('aktivasi') || q.includes('perpanjang') || q.includes('berapa');
-      const isApi = q.includes('api') || q.includes('webhook') || q.includes('curl') || q.includes('php') || q.includes('node') || q.includes('integrasi');
-
-      if (isPricing) {
-        return {
-          reply: `### Biaya & Ketentuan Payment Gateway GoPay & QRIS SaaS\n\nSolusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/WhatsApp, dan aplikasi Anda:\n\n• **Biaya Aktivasi Perdana**: **${formatRupiah(gwActivationFee)}** (Sudah termasuk lisensi aktif 30 hari penuh).\n• **Perpanjangan Bulanan**: Sangat terjangkau, hanya **${formatRupiah(gwRenewalFee)} / bulan** (bisa perpanjang manual atau potong saldo RyPay otomatis).\n• **Fee Transaksi 0% (GRATIS)**: Tanpa potongan persenan per transaksi. 100% uang pembayaran masuk utuh ke rekening GoPay/GoBiz Anda.\n• **Direct Settlement Instan**: Uang langsung masuk detik itu juga ke akun GoPay pemilik tanpa perlu withdraw pihak ketiga.\n• **Pairing Tanpa Ribet**: Cukup masukkan nomor HP GoBiz & verifikasi OTP tanpa berkas legalitas PT/CV.`,
-          actions: [
-            { label: `Aktivasi Gateway (${formatRupiah(gwActivationFee)})`, href: '/gateway' },
-            { label: 'Dokumentasi API', href: '/gateway' },
-          ],
-        };
-      }
-
-      if (isApi) {
-        return {
-          reply: `### Integrasi REST API & Webhook Callback Gateway\n\nRy-ITSolutions menyediakan REST API berkecepatan tinggi untuk menghubungkan pembayaran otomatis ke sistem Anda:\n\n• **Endpoint Buat QRIS**: \`POST /api/v1/gateway/create-qris\`\n• **Webhook Notification**: Mengirim notifikasi webhook secara real-time (\`0.2 - 0.5 detik\`) saat pembayaran sukses (\`payment.success\`).\n• **Keamanan Tinggi**: Dilengkapi HMAC-SHA256 signature verification.\n• **Sampel Integrasi**: Tersedia kode siap pakai untuk cURL, PHP (Laravel/CI), Node.js, dan Python.\n\nKunjungi menu **Gateway** untuk mengaktifkan lisensi dan mengelola API Key Anda!`,
-          actions: [
-            { label: 'Kelola API Key Gateway', href: '/gateway' },
-          ],
-        };
-      }
-
+    // DOMAIN: CS & ADMIN WHATSAPP
+    if (q.includes('cs') || q.includes('admin') || q.includes('customer support') || q.includes('whatsapp') || q.includes('wa admin')) {
       return {
-        reply: `### Fitur & Keunggulan Payment Gateway GoPay & QRIS SaaS\n\n1. **Aktivasi Terjangkau**: Biaya perdana **${formatRupiah(gwActivationFee)}** (30 hari), perpanjangan hanya **${formatRupiah(gwRenewalFee)} / bulan**.\n2. **0% Fee Transaksi**: Uang pembayaran masuk 100% utuh tanpa potongan komisi.\n3. **Direct Settlement**: Dana langsung detik itu juga masuk ke saldo GoPay/GoBiz pemilik.\n4. **Webhook Super Cepat**: Callback webhook 0.2 - 0.5 detik untuk eksekusi pesanan otomatis.\n5. **Dynamic QRIS**: Generate kode QRIS otomatis sesuai nominal unik transaksi.`,
-        actions: [
-          { label: 'Buka Menu Gateway', href: '/gateway' },
-          { label: 'Dokumentasi API', href: '/gateway' },
-        ],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 5: TOP UP SALDO & RYPAY
-    // -------------------------------------------------------------
-    if (bestDomain === 'topup') {
-      const isFee = q.includes('biaya') || q.includes('admin') || q.includes('fee') || q.includes('gratis') || q.includes('potongan');
-
-      if (isFee) {
-        return {
-          reply: `### Biaya & Ketentuan Top Up RyPay\n\n• **Biaya Admin: Rp 0 (BEBAS BIAYA ADMIN)**.\n• **Minimal Top Up**: Mulai dari **${formatRupiah(topupMin)}**.\n• **Metode Pembayaran**: Menggunakan **Dynamic QRIS Otomatis** yang mendukung seluruh Bank (BCA, Mandiri, BRI, BNI, BSI) & E-Wallet (GoPay, OVO, DANA, ShopeePay, LinkAja).\n• **Kecepatan Masuk**: Saldo RyPay otomatis bertambah dalam **2 - 5 detik** setelah QRIS dibayar (sistem aktif 24 jam nonstop).`,
-          actions: [
-            { label: 'Top Up RyPay Sekarang', href: '/topup' },
-            { label: 'Cek Riwayat Saldo', href: '/history' },
-          ],
-        };
-      }
-
-      return {
-        reply: `### Panduan Isi Saldo RyPay Otomatis (QRIS 24 Jam)\n\nRyPay adalah saldo dompet digital Anda di Ry-ITSolutions untuk memesan Unblock IMEI, aktivasi Gateway, dan layanan digital lainnya secara instan.\n\n**Cara Top Up:**\n1. Buka menu **Top Up** (\`/topup\`).\n2. Masukkan nominal deposit yang diinginkan (minimal ${formatRupiah(topupMin)}).\n3. Klik **Lanjut Pembayaran** untuk menampilkan kode QRIS dinamis.\n4. Scan QRIS dengan m-Banking atau e-Wallet pilihan Anda.\n5. Selesai! Saldo otomatis masuk dalam 2-5 detik tanpa perlu konfirmasi manual ke admin.`,
-        actions: [
-          { label: 'Isi Saldo RyPay', href: '/topup' },
-          { label: 'Riwayat Transaksi', href: '/history' },
-        ],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 6: ANNOUNCEMENTS & UPDATES
-    // -------------------------------------------------------------
-    if (bestDomain === 'announcement') {
-      const anns = k?.announcements || [];
-      if (anns.length > 0) {
-        const annList = anns.map((a, idx) => `${idx + 1}. \"${a.message}\"`).join('\n');
-        return {
-          reply: `### Pengumuman & Update Website Terkini\n\nBerikut pengumuman aktif dari admin yang sedang berjalan di website:\n\n${annList}`,
-          actions: [
-            { label: 'Lihat Dashboard', href: '/dashboard' },
-            { label: 'Buka Form IMEI', href: '/unblock-imei' },
-          ],
-        };
-      }
-      return {
-        reply: `### Informasi & Berita Website\n\nSaat ini seluruh sistem berjalan normal (100% Operational) tanpa pengumuman khusus. Pemesanan unblock IMEI dan gateway aktif 24 jam!`,
-        actions: [
-          { label: 'Buka Dashboard', href: '/dashboard' },
-        ],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 7: RYPOINTS & REWARD
-    // -------------------------------------------------------------
-    if (bestDomain === 'rypoints') {
-      return {
-        reply: `### Fitur Koin RyPoints & Roda Hoki (Games)\n\nRyPoints adalah koin reward loyalitas pengguna di Ry-ITSolutions:\n\n• **Cara Mendapatkan**: Mainkan **Roda Hoki (Spin Wheel)** harian dan jawab kuis trivia di menu Games setiap hari.\n• **Kegunaan**: Koin RyPoints dapat ditukarkan langsung menjadi saldo RyPay untuk bertransaksi hemat!\n• **Bebas Syarat**: Setiap user terdaftar berhak memutar spin wheel harian secara gratis.`,
-        actions: [
-          { label: 'Main Games RyPoints', href: '/games' },
-          { label: 'Cek Saldo RyPay', href: '/dashboard' },
-        ],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 8: CEIR DATABASE CHECK
-    // -------------------------------------------------------------
-    if (bestDomain === 'ceir') {
-      return {
-        reply: `### Layanan Cek Status Database CEIR\n\nLayanan untuk mengetahui apakah 15 digit nomor IMEI perangkat Anda terdaftar di database CEIR (Kemenperin / Bea Cukai / Kominfo):\n\n• **Akses Layanan**: Kunjungi menu **Cek CEIR** (\`/cek-ceir\`).\n• **Input IMEI**: Masukkan 15 digit IMEI iPhone / Android Anda.\n• **Hasil Cepat**: Menampilkan status keabsahan sinyal perangkat dalam hitungan detik.`,
-        actions: [
-          { label: 'Cek Status CEIR Sekarang', href: '/cek-ceir' },
-          { label: 'Buka Blokir IMEI', href: '/unblock-imei' },
-        ],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 9: APPLE WARRANTY CHECK
-    // -------------------------------------------------------------
-    if (bestDomain === 'apple') {
-      return {
-        reply: `### Layanan Cek Garansi Apple Resmi (100% Gratis)\n\nCek keaslian perangkat, model iPhone/iPad/Mac, dan masa garansi AppleCare langsung dari basis data resmi Apple:\n\n• **Biaya**: **100% GRATIS** tanpa potong saldo.\n• **Data Ditampilkan**: Model perangkat, warna, kapasitas penyimpanan, tanggal pembelian, estimasi garansi aktif, dan cakupan perbaikan AppleCare.\n• **Cara Cek**: Masukkan Serial Number perangkat Anda di menu **Cek Garansi** (\`/cek-garansi\`).`,
-        actions: [
-          { label: 'Cek Garansi Apple Gratis', href: '/cek-garansi' },
-        ],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 10: RESELLER & MITRA
-    // -------------------------------------------------------------
-    if (bestDomain === 'reseller') {
-      return {
-        reply: `### Program Kemitraan & Reseller Grosir\n\nBagi Anda pemilik konter HP, toko handphone, atau pelaku usaha yang membutuhkan transaksi dalam jumlah banyak (Bulk IMEI atau Gateway Payment):\n\n• Kami menyediakan **penawaran harga khusus mitra grosir**.\n• Prioritas pemrosesan pesanan dan jalur support khusus.\n• Silakan hubungi langsung WhatsApp Admin Kemitraan kami untuk berdiskusi lebih lanjut!`,
-        actions: [
-          { label: 'Hubungi Admin Kemitraan', href: `https://wa.me/${csAdmin1.replace(/[^0-9]/g, '')}`, isExternal: true },
-        ],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // DOMAIN 11: CS & WHATSAPP ADMIN
-    // -------------------------------------------------------------
-    if (bestDomain === 'cs') {
-      return {
-        reply: `### Kontak Layanan Pelanggan (CS Admin)\n\nTim Customer Support Ry-ITSolutions siap membantu kendala transaksi atau pertanyaan teknis Anda:\n\n• **Admin 1**: [${csAdmin1}](https://wa.me/${csAdmin1.replace(/[^0-9]/g, '')}) *(Layanan IMEI & Gateway)*\n• **Admin 2**: [${csAdmin2}](https://wa.me/${csAdmin2.replace(/[^0-9]/g, '')}) *(Bantuan Transaksi & Deposit)*\n\nJam Operasional CS: Setiap hari pukul **${k?.cs?.hours || '08.00 - 23.00 WIB'}**.\n*Sistem deposit dan pemesanan di website tetap aktif 24 jam nonstop.*`,
+        reply: `### Kontak Layanan Pelanggan (CS Admin)\n\nTim Customer Support Ry-ITSolutions siap membantu kendala transaksi atau pertanyaan teknis Anda:\n\n• **Admin 1**: [${csAdmin1}](https://wa.me/${csAdmin1.replace(/[^0-9]/g, '')}) *(Layanan IMEI & Gateway)*\n• **Admin 2**: [${csAdmin2}](https://wa.me/${csAdmin2.replace(/[^0-9]/g, '')}) *(Bantuan Transaksi & Deposit)*\n\nJam Operasional CS: Setiap hari pukul **${k?.cs?.hours || '08.00 - 23.00 WIB'}**.\n*Sistem pemesanan dan deposit di website aktif 24 jam nonstop.*`,
         actions: [
           { label: 'Chat WhatsApp Admin 1', href: `https://wa.me/${csAdmin1.replace(/[^0-9]/g, '')}`, isExternal: true },
           { label: 'Chat WhatsApp Admin 2', href: `https://wa.me/${csAdmin2.replace(/[^0-9]/g, '')}`, isExternal: true },
@@ -557,14 +729,13 @@ export default function AiChatPage() {
       };
     }
 
-    // -------------------------------------------------------------
-    // DOMAIN 12: GREETINGS
-    // -------------------------------------------------------------
-    if (bestDomain === 'greetings') {
+    // DOMAIN: GREETINGS
+    if (/^(halo|hai|hi|pagi|siang|sore|malam|assalamualaikum|ping|p)$/i.test(q) || /^(halo|hai|hi|pagi|siang|sore|malam) /i.test(q)) {
       return {
-        reply: `Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten virtual cerdas resmi dari **Ry-ITSolutions**.\n\nSaya selalu tersinkronisasi otomatis dengan database sistem:\n• **Buka Blokir IMEI All Operator** (Garansi aktif 3 bulan)\n• **Payment Gateway GoPay & Dynamic QRIS SaaS** (Aktivasi Rp 35.000, Fee 0%)\n• **Top Up Saldo RyPay Otomatis 24 Jam** (QRIS bebas biaya admin)\n• **Voucher Promo Diskon & Koin RyPoints**\n• **Cek Garansi Apple & Database CEIR** (Gratis)\n\nAda layanan yang ingin Anda tanyakan?`,
+        reply: `Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nSaya dapat membantu Anda untuk:\n• 📊 **Menghitung Pengeluaran & Riwayat Pesanan Akun Anda**\n• 📱 **Layanan Buka Blokir IMEI All Operator (Garansi 3 Bulan)**\n• ⚡ **SaaS Payment Gateway GoPay & Dynamic QRIS (Fee 0%)**\n• 💡 **Pertanyaan Seputar Teknologi Smartphone & Cek Garansi**\n• 🧮 **Perhitungan Matematika & Biaya Layanan**\n\nAda yang ingin Anda tanyakan atau hitung?`,
         actions: [
-          { label: 'Buka Blokir IMEI', href: '/unblock-imei' },
+          { label: 'Cek Pengeluaran Saya', href: '/history' },
+          { label: 'Buka Menu IMEI', href: '/unblock-imei' },
           { label: 'Gateway GoPay', href: '/gateway' },
           { label: 'Top Up RyPay', href: '/topup' },
         ],
@@ -572,14 +743,15 @@ export default function AiChatPage() {
     }
 
     // -------------------------------------------------------------
-    // DEFAULT FALLBACK
+    // 5. INTELLIGENT ADAPTIVE FALLBACK (RAMAH & MULTI-KONTEKS)
     // -------------------------------------------------------------
     return {
-      reply: `Terima kasih atas pertanyaan Anda seputar: **\"${userText}\"**.\n\nSebagai asisten cerdas **Ry-ITSolutions** yang terhubung langsung ke database sistem, saya siap memandu Anda untuk:\n\n1. **Aktivasi & Buka Blokir IMEI All Operator** (Garansi 3 bulan penuh).\n2. **SaaS Payment Gateway GoPay & QRIS Dinamis** (Aktivasi Rp 35.000, 0% fee).\n3. **Top Up Saldo RyPay Otomatis 24 Jam** (QRIS bebas biaya admin).\n4. **Kupon Promo & Koin RyPoints Reward**.\n5. **Cek Garansi Apple & Database CEIR Gratis**.\n\nSilakan pilih menu di bawah atau ketik topik yang ingin Anda tanyakan!`,
+      reply: `Terima kasih atas pertanyaan Anda seputar: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat membantu menjawab pertanyaan teknis, menghitung transaksi Anda, atau mengarahkan Anda ke solusi terbaik:\n\n1. **Statistik Pengeluaran & Pesanan**: Ketik *"Berapa pengeluaran saya?"* untuk melihat audit belanja akun Anda.\n2. **Aktivasi & Buka Blokir IMEI All Operator**: Pemulihan sinyal HP No Service dengan garansi penuh 3 bulan.\n3. **Payment Gateway GoPay & QRIS SaaS**: Automasi pembayaran toko online dengan fee 0% dan settlement instan.\n4. **Wawasan Teknologi & Gadget**: Edukasi seputar baterai, baseband, aturan CEIR, dan tips membeli smartphone.\n\nSilakan ketik pertanyaan Anda lebih detail atau pilih menu layanan di bawah!`,
       actions: [
-        { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
-        { label: 'Gateway GoPay & QRIS', href: '/gateway' },
-        { label: 'Top Up Saldo RyPay', href: '/topup' },
+        { label: '📊 Cek Pengeluaran Saya', href: '/history' },
+        { label: '📱 Layanan Unblock IMEI', href: '/unblock-imei' },
+        { label: '⚡ Gateway GoPay & QRIS', href: '/gateway' },
+        { label: '💳 Top Up Saldo RyPay', href: '/topup' },
       ],
     };
   };
@@ -639,12 +811,12 @@ export default function AiChatPage() {
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.removeItem(STORAGE_KEY);
-        setMessages([getWelcomeMessage(knowledge)]);
+        setMessages([getWelcomeMessage(knowledge, userAnalytics)]);
       }
     });
   };
 
-  // Render markdown-like formatted text with high-contrast, crystal-clear readability
+  // Render markdown-like formatted text with crystal-clear readability
   const renderFormattedText = (raw: string) => {
     const lines = raw.split('\n');
     return lines.map((line, idx) => {
@@ -666,7 +838,7 @@ export default function AiChatPage() {
         );
       }
 
-      if (/^\\d+\\.\\s/.test(line)) {
+      if (/^\d+\.\s/.test(line)) {
         return (
           <div key={idx} className="my-0.5 leading-relaxed pl-2 text-slate-700 dark:text-slate-200">
             {parseBold(line)}
@@ -734,11 +906,11 @@ export default function AiChatPage() {
               <h1 className="text-[13px] font-bold text-slate-900 dark:text-white">Ry-AI Assistant</h1>
               <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live Sync
+                Live AI
               </span>
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-              <span>{isKnowledgeReady ? 'Tersinkron Database Real-Time' : 'Menghubungkan ke Database...'}</span>
+              <span>{isKnowledgeReady ? (isUserLoaded && userAnalytics?.user ? `Terhubung: ${userAnalytics.user.name}` : 'Tersinkron Database Real-Time') : 'Menghubungkan ke Database...'}</span>
             </p>
           </div>
         </div>
@@ -896,7 +1068,7 @@ export default function AiChatPage() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Tanyakan info layanan, unblock IMEI, gateway GoPay, promo..."
+            placeholder="Tanyakan pengeluaran Anda, unblock IMEI, kalkulator, info HP..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={isTyping}

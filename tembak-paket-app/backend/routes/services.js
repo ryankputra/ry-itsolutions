@@ -815,4 +815,114 @@ router.get('/user/referral-info', isAuthenticated, async (req, res) => {
     }
 });
 
+
+// GET /api/user/analytics (User Expense & Order Analytics for Ry-AI)
+router.get('/user/analytics', async (req, res) => {
+    try {
+        if (!req.session?.userId) {
+            return res.json({
+                status: true,
+                isLoggedIn: false,
+                data: null
+            });
+        }
+
+        const user = await dbGet(
+            "SELECT id, name, email, phone, role, balance, coins, createdAt FROM users WHERE id = ?",
+            [req.session.userId]
+        );
+
+        if (!user) {
+            return res.json({
+                status: true,
+                isLoggedIn: false,
+                data: null
+            });
+        }
+
+        // Transactions (Orders)
+        const transactions = await dbAll(
+            "SELECT id, packageName, originalPrice, platformFee, discount_amount, status, createdAt, service_type FROM transactions WHERE userId = ? ORDER BY createdAt DESC",
+            [req.session.userId]
+        );
+
+        let totalSpent = 0;
+        let successfulOrders = 0;
+        let pendingOrders = 0;
+        let failedOrders = 0;
+
+        (transactions || []).forEach(tx => {
+            const st = (tx.status || '').toLowerCase();
+            const cost = ((tx.originalPrice || 0) + (tx.platformFee || 0)) - (tx.discount_amount || 0);
+
+            if (st === 'success' || st === 'completed' || st === 'done') {
+                totalSpent += cost > 0 ? cost : 0;
+                successfulOrders++;
+            } else if (st === 'pending' || st === 'processing' || st === 'in_queue' || st === 'waiting') {
+                pendingOrders++;
+            } else if (st === 'failed' || st === 'cancelled' || st === 'refund') {
+                failedOrders++;
+            }
+        });
+
+        // Topups (Deposit history)
+        const topups = await dbAll(
+            "SELECT id, baseAmount, uniqueAmount, status, createdAt FROM topups WHERE userId = ? ORDER BY createdAt DESC",
+            [req.session.userId]
+        );
+
+        let totalTopup = 0;
+        let topupCount = 0;
+
+        (topups || []).forEach(tp => {
+            const st = (tp.status || '').toLowerCase();
+            if (st === 'success' || st === 'completed') {
+                totalTopup += tp.uniqueAmount || tp.baseAmount || 0;
+                topupCount++;
+            }
+        });
+
+        const recentOrders = (transactions || []).slice(0, 3).map(tx => {
+            const cost = ((tx.originalPrice || 0) + (tx.platformFee || 0)) - (tx.discount_amount || 0);
+            return {
+                id: tx.id,
+                name: tx.packageName || 'Layanan Ry-ITSolutions',
+                amount: cost > 0 ? cost : 0,
+                status: tx.status,
+                date: tx.createdAt
+            };
+        });
+
+        return res.json({
+            status: true,
+            isLoggedIn: true,
+            data: {
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    balance: user.balance || 0,
+                    coins: user.coins || 0,
+                    memberSince: user.createdAt
+                },
+                stats: {
+                    totalSpent,
+                    totalOrders: (transactions || []).length,
+                    successfulOrders,
+                    pendingOrders,
+                    failedOrders,
+                    totalTopup,
+                    topupCount,
+                    recentOrders
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user analytics:', error);
+        return res.status(500).json({ status: false, message: 'Gagal mengambil analytics user' });
+    }
+});
+
 module.exports = router;
+
