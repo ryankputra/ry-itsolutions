@@ -1,3 +1,5 @@
+*.sqlite*
+*.bak*
 *.sqlite
 *.sqlite3
 backend/sessions/*

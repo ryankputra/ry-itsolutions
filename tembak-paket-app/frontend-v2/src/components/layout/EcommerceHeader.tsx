@@ -150,10 +150,10 @@ export function EcommerceHeader() {
       {/* ============================================================ */}
       {/* MOBILE TOP HEADER (Signature Ry-ITSolutions Blue)            */}
       {/* ============================================================ */}
-      <div className="lg:hidden bg-white/80 dark:bg-[#161617]/80 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-black/[0.06] dark:border-white/[0.08] px-3.5 py-2.5 flex items-center gap-2.5 relative transition-colors">
-                {/* Search Bar (Clean White Input without Camera icon) */}
-        <div ref={searchRef} data-tour="search-bar" className="flex-1 relative">
-          <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+      <div className="lg:hidden bg-white/85 dark:bg-[#161617]/85 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-black/[0.06] dark:border-white/[0.08] px-3 py-2 flex items-center gap-2 relative transition-colors">
+        {/* Search Bar (Spacious Flex-1 with Auto-Width) */}
+        <div ref={searchRef} data-tour="search-bar" className="flex-1 min-w-0 relative">
+          <form onSubmit={handleSearchSubmit} className="relative flex items-center w-full">
             <div className="w-full h-9 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] border border-transparent focus-within:border-[#0071E3]/40 focus-within:bg-white dark:focus-within:bg-[#1C1C1E] flex items-center px-3 transition-all">
               <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -164,7 +164,7 @@ export function EcommerceHeader() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowSearchDropdown(true)}
                 placeholder="Cari layanan, ketik IMEI..."
-                className="w-full h-full pl-2 pr-2 text-xs text-slate-900 placeholder:text-slate-400 bg-transparent outline-none"
+                className="w-full h-full pl-2 pr-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 bg-transparent outline-none truncate"
               />
             </div>
           </form>
@@ -194,68 +194,87 @@ export function EcommerceHeader() {
                   </Link>
                 ))}
               </div>
+              {/* Quick Tour Guide link inside dropdown so it is still easily accessible */}
+              <div className="pt-2 mt-1 border-t border-hairline/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSearchDropdown(false);
+                    window.dispatchEvent(new Event("open_app_tour"));
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Buka Panduan Aplikasi Interaktif</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Install App Button (Mobile) */}
-        <InstallAppButton variant="header" />
+        {/* Action Buttons Group (Clean, Uncrowded & Spacious) */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Install App Button (Compact icon on mobile, auto-hides if already installed) */}
+          <InstallAppButton variant="header" />
 
-        {/* Panduan Tour Button (Mobile) */}
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
-          className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0 flex items-center gap-1 font-medium text-[11px]"
-          title="Panduan Aplikasi Interaktif"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
+          {/* Panduan Tour Button (Shown on sm+ to keep small mobile screens spacious) */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
+            className="hidden sm:flex p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0 items-center gap-1 font-medium text-[11px]"
+            title="Panduan Aplikasi Interaktif"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
 
-        {/* Notification Bell (Mobile) */}
-        <Link
-          href="/notifications"
-          className="relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-          title="Notifikasi & Promo"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-          </svg>
-          {unread && (
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse ring-2 ring-white dark:ring-black"></span>
-          )}
-        </Link>
+          {/* Notification Bell (Hidden on small mobile as it is already in Bottom Navigation) */}
+          <Link
+            href="/notifications"
+            className="hidden sm:block relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            title="Notifikasi & Promo"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+            </svg>
+            {unread && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse ring-2 ring-white dark:ring-black"></span>
+            )}
+          </Link>
 
-        {/* Cart Icon with real Cart Count */}
-        <Link
-          href="/cart"
-          className="relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-          title="Keranjang Belanja"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-          </svg>
-          {cartCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full min-w-[15px] h-3.5 px-1 text-[8px] font-bold flex items-center justify-center">
-              {cartCount}
-            </span>
-          )}
-        </Link>
+          {/* Cart Icon with real Cart Count */}
+          <Link
+            href="/cart"
+            className="relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            title="Keranjang Belanja"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+            </svg>
+            {cartCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full min-w-[15px] h-3.5 px-1 text-[8px] font-bold flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </Link>
 
-        {/* Theme Toggle (Mobile) */}
-        <ThemeToggle className="text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 !p-1.5 shrink-0 rounded-lg" />
+          {/* Theme Toggle (Mobile) */}
+          <ThemeToggle className="text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:bg-gray-800 !p-1.5 shrink-0 rounded-lg" />
 
-        {/* Chat / CS WhatsApp Icon */}
-        <Link
-          href="/tickets"
-          className="p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-          title="Pusat Bantuan CS"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-          </svg>
-        </Link>
+          {/* Chat / CS WhatsApp Icon (Hidden on small mobile since permanent floating WhatsApp widget is active) */}
+          <Link
+            href="/tickets"
+            className="hidden sm:block p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            title="Pusat Bantuan CS"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+          </Link>
+        </div>
       </div>
 
       {/* ============================================================ */}

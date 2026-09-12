@@ -111,11 +111,11 @@ export function InstallAppButton({ className = "", variant = "button" }: Install
       <button
         type="button"
         onClick={handleInstallClick}
-        className={`px-3 py-1.5 rounded-full bg-[#E8E8ED] hover:bg-[#DEDEE3] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] text-[11px] font-medium transition-all flex items-center gap-1.5 shrink-0 active:scale-95 ${className}`}
+        className={`px-2.5 py-1.5 sm:px-3 rounded-full bg-[#E8E8ED] hover:bg-[#DEDEE3] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] text-[11px] font-medium transition-all flex items-center gap-1.5 shrink-0 active:scale-95 ${className}`}
         title="Install Aplikasi Ry-ITSolutions di HP / Laptop"
       >
-        <Download className="w-3.5 h-3.5 shrink-0 text-slate-600 dark:text-slate-300" />
-        <span>Install App</span>
+        <Download className="w-4 h-4 shrink-0 text-slate-600 dark:text-slate-300" />
+        <span className="hidden sm:inline">Install App</span>
       </button>
     );
   }
