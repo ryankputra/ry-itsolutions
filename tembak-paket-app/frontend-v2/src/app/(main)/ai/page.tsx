@@ -436,6 +436,18 @@ ${recentList}`,
     // 3. OUT-OF-CONTEXT TECH & SMARTPHONE EDUCATION
     // -------------------------------------------------------------
 
+    // A0. PERTANYAAN DI LUAR KONTEKS
+    if (q.includes('luar konteks') || q.includes('bisa ditanya apa') || q.includes('bisa tanya apa') || q.includes('bisa apa saja')) {
+      return {
+        reply: `Tentu saja bisa! Saya adalah **Ry-AI**, asisten kecerdasan buatan serba bisa dari Ry-ITSolutions. Anda dapat menanyakan topik apa pun kepada saya, baik itu:\n\n1. 🧠 **Pertanyaan Umum & Sains**: Penjelasan seputar teknologi, pemrograman, sains, tips kehidupan, hingga cara kerja sistem komputer.\n2. 📊 **Analitik & Pengeluaran Akun**: Menghitung total uang yang sudah Anda belanjakan selama ini di Ry-ITSolutions, statistik order sukses, dan sisa saldo dompet RyPay Anda.\n3. 📱 **Dunia Gadget & Smartphone**: Tips merawat Battery Health iPhone, penyebab sinyal hilang/begal, perbedaan unit resmi iBox vs Inter, hingga cara cek IMEI.\n4. 🧮 **Kalkulator & Perhitungan Cepat**: Menghitung rumus, operasi matematika, atau kalkulasi persen diskon.\n5. 💬 **Diskusi & Obrolan Santai**: Tanya jawab santai, meminta rekomendasi, atau berdiskusi seputar ide bisnis digital.\n\nSilakan tanyakan hal apa pun yang ada di pikiran Anda, saya siap menjawabnya!`,
+        actions: [
+          { label: '📊 Cek Pengeluaran Saya', href: '/history' },
+          { label: '📱 Layanan Unblock IMEI', href: '/unblock-imei' },
+          { label: '⚡ Gateway GoPay & QRIS', href: '/gateway' },
+        ],
+      };
+    }
+
     // A. APA ITU IMEI & CARA CEK
     if (q.includes('apa itu imei') || q.includes('arti imei') || q.includes('fungsi imei') || q.includes('pengertian imei')) {
       return {
@@ -756,8 +768,8 @@ Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/
     };
   };
 
-  // Handle Send Message
-  const handleSendMessage = (textToSend?: string) => {
+  // Handle Send Message (Calls Backend OpenAI ChatGPT Integration with Live Fallback)
+  const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend !== undefined ? textToSend : inputValue).trim();
     if (!text || isTyping) return;
 
@@ -770,11 +782,45 @@ Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/
       timestamp: formatTime(new Date()),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInputValue('');
     setIsTyping(true);
 
-    // AI thinking
+    try {
+      const historyPayload = newMessages.slice(-6).map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }));
+
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: text, history: historyPayload }),
+      });
+
+      const data = await res.json();
+      if (data?.status && data.reply) {
+        const defaultActions = generateAiResponse(text).actions;
+        const aiMessage: Message = {
+          id: `ai_${Date.now()}`,
+          sender: 'ai',
+          text: data.reply,
+          timestamp: formatTime(new Date()),
+          actions: defaultActions,
+        };
+
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsTyping(false);
+        try { playDingSound(); } catch {}
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend AI chat fallback triggered:', err);
+    }
+
+    // Client-side fallback
     setTimeout(() => {
       const aiResponseData = generateAiResponse(text);
       const aiMessage: Message = {
@@ -788,7 +834,7 @@ Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/
       setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
       try { playDingSound(); } catch {}
-    }, 350);
+    }, 300);
   };
 
   // Handle Copy Message Text

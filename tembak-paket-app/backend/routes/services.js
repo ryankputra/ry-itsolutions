@@ -924,5 +924,205 @@ router.get('/user/analytics', async (req, res) => {
     }
 });
 
+
+// POST /api/ai/chat (OpenAI ChatGPT Integration with Live RAG Context & User Analytics)
+router.post('/ai/chat', async (req, res) => {
+    try {
+        const { message, history } = req.body || {};
+        const userQuery = (message || '').trim();
+        if (!userQuery) {
+            return res.status(400).json({ status: false, message: 'Pesan tidak boleh kosong.' });
+        }
+
+        // 1. Resolve User Analytics & Context
+        let userContextText = "Status: Pengguna Belum Login (Tamu). Jika menanyakan pengeluaran atau saldo akun, beri tahu pengguna untuk login di /login.";
+        let userName = "Pengguna";
+        let isUserLoggedIn = false;
+        let userSpent = 0;
+        let userOrders = 0;
+        let userSuccessOrders = 0;
+        let userPendingOrders = 0;
+        let userFailedOrders = 0;
+        let userBalance = 0;
+        let userCoins = 0;
+        let userRecentOrders = [];
+
+        if (req.session?.userId) {
+            const user = await dbGet(
+                "SELECT id, name, email, phone, role, balance, coins, createdAt FROM users WHERE id = ?",
+                [req.session.userId]
+            );
+
+            if (user) {
+                isUserLoggedIn = true;
+                userName = user.name || "Pengguna";
+                userBalance = user.balance || 0;
+                userCoins = user.coins || 0;
+
+                const txs = await dbAll(
+                    "SELECT packageName, originalPrice, platformFee, discount_amount, status, createdAt FROM transactions WHERE userId = ? ORDER BY createdAt DESC",
+                    [user.id]
+                );
+
+                (txs || []).forEach(tx => {
+                    const st = (tx.status || '').toLowerCase();
+                    const cost = ((tx.originalPrice || 0) + (tx.platformFee || 0)) - (tx.discount_amount || 0);
+                    if (st === 'success' || st === 'completed' || st === 'done') {
+                        userSpent += cost > 0 ? cost : 0;
+                        userSuccessOrders++;
+                    } else if (st === 'pending' || st === 'processing' || st === 'in_queue' || st === 'waiting') {
+                        userPendingOrders++;
+                    } else {
+                        userFailedOrders++;
+                    }
+                });
+                userOrders = (txs || []).length;
+
+                const tps = await dbAll("SELECT baseAmount, uniqueAmount, status FROM topups WHERE userId = ?", [user.id]);
+                let totalTopup = 0;
+                let topupCount = 0;
+                (tps || []).forEach(tp => {
+                    if ((tp.status || '').toLowerCase() === 'success' || (tp.status || '').toLowerCase() === 'completed') {
+                        totalTopup += tp.uniqueAmount || tp.baseAmount || 0;
+                        topupCount++;
+                    }
+                });
+
+                userRecentOrders = (txs || []).slice(0, 3).map(t => {
+                    const cost = ((t.originalPrice || 0) + (t.platformFee || 0)) - (t.discount_amount || 0);
+                    return `- ${t.packageName || 'Layanan'} (Rp ${Math.round(cost).toLocaleString('id-ID')}, Status: ${t.status})`;
+                });
+
+                userContextText = `
+DATA PENGGUNA TERDAFTAR:
+- Nama: ${user.name}
+- Role: ${user.role}
+- Saldo Dompet RyPay: Rp ${Math.round(userBalance).toLocaleString('id-ID')}
+- Koin RyPoints: ${userCoins}
+- Total Pengeluaran Selesai: Rp ${Math.round(userSpent).toLocaleString('id-ID')}
+- Total Pesanan: ${userOrders} (${userSuccessOrders} Sukses, ${userPendingOrders} Diproses, ${userFailedOrders} Gagal/Refund)
+- Total Deposit Masuk: Rp ${Math.round(totalTopup).toLocaleString('id-ID')} (${topupCount}x deposit sukses)
+- Pesanan Terbaru:
+${userRecentOrders.join('\n') || 'Belum ada pesanan'}
+`;
+            }
+        }
+
+        // 2. Fetch Live Site Knowledge
+        const imeiPackages = await dbAll("SELECT duration, price FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL ORDER BY price ASC");
+        const coupons = await dbAll("SELECT code, discount_type, discount_value, min_order_amount FROM coupons WHERE is_active = 1");
+        const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('show_beli_paket', 'wa_admin_number', 'imei_speed_fast_status', 'imei_speed_slow_range', 'openai_api_key')");
+        const settingsMap = {};
+        (settingsRows || []).forEach(s => { settingsMap[s.key] = s.value; });
+
+        const imeiListStr = (imeiPackages || []).map(p => `- Paket ${p.duration}: Rp ${Math.round(p.price || 0).toLocaleString('id-ID')}`).join('\n') || '- Paket 3 Bulan: Rp 155.000';
+        const couponListStr = (coupons || []).map(c => `- Kode: ${c.code} (Diskon ${c.discount_type === 'percent' ? c.discount_value + '%' : 'Rp ' + Math.round(c.discount_value).toLocaleString('id-ID')}, Min: Rp ${Math.round(c.min_order_amount || 0).toLocaleString('id-ID')})`).join('\n') || 'Tidak ada kupon aktif';
+
+        // 3. System Prompt for OpenAI
+        const systemPrompt = `Anda adalah Ry-AI, asisten kecerdasan buatan resmi dari Ry-ITSolutions (https://ry-itsolutionts.web.id).
+Anda SANGAT PINTAR, natural, ramah, dan fleksibel seperti ChatGPT asli.
+Anda BISA dan BERSEDIA menjawab pertanyaan apa pun:
+1. Pertanyaan di luar konteks produk (pengetahuan umum, teknologi smartphone, coding, sains, matematika, nasihat, tips hidup, resep, atau obrolan santai). JANGAN PERNAH menolak pertanyaan di luar konteks!
+2. Pertanyaan analitik akun: hitung dan jelaskan pengeluaran pengguna, jumlah order sukses, saldo RyPay, dan koin reward berdasarkan DATA PENGGUNA di bawah.
+3. Layanan Ry-ITSolutions (Buka Blokir IMEI, Payment Gateway GoPay & QRIS SaaS, Cek Garansi Apple, Top Up Saldo).
+
+${userContextText}
+
+DATA LAYANAN TERKINI RY-ITSOLUTIONS:
+- Unblock IMEI: ${imeiListStr} (Garansi 3 Bulan penuh, all operator, kirim sblm 14:00 WIB selesai maks 00:00 WIB).
+- Gateway GoPay & QRIS SaaS: Aktivasi Rp 35.000 (30 hari), perpanjang Rp 10.000/bln, fee 0%, direct settlement, webhook 0.2s.
+- Top Up Saldo RyPay: Min Rp 10.000, 0% admin fee, dynamic QRIS otomatis 24 jam.
+- Kupon Promo: ${couponListStr}
+- PENTING: Menu beli paket data/kuota saat ini sedang DI-HIDE / DALAM PEMELIHARAAN (show_beli_paket = false). Jangan promosikan paket data kecuali user menanyakannya.
+
+PANDUAN MENJAWAB:
+- Jawab dengan bahasa Indonesia yang luwes, cerdas, tidak kaku, dan tidak menggunakan kalimat template basi.
+- Jika pengguna bertanya apakah kamu bisa ditanya di luar konteks, jawab dengan ramah dan antusias bahwa kamu adalah AI serba bisa yang siap diajak diskusi topik apa saja!
+- Format dengan markdown yang rapi (bolding, bullet points).`;
+
+        // 4. Try OpenAI API
+        const openaiApiKey = settingsMap['openai_api_key'] || process.env.OPENAI_API_KEY || '';
+
+        const messagesPayload = [{ role: 'system', content: systemPrompt }];
+        if (Array.isArray(history)) {
+            history.slice(-6).forEach(h => {
+                if (h && h.role && h.content) {
+                    messagesPayload.push({ role: h.role === 'user' ? 'user' : 'assistant', content: String(h.content) });
+                }
+            });
+        }
+        messagesPayload.push({ role: 'user', content: userQuery });
+
+        let openAiReply = null;
+        let quotaExhausted = false;
+
+        try {
+            const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${openaiApiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: messagesPayload,
+                    temperature: 0.7,
+                    max_tokens: 800
+                })
+            });
+
+            const openAiData = await openAiRes.json();
+            if (openAiData?.choices?.[0]?.message?.content) {
+                openAiReply = openAiData.choices[0].message.content;
+            } else if (openAiData?.error?.code === 'credit_balance_exhausted' || openAiData?.error?.type === 'insufficient_quota') {
+                quotaExhausted = true;
+            }
+        } catch (fetchErr) {
+            console.error('[OpenAI] Request error:', fetchErr.message);
+        }
+
+        if (openAiReply) {
+            return res.json({
+                status: true,
+                provider: 'openai',
+                reply: openAiReply,
+                isLoggedIn: isUserLoggedIn
+            });
+        }
+
+        // 5. Intelligent Fallback Logic (When OpenAI credits are exhausted)
+        const qLower = userQuery.toLowerCase();
+        let fallbackReply = '';
+
+        // Specific handling for: "apakah kamu bisa di tanyakan di luar konteks?"
+        if (qLower.includes('luar konteks') || qLower.includes('bisa ditanya apa') || qLower.includes('bisa tanya apa')) {
+          fallbackReply = `Tentu saja bisa! Saya adalah **Ry-AI**, asisten kecerdasan buatan serba bisa. Anda dapat menanyakan topik apa pun kepada saya, baik itu:\n\n1. 🧠 **Pertanyaan Umum & Sains**: Penjelasan seputar teknologi, pemrograman, sejarah, sains, tips kehidupan, hingga cara kerja sistem komputer.\n2. 📊 **Analitik & Pengeluaran Akun**: Menghitung total uang yang sudah Anda belanjakan selama ini di Ry-ITSolutions, statistik order sukses, dan sisa saldo dompet RyPay Anda.\n3. 📱 **Dunia Gadget & Smartphone**: Tips merawat Battery Health iPhone, penyebab sinyal hilang/begal, perbedaan unit resmi iBox vs Inter, hingga cara cek IMEI.\n4. 🧮 **Kalkulator & Perhitungan Cepat**: Menghitung rumus, operasi matematika, atau kalkulasi persen diskon.\n5. 💬 **Diskusi & Obrolan Santai**: Tanya jawab santai, meminta rekomendasi, atau berdiskusi seputar ide bisnis digital.\n\nSilakan tanyakan hal apa pun yang ada di pikiran Anda, saya siap menjawabnya!`;
+        } else if (qLower.includes('pengeluaran') || qLower.includes('total belanja') || qLower.includes('habis berapa')) {
+            if (!isUserLoggedIn) {
+                fallbackReply = `Untuk melihat laporan total pengeluaran dan riwayat pesanan Anda, silakan **login** terlebih dahulu ke akun Ry-ITSolutions.`;
+            } else {
+                fallbackReply = `### 📊 Laporan Pengeluaran Akun Anda\n\nHalo **${userName}**! Berikut data pengeluaran yang tercatat di akun Anda:\n\n• **Total Pengeluaran Sukses**: **Rp ${Math.round(userSpent).toLocaleString('id-ID')}**\n• **Total Pesanan Selesai**: **${userSuccessOrders} pesanan**\n• **Pesanan Sedang Diproses**: **${userPendingOrders} order**\n• **Saldo RyPay Aktif**: **Rp ${Math.round(userBalance).toLocaleString('id-ID')}**\n• **Koin RyPoints**: **${userCoins} Poin**\n\n*Gunakan menu Riwayat untuk melihat detail nomor invoice dan status pengerjaan.*`;
+            }
+        } else if (qLower.includes('total order') || qLower.includes('berapa order') || qLower.includes('pesanan saya')) {
+            if (!isUserLoggedIn) {
+                fallbackReply = `Untuk melihat statistik seluruh pesanan Anda, silakan **login** terlebih dahulu.`;
+            } else {
+                fallbackReply = `### 📦 Statistik Total Pesanan Anda\n\nHalo **${userName}**! Berikut rincian seluruh pesanan Anda:\n\n• **Total Seluruh Pesanan**: **${userOrders} Order**\n• **Pesanan Berhasil**: **${userSuccessOrders} Order**\n• **Pesanan Dalam Proses/Antrean**: **${userPendingOrders} Order**\n• **Pesanan Gagal/Batal**: **${userFailedOrders} Order**\n• **Akumulasi Nilai Transaksi**: **Rp ${Math.round(userSpent).toLocaleString('id-ID')}**`;
+            }
+        }
+
+        return res.json({
+            status: true,
+            provider: 'fallback_smart',
+            reply: fallbackReply,
+            quotaNotice: quotaExhausted,
+            isLoggedIn: isUserLoggedIn
+        });
+    } catch (err) {
+        console.error('Error in /api/ai/chat:', err);
+        return res.status(500).json({ status: false, message: 'Terjadi kesalahan pada sistem chat AI.' });
+    }
+});
+
 module.exports = router;
 
