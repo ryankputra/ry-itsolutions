@@ -66,6 +66,7 @@ export default function AdminImeiPage() {
   const [ceirgoServices, setCeirgoServices] = useState<any[]>([]);
   const [ceirgoPricing, setCeirgoPricing] = useState<any>({});
   const [ceirgoDisplayCodes, setCeirgoDisplayCodes] = useState<Set<string>>(new Set());
+  const [ceirgoCustomNames, setCeirgoCustomNames] = useState<Record<string, string>>({});
 
   const autoSavePricing = (p: any, instant = false) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -122,7 +123,9 @@ export default function AdminImeiPage() {
 
       if (ceirSvcRes?.ok) {
         const d = await ceirSvcRes.json();
-        if (d?.status && Array.isArray(d.services)) setCeirgoServices(d.services);
+        const svcs = d?.data || d?.services;
+        if (d?.status && Array.isArray(svcs)) setCeirgoServices(svcs);
+        if (d?.customNames && typeof d.customNames === "object") setCeirgoCustomNames(d.customNames);
       }
 
       if (dispRes?.ok) {
@@ -131,6 +134,12 @@ export default function AdminImeiPage() {
           const codes = new Set<string>([...(d.data.cekCeir || []), ...(d.data.barcode || [])]);
           setCeirgoDisplayCodes(codes);
         }
+      }
+
+      if (ceirPriceRes?.ok) {
+        const d = await ceirPriceRes.json();
+        const prc = d?.data || d?.pricing || {};
+        setCeirgoPricing(prc);
       }
 
       if (ceirPriceRes?.ok) {
@@ -851,8 +860,8 @@ export default function AdminImeiPage() {
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-bold text-ink text-xs">{svc.name}</p>
-                          <p className="text-[10px] text-primary font-mono">{svc.code}</p>
+                          <p className="font-bold text-ink text-xs">{ceirgoCustomNames[svc.code] || svc.customName || svc.name}</p>
+                          <p className="text-[10px] text-primary font-mono">{svc.code} {svc.name !== (ceirgoCustomNames[svc.code] || svc.name) ? `(${svc.name})` : ""}</p>
                           <p className="text-[11px] text-ink-muted mt-0.5">Modal: Rp {Number(svc.modalPrice || 0).toLocaleString("id-ID")}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -869,6 +878,16 @@ export default function AdminImeiPage() {
                           />
                           <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
                         </label>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-ink-muted">Nama Tampilan Produk</label>
+                        <input
+                          type="text"
+                          value={ceirgoCustomNames[svc.code] ?? (svc.customName || svc.name)}
+                          onChange={(e) => setCeirgoCustomNames({ ...ceirgoCustomNames, [svc.code]: e.target.value })}
+                          placeholder={svc.name}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-hairline bg-canvas text-xs font-semibold text-ink outline-none focus:border-primary"
+                        />
                       </div>
                       <Input
                         label="Harga Jual (Rp)"
@@ -901,8 +920,8 @@ export default function AdminImeiPage() {
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-bold text-ink text-xs">{svc.name}</p>
-                          <p className="text-[10px] text-purple-600 font-mono">{svc.code}</p>
+                          <p className="font-bold text-ink text-xs">{ceirgoCustomNames[svc.code] || svc.customName || svc.name}</p>
+                          <p className="text-[10px] text-purple-600 font-mono">{svc.code} {svc.name !== (ceirgoCustomNames[svc.code] || svc.name) ? `(${svc.name})` : ""}</p>
                           <p className="text-[11px] text-ink-muted mt-0.5">Modal: Rp {Number(svc.modalPrice || 0).toLocaleString("id-ID")}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -919,6 +938,16 @@ export default function AdminImeiPage() {
                           />
                           <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
                         </label>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-ink-muted">Nama Tampilan Produk</label>
+                        <input
+                          type="text"
+                          value={ceirgoCustomNames[svc.code] ?? (svc.customName || svc.name)}
+                          onChange={(e) => setCeirgoCustomNames({ ...ceirgoCustomNames, [svc.code]: e.target.value })}
+                          placeholder={svc.name}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-hairline bg-canvas text-xs font-semibold text-ink outline-none focus:border-primary"
+                        />
                       </div>
                       <Input
                         label="Harga Jual (Rp)"
@@ -944,14 +973,21 @@ export default function AdminImeiPage() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ cekCeir, barcode }),
                   });
-                  const res = await fetch("/api/admin/ceirgo-pricing", {
+                  await fetch("/api/admin/ceirgo-pricing", {
                     method: "POST",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(ceirgoPricing),
                   });
+                  const res = await fetch("/api/admin/ceirgo-custom-names", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(ceirgoCustomNames),
+                  });
                   if (res.ok) {
-                    Swal.fire({ title: "Sukses", text: "Harga dan tampilan layanan pusat berhasil disimpan.", timer: 1500, showConfirmButton: false });
+                    Swal.fire({ title: "Sukses", text: "Nama produk, harga, dan tampilan layanan pusat berhasil disimpan.", timer: 1500, showConfirmButton: false });
+                    loadData();
                   }
                 } catch (e) {
                   Swal.fire({ title: "Error", text: "Gagal menyimpan pengaturan layanan." });

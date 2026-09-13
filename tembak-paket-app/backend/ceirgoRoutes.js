@@ -41,7 +41,11 @@ const DEFAULT_FALLBACK_SERVICES = [
     { code: 'cek_simlock', name: 'Cek Carrier Simlock (Operator Asal)', modalPrice: 2000 },
     { code: 'cek_digi', name: 'Cek DIGI', modalPrice: 1000 },
     { code: 'cek_sf', name: 'Cek Smartfren', modalPrice: 1000 },
-    { code: 'cek_imei', name: 'Cek Status IMEI', modalPrice: 2000 }
+    { code: 'cek_imei', name: 'Cek Status IMEI', modalPrice: 2000 },
+    { code: 'create_barcode', name: 'Generator Barcode Universal', modalPrice: 3000 },
+    { code: 'create_barcode_samsung', name: 'Generator Barcode Samsung', modalPrice: 3000 },
+    { code: 'create_barcode_redmi', name: 'Generator Barcode Redmi / Xiaomi', modalPrice: 3000 },
+    { code: 'create_barcode_ios26', name: 'Generator Barcode iOS (iPhone)', modalPrice: 3500 }
 ];
 
 function initCeirgoRoutes() {
@@ -72,7 +76,7 @@ function initCeirgoRoutes() {
                 acc[normalizedKey] = parseInt(row.value) || 0;
                 return acc;
             }, {});
-            res.json({ status: true, data: pricing });
+            res.json({ status: true, data: pricing, pricing });
         } catch (error) {
             console.error("[API] Error fetching CeirGO pricing:", error.message);
             res.status(500).json({ status: false, message: 'Gagal mengambil harga layanan CeirGO.' });
@@ -89,8 +93,20 @@ function initCeirgoRoutes() {
 
             const services = normalizeServices(ceirgoRes);
             if (!Array.isArray(services) || services.length === 0) {
-                return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
+                let customNames = {};
+                try {
+                    const cnRow = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_custom_names'");
+                    if (cnRow?.value) customNames = JSON.parse(cnRow.value);
+                } catch (cnErr) {}
+                const svcsWithCustom = DEFAULT_FALLBACK_SERVICES.map(s => ({ ...s, customName: customNames[s.code] || s.name }));
+                return res.json({ status: true, data: svcsWithCustom, services: svcsWithCustom, customNames, fallback: true });
             }
+
+            let customNames = {};
+            try {
+                const cnRow = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_custom_names'");
+                if (cnRow?.value) customNames = JSON.parse(cnRow.value);
+            } catch (cnErr) {}
 
             const detailedServices = await Promise.all(
                 services.map(async (svc) => {
@@ -103,6 +119,7 @@ function initCeirgoRoutes() {
                         return {
                             code: svc.code,
                             name: svc.name,
+                            customName: customNames[svc.code] || svc.name,
                             description: svc.description || detail?.description || '',
                             modalPrice,
                             unit_price: modalPrice,
@@ -115,6 +132,7 @@ function initCeirgoRoutes() {
                         return {
                             code: svc.code,
                             name: svc.name,
+                            customName: customNames[svc.code] || svc.name,
                             modalPrice: readModalPrice(null, svc),
                             unit_price: readModalPrice(null, svc)
                         };
@@ -122,7 +140,8 @@ function initCeirgoRoutes() {
                 })
             );
 
-            res.json({ status: true, data: detailedServices.filter(Boolean) });
+            const filteredServices = detailedServices.filter(Boolean);
+            res.json({ status: true, data: filteredServices, services: filteredServices, customNames });
         } catch (error) {
             console.warn("[API Warning] CeirGO admin server offline/timed out. Serving fallback catalog:", error.message);
             res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });

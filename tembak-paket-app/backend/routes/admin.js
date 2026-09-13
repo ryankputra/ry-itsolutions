@@ -626,6 +626,44 @@ router.put('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) =
     }
 });
 
+router.get('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key LIKE 'ceirgo_price_%'");
+        const pricing = rows.reduce((acc, row) => {
+            const normalizedKey = row.key.replace(/^ceirgo_price_ceirgo_price_/, 'ceirgo_price_').replace('ceirgo_price_', '');
+            acc[normalizedKey] = parseInt(row.value) || 0;
+            return acc;
+        }, {});
+        res.json({ status: true, data: pricing, pricing });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.get('/admin/ceirgo-custom-names', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_custom_names'");
+        let customNames = {};
+        if (row && row.value) {
+            try { customNames = JSON.parse(row.value); } catch (e) {}
+        }
+        res.json({ status: true, data: customNames, customNames });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/ceirgo-custom-names', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const customNames = req.body;
+        const val = typeof customNames === 'object' && customNames !== null ? JSON.stringify(customNames) : '{}';
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ceirgo_custom_names', ?)", [val]);
+        res.json({ status: true, message: "Nama tampilan produk berhasil diperbarui." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // 10. CeirGO Deposit & Providers
 const DEFAULT_FALLBACK_PROVIDERS = [
     { id: 'qris', code: 'qris', name: 'QRIS Realtime 24 Jam', min: 10000, fee: 0, type: 'qris' },
@@ -2350,9 +2388,51 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             [updatedDuration, updatedPrice, updatedVisible, speedsJson, speedPricesJson, id]
         );
 
+        // 1. Audit Log in Website Database (user_activity_logs)
+        try {
+            const { logUserActivity } = require('../utils/activityLogger');
+            await logUserActivity({
+                userId: req.user?.id || req.session?.userId || 1,
+                userName: req.user?.name || 'Admin',
+                userEmail: req.user?.email || 'admin@ry-itsolutions.web.id',
+                action: 'EDIT_IMEI_PACKAGE',
+                description: `Pembaruan paket IMEI '${updatedDuration}' (Harga: Rp ${updatedPrice.toLocaleString('id-ID')})`,
+                path: req.originalUrl,
+                req
+            });
+        } catch (logErr) {
+            console.error('[Admin Log Activity Error]', logErr);
+        }
+
+        // 2. In-App Website Notification & Announcement Banner
+        try {
+            const annId = `ann_pkg_upd_${Date.now()}`;
+            const annMsg = `[UPDATE PAKET IMEI] Paket ${updatedDuration} telah diperbarui dengan harga mulai Rp ${updatedPrice.toLocaleString('id-ID')}! Cek di menu Buka IMEI.`;
+            await dbRun("INSERT OR REPLACE INTO announcements (id, message, createdAt, bgColor, is_active) VALUES (?, ?, ?, ?, 1)",
+                [annId, annMsg, new Date().toISOString(), '#2563eb']
+            );
+            sseBroadcast('announcement', { message: annMsg, bgColor: '#2563eb' });
+        } catch (annErr) {
+            console.error('[Announcement Broadcast Error]', annErr);
+        }
+
+        // 3. Web Push Notification to Mobile Status Bar
+        try {
+            const { broadcastPushNotification } = require('../services/webPushService');
+            broadcastPushNotification({
+                title: `Update Paket IMEI: ${updatedDuration}`,
+                body: `Harga & paket ${updatedDuration} baru saja diperbarui mulai Rp ${updatedPrice.toLocaleString('id-ID')}. Cek detail sekarang!`,
+                url: '/unblock-imei',
+                icon: '/logo.png',
+                tag: `update-imei-${id}`
+            }).catch(pErr => console.error('[Auto WebPush Error]', pErr));
+        } catch (pushErr) {
+            console.error('[WebPush Error]', pushErr);
+        }
+
         res.json({
             status: true,
-            message: `Paket '${updatedDuration}' berhasil diperbarui!`,
+            message: `Paket '${updatedDuration}' berhasil diperbarui! Notifikasi pembaruan dan log website telah dikirimkan.`,
             data: { id, duration: updatedDuration, price: updatedPrice, isVisible: updatedVisible, allowed_speeds: parsedSpeeds }
         });
     } catch (e) {

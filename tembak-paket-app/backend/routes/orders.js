@@ -413,6 +413,11 @@ router.get('/orders/catalog', async (req, res) => {
         const activeCekCeir = new Set(Array.isArray(displaySettings.cekCeir) ? displaySettings.cekCeir : Array.from(DIAGNOSTIC_SERVICE_CODES));
         const activeBarcode = new Set(Array.isArray(displaySettings.barcode) ? displaySettings.barcode : Array.from(BARCODE_SERVICE_CODES));
 
+        let customNames = {};
+        if (settings.ceirgo_custom_names) {
+            try { customNames = JSON.parse(settings.ceirgo_custom_names); } catch (e) {}
+        }
+
         const pricing = {};
         for (const [k, v] of Object.entries(settings)) {
             if (k.startsWith('ceirgo_price_')) {
@@ -423,14 +428,14 @@ router.get('/orders/catalog', async (req, res) => {
 
         const diagnosticProducts = Array.from(DIAGNOSTIC_SERVICE_CODES).map(code => ({
             code,
-            name: SERVICE_NAMES[code] || code,
+            name: customNames[code] || SERVICE_NAMES[code] || code,
             price: pricing[code] || 5000,
             active: activeCekCeir.has(code)
         }));
 
         const barcodeProducts = Array.from(BARCODE_SERVICE_CODES).map(code => ({
             code,
-            name: SERVICE_NAMES[code] || code,
+            name: customNames[code] || SERVICE_NAMES[code] || code,
             price: pricing[code] || 5000,
             active: activeBarcode.has(code)
         }));

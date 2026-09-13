@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
-import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
+import Link from "next/link";
+import { Wallet, AlertCircle } from "lucide-react";
 
 const ceirgoNameMapping: Record<string, string> = {
   'create_barcode': 'Create Barcode Universal',
@@ -171,9 +172,21 @@ export default function BarcodePage() {
 
     const price = getPrice(option);
 
-    // If Direct QRIS chosen or balance < price, trigger Instant QRIS directly
-    if (paymentMethod === "qris" || (user && user.balance < price)) {
-      setShowInstantQris(true);
+    if (!user || user.balance < price) {
+      Swal.fire({
+        title: "Saldo Akun Tidak Mencukupi",
+        text: `Saldo akun Anda saat ini (Rp ${Number(user?.balance || 0).toLocaleString("id-ID")}) tidak mencukupi untuk biaya pembuatan barcode (Rp ${price.toLocaleString("id-ID")}). Silakan lakukan Top Up Saldo terlebih dahulu.`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Top Up Saldo",
+        cancelButtonText: "Batal",
+        confirmButtonColor: "#9333ea",
+        cancelButtonColor: "#6b7280"
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push("/topup");
+        }
+      });
       return;
     }
 
@@ -386,65 +399,57 @@ export default function BarcodePage() {
             </div>
           </div>
 
-          {/* Pilihan Metode Pembayaran Direct vs Saldo */}
+          {/* Metode Pembayaran: Saldo Akun Saja */}
           <div className="space-y-2 pt-4 border-t border-hairline">
             <label className="text-xs font-bold text-ink flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[11px] font-bold">4</span>
-                Pilih Metode Pembayaran
+                Metode Pembayaran
               </span>
-              <span className="text-[10px] text-ink-muted">Langsung diproses otomatis 24 Jam</span>
+              <span className="text-[10px] text-purple-600 font-bold bg-purple-50 dark:bg-purple-950/40 px-2.5 py-0.5 rounded-full">
+                Hanya Saldo Akun
+              </span>
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("balance")}
-                className={`p-3.5 rounded-2xl border text-left transition-all ${
-                  paymentMethod === "balance"
-                    ? "border-purple-600 bg-purple-500/10 ring-1 ring-purple-600 font-bold shadow-xs text-purple-900 dark:text-purple-300"
-                    : "border-hairline bg-canvas hover:bg-parchment"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-6-10.5H20.25a2.25 2.25 0 012.25 2.25v10.5a2.25 2.25 0 01-2.25 2.25H3.75a2.25 2.25 0 01-2.25-2.25V6.75A2.25 2.25 0 013.75 4.5z"/></svg> Saldo Akun
-                  </span>
-                  <input type="radio" checked={paymentMethod === "balance"} onChange={() => {}} className="text-purple-600" />
+            <div className="p-3.5 rounded-2xl border border-purple-500/30 bg-purple-500/5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                  <Wallet className="w-5 h-5" />
                 </div>
-                <div className="text-xs text-purple-600 font-mono font-bold mt-1.5">
-                  Rp {Number(user?.balance || 0).toLocaleString("id-ID")}
+                <div>
+                  <p className="text-xs font-bold text-ink">Saldo Akun Anda</p>
+                  <p className="text-sm font-mono font-extrabold text-purple-600 mt-0.5">
+                    Rp {Number(user?.balance || 0).toLocaleString("id-ID")}
+                  </p>
                 </div>
-                <p className="text-[10px] text-ink-muted mt-0.5">Potong langsung dari dompet akun</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("qris")}
-                className={`p-3.5 rounded-2xl border text-left transition-all ${
-                  paymentMethod === "qris"
-                    ? "border-purple-600 bg-purple-500/10 ring-1 ring-purple-600 font-bold shadow-xs text-purple-900 dark:text-purple-300"
-                    : "border-hairline bg-canvas hover:bg-parchment"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 inline mr-1 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg> Direct QRIS Otomatis
-                  </span>
-                  <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-purple-600" />
-                </div>
-                <div className="text-xs text-emerald-600 font-bold mt-1.5">
-                  Semua Bank &amp; E-Wallet (Realtime 24 Jam)
-                </div>
-                <p className="text-[10px] text-ink-muted mt-0.5">BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay</p>
-              </button>
+              </div>
+              {user && user.balance < getPrice(option) ? (
+                <Link href="/topup" className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-xs shrink-0">
+                  + Top Up Saldo
+                </Link>
+              ) : (
+                <span className="text-[11px] text-emerald-600 font-bold bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 rounded-full shrink-0">
+                  Saldo Cukup
+                </span>
+              )}
             </div>
+            {user && user.balance < getPrice(option) && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                <span>Saldo Anda kurang <b>Rp {(getPrice(option) - (user?.balance || 0)).toLocaleString("id-ID")}</b>. Silakan lakukan Top Up untuk membuat barcode ini.</span>
+              </div>
+            )}
           </div>
 
-          <Button className="w-full h-12 text-sm font-bold shadow-md shadow-purple-500/20 mt-4 bg-purple-600 hover:bg-purple-700 text-white" type="submit" isLoading={submitting}>
+          <Button
+            className="w-full h-12 text-sm font-bold shadow-md shadow-purple-500/20 mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+            type="submit"
+            isLoading={submitting}
+            disabled={user && user.balance < getPrice(option)}
+          >
             {submitting
               ? "Membuat Barcode..."
-              : paymentMethod === "qris" || (user && user.balance < getPrice(option))
-              ? `Bayar via QRIS Direct (Rp ${getPrice(option).toLocaleString('id-ID')})`
+              : user && user.balance < getPrice(option)
+              ? `Saldo Kurang (Biaya: Rp ${getPrice(option).toLocaleString('id-ID')})`
               : `Generate Barcode (Rp ${getPrice(option).toLocaleString('id-ID')})`}
           </Button>
         </form>
