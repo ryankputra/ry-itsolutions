@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
-import { PushSettingsCard } from "@/components/ui/PushSettingsCard";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { InstallAppButton } from "@/components/ui/InstallAppButton";
 
@@ -495,9 +494,14 @@ export default function ProfilePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                   </svg>
                 </Link>
+              ) : user?.role === "reseller" ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
+                  <span>💎</span>
+                  <span>RESELLER VIP</span>
+                </span>
               ) : (
                 <span className="px-2.5 py-0.5 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] text-[10px] font-semibold uppercase tracking-wider shrink-0">
-                  MEMBER VIP
+                  ⭐ MEMBER VIP
                 </span>
               )}
             </div>
@@ -937,9 +941,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Push Notification Manager Card */}
-      <PushSettingsCard />
-
       {/* ============================================================ */}
       {/* 5. PUSAT BANTUAN & KEAMANAN                                   */}
       {/* ============================================================ */}
@@ -1007,8 +1008,13 @@ export default function ProfilePage() {
       {/* 6. MODAL PENGATURAN PROFIL & AKUN LENGKAP                    */}
       {/* ============================================================ */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-canvas border border-hairline rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSettingsModal(false);
+          }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div className="bg-canvas border border-hairline rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[82vh] sm:max-h-[88vh] flex flex-col animate-in zoom-in-95 duration-200 my-auto">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-hairline flex items-center justify-between bg-parchment/30 shrink-0">
               <div>
@@ -1053,7 +1059,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Modal Body / Tab Content */}
-            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+            <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 flex-1 text-xs pb-16 sm:pb-8">
               {/* TAB 1: DATA DIRI (Nama & Foto) */}
               {settingsTab === 'profile' && (
                 <form onSubmit={handleSaveName} className="space-y-4">
@@ -1111,9 +1117,39 @@ export default function ProfilePage() {
 
                   <div>
                     <label className="font-bold text-ink-muted block mb-1.5">Tingkatan Member</label>
-                    <div className="p-2.5 rounded-xl border border-hairline bg-parchment/40 flex items-center justify-between">
-                      <span className="font-black text-ink">{user?.role === 'admin' ? '🛡️ Administrator Utama' : '⭐ Member VIP'}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-[10px]">Aktif</span>
+                    <div className="p-3 rounded-2xl border border-hairline bg-parchment/40 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-black text-ink text-xs sm:text-sm">
+                          {user?.role === 'admin'
+                            ? '🛡️ Administrator Utama'
+                            : user?.role === 'reseller'
+                            ? '💎 Mitra Reseller Prioritas'
+                            : '⭐ Member Reguler (VIP)'}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-[10px] border border-emerald-500/20">
+                          Aktif
+                        </span>
+                      </div>
+
+                      {user?.role !== 'admin' && (
+                        <div className="pt-2 border-t border-hairline/60 text-[11px] space-y-2">
+                          <p className="text-ink-muted leading-relaxed">
+                            {user?.role === 'reseller'
+                              ? 'Akun Anda aktif sebagai Mitra Reseller dengan akses harga grosir termurah dan antrean pengerjaan IMEI prioritas.'
+                              : 'Tingkatkan tingkatan akun Anda ke Mitra Reseller untuk mendapatkan harga paket grosir & antrean pengerjaan IMEI nomor 1.'}
+                          </p>
+                          {user?.role !== 'reseller' && (
+                            <a
+                              href={`https://wa.me/6287767287284?text=Halo%20Admin%20Ry-ITSolutions%2C%20saya%20ingin%20mengajukan%20upgrade%20tingkatan%20member%20ke%20Reseller%20untuk%20akun%20saya%20(ID%3A%20${encodeURIComponent(user?.id || "")}%2C%20Nama%3A%20${encodeURIComponent(user?.name || username)})`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-all shadow-xs"
+                            >
+                              <span>🚀</span> Ajukan Upgrade Reseller via CS WhatsApp
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1121,7 +1157,7 @@ export default function ProfilePage() {
                     <button
                       type="submit"
                       disabled={savingName}
-                      className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {savingName ? "Menyimpan..." : "Simpan Perubahan Nama"}
                     </button>
@@ -1180,7 +1216,7 @@ export default function ProfilePage() {
                     <button
                       type="submit"
                       disabled={savingPhone}
-                      className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all"
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {savingPhone ? "Menyimpan..." : "Simpan Nomor WhatsApp"}
                     </button>
@@ -1341,7 +1377,7 @@ export default function ProfilePage() {
                     <button
                       type="submit"
                       disabled={savingPassword || !currentPassword || !newPassword}
-                      className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {savingPassword ? "Menyimpan..." : "Simpan Password Baru"}
                     </button>
