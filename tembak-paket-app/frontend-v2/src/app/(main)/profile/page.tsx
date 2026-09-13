@@ -21,346 +21,6 @@ export default function ProfilePage() {
     canceled: 0,
   });
 
-  // Modal Settings States
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'whatsapp' | 'email' | 'password'>('profile');
-
-  // Form States for Profile Settings
-  const [nameInput, setNameInput] = useState("");
-  const [savingName, setSavingName] = useState(false);
-
-  const [phoneInput, setPhoneInput] = useState("");
-  const [savingPhone, setSavingPhone] = useState(false);
-
-  const [newEmailInput, setNewEmailInput] = useState("");
-  const [emailOtpInput, setEmailOtpInput] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCountdown, setOtpCountdown] = useState(0);
-  const [sendingOtp, setSendingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  // OTP Countdown timer
-  useEffect(() => {
-    let timer: any;
-    if (otpCountdown > 0) {
-      timer = setInterval(() => {
-        setOtpCountdown((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [otpCountdown]);
-
-  useEffect(() => {
-    // Fetch transaction counts
-    fetch("/api/user/transactions", { credentials: "include" })
-      .then((res) => safeJson(res))
-      .then((data) => {
-        if (data?.status && Array.isArray(data.data)) {
-          const pending = data.data.filter(
-            (t: any) =>
-              (t.status === "pending" || t.status === "unpaid") &&
-              t.payment_method !== "balance" &&
-              t.paymentMethod !== "balance"
-          ).length;
-          const waiting = data.data.filter((t: any) => {
-            const s = (t.status || "").toLowerCase();
-            const note = (t.admin_note || t.adminNote || "").toLowerCase();
-            return (
-              s === "in_queue" ||
-              s === "waiting" ||
-              s === "waiting_admin" ||
-              (s === "processing" && note.includes("menunggu"))
-            );
-          }).length;
-          const processing = data.data.filter((t: any) => {
-            const s = (t.status || "").toLowerCase();
-            const note = (t.admin_note || t.adminNote || "").toLowerCase();
-            return (
-              (s === "processing" || s === "in_progress") &&
-              !note.includes("menunggu")
-            );
-          }).length;
-          const success = data.data.filter(
-            (t: any) => t.status === "success" || t.status === "completed"
-          ).length;
-          const canceled = data.data.filter(
-            (t: any) =>
-              t.status === "failed" ||
-              t.status === "canceled" ||
-              t.status === "cancelled" ||
-              t.status === "rejected" ||
-              t.status === "refunded"
-          ).length;
-          setOrderCounts({ pending, waiting, processing, success, canceled });
-        }
-      })
-      .catch(() => {});
-
-    // Fetch public vouchers count
-    fetch("/api/coupons/public", { credentials: "include" })
-      .then((res) => safeJson(res))
-      .then((data) => {
-        if (data?.status && Array.isArray(data.data)) {
-          setVouchersCount(data.data.length);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const openSettingsModal = (tab: 'profile' | 'whatsapp' | 'email' | 'password' = 'profile') => {
-    setNameInput(user?.name || "");
-    setPhoneInput(user?.phone || user?.verifiedPhone || "");
-    setNewEmailInput("");
-    setEmailOtpInput("");
-    setOtpSent(false);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setSettingsTab(tab);
-    setShowSettingsModal(true);
-  };
-
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      Swal.fire({ icon: "error", title: "Format Salah", text: "Pilih file gambar (JPG, PNG, WEBP)." });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      Swal.fire({ icon: "error", title: "Ukuran Terlalu Besar", text: "Ukuran maksimal foto adalah 5MB." });
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("avatar", file);
-
-    setUploadingAvatar(true);
-    try {
-      const res = await fetch("/api/user/avatar", {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-      const data = await safeJson(res);
-      if (data?.status && data.avatar) {
-        setUser(user ? { ...user, avatar: data.avatar } : null);
-        Swal.fire({
-          icon: "success",
-          title: "Foto Profil Diperbarui",
-          text: "Foto profil akun Anda berhasil disimpan.",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        Swal.fire({ icon: "error", title: "Gagal Mengunggah", text: data?.message || "Terjadi kesalahan." });
-      }
-    } catch (err) {
-      Swal.fire({ icon: "error", title: "Gagal", text: "Gagal mengunggah foto profil." });
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
-
-  const handleSaveName = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!nameInput.trim()) {
-      return Swal.fire("Perhatian", "Nama lengkap tidak boleh kosong!", "warning");
-    }
-    setSavingName(true);
-    try {
-      const res = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name: nameInput.trim() }),
-      });
-      const data = await safeJson(res);
-      if (data?.status) {
-        if (user) {
-          setUser({ ...user, name: nameInput.trim() });
-        }
-        Swal.fire({
-          icon: "success",
-          title: "Berhasil!",
-          text: "Nama lengkap Anda berhasil diperbarui.",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        Swal.fire("Gagal", data?.message || "Gagal memperbarui nama.", "error");
-      }
-    } catch (err: any) {
-      Swal.fire("Error", err.message || "Gagal menghubungi server.", "error");
-    } finally {
-      setSavingName(false);
-    }
-  };
-
-  const handleSavePhone = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    let clean = phoneInput.replace(/\D/g, "");
-    if (!clean || clean.length < 9) {
-      return Swal.fire("Perhatian", "Nomor WhatsApp minimal 9 digit angka!", "warning");
-    }
-    if (clean.startsWith("0")) clean = "62" + clean.substring(1);
-    else if (!clean.startsWith("62")) clean = "62" + clean;
-
-    setSavingPhone(true);
-    try {
-      const res = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ phone: clean }),
-      });
-      const data = await safeJson(res);
-      if (data?.status) {
-        if (user) {
-          setUser({ ...user, phone: clean, verifiedPhone: clean });
-        }
-        Swal.fire({
-          icon: "success",
-          title: "Berhasil Disimpan!",
-          text: "Nomor WhatsApp aktif untuk menerima invoice dan notifikasi otomatis.",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        Swal.fire("Gagal", data?.message || "Gagal menyimpan nomor WhatsApp.", "error");
-      }
-    } catch (err: any) {
-      Swal.fire("Error", err.message || "Gagal menghubungi server.", "error");
-    } finally {
-      setSavingPhone(false);
-    }
-  };
-
-  const handleRequestEmailOtp = async () => {
-    if (!newEmailInput.trim() || !newEmailInput.includes("@")) {
-      return Swal.fire("Perhatian", "Masukkan alamat email baru yang valid!", "warning");
-    }
-    if (newEmailInput.trim().toLowerCase() === (user?.email || "").toLowerCase()) {
-      return Swal.fire("Perhatian", "Email baru tidak boleh sama dengan email saat ini!", "info");
-    }
-
-    setSendingOtp(true);
-    try {
-      const res = await fetch("/api/user/request-email-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ newEmail: newEmailInput.trim() }),
-      });
-      const data = await safeJson(res);
-      if (data?.status) {
-        setOtpSent(true);
-        setOtpCountdown(60);
-        Swal.fire({
-          icon: "success",
-          title: "Kode OTP Terkirim!",
-          text: data.message || `Kode 6 digit telah dikirim ke ${newEmailInput}. Silakan cek Inbox / Spam.`,
-        });
-      } else {
-        Swal.fire("Gagal", data?.message || "Gagal mengirim OTP ke email baru.", "error");
-      }
-    } catch (err: any) {
-      Swal.fire("Error", err.message || "Gagal menghubungi server.", "error");
-    } finally {
-      setSendingOtp(false);
-    }
-  };
-
-  const handleVerifyEmailOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!newEmailInput.trim() || !emailOtpInput.trim()) {
-      return Swal.fire("Perhatian", "Masukkan email baru dan kode OTP 6 digit.", "warning");
-    }
-    setVerifyingOtp(true);
-    try {
-      const res = await fetch("/api/user/verify-email-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          newEmail: newEmailInput.trim(),
-          otp: emailOtpInput.trim(),
-        }),
-      });
-      const data = await safeJson(res);
-      if (data?.status) {
-        if (user) {
-          setUser({ ...user, email: newEmailInput.trim().toLowerCase() });
-        }
-        setOtpSent(false);
-        setEmailOtpInput("");
-        setNewEmailInput("");
-        Swal.fire({
-          icon: "success",
-          title: "Email Berhasil Diubah!",
-          text: "Alamat email akun Anda telah berhasil diperbarui.",
-        });
-      } else {
-        Swal.fire("Gagal", data?.message || "Kode OTP salah atau telah kedaluwarsa.", "error");
-      }
-    } catch (err: any) {
-      Swal.fire("Error", err.message || "Gagal menghubungi server.", "error");
-    } finally {
-      setVerifyingOtp(false);
-    }
-  };
-
-  const handleChangePassword = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!currentPassword || !newPassword) {
-      return Swal.fire("Perhatian", "Mohon isi password saat ini dan password baru.", "warning");
-    }
-    if (newPassword.length < 6) {
-      return Swal.fire("Perhatian", "Password baru minimal 6 karakter.", "warning");
-    }
-    if (newPassword !== confirmPassword) {
-      return Swal.fire("Perhatian", "Konfirmasi password baru tidak cocok!", "error");
-    }
-
-    setSavingPassword(true);
-    try {
-      const res = await fetch("/api/user/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await safeJson(res);
-      if (data?.status) {
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        Swal.fire({
-          icon: "success",
-          title: "Password Berhasil Diubah!",
-          text: data.message || "Gunakan password baru ini untuk login berikutnya.",
-        });
-      } else {
-        Swal.fire("Gagal", data?.message || "Password saat ini salah.", "error");
-      }
-    } catch (err: any) {
-      Swal.fire("Error", err.message || "Gagal mengubah password.", "error");
-    } finally {
-      setSavingPassword(false);
-    }
-  };
-
   const handleLogout = async () => {
     const { isConfirmed } = await Swal.fire({
       title: "Konfirmasi Keluar",
@@ -420,25 +80,24 @@ export default function ProfilePage() {
             </svg>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => openSettingsModal('profile')}
-            className="p-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
-            title="Pengaturan Profil & Akun"
+          <Link
+            href="/profile/settings"
+            className="p-2 rounded-full bg-canvas border border-hairline hover:bg-parchment text-ink transition-colors"
+            title="Pengaturan Akun & Profil"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-          </button>
+          </Link>
         </div>
 
         {/* User Info Row */}
         <div className="flex items-center gap-4">
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="w-16 h-16 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white flex items-center justify-center font-bold text-2xl shadow-xs uppercase shrink-0 relative cursor-pointer group border border-black/[0.08] dark:border-white/[0.1] overflow-hidden"
-            title="Klik untuk ubah foto profil"
+          <Link
+            href="/profile/settings"
+            className="w-16 h-16 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white flex items-center justify-center font-bold text-2xl shadow-xs uppercase shrink-0 relative cursor-pointer border border-black/[0.08] dark:border-white/[0.1] overflow-hidden hover:opacity-90 transition-opacity"
+            title="Pengaturan Foto Profil & Akun"
           >
             {user?.avatar ? (
               <img
@@ -449,37 +108,16 @@ export default function ProfilePage() {
             ) : (
               username[0]
             )}
-
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-              </svg>
-            </div>
-
-            {uploadingAvatar && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            )}
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
+          </Link>
 
           <div className="space-y-1 flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h2
-                onClick={() => openSettingsModal('profile')}
-                className="font-bold text-base sm:text-lg text-[#1D1D1F] dark:text-[#F5F5F7] truncate cursor-pointer hover:text-primary transition-colors"
+              <Link
+                href="/profile/settings"
+                className="font-bold text-base sm:text-lg text-[#1D1D1F] dark:text-[#F5F5F7] truncate hover:text-primary transition-colors block"
               >
                 {username}
-              </h2>
+              </Link>
               {user?.role === "admin" ? (
                 <Link
                   href="/admin"
@@ -495,13 +133,12 @@ export default function ProfilePage() {
                   </svg>
                 </Link>
               ) : user?.role === "reseller" ? (
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
-                  <span>💎</span>
-                  <span>RESELLER VIP</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider shrink-0">
+                  RESELLER VIP
                 </span>
               ) : (
                 <span className="px-2.5 py-0.5 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] text-[10px] font-semibold uppercase tracking-wider shrink-0">
-                  ⭐ MEMBER VIP
+                  MEMBER VIP
                 </span>
               )}
             </div>
@@ -511,36 +148,39 @@ export default function ProfilePage() {
             </p>
 
             {/* Nomor WhatsApp Notifikasi Terhubung */}
-            <div
-              onClick={() => openSettingsModal('whatsapp')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold cursor-pointer hover:bg-emerald-500/20 transition-colors"
-              title="Klik untuk ubah nomor WhatsApp Notifikasi"
-            >
-              <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-              </svg>
-              <span>WA Notifikasi:</span>
-              <span className="font-black">
-                {userPhone ? userPhone : "Belum diatur"}
-              </span>
-              <span className="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white font-bold text-[8px] uppercase">
-                {userPhone ? "Aktif" : "Set"}
-              </span>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline ml-0.5">Ubah</span>
+            <div>
+              <Link
+                href="/profile/settings?tab=whatsapp"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors"
+                title="Pengaturan Nomor WhatsApp Notifikasi"
+              >
+                <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                </svg>
+                <span>WA Notifikasi:</span>
+                <span className="font-bold">
+                  {userPhone ? userPhone : "Belum diatur"}
+                </span>
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white font-bold text-[8px] uppercase">
+                  {userPhone ? "Aktif" : "Set"}
+                </span>
+                <svg className="w-3 h-3 ml-0.5 opacity-60" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </Link>
             </div>
 
             {/* Button Edit Profil & Keamanan */}
             <div className="pt-1.5">
-              <button
-                type="button"
-                onClick={() => openSettingsModal('profile')}
-                className="px-3 py-1 rounded-full bg-primary hover:bg-primary-hover text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors"
+              <Link
+                href="/profile/settings"
+                className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                 </svg>
-                <span>Edit Profil &amp; Keamanan</span>
-              </button>
+                <span>Pengaturan Akun</span>
+              </Link>
             </div>
           </div>
         </div>
@@ -942,6 +582,77 @@ export default function ProfilePage() {
       </div>
 
       {/* ============================================================ */}
+      {/* 5. MENU PENGATURAN AKUN & KEAMANAN                            */}
+      {/* ============================================================ */}
+      <div className="rounded-2xl bg-canvas border border-hairline p-4 shadow-sm space-y-2">
+        <h3 className="font-bold text-xs sm:text-sm text-ink border-b border-hairline/80 pb-2.5">
+          Akun &amp; Keamanan
+        </h3>
+
+        <div className="space-y-1 text-xs">
+          <Link
+            href="/profile/settings"
+            className="flex items-center justify-between p-2.5 rounded-xl hover:bg-parchment font-semibold text-ink transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold text-ink">Pengaturan Profil &amp; Data Diri</p>
+                <p className="text-[11px] text-ink-muted">Ubah foto profil, nama lengkap, dan tingkatan akun</p>
+              </div>
+            </div>
+            <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
+
+          <Link
+            href="/profile/settings?tab=whatsapp"
+            className="flex items-center justify-between p-2.5 rounded-xl hover:bg-parchment font-semibold text-ink transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold text-ink">Nomor WhatsApp Notifikasi</p>
+                <p className="text-[11px] text-ink-muted">Terima nota invoice QRIS dan status pesanan otomatis</p>
+              </div>
+            </div>
+            <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
+
+          <Link
+            href="/profile/settings?tab=password"
+            className="flex items-center justify-between p-2.5 rounded-xl hover:bg-parchment font-semibold text-ink transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold text-ink">Keamanan &amp; Kata Sandi</p>
+                <p className="text-[11px] text-ink-muted">Kelola kata sandi akun dan verifikasi pergantian email</p>
+              </div>
+            </div>
+            <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
       {/* 5. PUSAT BANTUAN & KEAMANAN                                   */}
       {/* ============================================================ */}
       <div className="rounded-2xl bg-canvas border border-hairline p-4 shadow-sm space-y-2">
@@ -1004,390 +715,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* 6. MODAL PENGATURAN PROFIL & AKUN LENGKAP                    */}
-      {/* ============================================================ */}
-      {showSettingsModal && (
-        <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowSettingsModal(false);
-          }}
-          className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
-        >
-          <div className="bg-canvas border border-hairline rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[82vh] sm:max-h-[88vh] flex flex-col animate-in zoom-in-95 duration-200 my-auto">
-            {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-hairline flex items-center justify-between bg-parchment/30 shrink-0">
-              <div>
-                <h3 className="font-black text-sm sm:text-base text-ink flex items-center gap-2">
-                  <span>⚙️</span> Pengaturan Akun &amp; Profil
-                </h3>
-                <p className="text-[11px] text-ink-muted">
-                  Kelola nama, WhatsApp notifikasi, email OTP, dan keamanan akun
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowSettingsModal(false)}
-                className="w-8 h-8 rounded-full bg-parchment hover:bg-hairline flex items-center justify-center text-ink text-xs font-black transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Navigation Tabs */}
-            <div className="flex border-b border-hairline bg-canvas shrink-0 overflow-x-auto p-1.5 gap-1">
-              {[
-                { id: 'profile', label: 'Data Diri', icon: '👤' },
-                { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-                { id: 'email', label: 'Ganti Email', icon: '✉️' },
-                { id: 'password', label: 'Keamanan', icon: '🔒' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setSettingsTab(tab.id as any)}
-                  className={`flex-1 min-w-[90px] py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 select-none ${
-                    settingsTab === tab.id
-                      ? 'bg-primary text-white shadow-xs'
-                      : 'text-ink-muted hover:text-ink hover:bg-parchment'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Modal Body / Tab Content */}
-            <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 flex-1 text-xs pb-16 sm:pb-8">
-              {/* TAB 1: DATA DIRI (Nama & Foto) */}
-              {settingsTab === 'profile' && (
-                <form onSubmit={handleSaveName} className="space-y-4">
-                  <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-parchment/40 border border-hairline">
-                    <div className="relative">
-                      <div className="w-14 h-14 rounded-full bg-canvas border border-hairline overflow-hidden flex items-center justify-center font-black text-xl text-primary shrink-0">
-                        {user?.avatar ? (
-                          <img src={user.avatar} alt={username} className="w-full h-full object-cover" />
-                        ) : (
-                          username[0]
-                        )}
-                      </div>
-                      {uploadingAvatar && (
-                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-bold text-ink">Foto Profil Akun</p>
-                      <p className="text-[11px] text-ink-muted mb-1.5">Format JPG, PNG, atau WEBP maks 5MB</p>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingAvatar}
-                        className="px-3 py-1 rounded-lg bg-canvas border border-hairline hover:border-primary text-primary text-[11px] font-bold transition-colors"
-                      >
-                        {uploadingAvatar ? "Mengunggah..." : "Pilih Foto Baru"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink block mb-1.5">Nama Lengkap</label>
-                    <input
-                      type="text"
-                      required
-                      value={nameInput}
-                      onChange={(e) => setNameInput(e.target.value)}
-                      placeholder="Masukkan nama lengkap Anda"
-                      className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none transition-all"
-                    />
-                    <p className="text-[10px] text-ink-muted mt-1">Nama ini akan tercantum pada invoice dan sapaan profil.</p>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink-muted block mb-1.5">ID Akun (Sistem)</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={user?.id || ""}
-                      className="w-full p-2.5 rounded-xl border border-hairline/60 bg-parchment/50 text-ink-muted font-mono text-[11px] cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink-muted block mb-1.5">Tingkatan Member</label>
-                    <div className="p-3 rounded-2xl border border-hairline bg-parchment/40 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-black text-ink text-xs sm:text-sm">
-                          {user?.role === 'admin'
-                            ? '🛡️ Administrator Utama'
-                            : user?.role === 'reseller'
-                            ? '💎 Mitra Reseller Prioritas'
-                            : '⭐ Member Reguler (VIP)'}
-                        </span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-[10px] border border-emerald-500/20">
-                          Aktif
-                        </span>
-                      </div>
-
-                      {user?.role !== 'admin' && (
-                        <div className="pt-2 border-t border-hairline/60 text-[11px] space-y-2">
-                          <p className="text-ink-muted leading-relaxed">
-                            {user?.role === 'reseller'
-                              ? 'Akun Anda aktif sebagai Mitra Reseller dengan akses harga grosir termurah dan antrean pengerjaan IMEI prioritas.'
-                              : 'Tingkatkan tingkatan akun Anda ke Mitra Reseller untuk mendapatkan harga paket grosir & antrean pengerjaan IMEI nomor 1.'}
-                          </p>
-                          {user?.role !== 'reseller' && (
-                            <a
-                              href={`https://wa.me/6287767287284?text=Halo%20Admin%20Ry-ITSolutions%2C%20saya%20ingin%20mengajukan%20upgrade%20tingkatan%20member%20ke%20Reseller%20untuk%20akun%20saya%20(ID%3A%20${encodeURIComponent(user?.id || "")}%2C%20Nama%3A%20${encodeURIComponent(user?.name || username)})`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-all shadow-xs"
-                            >
-                              <span>🚀</span> Ajukan Upgrade Reseller via CS WhatsApp
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={savingName}
-                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                    >
-                      {savingName ? "Menyimpan..." : "Simpan Perubahan Nama"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* TAB 2: WHATSAPP NOTIFIKASI */}
-              {settingsTab === 'whatsapp' && (
-                <form onSubmit={handleSavePhone} className="space-y-4">
-                  <div className="p-3.5 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 text-emerald-950 dark:text-emerald-300 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-emerald-600 font-black">💬 WhatsApp Notifikasi Transaksi</span>
-                      {userPhone ? (
-                        <span className="px-2 py-0.2 rounded-full bg-emerald-500 text-white font-black text-[9px] uppercase">
-                          Terhubung
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.2 rounded-full bg-amber-500 text-white font-black text-[9px] uppercase">
-                          Belum Diatur
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-emerald-800 dark:text-emerald-400">
-                      Sistem bot WhatsApp Ry-ITSolutions secara otomatis akan mengirimkan bukti nota, link garansi unblock IMEI, dan informasi update order ke nomor ini.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink block mb-1.5">Nomor WhatsApp Aktif</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        value={phoneInput}
-                        onChange={(e) => setPhoneInput(e.target.value)}
-                        placeholder="Contoh: 081234567890 atau 6281234567890"
-                        className="w-full p-2.5 pl-3 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none transition-all"
-                      />
-                    </div>
-                    <p className="text-[10px] text-ink-muted mt-1">
-                      Format bebas: Awali dengan 08... atau 628... (sistem otomatis merapikan formatnya).
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-parchment/40 border border-hairline text-[11px] space-y-1">
-                    <p className="font-bold text-ink">Keuntungan menghubungkan WhatsApp:</p>
-                    <ul className="list-disc list-inside text-ink-muted space-y-0.5">
-                      <li>Nota digital langsung masuk ke chat WhatsApp Anda saat bayar QRIS.</li>
-                      <li>Notifikasi saat IMEI selesai diproses atau jika butuh revisi format IMEI.</li>
-                      <li>Aman &amp; terjaga kerahasiaannya.</li>
-                    </ul>
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={savingPhone}
-                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                    >
-                      {savingPhone ? "Menyimpan..." : "Simpan Nomor WhatsApp"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* TAB 3: GANTI EMAIL AKUN (DENGAN OTP) */}
-              {settingsTab === 'email' && (
-                <div className="space-y-4">
-                  <div className="p-3.5 rounded-2xl bg-blue-500/[0.06] border border-blue-500/20 text-blue-950 dark:text-blue-300 space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold">✉️ Alamat Email Saat Ini:</span>
-                      <span className="font-black text-primary underline">{user?.email || "-"}</span>
-                    </div>
-                    <p className="text-[11px] text-blue-800 dark:text-blue-400">
-                      Untuk keamanan akun, penggantian email wajib diverifikasi dengan kode OTP 6 digit yang dikirimkan ke alamat email baru Anda.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink block mb-1.5">Alamat Email Baru</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="email"
-                        required
-                        disabled={otpSent}
-                        value={newEmailInput}
-                        onChange={(e) => setNewEmailInput(e.target.value)}
-                        placeholder="Contoh: emailbaru@gmail.com"
-                        className="flex-1 p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none transition-all disabled:opacity-60"
-                      />
-                      <button
-                        type="button"
-                        disabled={sendingOtp || otpCountdown > 0 || !newEmailInput.trim()}
-                        onClick={handleRequestEmailOtp}
-                        className="px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-[11px] shadow-xs transition-all shrink-0 disabled:opacity-50"
-                      >
-                        {sendingOtp
-                          ? "Mengirim..."
-                          : otpCountdown > 0
-                          ? `Kirim Ulang (${otpCountdown}s)`
-                          : otpSent
-                          ? "Kirim Ulang OTP"
-                          : "Kirim Kode OTP"}
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-ink-muted mt-1">
-                      Pastikan email aktif dan dapat menerima pesan masuk / spam.
-                    </p>
-                  </div>
-
-                  {otpSent && (
-                    <form onSubmit={handleVerifyEmailOtp} className="p-3.5 rounded-2xl bg-amber-500/[0.06] border border-amber-500/20 space-y-3 animate-in fade-in duration-200">
-                      <div>
-                        <label className="font-bold text-ink block mb-1">
-                          Masukkan Kode OTP 6 Digit dari Email Baru
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          maxLength={6}
-                          value={emailOtpInput}
-                          onChange={(e) => setEmailOtpInput(e.target.value.replace(/\D/g, ""))}
-                          placeholder="Contoh: 123456"
-                          className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-black text-center text-lg tracking-widest focus:border-primary outline-none"
-                        />
-                        <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">
-                          Kode verifikasi berlaku selama 15 menit.
-                        </p>
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => { setOtpSent(false); setEmailOtpInput(""); }}
-                          className="px-3 py-2 rounded-xl bg-parchment hover:bg-hairline text-ink font-bold text-xs"
-                        >
-                          Ubah Email
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={verifyingOtp || emailOtpInput.length < 6}
-                          className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
-                        >
-                          {verifyingOtp ? "Memverifikasi..." : "Verifikasi & Simpan Email Baru"}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
-
-              {/* TAB 4: GANTI PASSWORD */}
-              {settingsTab === 'password' && (
-                <form onSubmit={handleChangePassword} className="space-y-3.5">
-                  <div className="p-3 rounded-2xl bg-parchment/50 border border-hairline text-[11px] text-ink-muted">
-                    🔒 Gunakan kombinasi huruf dan angka minimal 6 karakter agar akun Anda tetap aman.
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink block mb-1">Password Saat Ini</label>
-                    <div className="relative">
-                      <input
-                        type={showCurrentPassword ? "text" : "password"}
-                        required
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="Masukkan password saat ini"
-                        className="w-full p-2.5 pr-9 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-2.5 top-2.5 text-ink-muted hover:text-ink text-xs font-bold"
-                      >
-                        {showCurrentPassword ? "🙈" : "👁️"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink block mb-1">Password Baru</label>
-                    <div className="relative">
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        required
-                        minLength={6}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Minimal 6 karakter"
-                        className="w-full p-2.5 pr-9 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-2.5 top-2.5 text-ink-muted hover:text-ink text-xs font-bold"
-                      >
-                        {showNewPassword ? "🙈" : "👁️"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-ink block mb-1">Konfirmasi Password Baru</label>
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Ulangi password baru"
-                      className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
-                    />
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={savingPassword || !currentPassword || !newPassword}
-                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                    >
-                      {savingPassword ? "Menyimpan..." : "Simpan Password Baru"}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
   );
 }

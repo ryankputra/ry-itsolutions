@@ -221,6 +221,12 @@
       "namedRegex": "^/profile(?:/)?$"
     },
     {
+      "page": "/profile/settings",
+      "regex": "^/profile/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/profile/settings(?:/)?$"
+    },
+    {
       "page": "/referral",
       "regex": "^/referral(?:/)?$",
       "routeKeys": {},
