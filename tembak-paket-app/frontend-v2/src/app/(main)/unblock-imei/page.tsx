@@ -132,7 +132,7 @@ function UnblockImeiContent() {
   const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
   const selectedPkg = uniquePackages.find(p => p && p.id === selectedPkgId) || safePackages.find(p => p && p.id === selectedPkgId);
 
-  const pkgSpeedPrices: Record<string, number> = React.useMemo(() => {
+  const pkgSpeedPrices: any = React.useMemo(() => {
     if (!selectedPkg?.speed_prices) return {};
     try {
       return typeof selectedPkg.speed_prices === 'string'
@@ -143,18 +143,30 @@ function UnblockImeiContent() {
     }
   }, [selectedPkg]);
 
-  let pricePerImei = 0;
+  const wholesaleMinQty = Number(pkgSpeedPrices?.wholesale_min_qty) || 2;
+  const wholesalePrices = pkgSpeedPrices?.wholesale_prices || {};
+  const wholesalePriceForSpeed = Number(wholesalePrices[selectedSpeed] || 0);
+  const isWholesaleActive = Boolean(
+    pkgSpeedPrices?.wholesale_enabled &&
+    imeiCount >= wholesaleMinQty &&
+    wholesalePriceForSpeed > 0
+  );
+
+  let regularPricePerImei = 0;
   if (selectedPkg) {
     if (selectedSpeed && pkgSpeedPrices[selectedSpeed] !== undefined && Number(pkgSpeedPrices[selectedSpeed]) > 0) {
-      pricePerImei = Number(pkgSpeedPrices[selectedSpeed]);
+      regularPricePerImei = Number(pkgSpeedPrices[selectedSpeed]);
     } else {
       const basePrice = Number(selectedPkg.price || 0);
       const speedCost = selectedSpeed && speedPricing ? Number(speedPricing[`imei_speed_${selectedSpeed}`] || speedPricing[selectedSpeed] || 0) : 0;
-      pricePerImei = basePrice + speedCost;
+      regularPricePerImei = basePrice + speedCost;
     }
   }
 
+  const pricePerImei = isWholesaleActive ? wholesalePriceForSpeed : regularPricePerImei;
   const rawTotalPrice = pricePerImei * imeiCount;
+  const regularTotalPrice = regularPricePerImei * imeiCount;
+  const wholesaleSavings = isWholesaleActive ? Math.max(0, regularTotalPrice - rawTotalPrice) : 0;
 
   const discountAmount = appliedCoupon ? Math.min(Number(appliedCoupon.discount_amount || 0), rawTotalPrice) : 0;
   const priceAfterCoupon = Math.max(0, rawTotalPrice - discountAmount);
@@ -549,6 +561,32 @@ function UnblockImeiContent() {
       {/* Broadcast Announcement Banner */}
       <BroadcastBanner initialAnnouncements={announcements} />
 
+      {/* Promo Diskon Multi-IMEI & Dual SIM Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-primary/10 to-indigo-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+            </svg>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-xs text-ink tracking-tight">Promo Diskon Multi-IMEI &amp; Dual SIM</span>
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-white">Hemat Otomatis</span>
+            </div>
+            <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">
+              Daftarkan 2 IMEI atau lebih (HP Dual SIM / Multi-Device sekaligus) otomatis dapat harga grosir spesial mulai dari <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp 160.000 / IMEI</span>.
+            </p>
+          </div>
+        </div>
+        <div className="self-end sm:self-center shrink-0">
+          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-300/60">
+            Min. 2 IMEI
+          </span>
+        </div>
+      </div>
+
       <Card glass className="p-6 space-y-6">
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
           <h3 className="font-bold flex items-center gap-1.5 text-base">
@@ -591,6 +629,16 @@ function UnblockImeiContent() {
                 className="w-full rounded-xl border border-hairline bg-canvas px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all min-h-[100px] leading-relaxed"
                 required 
               />
+
+              {/* Panduan Multi-IMEI / Dual SIM */}
+              <div className="flex items-start gap-2 p-2.5 rounded-xl bg-primary/5 border border-primary/10 text-xs text-ink-muted">
+                <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                </svg>
+                <p className="text-[11px] leading-relaxed">
+                  <span className="font-bold text-ink">Punya HP Dual SIM (IMEI 1 &amp; 2) atau mau unblock 2 HP sekaligus?</span> Masukkan tiap 15 digit IMEI di baris baru. Pembelian minimal 2 IMEI otomatis mendapatkan harga diskon grosir!
+                </p>
+              </div>
 
               {/* Interactive Multi-IMEI Tag Badges & Live Device Auto-Detect */}
               {imei.trim().length > 0 && (() => {
@@ -795,6 +843,14 @@ function UnblockImeiContent() {
                           <p className="font-black text-xs sm:text-sm text-primary">
                             {isSelected ? `Rp ${activeCardPrice.toLocaleString("id-ID")}` : `Mulai Rp ${lowestPrice.toLocaleString("id-ID")}`}
                           </p>
+                          {optSp.wholesale_enabled && (
+                            <div className="mt-1 pt-1 border-t border-hairline/60 flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                              <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                              </svg>
+                              <span>Grosir &ge;{optSp.wholesale_min_qty || 2} IMEI</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Guarantee tag */}
@@ -842,6 +898,11 @@ function UnblockImeiContent() {
                           ? "Gratis"
                           : `+Rp ${Number(opt.price).toLocaleString("id-ID")}`}
                       </div>
+                      {pkgSpeedPrices.wholesale_enabled && pkgSpeedPrices.wholesale_prices?.[opt.id] && (
+                        <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/40 px-1 py-0.5 rounded mt-1">
+                          &ge;{pkgSpeedPrices.wholesale_min_qty || 2} IMEI: Rp {Number(pkgSpeedPrices.wholesale_prices[opt.id]).toLocaleString("id-ID")}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -970,9 +1031,36 @@ function UnblockImeiContent() {
 
             {/* Price Breakdown Summary */}
             <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline space-y-2 text-xs">
+              {/* Wholesale Active Status or Incentive Callout */}
+              {isWholesaleActive ? (
+                <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    <span>Harga Grosir Multi-IMEI Diterapkan</span>
+                  </div>
+                  <span className="font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded-full text-[10px]">
+                    Hemat Rp {wholesaleSavings.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              ) : imeiCount === 1 && pkgSpeedPrices.wholesale_enabled && pkgSpeedPrices.wholesale_prices?.[selectedSpeed] ? (
+                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                  <span>Tambah 1 IMEI lagi untuk harga grosir Rp {Number(pkgSpeedPrices.wholesale_prices[selectedSpeed]).toLocaleString("id-ID")}/IMEI!</span>
+                  <span className="font-bold text-amber-700 shrink-0 ml-1">Hemat Rp {((regularPricePerImei - Number(pkgSpeedPrices.wholesale_prices[selectedSpeed])) * 2).toLocaleString("id-ID")}</span>
+                </div>
+              ) : null}
+
               <div className="flex justify-between text-ink-muted">
-                <span>Subtotal ({imeiCount} IMEI)</span>
-                <span className="font-bold text-ink">Rp {rawTotalPrice.toLocaleString("id-ID")}</span>
+                <span>Subtotal ({imeiCount} IMEI {isWholesaleActive ? `@ Rp ${pricePerImei.toLocaleString("id-ID")}` : ""})</span>
+                <div className="text-right">
+                  {isWholesaleActive && (
+                    <span className="line-through text-ink-muted/70 text-[11px] mr-1.5">
+                      Rp {regularTotalPrice.toLocaleString("id-ID")}
+                    </span>
+                  )}
+                  <span className="font-bold text-ink">Rp {rawTotalPrice.toLocaleString("id-ID")}</span>
+                </div>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-emerald-700 font-semibold">

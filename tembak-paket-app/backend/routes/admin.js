@@ -2212,6 +2212,10 @@ router.post('/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) =
         } else if (typeof speed_prices === 'string') {
             try { speedPricesObj = JSON.parse(speed_prices); } catch (e) {}
         }
+        if (req.body.wholesale_enabled !== undefined) speedPricesObj.wholesale_enabled = Boolean(req.body.wholesale_enabled);
+        if (req.body.wholesale_min_qty !== undefined) speedPricesObj.wholesale_min_qty = Number(req.body.wholesale_min_qty) || 2;
+        if (req.body.wholesale_prices !== undefined) speedPricesObj.wholesale_prices = typeof req.body.wholesale_prices === 'object' ? req.body.wholesale_prices : {};
+        if (req.body.wholesale_promo_note !== undefined) speedPricesObj.wholesale_promo_note = String(req.body.wholesale_promo_note || '').trim();
 
         let parsedSpeeds = ['fast', 'semi', 'slow'];
         if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {
@@ -2317,6 +2321,10 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
         } else if (existing.speed_prices) {
             try { speedPricesObj = JSON.parse(existing.speed_prices); } catch (e) {}
         }
+        if (req.body.wholesale_enabled !== undefined) speedPricesObj.wholesale_enabled = Boolean(req.body.wholesale_enabled);
+        if (req.body.wholesale_min_qty !== undefined) speedPricesObj.wholesale_min_qty = Number(req.body.wholesale_min_qty) || 2;
+        if (req.body.wholesale_prices !== undefined) speedPricesObj.wholesale_prices = typeof req.body.wholesale_prices === 'object' ? req.body.wholesale_prices : {};
+        if (req.body.wholesale_promo_note !== undefined) speedPricesObj.wholesale_promo_note = String(req.body.wholesale_promo_note || '').trim();
 
         let parsedSpeeds = ['fast', 'semi', 'slow'];
         if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {

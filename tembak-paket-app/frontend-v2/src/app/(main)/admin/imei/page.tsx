@@ -39,10 +39,18 @@ export default function AdminImeiPage() {
     duration: string;
     allowed_speeds: string[];
     speed_prices: { fast: string; semi: string; slow: string };
+    wholesale_enabled: boolean;
+    wholesale_min_qty: number;
+    wholesale_prices: { fast: string; semi: string; slow: string };
+    wholesale_promo_note: string;
   }>({
     duration: "",
     allowed_speeds: ["fast", "semi", "slow"],
     speed_prices: { fast: "", semi: "", slow: "" },
+    wholesale_enabled: false,
+    wholesale_min_qty: 2,
+    wholesale_prices: { fast: "", semi: "", slow: "" },
+    wholesale_promo_note: "",
   });
   const [editingPkg, setEditingPkg] = useState<any | null>(null);
   const [savingImeiPkg, setSavingImeiPkg] = useState(false);
@@ -151,7 +159,19 @@ export default function AdminImeiPage() {
       spPrices[sp] = num;
     }
 
-    const minPrice = Math.min(...Object.values(spPrices));
+    if (newImeiPkg.wholesale_enabled) {
+      (spPrices as any).wholesale_enabled = true;
+      (spPrices as any).wholesale_min_qty = Number(newImeiPkg.wholesale_min_qty) || 2;
+      const wsObj: Record<string, number> = {};
+      for (const sp of activeSpeeds) {
+        const p = parseInt(newImeiPkg.wholesale_prices?.[sp as "fast" | "semi" | "slow"] || "");
+        if (p > 0) wsObj[sp] = p;
+      }
+      (spPrices as any).wholesale_prices = wsObj;
+      (spPrices as any).wholesale_promo_note = newImeiPkg.wholesale_promo_note || "";
+    }
+
+    const minPrice = Math.min(...Object.values(spPrices).filter(v => typeof v === 'number' && v > 0) as number[]);
 
     setSavingImeiPkg(true);
     try {
@@ -165,6 +185,10 @@ export default function AdminImeiPage() {
           isVisible: 1,
           allowed_speeds: activeSpeeds,
           speed_prices: spPrices,
+          wholesale_enabled: newImeiPkg.wholesale_enabled,
+          wholesale_min_qty: Number(newImeiPkg.wholesale_min_qty) || 2,
+          wholesale_prices: (spPrices as any).wholesale_prices || {},
+          wholesale_promo_note: newImeiPkg.wholesale_promo_note || "",
         }),
       });
       const d = await res.json();
@@ -174,6 +198,10 @@ export default function AdminImeiPage() {
           duration: "",
           allowed_speeds: ["fast", "semi", "slow"],
           speed_prices: { fast: "", semi: "", slow: "" },
+          wholesale_enabled: false,
+          wholesale_min_qty: 2,
+          wholesale_prices: { fast: "", semi: "", slow: "" },
+          wholesale_promo_note: "",
         });
         loadData();
       } else {
@@ -534,6 +562,15 @@ export default function AdminImeiPage() {
                               );
                             })}
                           </div>
+                          {spPrices?.wholesale_enabled && (
+                            <div className="mt-1.5 flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-300/60 dark:border-emerald-800/40 w-fit">
+                              <Tag className="w-3 h-3" />
+                              <span>Grosir &ge;{spPrices.wholesale_min_qty || 2} IMEI:
+                                {spPrices.wholesale_prices?.fast ? ` Fast Rp ${Number(spPrices.wholesale_prices.fast).toLocaleString("id-ID")}` : ""}
+                                {spPrices.wholesale_prices?.slow ? ` Slow Rp ${Number(spPrices.wholesale_prices.slow).toLocaleString("id-ID")}` : ""}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1">
@@ -569,7 +606,36 @@ export default function AdminImeiPage() {
                                   spObj[s] = String(pkg.price);
                                 });
                               }
-                              setEditingPkg({ ...pkg, allowed_speeds: speeds, speed_prices: spObj });
+                              let wsEnabled = false;
+                              let wsMinQty = 2;
+                              let wsPrices: any = { fast: "", semi: "", slow: "" };
+                              let wsNote = "";
+                              if (pkg.speed_prices) {
+                                try {
+                                  const parsed = typeof pkg.speed_prices === "string" ? JSON.parse(pkg.speed_prices) : pkg.speed_prices;
+                                  if (parsed && typeof parsed === "object") {
+                                    wsEnabled = Boolean(parsed.wholesale_enabled);
+                                    wsMinQty = Number(parsed.wholesale_min_qty) || 2;
+                                    if (parsed.wholesale_prices && typeof parsed.wholesale_prices === "object") {
+                                      wsPrices = {
+                                        fast: parsed.wholesale_prices.fast !== undefined ? String(parsed.wholesale_prices.fast) : "",
+                                        semi: parsed.wholesale_prices.semi !== undefined ? String(parsed.wholesale_prices.semi) : "",
+                                        slow: parsed.wholesale_prices.slow !== undefined ? String(parsed.wholesale_prices.slow) : "",
+                                      };
+                                    }
+                                    wsNote = String(parsed.wholesale_promo_note || "");
+                                  }
+                                } catch (e) {}
+                              }
+                              setEditingPkg({
+                                ...pkg,
+                                allowed_speeds: speeds,
+                                speed_prices: spObj,
+                                wholesale_enabled: wsEnabled,
+                                wholesale_min_qty: wsMinQty,
+                                wholesale_prices: wsPrices,
+                                wholesale_promo_note: wsNote,
+                              });
                             }}
                             className="p-1 text-primary hover:bg-primary/10 rounded-lg"
                             title="Edit paket"
@@ -660,6 +726,79 @@ export default function AdminImeiPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Pengaturan Harga Grosir / Multi-IMEI */}
+              <div className="p-3.5 rounded-xl border border-hairline bg-parchment/40 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-emerald-600" />
+                    <div>
+                      <span className="font-bold text-xs text-ink block">Harga Grosir Multi-IMEI</span>
+                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI (Dual SIM / Multi-Device)</span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={newImeiPkg.wholesale_enabled}
+                    onChange={(e) => setNewImeiPkg({ ...newImeiPkg, wholesale_enabled: e.target.checked })}
+                    className="w-4 h-4 rounded text-primary focus:ring-0 cursor-pointer"
+                  />
+                </label>
+
+                {newImeiPkg.wholesale_enabled && (
+                  <div className="space-y-3 pt-2 border-t border-hairline/60">
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-xs font-semibold text-ink">Minimal Pembelian:</label>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="2"
+                          value={newImeiPkg.wholesale_min_qty}
+                          onChange={(e) => setNewImeiPkg({ ...newImeiPkg, wholesale_min_qty: parseInt(e.target.value) || 2 })}
+                          className="w-20 px-2 py-1 rounded-lg border border-hairline bg-canvas text-xs font-bold text-center outline-none focus:border-primary"
+                        />
+                        <span className="text-xs text-ink-muted font-bold">IMEI</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-ink">Harga Grosir Satuan (Rp/IMEI):</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {speedTiers.map((s) => (
+                          <div key={s.id} className="space-y-1">
+                            <label className="text-[10px] font-bold text-ink-muted">{s.label}</label>
+                            <input
+                              type="number"
+                              placeholder="Cth: 160000"
+                              value={newImeiPkg.wholesale_prices?.[s.id as "fast" | "semi" | "slow"] || ""}
+                              onChange={(e) =>
+                                setNewImeiPkg({
+                                  ...newImeiPkg,
+                                  wholesale_prices: {
+                                    ...newImeiPkg.wholesale_prices,
+                                    [s.id]: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-hairline bg-canvas text-xs font-bold outline-none focus:border-primary"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Catatan promo (cth: Hemat Rp 50.000 untuk 2 IMEI Fast)"
+                        value={newImeiPkg.wholesale_promo_note}
+                        onChange={(e) => setNewImeiPkg({ ...newImeiPkg, wholesale_promo_note: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-hairline bg-canvas text-xs text-ink outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Button type="submit" isLoading={savingImeiPkg} className="w-full text-xs font-bold h-10 gap-1.5">
@@ -895,6 +1034,79 @@ export default function AdminImeiPage() {
                 </div>
               </div>
 
+              {/* Pengaturan Harga Grosir / Multi-IMEI di Edit Modal */}
+              <div className="p-3.5 rounded-xl border border-hairline bg-parchment/40 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-emerald-600" />
+                    <div>
+                      <span className="font-bold text-xs text-ink block">Harga Grosir Multi-IMEI</span>
+                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI (Dual SIM / Multi-Device)</span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingPkg.wholesale_enabled)}
+                    onChange={(e) => setEditingPkg({ ...editingPkg, wholesale_enabled: e.target.checked })}
+                    className="w-4 h-4 rounded text-primary focus:ring-0 cursor-pointer"
+                  />
+                </label>
+
+                {editingPkg.wholesale_enabled && (
+                  <div className="space-y-3 pt-2 border-t border-hairline/60">
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-xs font-semibold text-ink">Minimal Pembelian:</label>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="2"
+                          value={editingPkg.wholesale_min_qty || 2}
+                          onChange={(e) => setEditingPkg({ ...editingPkg, wholesale_min_qty: parseInt(e.target.value) || 2 })}
+                          className="w-20 px-2 py-1 rounded-lg border border-hairline bg-canvas text-xs font-bold text-center outline-none focus:border-primary"
+                        />
+                        <span className="text-xs text-ink-muted font-bold">IMEI</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-ink">Harga Grosir Satuan (Rp/IMEI):</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {speedTiers.map((s) => (
+                          <div key={s.id} className="space-y-1">
+                            <label className="text-[10px] font-bold text-ink-muted">{s.label}</label>
+                            <input
+                              type="number"
+                              placeholder="Cth: 160000"
+                              value={editingPkg.wholesale_prices?.[s.id] || ""}
+                              onChange={(e) =>
+                                setEditingPkg({
+                                  ...editingPkg,
+                                  wholesale_prices: {
+                                    ...editingPkg.wholesale_prices,
+                                    [s.id]: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-hairline bg-canvas text-xs font-bold outline-none focus:border-primary"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Catatan promo (cth: Hemat Rp 50.000 untuk 2 IMEI Fast)"
+                        value={editingPkg.wholesale_promo_note || ""}
+                        onChange={(e) => setEditingPkg({ ...editingPkg, wholesale_promo_note: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-hairline bg-canvas text-xs text-ink outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
@@ -934,7 +1146,19 @@ export default function AdminImeiPage() {
                       spPrices[sp] = num;
                     }
 
-                    const minPrice = Math.min(...Object.values(spPrices));
+                    if (editingPkg.wholesale_enabled) {
+                      (spPrices as any).wholesale_enabled = true;
+                      (spPrices as any).wholesale_min_qty = Number(editingPkg.wholesale_min_qty) || 2;
+                      const wsObj: Record<string, number> = {};
+                      for (const sp of curSpeeds) {
+                        const p = parseInt(editingPkg.wholesale_prices?.[sp] || "");
+                        if (p > 0) wsObj[sp] = p;
+                      }
+                      (spPrices as any).wholesale_prices = wsObj;
+                      (spPrices as any).wholesale_promo_note = editingPkg.wholesale_promo_note || "";
+                    }
+
+                    const minPrice = Math.min(...Object.values(spPrices).filter(v => typeof v === 'number' && v > 0) as number[]);
 
                     setSavingImeiPkg(true);
                     try {
@@ -948,6 +1172,10 @@ export default function AdminImeiPage() {
                           isVisible: editingPkg.isVisible,
                           allowed_speeds: curSpeeds,
                           speed_prices: spPrices,
+                          wholesale_enabled: Boolean(editingPkg.wholesale_enabled),
+                          wholesale_min_qty: Number(editingPkg.wholesale_min_qty) || 2,
+                          wholesale_prices: (spPrices as any).wholesale_prices || {},
+                          wholesale_promo_note: editingPkg.wholesale_promo_note || "",
                         }),
                       });
                       const d = await res.json();

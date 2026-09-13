@@ -685,7 +685,19 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                         } catch (e) {}
                     }
 
-                    if (spOpt && pkgSpeedPrices[spOpt] !== undefined && Number(pkgSpeedPrices[spOpt]) > 0) {
+                    // Check for Wholesale / Multi-IMEI Tiered Discount
+                    const wholesaleMinQty = Number(pkgSpeedPrices.wholesale_min_qty) || 2;
+                    const wholesalePrices = pkgSpeedPrices.wholesale_prices || {};
+                    const wholesalePriceForSpeed = Number(wholesalePrices[spOpt] || 0);
+                    const isWholesaleActive = Boolean(
+                        pkgSpeedPrices.wholesale_enabled &&
+                        imeiCount >= wholesaleMinQty &&
+                        wholesalePriceForSpeed > 0
+                    );
+
+                    if (isWholesaleActive) {
+                        price = wholesalePriceForSpeed;
+                    } else if (spOpt && pkgSpeedPrices[spOpt] !== undefined && Number(pkgSpeedPrices[spOpt]) > 0) {
                         price = Number(pkgSpeedPrices[spOpt]);
                     } else {
                         // Fallback: base package price + global speed setting
