@@ -3,6 +3,8 @@
   "/_global-error/page": "app/_global-error/page.js",
   "/icon.svg/route": "app/icon.svg/route.js",
   "/qr/[id]/route": "app/qr/[id]/route.js",
+  "/create-qris/route": "app/create-qris/route.js",
+  "/check-payment/route": "app/check-payment/route.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
   "/(auth)/register/page": "app/(auth)/register/page.js",
   "/page": "app/page.js",
@@ -40,7 +42,5 @@
   "/(main)/admin/theme/page": "app/(main)/admin/theme/page.js",
   "/(main)/admin/tickets/page": "app/(main)/admin/tickets/page.js",
   "/(main)/admin/users/page": "app/(main)/admin/users/page.js",
-  "/(main)/admin/vouchers/page": "app/(main)/admin/vouchers/page.js",
-  "/create-qris/route": "app/create-qris/route.js",
-  "/check-payment/route": "app/check-payment/route.js"
+  "/(main)/admin/vouchers/page": "app/(main)/admin/vouchers/page.js"
 }

@@ -92,9 +92,9 @@ export default function AdminImeiPage() {
     setLoading(true);
     try {
       const [pricingRes, statusRes, imeiRes, ceirSvcRes, dispRes, ceirPriceRes] = await Promise.all([
-        fetch("/api/manual-services/pricing").catch(() => null),
+        fetch("/api/manual-services-pricing", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/imei-service-status", { credentials: "include" }).catch(() => null),
-        fetch("/api/imei-packages?all=true").catch(() => null),
+        fetch("/api/imei-packages?all=true", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/ceirgo-services", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/ceirgo-display-settings", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/ceirgo-pricing", { credentials: "include" }).catch(() => null),
@@ -102,7 +102,8 @@ export default function AdminImeiPage() {
 
       if (pricingRes?.ok) {
         const d = await pricingRes.json();
-        if (d?.pricing) setPricing(d.pricing);
+        const prc = d?.data || d?.pricing;
+        if (prc) setPricing(prc);
       }
 
       if (statusRes?.ok) {
@@ -115,7 +116,8 @@ export default function AdminImeiPage() {
 
       if (imeiRes?.ok) {
         const d = await imeiRes.json();
-        if (d?.status && Array.isArray(d.packages)) setImeiPackages(d.packages);
+        const pkgs = d?.data || d?.packages;
+        if (d?.status && Array.isArray(pkgs)) setImeiPackages(pkgs);
       }
 
       if (ceirSvcRes?.ok) {

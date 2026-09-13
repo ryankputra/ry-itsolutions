@@ -248,7 +248,7 @@ router.get('/imei-packages', async (req, res) => {
                 speed_prices
             };
         });
-        res.json({ status: true, data });
+        res.json({ status: true, data, packages: data });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
@@ -274,7 +274,7 @@ router.get('/imei-service-status', async (req, res) => {
 });
 
 // 6. GET /api/manual-services-pricing & /api/speed-pricing
-router.get('/manual-services-pricing', async (req, res) => {
+router.get(['/manual-services-pricing', '/manual-services/pricing'], async (req, res) => {
     try {
         const defaults = {
             imei_speed_fast_status: 'hidden',
@@ -292,7 +292,7 @@ router.get('/manual-services-pricing', async (req, res) => {
         for (const [key, value] of Object.entries(defaults)) {
             if (!(key in pricing)) pricing[key] = value;
         }
-        res.json({ status: true, data: pricing });
+        res.json({ status: true, data: pricing, pricing });
     } catch (error) {
         res.status(500).json({ status: false, message: error.message });
     }
@@ -438,7 +438,7 @@ router.get('/public/check-warranty', async (req, res) => {
             warranty
         };
 
-        res.json({ status: true, data });
+        res.json({ status: true, data, packages: data });
     } catch (e) {
         console.error("[CHECK_WARRANTY_ERR]", e.message);
         res.status(500).json({ status: false, message: "Gagal memeriksa garansi." });
@@ -648,7 +648,7 @@ router.get('/coupons/public', async (req, res) => {
             };
         });
 
-        res.json({ status: true, data });
+        res.json({ status: true, data, packages: data });
     } catch (e) {
         console.error("Error fetching public coupons:", e);
         res.status(500).json({ status: false, message: "Gagal mengambil daftar voucher promo." });
