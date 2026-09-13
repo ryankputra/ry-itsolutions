@@ -1024,7 +1024,7 @@ router.get('/admin/provider-balances', isAuthenticated, isAdmin, async (req, res
 // 15. Broadcast System
 router.post('/admin/broadcast', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { title, message, voucherCode, targetTelegram, targetWhatsApp, targetInApp, bgColor } = req.body;
+        const { title, message, voucherCode, targetTelegram, targetWhatsApp, targetInApp, targetWebPush, bgColor } = req.body;
         if (!message) return res.status(400).json({ status: false, message: "Pesan broadcast wajib diisi." });
 
         if (targetInApp) {
@@ -1074,6 +1074,19 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
             } catch (wErr) {
                 console.error('[Broadcast WA Error]', wErr.message);
             }
+        }
+
+        if (targetWebPush) {
+            try {
+                const { broadcastPushNotification } = require('../services/webPushService');
+                const pushBody = voucherCode ? `${message} (Kupon: ${voucherCode})` : message;
+                broadcastPushNotification({
+                    title: title || '🔥 Promo Spesial Ry-ITSolutions!',
+                    body: pushBody,
+                    url: '/unblock-imei',
+                    tag: `promo-${Date.now()}`
+                }).catch(() => {});
+            } catch (pErr) {}
         }
 
         res.json({ status: true, message: "Pesan broadcast berhasil dikirimkan!" });
@@ -2235,6 +2248,20 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, annMsg, new Date().toISOString()]).catch(() => {});
                 sseBroadcast('announcement', { message: annMsg, bgColor: '#059669' });
             }
+        }
+
+        // Web Push Notification to mobile status bar
+        if (req.body.notify_push || req.body.send_push_notification) {
+            try {
+                const { broadcastPushNotification } = require('../services/webPushService');
+                broadcastPushNotification({
+                    title: `🔥 Layanan Baru: Paket IMEI ${duration.trim()}!`,
+                    body: `Telah hadir paket baru seharga Rp ${numPrice.toLocaleString('id-ID')} (${parsedSpeeds.join(', ')}). Buka untuk detail!`,
+                    url: '/unblock-imei',
+                    icon: '/logo.png',
+                    tag: `new-imei-${id}`
+                }).catch(pErr => console.error('[Auto WebPush Error]', pErr));
+            } catch (pEx) {}
         }
 
         res.json({

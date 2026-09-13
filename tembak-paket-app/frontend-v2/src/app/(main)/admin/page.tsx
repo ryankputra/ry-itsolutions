@@ -12,7 +12,7 @@ import { AdminThemeManager } from "@/components/admin/AdminThemeManager";
 import { AdminOnlineUsersModal, OnlineUser } from "@/components/admin/AdminOnlineUsersModal";
 import { AdminUserActivityModal } from "@/components/admin/AdminUserActivityModal";
 import { AdminActivityLogsTab } from "@/components/admin/AdminActivityLogsTab";
-import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Trash2, Activity, FileText } from "lucide-react";
+import { Sliders, RotateCw, Wallet, Clock, Headphones, Users, Server, Coins, Smartphone, Package, QrCode, Ticket, Megaphone, Share2, Palette, Settings, MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Trash2, Activity, FileText, Bell } from "lucide-react";
 
 export default function AdminPage() {
   const { user, loading: userLoading, updateMenuSettings } = useApp();
@@ -441,8 +441,21 @@ export default function AdminPage() {
     targetTelegram: true,
     targetWhatsApp: true,
     targetInApp: true,
+    targetWebPush: true,
     bgColor: "#0066cc"
   });
+  const [newImeiNotifyPush, setNewImeiNotifyPush] = useState(true);
+  const [pushSubscribersCount, setPushSubscribersCount] = useState<number | null>(null);
+
+  const loadPushSubscribers = async () => {
+    try {
+      const res = await fetch('/api/admin/push/stats', { credentials: 'include' });
+      const d = await safeJson(res);
+      if (d?.status && typeof d.totalSubscribers === 'number') {
+        setPushSubscribersCount(d.totalSubscribers);
+      }
+    } catch (e) {}
+  };
   const [broadcasting, setBroadcasting] = useState(false);
   const [webBroadcasts, setWebBroadcasts] = useState<any[]>([]);
   const [loadingWebBroadcasts, setLoadingWebBroadcasts] = useState(false);
@@ -1347,6 +1360,7 @@ export default function AdminPage() {
       loadAdminTickets();
       loadGatewayKeys();
       loadPresenceStats();
+      loadPushSubscribers();
       const presenceTimer = setInterval(loadPresenceStats, 15000);
 
       const fetchBalances = () => {
@@ -3856,6 +3870,21 @@ export default function AdminPage() {
                 </div>
 
                 <div className="pt-2 flex justify-end">
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={newImeiNotifyPush}
+                        onChange={(e) => setNewImeiNotifyPush(e.target.checked)}
+                        className="w-4 h-4 rounded border-hairline text-primary focus:ring-primary cursor-pointer"
+                      />
+                      <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                        <Bell className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>Kirim Notifikasi ke Bar HP Pengguna (Web Push)</span>
+                      </span>
+                    </label>
+                  </div>
+
                   <Button
                     className="h-10 px-6 text-xs font-bold"
                     disabled={savingImeiPkg}
@@ -3875,7 +3904,8 @@ export default function AdminPage() {
                           body: JSON.stringify({
                             duration: newImeiPkg.duration.trim(),
                             price: parseInt(newImeiPkg.price),
-                            allowed_speeds: newImeiPkg.allowed_speeds
+                            allowed_speeds: newImeiPkg.allowed_speeds,
+                            notify_push: newImeiNotifyPush
                           })
                         });
                         const d = await res.json();
@@ -4683,7 +4713,7 @@ export default function AdminPage() {
               {/* Target Channel Switches */}
               <div className="p-3 rounded-xl bg-parchment/60 border border-hairline space-y-2">
                 <p className="text-xs font-bold text-ink">Saluran Tujuan Broadcast:</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
                     <input
                       type="checkbox"
@@ -4720,6 +4750,21 @@ export default function AdminPage() {
                     <div>
                       <span className="text-xs font-bold text-ink block">Banner In-App</span>
                       <span className="text-[10px] text-ink-muted">Tampil di dashboard user</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-canvas border border-hairline cursor-pointer hover:bg-parchment transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={broadcastData.targetWebPush}
+                      onChange={e => setBroadcastData({ ...broadcastData, targetWebPush: e.target.checked })}
+                      className="w-4 h-4 rounded text-primary"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-ink block">Status Bar HP</span>
+                      <span className="text-[10px] text-ink-muted">
+                        {pushSubscribersCount != null ? `${pushSubscribersCount} HP terhubung` : 'Push Notifikasi HP'}
+                      </span>
                     </div>
                   </label>
                 </div>

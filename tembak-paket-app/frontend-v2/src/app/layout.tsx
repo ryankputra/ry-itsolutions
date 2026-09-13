@@ -4,6 +4,7 @@ import { AppProvider } from "@/lib/store";
 import { DynamicThemeProvider } from "@/lib/themeContext";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { NavigationProgressBar } from "@/components/ui/NavigationProgressBar";
+import { PushNotificationBanner } from "@/components/ui/PushNotificationBanner";
 import { Suspense } from "react";
 import Script from "next/script";
 import "./globals.css";
@@ -64,6 +65,7 @@ export default function RootLayout({
           <DynamicThemeProvider>
             <AppProvider>
               {children}
+              <PushNotificationBanner />
             </AppProvider>
           </DynamicThemeProvider>
         </GoogleOAuthProvider>

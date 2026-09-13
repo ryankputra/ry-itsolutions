@@ -310,6 +310,21 @@ async function initializeDatabase() {
                 await dbRun(`ALTER TABLE users ADD COLUMN lastLogin TEXT`);
             } catch (loginErr) {}
 
+            // Web Push Subscriptions for mobile status bar notifications
+            try {
+                await dbRun(`CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    userId TEXT,
+                    endpoint TEXT UNIQUE NOT NULL,
+                    keys_p256dh TEXT NOT NULL,
+                    keys_auth TEXT NOT NULL,
+                    userAgent TEXT,
+                    ip TEXT,
+                    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                )`);
+                await dbRun(`CREATE INDEX IF NOT EXISTS idx_push_userId ON push_subscriptions(userId)`);
+            } catch (pushErr) {}
+
             console.log("✅ Database schema initialized successfully.");
         } catch (error) {
             console.error("Database initialization failed:", error);
