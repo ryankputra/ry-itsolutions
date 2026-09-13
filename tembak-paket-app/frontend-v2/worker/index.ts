@@ -18,7 +18,7 @@ self.addEventListener('push', (event: any) => {
   const options: any = {
     body: data.body || 'Buka aplikasi untuk melihat promo & layanan terbaru.',
     icon: data.icon || '/logo.png',
-    badge: data.badge || '/icon.svg',
+    badge: data.badge || '/badge.png',
     data: {
       url: data.url || '/'
     },

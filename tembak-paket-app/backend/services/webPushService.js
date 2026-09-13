@@ -100,7 +100,7 @@ async function sendPushNotification(subObj, payload) {
 /**
  * Broadcast push notification to all subscribed user devices
  */
-async function broadcastPushNotification({ title, body, icon = '/logo.png', url = '/', tag = 'ry-notification', badge = '/icon.svg' }) {
+async function broadcastPushNotification({ title, body, icon = '/logo.png', url = '/', tag = 'ry-notification', badge = '/badge.png' }) {
     if (!isInitialized) await initVapidKeys();
 
     try {
@@ -114,7 +114,7 @@ async function broadcastPushNotification({ title, body, icon = '/logo.png', url 
             title: title || 'Ry-ITSolutions',
             body: body || 'Ada pembaruan layanan & promo baru!',
             icon: icon || '/logo.png',
-            badge: badge || '/icon.svg',
+            badge: badge || '/badge.png',
             url: url || '/',
             tag: tag || ('ry-' + Date.now()),
             timestamp: Date.now()

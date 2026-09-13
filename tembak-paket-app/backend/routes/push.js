@@ -64,7 +64,7 @@ router.post('/push/subscribe', async (req, res) => {
             title: '🔔 Notifikasi Status Bar Aktif!',
             body: 'Selamat! Anda akan menerima update langsung di status bar HP saat ada layanan & promo baru di Ry-ITSolutions.',
             icon: '/logo.png',
-            badge: '/icon.svg',
+            badge: '/badge.png',
             url: '/unblock-imei',
             tag: 'welcome-push'
         }).catch((err) => {
@@ -130,7 +130,7 @@ router.post('/push/test-me', async (req, res) => {
             title: '🔔 Uji Coba Status Bar Ry-ITSolutions!',
             body: 'Sukses! Notifikasi bilah HP Anda berfungsi normal dan siap menerima info layanan & promo baru.',
             icon: '/logo.png',
-            badge: '/icon.svg',
+            badge: '/badge.png',
             url: '/unblock-imei',
             tag: testTag
         });
