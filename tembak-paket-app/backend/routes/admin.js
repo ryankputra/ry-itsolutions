@@ -2201,27 +2201,45 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 // 1. POST /api/admin/imei-packages
 router.post('/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { duration, price, allowed_speeds } = req.body;
-        if (!duration || price === undefined || price === null) {
-            return res.status(400).json({ status: false, message: "Durasi dan harga jual paket wajib diisi." });
+        const { duration, price, allowed_speeds, speed_prices } = req.body;
+        if (!duration || !duration.trim()) {
+            return res.status(400).json({ status: false, message: "Durasi paket wajib diisi." });
+        }
+
+        let speedPricesObj = {};
+        if (speed_prices && typeof speed_prices === 'object') {
+            speedPricesObj = speed_prices;
+        } else if (typeof speed_prices === 'string') {
+            try { speedPricesObj = JSON.parse(speed_prices); } catch (e) {}
+        }
+
+        let parsedSpeeds = ['fast', 'semi', 'slow'];
+        if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {
+            parsedSpeeds = allowed_speeds;
+        } else if (Object.keys(speedPricesObj).length > 0) {
+            parsedSpeeds = Object.keys(speedPricesObj).filter(k => Number(speedPricesObj[k]) > 0);
+        }
+
+        const validPrices = Object.entries(speedPricesObj)
+            .filter(([k, v]) => parsedSpeeds.includes(k) && Number(v) > 0)
+            .map(([_, v]) => Number(v));
+
+        let numPrice = Number(price);
+        if (validPrices.length > 0) {
+            numPrice = Math.min(...validPrices);
+        }
+        if (isNaN(numPrice) || numPrice <= 0) {
+            return res.status(400).json({ status: false, message: "Harga jual paket harus ditentukan untuk minimal 1 opsi kecepatan." });
         }
 
         const id = `imei_${Date.now()}`;
-        const numPrice = Number(price) || 0;
-        let speedsJson = '["fast","semi","slow"]';
-        if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {
-            speedsJson = JSON.stringify(allowed_speeds);
-        } else if (typeof allowed_speeds === 'string' && allowed_speeds.trim()) {
-            speedsJson = allowed_speeds.trim();
-        }
+        const speedsJson = JSON.stringify(parsedSpeeds);
+        const speedPricesJson = JSON.stringify(speedPricesObj);
 
         await dbRun(
-            "INSERT INTO imei_packages (id, duration, price, isVisible, allowed_speeds) VALUES (?, ?, ?, 1, ?)",
-            [id, duration.trim(), numPrice, speedsJson]
+            "INSERT INTO imei_packages (id, duration, price, isVisible, allowed_speeds, speed_prices) VALUES (?, ?, ?, 1, ?, ?)",
+            [id, duration.trim(), numPrice, speedsJson, speedPricesJson]
         );
-
-        let parsedSpeeds = ['fast', 'semi', 'slow'];
-        try { parsedSpeeds = JSON.parse(speedsJson); } catch (e) {}
 
         if (req.body.notify_wa || req.body.send_notification) {
             const targetMode = req.body.notify_target === 'all' ? 'all' : 'admin_only';
@@ -2279,7 +2297,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { duration, price, isVisible, allowed_speeds } = req.body;
+        const { duration, price, isVisible, allowed_speeds, speed_prices } = req.body;
 
         const existing = await dbGet("SELECT * FROM imei_packages WHERE id = ?", [id]);
         if (!existing) {
@@ -2287,23 +2305,42 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
         }
 
         const updatedDuration = duration !== undefined ? duration.trim() : existing.duration;
-        const updatedPrice = price !== undefined ? Number(price) : existing.price;
         const updatedVisible = isVisible !== undefined ? (isVisible === 1 || isVisible === true ? 1 : 0) : existing.isVisible;
 
-        let speedsJson = existing.allowed_speeds || '["fast","semi","slow"]';
-        if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {
-            speedsJson = JSON.stringify(allowed_speeds);
-        } else if (typeof allowed_speeds === 'string' && allowed_speeds.trim()) {
-            speedsJson = allowed_speeds.trim();
+        let speedPricesObj = {};
+        if (speed_prices !== undefined) {
+            if (typeof speed_prices === 'object' && speed_prices !== null) {
+                speedPricesObj = speed_prices;
+            } else if (typeof speed_prices === 'string') {
+                try { speedPricesObj = JSON.parse(speed_prices); } catch (e) {}
+            }
+        } else if (existing.speed_prices) {
+            try { speedPricesObj = JSON.parse(existing.speed_prices); } catch (e) {}
         }
 
-        await dbRun(
-            "UPDATE imei_packages SET duration = ?, price = ?, isVisible = ?, allowed_speeds = ? WHERE id = ?",
-            [updatedDuration, updatedPrice, updatedVisible, speedsJson, id]
-        );
-
         let parsedSpeeds = ['fast', 'semi', 'slow'];
-        try { parsedSpeeds = JSON.parse(speedsJson); } catch (e) {}
+        if (Array.isArray(allowed_speeds) && allowed_speeds.length > 0) {
+            parsedSpeeds = allowed_speeds;
+        } else if (existing.allowed_speeds) {
+            try { parsedSpeeds = JSON.parse(existing.allowed_speeds); } catch (e) {}
+        }
+
+        const validPrices = Object.entries(speedPricesObj)
+            .filter(([k, v]) => parsedSpeeds.includes(k) && Number(v) > 0)
+            .map(([_, v]) => Number(v));
+
+        let updatedPrice = price !== undefined && Number(price) > 0 ? Number(price) : existing.price;
+        if (validPrices.length > 0) {
+            updatedPrice = Math.min(...validPrices);
+        }
+
+        const speedsJson = JSON.stringify(parsedSpeeds);
+        const speedPricesJson = JSON.stringify(speedPricesObj);
+
+        await dbRun(
+            "UPDATE imei_packages SET duration = ?, price = ?, isVisible = ?, allowed_speeds = ?, speed_prices = ? WHERE id = ?",
+            [updatedDuration, updatedPrice, updatedVisible, speedsJson, speedPricesJson, id]
+        );
 
         res.json({
             status: true,

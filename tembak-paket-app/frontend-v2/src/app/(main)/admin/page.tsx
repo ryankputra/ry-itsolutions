@@ -359,10 +359,14 @@ export default function AdminPage() {
   const [manualOrders, setManualOrders] = useState<any[]>([]);
   const [pricing, setPricing] = useState<any>({});
   const [imeiPackages, setImeiPackages] = useState<any[]>([]);
-  const [newImeiPkg, setNewImeiPkg] = useState<{ duration: string; price: string; allowed_speeds: string[] }>({
+  const [newImeiPkg, setNewImeiPkg] = useState<{
+    duration: string;
+    allowed_speeds: string[];
+    speed_prices: { fast: string; semi: string; slow: string };
+  }>({
     duration: "",
-    price: "",
-    allowed_speeds: ["fast", "semi", "slow"]
+    allowed_speeds: ["fast", "semi", "slow"],
+    speed_prices: { fast: "", semi: "", slow: "" }
   });
   const [editingPkg, setEditingPkg] = useState<any | null>(null);
   const [savingImeiPkg, setSavingImeiPkg] = useState(false);
@@ -3700,7 +3704,27 @@ export default function AdminPage() {
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="font-extrabold text-sm text-ink">{pkg.duration}</p>
-                            <p className="text-xs font-black text-primary">Rp {Number(pkg.price || 0).toLocaleString('id-ID')}</p>
+                            {(() => {
+                              let spPrices: any = {};
+                              if (pkg.speed_prices) {
+                                try {
+                                  spPrices = typeof pkg.speed_prices === 'string' ? JSON.parse(pkg.speed_prices) : pkg.speed_prices;
+                                } catch (e) {}
+                              }
+                              return (
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                  {speeds.map(s => {
+                                    const val = spPrices[s];
+                                    return (
+                                      <span key={s} className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 flex items-center gap-1">
+                                        <span>{s === 'fast' ? '⚡ Fast' : s === 'semi' ? '🚀 Semi' : '⏳ Slow'}:</span>
+                                        <span>{val ? `Rp ${Number(val).toLocaleString('id-ID')}` : `Rp ${Number(pkg.price).toLocaleString('id-ID')}`}</span>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()}
                           </div>
                           <div className="flex items-center gap-1.5">
                             <button
@@ -3743,7 +3767,25 @@ export default function AdminPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setEditingPkg({ ...pkg, allowed_speeds: speeds })}
+                              onClick={() => {
+                              let spObj: any = { fast: "", semi: "", slow: "" };
+                              if (pkg.speed_prices) {
+                                try {
+                                  const parsed = typeof pkg.speed_prices === 'string' ? JSON.parse(pkg.speed_prices) : pkg.speed_prices;
+                                  if (parsed && typeof parsed === 'object') {
+                                    spObj = {
+                                      fast: parsed.fast !== undefined ? String(parsed.fast) : "",
+                                      semi: parsed.semi !== undefined ? String(parsed.semi) : "",
+                                      slow: parsed.slow !== undefined ? String(parsed.slow) : ""
+                                    };
+                                  }
+                                } catch (e) {}
+                              }
+                              if (!spObj.fast && !spObj.semi && !spObj.slow && pkg.price) {
+                                (speeds || []).forEach((s: string) => { spObj[s] = String(pkg.price); });
+                              }
+                              setEditingPkg({ ...pkg, allowed_speeds: speeds, speed_prices: spObj });
+                            }}
                               className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors"
                             >
                               Edit
@@ -3818,87 +3860,110 @@ export default function AdminPage() {
               </div>
 
               {/* Form Tambah Paket Baru */}
-              <div className="p-4 rounded-2xl bg-parchment/30 border border-hairline space-y-3 pt-3">
+              <div className="p-4 rounded-2xl bg-parchment/30 border border-hairline space-y-4 pt-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-ink flex items-center gap-1.5">
                     <span>+</span> Tambah Paket Durasi Baru
                   </span>
                   <span className="text-[10px] text-ink-muted">
-                    Atur durasi, harga jual &amp; batasan kecepatan
+                    Atur durasi &amp; harga spesifik per kecepatan proses
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
                   <Input
-                    label="Durasi Paket (Contoh: 1 Bulan, 6 Bulan, dsb)"
-                    placeholder="Contoh: 1 Bulan"
+                    label="Durasi Paket (Contoh: 1 Bulan, 3 Bulan, 6 Bulan, dsb)"
+                    placeholder="Contoh: 3 Bulan"
                     value={newImeiPkg.duration}
                     onChange={e => setNewImeiPkg({ ...newImeiPkg, duration: e.target.value })}
                   />
-                  <Input
-                    label="Harga Jual ke Pembeli (Rp)"
-                    type="number"
-                    placeholder="Contoh: 100000"
-                    value={newImeiPkg.price}
-                    onChange={e => setNewImeiPkg({ ...newImeiPkg, price: e.target.value })}
-                  />
                 </div>
 
-                {/* Checklist Pilihan Kecepatan Pengerjaan */}
-                <div className="space-y-1.5 pt-1">
+                {/* Pengaturan Harga Per Kecepatan Pengerjaan */}
+                <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-ink flex items-center gap-1.5">
-                      <span>Pilihan Kecepatan</span> yang Diizinkan untuk Paket Ini:
+                      <span>Harga Jual per Kecepatan Pengerjaan:</span>
                     </label>
-                    <span className="text-[10px] text-ink-muted">Klik untuk memilih (minimal 1)</span>
+                    <span className="text-[10px] text-ink-muted">Centang kecepatan yang aktif & tentukan harganya</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {[
-                      { id: 'fast', label: 'Fast'},
-                      { id: 'semi', label: 'Semi Fast'},
-                      { id: 'slow', label: 'Slow'}
+                      { id: 'fast', label: 'Fast (Cepat)', icon: '⚡', desc: 'Prioritas kilat' },
+                      { id: 'semi', label: 'Semi Fast (Sedang)', icon: '🚀', desc: 'Estimasi standar' },
+                      { id: 'slow', label: 'Slow (Normal/Hemat)', icon: '⏳', desc: 'Antrian santai paling hemat' }
                     ].map(speed => {
                       const isSelected = (newImeiPkg.allowed_speeds || []).includes(speed.id);
                       return (
-                        <button
+                        <div
                           key={speed.id}
-                          type="button"
-                          onClick={() => {
-                            const current = newImeiPkg.allowed_speeds || [];
-                            if (isSelected) {
-                              if (current.length === 1) {
-                                return Swal.fire("Info", "Minimal harus memilih 1 opsi kecepatan pengerjaan", "info");
-                              }
-                              setNewImeiPkg({ ...newImeiPkg, allowed_speeds: current.filter(s => s !== speed.id) });
-                            } else {
-                              setNewImeiPkg({ ...newImeiPkg, allowed_speeds: [...current, speed.id] });
-                            }
-                          }}
-                          className={`p-3 rounded-xl border text-left transition-all ${
+                          className={`p-3 rounded-xl border transition-all ${
                             isSelected
-                              ? 'border-primary bg-primary/10 shadow-xs text-primary ring-1 ring-primary/40'
-                              : 'border-hairline bg-canvas/70 text-ink-muted hover:border-ink-muted'
+                              ? 'border-primary/50 bg-primary/[0.04] ring-1 ring-primary/30'
+                              : 'border-hairline bg-canvas/40 opacity-70'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-black text-xs sm:text-sm">{speed.icon} {speed.label}</span>
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black ${
-                              isSelected ? 'bg-primary text-white' : 'border border-hairline bg-canvas'
-                            }`}>
-                              {isSelected ? '' : ''}
-                            </span>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  const current = newImeiPkg.allowed_speeds || [];
+                                  if (!e.target.checked) {
+                                    if (current.length === 1) {
+                                      return Swal.fire("Info", "Minimal harus memilih 1 kecepatan pengerjaan", "info");
+                                    }
+                                    setNewImeiPkg({ ...newImeiPkg, allowed_speeds: current.filter(s => s !== speed.id) });
+                                  } else {
+                                    setNewImeiPkg({ ...newImeiPkg, allowed_speeds: [...current, speed.id] });
+                                  }
+                                }}
+                                className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
+                              />
+                              <span className="font-black text-xs text-ink">{speed.icon} {speed.label}</span>
+                            </label>
                           </div>
-                        </button>
+
+                          <p className="text-[10px] text-ink-muted mb-2">{speed.desc}</p>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-ink-muted block mb-1">
+                              Harga {speed.id === 'fast' ? 'Fast' : speed.id === 'semi' ? 'Semi Fast' : 'Slow'} (Rp)
+                            </label>
+                            <input
+                              type="number"
+                              disabled={!isSelected}
+                              placeholder={isSelected ? "Misal: 155000" : "Non-aktif"}
+                              value={newImeiPkg.speed_prices?.[speed.id as 'fast' | 'semi' | 'slow'] || ""}
+                              onChange={e => {
+                                setNewImeiPkg({
+                                  ...newImeiPkg,
+                                  speed_prices: {
+                                    ...newImeiPkg.speed_prices,
+                                    [speed.id]: e.target.value
+                                  }
+                                });
+                              }}
+                              className={`w-full px-2.5 py-1.5 rounded-lg border text-xs font-bold outline-none transition-all ${
+                                isSelected
+                                  ? 'border-hairline bg-canvas text-ink focus:border-primary'
+                                  : 'border-hairline/50 bg-parchment/50 text-ink-muted cursor-not-allowed'
+                              }`}
+                            />
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
                   <p className="text-[10px] text-ink-muted italic">
-                    Contoh: Jika Anda memasukkan paket "1 Bulan" dan hanya mencentang "Fast", maka pelanggan yang memilih paket 1 Bulan hanya akan melihat opsi pengerjaan Fast saja.
+                    💡 Satu produk durasi (misal "3 Bulan") dapat memiliki harga berbeda untuk Fast (cth: Rp 185.000) dan Slow (cth: Rp 155.000). Saat pembeli memilih opsi kecepatan, total harga otomatis berubah!
                   </p>
                 </div>
 
-                <div className="pt-2 flex justify-end">
-                  <div className="flex items-center justify-between gap-3 pt-1">
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="flex items-center justify-between sm:justify-start gap-3">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -3908,7 +3973,7 @@ export default function AdminPage() {
                       />
                       <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
                         <Bell className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span>Kirim Notifikasi ke Bar HP Pengguna (Web Push)</span>
+                        <span>Kirim Notifikasi ke HP Pengguna</span>
                       </span>
                     </label>
                     <button
@@ -3925,12 +3990,30 @@ export default function AdminPage() {
                     className="h-10 px-6 text-xs font-bold"
                     disabled={savingImeiPkg}
                     onClick={async () => {
-                      if (!newImeiPkg.duration.trim() || !newImeiPkg.price) {
-                        return Swal.fire({ title: "Perhatian", text: "Mohon isi nama durasi dan harga jual paket."});
+                      if (!newImeiPkg.duration?.trim()) {
+                        return Swal.fire({ title: "Perhatian", text: "Mohon isi nama durasi paket (misal: 3 Bulan)." });
                       }
-                      if (!newImeiPkg.allowed_speeds || newImeiPkg.allowed_speeds.length === 0) {
-                        return Swal.fire({ title: "Perhatian", text: "Pilih minimal 1 kecepatan pengerjaan yang diizinkan."});
+                      const activeSpeeds = newImeiPkg.allowed_speeds || [];
+                      if (activeSpeeds.length === 0) {
+                        return Swal.fire({ title: "Perhatian", text: "Pilih minimal 1 kecepatan pengerjaan yang diizinkan." });
                       }
+
+                      // Check prices for active speeds
+                      const spPrices: Record<string, number> = {};
+                      for (const sp of activeSpeeds) {
+                        const rawPrice = newImeiPkg.speed_prices?.[sp as 'fast' | 'semi' | 'slow'];
+                        const num = parseInt(rawPrice || "");
+                        if (!num || num <= 0) {
+                          return Swal.fire({
+                            title: "Perhatian",
+                            text: `Mohon isi harga jual valid untuk opsi ${sp.toUpperCase()}.`
+                          });
+                        }
+                        spPrices[sp] = num;
+                      }
+
+                      const minPrice = Math.min(...Object.values(spPrices));
+
                       setSavingImeiPkg(true);
                       try {
                         const res = await fetch('/api/admin/imei-packages', {
@@ -3939,8 +4022,9 @@ export default function AdminPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             duration: newImeiPkg.duration.trim(),
-                            price: parseInt(newImeiPkg.price),
-                            allowed_speeds: newImeiPkg.allowed_speeds,
+                            price: minPrice,
+                            allowed_speeds: activeSpeeds,
+                            speed_prices: spPrices,
                             notify_push: newImeiNotifyPush
                           })
                         });
@@ -3952,7 +4036,11 @@ export default function AdminPage() {
                             timer: 2000,
                             showConfirmButton: false
                           });
-                          setNewImeiPkg({ duration: "", price: "", allowed_speeds: ["fast", "semi", "slow"] });
+                          setNewImeiPkg({
+                            duration: "",
+                            allowed_speeds: ["fast", "semi", "slow"],
+                            speed_prices: { fast: "", semi: "", slow: "" }
+                          });
                           loadManualData();
                         } else {
                           Swal.fire("Gagal", d.message || "Gagal menyimpan paket IMEI.", "error");
@@ -3971,23 +4059,23 @@ export default function AdminPage() {
 
               {/* MODAL EDIT PAKET */}
               {editingPkg && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-                  <div className="bg-canvas border border-hairline rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4">
-                    <div className="flex items-center justify-between border-b border-hairline pb-3">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs animate-in fade-in duration-200">
+                  <div className="bg-canvas border border-hairline rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-center justify-between pb-3 border-b border-hairline">
                       <div>
                         <h3 className="font-black text-sm sm:text-base text-ink">Edit Paket Durasi IMEI</h3>
-                        <p className="text-[11px] text-ink-muted">Ubah nama durasi, harga jual, dan kecepatan proses</p>
+                        <p className="text-[11px] text-ink-muted">Ubah nama durasi dan atur harga per kecepatan proses</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setEditingPkg(null)}
                         className="w-8 h-8 rounded-full bg-parchment hover:bg-hairline flex items-center justify-center text-ink text-xs font-bold"
                       >
-                        
+                        ✕
                       </button>
                     </div>
 
-                    <div className="space-y-3 text-xs">
+                    <div className="space-y-3.5 text-xs">
                       <div>
                         <label className="font-bold text-ink block mb-1">Durasi Paket</label>
                         <input
@@ -3999,46 +4087,66 @@ export default function AdminPage() {
                         />
                       </div>
 
-                      <div>
-                        <label className="font-bold text-ink block mb-1">Harga Jual (Rp)</label>
-                        <input
-                          type="number"
-                          required
-                          value={editingPkg.price || ''}
-                          onChange={e => setEditingPkg({ ...editingPkg, price: e.target.value })}
-                          className="w-full p-2.5 rounded-xl border border-hairline bg-canvas text-ink font-bold focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      {/* Kecepatan yang diizinkan */}
-                      <div className="space-y-1.5 pt-1">
-                        <label className="font-bold text-ink block">Pilihan Kecepatan yang Diizinkan:</label>
-                        <div className="grid grid-cols-3 gap-2">
+                      {/* Atur Kecepatan & Harga Masing-Masing */}
+                      <div className="space-y-2 pt-1">
+                        <label className="font-bold text-ink block">Harga Jual per Kecepatan:</label>
+                        <div className="space-y-2">
                           {[
-                            { id: 'fast', label: 'Fast'},
-                            { id: 'semi', label: 'Semi Fast'},
-                            { id: 'slow', label: 'Slow'}
+                            { id: 'fast', label: 'Fast (Cepat)', icon: '⚡' },
+                            { id: 'semi', label: 'Semi Fast (Sedang)', icon: '🚀' },
+                            { id: 'slow', label: 'Slow (Normal/Hemat)', icon: '⏳' }
                           ].map(s => {
                             const curSpeeds: string[] = editingPkg.allowed_speeds || [];
                             const isSel = curSpeeds.includes(s.id);
                             return (
-                              <button
+                              <div
                                 key={s.id}
-                                type="button"
-                                onClick={() => {
-                                  if (isSel) {
-                                    if (curSpeeds.length === 1) return Swal.fire("Info", "Minimal harus 1 kecepatan", "info");
-                                    setEditingPkg({ ...editingPkg, allowed_speeds: curSpeeds.filter(x => x !== s.id) });
-                                  } else {
-                                    setEditingPkg({ ...editingPkg, allowed_speeds: [...curSpeeds, s.id] });
-                                  }
-                                }}
-                                className={`p-2 rounded-xl border text-center transition-all ${
-                                  isSel ? 'border-primary bg-primary/10 text-primary font-bold ring-1 ring-primary/40' : 'border-hairline bg-canvas text-ink-muted'
+                                className={`p-2.5 rounded-xl border transition-all ${
+                                  isSel ? 'border-primary/40 bg-primary/[0.03]' : 'border-hairline bg-canvas/40 opacity-60'
                                 }`}
                               >
-                                <span>{s.icon} {s.label}</span>
-                              </button>
+                                <div className="flex items-center justify-between gap-2">
+                                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSel}
+                                      onChange={(e) => {
+                                        if (!e.target.checked) {
+                                          if (curSpeeds.length === 1) return Swal.fire("Info", "Minimal harus 1 kecepatan aktif", "info");
+                                          setEditingPkg({ ...editingPkg, allowed_speeds: curSpeeds.filter(x => x !== s.id) });
+                                        } else {
+                                          setEditingPkg({ ...editingPkg, allowed_speeds: [...curSpeeds, s.id] });
+                                        }
+                                      }}
+                                      className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
+                                    />
+                                    <span className="font-black text-xs text-ink">{s.icon} {s.label}</span>
+                                  </label>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] text-ink-muted font-bold">Rp</span>
+                                    <input
+                                      type="number"
+                                      disabled={!isSel}
+                                      placeholder={isSel ? "Harga" : "Nonaktif"}
+                                      value={editingPkg.speed_prices?.[s.id] || ""}
+                                      onChange={e => {
+                                        setEditingPkg({
+                                          ...editingPkg,
+                                          speed_prices: {
+                                            ...editingPkg.speed_prices,
+                                            [s.id]: e.target.value
+                                          }
+                                        });
+                                      }}
+                                      className={`w-28 px-2 py-1 rounded-lg border text-xs font-bold text-right outline-none ${
+                                        isSel
+                                          ? 'border-hairline bg-canvas text-ink focus:border-primary'
+                                          : 'border-hairline/40 bg-parchment/40 text-ink-muted cursor-not-allowed'
+                                      }`}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
                             );
                           })}
                         </div>
@@ -4071,9 +4179,26 @@ export default function AdminPage() {
                         type="button"
                         disabled={savingImeiPkg}
                         onClick={async () => {
-                          if (!editingPkg.duration?.trim() || !editingPkg.price) {
-                            return Swal.fire("Perhatian", "Isi durasi dan harga", "info");
+                          if (!editingPkg.duration?.trim()) {
+                            return Swal.fire("Perhatian", "Isi durasi paket", "info");
                           }
+                          const curSpeeds: string[] = editingPkg.allowed_speeds || [];
+                          if (curSpeeds.length === 0) {
+                            return Swal.fire("Perhatian", "Pilih minimal 1 kecepatan proses yang diizinkan", "info");
+                          }
+
+                          const spPrices: Record<string, number> = {};
+                          for (const sp of curSpeeds) {
+                            const rawPrice = editingPkg.speed_prices?.[sp];
+                            const num = parseInt(rawPrice || "");
+                            if (!num || num <= 0) {
+                              return Swal.fire("Perhatian", `Isi harga valid untuk opsi ${sp.toUpperCase()}`, "info");
+                            }
+                            spPrices[sp] = num;
+                          }
+
+                          const minPrice = Math.min(...Object.values(spPrices));
+
                           setSavingImeiPkg(true);
                           try {
                             const res = await fetch(`/api/admin/imei-packages/${editingPkg.id}`, {
@@ -4082,9 +4207,10 @@ export default function AdminPage() {
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
                                 duration: editingPkg.duration.trim(),
-                                price: parseInt(editingPkg.price),
+                                price: minPrice,
                                 isVisible: editingPkg.isVisible,
-                                allowed_speeds: editingPkg.allowed_speeds
+                                allowed_speeds: curSpeeds,
+                                speed_prices: spPrices
                               })
                             });
                             const d = await res.json();

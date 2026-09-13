@@ -108,12 +108,52 @@ function UnblockImeiContent() {
   }, []);
 
   const safePackages = Array.isArray(packages) ? packages : [];
+
+  // Deduplicate packages by duration (case-insensitive) if any legacy duplicates exist
+  const uniquePackages = React.useMemo(() => {
+    const map = new Map<string, any>();
+    safePackages.forEach(p => {
+      const dur = (p.duration || '').trim().toLowerCase();
+      if (!map.has(dur)) {
+        map.set(dur, p);
+      } else {
+        const existing = map.get(dur);
+        const hasSp1 = existing.speed_prices && Object.keys(typeof existing.speed_prices === 'string' ? JSON.parse(existing.speed_prices) : existing.speed_prices).length > 0;
+        const hasSp2 = p.speed_prices && Object.keys(typeof p.speed_prices === 'string' ? JSON.parse(p.speed_prices) : p.speed_prices).length > 0;
+        if (!hasSp1 && hasSp2) {
+          map.set(dur, p);
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [safePackages]);
+
   const imeiList = parseMultipleImeis(imei);
   const imeiCount = imeiList.length > 0 ? imeiList.length : 1;
-  const selectedPkg = safePackages.find(p => p && p.id === selectedPkgId);
-  const basePrice = selectedPkg ? Number(selectedPkg.price || 0) : 0;
-  const speedCost = selectedSpeed && speedPricing ? Number(speedPricing[`imei_speed_${selectedSpeed}`] || speedPricing[selectedSpeed] || 0) : 0;
-  const pricePerImei = basePrice + speedCost;
+  const selectedPkg = uniquePackages.find(p => p && p.id === selectedPkgId) || safePackages.find(p => p && p.id === selectedPkgId);
+
+  const pkgSpeedPrices: Record<string, number> = React.useMemo(() => {
+    if (!selectedPkg?.speed_prices) return {};
+    try {
+      return typeof selectedPkg.speed_prices === 'string'
+        ? JSON.parse(selectedPkg.speed_prices)
+        : selectedPkg.speed_prices;
+    } catch (e) {
+      return {};
+    }
+  }, [selectedPkg]);
+
+  let pricePerImei = 0;
+  if (selectedPkg) {
+    if (selectedSpeed && pkgSpeedPrices[selectedSpeed] !== undefined && Number(pkgSpeedPrices[selectedSpeed]) > 0) {
+      pricePerImei = Number(pkgSpeedPrices[selectedSpeed]);
+    } else {
+      const basePrice = Number(selectedPkg.price || 0);
+      const speedCost = selectedSpeed && speedPricing ? Number(speedPricing[`imei_speed_${selectedSpeed}`] || speedPricing[selectedSpeed] || 0) : 0;
+      pricePerImei = basePrice + speedCost;
+    }
+  }
+
   const rawTotalPrice = pricePerImei * imeiCount;
 
   const discountAmount = appliedCoupon ? Math.min(Number(appliedCoupon.discount_amount || 0), rawTotalPrice) : 0;
@@ -428,7 +468,12 @@ function UnblockImeiContent() {
   };
 
   const allowedSpeedsForPkg: string[] = (() => {
-    if (!selectedPkg || !selectedPkg.allowed_speeds) return ['fast', 'semi', 'slow'];
+    if (!selectedPkg) return ['fast', 'semi', 'slow'];
+    if (Object.keys(pkgSpeedPrices).length > 0) {
+      const activeKeys = Object.keys(pkgSpeedPrices).filter(k => Number(pkgSpeedPrices[k]) > 0);
+      if (activeKeys.length > 0) return activeKeys;
+    }
+    if (!selectedPkg.allowed_speeds) return ['fast', 'semi', 'slow'];
     try {
       const parsed = typeof selectedPkg.allowed_speeds === 'string'
         ? JSON.parse(selectedPkg.allowed_speeds)
@@ -448,12 +493,20 @@ function UnblockImeiContent() {
       const status = speedPricing ? speedPricing[`${opt.key}_status`] : null;
       return status === 'visible' || status === 'active' || status !== 'hidden';
     })
-    .map(opt => ({
-      id: opt.id,
-      label: opt.label,
-      rangeText: (speedPricing && speedPricing[`${opt.key}_range`]) || opt.defaultRange,
-      price: (speedPricing && parseInt(speedPricing[opt.key])) || 0
-    }));
+    .map(opt => {
+      const hasSpecificPrice = pkgSpeedPrices[opt.id] !== undefined && Number(pkgSpeedPrices[opt.id]) > 0;
+      const displayPrice = hasSpecificPrice
+        ? Number(pkgSpeedPrices[opt.id])
+        : ((speedPricing && parseInt(speedPricing[opt.key])) || 0);
+
+      return {
+        id: opt.id,
+        label: opt.label,
+        rangeText: (speedPricing && speedPricing[`${opt.key}_range`]) || opt.defaultRange,
+        isSpecificPrice: hasSpecificPrice,
+        price: displayPrice
+      };
+    });
 
   useEffect(() => {
     if (speedOptions.length > 0) {
@@ -697,10 +750,21 @@ function UnblockImeiContent() {
                 ) : safePackages.length === 0 ? (
                   <p className="text-xs text-ink-muted col-span-3">Belum ada pilihan paket.</p>
                 ) : (
-                  safePackages.map((opt, idx) => {
+                  uniquePackages.map((opt, idx) => {
                     const isSelected = selectedPkgId === opt.id;
                     const isBestSeller = (opt.duration || "").toLowerCase().includes("3 bulan") || idx === 0;
-                    const optPrice = Number(opt.price || 0);
+
+                    let optSp: any = {};
+                    if (opt.speed_prices) {
+                      try {
+                        optSp = typeof opt.speed_prices === 'string' ? JSON.parse(opt.speed_prices) : opt.speed_prices;
+                      } catch (e) {}
+                    }
+                    const validSpPrices = Object.values(optSp).map(v => Number(v)).filter(v => v > 0);
+                    const lowestPrice = validSpPrices.length > 0 ? Math.min(...validSpPrices) : Number(opt.price || 0);
+                    const activeCardPrice = isSelected && selectedSpeed && optSp[selectedSpeed]
+                      ? Number(optSp[selectedSpeed])
+                      : lowestPrice;
 
                     return (
                       <button
@@ -726,10 +790,10 @@ function UnblockImeiContent() {
                         {/* Pricing */}
                         <div>
                           <p className="text-[9px] text-ink-muted line-through">
-                            Rp {(optPrice + 20000).toLocaleString("id-ID")}
+                            Rp {(activeCardPrice + 20000).toLocaleString("id-ID")}
                           </p>
                           <p className="font-black text-xs sm:text-sm text-primary">
-                            Rp {optPrice.toLocaleString("id-ID")}
+                            {isSelected ? `Rp ${activeCardPrice.toLocaleString("id-ID")}` : `Mulai Rp ${lowestPrice.toLocaleString("id-ID")}`}
                           </p>
                         </div>
 
@@ -771,8 +835,12 @@ function UnblockImeiContent() {
                           {opt.rangeText}
                         </div>
                       )}
-                      <div className="text-[10px] font-semibold mt-0.5 text-ink-muted">
-                        {opt.price === 0 ? "Gratis" : `+Rp ${Number(opt.price).toLocaleString("id-ID")}`}
+                      <div className="text-[10px] font-extrabold mt-0.5 text-primary">
+                        {opt.isSpecificPrice
+                          ? `Rp ${Number(opt.price).toLocaleString("id-ID")}`
+                          : opt.price === 0
+                          ? "Gratis"
+                          : `+Rp ${Number(opt.price).toLocaleString("id-ID")}`}
                       </div>
                     </button>
                   ))}

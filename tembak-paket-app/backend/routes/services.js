@@ -234,10 +234,18 @@ router.get('/imei-packages', async (req, res) => {
                     if (Array.isArray(parsed) && parsed.length > 0) allowed_speeds = parsed;
                 } catch (e) {}
             }
+            let speed_prices = {};
+            if (r.speed_prices) {
+                try {
+                    const parsed = typeof r.speed_prices === 'string' ? JSON.parse(r.speed_prices) : r.speed_prices;
+                    if (parsed && typeof parsed === 'object') speed_prices = parsed;
+                } catch (e) {}
+            }
             return {
                 ...r,
                 isVisible: r.isVisible === undefined || r.isVisible === null ? 1 : Number(r.isVisible),
-                allowed_speeds
+                allowed_speeds,
+                speed_prices
             };
         });
         res.json({ status: true, data });
@@ -1023,13 +1031,20 @@ ${userRecentOrders.join('\n') || 'Belum ada pesanan'}
         }
 
         // 2. Fetch Live Site Knowledge
-        const imeiPackages = await dbAll("SELECT duration, price FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL ORDER BY price ASC");
+        const imeiPackages = await dbAll("SELECT duration, price, speed_prices FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL ORDER BY price ASC");
         const coupons = await dbAll("SELECT code, discount_type, discount_value, min_order_amount FROM coupons WHERE is_active = 1");
         const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('show_beli_paket', 'wa_admin_number', 'imei_speed_fast_status', 'imei_speed_slow_range', 'openai_api_key', 'gemini_api_key')");
         const settingsMap = {};
         (settingsRows || []).forEach(s => { settingsMap[s.key] = s.value; });
 
-        const imeiListStr = (imeiPackages || []).map(p => `- Paket ${p.duration}: Rp ${Math.round(p.price || 0).toLocaleString('id-ID')}`).join('\n') || '- Paket 3 Bulan: Rp 155.000';
+        const imeiListStr = (imeiPackages || []).map(p => {
+            let spObj = {};
+            if (p.speed_prices) {
+                try { spObj = JSON.parse(p.speed_prices); } catch (e) {}
+            }
+            const spDetails = Object.entries(spObj).map(([sp, val]) => `${sp.toUpperCase()}: Rp ${Number(val).toLocaleString('id-ID')}`).join(', ');
+            return `- Paket ${p.duration}: ${spDetails ? spDetails : 'Rp ' + Math.round(p.price || 0).toLocaleString('id-ID')}`;
+        }).join('\n') || '- Paket 3 Bulan: Rp 155.000';
         const couponListStr = (coupons || []).map(c => `- Kode: ${c.code} (Diskon ${c.discount_type === 'percent' ? c.discount_value + '%' : 'Rp ' + Math.round(c.discount_value).toLocaleString('id-ID')}, Min: Rp ${Math.round(c.min_order_amount || 0).toLocaleString('id-ID')})`).join('\n') || 'Tidak ada kupon aktif';
 
         // 3. System Prompt for OpenAI
