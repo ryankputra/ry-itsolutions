@@ -125,6 +125,84 @@
       "namedRegex": "^/admin(?:/)?$"
     },
     {
+      "page": "/admin/broadcast",
+      "regex": "^/admin/broadcast(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/broadcast(?:/)?$"
+    },
+    {
+      "page": "/admin/gateway",
+      "regex": "^/admin/gateway(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/gateway(?:/)?$"
+    },
+    {
+      "page": "/admin/imei",
+      "regex": "^/admin/imei(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/imei(?:/)?$"
+    },
+    {
+      "page": "/admin/logs",
+      "regex": "^/admin/logs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/logs(?:/)?$"
+    },
+    {
+      "page": "/admin/orders",
+      "regex": "^/admin/orders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/orders(?:/)?$"
+    },
+    {
+      "page": "/admin/packages",
+      "regex": "^/admin/packages(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/packages(?:/)?$"
+    },
+    {
+      "page": "/admin/referral",
+      "regex": "^/admin/referral(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/referral(?:/)?$"
+    },
+    {
+      "page": "/admin/reviews",
+      "regex": "^/admin/reviews(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/reviews(?:/)?$"
+    },
+    {
+      "page": "/admin/settings",
+      "regex": "^/admin/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/settings(?:/)?$"
+    },
+    {
+      "page": "/admin/theme",
+      "regex": "^/admin/theme(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/theme(?:/)?$"
+    },
+    {
+      "page": "/admin/tickets",
+      "regex": "^/admin/tickets(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/tickets(?:/)?$"
+    },
+    {
+      "page": "/admin/users",
+      "regex": "^/admin/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/users(?:/)?$"
+    },
+    {
+      "page": "/admin/vouchers",
+      "regex": "^/admin/vouchers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/vouchers(?:/)?$"
+    },
+    {
       "page": "/ai",
       "regex": "^/ai(?:/)?$",
       "routeKeys": {},
