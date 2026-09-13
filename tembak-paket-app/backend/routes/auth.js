@@ -15,7 +15,7 @@ const SibApiV3Sdk = require('sib-api-v3-sdk');
 const { dbGet, dbRun, dbAll } = require('../config/db');
 const { isAuthenticated } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
-const { validateEmailActive, sendRegistrationOtpEmail, sendPasswordResetOtpEmail } = require('../services/emailService');
+const { validateEmailActive, sendRegistrationOtpEmail, sendPasswordResetOtpEmail, sendEmailChangeOtpEmail } = require('../services/emailService');
 const { logUserActivity } = require('../utils/activityLogger');
 const { updatePresence, removePresence } = require('../utils/presenceManager');
 
@@ -679,6 +679,138 @@ router.put("/user/profile", isAuthenticated, async (req, res) => {
     } catch (e) {
         console.error("Error updating profile:", e);
         res.status(500).json({ status: false, message: e.message || "Gagal memperbarui profil." });
+    }
+});
+
+// 8.6. Request Change Email OTP
+router.post('/user/request-email-otp', isAuthenticated, async (req, res) => {
+    try {
+        const { newEmail } = req.body;
+        if (!newEmail || typeof newEmail !== 'string') {
+            return res.status(400).json({ status: false, message: "Email baru wajib diisi." });
+        }
+        const validEmail = newEmail.trim().toLowerCase();
+        const emailCheck = await validateEmailActive(validEmail);
+        if (!emailCheck.valid) {
+            return res.status(400).json({ status: false, message: emailCheck.message });
+        }
+        const existingUser = await dbGet('SELECT id FROM users WHERE email = ?', [validEmail]);
+        if (existingUser) {
+            return res.status(400).json({ status: false, message: "Alamat email tersebut sudah digunakan oleh akun lain." });
+        }
+        const currentUser = await dbGet('SELECT id, name, email FROM users WHERE id = ?', [req.session.userId]);
+        if (currentUser && currentUser.email && currentUser.email.toLowerCase() === validEmail) {
+            return res.status(400).json({ status: false, message: "Alamat email baru tidak boleh sama dengan email saat ini." });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 15 * 60 * 1000;
+
+        await dbRun(
+            'INSERT OR REPLACE INTO email_verifications (email, otp, type, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [validEmail, otp, 'change_email', JSON.stringify({ userId: req.session.userId, newEmail: validEmail }), expiresAt, new Date().toISOString()]
+        );
+
+        const emailSent = await sendEmailChangeOtpEmail(validEmail, otp, currentUser?.name || 'Pengguna');
+        if (!emailSent.success) {
+            return res.status(500).json({ status: false, message: "Gagal mengirimkan kode OTP ke email baru. Silakan coba lagi." });
+        }
+
+        res.json({
+            status: true,
+            message: `Kode verifikasi 6 digit telah dikirim ke ${validEmail}. Silakan periksa kotak masuk atau spam.`
+        });
+    } catch (e) {
+        console.error("Error request-email-otp:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal memproses permintaan OTP email." });
+    }
+});
+
+// 8.7. Verify Change Email OTP & Update User Email
+router.post('/user/verify-email-otp', isAuthenticated, async (req, res) => {
+    try {
+        const { newEmail, otp } = req.body;
+        if (!newEmail || !otp) {
+            return res.status(400).json({ status: false, message: "Email baru dan kode OTP wajib diisi." });
+        }
+        const validEmail = newEmail.trim().toLowerCase();
+        const record = await dbGet(
+            'SELECT * FROM email_verifications WHERE email = ? AND type = ?',
+            [validEmail, 'change_email']
+        );
+
+        if (!record) {
+            return res.status(400).json({ status: false, message: "Permintaan ganti email tidak ditemukan atau telah kedaluwarsa. Silakan minta kode baru." });
+        }
+
+        if (Number(record.expires_at) < Date.now()) {
+            await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'change_email']);
+            return res.status(400).json({ status: false, message: "Kode OTP telah kedaluwarsa. Silakan minta kode baru." });
+        }
+
+        if (record.otp !== String(otp).trim()) {
+            return res.status(400).json({ status: false, message: "Kode OTP verifikasi salah." });
+        }
+
+        let payload = {};
+        try { payload = JSON.parse(record.payload || '{}'); } catch(err) {}
+        if (payload.userId && payload.userId !== req.session.userId) {
+            return res.status(403).json({ status: false, message: "Sesi verifikasi tidak sesuai." });
+        }
+
+        await dbRun("UPDATE users SET email = ? WHERE id = ?", [validEmail, req.session.userId]);
+        await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'change_email']);
+
+        const updatedUser = await dbGet("SELECT id, name, email, role, balance, coins, avatar, verifiedPhone FROM users WHERE id = ?", [req.session.userId]);
+        logUserActivity({ userId: req.session.userId, userName: updatedUser.name, userEmail: validEmail, action: 'UPDATE_EMAIL', description: `Email berhasil diubah ke ${validEmail}`, req });
+
+        res.json({
+            status: true,
+            message: "Alamat email akun berhasil diperbarui!",
+            user: {
+                ...updatedUser,
+                phone: updatedUser.verifiedPhone || ""
+            }
+        });
+    } catch (e) {
+        console.error("Error verify-email-otp:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal memverifikasi OTP email." });
+    }
+});
+
+// 8.8. Change Password
+router.post('/user/change-password', isAuthenticated, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ status: false, message: "Password saat ini dan password baru wajib diisi." });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ status: false, message: "Password baru minimal 6 karakter." });
+        }
+
+        const user = await dbGet('SELECT * FROM users WHERE id = ?', [req.session.userId]);
+        if (!user) {
+            return res.status(404).json({ status: false, message: "User tidak ditemukan." });
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ status: false, message: "Password saat ini salah." });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await dbRun("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, req.session.userId]);
+
+        logUserActivity({ userId: req.session.userId, userName: user.name, userEmail: user.email, action: 'CHANGE_PASSWORD', description: 'Password akun berhasil diubah', req });
+
+        res.json({
+            status: true,
+            message: "Password berhasil diperbarui! Silakan gunakan password baru ini untuk login berikutnya."
+        });
+    } catch (e) {
+        console.error("Error change-password:", e);
+        res.status(500).json({ status: false, message: e.message || "Gagal mengubah password." });
     }
 });
 

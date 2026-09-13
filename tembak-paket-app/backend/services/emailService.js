@@ -177,9 +177,55 @@ async function sendPasswordResetOtpEmail(email, otpCode, userName = 'Pengguna') 
     return sendEmail({ to: email, subject, html, text });
 }
 
+
+/**
+ * Mengirimkan email OTP untuk perubahan alamat email akun
+ */
+async function sendEmailChangeOtpEmail(newEmail, otpCode, userName = 'Pengguna') {
+    const subject = `${otpCode} adalah Kode Verifikasi Penggantian Email Akun - Ry-ITSolutions`;
+    const html = `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <title>Verifikasi Ganti Email</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; margin: 0; padding: 24px;">
+        <div style="max-width: 520px; margin: 0 auto; background: #161e2e; border: 1px solid #2d3748; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <div style="background: linear-gradient(135deg, #0284c7, #6366f1); padding: 28px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Ry-ITSolutions</h1>
+                <p style="color: #bae6fd; margin: 6px 0 0 0; font-size: 14px;">Verifikasi Penggantian Email Akun</p>
+            </div>
+            <div style="padding: 32px 28px;">
+                <p style="font-size: 16px; margin: 0 0 16px 0;">Halo <strong>${userName}</strong>,</p>
+                <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0;">
+                    Kami menerima permintaan untuk mengganti alamat email akun Ry-ITSolutions Anda ke alamat email baru ini. Masukkan kode verifikasi 6 digit berikut pada halaman profil untuk menyelesaikan proses:
+                </p>
+                <div style="background: #0f172a; border: 2px dashed #0284c7; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
+                    <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #38bdf8; font-family: monospace;">${otpCode}</span>
+                    <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit</p>
+                </div>
+                <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin: 0 0 8px 0;">
+                    🔒 Jika Anda tidak pernah meminta perubahan alamat email, abaikan email ini dan akun Anda akan tetap aman.
+                </p>
+            </div>
+            <div style="background: #0f172a; padding: 16px 28px; text-align: center; border-top: 1px solid #1e293b;">
+                <p style="margin: 0; font-size: 12px; color: #64748b;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+
+    const text = `Kode Verifikasi Ganti Email Ry-ITSolutions Anda adalah: ${otpCode}. Kode ini berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
+
+    return sendEmail({ to: newEmail, subject, html, text });
+}
+
 module.exports = {
     validateEmailActive,
     sendEmail,
     sendRegistrationOtpEmail,
-    sendPasswordResetOtpEmail
+    sendPasswordResetOtpEmail,
+    sendEmailChangeOtpEmail
 };
