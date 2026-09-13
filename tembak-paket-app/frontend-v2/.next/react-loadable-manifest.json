@@ -18,6 +18,12 @@
       "static/chunks/ad2866b8.6c51983a1eb56136.js"
     ]
   },
+  "app/(main)/admin/page.tsx -> @/lib/pushClient": {
+    "id": 51016,
+    "files": [
+      "static/chunks/1016.8ab3d59feea29bf0.js"
+    ]
+  },
   "app/(main)/layout.tsx -> @/lib/sweetalert": {
     "id": 88637,
     "files": []

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
+import { PushSettingsCard } from "@/components/ui/PushSettingsCard";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { InstallAppButton } from "@/components/ui/InstallAppButton";
 
@@ -509,6 +510,8 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      <PushSettingsCard />
 
       {/* ============================================================ */}
       {/* 2. PESANAN SAYA CARD (Persis Sesuai Screenshot)              */}

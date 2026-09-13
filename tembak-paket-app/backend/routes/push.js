@@ -57,6 +57,8 @@ router.post('/push/subscribe', async (req, res) => {
             ]
         );
 
+        console.log(`[WebPush] Device subscribed successfully: ${userAgent} (${ip}), userId: ${userId}`);
+
         // Send a friendly confirmation push to the device
         sendPushNotification(subscription, {
             title: '🔔 Notifikasi Status Bar Aktif!',
@@ -65,7 +67,9 @@ router.post('/push/subscribe', async (req, res) => {
             badge: '/icon.svg',
             url: '/unblock-imei',
             tag: 'welcome-push'
-        }).catch(() => {});
+        }).catch((err) => {
+            console.error('[WebPush] Welcome push failed:', err.message);
+        });
 
         res.json({
             status: true,
@@ -90,6 +94,63 @@ router.post('/push/unsubscribe', async (req, res) => {
         res.json({ status: true, message: 'Langganan notifikasi berhasil dicabut.' });
     } catch (e) {
         res.status(500).json({ status: false, message: 'Gagal mencabut notifikasi.' });
+    }
+});
+
+/**
+ * POST /api/push/test-me
+ * Sends an instant test push notification directly to the caller's device/subscription
+ */
+router.post('/push/test-me', async (req, res) => {
+    try {
+        const { endpoint } = req.body || {};
+        let sub = null;
+
+        if (endpoint) {
+            sub = await dbGet("SELECT * FROM push_subscriptions WHERE endpoint = ?", [endpoint]);
+        }
+        if (!sub && (req.session?.userId || req.headers['x-user-id'])) {
+            const uId = req.session?.userId || req.headers['x-user-id'];
+            sub = await dbGet("SELECT * FROM push_subscriptions WHERE userId = ? ORDER BY id DESC LIMIT 1", [String(uId)]);
+        }
+        if (!sub) {
+            // Fallback: pick latest subscribed device
+            sub = await dbGet("SELECT * FROM push_subscriptions ORDER BY id DESC LIMIT 1");
+        }
+
+        if (!sub) {
+            return res.status(404).json({
+                status: false,
+                message: 'Perangkat belum terdaftar di sistem. Silakan aktifkan notifikasi terlebih dahulu.'
+            });
+        }
+
+        const testTag = 'test-push-' + Date.now();
+        const result = await sendPushNotification(sub, {
+            title: '🔔 Uji Coba Status Bar Ry-ITSolutions!',
+            body: 'Sukses! Notifikasi bilah HP Anda berfungsi normal dan siap menerima info layanan & promo baru.',
+            icon: '/logo.png',
+            badge: '/icon.svg',
+            url: '/unblock-imei',
+            tag: testTag
+        });
+
+        if (result.success) {
+            console.log(`[WebPush] Test push sent successfully to ${sub.endpoint.slice(0, 35)}...`);
+            res.json({
+                status: true,
+                message: 'Notifikasi tes berhasil dikirim ke status bar HP Anda!'
+            });
+        } else {
+            console.error('[WebPush] Test push failed:', result.error);
+            res.status(500).json({
+                status: false,
+                message: `Gagal mengirim push: ${result.error || 'Endpoint tidak merespons'}`
+            });
+        }
+    } catch (e) {
+        console.error('[WebPush] Error in /api/push/test-me:', e);
+        res.status(500).json({ status: false, message: e.message });
     }
 });
 
@@ -125,7 +186,7 @@ router.post('/admin/push/broadcast', isAuthenticated, isAdmin, async (req, res) 
             body: body.trim(),
             url: (url || '/').trim(),
             icon: icon || '/logo.png',
-            tag: tag || `broadcast-${Date.now()}`
+            tag: tag || ('broadcast-' + Date.now())
         });
 
         res.json({

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import { safeJson } from "@/lib/api";
+import { PushSettingsCard } from "@/components/ui/PushSettingsCard";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -186,6 +187,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4 pb-20">
+      <PushSettingsCard className="mb-4" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <button

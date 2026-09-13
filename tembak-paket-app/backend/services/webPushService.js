@@ -9,44 +9,52 @@ const { dbGet, dbRun, dbAll } = require('../config/db');
 let vapidPublicKey = '';
 let vapidPrivateKey = '';
 let isInitialized = false;
+let initPromise = null;
 
 /**
  * Initialize VAPID Keys from SQLite settings or generate new ones
  */
 async function initVapidKeys() {
     if (isInitialized && vapidPublicKey && vapidPrivateKey) return;
+    if (initPromise) return initPromise;
 
-    try {
-        const pubRow = await dbGet("SELECT value FROM settings WHERE key = 'vapid_public_key'");
-        const privRow = await dbGet("SELECT value FROM settings WHERE key = 'vapid_private_key'");
+    initPromise = (async () => {
+        try {
+            const pubRow = await dbGet("SELECT value FROM settings WHERE key = 'vapid_public_key'");
+            const privRow = await dbGet("SELECT value FROM settings WHERE key = 'vapid_private_key'");
 
-        if (pubRow?.value && privRow?.value) {
-            vapidPublicKey = pubRow.value;
-            vapidPrivateKey = privRow.value;
-        } else {
-            // Generate robust VAPID keypair
-            const newKeys = webpush.generateVAPIDKeys();
-            vapidPublicKey = newKeys.publicKey;
-            vapidPrivateKey = newKeys.privateKey;
+            if (pubRow?.value && privRow?.value) {
+                vapidPublicKey = pubRow.value;
+                vapidPrivateKey = privRow.value;
+            } else {
+                // Generate robust VAPID keypair
+                const newKeys = webpush.generateVAPIDKeys();
+                vapidPublicKey = newKeys.publicKey;
+                vapidPrivateKey = newKeys.privateKey;
 
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('vapid_public_key', ?)", [vapidPublicKey]);
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('vapid_private_key', ?)", [vapidPrivateKey]);
-            console.log('[WebPush] Generated and saved new VAPID keys to database.');
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('vapid_public_key', ?)", [vapidPublicKey]);
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('vapid_private_key', ?)", [vapidPrivateKey]);
+                console.log('[WebPush] Generated and saved new VAPID keys to database.');
+            }
+
+            webpush.setVapidDetails(
+                'mailto:admin@ry-itsolutionts.web.id',
+                vapidPublicKey,
+                vapidPrivateKey
+            );
+            isInitialized = true;
+        } catch (e) {
+            console.error('[WebPush] Failed to initialize VAPID keys:', e.message);
+        } finally {
+            initPromise = null;
         }
+    })();
 
-        webpush.setVapidDetails(
-            'mailto:admin@ry-itsolutionts.web.id',
-            vapidPublicKey,
-            vapidPrivateKey
-        );
-        isInitialized = true;
-    } catch (e) {
-        console.error('[WebPush] Failed to initialize VAPID keys:', e.message);
-    }
+    return initPromise;
 }
 
 // Auto init on module load
-initVapidKeys();
+initVapidKeys().catch(() => {});
 
 /**
  * Get Public VAPID Key for client subscription
@@ -98,6 +106,7 @@ async function broadcastPushNotification({ title, body, icon = '/logo.png', url 
     try {
         const subscribers = await dbAll("SELECT id, endpoint, keys_p256dh, keys_auth, userId FROM push_subscriptions");
         if (!subscribers || subscribers.length === 0) {
+            console.warn('[WebPush] Broadcast skipped: Belum ada perangkat HP/browser pelanggan yang terdaftar.');
             return { totalSent: 0, successCount: 0, failureCount: 0, message: 'Tidak ada perangkat terdaftar' };
         }
 
@@ -107,7 +116,7 @@ async function broadcastPushNotification({ title, body, icon = '/logo.png', url 
             icon: icon || '/logo.png',
             badge: badge || '/icon.svg',
             url: url || '/',
-            tag: tag || `ry-${Date.now()}`,
+            tag: tag || ('ry-' + Date.now()),
             timestamp: Date.now()
         });
 

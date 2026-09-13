@@ -446,6 +446,34 @@ export default function AdminPage() {
   });
   const [newImeiNotifyPush, setNewImeiNotifyPush] = useState(true);
   const [pushSubscribersCount, setPushSubscribersCount] = useState<number | null>(null);
+  const handleTestMyDevicePush = async () => {
+    try {
+      const { subscribeToPushNotifications, testPushNotification, isPushSupported } = await import('@/lib/pushClient');
+      if (!isPushSupported()) {
+        return Swal.fire("Info", "Browser ini tidak mendukung Web Push Notification.", "info");
+      }
+      const subRes = await subscribeToPushNotifications();
+      if (!subRes.success && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+        return Swal.fire("Perhatian", subRes.message, "warning");
+      }
+      const testRes = await testPushNotification();
+      if (testRes.success) {
+        Swal.fire({
+          title: "Terkirim! 🔔",
+          text: "Notifikasi tes telah dikirim ke status bar HP Anda.",
+          icon: "success",
+          timer: 3000,
+          showConfirmButton: false
+        });
+        loadPushSubscribers();
+    import('@/lib/pushClient').then(m => m.autoSyncPushIfGranted()).catch(() => {});
+      } else {
+        Swal.fire("Gagal", testRes.message, "error");
+      }
+    } catch (err: any) {
+      Swal.fire("Error", err.message, "error");
+    }
+  };
 
   const loadPushSubscribers = async () => {
     try {
@@ -3883,6 +3911,14 @@ export default function AdminPage() {
                         <span>Kirim Notifikasi ke Bar HP Pengguna (Web Push)</span>
                       </span>
                     </label>
+                    <button
+                      type="button"
+                      onClick={handleTestMyDevicePush}
+                      className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg border border-primary/20 transition-colors"
+                    >
+                      <Bell className="w-3 h-3" />
+                      <span>🔔 Uji di HP Ini</span>
+                    </button>
                   </div>
 
                   <Button
@@ -4762,9 +4798,18 @@ export default function AdminPage() {
                     />
                     <div>
                       <span className="text-xs font-bold text-ink block">Status Bar HP</span>
-                      <span className="text-[10px] text-ink-muted">
-                        {pushSubscribersCount != null ? `${pushSubscribersCount} HP terhubung` : 'Push Notifikasi HP'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-ink-muted">
+                          {pushSubscribersCount != null ? `${pushSubscribersCount} HP terhubung` : 'Push Notifikasi HP'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleTestMyDevicePush(); }}
+                          className="text-[10px] font-bold text-primary hover:underline px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20"
+                        >
+                          Uji HP
+                        </button>
+                      </div>
                     </div>
                   </label>
                 </div>

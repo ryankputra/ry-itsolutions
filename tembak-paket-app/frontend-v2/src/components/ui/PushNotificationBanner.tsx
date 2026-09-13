@@ -1,56 +1,58 @@
 "use client";
+
 import React, { useEffect, useState } from 'react';
-import { Bell, X, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Bell, X, Sparkles } from 'lucide-react';
 import { Button } from './Button';
 import Swal from '@/lib/sweetalert';
+import {
+  isPushSupported,
+  getNotificationPermission,
+  subscribeToPushNotifications,
+  autoSyncPushIfGranted,
+  testPushNotification
+} from '@/lib/pushClient';
 
 const STORAGE_DISMISS_KEY = 'ry_push_dismissed_until';
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
 
 export const PushNotificationBanner: React.FC = () => {
   const [showBanner, setShowBanner] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  const [supported, setSupported] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const supported =
-      'serviceWorker' in navigator &&
-      'PushManager' in window &&
-      'Notification' in window;
+    const isSupp = isPushSupported();
+    setSupported(isSupp);
+    if (!isSupp) return;
 
-    setIsSupported(supported);
-    if (!supported) return;
+    const perm = getNotificationPermission();
 
-    // Already granted or denied
-    if (Notification.permission !== 'default') return;
+    // If permission is already granted, silently ensure registration and sync to server!
+    if (perm === 'granted') {
+      autoSyncPushIfGranted();
+      return;
+    }
 
-    // Check dismissed timeout (7 days)
+    // If denied, don't nag user
+    if (perm === 'denied') {
+      return;
+    }
+
+    // If default, check 7 days dismissal
     const dismissedUntil = localStorage.getItem(STORAGE_DISMISS_KEY);
     if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
 
-    // Delay banner display by 3 seconds for pleasant UX
+    // Show banner after brief delay
     const timer = setTimeout(() => {
       setShowBanner(true);
-    }, 3000);
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, []);
 
   const handleDismiss = () => {
     setShowBanner(false);
-    // Dismiss for 7 days
     try {
       localStorage.setItem(STORAGE_DISMISS_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
     } catch (e) {}
@@ -59,57 +61,43 @@ export const PushNotificationBanner: React.FC = () => {
   const handleSubscribe = async () => {
     setSubscribing(true);
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
+      const res = await subscribeToPushNotifications();
+      if (res.success) {
         setShowBanner(false);
-        return;
-      }
+        // Immediately fire a test notification so the user sees and hears it on their phone!
+        await testPushNotification();
 
-      // 1. Get VAPID public key
-      const keyRes = await fetch('/api/push/vapid-public-key');
-      const keyData = await keyRes.json();
-      if (!keyData?.status || !keyData.publicKey) {
-        throw new Error('VAPID public key tidak tersedia');
-      }
-
-      // 2. Wait for service worker ready
-      const registration = await navigator.serviceWorker.ready;
-
-      // 3. Subscribe to PushManager
-      const convertedVapidKey = urlBase64ToUint8Array(keyData.publicKey);
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey
-      });
-
-      // 4. Send subscription to server
-      const saveRes = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ subscription })
-      });
-
-      const saveData = await saveRes.json();
-      if (saveData?.status) {
-        setShowBanner(false);
         Swal.fire({
-          title: 'Notifikasi Aktif! 🔔',
+          title: 'Notifikasi Bar HP Aktif! 🔔',
           text: 'Pemberitahuan layanan baru & promo spesial kini akan langsung berdering di status bar HP Anda.',
           icon: 'success',
-          timer: 3000,
+          timer: 3500,
           showConfirmButton: false
         });
+      } else {
+        if (Notification.permission === 'denied') {
+          setShowBanner(false);
+          Swal.fire({
+            title: 'Izin Notifikasi Diblokir',
+            text: 'Izin notifikasi diblokir di setelan browser. Ketuk ikon gembok 🔒 di sebelah alamat web browser Anda -> Izin -> Izinkan Notifikasi.',
+            icon: 'warning'
+          });
+        } else {
+          Swal.fire({
+            title: 'Perhatian',
+            text: res.message,
+            icon: 'info'
+          });
+        }
       }
     } catch (err: any) {
-      console.error('[PushNotification] Subscription error:', err);
-      setShowBanner(false);
+      console.error('[PushBanner] Subscribe error:', err);
     } finally {
       setSubscribing(false);
     }
   };
 
-  if (!isSupported || !showBanner) return null;
+  if (!supported || !showBanner) return null;
 
   return (
     <div className="fixed bottom-20 sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-50 max-w-md animate-in slide-in-from-bottom-5 duration-300">
@@ -135,11 +123,11 @@ export const PushNotificationBanner: React.FC = () => {
 
           <div className="min-w-0 space-y-1">
             <h4 className="text-xs sm:text-sm font-bold text-ink flex items-center gap-1.5">
-              <span>Aktifkan Notifikasi HP</span>
+              <span>Aktifkan Notifikasi Bar HP</span>
               <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             </h4>
             <p className="text-[11px] sm:text-xs text-ink-muted leading-relaxed">
-              Dapatkan pemberitahuan langsung di status bar HP saat ada layanan baru (misal: Unblock IMEI) & promo diskon.
+              Dapatkan info di status bar HP saat ada layanan baru (misal: Unblock IMEI) & promo diskon spesial.
             </p>
           </div>
         </div>
