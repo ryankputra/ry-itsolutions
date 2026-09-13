@@ -36,7 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Navigation Items
   const adminNavItems = [
-    { href: "/admin", label: "Ikhtisar", icon: LayoutDashboard },
+    { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/orders", label: "Antrean Pesanan", icon: Clock },
     { href: "/admin/imei", label: "Layanan IMEI & CEIR", icon: Smartphone },
     { href: "/admin/users", label: "Kelola Pengguna", icon: Users },

@@ -20,7 +20,14 @@ import {
   Server,
   ShieldCheck,
   Megaphone,
+  Tag,
 } from "lucide-react";
+
+const SPEED_TIERS = [
+  { id: "fast", label: "Fast", desc: "Prioritas Kilat" },
+  { id: "semi", label: "Semi Fast", desc: "Estimasi Sedang" },
+  { id: "slow", label: "Slow", desc: "Paling Hemat" },
+];
 
 export default function AdminImeiPage() {
   const [loading, setLoading] = useState(false);
@@ -765,7 +772,7 @@ export default function AdminImeiPage() {
                     <div className="space-y-2">
                       <p className="text-[11px] font-bold text-ink">Harga Grosir Satuan (Rp/IMEI):</p>
                       <div className="grid grid-cols-3 gap-2">
-                        {speedTiers.map((s) => (
+                        {SPEED_TIERS.map((s) => (
                           <div key={s.id} className="space-y-1">
                             <label className="text-[10px] font-bold text-ink-muted">{s.label}</label>
                             <input
@@ -1071,7 +1078,7 @@ export default function AdminImeiPage() {
                     <div className="space-y-2">
                       <p className="text-[11px] font-bold text-ink">Harga Grosir Satuan (Rp/IMEI):</p>
                       <div className="grid grid-cols-3 gap-2">
-                        {speedTiers.map((s) => (
+                        {SPEED_TIERS.map((s) => (
                           <div key={s.id} className="space-y-1">
                             <label className="text-[10px] font-bold text-ink-muted">{s.label}</label>
                             <input
