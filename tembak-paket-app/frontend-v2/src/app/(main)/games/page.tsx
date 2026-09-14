@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { playCoinClaimSound, playWheelTickSound, playPopSound, playDingSound } from "@/lib/soundFx";
-import { safeJson } from "@/lib/api";
+import FlappyCyberGame from "@/components/games/FlappyCyberGame";
+import CoinCatcherGame from "@/components/games/CoinCatcherGame";
 
-type GameTab = "wheel" | "mystery_box" | "scratch" | "trivia";
+type GameTab = "wheel" | "flappy" | "scratch" | "catcher";
 
 interface GameStatus {
   coins: number;
@@ -17,11 +18,9 @@ interface GameStatus {
   today_checkin_done: boolean;
   current_streak: number;
   can_spin: boolean;
-  can_mystery_box: boolean;
+  can_flappy_cyber: boolean;
   can_scratch: boolean;
-  can_trivia: boolean;
-  today_trivia_done: boolean;
-  trivia_coins_earned: number;
+  can_coin_catcher: boolean;
 }
 
 interface TriviaQuestion {
@@ -45,11 +44,9 @@ export default function GamesPage() {
     today_checkin_done: false,
     current_streak: 1,
     can_spin: true,
-    can_mystery_box: true,
+    can_flappy_cyber: true,
     can_scratch: true,
-    can_trivia: true,
-    today_trivia_done: false,
-    trivia_coins_earned: 0,
+    can_coin_catcher: true,
   });
 
   const [claimingCheckin, setClaimingCheckin] = useState(false);
@@ -96,11 +93,9 @@ export default function GamesPage() {
           today_checkin_done: payload.today_checkin_done ?? false,
           current_streak: Number(payload.current_streak) || 1,
           can_spin: payload.can_spin ?? true,
-          can_mystery_box: payload.can_mystery_box ?? true,
+          can_flappy_cyber: payload.can_flappy_cyber ?? true,
           can_scratch: payload.can_scratch ?? true,
-          can_trivia: payload.can_trivia ?? true,
-          today_trivia_done: payload.today_trivia_done ?? false,
-          trivia_coins_earned: payload.trivia_coins_earned ?? 0,
+          can_coin_catcher: payload.can_coin_catcher ?? true,
         });
       }
     } catch (e) {
@@ -769,12 +764,12 @@ export default function GamesPage() {
               ),
             },
             {
-              id: "mystery_box",
-              name: "Kotak Misteri",
-              available: gameData.can_mystery_box,
+              id: "flappy",
+              name: "Flappy Cyber",
+              available: gameData.can_flappy_cyber,
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-8.25M3 11.25l9 5.25 9-5.25M3 11.25l9-5.25 9 5.25m-9-5.25V3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                 </svg>
               ),
             },
@@ -789,12 +784,12 @@ export default function GamesPage() {
               ),
             },
             {
-              id: "trivia",
-              name: "Kuis Cepat",
-              available: gameData.can_trivia,
+              id: "catcher",
+              name: "Tangkap Koin",
+              available: gameData.can_coin_catcher,
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a3 3 0 10-3-3 3 3 0 003 3zm0 0v5.25m-6 3h12a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0018 4.5H6A2.25 2.25 0 003.75 6.75v12A2.25 2.25 0 006 21z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               ),
             },
@@ -935,110 +930,37 @@ export default function GamesPage() {
         </div>
       )}
 
-      {/* --- TAB 2: KOTAK MISTERI (MYSTERY BOX) --- */}
-      {activeTab === "mystery_box" && (
+      {/* --- TAB 2: FLAPPY CYBER --- */}
+      {activeTab === "flappy" && (
         <div className="pt-1">
           <Card className="p-5 space-y-4 border border-hairline bg-canvas shadow-xl rounded-3xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-sm">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-8.25M3 11.25l9 5.25 9-5.25M3 11.25l9-5.25 9 5.25m-9-5.25V3" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="font-bold text-sm sm:text-base text-ink">Kotak Misteri Harian</h2>
-                  <p className="text-[11px] text-ink-muted">Pilih 1 dari 3 kotak untuk mengungkap hadiah misteri hingga 150 Koin</p>
+                  <h2 className="font-bold text-sm sm:text-base text-ink">Flappy Cyber Flyer</h2>
+                  <p className="text-[11px] text-ink-muted">Terbangkan drone melintasi rintangan &amp; kumpulkan koin</p>
                 </div>
               </div>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                gameData.can_mystery_box
+                gameData.can_flappy_cyber
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                   : "bg-parchment text-ink-muted border border-hairline"
               }`}>
-                {gameData.can_mystery_box ? "1 Kesempatan" : "Sudah Dibuka"}
+                {gameData.can_flappy_cyber ? "1 Tiket Tersedia" : "Tiket Habis"}
               </span>
             </div>
 
-            {/* 3 3D Mystery Boxes Grid */}
-            <div className="py-6 px-2">
-              <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                {[0, 1, 2].map((idx) => {
-                  const isSelected = selectedBox === idx;
-                  const isOpened = boxesResult !== null;
-                  const boxContent = boxesResult ? boxesResult[idx] : null;
-
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => handleOpenBox(idx)}
-                      className={`relative flex flex-col items-center justify-center p-4 rounded-3xl border transition-all select-none ${
-                        !gameData.can_mystery_box && !isOpened
-                          ? "bg-parchment/60 border-hairline opacity-60 cursor-not-allowed"
-                          : isOpened
-                          ? isSelected
-                            ? "bg-gradient-to-b from-amber-500/10 to-amber-500/20 border-amber-500/50 shadow-lg scale-105"
-                            : "bg-parchment/50 border-hairline opacity-75"
-                          : openingBox && isSelected
-                          ? "bg-purple-500/10 border-purple-500 animate-bounce scale-105"
-                          : "bg-parchment border-hairline hover:border-primary/40 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
-                      }`}
-                    >
-                      {/* Box Number Tag */}
-                      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-canvas/80 border border-hairline text-[9px] font-extrabold text-ink">
-                        #{idx + 1}
-                      </span>
-
-                      {/* Box Visual Icon */}
-                      <div className="my-4">
-                        {isOpened ? (
-                          <div className="flex flex-col items-center text-center space-y-1 animate-in zoom-in duration-300">
-                            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </div>
-                            <span className="font-extrabold text-xs sm:text-sm text-ink mt-1">
-                              +{boxContent?.amount || 0}
-                            </span>
-                            <span className="text-[9px] text-ink-muted">
-                              {isSelected ? "Pilihan Anda" : "Kotak Lain"}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                            openingBox && isSelected
-                              ? "bg-purple-600 text-white shadow-xl rotate-12"
-                              : "bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-md hover:rotate-3"
-                          }`}>
-                            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-8.25M3 11.25l9 5.25 9-5.25M3 11.25l9-5.25 9 5.25m-9-5.25V3" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-
-                      <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">
-                        {isOpened ? (isSelected ? "MENANG" : "TERBUKA") : "KETUK BUKA"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {mysteryWonCoins !== null && (
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
-                <span className="font-bold">Hadiah telah ditambahkan ke dompet Anda</span>
-                <span className="font-black text-sm">+{mysteryWonCoins.toLocaleString("id-ID")} Koin</span>
-              </div>
-            )}
-
-            {!gameData.can_mystery_box && boxesResult === null && (
-              <div className="p-3 text-center rounded-2xl bg-parchment text-ink-muted text-xs border border-hairline">
-                Tiket Kotak Misteri hari ini sudah digunakan. Kunjungi kembali besok untuk kotak baru.
-              </div>
-            )}
+            <FlappyCyberGame
+              canPlay={gameData.can_flappy_cyber}
+              onCoinsClaimed={(newBal) => {
+                setGameData(prev => ({ ...prev, coins: newBal, can_flappy_cyber: false }));
+              }}
+            />
           </Card>
         </div>
       )}
@@ -1176,146 +1098,37 @@ export default function GamesPage() {
         </div>
       )}
 
-      {/* --- TAB 4: KUIS CEPAT TEKNOLOGI (TRIVIA) --- */}
-      {activeTab === "trivia" && (
+      {/* --- TAB 4: TANGKAP KOIN --- */}
+      {activeTab === "catcher" && (
         <div className="pt-1">
           <Card className="p-5 space-y-4 border border-hairline bg-canvas shadow-xl rounded-3xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a3 3 0 10-3-3 3 3 0 003 3zm0 0v5.25m-6 3h12a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0018 4.5H6A2.25 2.25 0 003.75 6.75v12A2.25 2.25 0 006 21z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="font-bold text-sm sm:text-base text-ink">Kuis Cepat Teknologi</h2>
-                  <p className="text-[11px] text-ink-muted">Jawab 3 pertanyaan ringan untuk memenangkan hingga +45 Koin</p>
+                  <h2 className="font-bold text-sm sm:text-base text-ink">Tangkap Koin Arcade</h2>
+                  <p className="text-[11px] text-ink-muted">Geser wadah untuk menangkap koin &amp; gem jatuh</p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-parchment border border-hairline text-xs font-bold text-ink">
-                <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{triviaTimer}s</span>
-              </div>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                gameData.can_coin_catcher
+                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                  : "bg-parchment text-ink-muted border border-hairline"
+              }`}>
+                {gameData.can_coin_catcher ? "1 Tiket Tersedia" : "Tiket Habis"}
+              </span>
             </div>
 
-            {/* Questions Step Flow */}
-            {gameData.today_trivia_done && !triviaResult ? (
-              <div className="p-6 text-center space-y-3 rounded-2xl bg-parchment border border-hairline">
-                <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-ink">Kuis Hari Ini Sudah Selesai</h3>
-                  <p className="text-[11px] text-ink-muted mt-1">
-                    Anda telah mendapatkan bonus RyPoints dari kuis hari ini. Pertanyaan baru akan tersedia besok!
-                  </p>
-                </div>
-              </div>
-            ) : triviaResult ? (
-              /* Results Screen */
-              <div className="space-y-4 p-4 rounded-3xl bg-parchment/60 border border-hairline animate-in fade-in">
-                <div className="text-center space-y-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary">HASIL KUIS HARIAN</span>
-                  <h3 className="text-lg font-black text-ink">
-                    Skor: {triviaResult.score} / {triviaResult.total} Benar
-                  </h3>
-                  <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs">
-                    +{triviaResult.coins_earned} RyPoints Diterima
-                  </div>
-                </div>
-
-                {/* Explanation feedback */}
-                <div className="space-y-2 pt-2">
-                  {triviaResult.feedback?.map((item: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-2xl border text-xs space-y-1 ${
-                        item.is_correct
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200"
-                          : "bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between font-bold">
-                        <span>Soal #{idx + 1}</span>
-                        <span>{item.is_correct ? "Benar (+100)" : "Salah"}</span>
-                      </div>
-                      <p className="text-[11px]">{item.question}</p>
-                      <p className="text-[10px] opacity-80 pt-0.5">{item.explanation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : triviaQuestions.length > 0 ? (
-              /* Active Question Card */
-              <div className="space-y-4">
-                {/* Step indicator */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-ink">Pertanyaan {triviaStep + 1} dari 3</span>
-                  <span className="text-ink-muted text-[11px]">Pilih 1 jawaban</span>
-                </div>
-
-                {/* Progress bar */}
-                <div className="w-full h-1.5 rounded-full bg-parchment overflow-hidden border border-hairline">
-                  <div
-                    className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${((triviaStep + 1) / 3) * 100}%` }}
-                  />
-                </div>
-
-                {/* Question Box */}
-                <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline min-h-[70px] flex items-center">
-                  <p className="font-bold text-xs sm:text-sm text-ink leading-relaxed">
-                    {triviaQuestions[triviaStep]?.question}
-                  </p>
-                </div>
-
-                {/* Options list */}
-                <div className="space-y-2">
-                  {triviaQuestions[triviaStep]?.options?.map((opt, optIdx) => {
-                    const isSelected = triviaAnswers[triviaStep] === optIdx;
-                    return (
-                      <button
-                        key={optIdx}
-                        type="button"
-                        onClick={() => handleSelectTriviaAnswer(optIdx)}
-                        className={`w-full p-3 rounded-2xl border text-left text-xs font-semibold transition-all flex items-center justify-between ${
-                          isSelected
-                            ? "bg-primary text-white border-primary shadow-xs"
-                            : "bg-canvas hover:bg-parchment text-ink border-hairline"
-                        }`}
-                      >
-                        <span>{opt}</span>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                          isSelected ? "border-white bg-white/20" : "border-hairline"
-                        }`}>
-                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Submit button on last step */}
-                {triviaAnswers.length === 3 && (
-                  <Button
-                    onClick={handleSubmitTrivia}
-                    isLoading={submittingTrivia}
-                    className="w-full h-11 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-md mt-2"
-                  >
-                    Kirim Jawaban &amp; Klaim Koin
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="p-8 text-center text-ink-muted text-xs">
-                Memuat pertanyaan kuis harian...
-              </div>
-            )}
+            <CoinCatcherGame
+              canPlay={gameData.can_coin_catcher}
+              onCoinsClaimed={(newBal) => {
+                setGameData(prev => ({ ...prev, coins: newBal, can_coin_catcher: false }));
+              }}
+            />
           </Card>
         </div>
       )}
@@ -1338,26 +1151,26 @@ export default function GamesPage() {
               onClick: handleDailyCheckin,
             },
             {
-              title: "Kotak Misteri Harian",
-              desc: "Buka peti keberuntungan dengan hadiah koin kejutan",
-              reward: "s.d 150 Koin",
-              action: "Buka",
-              onClick: () => setActiveTab("mystery_box"),
-            },
-            {
-              title: "Kartu Gores Berhadiah",
-              desc: "Gores kartu digital dan temukan 3 petak kembar",
-              reward: "s.d 100 Koin",
-              action: "Gores",
-              onClick: () => setActiveTab("scratch"),
-            },
-            {
-              title: "Kuis Cepat Teknologi",
-              desc: "Uji wawasan seputar IMEI dan gadget dalam 30 detik",
-              reward: "s.d 45 Koin",
-              action: "Mulai",
-              onClick: () => setActiveTab("trivia"),
-            },
+                title: "Flappy Cyber Flyer",
+                desc: "Terbangkan drone melintasi rintangan untuk kumpulkan koin",
+                reward: "s.d 50 Koin",
+                action: "Terbang",
+                onClick: () => setActiveTab("flappy"),
+              },
+              {
+                title: "Kartu Gores Berhadiah",
+                desc: "Gores kartu digital dan temukan 3 petak kembar",
+                reward: "s.d 100 Koin",
+                action: "Gores",
+                onClick: () => setActiveTab("scratch"),
+              },
+              {
+                title: "Tangkap Koin Arcade",
+                desc: "Tangkapi koin dan gem yang jatuh dari langit",
+                reward: "s.d 50 Koin",
+                action: "Tangkap",
+                onClick: () => setActiveTab("catcher"),
+              },
             {
               title: "Order Buka IMEI All Operator",
               desc: "Dapatkan cashback koin setiap menyelesaikan order aktivasi",

@@ -176,24 +176,17 @@ router.get('/games/status', isAuthenticated, async (req, res) => {
               AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
         `, [userId, todayWIB, todayWIB]);
 
-        // Mystery Box status
-        const todayMysteryBox = await dbGet(`
+        // Flappy Cyber status
+        const todayFlappy = await dbGet(`
             SELECT * FROM user_coin_claims 
-            WHERE userId = ? AND claim_type = 'mystery_box' 
+            WHERE userId = ? AND claim_type = 'flappy_cyber' 
               AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
         `, [userId, todayWIB, todayWIB]);
 
-        // Scratch Card status
-        const todayScratch = await dbGet(`
+        // Coin Catcher status
+        const todayCatcher = await dbGet(`
             SELECT * FROM user_coin_claims 
-            WHERE userId = ? AND claim_type = 'scratch_card' 
-              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
-        `, [userId, todayWIB, todayWIB]);
-
-        // Daily Trivia status
-        const todayTrivia = await dbGet(`
-            SELECT * FROM user_coin_claims 
-            WHERE userId = ? AND claim_type = 'daily_trivia' 
+            WHERE userId = ? AND claim_type = 'coin_catcher' 
               AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
         `, [userId, todayWIB, todayWIB]);
 
@@ -207,6 +200,8 @@ router.get('/games/status', isAuthenticated, async (req, res) => {
             can_mystery_box: !todayMysteryBox,
             can_scratch: !todayScratch,
             can_trivia: !todayTrivia,
+            can_flappy_cyber: !todayFlappy,
+            can_coin_catcher: !todayCatcher,
             today_trivia_done: !!todayTrivia,
             trivia_coins_earned: todayTrivia?.coins_amount || 0,
             rewards
@@ -620,6 +615,88 @@ router.post('/games/trivia/submit', isAuthenticated, async (req, res) => {
     } catch (e) {
         console.error("Error in trivia submit:", e);
         res.status(500).json({ status: false, message: "Gagal mengirim jawaban kuis." });
+    }
+});
+
+// 9. POST /api/games/flappy-cyber
+router.post('/games/flappy-cyber', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const todayWIB = getWIBDate();
+        const score = Math.max(0, Math.min(100, Number(req.body.score) || 0));
+
+        const todayClaim = await dbGet(`
+            SELECT id FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'flappy_cyber' 
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
+        `, [userId, todayWIB, todayWIB]);
+
+        if (todayClaim) {
+            return res.status(400).json({ status: false, message: "Tiket Flappy Cyber hari ini sudah terpakai. Coba lagi besok ya!" });
+        }
+
+        const wonCoins = Math.min(50, Math.max(10, 10 + Math.floor(score * 1.5)));
+
+        await dbRun("UPDATE users SET coins = MIN(25000, COALESCE(coins, 0) + ?) WHERE id = ?", [wonCoins, userId]);
+        const claimId = `flappy_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await dbRun(`
+            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claim_date, claimed_at)
+            VALUES (?, ?, 'flappy_cyber', ?, ?, ?, ?)
+        `, [claimId, userId, wonCoins, score, todayWIB, new Date().toISOString()]);
+
+        const updatedUser = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
+
+        res.json({
+            status: true,
+            score: score,
+            coins_earned: wonCoins,
+            message: `Skor Terbang: ${score}! Anda berhasil mengumpulkan +${wonCoins.toLocaleString('id-ID')} Koin Ry!`,
+            new_coins_balance: updatedUser?.coins || 0
+        });
+    } catch (e) {
+        console.error("Error in flappy-cyber submit:", e);
+        res.status(500).json({ status: false, message: "Gagal menyimpan skor Flappy Cyber." });
+    }
+});
+
+// 10. POST /api/games/coin-catcher
+router.post('/games/coin-catcher', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const todayWIB = getWIBDate();
+        const score = Math.max(0, Math.min(100, Number(req.body.score) || 0));
+
+        const todayClaim = await dbGet(`
+            SELECT id FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'coin_catcher' 
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
+        `, [userId, todayWIB, todayWIB]);
+
+        if (todayClaim) {
+            return res.status(400).json({ status: false, message: "Tiket Tangkap Koin hari ini sudah terpakai. Coba lagi besok ya!" });
+        }
+
+        const wonCoins = Math.min(50, Math.max(10, 10 + Math.floor(score * 1.5)));
+
+        await dbRun("UPDATE users SET coins = MIN(25000, COALESCE(coins, 0) + ?) WHERE id = ?", [wonCoins, userId]);
+        const claimId = `catcher_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await dbRun(`
+            INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, streak_count, claim_date, claimed_at)
+            VALUES (?, ?, 'coin_catcher', ?, ?, ?, ?)
+        `, [claimId, userId, wonCoins, score, todayWIB, new Date().toISOString()]);
+
+        const updatedUser = await dbGet("SELECT coins FROM users WHERE id = ?", [userId]);
+
+        res.json({
+            status: true,
+            score: score,
+            coins_earned: wonCoins,
+            message: `Koin Ditangkap: ${score}! Anda mendapatkan +${wonCoins.toLocaleString('id-ID')} Koin Ry!`,
+            new_coins_balance: updatedUser?.coins || 0
+        });
+    } catch (e) {
+        console.error("Error in coin-catcher submit:", e);
+        res.status(500).json({ status: false, message: "Gagal menyimpan skor Tangkap Koin." });
     }
 });
 
