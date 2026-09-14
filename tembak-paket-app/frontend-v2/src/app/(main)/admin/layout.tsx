@@ -306,13 +306,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       {/* Online Users Modal */}
-      {showOnlineModal && (
-        <AdminOnlineUsersModal
-          onClose={() => setShowOnlineModal(false)}
-          onlineUsers={presenceStats.onlineUsers}
-          onInspectUser={() => {}}
-        />
-      )}
+      <AdminOnlineUsersModal
+        isOpen={showOnlineModal}
+        onClose={() => setShowOnlineModal(false)}
+        onlineUsers={presenceStats.onlineUsers}
+        totalOnline={presenceStats.totalOnline}
+        onRefresh={loadPresenceStats}
+        onViewUserLogs={(u) => {
+          setShowOnlineModal(false);
+          router.push(`/admin/logs?search=${encodeURIComponent(u.email || u.id)}`);
+        }}
+      />
 
       {/* 3. Main Content of Current Admin Page */}
       <div>{children}</div>

@@ -143,6 +143,7 @@ function UnblockImeiContent() {
     }
   }, [selectedPkg]);
 
+  const speedCost = selectedSpeed && speedPricing ? Number(speedPricing[`imei_speed_${selectedSpeed}`] || speedPricing[selectedSpeed] || 0) : 0;
   const wholesaleMinQty = Number(pkgSpeedPrices?.wholesale_min_qty) || 2;
   const wholesalePrices = pkgSpeedPrices?.wholesale_prices || {};
   const wholesalePriceForSpeed = Number(wholesalePrices[selectedSpeed] || 0);

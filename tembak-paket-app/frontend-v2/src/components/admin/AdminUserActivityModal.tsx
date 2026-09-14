@@ -20,25 +20,28 @@ export interface UserActivityLog {
 }
 
 interface AdminUserActivityModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
-  targetUser: { id: string; name: string; email: string; role?: string } | null;
+  targetUser?: { id: string | number; name: string; email: string; role?: string } | null;
+  user?: { id: string | number; name: string; email: string; role?: string } | null;
 }
 
 export const AdminUserActivityModal: React.FC<AdminUserActivityModalProps> = ({
   isOpen,
   onClose,
-  targetUser
+  targetUser,
+  user
 }) => {
+  const currentUser = targetUser || user;
   const [logs, setLogs] = useState<UserActivityLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterAction, setFilterAction] = useState<string>('ALL');
 
   const fetchLogs = async () => {
-    if (!targetUser?.id) return;
+    if (!currentUser?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/user-logs/${targetUser.id}`, { credentials: 'include' });
+      const res = await fetch(`/api/admin/user-logs/${currentUser?.id}`, { credentials: 'include' });
       const data = await safeJson(res);
       if (data?.status && Array.isArray(data.data)) {
         setLogs(data.data);
@@ -53,10 +56,10 @@ export const AdminUserActivityModal: React.FC<AdminUserActivityModalProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen && targetUser?.id) {
+    if (isOpen && currentUser?.id) {
       fetchLogs();
     }
-  }, [isOpen, targetUser?.id]);
+  }, [isOpen, currentUser?.id]);
 
   if (!isOpen || !targetUser) return null;
 

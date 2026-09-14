@@ -698,7 +698,7 @@ export default function GatewayDeveloperPage() {
               <button
                 onClick={() => {
                   const expiringKey = keys.find(k => k.status === 'active' && k.daysRemaining <= 3);
-                  if (expiringKey) handleOpenRenewModal(expiringKey);
+                  if (expiringKey) handleRenewKey(expiringKey);
                 }}
                 className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-xs transition-transform hover:scale-105"
               >

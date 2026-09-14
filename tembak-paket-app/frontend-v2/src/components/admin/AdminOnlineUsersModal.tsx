@@ -23,8 +23,8 @@ interface AdminOnlineUsersModalProps {
   onClose: () => void;
   onlineUsers: OnlineUser[];
   totalOnline: number;
-  onRefresh: () => void;
-  onViewUserLogs: (user: { id: string; name: string; email: string }) => void;
+  onRefresh?: () => void;
+  onViewUserLogs?: (user: { id: string; name: string; email: string }) => void;
 }
 
 export const AdminOnlineUsersModal: React.FC<AdminOnlineUsersModalProps> = ({
@@ -155,7 +155,7 @@ export const AdminOnlineUsersModal: React.FC<AdminOnlineUsersModalProps> = ({
                       className="h-7 px-2.5 text-[11px] font-semibold rounded-xl border-hairline gap-1 shrink-0 text-primary hover:bg-primary/10"
                       onClick={() => {
                         onClose();
-                        onViewUserLogs({ id: u.userId, name: u.name, email: u.email });
+                        onViewUserLogs?.({ id: u.userId, name: u.name, email: u.email });
                       }}
                     >
                       <FileText className="w-3 h-3" />

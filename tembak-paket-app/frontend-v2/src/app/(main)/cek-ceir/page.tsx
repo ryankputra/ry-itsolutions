@@ -7,6 +7,7 @@ import { useApp } from "@/lib/store";
 import Swal from "@/lib/sweetalert";
 import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
+import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
 import Link from "next/link";
@@ -408,7 +409,7 @@ export default function CekCeirPage() {
             className="w-full h-12 text-sm font-bold shadow-md shadow-primary/20 mt-4"
             type="submit"
             isLoading={submitting}
-            disabled={user && user.balance < getPrice(option)}
+            disabled={Boolean(user && user.balance < getPrice(option))}
           >
             {submitting
               ? "Memproses Server..."
@@ -455,7 +456,7 @@ export default function CekCeirPage() {
       )}
 
       <SuccessModal
-        isOpen={showSuccessPop}
+        isOpen={Boolean(showSuccessPop)}
         onClose={() => {
           setShowSuccessPop(false);
           router.push('/history');
@@ -468,7 +469,7 @@ export default function CekCeirPage() {
       />
 
       <InstantQrisPaymentModal
-        isOpen={showInstantQris}
+        isOpen={Boolean(showInstantQris)}
         onClose={() => setShowInstantQris(false)}
         amount={getPrice(option)}
         orderTitle={`Cek ${ceirgoNameMapping[option] || option} (${imei})`}

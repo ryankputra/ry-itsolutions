@@ -64,6 +64,7 @@ export default function NotificationsPage() {
     title: string;
     description: string;
     time: string;
+    timestamp: number;
     icon: React.ReactNode;
     iconBg: string;
     actionText?: string;
@@ -99,6 +100,7 @@ export default function NotificationsPage() {
         </svg>
       ),
       iconBg: isSuccess ? "bg-emerald-50 border-emerald-200" : isPending ? "bg-amber-50 border-amber-200" : "bg-rose-50 border-rose-200",
+      timestamp: trx.createdAt ? new Date(trx.createdAt).getTime() : 0,
       actionText: "Lihat Nota",
       action: () => setSelectedInvoiceTrx(trx),
     });
@@ -118,6 +120,7 @@ export default function NotificationsPage() {
         </svg>
       ),
       iconBg: "bg-blue-50 border-blue-200",
+      timestamp: v.start_date || v.createdAt ? new Date(v.start_date || v.createdAt).getTime() : Date.now() - 86400000,
       actionText: "Klaim Voucher",
       action: () => router.push("/vouchers"),
     });
@@ -137,6 +140,7 @@ export default function NotificationsPage() {
         </svg>
       ),
       iconBg: "bg-emerald-50 border-emerald-200",
+      timestamp: pkg.createdAt ? new Date(pkg.createdAt).getTime() : 0,
       actionText: "Beli Sekarang",
       action: () => router.push("/unblock-imei"),
     });
@@ -155,6 +159,7 @@ export default function NotificationsPage() {
       </svg>
     ),
     iconBg: "bg-amber-50 border-amber-200",
+    timestamp: 0,
     actionText: "Klaim Koin",
     action: () => router.push("/games"),
   });
@@ -162,12 +167,14 @@ export default function NotificationsPage() {
   // 4. Server Announcements (Multiple Broadcast Support)
   if (announcements && announcements.length > 0) {
     announcements.forEach((ann, idx) => {
+      const annTime = ann.createdAt ? new Date(ann.createdAt).getTime() : Date.now();
       notifications.push({
         id: ann.id || `announcement_${idx}`,
         type: "system",
-        title: "Pengumuman & Promo Ry-ITSolutions",
+        title: ann.title || "Pengumuman & Promo Ry-ITSolutions",
         description: ann.message,
         time: ann.createdAt ? new Date(ann.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Info Resmi",
+        timestamp: annTime,
         icon: (
           <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.455a20.89 20.89 0 01-1.503-3.819m3.165-.4c.594-.05 1.189-.125 1.78-.226a11.956 11.956 0 004.832-2.016m-6.612 2.642a12.02 12.02 0 01-1.78-.226m10.172-4.432A11.96 11.96 0 0013.91 5.34m0 0a11.97 11.97 0 00-3.57-1.22m3.57 1.22c.594.05 1.189.125 1.78.226m-1.78-.226c-1.19.1-2.38.25-3.57.446" />
@@ -179,6 +186,9 @@ export default function NotificationsPage() {
       });
     });
   }
+
+  // Sort unified notifications chronologically (newest first)
+  notifications.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
   const filteredNotifications =
     activeTab === "all"

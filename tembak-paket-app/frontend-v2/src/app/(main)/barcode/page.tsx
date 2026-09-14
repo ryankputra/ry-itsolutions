@@ -7,6 +7,7 @@ import { useApp } from "@/lib/store";
 import Swal from "@/lib/sweetalert";
 import { useRouter } from "next/navigation";
 import { SuccessModal } from "@/components/ui/SuccessModal";
+import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
 import Link from "next/link";
@@ -444,7 +445,7 @@ export default function BarcodePage() {
             className="w-full h-12 text-sm font-bold shadow-md shadow-purple-500/20 mt-4 bg-purple-600 hover:bg-purple-700 text-white"
             type="submit"
             isLoading={submitting}
-            disabled={user && user.balance < getPrice(option)}
+            disabled={Boolean(user && user.balance < getPrice(option))}
           >
             {submitting
               ? "Membuat Barcode..."
@@ -471,7 +472,7 @@ export default function BarcodePage() {
       )}
 
       <SuccessModal
-        isOpen={showSuccessPop}
+        isOpen={Boolean(showSuccessPop)}
         onClose={() => {
           setShowSuccessPop(false);
           router.push('/history');
@@ -484,7 +485,7 @@ export default function BarcodePage() {
       />
 
       <InstantQrisPaymentModal
-        isOpen={showInstantQris}
+        isOpen={Boolean(showInstantQris)}
         onClose={() => setShowInstantQris(false)}
         amount={getPrice(option)}
         orderTitle={`Generate ${ceirgoNameMapping[option] || option} (${imei})`}

@@ -349,7 +349,7 @@ export default function AdminBroadcastPage() {
                 </div>
 
                 <Button
-                  variant="destructive"
+                  variant="danger"
                   size="sm"
                   onClick={() => handleDeleteWebBroadcast(item.id)}
                   className="text-xs shrink-0 self-end sm:self-center gap-1.5"
