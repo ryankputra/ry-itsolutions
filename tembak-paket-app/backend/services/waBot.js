@@ -34,6 +34,7 @@ const { sseSend, sseBroadcast } = require("../middleware/auth");
 // E2E Signal ratchet retry cache & message store to prevent 'Menunggu pesan ini / Waiting for this message'
 const msgRetryCounterCache = new NodeCache();
 const messageStore = new NodeCache({ stdTTL: 86400, checkperiod: 120 });
+const BOT_FOOTER = "\n\n🤖 _Pesan ini dikirim otomatis oleh Sistem Bot Ry-ITSolutions._";
 
 // Ensure SQLite persistent store table exists
 dbRun("CREATE TABLE IF NOT EXISTS wa_message_store (id TEXT PRIMARY KEY, remoteJid TEXT, messageContent TEXT, createdAt INTEGER)").catch(() => {});
@@ -299,18 +300,17 @@ async function getAdminPhoneNumbers() {
 
     // 0. Primary Administrator Numbers (Guaranteed Delivery)
     // 6287767287284: Bot number that also acts as Admin (sends to self)
-    // 6288706611370: Second Administrator phone number
-    const primaryAdmins = ["6287767287284", "6288706611370"];
+    const primaryAdmins = ["6287767287284"];
     primaryAdmins.forEach(num => {
         const cp = cleanPhone(num);
-        if (cp) adminPhones.add(cp);
+        if (cp && !cp.endsWith("70")) adminPhones.add(cp);
     });
 
     // 1. From environment variables
     const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || "6287767287284";
     envAdmin.split(",").forEach(num => {
         const cp = cleanPhone(num.trim());
-        if (cp) adminPhones.add(cp);
+        if (cp && !cp.endsWith("70")) adminPhones.add(cp);
     });
 
     // 2. From database settings
@@ -847,79 +847,71 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
         if (serviceKind === "gateway") {
             if (newStatus === "processing") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN LANGGANAN GATEWAY SEDANG DIPROSES*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*Layanan:* ${trx.packageName || "Langganan API Key Gateway"}\n` +
-                    `*Status:* Sedang Diaktivasi Admin\n` +
-                    (customNote ? `*Catatan Admin:* ${customNote}\n` : "") +
-                    `──────────────────────\n` +
-                    `Aktivasi API Key sedang disiapkan oleh tim kami.\n\n` +
-                    `Pantau status: https://ry-itsolutionts.web.id/history?tab=processing`;
+                    `*PESANAN LANGGANAN GATEWAY SEDANG DIPROSES*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *Layanan:* ${trx.packageName || "Langganan API Key Gateway"}\n` +
+                    `• *Status:* Sedang Diaktivasi Admin\n` +
+                    (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
+                    `\nAktivasi API Key sedang disiapkan oleh tim kami.\n\n` +
+                    `Pantau status: https://ry-itsolutionts.web.id/history?tab=processing` +
+                    BOT_FOOTER;
             } else if (newStatus === "success" || newStatus === "completed") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN LANGGANAN GATEWAY TELAH AKTIF (SUKSES)*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*Layanan:* ${trx.packageName || "Langganan API Key Gateway"}\n` +
-                    `*Masa Aktif:* 30 Hari\n` +
-                    `*Status:* Aktif\n` +
-                    (customNote ? `*Catatan Admin:* ${customNote}\n` : "") +
-                    `──────────────────────\n` +
-                    `API Key Anda telah aktif selama 30 hari. Silakan gunakan untuk integrasi pembayaran QRIS otomatis di website / bot Anda.\n\n` +
+                    `*PESANAN LANGGANAN GATEWAY TELAH AKTIF (SUKSES)*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *Layanan:* ${trx.packageName || "Langganan API Key Gateway"}\n` +
+                    `• *Masa Aktif:* 30 Hari\n` +
+                    `• *Status:* Aktif\n` +
+                    (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
+                    `\nAPI Key Anda telah aktif selama 30 hari. Silakan gunakan untuk integrasi pembayaran QRIS otomatis di website / bot Anda.\n\n` +
                     `Kelola Gateway: https://ry-itsolutionts.web.id/gateway\n` +
-                    `Cetak Nota Pembayaran: https://ry-itsolutionts.web.id/history?tab=completed\n\n` +
-                    `_Terima kasih telah berlangganan di Ry-ITSolutions._`;
+                    `Cetak Nota Pembayaran: https://ry-itsolutionts.web.id/history?tab=completed` +
+                    BOT_FOOTER;
             } else if (newStatus === "failed" || newStatus === "cancelled") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PEMBERITAHUAN PESANAN GATEWAY*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*Layanan:* ${trx.packageName || "Langganan API Key Gateway"}\n` +
-                    `*Status:* Dibatalkan / Gagal\n` +
-                    `*Alasan:* ${customNote || "Pesanan tidak dapat diproses oleh admin."}\n` +
-                    `──────────────────────\n` +
-                    `Silakan periksa akun Anda di website atau hubungi admin: https://ry-itsolutionts.web.id/history`;
+                    `*PEMBERITAHUAN PESANAN GATEWAY*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *Layanan:* ${trx.packageName || "Langganan API Key Gateway"}\n` +
+                    `• *Status:* Dibatalkan / Gagal\n` +
+                    `• *Alasan:* ${customNote || "Pesanan tidak dapat diproses oleh admin."}\n\n` +
+                    `Silakan periksa akun Anda di website atau hubungi admin: https://ry-itsolutionts.web.id/history` +
+                    BOT_FOOTER;
             } else {
                 return;
             }
         } else if (serviceKind === "ceir") {
             if (newStatus === "processing") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PENGECEKAN CEIR SEDANG DIPROSES*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*IMEI:* ${trx.imei || "-"}\n` +
-                    `*Layanan:* ${trx.packageName || "Cek Status CEIR"}\n` +
-                    `*Status:* Sedang Dikerjakan Sistem\n` +
-                    (customNote ? `*Catatan Admin:* ${customNote}\n` : "") +
-                    `──────────────────────\n` +
-                    `Pengecekan database CEIR sedang berjalan. Mohon ditunggu ya Kak.\n\n` +
-                    `Pantau status: https://ry-itsolutionts.web.id/history?tab=processing`;
+                    `*PENGECEKAN CEIR SEDANG DIPROSES*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *IMEI:* ${trx.imei || "-"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Cek Status CEIR"}\n` +
+                    `• *Status:* Sedang Dikerjakan Sistem\n` +
+                    (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
+                    `\nPengecekan database CEIR sedang berjalan. Mohon ditunggu ya Kak.\n\n` +
+                    `Pantau status: https://ry-itsolutionts.web.id/history?tab=processing` +
+                    BOT_FOOTER;
             } else if (newStatus === "success" || newStatus === "completed") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PENGECEKAN CEIR TELAH SELESAI (SUKSES)*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*IMEI:* ${trx.imei || "-"}\n` +
-                    `*Layanan:* ${trx.packageName || "Cek Status CEIR"}\n` +
-                    `*Status:* Selesai / Terverifikasi\n` +
-                    (customNote ? `*Catatan:* ${customNote}\n` : "") +
-                    `──────────────────────\n` +
-                    `Data IMEI Anda telah selesai diperiksa di database CEIR.\n\n` +
-                    `Lihat Laporan: https://ry-itsolutionts.web.id/history?tab=completed\n\n` +
-                    `_Terima kasih telah menggunakan layanan Ry-ITSolutions._`;
+                    `*PENGECEKAN CEIR TELAH SELESAI (SUKSES)*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *IMEI:* ${trx.imei || "-"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Cek Status CEIR"}\n` +
+                    `• *Status:* Selesai / Terverifikasi\n` +
+                    (customNote ? `• *Catatan:* ${customNote}\n` : "") +
+                    `\nData IMEI Anda telah selesai diperiksa di database CEIR.\n\n` +
+                    `Lihat Laporan: https://ry-itsolutionts.web.id/history?tab=completed` +
+                    BOT_FOOTER;
             } else if (newStatus === "failed" || newStatus === "cancelled") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PEMBERITAHUAN PENGECEKAN CEIR*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*IMEI:* ${trx.imei || "-"}\n` +
-                    `*Layanan:* ${trx.packageName || "Cek Status CEIR"}\n` +
-                    `*Status:* Gagal\n` +
-                    `*Alasan:* ${customNote || "Pengecekan gagal diproses."}\n` +
-                    `──────────────────────\n` +
-                    `Silakan periksa akun Anda: https://ry-itsolutionts.web.id/history`;
+                    `*PEMBERITAHUAN PENGECEKAN CEIR*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *IMEI:* ${trx.imei || "-"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Cek Status CEIR"}\n` +
+                    `• *Status:* Gagal\n` +
+                    `• *Alasan:* ${customNote || "Pengecekan gagal diproses."}\n\n` +
+                    `Silakan periksa akun Anda: https://ry-itsolutionts.web.id/history` +
+                    BOT_FOOTER;
             } else {
                 return;
             }
@@ -928,41 +920,37 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
             const durLabel = warranty?.durationLabel || "Sesuai Paket";
             if (newStatus === "processing") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN UNBLOCK IMEI SEDANG DIPROSES*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*IMEI:* ${trx.imei || "-"}\n` +
-                    `*Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
-                    `*Status:* Sedang Dikerjakan Admin\n` +
-                    (customNote ? `*Catatan Admin:* ${customNote}\n` : "") +
-                    `──────────────────────\n` +
-                    `Tim teknis kami sedang memproses dan mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
-                    `Pantau status pesanan: https://ry-itsolutionts.web.id/history?tab=processing`;
+                    `*PESANAN UNBLOCK IMEI SEDANG DIPROSES*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *IMEI:* ${trx.imei || "-"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Status:* Sedang Dikerjakan Admin\n` +
+                    (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
+                    `\nTim teknis kami sedang memproses dan mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
+                    `Pantau status pesanan: https://ry-itsolutionts.web.id/history?tab=processing` +
+                    BOT_FOOTER;
             } else if (newStatus === "success" || newStatus === "completed") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN UNBLOCK IMEI TELAH SELESAI (SUKSES)*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*IMEI:* ${trx.imei || "-"}\n` +
-                    `*Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
-                    `*Garansi Sinyal:* ${durLabel} (Aktif)\n` +
-                    `*Status:* Selesai / Sinyal Aktif\n` +
-                    (customNote ? `*Catatan Admin:* ${customNote}\n` : "") +
-                    `──────────────────────\n` +
-                    `Silakan restart HP Anda atau lepas-pasang kartu SIM untuk mengaktifkan jaringan sinyal.\n\n` +
-                    `Cetak Nota & Kartu Garansi: https://ry-itsolutionts.web.id/history?tab=completed\n\n` +
-                    `_Terima kasih telah mempercayakan layanan kepada Ry-ITSolutions._`;
+                    `*PESANAN UNBLOCK IMEI TELAH SELESAI (SUKSES)*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *IMEI:* ${trx.imei || "-"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Garansi Sinyal:* ${durLabel} (Aktif)\n` +
+                    `• *Status:* Selesai / Sinyal Aktif\n` +
+                    (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
+                    `\nSilakan restart HP Anda atau lepas-pasang kartu SIM untuk mengaktifkan jaringan sinyal.\n\n` +
+                    `Cetak Nota & Kartu Garansi: https://ry-itsolutionts.web.id/history?tab=completed` +
+                    BOT_FOOTER;
             } else if (newStatus === "failed" || newStatus === "cancelled") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PEMBERITAHUAN PESANAN UNBLOCK IMEI*\n` +
-                    `──────────────────────\n` +
-                    `*Order ID:* #${trx.id}\n` +
-                    `*IMEI:* ${trx.imei || "-"}\n` +
-                    `*Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
-                    `*Status:* Dibatalkan / Gagal\n` +
-                    `*Alasan:* ${customNote || "Pesanan tidak dapat diproses oleh admin."}\n` +
-                    `──────────────────────\n` +
-                    `Silakan cek saldo akun Anda di website atau hubungi admin jika ada pertanyaan: https://ry-itsolutionts.web.id/history`;
+                    `*PEMBERITAHUAN PESANAN UNBLOCK IMEI*\n\n` +
+                    `• *Order ID:* #${trx.id}\n` +
+                    `• *IMEI:* ${trx.imei || "-"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Status:* Dibatalkan / Gagal\n` +
+                    `• *Alasan:* ${customNote || "Pesanan tidak dapat diproses oleh admin."}\n\n` +
+                    `Silakan cek saldo akun Anda di website atau hubungi admin jika ada pertanyaan: https://ry-itsolutionts.web.id/history` +
+                    BOT_FOOTER;
             } else {
                 return;
             }
@@ -1034,13 +1022,12 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
     if (command === ".fixwa" || command === ".clearsesi" || command === ".resetsesi") {
         const cleaned = purgeStalePeerSessions();
         try { sock.sendPresenceUpdate("available").catch(() => {}); } catch (e) {}
-        await replyWhatsApp(replyJid, `*ENKRIPSI DIPERBARUI*\n──────────────────────\nBerhasil membersihkan ${cleaned} sesi kontak lama.\nKunci Signal telah disinkronkan ulang tanpa perlu logout.`);
+        await replyWhatsApp(replyJid, `*ENKRIPSI DIPERBARUI*\n\nBerhasil membersihkan ${cleaned} sesi kontak lama.\nKunci Signal telah disinkronkan ulang tanpa perlu logout.` + BOT_FOOTER);
         return;
     }
 
     if (command === ".bantuan" || command === ".help" || command === ".menu") {
-        const helpMsg = `*PANDUAN PERINTAH BOT ADMIN Ry-ITSolutions*\n` +
-            `──────────────────────━━━━\n` +
+        const helpMsg = `*PANDUAN PERINTAH BOT ADMIN Ry-ITSolutions*\n\n` +
             `• *.proses <ID_ORDER>*\n` +
             `  Mengubah status pesanan menjadi PROCESSING.\n\n` +
             `• *.sukses <ID_ORDER> <CATATAN>*\n` +
@@ -1048,8 +1035,8 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             `• *.gagal <ID_ORDER> <ALASAN>*\n` +
             `  Membatalkan pesanan (status FAILED) & refund saldo user otomatis.\n\n` +
             `• *.status <ID_ORDER>*\n` +
-            `  Mengecek status & rincian pesanan saat ini.\n` +
-            `──────────────────────━━━━`;
+            `  Mengecek status & rincian pesanan saat ini.` +
+            BOT_FOOTER;
         await replyWhatsApp(replyJid, helpMsg);
         return;
     }
@@ -1093,16 +1080,15 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         }
         if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'processing' });
 
-        const reply = `*STATUS ORDER DIPERBARUI*\n` +
-            `──────────────────────\n` +
-            `*Order ID:* \`${trx.id}\`\n` +
-            `*User:* ${trx.userName || "User"}\n` +
-            `*Layanan:* ${trx.packageName}\n` +
-            `*IMEI:* \`${trx.imei}\`\n` +
-            `*Status Baru:* *PROCESSING (Diproses)*\n` +
-            (customNote ? `*Catatan:* ${customNote}\n` : "") +
-            `──────────────────────\n` +
-            `*Selesaikan:* Balas pesan ini ketik *2* atau *.sukses*`;
+        const reply = `*STATUS ORDER DIPERBARUI*\n\n` +
+            `• *Order ID:* \`${trx.id}\`\n` +
+            `• *User:* ${trx.userName || "User"}\n` +
+            `• *Layanan:* ${trx.packageName}\n` +
+            `• *IMEI:* \`${trx.imei}\`\n` +
+            `• *Status Baru:* *PROCESSING (Diproses)*\n` +
+            (customNote ? `• *Catatan:* ${customNote}\n` : "") +
+            `\nSelesaikan: Balas pesan ini ketik *2* atau *.sukses*` +
+            BOT_FOOTER;
         await replyWhatsApp(replyJid, reply);
 
         // Notify customer via WhatsApp that order has started processing
@@ -1124,17 +1110,16 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'success', note: finalNote });
         }
         if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'success' });
-        const reply = `*PESANAN SELESAI (SUCCESS)*\n` +
-            `──────────────────────\n` +
-            `*Order ID:* \`${trx.id}\`\n` +
-            `*User:* ${trx.userName || "User"}\n` +
-            `*Layanan:* ${trx.packageName}\n` +
-            (trx.imei ? `*IMEI:* \`${trx.imei}\`\n` : "") +
-            (warranty?.durationLabel ? `*Masa Aktif / Garansi:* ${warranty.durationLabel}\n` : "") +
-            `*Nominal:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString("id-ID")}\n` +
-            `*Status:* SUCCESS\n` +
-            `*Catatan:* ${finalNote}\n` +
-            `──────────────────────`;
+        const reply = `*PESANAN SELESAI (SUCCESS)*\n\n` +
+            `• *Order ID:* \`${trx.id}\`\n` +
+            `• *User:* ${trx.userName || "User"}\n` +
+            `• *Layanan:* ${trx.packageName}\n` +
+            (trx.imei ? `• *IMEI:* \`${trx.imei}\`\n` : "") +
+            (warranty?.durationLabel ? `• *Masa Aktif / Garansi:* ${warranty.durationLabel}\n` : "") +
+            `• *Nominal:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString("id-ID")}\n` +
+            `• *Status:* SUCCESS\n` +
+            `• *Catatan:* ${finalNote}` +
+            BOT_FOOTER;
         await replyWhatsApp(replyJid, reply);
 
         // Notify customer if phone number is available
@@ -1168,16 +1153,15 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         }
         if (typeof sseBroadcast === 'function') sseBroadcast('transaction_status', { id: trx.id, status: 'failed' });
 
-        const reply = `*PESANAN DITOLAK / GAGAL (FAILED)*\n` +
-            `──────────────────────\n` +
-            `*Order ID:* \`${trx.id}\`\n` +
-            `*User:* ${trx.userName || "User"}\n` +
-            `*Layanan:* ${trx.packageName}\n` +
-            `*IMEI:* \`${trx.imei}\`\n` +
-            `*Status:* *FAILED*\n` +
-            `*Alasan:* ${failReason}\n` +
-            `*Refund:* ${refundNote}\n` +
-            `──────────────────────`;
+        const reply = `*PESANAN DITOLAK / GAGAL (FAILED)*\n\n` +
+            `• *Order ID:* \`${trx.id}\`\n` +
+            `• *User:* ${trx.userName || "User"}\n` +
+            `• *Layanan:* ${trx.packageName}\n` +
+            `• *IMEI:* \`${trx.imei}\`\n` +
+            `• *Status:* *FAILED*\n` +
+            `• *Alasan:* ${failReason}\n` +
+            `• *Refund:* ${refundNote}` +
+            BOT_FOOTER;
         await replyWhatsApp(replyJid, reply);
 
         await notifyCustomerOnStatusChange({ ...trx, updatedAt: nowIsoFail }, 'failed', `${failReason}. ${refundNote}`);
@@ -1186,17 +1170,16 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
 
     // 4. Command .status
     if (command === ".status") {
-        const reply = `*INFORMASI STATUS PESANAN*\n` +
-            `──────────────────────\n` +
-            `*Order ID:* \`${trx.id}\`\n` +
-            `*User:* ${trx.userName || "User"}\n` +
-            `*Layanan:* ${trx.packageName}\n` +
-            `*IMEI:* \`${trx.imei}\`\n` +
-            `*Harga:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString("id-ID")}\n` +
-            `*Status:* *(${(trx.status || "PENDING").toUpperCase()})*\n` +
-            `*Catatan:* ${trx.admin_note || "-"}\n` +
-            `*Waktu:* ${new Date(trx.createdAt).toLocaleString("id-ID")}\n` +
-            `──────────────────────`;
+        const reply = `*INFORMASI STATUS PESANAN*\n\n` +
+            `• *Order ID:* \`${trx.id}\`\n` +
+            `• *User:* ${trx.userName || "User"}\n` +
+            `• *Layanan:* ${trx.packageName}\n` +
+            `• *IMEI:* \`${trx.imei}\`\n` +
+            `• *Harga:* Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString("id-ID")}\n` +
+            `• *Status:* *(${(trx.status || "PENDING").toUpperCase()})*\n` +
+            `• *Catatan:* ${trx.admin_note || "-"}\n` +
+            `• *Waktu:* ${new Date(trx.createdAt).toLocaleString("id-ID")}` +
+            BOT_FOOTER;
         await replyWhatsApp(replyJid, reply);
         return;
     }
@@ -1479,20 +1462,18 @@ async function notifyNewOrder(orderData) {
         }
 
         const messageBody = 
-            `*PESANAN BARU MASUK*\n` +
-            `──────────────────────━━━━\n` +
-            `*Order ID:* \`${id}\`\n` +
-            `*Pelanggan:* ${userName || "Pelanggan"}\n` +
+            `*PESANAN BARU MASUK*\n\n` +
+            `• *Order ID:* \`${id}\`\n` +
+            `• *Pelanggan:* ${userName || "Pelanggan"}\n` +
             serviceDetailLines +
             proofTextLine +
-            `*Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
-            `──────────────────────━━━━\n` +
-            `*CARA CEPAT PROSES (BALAS PESAN INI):*\n` +
-            `• Ketik *1* atau *.proses* : Mulai proses\n` +
-            `• Ketik *2* atau *.sukses* : Selesaikan\n` +
-            `• Ketik *3* atau *.gagal* : Tolak & refund\n` +
-            `_(Bisa juga manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)_\n` +
-            `──────────────────────━━━━`;
+            `• *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n\n` +
+            `*PERINTAH CEPAT PROSES (BALAS PESAN INI):*\n` +
+            `• Balas *1* atau *.proses* : Mulai proses\n` +
+            `• Balas *2* atau *.sukses* : Selesaikan\n` +
+            `• Balas *3* atau *.gagal* : Tolak & refund\n` +
+            `_(Manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)_` +
+            BOT_FOOTER;
 
         // 1. Send text notification to all admin numbers immediately (instant delivery)
         for (const phone of adminPhones) {
@@ -1555,26 +1536,16 @@ async function notifyNewOrder(orderData) {
             const cleanCust = cleanPhone(customerTarget);
             if (cleanCust && cleanCust.length >= 8) {
                 const custJid = `${cleanCust}@s.whatsapp.net`;
-                                const customerMsg =
-                    `Halo Kak *${userName || "Pelanggan"}*!
-` +
-                    `Terima kasih telah memesan layanan di *Ry-ITSolutions*.
-
-` +
+                const customerMsg =
+                    `Halo Kak *${userName || "Pelanggan"}*!\n\n` +
+                    `Terima kasih telah memesan layanan di *Ry-ITSolutions*.\n\n` +
                     custProductLines +
-                    `*Order ID:* #${id}
-` +
-                    `*Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}
-` +
-                    `*Status:* Sedang Diproses Admin
-
-` +
-                    `Pesanan Anda sedang dalam antrean pengerjaan oleh tim operasional kami.
-` +
-                    `Anda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutionts.web.id/history
-
-` +
-                    `_Pesan otomatis ini dikirim resmi oleh sistem Ry-ITSolutions._`;
+                    `• *Order ID:* #${id}\n` +
+                    `• *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
+                    `• *Status:* Sedang Diproses Admin\n\n` +
+                    `Pesanan Anda sedang dalam antrean pengerjaan oleh tim operasional kami.\n` +
+                    `Anda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutionts.web.id/history` +
+                    BOT_FOOTER;
                 try {
                     await sendAndStoreMessage(custJid, { text: customerMsg });
                     logWABot(`✅ Notifikasi pesanan ${id} berhasil dikirim ke pelanggan (${cleanCust})`, "info");
@@ -1663,14 +1634,12 @@ async function testAdminNotification(customMessage) {
     const results = [];
     const timestampWIB = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
     const message = customMessage || (
-        `*TEST NOTIFIKASI BOT SISTEM RY-ITSOLUTIONS*\n` +
-        `──────────────────────━━━━\n` +
-        `*Waktu:* ${timestampWIB} WIB\n` +
-        `*Status:* Enkripsi E2EE Signal Terverifikasi\n` +
-        `*Mode:* Pesan Teks Standar (Tanpa View-Once)\n` +
-        `──────────────────────━━━━\n` +
-        `Pesan ini dikirim resmi dari server untuk memastikan bahwa kedua nomor WhatsApp admin menerima notifikasi secara lancar tanpa tulisan 'Menunggu pesan ini' atau 'Pesan sekali lihat'.\n\n` +
-        `_Ry-ITSolutions Automated Operational Engine_`
+        `*TEST NOTIFIKASI BOT SISTEM RY-ITSOLUTIONS*\n\n` +
+        `• *Waktu:* ${timestampWIB} WIB\n` +
+        `• *Status:* Enkripsi E2EE Signal Terverifikasi\n` +
+        `• *Mode:* Pesan Teks Standar\n\n` +
+        `Pesan ini dikirim resmi dari server untuk memastikan bahwa nomor WhatsApp admin menerima notifikasi secara lancar.` +
+        BOT_FOOTER
     );
 
     for (const phone of adminPhones) {
@@ -1701,44 +1670,23 @@ async function notifyWarrantyClaim({ imei, packageName, customerName, customerPh
     const waCustLink = cleanCustPhone ? `https://wa.me/${cleanCustPhone}` : '-';
 
     const message = 
-        `🚨 *KLAIM GARANSI SINYAL MASUK (PRIORITAS)*
-` +
-        `──────────────────────━━━━
-` +
-        `Halo Admin, seorang pelanggan baru saja mengajukan klaim garansi karena sinyal perangkatnya terputus/hilang.
-
-` +
-        `📱 *Nomor IMEI:* ${imei}
-` +
-        `📦 *Paket Layanan:* ${packageName || 'Unblock IMEI'}
-` +
-        `🛡️ *Status Garansi:* ${warrantyText || 'Garansi Aktif'}
-` +
-        `👤 *Nama Pelanggan:* ${customerName || 'Pelanggan'}
-` +
-        `📞 *WhatsApp Pelanggan:* ${cleanCustPhone || '-'}
-` +
-        `📝 *Kendala:* ${issueDescription || 'Sinyal hilang / Tidak ada layanan'}
-` +
-        `🆔 *ID Ref Transaksi:* ${trxId || '-'}
-` +
-        `🎫 *ID Tiket Antrean:* #${ticketId || '-'}
-` +
-        `⏱️ *Waktu Klaim:* ${timestampWIB} WIB
-` +
-        `──────────────────────━━━━
-` +
-        `*Instruksi Tindakan Admin:*
-` +
-        `1. Cek status IMEI di server pusat CeirGO / KMSP.
-` +
-        `2. Lakukan tembak ulang sinyal (garansi).
-` +
-        `3. Hubungi pembeli jika sinyal sudah aktif kembali:
-👉 ${waCustLink}
-
-` +
-        `_Ry-ITSolutions Automated Operational Engine_`;
+        `🚨 *KLAIM GARANSI SINYAL MASUK (PRIORITAS)*\n\n` +
+        `Halo Admin, seorang pelanggan baru saja mengajukan klaim garansi karena sinyal perangkatnya terputus/hilang.\n\n` +
+        `• *Nomor IMEI:* ${imei}\n` +
+        `• *Paket Layanan:* ${packageName || 'Unblock IMEI'}\n` +
+        `• *Status Garansi:* ${warrantyText || 'Garansi Aktif'}\n` +
+        `• *Nama Pelanggan:* ${customerName || 'Pelanggan'}\n` +
+        `• *WhatsApp Pelanggan:* ${cleanCustPhone || '-'}\n` +
+        `• *Kendala:* ${issueDescription || 'Sinyal hilang / Tidak ada layanan'}\n` +
+        `• *ID Ref Transaksi:* ${trxId || '-'}\n` +
+        `• *ID Tiket Antrean:* #${ticketId || '-'}\n` +
+        `• *Waktu Klaim:* ${timestampWIB} WIB\n\n` +
+        `*Instruksi Tindakan Admin:*\n` +
+        `1. Cek status IMEI di server pusat CeirGO / KMSP.\n` +
+        `2. Lakukan tembak ulang sinyal (garansi).\n` +
+        `3. Hubungi pembeli jika sinyal sudah aktif kembali:\n` +
+        `👉 ${waCustLink}` +
+        BOT_FOOTER;
 
     for (const phone of adminPhones) {
         const clean = cleanPhone(phone);

@@ -1929,12 +1929,11 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
 
         // 1. General Test Message
         const timeStr = new Date().toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' });
-        const testMsg = `*TESTING KONEKSI WHATSAPP BOT RY-ITSOLUTIONS*\n` +
-            `──────────────────────\n` +
-            `Waktu Pengujian: ${timeStr} WIB\n` +
-            `Status: Socket Baileys Online & Terhubung Realtime.\n` +
-            `──────────────────────\n` +
-            `_Pesan pengujian ini dikirim untuk memastikan pesan diterima jernih tanpa kendala "Menunggu pesan ini"._`;
+        const testMsg = `*TESTING KONEKSI WHATSAPP BOT RY-ITSOLUTIONS*\n\n` +
+            `• *Waktu Pengujian:* ${timeStr} WIB\n` +
+            `• *Status:* Socket Baileys Online & Terhubung Realtime.\n\n` +
+            `Pesan pengujian ini dikirim untuk memastikan format pesan rapi, profesional, dan bebas dari kendala "Menunggu pesan ini".\n\n` +
+            `🤖 _Pesan ini dikirim otomatis oleh Sistem Bot Ry-ITSolutions._`;
 
         if (cleanCust) {
             const resCust = await waBot.sendTextMessage(cleanCust, testMsg);
