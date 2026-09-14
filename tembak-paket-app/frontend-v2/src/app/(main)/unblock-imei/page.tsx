@@ -113,13 +113,28 @@ function UnblockImeiContent() {
   const uniquePackages = React.useMemo(() => {
     const map = new Map<string, any>();
     safePackages.forEach(p => {
+      if (!p) return;
       const dur = (p.duration || '').trim().toLowerCase();
       if (!map.has(dur)) {
         map.set(dur, p);
       } else {
         const existing = map.get(dur);
-        const hasSp1 = existing.speed_prices && Object.keys(typeof existing.speed_prices === 'string' ? JSON.parse(existing.speed_prices) : existing.speed_prices).length > 0;
-        const hasSp2 = p.speed_prices && Object.keys(typeof p.speed_prices === 'string' ? JSON.parse(p.speed_prices) : p.speed_prices).length > 0;
+        let hasSp1 = false;
+        try {
+          if (existing?.speed_prices) {
+            const parsed1 = typeof existing.speed_prices === 'string' ? JSON.parse(existing.speed_prices) : existing.speed_prices;
+            hasSp1 = Boolean(parsed1 && typeof parsed1 === 'object' && Object.keys(parsed1).length > 0);
+          }
+        } catch (e) {}
+
+        let hasSp2 = false;
+        try {
+          if (p?.speed_prices) {
+            const parsed2 = typeof p.speed_prices === 'string' ? JSON.parse(p.speed_prices) : p.speed_prices;
+            hasSp2 = Boolean(parsed2 && typeof parsed2 === 'object' && Object.keys(parsed2).length > 0);
+          }
+        } catch (e) {}
+
         if (!hasSp1 && hasSp2) {
           map.set(dur, p);
         }
@@ -643,7 +658,7 @@ function UnblockImeiContent() {
 
               {/* Interactive Multi-IMEI Tag Badges & Live Device Auto-Detect */}
               {imei.trim().length > 0 && (() => {
-                const parsedList = parseMultipleImeis(imei);
+                const parsedList = (parseMultipleImeis(imei) || []).filter(Boolean);
                 const validCount = parsedList.filter(i => i && i.isValidLength && i.isValidLuhn).length;
                 const warnCount = parsedList.filter(i => i && i.isValidLength && !i.isValidLuhn).length;
 
@@ -679,45 +694,48 @@ function UnblockImeiContent() {
 
                     {/* Interactive Tag Cards */}
                     <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-                      {parsedList.map((analysis, idx) => (
-                        <div 
-                          key={idx} 
-                          className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
-                            analysis.isValidLength && analysis.isValidLuhn 
-                              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' 
-                              : analysis.isValidLength && !analysis.isValidLuhn
-                              ? 'bg-amber-50/70 border-amber-200 text-amber-950'
-                              : 'bg-canvas border-hairline text-ink-muted'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="w-5 h-5 rounded-full bg-parchment font-bold text-[10px] text-ink-muted flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="font-black text-ink truncate text-xs">
-                                {analysis.brand ? `${analysis.brand} ${analysis.model}` : `Perangkat #${idx + 1}`}
-                              </p>
-                              <p className="text-[11px] opacity-80 font-mono font-bold tracking-wider truncate">
-                                {analysis.clean || analysis.raw}
-                              </p>
+                      {parsedList.map((analysis, idx) => {
+                        if (!analysis) return null;
+                        const cleanStr = analysis.clean || analysis.raw || "";
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                              analysis.isValidLength && analysis.isValidLuhn 
+                                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' 
+                                : analysis.isValidLength && !analysis.isValidLuhn
+                                ? 'bg-amber-50/70 border-amber-200 text-amber-950'
+                                : 'bg-canvas border-hairline text-ink-muted'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-5 h-5 rounded-full bg-parchment font-bold text-[10px] text-ink-muted flex items-center justify-center shrink-0">
+                                {idx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="font-black text-ink truncate text-xs">
+                                  {analysis.brand ? `${analysis.brand} ${analysis.model || ''}`.trim() : `Perangkat #${idx + 1}`}
+                                </p>
+                                <p className="text-[11px] opacity-80 font-mono font-bold tracking-wider truncate">
+                                  {cleanStr}
+                                </p>
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {analysis.isValidLength && analysis.isValidLuhn ? (
-                              <span className="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
-                                GSMA Valid
-                              </span>
-                            ) : analysis.isValidLength && !analysis.isValidLuhn ? (
-                              <span className="inline-flex items-center gap-1 font-bold text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200" title="Digit checksum luhn tidak cocok">
-                                Typo Checksum
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-ink-muted">
-                                {analysis.clean.length}/15 digit
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {analysis.isValidLength && analysis.isValidLuhn ? (
+                                <span className="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
+                                  GSMA Valid
+                                </span>
+                              ) : analysis.isValidLength && !analysis.isValidLuhn ? (
+                                <span className="inline-flex items-center gap-1 font-bold text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200" title="Digit checksum luhn tidak cocok">
+                                  Typo Checksum
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-ink-muted">
+                                  {cleanStr.length}/15 digit
+                                </span>
+                              )}
 
                             {/* Remove Tag Button */}
                             <button
@@ -730,7 +748,8 @@ function UnblockImeiContent() {
                             </button>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
