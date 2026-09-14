@@ -708,7 +708,7 @@ export default function AdminSettingsPage() {
               <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-2 text-xs">
                 <p className="font-bold text-ink">Sesi GoBiz Aktif</p>
                 <p className="text-ink-muted text-[11px]">
-                  Outlet: <b>{gopayStatus.outlet_name || "Merchant"}</b> &bull; No HP: {gopayStatus.phone_number || "-"}
+                  Outlet: <b>{gopayStatus.outlet_name || gopayStatus.session_info?.outlet_name || "Merchant"}</b> &bull; No HP: {gopayStatus.phone_number || gopayStatus.session_info?.phone_number || gopayStatus.gopayPhone || "-"}
                 </p>
               </div>
             ) : (

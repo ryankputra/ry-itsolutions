@@ -1913,10 +1913,22 @@ router.get('/admin/gopay/status', isAuthenticated, isAdmin, async (req, res) => 
             timeout: 5000
         });
         const d = response.data;
+        const rawData = d?.data || d || {};
+        const sessionInfo = rawData.session_info || {};
+
+        const outletName = rawData.outlet_name || sessionInfo.outlet_name || null;
+        const phoneNumber = rawData.phone_number || sessionInfo.phone_number || rawData.gopayPhone || null;
+        const merchantId = rawData.merchant_id || sessionInfo.merchant_id || null;
+
         res.json({
             status: Boolean(d?.success),
             success: Boolean(d?.success),
-            data: d?.data || d
+            data: {
+                ...rawData,
+                outlet_name: outletName,
+                phone_number: phoneNumber,
+                merchant_id: merchantId
+            }
         });
     } catch (err) {
         res.json({

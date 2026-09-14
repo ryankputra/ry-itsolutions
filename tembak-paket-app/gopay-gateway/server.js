@@ -354,15 +354,21 @@ app.get('/token-status', apiKeyAuth, async (req, res) => {
             });
         }
 
+        const outletName = sessionData?.outlet_name || sessionData?.merchant_name || null;
+        const phoneNumber = sessionData?.phone_number || sessionData?.phone || null;
+
         res.json({ 
             success: true, 
             data: { 
                 token_status: 'valid', 
                 message: 'Token dan Sesi GoPay Merchant Aktif',
+                merchant_id: sessionData?.merchant_id || merchantId,
+                outlet_name: outletName,
+                phone_number: phoneNumber,
                 session_info: {
                     merchant_id: sessionData?.merchant_id || merchantId,
-                    outlet_name: sessionData?.outlet_name || null,
-                    phone_number: sessionData?.phone_number || null,
+                    outlet_name: outletName,
+                    phone_number: phoneNumber,
                     expires_at: sessionData?.expires_at || null,
                     updated_at: sessionData?.updated_at || null
                 }
