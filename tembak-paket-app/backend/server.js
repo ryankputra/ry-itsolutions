@@ -96,8 +96,7 @@ app.use(cors({
             origin.startsWith('http://127.0.0.1:') ||
             origin.startsWith('http://192.168.') ||
             origin.includes('telegram.org') ||
-            origin.includes('ry-itsolutions.web.id') ||
-            origin.endsWith('.web.id')
+            /^https?:\/\/([a-z0-9-]+\.)*ry-itsolutions\.web\.id$/i.test(origin)
         ) {
             return callback(null, true);
         }
@@ -115,7 +114,16 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 // 4. Rate Limiting & Input Sanitization
 app.use('/api', globalRateLimiter);
 app.use(inputSanitizer);
-app.use(['/api/auth/login', '/api/auth/register', '/api/coupons/claim'], sensitiveRateLimiter);
+app.use([
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/forgot-password',
+    '/api/auth/verify-otp',
+    '/api/coupons/claim',
+    '/api/order/ceir',
+    '/api/order/barcode',
+    '/api/order/manual'
+], sensitiveRateLimiter);
 
 // 5. Session Store Configuration
 const sessionConfig = {

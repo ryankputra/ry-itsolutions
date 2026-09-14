@@ -7,12 +7,16 @@ const rateLimit = require('express-rate-limit');
 // 1. Recursive Input Sanitizer against XSS & Injection Primitives
 function sanitizeValue(value) {
     if (typeof value === 'string') {
-        // Strip script tags and dangerous HTML execution tags
+        // Strip script tags, event handlers, and dangerous HTML execution tags
         let clean = value
             .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+            .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+            .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
             .replace(/javascript:/gi, '')
-            .replace(/onload\s*=/gi, '')
-            .replace(/onerror\s*=/gi, '');
+            .replace(/vbscript:/gi, '')
+            .replace(/data:text\/html/gi, '')
+            .replace(/on[a-z]+\s*=/gi, '');
         return clean;
     } else if (Array.isArray(value)) {
         return value.map(sanitizeValue);
