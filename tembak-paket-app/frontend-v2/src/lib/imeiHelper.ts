@@ -264,19 +264,21 @@ export function analyzeImei(input: string): ImeiAnalysis {
 
   // Check 6-digit heuristic or general pattern
   const fallback = getHeuristicBrand(clean.substring(0, 6), tac8);
+  const brandName = fallback?.brand || "";
   return {
-    raw: input,
+    raw: input || "",
     clean,
     isValidLength,
     isValidLuhn,
-    brand: fallback.brand,
-    model: fallback.model,
-    type: fallback.type,
-    isApple: fallback.brand.includes("Apple")
+    brand: brandName,
+    model: fallback?.model || "",
+    type: fallback?.type || "generic",
+    isApple: brandName.includes("Apple")
   };
 }
 
 export function parseMultipleImeis(input: string): ImeiAnalysis[] {
+  if (!input || typeof input !== "string") return [];
   const lines = input.split(/[\n,;]+/).map(s => s.trim()).filter(s => s.length > 0);
   return lines.map(line => analyzeImei(line));
 }

@@ -644,8 +644,8 @@ function UnblockImeiContent() {
               {/* Interactive Multi-IMEI Tag Badges & Live Device Auto-Detect */}
               {imei.trim().length > 0 && (() => {
                 const parsedList = parseMultipleImeis(imei);
-                const validCount = parsedList.filter(i => i.isValidLength && i.isValidLuhn).length;
-                const warnCount = parsedList.filter(i => i.isValidLength && !i.isValidLuhn).length;
+                const validCount = parsedList.filter(i => i && i.isValidLength && i.isValidLuhn).length;
+                const warnCount = parsedList.filter(i => i && i.isValidLength && !i.isValidLuhn).length;
 
                 const removeImeiAtIndex = (indexToRemove: number) => {
                   const lines = imei.split(/[\n,]+/).map(i => i.trim()).filter(Boolean);
