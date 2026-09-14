@@ -43,7 +43,7 @@ export default function TopUpPage() {
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   // States for Timer & Polling
-  const [timeLeft, setTimeLeft] = useState<number>(15 * 60);
+  const [timeLeft, setTimeLeft] = useState<number>(5 * 60);
   const [topUpId, setTopUpId] = useState<string | null>(null);
   const [isCheckingManual, setIsCheckingManual] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);

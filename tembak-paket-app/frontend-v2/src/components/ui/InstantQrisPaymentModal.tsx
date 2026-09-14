@@ -45,10 +45,10 @@ function computeTargetExpiryMs(exp?: any, crt?: any): number {
       ? (numCrt < 10000000000 ? numCrt * 1000 : numCrt)
       : new Date(crt).getTime();
     if (!isNaN(crtMs) && crtMs > 0) {
-      return crtMs + 15 * 60 * 1000;
+      return crtMs + 5 * 60 * 1000;
     }
   }
-  return Date.now() + 15 * 60 * 1000;
+  return Date.now() + 5 * 60 * 1000;
 }
 
 export function InstantQrisPaymentModal({
@@ -70,7 +70,7 @@ export function InstantQrisPaymentModal({
     merchant?: string;
   } | null>(null);
   const [expiresAtMs, setExpiresAtMs] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState(900);
+  const [timeLeft, setTimeLeft] = useState(300);
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 

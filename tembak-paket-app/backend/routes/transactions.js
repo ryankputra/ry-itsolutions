@@ -399,7 +399,7 @@ async function generateDynamicQris(amount, provider = 'nobu') {
 function checkOrkutPaymentStatus(id, uniqueAmount) {
     if (!ORKUT_MERCHANT_ID || !ORKUT_USERNAME || !ORKUT_TOKEN) return;
     const url = `https://qris.payment.web.id/payment/qris/${ORKUT_MERCHANT_ID}`;
-    const maxDurationMs = 15 * 60 * 1000;
+    const maxDurationMs = 5 * 60 * 1000;
     const interval = 15000;
 
     const isTopup = id.startsWith('TU-');
@@ -849,7 +849,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 let qrisImage = null;
                 let dynamicRawCode = '';
                 let uniqueAmt = finalPriceToPay;
-                let expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
+                let expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
                 let gopayTrxId = null;
                 let merchantName = 'RYYSTORE OK2285905';
 
@@ -1099,7 +1099,7 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
                 const totalVal = (unique >= base && unique > 0) ? unique : (base > 0 ? base : (Number(item.amount) || 0));
 
                 const createdTime = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
-                const expiresAtSec = Math.floor((createdTime + 15 * 60 * 1000) / 1000);
+                const expiresAtSec = Math.floor((createdTime + 5 * 60 * 1000) / 1000);
                 return {
                     id: item.id,
                     userId: item.userId,
@@ -1339,7 +1339,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
             const nobuGen = await generateDynamicQris(uniqueAmount, 'nobu');
             const qrisBase64Image = typeof nobuGen === 'string' ? nobuGen : (nobuGen?.dataUrl || '');
             const dynamicRawCode = typeof nobuGen === 'string' ? '' : (nobuGen?.dynamicCode || '');
-            const expiresAtSec = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
+            const expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
 
             logUserActivity({
                 userId,
