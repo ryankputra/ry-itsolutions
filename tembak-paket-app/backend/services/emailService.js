@@ -119,7 +119,7 @@ async function sendRegistrationOtpEmail(email, otpCode, userName = 'Pengguna') {
                 </p>
                 <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; margin: 0 0 20px 0;">
                     <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: monospace;">${otpCode}</span>
-                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 10 menit.</p>
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 5 menit.</p>
                 </div>
                 <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
                     PENTING: Jangan berikan kode ini kepada siapa pun, termasuk staf Ry-ITSolutions.
@@ -133,7 +133,7 @@ async function sendRegistrationOtpEmail(email, otpCode, userName = 'Pengguna') {
     </html>
     `;
 
-    const text = `Kode Verifikasi Pendaftaran Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 10 menit. Jangan berikan kepada siapa pun.`;
+    const text = `Kode Verifikasi Pendaftaran Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 5 menit. Jangan berikan kepada siapa pun.`;
 
     return sendEmail({ to: email, subject, html, text });
 }
@@ -166,7 +166,7 @@ async function sendPasswordResetOtpEmail(email, otpCode, userName = 'Pengguna') 
                 </p>
                 <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; margin: 0 0 20px 0;">
                     <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: monospace;">${otpCode}</span>
-                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit.</p>
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 5 menit.</p>
                 </div>
                 <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
                     PENTING: Jangan berikan kode ini kepada siapa pun. Jika Anda tidak merasa meminta reset password, abaikan email ini.
@@ -180,7 +180,7 @@ async function sendPasswordResetOtpEmail(email, otpCode, userName = 'Pengguna') 
     </html>
     `;
 
-    const text = `Kode Reset Password Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
+    const text = `Kode Reset Password Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 5 menit. Jika Anda tidak memintanya, abaikan email ini.`;
 
     return sendEmail({ to: email, subject, html, text });
 }
@@ -213,7 +213,7 @@ async function sendEmailChangeOtpEmail(newEmail, otpCode, userName = 'Pengguna')
                 </p>
                 <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; margin: 0 0 20px 0;">
                     <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: monospace;">${otpCode}</span>
-                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit.</p>
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 5 menit.</p>
                 </div>
                 <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
                     PENTING: Jika Anda tidak pernah meminta perubahan alamat email, abaikan email ini dan akun Anda akan tetap aman.
@@ -227,7 +227,7 @@ async function sendEmailChangeOtpEmail(newEmail, otpCode, userName = 'Pengguna')
     </html>
     `;
 
-    const text = `Kode Verifikasi Perubahan Email Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
+    const text = `Kode Verifikasi Perubahan Email Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 5 menit. Jika Anda tidak memintanya, abaikan email ini.`;
 
     return sendEmail({ to: newEmail, subject, html, text });
 }

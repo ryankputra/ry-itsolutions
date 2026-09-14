@@ -191,7 +191,7 @@ router.post('/auth/register-request-otp', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 menit
+        const expiresAt = Date.now() + 5 * 60 * 1000; // 5 menit
         const payload = JSON.stringify({
             name,
             email: validEmail,
@@ -458,7 +458,7 @@ router.post('/auth/forgot-password-request', async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 menit
+        const expiresAt = Date.now() + 5 * 60 * 1000; // 5 menit
 
         await dbRun(
             'INSERT OR REPLACE INTO email_verifications (email, otp, type, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -704,7 +704,7 @@ router.post('/user/request-email-otp', isAuthenticated, async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = Date.now() + 15 * 60 * 1000;
+        const expiresAt = Date.now() + 5 * 60 * 1000; // 5 menit
 
         await dbRun(
             'INSERT OR REPLACE INTO email_verifications (email, otp, type, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
