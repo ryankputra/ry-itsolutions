@@ -1919,6 +1919,12 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
             return cp && !cp.endsWith("70");
         });
 
+        // Purge stale contact sessions to force fresh Signal E2E prekey exchange with WhatsApp servers
+        if (typeof waBot.purgeStalePeerSessions === 'function') {
+            const purgedCount = waBot.purgeStalePeerSessions();
+            console.log(`[WA Test Suite] Purged ${purgedCount} stale peer session files before running test suite.`);
+        }
+
         const logs = [];
 
         // 1. General Test Message

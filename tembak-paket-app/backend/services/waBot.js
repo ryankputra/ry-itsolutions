@@ -1232,8 +1232,22 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         }
     }
 
+    // Generate deterministic custom message ID for pre-caching
+    const msgId = options.messageId || ("RYY" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 7).toUpperCase());
+
+    // Prepare normalized proto payload for instant Signal retry response
+    let protoPayload = finalContent;
+    if (finalContent.text) {
+        protoPayload = { conversation: finalContent.text };
+    }
+
+    // Pre-cache in memory & SQLite BEFORE sending frame to network
+    await storeMessage(msgId, finalJid, protoPayload);
+
+    const sendOpts = { ...options, messageId: msgId };
+
     try {
-        const sent = await sock.sendMessage(finalJid, finalContent, options);
+        const sent = await sock.sendMessage(finalJid, finalContent, sendOpts);
         if (sent?.key?.id && sent?.message) {
             await storeMessage(sent.key.id, finalJid, sent.message);
         }
@@ -1249,7 +1263,7 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
                     files.forEach(f => {
                         try { fs.unlinkSync(path.join(SESSIONS_DIR, f)); } catch (e) {}
                     });
-                    const retried = await sock.sendMessage(finalJid, finalContent, options);
+                    const retried = await sock.sendMessage(finalJid, finalContent, sendOpts);
                     if (retried?.key?.id && retried?.message) {
                         await storeMessage(retried.key.id, finalJid, retried.message);
                     }
