@@ -10,9 +10,16 @@ const {
     sendTextMessage, 
     notifyNewOrder, 
     notifyCustomerOnStatusChange,
-    getAdminPhoneNumbers,
-    cleanPhone
+    getAdminPhoneNumbers
 } = require("../services/waBot");
+
+function cleanPhone(raw) {
+    if (!raw) return "";
+    let p = String(raw).replace(/\D/g, "");
+    if (p.startsWith("0")) p = "62" + p.substring(1);
+    else if (!p.startsWith("62")) p = "62" + p;
+    return p;
+}
 
 async function runWaTest() {
     console.log("=================================================");
