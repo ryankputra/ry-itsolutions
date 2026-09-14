@@ -389,7 +389,7 @@ export default function DashboardPage() {
               ),
             },
             {
-              name: "Diagnostik",
+              name: "Layanan CEIR",
               href: "/cek-ceir",
               tourKey: "service-ceir",
               iconBg: "bg-[#34C759]/10 dark:bg-[#34C759]/20 border border-[#34C759]/20 dark:border-[#34C759]/30 text-[#34C759] dark:text-[#30D158] group-hover:bg-[#34C759]/20",

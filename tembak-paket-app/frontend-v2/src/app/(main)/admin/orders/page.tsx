@@ -272,7 +272,7 @@ export default function AdminOrdersPage() {
               </div>
               <div>
                 <p className={`font-bold text-xs sm:text-sm ${orderQueueSubTab === "automated" ? "text-amber-700" : "text-ink"}`}>
-                  Log CEIR & Diagnostik (Otomatis)
+                  Log Layanan CEIR (Otomatis)
                 </p>
                 <p className="text-[11px] text-ink-muted">Layanan cek database server & generator barcode realtime.</p>
               </div>

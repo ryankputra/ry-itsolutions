@@ -57,8 +57,11 @@ export default function CekCeirPage() {
     Promise.all([
       fetch('/api/ceirgo-pricing').then(res => safeJson(res)).catch(() => null),
       fetch('/api/ceirgo-services').then(res => safeJson(res)).catch(() => ({ status: false })),
-      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false }))
-    ]).then(([ceirPrcData, ceirSvcData, displayData]) => {
+      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false })),
+      fetch('/api/ceirgo-custom-names').then(res => safeJson(res)).catch(() => null)
+    ]).then(([ceirPrcData, ceirSvcData, displayData, customNamesData]) => {
+      const customNames: Record<string, string> = customNamesData?.data || customNamesData?.customNames || ceirSvcData?.customNames || {};
+
       if (ceirPrcData?.status && ceirPrcData.data) {
         setCeirgoPricing(ceirPrcData.data);
       }
@@ -68,19 +71,26 @@ export default function CekCeirPage() {
         ? ceirSvcData.data.page.items
         : Array.isArray(ceirSvcData?.data)
           ? ceirSvcData.data
-          : [];
+          : Array.isArray(ceirSvcData?.services)
+            ? ceirSvcData.services
+            : [];
 
-      const merged = [...DIAGNOSTIC_SERVICES_CORE];
+      const merged = DIAGNOSTIC_SERVICES_CORE.map(core => ({
+        ...core,
+        name: customNames[core.code] || core.name
+      }));
+
       rawServices.forEach((svc: any) => {
         if (!svc?.code || /barcode|create/i.test(`${svc.code} ${svc.name}`)) return;
         const exists = merged.find(m => m.code === svc.code);
+        const resolvedName = customNames[svc.code] || svc.customName || svc.name || ceirgoNameMapping[svc.code];
         if (exists) {
-          exists.name = svc.name || ceirgoNameMapping[svc.code] || exists.name;
+          if (resolvedName) exists.name = resolvedName;
           exists.modalPrice = Number(svc.modalPrice ?? svc.unit_price ?? exists.modalPrice);
         } else {
           merged.push({
             code: svc.code,
-            name: svc.name || ceirgoNameMapping[svc.code] || svc.code,
+            name: resolvedName || svc.code,
             modalPrice: Number(svc.modalPrice ?? svc.unit_price ?? 2000)
           });
         }
@@ -116,18 +126,24 @@ export default function CekCeirPage() {
     return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 5000;
   };
 
+  const getServiceName = (code: string) => {
+    const svc = ceirgoServices.find(s => s.code === code);
+    return svc?.name || ceirgoNameMapping[code] || code;
+  };
+
   const executeCeirSubmission = async (methodOverride?: string) => {
     const activeMethod = methodOverride || paymentMethod;
     setError("");
     setSubmitting(true);
 
     try {
+      const selectedName = getServiceName(option);
       const formData = new FormData();
       formData.append("service_type", "ceir");
       formData.append("service_code", option);
       formData.append("price_key", option);
       formData.append("imei", imei);
-      formData.append("duration", ceirgoNameMapping[option] || option);
+      formData.append("duration", selectedName);
       formData.append("payment_method", activeMethod);
     const userPhone = user?.phone || user?.verifiedPhone || "";
     if (userPhone) {
@@ -178,6 +194,7 @@ export default function CekCeirPage() {
     if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
 
     const price = getPrice(option);
+    const serviceName = getServiceName(option);
 
     if (!user || user.balance < price) {
       Swal.fire({
@@ -198,8 +215,8 @@ export default function CekCeirPage() {
     }
 
     const confirm = await Swal.fire({
-      title: 'Konfirmasi Pesanan Diagnostik',
-      text: `Anda akan melakukan ${ceirgoNameMapping[option] || option} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
+      title: 'Konfirmasi Pesanan Layanan CEIR',
+      text: `Anda akan melakukan ${serviceName} untuk IMEI ${imei}. Biaya: Rp ${price.toLocaleString('id-ID')}. Lanjutkan?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -219,7 +236,7 @@ export default function CekCeirPage() {
     if (ceirgoServices.length === 0) {
       return (
         <div className="col-span-full p-4 text-center text-sm text-ink-muted border rounded-xl border-dashed">
-          Belum ada layanan Diagnostik IMEI yang diaktifkan oleh Admin.
+          Belum ada Layanan CEIR yang diaktifkan oleh Admin.
         </div>
       );
     }
@@ -258,7 +275,7 @@ export default function CekCeirPage() {
           type="button"
           className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-primary text-white shadow-xs flex items-center justify-center gap-1.5 transition-all"
         >
-          <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg> Diagnostik IMEI
+          <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg> Layanan CEIR
         </button>
         <button
           type="button"
@@ -276,7 +293,7 @@ export default function CekCeirPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink flex items-center gap-2">
             <span className="p-1.5 rounded-xl bg-primary/10 text-primary"><svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg></span>
-            Cek Status & Diagnostik IMEI
+            Layanan CEIR
           </h1>
           <p className="text-xs sm:text-sm text-ink-muted">Pemeriksaan database CEIR Kemenperin, Bea Cukai, Masa Aktif Sinyal, DIGI & Smartfren.</p>
         </div>
@@ -296,7 +313,7 @@ export default function CekCeirPage() {
           <div className="space-y-2.5">
             <label className="text-xs font-bold text-ink flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[11px] font-bold">1</span>
-              Pilih Layanan Diagnostik
+              Pilih Layanan CEIR
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {renderServiceButtons()}
@@ -463,7 +480,7 @@ export default function CekCeirPage() {
         }}
         amount={getPrice(option)}
         title="Pemeriksaan Berhasil Dikirim"
-        statusText="Pesanan diagnostik berhasil diproses oleh server CeirGO!"
+        statusText="Pesanan Layanan CEIR berhasil diproses oleh server CeirGO!"
         recipientLabel="IMEI Target"
         recipientValue={imei}
       />
@@ -472,7 +489,7 @@ export default function CekCeirPage() {
         isOpen={Boolean(showInstantQris)}
         onClose={() => setShowInstantQris(false)}
         amount={getPrice(option)}
-        orderTitle={`Cek ${ceirgoNameMapping[option] || option} (${imei})`}
+        orderTitle={`Cek ${getServiceName(option)} (${imei})`}
         onSuccess={() => {
           setShowInstantQris(false);
           executeCeirSubmission("qris");

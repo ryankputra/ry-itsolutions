@@ -3,10 +3,10 @@ const ceirgoClient = require('./ceirgoClient');
 
 const ceirgoRoutes = express.Router();
 
-let dbAll, isAuthenticated, isAdmin;
+let dbGet, dbAll, isAuthenticated, isAdmin;
 
 function setDependencies(deps) {
-    ({ dbAll, isAuthenticated, isAdmin } = deps);
+    ({ dbGet, dbAll, isAuthenticated, isAdmin } = deps);
 }
 
 function readModalPrice(detail, svc) {
@@ -52,18 +52,56 @@ function initCeirgoRoutes() {
     // Public list for user pages (filtered client-side by display settings)
     ceirgoRoutes.get('/ceirgo-services', async (req, res) => {
         try {
-            const ceirgoRes = await ceirgoClient.getServices({ limit: 50 });
-            if (!ceirgoRes.status) {
-                return res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
+            let customNames = {};
+            if (dbGet) {
+                try {
+                    const cnRow = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_custom_names'");
+                    if (cnRow?.value) customNames = JSON.parse(cnRow.value);
+                } catch (e) {}
             }
 
-            const services = normalizeServices(ceirgoRes);
-            const finalServices = Array.isArray(services) && services.length > 0 ? services : DEFAULT_FALLBACK_SERVICES;
+            const ceirgoRes = await ceirgoClient.getServices({ limit: 50 });
+            const rawServices = !ceirgoRes.status ? DEFAULT_FALLBACK_SERVICES : normalizeServices(ceirgoRes);
+            const finalRaw = Array.isArray(rawServices) && rawServices.length > 0 ? rawServices : DEFAULT_FALLBACK_SERVICES;
 
-            res.json({ status: true, data: finalServices });
+            const services = finalRaw.map(svc => ({
+                ...svc,
+                name: customNames[svc.code] || svc.customName || svc.name,
+                customName: customNames[svc.code] || svc.customName || svc.name
+            }));
+
+            res.json({ status: true, data: services, services, customNames, fallback: !ceirgoRes.status });
         } catch (error) {
             console.warn("[API Warning] CeirGO live server offline/timed out. Using fallback diagnostic catalog:", error.message);
-            res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
+            let customNames = {};
+            if (dbGet) {
+                try {
+                    const cnRow = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_custom_names'");
+                    if (cnRow?.value) customNames = JSON.parse(cnRow.value);
+                } catch (e) {}
+            }
+            const fallbackSvcs = DEFAULT_FALLBACK_SERVICES.map(svc => ({
+                ...svc,
+                name: customNames[svc.code] || svc.name,
+                customName: customNames[svc.code] || svc.name
+            }));
+            res.json({ status: true, data: fallbackSvcs, services: fallbackSvcs, customNames, fallback: true });
+        }
+    });
+
+    // Public endpoint for custom names
+    ceirgoRoutes.get('/ceirgo-custom-names', async (req, res) => {
+        try {
+            let customNames = {};
+            if (dbGet) {
+                const row = await dbGet("SELECT value FROM settings WHERE key = 'ceirgo_custom_names'");
+                if (row && row.value) {
+                    try { customNames = JSON.parse(row.value); } catch (e) {}
+                }
+            }
+            res.json({ status: true, data: customNames, customNames });
+        } catch (e) {
+            res.status(500).json({ status: false, message: e.message });
         }
     });
 

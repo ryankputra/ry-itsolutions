@@ -827,14 +827,14 @@ export default function AdminImeiPage() {
           </Card>
         </div>
 
-        {/* Kolom Kanan: Layanan Diagnostik & Server Pusat (CEIR, Bea Cukai, Barcode) */}
+        {/* Kolom Kanan: Layanan CEIR & Server Pusat (CEIR, Bea Cukai, Barcode) */}
         <div className="lg:col-span-6 space-y-6">
           <Card glass className="p-5 space-y-4">
             <div className="flex justify-between items-start flex-wrap gap-2 border-b border-hairline pb-3">
               <div>
                 <h3 className="text-sm font-bold text-ink flex items-center gap-2">
                   <Server className="w-4 h-4 text-primary" />
-                  Layanan Diagnostik & Server Pusat CEIR
+                  Layanan CEIR & Server Pusat
                 </h3>
                 <p className="text-xs text-ink-muted mt-0.5">Atur harga jual dan visibilitas cek database CEIR, Bea Cukai, & Barcode.</p>
               </div>
@@ -843,7 +843,7 @@ export default function AdminImeiPage() {
             {/* Category 1: Cek Database Server */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-ink">Cek Database & Diagnostik Sinyal</span>
+                <span className="text-xs font-bold text-ink">Cek Database & Layanan CEIR</span>
                 <span className="text-[10px] bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
                   {ceirgoServices.filter((s) => !/barcode|create/i.test(`${s.code} ${s.name}`) && ceirgoDisplayCodes.has(s.code)).length} Aktif
                 </span>

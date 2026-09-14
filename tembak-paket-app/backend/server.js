@@ -148,7 +148,7 @@ initializeDatabase();
 app.get('/api/stream', handleSseStream);
 
 // 7. Mount CeirGO Module
-setDependencies({ dbAll, isAuthenticated, isAdmin, CEIRGO_API_KEY, CEIRGO_BASE_URL });
+setDependencies({ dbGet, dbAll, isAuthenticated, isAdmin, CEIRGO_API_KEY, CEIRGO_BASE_URL });
 initCeirgoRoutes();
 app.use('/api', ceirgoRoutes);
 

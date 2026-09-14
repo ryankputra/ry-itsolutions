@@ -98,7 +98,7 @@ export function EcommerceHeader() {
   const services = [
     { title: "Payment Gateway GoPay & QRIS (Unofficial)", desc: "Integrasi API terima pembayaran otomatis toko Anda", href: "/gateway", tag: "Developer" },
     { title: "Buka Blokir IMEI (All Operator)", desc: "1 Bulan, 3 Bulan, Garansi Resmi", href: "/unblock-imei", tag: "Populer" },
-    { title: "Cek Status & Diagnostik IMEI", desc: "Verifikasi CEIR, Bea Cukai, Sinyal, DIGI & SF", href: "/cek-ceir", tag: "Instan" },
+    { title: "Layanan CEIR", desc: "Verifikasi CEIR, Bea Cukai, Sinyal, DIGI & SF", href: "/cek-ceir", tag: "Instan" },
     { title: "Generator Barcode Device", desc: "Cetak barcode IMEI Samsung, Redmi & iOS 26", href: "/barcode", tag: "Alat" },
     { title: "Cek Garansi & Lacak IMEI", desc: "Pantau masa aktif dan cetak nota digital", href: "/cek-garansi", tag: "Garansi" },
     { title: "Klaim Voucher Diskon", desc: "Kupon promo cashback & potongan harga", href: "/vouchers", tag: "Hemat" },

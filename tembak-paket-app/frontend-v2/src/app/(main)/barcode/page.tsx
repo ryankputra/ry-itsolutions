@@ -52,8 +52,11 @@ export default function BarcodePage() {
     Promise.all([
       fetch('/api/ceirgo-pricing').then(res => safeJson(res)).catch(() => null),
       fetch('/api/ceirgo-services').then(res => safeJson(res)).catch(() => ({ status: false })),
-      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false }))
-    ]).then(([ceirPrcData, ceirSvcData, displayData]) => {
+      fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false })),
+      fetch('/api/ceirgo-custom-names').then(res => safeJson(res)).catch(() => null)
+    ]).then(([ceirPrcData, ceirSvcData, displayData, customNamesData]) => {
+      const customNames: Record<string, string> = customNamesData?.data || customNamesData?.customNames || ceirSvcData?.customNames || {};
+
       if (ceirPrcData?.status && ceirPrcData.data) {
         setCeirgoPricing(ceirPrcData.data);
       }
@@ -63,19 +66,26 @@ export default function BarcodePage() {
         ? ceirSvcData.data.page.items
         : Array.isArray(ceirSvcData?.data)
           ? ceirSvcData.data
-          : [];
+          : Array.isArray(ceirSvcData?.services)
+            ? ceirSvcData.services
+            : [];
 
-      const merged = [...BARCODE_SERVICES_CORE];
+      const merged = BARCODE_SERVICES_CORE.map(core => ({
+        ...core,
+        name: customNames[core.code] || core.name
+      }));
+
       rawServices.forEach((svc: any) => {
         if (!svc?.code || !/barcode|create/i.test(`${svc.code} ${svc.name}`)) return;
         const exists = merged.find(m => m.code === svc.code);
+        const resolvedName = customNames[svc.code] || svc.customName || svc.name || ceirgoNameMapping[svc.code];
         if (exists) {
-          exists.name = svc.name || ceirgoNameMapping[svc.code] || exists.name;
+          if (resolvedName) exists.name = resolvedName;
           exists.modalPrice = Number(svc.modalPrice ?? svc.unit_price ?? exists.modalPrice);
         } else {
           merged.push({
             code: svc.code,
-            name: svc.name || ceirgoNameMapping[svc.code] || svc.code,
+            name: resolvedName || svc.code,
             modalPrice: Number(svc.modalPrice ?? svc.unit_price ?? 5000)
           });
         }
@@ -111,12 +121,18 @@ export default function BarcodePage() {
     return Number.isFinite(modalPrice) && modalPrice > 0 ? modalPrice : 5000;
   };
 
+  const getServiceName = (code: string) => {
+    const svc = barcodeServices.find(s => s.code === code);
+    return svc?.name || ceirgoNameMapping[code] || code;
+  };
+
   const executeBarcodeSubmission = async (methodOverride?: string) => {
     const activeMethod = methodOverride || paymentMethod;
     setError("");
     setSubmitting(true);
 
     try {
+      const selectedName = getServiceName(option);
       const formData = new FormData();
       formData.append("service_type", "barcode");
       formData.append("service_code", option);
@@ -124,7 +140,7 @@ export default function BarcodePage() {
       formData.append("imei", imei);
       if (imei2) formData.append("imei2", imei2);
       formData.append("theme", theme);
-      formData.append("duration", ceirgoNameMapping[option] || option);
+      formData.append("duration", selectedName);
       formData.append("payment_method", activeMethod);
 
       const res = await fetch("/api/order/barcode", {
@@ -253,7 +269,7 @@ export default function BarcodePage() {
           onClick={() => router.push('/cek-ceir')}
           className="flex-1 py-2 px-3 text-xs font-semibold text-ink-muted hover:text-ink rounded-xl flex items-center justify-center gap-1.5 transition-all"
         >
-          <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg> Diagnostik IMEI
+          <svg className="w-3.5 h-3.5 inline mr-1 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg> Layanan CEIR
         </button>
         <button
           type="button"

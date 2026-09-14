@@ -317,7 +317,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
 
     // Send Telegram Admin Notification asynchronously
     try {
-        const notifMsg = `🔔 <b>PESANAN BARU (${isBarcode ? 'BARCODE' : 'DIAGNOSTIK CEIR'})</b>\n` +
+        const notifMsg = `🔔 <b>PESANAN BARU (${isBarcode ? 'BARCODE' : 'LAYANAN CEIR'})</b>\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🆔 <b>Trx ID:</b> <code>${trxId}</code>\n` +
             `👤 <b>User:</b> ${user.name || user.email || '-'} (${user.email || '-'})\n` +

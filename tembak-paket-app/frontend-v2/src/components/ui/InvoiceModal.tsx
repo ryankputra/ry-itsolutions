@@ -699,7 +699,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
                     <span className="text-slate-500 font-medium">Tipe Layanan</span>
                     <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                      Pengecekan Data & Diagnostik (Non-Garansi)
+                      Pengecekan Data & Layanan CEIR (Non-Garansi)
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 items-center">
