@@ -23,6 +23,7 @@ import {
   Edit2,
   X,
   AlertTriangle,
+  Activity,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -251,6 +252,87 @@ export default function AdminSettingsPage() {
       Swal.fire({ title: "Error", text: "Terjadi kesalahan saat verifikasi OTP." });
     } finally {
       setGopayVerifyingOtp(false);
+    }
+  };
+
+  const handleLogoutGopay = async () => {
+    const confirm = await Swal.fire({
+      title: "Putus Sesi GoBiz?",
+      text: "Sesi merchant GoPay (GoBiz) akan diputus dan file token akan dihapus.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Disconnect",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444",
+    });
+    if (!confirm.isConfirmed) return;
+
+    setLoadingGopay(true);
+    try {
+      const res = await fetch("/api/admin/gopay/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      const d = await safeJson(res);
+      if (d?.status || d?.success) {
+        Swal.fire({
+          title: "Terputus",
+          text: d?.message || "Sesi GoPay Merchant berhasil diputus.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        loadGopayStatus();
+      } else {
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal memutus sesi GoPay." });
+      }
+    } catch (e: any) {
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan koneksi saat logout GoPay." });
+    } finally {
+      setLoadingGopay(false);
+    }
+  };
+
+  const handleCheckGopayEndpoint = async () => {
+    setLoadingGopay(true);
+    try {
+      const startTime = Date.now();
+      const res = await fetch("/api/admin/gopay/status", { credentials: "include" });
+      const elapsed = Date.now() - startTime;
+      const d = await safeJson(res);
+
+      if (d?.status && d.data) {
+        setGopayStatus(d.data);
+        const isConnected = d.data.token_status === "valid";
+        const outlet = d.data.outlet_name || d.data.session_info?.outlet_name || "Merchant";
+        const phone = d.data.phone_number || d.data.session_info?.phone_number || d.data.gopayPhone || "-";
+
+        Swal.fire({
+          title: isConnected ? "Endpoint GoPay Terhubung!" : "Endpoint GoPay Aktif",
+          html: `
+            <div class="text-left text-xs space-y-2 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg font-mono">
+              <div><b>Status API:</b> <span class="text-emerald-600 font-bold">200 OK (${elapsed}ms)</span></div>
+              <div><b>Status Sesi:</b> <span class="${isConnected ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}">${d.data.token_status || 'Belum Login'}</span></div>
+              <div><b>Nama Outlet:</b> ${outlet}</div>
+              <div><b>No HP Merchant:</b> ${phone}</div>
+            </div>
+          `,
+          icon: isConnected ? "success" : "info",
+        });
+      } else {
+        Swal.fire({
+          title: "Koneksi Endpoint Gagal",
+          text: d?.message || "Gateway GoPay tidak merespon dengan benar.",
+          icon: "error",
+        });
+      }
+    } catch (e: any) {
+      Swal.fire({
+        title: "Error Endpoint",
+        text: "Tidak dapat terhubung ke endpoint GoPay Gateway.",
+        icon: "error",
+      });
+    } finally {
+      setLoadingGopay(false);
     }
   };
 
@@ -705,14 +787,54 @@ export default function AdminSettingsPage() {
             </div>
 
             {gopayStatus?.token_status === "valid" ? (
-              <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-2 text-xs">
-                <p className="font-bold text-ink">Sesi GoBiz Aktif</p>
-                <p className="text-ink-muted text-[11px]">
-                  Outlet: <b>{gopayStatus.outlet_name || gopayStatus.session_info?.outlet_name || "Merchant"}</b> &bull; No HP: {gopayStatus.phone_number || gopayStatus.session_info?.phone_number || gopayStatus.gopayPhone || "-"}
-                </p>
+              <div className="space-y-3">
+                <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-2 text-xs">
+                  <p className="font-bold text-ink flex items-center justify-between">
+                    <span>Sesi GoBiz Aktif</span>
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md">Token Valid</span>
+                  </p>
+                  <p className="text-ink-muted text-[11px]">
+                    Outlet: <b>{gopayStatus.outlet_name || gopayStatus.session_info?.outlet_name || "Merchant"}</b> &bull; No HP: {gopayStatus.phone_number || gopayStatus.session_info?.phone_number || gopayStatus.gopayPhone || "-"}
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCheckGopayEndpoint}
+                    disabled={loadingGopay}
+                    className="flex-1 text-xs font-bold h-9 gap-1.5 border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    Cek Endpoint
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={handleLogoutGopay}
+                    disabled={loadingGopay}
+                    className="text-xs font-bold h-9 gap-1.5 bg-rose-600 hover:bg-rose-700 text-white"
+                  >
+                    <Power className="w-3.5 h-3.5" />
+                    Diskonek (Logout)
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3 text-xs">
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCheckGopayEndpoint}
+                    disabled={loadingGopay}
+                    className="text-[11px] h-7 gap-1 text-sky-600 dark:text-sky-400 border-sky-500/30"
+                  >
+                    <Activity className="w-3 h-3" />
+                    Cek Endpoint
+                  </Button>
+                </div>
                 {!gopayOtpSent ? (
                   <form onSubmit={handleRequestGopayOtp} className="space-y-3">
                     <Input
