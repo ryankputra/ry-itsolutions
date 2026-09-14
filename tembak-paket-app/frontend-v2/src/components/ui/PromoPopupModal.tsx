@@ -129,17 +129,17 @@ export function PromoPopupModal() {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
       />
 
-      {/* Modal Card: Minimalist, Apple Obsidian Design */}
-      <div className="relative w-full max-w-[360px] sm:max-w-[400px] bg-parchment rounded-3xl overflow-hidden shadow-2xl border border-hairline z-10 flex flex-col animate-in zoom-in-95 duration-200">
+      {/* Modal Card: Minimalist Glassmorphism Design */}
+      <div className="relative w-full max-w-[360px] sm:max-w-[400px] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-2xl border border-white/40 dark:border-white/10 z-10 flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Minimalist Visual Header (No AI Stock Images) */}
-        <div className="relative px-5 pt-6 pb-4 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent border-b border-hairline/50 flex flex-col items-center text-center select-none">
+        <div className="relative px-5 pt-6 pb-4 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent border-b border-hairline/30 flex flex-col items-center text-center select-none">
           
           {/* Close button (X) */}
           <button
             onClick={handleClose}
             aria-label="Tutup pengumuman"
-            className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-canvas/80 hover:bg-canvas text-ink-muted hover:text-ink border border-hairline/80 flex items-center justify-center active:scale-90 transition-all shadow-xs cursor-pointer z-10"
+            className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300/40 dark:border-slate-700/40 flex items-center justify-center active:scale-90 transition-all shadow-xs cursor-pointer z-10"
           >
             <X className="w-4 h-4" />
           </button>
@@ -188,7 +188,7 @@ export function PromoPopupModal() {
           {parsed.coupon && (
             <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-dashed border-amber-500/30 text-amber-900 dark:text-amber-200">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-base shrink-0">🎟️</span>
+                <Ticket className="w-4 h-4 text-amber-500 shrink-0" />
                 <div className="min-w-0">
                   <div className="text-[9px] font-semibold text-amber-900/70 dark:text-amber-300/80 uppercase tracking-wider font-mono">KODE KUPON</div>
                   <div className="text-xs font-black font-mono tracking-wider truncate">{parsed.coupon}</div>
@@ -211,7 +211,7 @@ export function PromoPopupModal() {
           )}
 
           {/* Announcement Message */}
-          <div className="p-3.5 rounded-2xl bg-canvas/60 border border-hairline/60 text-xs sm:text-sm text-ink leading-relaxed font-medium whitespace-pre-line">
+          <div className="p-3.5 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 text-xs sm:text-sm text-ink leading-relaxed font-medium whitespace-pre-line">
             {parsed.body}
           </div>
 
