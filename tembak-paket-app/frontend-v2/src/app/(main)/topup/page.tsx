@@ -613,7 +613,7 @@ export default function TopUpPage() {
             >
               {gatewayInfo && !gatewayInfo.is_ready
                 ? "Pembayaran Otomatis Offline (Hubungi Admin)"
-                : `Lanjut Bayar (Rp ${selectedNum.toLocaleString("id-ID")})`}
+                : `Lanjut Top Up (Rp ${selectedNum.toLocaleString("id-ID")})`}
             </Button>
           </form>
         ) : (

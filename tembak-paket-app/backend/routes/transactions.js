@@ -124,7 +124,7 @@ async function generateGopayQris(amount) {
     const genRes = await generateQrisDataUrl(template, amount);
     const trxId = 'TRX-GP-' + Math.random().toString(36).substring(2, 10).toUpperCase();
     const qrisId = Math.random().toString(36).substring(2, 10);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     return {
         qris_id: qrisId,
@@ -135,7 +135,7 @@ async function generateGopayQris(amount) {
         qris_code: genRes.dynamicCode,
         amount: parseInt(amount, 10),
         expires_at: expiresAt.toISOString(),
-        expires_in: '10 menit',
+        expires_in: '5 menit',
         merchant: 'RyyStore IT Solutions'
     };
 }
@@ -312,7 +312,7 @@ function checkGopayPaymentStatus(id, amount, gopayTrxId, startTime) {
     const URL = process.env.GOPAY_GATEWAY_URL;
     const API_KEY = process.env.GOPAY_GATEWAY_API_KEY;
     if (!URL || !API_KEY) return;
-    const maxDurationMs = 10 * 60 * 1000;
+    const maxDurationMs = 5 * 60 * 1000;
     const interval = 8000;
 
     const isTopup = id.startsWith('TU-');
@@ -865,7 +865,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                         } catch (e) {}
                     }
                     gopayTrxId = gopayData.trx_id;
-                    expiresAtSec = Math.floor((Date.now() + 10 * 60 * 1000) / 1000);
+                    expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
                 } else {
                     const uniqueCode = Math.floor(Math.random() * 900) + 100;
                     uniqueAmt = finalPriceToPay + uniqueCode;
@@ -1282,7 +1282,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
         if (isGopay) {
             const gopayData = await generateGopayQris(baseAmount);
             const topUpId = `TU-GP-${Date.now()}`;
-            const expiresAtSec = Math.floor((Date.now() + 10 * 60 * 1000) / 1000);
+            const expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
             let qrisImg = gopayData.qris_image || gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
             if (qrisImg && !qrisImg.startsWith('data:image') && gopayData.qris_code) {
                 try {
