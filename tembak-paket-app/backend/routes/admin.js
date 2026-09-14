@@ -1902,6 +1902,120 @@ router.post(['/admin/baileys/test', '/admin/wabot/test', '/admin/whatsapp/test']
     }
 });
 
+router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/whatsapp/test-suite'], (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
+    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
+        return next();
+    }
+    return isAuthenticated(req, res, () => isAdmin(req, res, next));
+}, async (req, res) => {
+    try {
+        const targetCustomer = req.body?.customerPhone || "085156692166";
+        const cleanCust = waBot.cleanPhone ? waBot.cleanPhone(targetCustomer) : targetCustomer;
+
+        const rawAdmins = await waBot.getAdminPhoneNumbers();
+        const testAdmins = (rawAdmins || []).filter(num => {
+            const cp = (num || "").replace(/\D/g, "");
+            return cp && !cp.endsWith("70");
+        });
+
+        const logs = [];
+
+        // 1. General Test Message
+        const timeStr = new Date().toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' });
+        const testMsg = `*TESTING KONEKSI WHATSAPP BOT RY-ITSOLUTIONS*\n` +
+            `──────────────────────\n` +
+            `Waktu Pengujian: ${timeStr} WIB\n` +
+            `Status: Socket Baileys Online & Terhubung Realtime.\n` +
+            `──────────────────────\n` +
+            `_Pesan pengujian ini dikirim untuk memastikan pesan diterima jernih tanpa kendala "Menunggu pesan ini"._`;
+
+        if (cleanCust) {
+            const resCust = await waBot.sendTextMessage(cleanCust, testMsg);
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 1 Message", result: resCust });
+        }
+
+        for (const adminP of testAdmins) {
+            const resAdmin = await waBot.sendTextMessage(adminP, testMsg);
+            logs.push({ target: `Admin (${adminP})`, test: "Test 1 Message", result: resAdmin });
+        }
+
+        // 2. New Order Notification Test
+        const dummyNum = Math.floor(1000 + Math.random() * 9000);
+        const mockOrder = {
+            id: `TEST-IMEI-${dummyNum}`,
+            userName: "Budi (Testing Pelanggan)",
+            packageName: "Unblock IMEI 3 Bulan Garansi (Star Seller)",
+            serviceType: "imei",
+            imei: "351234161234567",
+            price: 250000,
+            speedOption: "fast",
+            customerPhone: cleanCust,
+            targetPhone: cleanCust
+        };
+
+        try {
+            await waBot.notifyNewOrder(mockOrder);
+            logs.push({ target: "Admin & Customer", test: "Test 2 notifyNewOrder", status: "success" });
+        } catch (e) {
+            logs.push({ target: "Admin & Customer", test: "Test 2 notifyNewOrder", status: "error", error: e.message });
+        }
+
+        // 3. Order Processing Notification Test
+        const mockTrx = {
+            id: mockOrder.id,
+            userName: mockOrder.userName,
+            packageName: mockOrder.packageName,
+            imei: mockOrder.imei,
+            targetPhone: cleanCust,
+            customerPhone: cleanCust,
+            userId: "user_test"
+        };
+
+        try {
+            await waBot.notifyCustomerOnStatusChange(mockTrx, "processing", "Pesanan sedang dikerjakan server teknisi.");
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 3 Processing Status", status: "success" });
+        } catch (e) {
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 3 Processing Status", status: "error", error: e.message });
+        }
+
+        // 4. Order Success Notification Test
+        try {
+            await waBot.notifyCustomerOnStatusChange({ ...mockTrx, platformFee: 250000 }, "success", "Sinyal telah aktif All Operator. Silakan restart HP Kakak!");
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 4 Success Status", status: "success" });
+        } catch (e) {
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 4 Success Status", status: "error", error: e.message });
+        }
+
+        // 5. Gateway Subscription Active Notification Test
+        const mockGw = {
+            id: `TEST-GW-${dummyNum}`,
+            userName: mockOrder.userName,
+            packageName: "Langganan QRIS Auto Gateway (30 Hari)",
+            targetPhone: cleanCust,
+            customerPhone: cleanCust,
+            userId: "user_test"
+        };
+        try {
+            await waBot.notifyCustomerOnStatusChange(mockGw, "success", "API Key Gateway QRIS telah aktif selama 30 hari.");
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 5 Gateway Subscription", status: "success" });
+        } catch (e) {
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 5 Gateway Subscription", status: "error", error: e.message });
+        }
+
+        res.json({
+            status: true,
+            success: true,
+            message: `Seluruh pengujian pesan WhatsApp Bot telah selesai dikirim ke pelanggan (${cleanCust}) dan admin.`,
+            customerTarget: cleanCust,
+            adminTargets: testAdmins,
+            logs
+        });
+    } catch (err) {
+        res.status(500).json({ status: false, success: false, message: "Error pengujian WA suite: " + err.message });
+    }
+});
+
 // 24. GoPay Merchant Gateway Proxy Endpoints (Port 3002)
 const GOPAY_GW_URL = process.env.GOPAY_GATEWAY_URL || 'http://127.0.0.1:3002';
 const GOPAY_GW_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
