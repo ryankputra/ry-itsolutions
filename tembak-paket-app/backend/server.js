@@ -80,6 +80,10 @@ const allowedOrigins = [
     'http://127.0.0.1:3001',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://ry-itsolutionts.web.id',
+    'http://ry-itsolutionts.web.id',
+    'https://www.ry-itsolutionts.web.id',
+    'http://www.ry-itsolutionts.web.id',
     'https://ry-itsolutions.web.id',
     'http://ry-itsolutions.web.id',
     'https://www.ry-itsolutions.web.id',
@@ -96,7 +100,7 @@ app.use(cors({
             origin.startsWith('http://127.0.0.1:') ||
             origin.startsWith('http://192.168.') ||
             origin.includes('telegram.org') ||
-            /^https?:\/\/([a-z0-9-]+\.)*ry-itsolutions\.web\.id$/i.test(origin)
+            /^https?:\/\/([a-z0-9-]+\.)*ry-itsolutiont?s?\.web\.id$/i.test(origin)
         ) {
             return callback(null, true);
         }

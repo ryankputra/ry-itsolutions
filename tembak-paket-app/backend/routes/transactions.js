@@ -1266,12 +1266,13 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
         const userId = req.session.userId;
         const baseAmount = parseInt(amount, 10);
 
-        if (isNaN(baseAmount) || baseAmount < 5000) {
-            return res.status(400).json({ status: false, message: 'Jumlah top up minimal Rp 5.000' });
-        }
-
         const user = await dbGet("SELECT * FROM users WHERE id = ?", [userId]);
         if (!user) return res.status(404).json({ status: false, message: 'User tidak ditemukan.' });
+
+        const minLimit = user.role === 'admin' ? 1 : 5000;
+        if (isNaN(baseAmount) || baseAmount < minLimit) {
+            return res.status(400).json({ status: false, message: `Jumlah top up minimal Rp ${minLimit.toLocaleString('id-ID')}` });
+        }
 
         const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
         const activeGateway = gwRow ? gwRow.value : 'orkut';
