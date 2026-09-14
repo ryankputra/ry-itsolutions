@@ -87,46 +87,54 @@ async function sendEmail({ to, subject, html, text }) {
 }
 
 /**
+function cleanName(name) {
+    if (!name || typeof name !== 'string') return 'Pengguna';
+    const stripped = name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F170}-\u{1F251}]/gu, '').trim();
+    return stripped || 'Pengguna';
+}
+
+/**
  * Template pengiriman OTP Verifikasi Pendaftaran Akun
  */
 async function sendRegistrationOtpEmail(email, otpCode, userName = 'Pengguna') {
-    const subject = `${otpCode} adalah Kode Verifikasi Ry-ITSolutions Anda`;
+    const safeName = cleanName(userName);
+    const subject = `Kode Verifikasi Pendaftaran: ${otpCode}`;
     const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="id">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Kode Verifikasi</title>
+        <title>Verifikasi Pendaftaran</title>
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; margin: 0; padding: 24px;">
-        <div style="max-width: 520px; margin: 0 auto; background: #161e2e; border: 1px solid #2d3748; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-            <div style="background: linear-gradient(135deg, #3b82f6, #6366f1); padding: 28px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Ry-ITSolutions</h1>
-                <p style="color: #e0e7ff; margin: 6px 0 0 0; font-size: 14px;">Verifikasi Akun Baru</p>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px;">
+        <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <div style="background-color: #0f172a; padding: 24px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">Ry-ITSolutions</h1>
+                <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 13px;">Verifikasi Akun Baru</p>
             </div>
-            <div style="padding: 32px 28px;">
-                <p style="font-size: 16px; margin: 0 0 16px 0;">Halo <strong>${userName}</strong>,</p>
-                <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0;">
-                    Terima kasih telah mendaftar. Gunakan kode verifikasi di bawah ini untuk mengaktifkan akun Anda:
+            <div style="padding: 28px 24px;">
+                <p style="font-size: 15px; margin: 0 0 14px 0; color: #1e293b;">Halo <strong>${safeName}</strong>,</p>
+                <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
+                    Terima kasih telah mendaftar. Gunakan kode verifikasi 6 digit di bawah ini untuk mengaktifkan akun Anda:
                 </p>
-                <div style="background: #0f172a; border: 2px dashed #3b82f6; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
-                    <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #60a5fa; font-family: monospace;">${otpCode}</span>
-                    <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode ini berlaku selama 10 menit</p>
+                <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; margin: 0 0 20px 0;">
+                    <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: monospace;">${otpCode}</span>
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 10 menit.</p>
                 </div>
-                <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin: 0 0 8px 0;">
-                    ⚠️ <strong>PENTING:</strong> Jangan pernah memberikan kode ini kepada siapapun, termasuk staf Ry-ITSolutions.
+                <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
+                    PENTING: Jangan berikan kode ini kepada siapa pun, termasuk staf Ry-ITSolutions.
                 </p>
             </div>
-            <div style="background: #0f172a; padding: 16px 28px; text-align: center; border-top: 1px solid #1e293b;">
-                <p style="margin: 0; font-size: 12px; color: #64748b;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
+            <div style="background: #f8fafc; padding: 14px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 12px; color: #94a3b8;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
             </div>
         </div>
     </body>
     </html>
     `;
 
-    const text = `Kode Verifikasi Ry-ITSolutions Anda adalah: ${otpCode}. Kode ini berlaku selama 10 menit. Jangan berikan kepada siapapun.`;
+    const text = `Kode Verifikasi Pendaftaran Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 10 menit. Jangan berikan kepada siapa pun.`;
 
     return sendEmail({ to: email, subject, html, text });
 }
@@ -136,43 +144,44 @@ async function sendRegistrationOtpEmail(email, otpCode, userName = 'Pengguna') {
  * Template pengiriman OTP Lupa / Reset Password
  */
 async function sendPasswordResetOtpEmail(email, otpCode, userName = 'Pengguna') {
-    const subject = `${otpCode} adalah Kode Reset Password Ry-ITSolutions Anda`;
+    const safeName = cleanName(userName);
+    const subject = `Kode Verifikasi Reset Password: ${otpCode}`;
     const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="id">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Reset Password</title>
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; margin: 0; padding: 24px;">
-        <div style="max-width: 520px; margin: 0 auto; background: #161e2e; border: 1px solid #2d3748; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-            <div style="background: linear-gradient(135deg, #ef4444, #8b5cf6); padding: 28px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Ry-ITSolutions</h1>
-                <p style="color: #fecdd3; margin: 6px 0 0 0; font-size: 14px;">Permintaan Reset Password</p>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px;">
+        <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <div style="background-color: #0f172a; padding: 24px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">Ry-ITSolutions</h1>
+                <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 13px;">Permintaan Reset Password</p>
             </div>
-            <div style="padding: 32px 28px;">
-                <p style="font-size: 16px; margin: 0 0 16px 0;">Halo <strong>${userName}</strong>,</p>
-                <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0;">
-                    Kami menerima permintaan untuk mengatur ulang kata sandi akun Ry-ITSolutions Anda. Gunakan kode verifikasi 6 digit di bawah ini untuk membuat password baru:
+            <div style="padding: 28px 24px;">
+                <p style="font-size: 15px; margin: 0 0 14px 0; color: #1e293b;">Halo <strong>${safeName}</strong>,</p>
+                <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
+                    Kami menerima permintaan untuk mengatur ulang kata sandi akun Ry-ITSolutions Anda. Gunakan kode verifikasi 6 digit berikut:
                 </p>
-                <div style="background: #0f172a; border: 2px dashed #ef4444; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
-                    <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #f87171; font-family: monospace;">${otpCode}</span>
-                    <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit</p>
+                <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; margin: 0 0 20px 0;">
+                    <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: monospace;">${otpCode}</span>
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit.</p>
                 </div>
-                <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin: 0 0 8px 0;">
-                    🔒 Jika Anda tidak merasa meminta reset password, Anda dapat mengabaikan email ini dengan aman. Password Anda tidak akan berubah.
+                <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
+                    PENTING: Jangan berikan kode ini kepada siapa pun. Jika Anda tidak merasa meminta reset password, abaikan email ini.
                 </p>
             </div>
-            <div style="background: #0f172a; padding: 16px 28px; text-align: center; border-top: 1px solid #1e293b;">
-                <p style="margin: 0; font-size: 12px; color: #64748b;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
+            <div style="background: #f8fafc; padding: 14px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 12px; color: #94a3b8;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
             </div>
         </div>
     </body>
     </html>
     `;
 
-    const text = `Kode Reset Password Ry-ITSolutions Anda adalah: ${otpCode}. Kode ini berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
+    const text = `Kode Reset Password Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
 
     return sendEmail({ to: email, subject, html, text });
 }
@@ -182,42 +191,44 @@ async function sendPasswordResetOtpEmail(email, otpCode, userName = 'Pengguna') 
  * Mengirimkan email OTP untuk perubahan alamat email akun
  */
 async function sendEmailChangeOtpEmail(newEmail, otpCode, userName = 'Pengguna') {
-    const subject = `${otpCode} adalah Kode Verifikasi Penggantian Email Akun - Ry-ITSolutions`;
+    const safeName = cleanName(userName);
+    const subject = `Kode Verifikasi Perubahan Email: ${otpCode}`;
     const html = `
     <!DOCTYPE html>
     <html lang="id">
     <head>
         <meta charset="UTF-8">
-        <title>Verifikasi Ganti Email</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Perubahan Email</title>
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; margin: 0; padding: 24px;">
-        <div style="max-width: 520px; margin: 0 auto; background: #161e2e; border: 1px solid #2d3748; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-            <div style="background: linear-gradient(135deg, #0284c7, #6366f1); padding: 28px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Ry-ITSolutions</h1>
-                <p style="color: #bae6fd; margin: 6px 0 0 0; font-size: 14px;">Verifikasi Penggantian Email Akun</p>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px;">
+        <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <div style="background-color: #0f172a; padding: 24px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">Ry-ITSolutions</h1>
+                <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 13px;">Verifikasi Perubahan Alamat Email</p>
             </div>
-            <div style="padding: 32px 28px;">
-                <p style="font-size: 16px; margin: 0 0 16px 0;">Halo <strong>${userName}</strong>,</p>
-                <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0;">
-                    Kami menerima permintaan untuk mengganti alamat email akun Ry-ITSolutions Anda ke alamat email baru ini. Masukkan kode verifikasi 6 digit berikut pada halaman profil untuk menyelesaikan proses:
+            <div style="padding: 28px 24px;">
+                <p style="font-size: 15px; margin: 0 0 14px 0; color: #1e293b;">Halo <strong>${safeName}</strong>,</p>
+                <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
+                    Kami menerima permintaan untuk mengganti alamat email akun Ry-ITSolutions Anda. Masukkan kode verifikasi 6 digit berikut:
                 </p>
-                <div style="background: #0f172a; border: 2px dashed #0284c7; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
-                    <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #38bdf8; font-family: monospace;">${otpCode}</span>
-                    <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit</p>
+                <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; margin: 0 0 20px 0;">
+                    <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: monospace;">${otpCode}</span>
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama 15 menit.</p>
                 </div>
-                <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin: 0 0 8px 0;">
-                    🔒 Jika Anda tidak pernah meminta perubahan alamat email, abaikan email ini dan akun Anda akan tetap aman.
+                <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
+                    PENTING: Jika Anda tidak pernah meminta perubahan alamat email, abaikan email ini dan akun Anda akan tetap aman.
                 </p>
             </div>
-            <div style="background: #0f172a; padding: 16px 28px; text-align: center; border-top: 1px solid #1e293b;">
-                <p style="margin: 0; font-size: 12px; color: #64748b;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
+            <div style="background: #f8fafc; padding: 14px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 12px; color: #94a3b8;">© ${new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
             </div>
         </div>
     </body>
     </html>
     `;
 
-    const text = `Kode Verifikasi Ganti Email Ry-ITSolutions Anda adalah: ${otpCode}. Kode ini berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
+    const text = `Kode Verifikasi Perubahan Email Ry-ITSolutions Anda adalah: ${otpCode}. Kode berlaku selama 15 menit. Jika Anda tidak memintanya, abaikan email ini.`;
 
     return sendEmail({ to: newEmail, subject, html, text });
 }
