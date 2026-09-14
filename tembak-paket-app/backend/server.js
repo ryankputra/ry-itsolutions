@@ -19,7 +19,7 @@ const FileStore = require('session-file-store')(session);
 const cors = require('cors');
 const helmet = require('helmet');
 
-const { db, dbAll, initializeDatabase } = require('./config/db');
+const { db, dbRun, dbGet, dbAll, initializeDatabase } = require('./config/db');
 const { isAuthenticated, isAdmin, isReseller, handleSseStream } = require('./middleware/auth');
 const { inputSanitizer, globalRateLimiter, sensitiveRateLimiter } = require('./middleware/security');
 const { initSchedulers } = require('./cron/schedulers');
