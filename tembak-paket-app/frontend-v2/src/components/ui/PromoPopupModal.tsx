@@ -126,26 +126,30 @@ export function PromoPopupModal() {
       {/* Backdrop blur */}
       <div
         onClick={handleClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity"
+        style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
       />
 
-      {/* Modal Card: Minimalist Glassmorphism Design */}
-      <div className="relative w-full max-w-[360px] sm:max-w-[400px] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-2xl border border-white/40 dark:border-white/10 z-10 flex flex-col animate-in zoom-in-95 duration-200">
+      {/* Modal Card: Premium Translucent Glassmorphism Design */}
+      <div 
+        className="relative w-full max-w-[360px] sm:max-w-[400px] bg-white/45 dark:bg-slate-900/55 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-2xl border border-white/60 dark:border-white/15 z-10 flex flex-col animate-in zoom-in-95 duration-200"
+        style={{ backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" }}
+      >
         
         {/* Minimalist Visual Header (No AI Stock Images) */}
-        <div className="relative px-5 pt-6 pb-4 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent border-b border-hairline/30 flex flex-col items-center text-center select-none">
+        <div className="relative px-5 pt-6 pb-4 bg-gradient-to-b from-white/30 via-white/10 to-transparent dark:from-slate-800/30 dark:to-transparent border-b border-white/30 dark:border-white/10 flex flex-col items-center text-center select-none">
           
           {/* Close button (X) */}
           <button
             onClick={handleClose}
             aria-label="Tutup pengumuman"
-            className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300/40 dark:border-slate-700/40 flex items-center justify-center active:scale-90 transition-all shadow-xs cursor-pointer z-10"
+            className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-slate-900/10 dark:bg-white/10 hover:bg-slate-900/20 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 border border-white/40 dark:border-white/20 flex items-center justify-center active:scale-90 transition-all shadow-xs cursor-pointer z-10"
           >
             <X className="w-4 h-4" />
           </button>
 
           {/* Elegant Icon Badge */}
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-lg shadow-primary/20 mb-3 border border-white/20">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-lg shadow-primary/20 mb-3 border border-white/30">
             {isVoucherPromo ? (
               <Ticket className="w-6 h-6" />
             ) : (
@@ -186,7 +190,7 @@ export function PromoPopupModal() {
         <div className="p-4 sm:p-5 space-y-3.5">
           {/* Minimalist Coupon Pill (if coupon code present) */}
           {parsed.coupon && (
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-dashed border-amber-500/30 text-amber-900 dark:text-amber-200">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/15 border border-dashed border-amber-500/40 text-amber-900 dark:text-amber-200 backdrop-blur-sm">
               <div className="flex items-center gap-2 min-w-0">
                 <Ticket className="w-4 h-4 text-amber-500 shrink-0" />
                 <div className="min-w-0">
@@ -211,7 +215,10 @@ export function PromoPopupModal() {
           )}
 
           {/* Announcement Message */}
-          <div className="p-3.5 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 text-xs sm:text-sm text-ink leading-relaxed font-medium whitespace-pre-line">
+          <div 
+            className="p-3.5 rounded-2xl bg-white/35 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-white/10 text-xs sm:text-sm text-ink leading-relaxed font-medium whitespace-pre-line shadow-xs"
+            style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}
+          >
             {parsed.body}
           </div>
 
@@ -221,7 +228,7 @@ export function PromoPopupModal() {
               <button
                 type="button"
                 onClick={() => setCurrentIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
-                className="flex items-center gap-1 font-semibold hover:text-ink active:scale-95 transition-all cursor-pointer py-1 px-2 rounded-lg hover:bg-muted/50"
+                className="flex items-center gap-1 font-semibold hover:text-ink active:scale-95 transition-all cursor-pointer py-1 px-2 rounded-lg hover:bg-white/20 dark:hover:bg-slate-800/30"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 <span>Sebelumnya</span>
@@ -232,7 +239,7 @@ export function PromoPopupModal() {
               <button
                 type="button"
                 onClick={() => setCurrentIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
-                className="flex items-center gap-1 font-semibold hover:text-ink active:scale-95 transition-all cursor-pointer py-1 px-2 rounded-lg hover:bg-muted/50"
+                className="flex items-center gap-1 font-semibold hover:text-ink active:scale-95 transition-all cursor-pointer py-1 px-2 rounded-lg hover:bg-white/20 dark:hover:bg-slate-800/30"
               >
                 <span>Selanjutnya</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -248,7 +255,7 @@ export function PromoPopupModal() {
               handleClose();
               router.push(actionHref);
             }}
-            className="w-full py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-xs sm:text-sm hover:opacity-95 active:scale-[0.99] transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-xs sm:text-sm hover:opacity-95 active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>{actionText}</span>
             <ChevronRight className="w-4 h-4" />
