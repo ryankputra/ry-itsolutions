@@ -809,9 +809,11 @@ function UnblockImeiContent() {
                         optSp = typeof opt.speed_prices === 'string' ? JSON.parse(opt.speed_prices) : opt.speed_prices;
                       } catch (e) {}
                     }
-                    const validSpPrices = Object.values(optSp).map(v => Number(v)).filter(v => v > 0);
+                    const validSpPrices = Object.entries(optSp)
+                      .filter(([k, v]) => !k.startsWith("wholesale_") && typeof v !== "boolean" && Number(v) >= 1000)
+                      .map(([, v]) => Number(v));
                     const lowestPrice = validSpPrices.length > 0 ? Math.min(...validSpPrices) : Number(opt.price || 0);
-                    const activeCardPrice = isSelected && selectedSpeed && optSp[selectedSpeed]
+                    const activeCardPrice = isSelected && selectedSpeed && optSp[selectedSpeed] && Number(optSp[selectedSpeed]) >= 1000
                       ? Number(optSp[selectedSpeed])
                       : lowestPrice;
 

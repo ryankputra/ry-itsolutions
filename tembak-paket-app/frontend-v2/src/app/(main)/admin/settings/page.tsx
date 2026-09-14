@@ -357,11 +357,12 @@ export default function AdminSettingsPage() {
         setCeirgoStatus({ connected: false, error: "Gagal terhubung ke backend", loading: false });
       });
 
-    fetch("/api/admin/packages", { credentials: "include" })
+    fetch("/api/admin/kmsp-balance", { credentials: "include" })
       .then((r) => safeJson(r))
       .then((d) => {
-        if (d?.balance != null) {
-          setProviderBalances((prev) => ({ ...prev, kmsp: Number(d.balance) }));
+        const bal = d?.kmspBalance ?? d?.balance ?? d?.data?.kmspBalance ?? d?.data?.balance;
+        if (bal != null && !isNaN(Number(bal))) {
+          setProviderBalances((prev) => ({ ...prev, kmsp: Number(bal) }));
         }
       })
       .catch(() => {});

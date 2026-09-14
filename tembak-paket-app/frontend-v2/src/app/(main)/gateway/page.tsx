@@ -48,12 +48,13 @@ export default function GatewayDeveloperPage() {
   const [isExtractingQr, setIsExtractingQr] = useState(false);
   const [copiedPostmanCurl, setCopiedPostmanCurl] = useState(false);
 
-  // Otomatis arahkan ke Tab Dokumentasi Publik jika pengunjung belum login / AI
   useEffect(() => {
-    if (!user) {
-      setActiveTab("docs");
+    if (user?.balance !== undefined) {
+      setUserBalance(Number(user.balance));
     }
   }, [user]);
+
+  const displayBalance = user?.balance !== undefined ? Number(user.balance) : (userBalance || 0);
 
   // Handler: Ekstraksi String QRIS Statis dari Upload Foto Gambar (PNG/JPG/WEBP)
   const handleExtractQrisFromImage = (
@@ -562,7 +563,7 @@ export default function GatewayDeveloperPage() {
             <div className="bg-slate-950/60 backdrop-blur-md border border-white/20 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[190px] text-center shadow-xl">
               <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">Saldo Akun Anda</span>
               <span className="text-xl sm:text-2xl font-black text-amber-300 my-1">
-                Rp {userBalance.toLocaleString("id-ID")}
+                Rp {displayBalance.toLocaleString("id-ID")}
               </span>
               <button
                 onClick={() => router.push("/topup")}
