@@ -95,18 +95,30 @@ async function checkAdminGopayHealthWatchdog() {
         const gopayGatewayUrl = process.env.GOPAY_GATEWAY_URL || 'http://127.0.0.1:3002';
         const apiKey = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
 
-        const res = await fetch(`${gopayGatewayUrl}/api/session-info`, {
-            headers: { 'x-api-key': apiKey },
-            timeout: 8000
-        });
-        const data = await res.json();
-        const isHealthy = data && data.success && data.data?.token_status === 'valid';
+        let isHealthy = false;
+        let statusMsg = 'Sesi belum login / Server habis reboot';
+
+        // Retry check up to 3 times with 4-second delay to avoid false alarms during server restart
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const res = await fetch(`${gopayGatewayUrl}/api/session-info`, {
+                    headers: { 'x-api-key': apiKey },
+                    timeout: 8000
+                });
+                const data = await res.json();
+                isHealthy = Boolean(data && data.success && data.data?.token_status === 'valid');
+                statusMsg = data?.data?.message || 'Sesi belum login / File sesi tidak ditemukan';
+                if (isHealthy) break;
+            } catch (err) {
+                statusMsg = `Koneksi ke gateway port 3002 gagal (${err.message})`;
+            }
+            if (attempt < 2) await new Promise(r => setTimeout(r, 4000));
+        }
 
         if (!isHealthy) {
             const now = Date.now();
             if (now - lastGopayAlertTime > GOPAY_ALERT_COOLDOWN_MS) {
                 lastGopayAlertTime = now;
-                const statusMsg = data?.data?.message || 'Sesi belum login / Server habis reboot';
                 console.warn(`[Watchdog] Sesi GoPay Merchant Admin terputus (${statusMsg})! Mengirim alert ke Telegram & WA Admin...`);
 
                 // 1. Alert to Telegram Admin
