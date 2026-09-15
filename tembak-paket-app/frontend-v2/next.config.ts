@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import withPWAInit from "@ducanh2912/next-pwa";
 
+import path from "path";
+
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
@@ -8,6 +10,9 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  // Explicitly specify workspace root to avoid inference warning and path mismatch
+  outputFileTracingRoot: path.join(__dirname, "../../"),
+
   // Optimasi Khusus Perangkat Low-Resource (Armbian STB / VPS RAM 1GB-2GB)
   typescript: {
     // Lewati type-check saat build di STB (menghemat 88+ menit)
