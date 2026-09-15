@@ -163,15 +163,27 @@ export default function CoinCatcherGame({ canPlay, onCoinsClaimed }: CoinCatcher
       ctx.arc(basketX, basketY, 35, 0, Math.PI * 2);
       ctx.fill();
 
+      const drawRoundRect = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+        if (typeof c.roundRect === "function") {
+          c.roundRect(x, y, w, h, r);
+        } else {
+          c.beginPath();
+          c.moveTo(x + r, y);
+          c.arcTo(x + w, y, x + w, y + h, r);
+          c.arcTo(x + w, y + h, x, y + h, r);
+          c.arcTo(x, y + h, x, y, r);
+          c.arcTo(x, y, x + w, y, r);
+          c.closePath();
+        }
+      };
+
       // Catcher Basket Body
       ctx.fillStyle = "#10B981";
-      ctx.beginPath();
-      ctx.roundRect(basketX - basketWidth / 2, basketY, basketWidth, 14, 7);
+      drawRoundRect(ctx, basketX - basketWidth / 2, basketY, basketWidth, 14, 7);
       ctx.fill();
 
       ctx.fillStyle = "#34D399";
-      ctx.beginPath();
-      ctx.roundRect(basketX - basketWidth / 2 + 4, basketY + 3, basketWidth - 8, 4, 2);
+      drawRoundRect(ctx, basketX - basketWidth / 2 + 4, basketY + 3, basketWidth - 8, 4, 2);
       ctx.fill();
 
       // 4. Update & Render Falling Items

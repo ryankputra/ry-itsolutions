@@ -144,16 +144,29 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
       ctx.arc(0, 0, 20, 0, Math.PI * 2);
       ctx.fill();
 
+      // Helper function for roundRect compatibility
+      const drawRoundRect = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+        if (typeof c.roundRect === "function") {
+          c.roundRect(x, y, w, h, r);
+        } else {
+          c.beginPath();
+          c.moveTo(x + r, y);
+          c.arcTo(x + w, y, x + w, y + h, r);
+          c.arcTo(x + w, y + h, x, y + h, r);
+          c.arcTo(x, y + h, x, y, r);
+          c.arcTo(x, y, x + w, y, r);
+          c.closePath();
+        }
+      };
+
       // Drone Body
       ctx.fillStyle = "#2563EB";
-      ctx.beginPath();
-      ctx.roundRect(-12, -8, 24, 16, 6);
+      drawRoundRect(ctx, -12, -8, 24, 16, 6);
       ctx.fill();
 
       // Cyber Visor
       ctx.fillStyle = "#38BDF8";
-      ctx.beginPath();
-      ctx.roundRect(0, -5, 10, 10, 3);
+      drawRoundRect(ctx, 0, -5, 10, 10, 3);
       ctx.fill();
 
       // Thruster Trail

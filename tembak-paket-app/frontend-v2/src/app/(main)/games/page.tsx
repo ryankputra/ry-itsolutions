@@ -374,9 +374,15 @@ export default function GamesPage() {
 
     // Centered instructional badge
     ctx.fillStyle = "rgba(17, 24, 39, 0.75)";
-    ctx.beginPath();
-    ctx.roundRect(width / 2 - 80, height / 2 - 18, 160, 36, 18);
-    ctx.fill();
+    if (typeof ctx.roundRect === "function") {
+      ctx.beginPath();
+      ctx.roundRect(width / 2 - 80, height / 2 - 18, 160, 36, 18);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.rect(width / 2 - 80, height / 2 - 18, 160, 36);
+      ctx.fill();
+    }
 
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "bold 12px sans-serif";
