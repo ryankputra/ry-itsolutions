@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
 import { playCoinClaimSound, playWheelTickSound, playPopSound, playDingSound } from "@/lib/soundFx";
+import { safeJson } from "@/lib/api";
 import FlappyCyberGame from "@/components/games/FlappyCyberGame";
 import CoinCatcherGame from "@/components/games/CoinCatcherGame";
 
