@@ -190,6 +190,13 @@ router.get('/games/status', isAuthenticated, async (req, res) => {
               AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
         `, [userId, todayWIB, todayWIB]);
 
+        // Scratch Card status
+        const todayScratch = await dbGet(`
+            SELECT * FROM user_coin_claims 
+            WHERE userId = ? AND claim_type = 'scratch_card' 
+              AND (claim_date = ? OR date(claimed_at, '+7 hours') = ?)
+        `, [userId, todayWIB, todayWIB]);
+
         const rewards = [15, 25, 35, 50, 65, 80, 150];
         const gamePayload = {
             coins: userCoins,
@@ -197,13 +204,9 @@ router.get('/games/status', isAuthenticated, async (req, res) => {
             current_streak: streak,
             today_checkin_done: !!todayCheckin,
             can_spin: !todaySpin,
-            can_mystery_box: !todayMysteryBox,
             can_scratch: !todayScratch,
-            can_trivia: !todayTrivia,
             can_flappy_cyber: !todayFlappy,
             can_coin_catcher: !todayCatcher,
-            today_trivia_done: !!todayTrivia,
-            trivia_coins_earned: todayTrivia?.coins_amount || 0,
             rewards
         };
 
