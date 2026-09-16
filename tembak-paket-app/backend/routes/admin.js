@@ -2608,6 +2608,17 @@ router.delete('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, 
 // WHATSAPP LIVE CHAT ADMIN APIS
 // ======================================================================
 
+function normalizePhone(p) {
+    if (!p) return '';
+    let digits = String(p).replace(/\D/g, '');
+    if (digits.startsWith('08')) {
+        digits = '628' + digits.slice(2);
+    } else if (digits.startsWith('8') && digits.length >= 10 && !digits.startsWith('628')) {
+        digits = '628' + digits.slice(1);
+    }
+    return digits;
+}
+
 // GET /api/admin/whatsapp/conversations
 router.get('/admin/whatsapp/conversations', isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -2627,28 +2638,58 @@ router.get('/admin/whatsapp/conversations', isAuthenticated, isAdmin, async (req
             ORDER BY h1.timestamp DESC
         `).catch(() => []);
 
-        // Build phone -> name map from transactions and users
+        // 1. Fetch saved phonebook contacts from wa_contacts table if available
+        const contacts = await dbAll("SELECT phone, jid, name, notify FROM wa_contacts").catch(() => []);
         const users = await dbAll("SELECT name, verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND verifiedPhone != ''").catch(() => []);
         const transactions = await dbAll("SELECT userName, targetPhone FROM transactions WHERE targetPhone IS NOT NULL AND targetPhone != '' GROUP BY targetPhone").catch(() => []);
 
         const nameMap = {};
+        for (const c of contacts) {
+            const title = c.name || c.notify;
+            if (title) {
+                const norm = normalizePhone(c.phone || c.jid);
+                const raw = (c.phone || c.jid || '').replace(/\D/g, '');
+                if (norm) nameMap[norm] = title;
+                if (raw) nameMap[raw] = title;
+            }
+        }
         for (const t of transactions) {
             if (t.targetPhone && t.userName) {
-                const clean = t.targetPhone.replace(/\D/g, '');
-                if (clean) nameMap[clean] = t.userName;
+                const norm = normalizePhone(t.targetPhone);
+                const raw = t.targetPhone.replace(/\D/g, '');
+                if (norm) nameMap[norm] = t.userName;
+                if (raw) nameMap[raw] = t.userName;
             }
         }
         for (const u of users) {
             if (u.verifiedPhone && u.name) {
-                const clean = u.verifiedPhone.replace(/\D/g, '');
-                if (clean) nameMap[clean] = u.name;
+                const norm = normalizePhone(u.verifiedPhone);
+                const raw = u.verifiedPhone.replace(/\D/g, '');
+                if (norm) nameMap[norm] = u.name;
+                if (raw) nameMap[raw] = u.name;
             }
         }
 
+        const adminPhones = await waBot.getAdminPhoneNumbers().catch(() => []);
+        const cleanAdminPhones = (adminPhones || []).map(p => normalizePhone(p)).filter(Boolean);
+
         const enriched = (rows || []).map(r => {
-            const cleanPhone = r.senderPhone || (r.remoteJid ? r.remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '') : '');
-            const knownName = nameMap[cleanPhone];
-            const displayTitle = knownName || (r.pushName && r.pushName !== cleanPhone ? r.pushName : (cleanPhone ? `+${cleanPhone}` : 'Obrolan Pelanggan'));
+            const rawNum = r.senderPhone || (r.remoteJid ? r.remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '') : '');
+            const cleanPhone = normalizePhone(rawNum);
+            const knownName = nameMap[cleanPhone] || nameMap[rawNum];
+            const isPushNamePhone = !r.pushName || r.pushName === rawNum || r.pushName === cleanPhone || r.pushName.replace(/\D/g, '') === cleanPhone;
+            
+            let displayTitle = knownName || (!isPushNamePhone ? r.pushName : null);
+            if (!displayTitle) {
+                if (cleanAdminPhones.includes(cleanPhone)) {
+                    displayTitle = "WhatsApp Admin (Bot)";
+                } else if (rawNum) {
+                    displayTitle = `+${rawNum}`;
+                } else {
+                    displayTitle = "Obrolan Pelanggan";
+                }
+            }
+
             return {
                 ...r,
                 pushName: displayTitle

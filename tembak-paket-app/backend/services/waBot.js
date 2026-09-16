@@ -37,23 +37,64 @@ const messageStore = new NodeCache({ stdTTL: 86400, checkperiod: 120 });
 const BOT_FOOTER = "\n\n🤖 _Pesan ini dikirim otomatis oleh Sistem Bot Ry-ITSolutions._";
 
 // Ensure SQLite persistent store table exists
-dbRun("CREATE TABLE IF NOT EXISTS wa_message_store (id TEXT PRIMARY KEY, remoteJid TEXT, messageContent TEXT, createdAt INTEGER)").catch(() => {});
-
 dbRun(`
-    CREATE TABLE IF NOT EXISTS wa_chat_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        msg_id TEXT UNIQUE,
-        remoteJid TEXT NOT NULL,
-        senderPhone TEXT,
-        pushName TEXT,
-        fromMe INTEGER DEFAULT 0,
-        messageType TEXT DEFAULT 'text',
-        body TEXT,
-        timestamp INTEGER NOT NULL,
-        isRead INTEGER DEFAULT 0,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    CREATE TABLE IF NOT EXISTS wa_contacts (
+        jid TEXT PRIMARY KEY,
+        phone TEXT,
+        name TEXT,
+        notify TEXT,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
 `).catch(() => {});
+
+function normalizePhone(p) {
+    if (!p) return '';
+    let digits = String(p).replace(/\D/g, '');
+    if (digits.startsWith('08')) {
+        digits = '628' + digits.slice(2);
+    } else if (digits.startsWith('8') && digits.length >= 10 && !digits.startsWith('628')) {
+        digits = '628' + digits.slice(1);
+    }
+    return digits;
+}
+
+async function saveWAContacts(contactsList) {
+    if (!Array.isArray(contactsList) || contactsList.length === 0) return;
+    for (const c of contactsList) {
+        if (!c.id || c.id.includes('@g.us') || c.id.includes('@broadcast') || c.id.includes('@newsletter')) continue;
+        const jid = c.id;
+        const rawPhone = (jid.replace('@s.whatsapp.net', '').split(':')[0] || '').replace(/\D/g, '');
+        const phone = normalizePhone(rawPhone);
+        const name = c.name || c.verifiedName || null;
+        const notify = c.notify || null;
+
+        if (name || notify) {
+            try {
+                const existing = await dbGet("SELECT name, notify FROM wa_contacts WHERE jid = ?", [jid]);
+                const newName = name || existing?.name || null;
+                const newNotify = notify || existing?.notify || null;
+
+                await dbRun(`
+                    INSERT INTO wa_contacts (jid, phone, name, notify, updatedAt)
+                    VALUES (?, ?, ?, ?, datetime('now'))
+                    ON CONFLICT(jid) DO UPDATE SET
+                        phone = excluded.phone,
+                        name = COALESCE(excluded.name, wa_contacts.name),
+                        notify = COALESCE(excluded.notify, wa_contacts.notify),
+                        updatedAt = datetime('now')
+                `, [jid, phone, newName, newNotify]);
+
+                const displayName = newName || newNotify;
+                if (displayName) {
+                    await dbRun(
+                        "UPDATE wa_chat_history SET pushName = ? WHERE remoteJid = ? OR senderPhone = ? OR senderPhone = ?",
+                        [displayName, jid, rawPhone, phone]
+                    );
+                }
+            } catch (e) {}
+        }
+    }
+}
 
 async function recordChatMessage(msgId, remoteJid, pushName, fromMe, body, messageType = 'text', timestamp = Date.now()) {
     if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.includes('@broadcast') || remoteJid.includes('@newsletter')) return;
@@ -807,9 +848,25 @@ async function initWABot(forceNew = false) {
             }
         });
 
-        // --- HISTORY SYNC CONTROLLER ---
-        sock.ev.on("messaging-history.set", async ({ messages }) => {
-            logWABot(`[WA Sync] Menerima sync riwayat chat dari WhatsApp: ${messages?.length || 0} pesan.`, "info");
+        // --- CONTACTS & HISTORY SYNC CONTROLLER ---
+        sock.ev.on("contacts.set", async ({ contacts }) => {
+            logWABot(`[WA Sync] Menerima sync kontak WhatsApp: ${contacts?.length || 0} kontak.`, "info");
+            await saveWAContacts(contacts);
+        });
+
+        sock.ev.on("contacts.upsert", async (contacts) => {
+            await saveWAContacts(contacts);
+        });
+
+        sock.ev.on("contacts.update", async (updates) => {
+            await saveWAContacts(updates);
+        });
+
+        sock.ev.on("messaging-history.set", async ({ messages, contacts }) => {
+            logWABot(`[WA Sync] Menerima sync riwayat dari WhatsApp: ${messages?.length || 0} pesan, ${contacts?.length || 0} kontak.`, "info");
+            if (contacts && Array.isArray(contacts)) {
+                await saveWAContacts(contacts);
+            }
             if (messages && Array.isArray(messages)) {
                 for (const msg of messages) {
                     try {
