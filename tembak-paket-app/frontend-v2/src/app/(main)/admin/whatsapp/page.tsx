@@ -69,73 +69,25 @@ export default function AdminWhatsAppChatPage() {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatPhone, setNewChatPhone] = useState("");
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const userScrolledUpRef = useRef<boolean>(false);
 
-  // Load WhatsApp Engine Status
-  const loadWAStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/whatsapp/status", { credentials: "include" });
-      const d = await safeJson(res);
-      if (d?.status) {
-        setWaStatus(d.connectionState || d.state || "connecting");
-        setConnectedPhone(d.connectedPhone || null);
-      }
-    } catch (e) {}
-  }, []);
+  const handleChatScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    userScrolledUpRef.current = !isNearBottom;
+  };
 
-  // Load Conversations List
-  const loadConversations = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoadingConversations(true);
-    try {
-      const res = await fetch("/api/admin/whatsapp/conversations", { credentials: "include" });
-      const d = await safeJson(res);
-      if (d?.status && Array.isArray(d.data)) {
-        setConversations(d.data);
-      }
-    } catch (e) {
-    } finally {
-      if (!isSilent) setLoadingConversations(false);
-    }
-  }, []);
-
-  // Load Messages for Active Conversation
-  const loadMessages = useCallback(async (jid: string, isSilent = false) => {
-    if (!jid) return;
-    if (!isSilent) setLoadingMessages(true);
-    try {
-      const res = await fetch(`/api/admin/whatsapp/messages/${encodeURIComponent(jid)}`, { credentials: "include" });
-      const d = await safeJson(res);
-      if (d?.status && Array.isArray(d.data)) {
-        setMessages(d.data);
-        if (d.phone) setActivePhone(d.phone);
-      }
-    } catch (e) {
-    } finally {
-      if (!isSilent) setLoadingMessages(false);
-    }
-  }, []);
-
+  // Scroll inner chat box to bottom ONLY if user hasn't scrolled up
   useEffect(() => {
-    loadWAStatus();
-    loadConversations();
-
-    // Auto refresh every 4 seconds for live chat updates
-    const interval = setInterval(() => {
-      loadConversations(true);
-      if (activeJid) {
-        loadMessages(activeJid, true);
-      }
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [loadWAStatus, loadConversations, loadMessages, activeJid]);
-
-  // Scroll to bottom when messages update
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current && !userScrolledUpRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const handleSelectConversation = (c: Conversation) => {
+    userScrolledUpRef.current = false;
     setActiveJid(c.remoteJid);
     setActivePhone(c.senderPhone || c.remoteJid.replace("@s.whatsapp.net", ""));
     setActiveName(c.pushName || c.senderPhone || "Pelanggan");
@@ -349,7 +301,7 @@ export default function AdminWhatsAppChatPage() {
                   <h3 className="font-bold text-sm text-ink truncate">{activeName || `+${activePhone}`}</h3>
                   <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    Terhubung via Engine WhatsApp Bot (+{activePhone})
+                    Terhubung via Engine WhatsApp Bot (+{connectedPhone || "6287767287284"})
                   </p>
                 </div>
               </div>
@@ -373,7 +325,11 @@ export default function AdminWhatsAppChatPage() {
             </div>
 
             {/* Chat Body (Messages Bubbles) */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div
+              ref={chatContainerRef}
+              onScroll={handleChatScroll}
+              className="flex-1 overflow-y-auto p-4 space-y-3"
+            >
               {loadingMessages ? (
                 <div className="p-12 text-center text-xs text-ink-muted">
                   <RotateCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
