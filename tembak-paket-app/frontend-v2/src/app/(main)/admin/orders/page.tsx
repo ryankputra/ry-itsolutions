@@ -126,12 +126,12 @@ export default function AdminOrdersPage() {
 
     const msg = encodeURIComponent(
       `*NOTA TRANSAKSI - RY-ITSOLUTIONS*\n\n` +
-        `ID Pesanan: #${trx.id.substring(0, 14)}\n` +
-        `Layanan: ${trx.packageName || "Layanan Resmi"}\n` +
+        `ID Pesanan: #${trx?.id ? String(trx.id).substring(0, 14) : "-"}\n` +
+        `Layanan: ${trx?.packageName || "Layanan Resmi"}\n` +
         `IMEI/Target: ${imeiList}\n` +
         `Status: *${statusText}*\n` +
-        (trx.admin_note ? `Catatan/SN: ${trx.admin_note}\n` : "") +
-        `Waktu: ${new Date(trx.createdAt).toLocaleString("id-ID")}\n\n` +
+        (trx?.admin_note ? `Catatan/SN: ${trx.admin_note}\n` : "") +
+        `Waktu: ${trx?.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}\n\n` +
         `Terima kasih telah bertransaksi bersama kami!`
     );
 
@@ -139,55 +139,69 @@ export default function AdminOrdersPage() {
   };
 
   // Sub-tab filtering: manual IMEI vs automated
-  const tabOrders = manualOrders.filter((o) => {
+  const tabOrders = (Array.isArray(manualOrders) ? manualOrders : []).filter((o) => {
+    if (!o || typeof o !== "object") return false;
+    const sType = String(o.service_type || "").toLowerCase();
+    const pkgId = String(o.packageId || "").toLowerCase();
     const isAuto =
-      o.service_type === "ceir" ||
-      o.service_type === "barcode" ||
-      (o.packageId && (o.packageId.startsWith("cek_") || o.packageId.startsWith("create_")));
+      sType === "ceir" ||
+      sType === "barcode" ||
+      pkgId.startsWith("cek_") ||
+      pkgId.startsWith("create_");
     return orderQueueSubTab === "automated" ? isAuto : !isAuto;
   });
 
   // Metrics
-  const manualPendingCount = manualOrders.filter(
-    (o) =>
+  const manualPendingCount = (Array.isArray(manualOrders) ? manualOrders : []).filter((o) => {
+    if (!o || typeof o !== "object") return false;
+    const sType = String(o.service_type || "").toLowerCase();
+    const pkgId = String(o.packageId || "").toLowerCase();
+    return (
       o.status === "pending" &&
-      o.service_type !== "ceir" &&
-      o.service_type !== "barcode" &&
-      !o.packageId?.startsWith("cek_") &&
-      !o.packageId?.startsWith("create_")
-  ).length;
+      sType !== "ceir" &&
+      sType !== "barcode" &&
+      !pkgId.startsWith("cek_") &&
+      !pkgId.startsWith("create_")
+    );
+  }).length;
 
-  const manualProcessingCount = manualOrders.filter(
-    (o) =>
+  const manualProcessingCount = (Array.isArray(manualOrders) ? manualOrders : []).filter((o) => {
+    if (!o || typeof o !== "object") return false;
+    const sType = String(o.service_type || "").toLowerCase();
+    const pkgId = String(o.packageId || "").toLowerCase();
+    return (
       (o.status === "processing" || o.status === "in_queue") &&
-      o.service_type !== "ceir" &&
-      o.service_type !== "barcode" &&
-      !o.packageId?.startsWith("cek_") &&
-      !o.packageId?.startsWith("create_")
-  ).length;
+      sType !== "ceir" &&
+      sType !== "barcode" &&
+      !pkgId.startsWith("cek_") &&
+      !pkgId.startsWith("create_")
+    );
+  }).length;
 
-  const automatedPendingCount = manualOrders.filter(
-    (o) =>
+  const automatedPendingCount = (Array.isArray(manualOrders) ? manualOrders : []).filter((o) => {
+    if (!o || typeof o !== "object") return false;
+    const sType = String(o.service_type || "").toLowerCase();
+    const pkgId = String(o.packageId || "").toLowerCase();
+    return (
       (o.status === "pending" || o.status === "processing") &&
-      (o.service_type === "ceir" ||
-        o.service_type === "barcode" ||
-        o.packageId?.startsWith("cek_") ||
-        o.packageId?.startsWith("create_"))
-  ).length;
+      (sType === "ceir" || sType === "barcode" || pkgId.startsWith("cek_") || pkgId.startsWith("create_"))
+    );
+  }).length;
 
   // Filtered orders list
   const filteredOrders = tabOrders.filter((o) => {
+    if (!o) return false;
     if (orderStatusFilter !== "all" && o.status !== orderStatusFilter) return false;
     if (hideSuccess && o.status === "success") return false;
     if (hideFailed && o.status === "failed") return false;
 
     if (searchOrder.trim()) {
       const q = searchOrder.toLowerCase();
-      const matchImei = o.imei && o.imei.toLowerCase().includes(q);
-      const matchId = o.id && o.id.toLowerCase().includes(q);
-      const matchName = o.userName && o.userName.toLowerCase().includes(q);
-      const matchPhone = o.targetPhone && o.targetPhone.includes(q);
-      return matchImei || matchId || matchName || matchPhone;
+      const matchImei = o.imei && String(o.imei).toLowerCase().includes(q);
+      const matchId = o.id && String(o.id).toLowerCase().includes(q);
+      const matchName = o.userName && String(o.userName).toLowerCase().includes(q);
+      const matchPhone = o.targetPhone && String(o.targetPhone).toLowerCase().includes(q);
+      return Boolean(matchImei || matchId || matchName || matchPhone);
     }
     return true;
   });
@@ -347,37 +361,39 @@ export default function AdminOrdersPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredOrders.map((o) => (
+            {filteredOrders.map((o, index) => (
               <div
-                key={o.id}
+                key={o?.id || index}
                 className="p-4 border border-hairline rounded-xl bg-canvas space-y-3 hover:border-primary/30 transition-colors shadow-xs"
               >
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-ink">{o.packageName}</span>
+                      <span className="font-bold text-sm text-ink">{o?.packageName || "Layanan Resmi"}</span>
                       <span className="text-xs font-mono text-ink-muted bg-parchment/60 px-2 py-0.5 rounded border border-hairline">
-                        #{o.id.substring(0, 14)}
+                        #{o?.id ? String(o.id).substring(0, 14) : "-"}
                       </span>
                     </div>
                     <p className="text-xs text-ink mt-0.5">
-                      Pelanggan: <span className="font-bold">{o.userName}</span>
-                      {o.targetPhone && <span className="ml-1 text-ink-muted font-mono">({o.targetPhone})</span>}
+                      Pelanggan: <span className="font-bold">{o?.userName || "Pelanggan"}</span>
+                      {o?.targetPhone && <span className="ml-1 text-ink-muted font-mono">({o.targetPhone})</span>}
                     </p>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {o.imei?.split(",").map((im: string, i: number) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-md border border-primary/20 font-mono"
-                        >
-                          {im.trim()}
-                        </span>
-                      ))}
+                      {typeof o?.imei === "string" && o.imei
+                        ? o.imei.split(",").map((im: string, i: number) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-md border border-primary/20 font-mono"
+                            >
+                              {im.trim()}
+                            </span>
+                          ))
+                        : null}
                     </div>
 
                     {orderQueueSubTab === "manual" ? (
-                      o.speed_option &&
+                      o?.speed_option &&
                       o.speed_option !== "instant" && (
                         <p className="text-xs font-semibold text-primary mt-1">
                           Kecepatan:{" "}
@@ -393,33 +409,33 @@ export default function AdminOrdersPage() {
                         </span>
                       </div>
                     )}
-                    <p className="text-[11px] text-ink-muted mt-1">{new Date(o.createdAt).toLocaleString("id-ID")}</p>
+                    <p className="text-[11px] text-ink-muted mt-1">{o?.createdAt ? new Date(o.createdAt).toLocaleString("id-ID") : "-"}</p>
                   </div>
 
                   <div className="flex sm:flex-col items-end justify-between gap-1.5 shrink-0">
                     <span
                       className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
-                        o.status === "success"
+                        o?.status === "success"
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                          : o.status === "failed"
+                          : o?.status === "failed"
                           ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
-                          : o.status === "processing"
+                          : o?.status === "processing"
                           ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                           : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                       }`}
                     >
-                      {o.status === "in_queue" ? "ANTREAN" : o.status}
+                      {o?.status === "in_queue" ? "ANTREAN" : o?.status || "PENDING"}
                     </span>
                     <span className="text-sm font-bold text-ink font-mono">
-                      Rp {(o.platformFee || o.originalPrice || 0).toLocaleString("id-ID")}
+                      Rp {(Number(o?.platformFee) || Number(o?.originalPrice) || Number(o?.price) || 0).toLocaleString("id-ID")}
                     </span>
                   </div>
                 </div>
 
                 {/* Screenshot Proofs (Manual Tab) */}
-                {orderQueueSubTab === "manual" && (o.user_image || o.user_image_ceir) && (
+                {orderQueueSubTab === "manual" && (o?.user_image || o?.user_image_ceir) && (
                   <div className="flex gap-4 flex-wrap pt-2 border-t border-hairline">
-                    {o.user_image && (
+                    {typeof o?.user_image === "string" && o.user_image && (
                       <div className="space-y-1">
                         <p className="text-xs font-bold text-ink">Foto Bukti Layar:</p>
                         <div className="flex flex-wrap gap-2">
