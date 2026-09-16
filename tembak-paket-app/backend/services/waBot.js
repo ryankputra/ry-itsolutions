@@ -39,6 +39,45 @@ const BOT_FOOTER = "\n\n🤖 _Pesan ini dikirim otomatis oleh Sistem Bot Ry-ITSo
 // Ensure SQLite persistent store table exists
 dbRun("CREATE TABLE IF NOT EXISTS wa_message_store (id TEXT PRIMARY KEY, remoteJid TEXT, messageContent TEXT, createdAt INTEGER)").catch(() => {});
 
+dbRun(`
+    CREATE TABLE IF NOT EXISTS wa_chat_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        msg_id TEXT UNIQUE,
+        remoteJid TEXT NOT NULL,
+        senderPhone TEXT,
+        pushName TEXT,
+        fromMe INTEGER DEFAULT 0,
+        messageType TEXT DEFAULT 'text',
+        body TEXT,
+        timestamp INTEGER NOT NULL,
+        isRead INTEGER DEFAULT 0,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`).catch(() => {});
+
+async function recordChatMessage(msgId, remoteJid, pushName, fromMe, body, messageType = 'text', timestamp = Date.now()) {
+    if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.includes('@broadcast') || remoteJid.includes('@newsletter')) return;
+    const cleanPhoneNum = (remoteJid.replace('@s.whatsapp.net', '').split(':')[0] || '').replace(/\D/g, '');
+    const isReadVal = fromMe ? 1 : 0;
+    const safeMsgId = msgId || `MSG_${Date.now()}_${Math.random().toString(36).substring(2,7)}`;
+    try {
+        await dbRun(`
+            INSERT OR REPLACE INTO wa_chat_history (msg_id, remoteJid, senderPhone, pushName, fromMe, messageType, body, timestamp, isRead)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            safeMsgId,
+            remoteJid,
+            cleanPhoneNum,
+            pushName || cleanPhoneNum,
+            fromMe ? 1 : 0,
+            messageType,
+            body || '',
+            timestamp,
+            isReadVal
+        ]);
+    } catch (err) {}
+}
+
 async function storeMessage(id, remoteJid, messageObj) {
     if (!id || !messageObj) return;
     try {
@@ -687,6 +726,24 @@ async function initWABot(forceNew = false) {
                 if (msg.key?.id && msg.message) {
                     await storeMessage(msg.key.id, msg.key.remoteJid, msg.message);
                 }
+
+                const remoteJid = msg.key?.remoteJid;
+                if (remoteJid && !remoteJid.includes("@g.us") && !remoteJid.includes("@broadcast") && !remoteJid.includes("@newsletter")) {
+                    const messageText = (
+                        msg.message?.conversation ||
+                        msg.message?.extendedTextMessage?.text ||
+                        msg.message?.imageMessage?.caption ||
+                        (msg.message?.imageMessage ? "[Foto]" : msg.message?.documentMessage ? "[Dokumen]" : "")
+                    ).trim();
+                    const pushName = msg.pushName || "";
+                    const fromMe = msg.key?.fromMe ? 1 : 0;
+                    const msgId = msg.key?.id;
+                    const ts = msg.messageTimestamp ? Number(msg.messageTimestamp) * 1000 : Date.now();
+
+                    if (messageText || msg.message?.imageMessage || msg.message?.documentMessage) {
+                        await recordChatMessage(msgId, remoteJid, pushName, fromMe, messageText, msg.message?.imageMessage ? 'image' : 'text', ts);
+                    }
+                }
             }
 
             for (const msg of messages) {
@@ -1234,6 +1291,8 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         if (sent?.key?.id && sent?.message) {
             await storeMessage(sent.key.id, finalJid, sent.message);
         }
+        const textBody = finalContent.text || finalContent.caption || (finalContent.image ? "[Foto]" : "[Pesan]");
+        await recordChatMessage(sent?.key?.id || msgId, finalJid, "Admin", 1, textBody, finalContent.image ? 'image' : 'text', Date.now());
         return sent;
     } catch (sendErr) {
         // Self-healing: if session ratchet error occurs, purge stale session for this contact & retry once
@@ -2057,5 +2116,6 @@ module.exports = {
     purgeStalePeerSessions,
     getAdminPhoneNumbers,
     testAdminNotification,
-    notifyWarrantyClaim
+    notifyWarrantyClaim,
+    recordChatMessage
 };

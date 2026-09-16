@@ -49,6 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/theme", label: "Tema & Momentum", icon: Palette },
     { href: "/admin/logs", label: "Log Aktivitas", icon: Activity },
     { href: "/admin/settings", label: "Pengaturan & Server", icon: Settings },
+    { href: "/admin/whatsapp", label: "Live Chat WA", icon: Smartphone },
     { href: "/admin/reviews", label: "Ulasan Pelanggan", icon: MessageSquare },
   ];
 

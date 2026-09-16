@@ -2604,5 +2604,97 @@ router.delete('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, 
     }
 });
 
+// ======================================================================
+// WHATSAPP LIVE CHAT ADMIN APIS
+// ======================================================================
+
+// GET /api/admin/whatsapp/conversations
+router.get('/admin/whatsapp/conversations', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const rows = await dbAll(`
+            SELECT h1.*,
+                   (SELECT COUNT(*) FROM wa_chat_history h2 WHERE h2.remoteJid = h1.remoteJid AND h2.isRead = 0 AND h2.fromMe = 0) as unreadCount
+            FROM wa_chat_history h1
+            INNER JOIN (
+                SELECT remoteJid, MAX(timestamp) as maxTs
+                FROM wa_chat_history
+                GROUP BY remoteJid
+            ) latest ON h1.remoteJid = latest.remoteJid AND h1.timestamp = latest.maxTs
+            ORDER BY h1.timestamp DESC
+        `).catch(() => []);
+
+        res.json({ status: true, data: rows });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// GET /api/admin/whatsapp/messages/:jid
+router.get('/admin/whatsapp/messages/:jid', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const rawJid = decodeURIComponent(req.params.jid || '');
+        const cleanNumber = rawJid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+        const fullJid = cleanNumber ? `${cleanNumber}@s.whatsapp.net` : rawJid;
+
+        const messages = await dbAll(`
+            SELECT * FROM wa_chat_history
+            WHERE remoteJid = ? OR senderPhone = ?
+            ORDER BY timestamp ASC
+            LIMIT 200
+        `, [fullJid, cleanNumber]).catch(() => []);
+
+        // Mark as read
+        await dbRun(`
+            UPDATE wa_chat_history SET isRead = 1
+            WHERE (remoteJid = ? OR senderPhone = ?) AND fromMe = 0
+        `, [fullJid, cleanNumber]).catch(() => {});
+
+        res.json({ status: true, data: messages, jid: fullJid, phone: cleanNumber });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// POST /api/admin/whatsapp/send
+router.post('/admin/whatsapp/send', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { targetPhone, jid, message } = req.body;
+        const phone = targetPhone || (jid ? jid.replace('@s.whatsapp.net', '').replace(/\D/g, '') : '');
+
+        if (!phone || !message || !message.trim()) {
+            return res.status(400).json({ status: false, message: "Nomor tujuan dan isi pesan wajib diisi." });
+        }
+
+        const waBot = require('../services/waBot');
+        const result = await waBot.sendTextMessage(phone, message.trim());
+
+        if (result && result.status) {
+            res.json({ status: true, message: result.message || "Pesan WhatsApp berhasil dikirim!" });
+        } else {
+            res.status(400).json({ status: false, message: result?.message || "Gagal mengirim pesan WhatsApp." });
+        }
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// POST /api/admin/whatsapp/read
+router.post('/admin/whatsapp/read', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { jid, phone } = req.body;
+        const cleanNumber = (phone || jid || '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+        const fullJid = cleanNumber ? `${cleanNumber}@s.whatsapp.net` : jid;
+
+        await dbRun(`
+            UPDATE wa_chat_history SET isRead = 1
+            WHERE (remoteJid = ? OR senderPhone = ?) AND fromMe = 0
+        `, [fullJid, cleanNumber]).catch(() => {});
+
+        res.json({ status: true, message: "Pesan telah ditandai dibaca." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 module.exports = router;
 
