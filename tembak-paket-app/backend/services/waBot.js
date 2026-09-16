@@ -78,6 +78,92 @@ async function recordChatMessage(msgId, remoteJid, pushName, fromMe, body, messa
     } catch (err) {}
 }
 
+function extractMessageTextAndDetails(rawObj) {
+    if (!rawObj) return null;
+    const content = rawObj.message || rawObj;
+    if (!content || typeof content !== 'object') return null;
+
+    let text = "";
+    let type = "text";
+
+    if (content.conversation) {
+        text = content.conversation;
+    } else if (content.extendedTextMessage?.text) {
+        text = content.extendedTextMessage.text;
+    } else if (content.imageMessage) {
+        text = content.imageMessage.caption || "[Foto]";
+        type = "image";
+    } else if (content.documentMessage) {
+        text = content.documentMessage.caption || content.documentMessage.fileName || "[Dokumen]";
+        type = "document";
+    } else if (content.audioMessage) {
+        text = "[Pesan Suara]";
+        type = "audio";
+    } else if (content.videoMessage) {
+        text = content.videoMessage.caption || "[Video]";
+        type = "video";
+    } else if (content.stickerMessage) {
+        text = "[Stiker]";
+        type = "sticker";
+    } else if (content.contactMessage || content.contactsArrayMessage) {
+        text = "[Kontak]";
+        type = "contact";
+    } else if (content.locationMessage || content.liveLocationMessage) {
+        text = "[Lokasi]";
+        type = "location";
+    } else if (content.protocolMessage) {
+        return null;
+    }
+
+    if (!text) return null;
+    return { text: text.trim(), type };
+}
+
+let isBackfilling = false;
+async function backfillStoreToHistory() {
+    if (isBackfilling) return 0;
+    isBackfilling = true;
+    try {
+        const rows = await dbAll("SELECT id, remoteJid, messageContent, createdAt FROM wa_message_store ORDER BY createdAt ASC").catch(() => []);
+        if (!rows || rows.length === 0) {
+            isBackfilling = false;
+            return 0;
+        }
+        let count = 0;
+        for (const row of rows) {
+            const remoteJid = row.remoteJid;
+            if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast") || remoteJid.includes("@newsletter")) continue;
+            try {
+                const parsed = typeof row.messageContent === 'string' ? JSON.parse(row.messageContent) : row.messageContent;
+                const details = extractMessageTextAndDetails(parsed);
+                if (!details || !details.text) continue;
+
+                const cleanPhoneNum = (remoteJid.replace('@s.whatsapp.net', '').split(':')[0] || '').replace(/\D/g, '');
+                const keyFromMe = parsed.key?.fromMe;
+                const fromMe = keyFromMe !== undefined ? (keyFromMe ? 1 : 0) : (row.id.startsWith("3EB0") || row.id.startsWith("BAE5") || row.id.startsWith("RYY") ? 1 : 0);
+                const pushName = parsed.pushName || cleanPhoneNum;
+                const ts = row.createdAt ? Number(row.createdAt) : Date.now();
+
+                await recordChatMessage(row.id, remoteJid, pushName, fromMe, details.text, details.type, ts);
+                count++;
+            } catch (e) {}
+        }
+        if (count > 0) {
+            logWABot(`[WA Hydration] Berhasil mengimpor ${count} riwayat pesan dari wa_message_store.`, "info");
+        }
+        isBackfilling = false;
+        return count;
+    } catch (e) {
+        isBackfilling = false;
+        return 0;
+    }
+}
+
+// Trigger initial backfill shortly after startup
+setTimeout(() => {
+    backfillStoreToHistory().catch(() => {});
+}, 3000);
+
 async function storeMessage(id, remoteJid, messageObj) {
     if (!id || !messageObj) return;
     try {
@@ -514,7 +600,8 @@ async function initWABot(forceNew = false) {
             printQRInTerminal: false,
             logger: customLogger,
             browser: Browsers.macOS("Chrome"),
-            syncFullHistory: false,
+            syncFullHistory: true,
+            shouldSyncHistoryMessage: () => true,
             markOnlineOnConnect: true,
             qrTimeout: 60000,
             connectTimeoutMs: 60000,
@@ -717,6 +804,31 @@ async function initWABot(forceNew = false) {
                 }
                 isInitializing = false;
                 setTimeout(() => initWABot(false), 2000);
+            }
+        });
+
+        // --- HISTORY SYNC CONTROLLER ---
+        sock.ev.on("messaging-history.set", async ({ messages }) => {
+            logWABot(`[WA Sync] Menerima sync riwayat chat dari WhatsApp: ${messages?.length || 0} pesan.`, "info");
+            if (messages && Array.isArray(messages)) {
+                for (const msg of messages) {
+                    try {
+                        if (msg.key?.id && msg.message) {
+                            await storeMessage(msg.key.id, msg.key.remoteJid, msg.message);
+                        }
+                        const remoteJid = msg.key?.remoteJid;
+                        if (remoteJid && !remoteJid.includes("@g.us") && !remoteJid.includes("@broadcast") && !remoteJid.includes("@newsletter")) {
+                            const details = extractMessageTextAndDetails(msg.message);
+                            if (details && details.text) {
+                                const pushName = msg.pushName || "";
+                                const fromMe = msg.key?.fromMe ? 1 : 0;
+                                const msgId = msg.key?.id;
+                                const ts = msg.messageTimestamp ? Number(msg.messageTimestamp) * 1000 : Date.now();
+                                await recordChatMessage(msgId, remoteJid, pushName, fromMe, details.text, details.type, ts);
+                            }
+                        }
+                    } catch (e) {}
+                }
             }
         });
 
@@ -2117,5 +2229,6 @@ module.exports = {
     getAdminPhoneNumbers,
     testAdminNotification,
     notifyWarrantyClaim,
-    recordChatMessage
+    recordChatMessage,
+    backfillStoreToHistory
 };

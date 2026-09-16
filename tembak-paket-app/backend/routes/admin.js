@@ -2611,6 +2611,10 @@ router.delete('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, 
 // GET /api/admin/whatsapp/conversations
 router.get('/admin/whatsapp/conversations', isAuthenticated, isAdmin, async (req, res) => {
     try {
+        if (waBot.backfillStoreToHistory) {
+            await waBot.backfillStoreToHistory().catch(() => {});
+        }
+
         const rows = await dbAll(`
             SELECT h1.*,
                    (SELECT COUNT(*) FROM wa_chat_history h2 WHERE h2.remoteJid = h1.remoteJid AND h2.isRead = 0 AND h2.fromMe = 0) as unreadCount
@@ -2623,7 +2627,35 @@ router.get('/admin/whatsapp/conversations', isAuthenticated, isAdmin, async (req
             ORDER BY h1.timestamp DESC
         `).catch(() => []);
 
-        res.json({ status: true, data: rows });
+        // Build phone -> name map from transactions and users
+        const users = await dbAll("SELECT name, verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND verifiedPhone != ''").catch(() => []);
+        const transactions = await dbAll("SELECT userName, targetPhone FROM transactions WHERE targetPhone IS NOT NULL AND targetPhone != '' GROUP BY targetPhone").catch(() => []);
+
+        const nameMap = {};
+        for (const t of transactions) {
+            if (t.targetPhone && t.userName) {
+                const clean = t.targetPhone.replace(/\D/g, '');
+                if (clean) nameMap[clean] = t.userName;
+            }
+        }
+        for (const u of users) {
+            if (u.verifiedPhone && u.name) {
+                const clean = u.verifiedPhone.replace(/\D/g, '');
+                if (clean) nameMap[clean] = u.name;
+            }
+        }
+
+        const enriched = (rows || []).map(r => {
+            const cleanPhone = r.senderPhone || (r.remoteJid ? r.remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '') : '');
+            const knownName = nameMap[cleanPhone];
+            const displayTitle = knownName || (r.pushName && r.pushName !== cleanPhone ? r.pushName : (cleanPhone ? `+${cleanPhone}` : 'Obrolan Pelanggan'));
+            return {
+                ...r,
+                pushName: displayTitle
+            };
+        });
+
+        res.json({ status: true, data: enriched });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }
