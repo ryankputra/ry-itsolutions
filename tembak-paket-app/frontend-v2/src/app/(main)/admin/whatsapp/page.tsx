@@ -70,7 +70,73 @@ export default function AdminWhatsAppChatPage() {
   const [newChatPhone, setNewChatPhone] = useState("");
 
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const userScrolledUpRef = useRef<boolean>(false);
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/whatsapp/status", { credentials: "include" });
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
+        const isConn = Boolean(d.data?.connected || d.data?.isConnected || d.connected || d.isConnected);
+        setWaStatus(isConn ? "open" : (d.data?.state || d.state || "connecting"));
+        setConnectedPhone(d.data?.connectedPhone || d.connectedPhone || null);
+      }
+    } catch (e) {
+      console.error("[WA Status Error]", e);
+    }
+  };
+
+  const loadConversations = async (silent = false) => {
+    if (!silent) setLoadingConversations(true);
+    try {
+      const res = await fetch("/api/admin/whatsapp/conversations", { credentials: "include" });
+      const d = await safeJson(res);
+      if (res.ok && d?.status && Array.isArray(d.data)) {
+        setConversations(d.data);
+      }
+    } catch (e) {
+      console.error("[WA Conversations Error]", e);
+    } finally {
+      if (!silent) setLoadingConversations(false);
+    }
+  };
+
+  const loadMessages = async (jid: string, silent = false) => {
+    if (!jid) return;
+    if (!silent) setLoadingMessages(true);
+    try {
+      const res = await fetch(`/api/admin/whatsapp/messages/${encodeURIComponent(jid)}`, { credentials: "include" });
+      const d = await safeJson(res);
+      if (res.ok && d?.status && Array.isArray(d.data)) {
+        setMessages(d.data);
+      }
+    } catch (e) {
+      console.error("[WA Messages Error]", e);
+    } finally {
+      if (!silent) setLoadingMessages(false);
+    }
+  };
+
+  useEffect(() => {
+    checkStatus();
+    loadConversations();
+
+    const interval = setInterval(() => {
+      checkStatus();
+      loadConversations(true);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!activeJid) return;
+    const msgInterval = setInterval(() => {
+      loadMessages(activeJid, true);
+    }, 4000);
+    return () => clearInterval(msgInterval);
+  }, [activeJid]);
 
   const handleChatScroll = () => {
     if (!chatContainerRef.current) return;

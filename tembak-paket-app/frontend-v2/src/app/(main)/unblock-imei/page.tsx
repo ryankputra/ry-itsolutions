@@ -158,6 +158,37 @@ function UnblockImeiContent() {
     }
   }, [selectedPkg]);
 
+  const wholesalePromoInfo = React.useMemo(() => {
+    let minPrice = Infinity;
+    let minQty = 2;
+    let hasPromo = false;
+
+    safePackages.forEach((p) => {
+      if (!p) return;
+      if (p.isVisible === 0 || p.isVisible === false || p.is_active === 0 || p.is_active === false || p.status === 'inactive') return;
+      if (!p.speed_prices) return;
+      try {
+        const parsed = typeof p.speed_prices === 'string' ? JSON.parse(p.speed_prices) : p.speed_prices;
+        if (parsed && parsed.wholesale_enabled) {
+          const prices = parsed.wholesale_prices || {};
+          const validPrices = Object.values(prices).map((v) => Number(v)).filter((v) => v > 0);
+          if (validPrices.length > 0) {
+            hasPromo = true;
+            const pkgMin = Math.min(...validPrices);
+            if (pkgMin < minPrice) minPrice = pkgMin;
+            if (parsed.wholesale_min_qty) minQty = Number(parsed.wholesale_min_qty);
+          }
+        }
+      } catch (e) {}
+    });
+
+    return {
+      hasPromo,
+      minPrice: minPrice !== Infinity ? minPrice : 160000,
+      minQty
+    };
+  }, [safePackages]);
+
   const speedCost = selectedSpeed && speedPricing ? Number(speedPricing[`imei_speed_${selectedSpeed}`] || speedPricing[selectedSpeed] || 0) : 0;
   const wholesaleMinQty = Number(pkgSpeedPrices?.wholesale_min_qty) || 2;
   const wholesalePrices = pkgSpeedPrices?.wholesale_prices || {};
@@ -578,30 +609,32 @@ function UnblockImeiContent() {
       <BroadcastBanner initialAnnouncements={announcements} />
 
       {/* Promo Diskon Multi-IMEI & Dual SIM Banner */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-primary/10 to-indigo-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-start sm:items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-            </svg>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xs text-ink tracking-tight">Promo Diskon Multi-IMEI &amp; Dual SIM</span>
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-white">Hemat Otomatis</span>
+      {wholesalePromoInfo.hasPromo && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-primary/10 to-indigo-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+              </svg>
             </div>
-            <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">
-              Daftarkan 2 IMEI atau lebih (HP Dual SIM / Multi-Device sekaligus) otomatis dapat harga grosir spesial mulai dari <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp 160.000 / IMEI</span>.
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-xs text-ink tracking-tight">Promo Diskon Multi-IMEI &amp; Dual SIM</span>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-white">Hemat Otomatis</span>
+              </div>
+              <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">
+                Daftarkan {wholesalePromoInfo.minQty} IMEI atau lebih (HP Dual SIM / Multi-Device sekaligus) otomatis dapat harga grosir spesial mulai dari <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {wholesalePromoInfo.minPrice.toLocaleString('id-ID')} / IMEI</span>.
+              </p>
+            </div>
+          </div>
+          <div className="self-end sm:self-center shrink-0">
+            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-300/60">
+              Min. {wholesalePromoInfo.minQty} IMEI
+            </span>
           </div>
         </div>
-        <div className="self-end sm:self-center shrink-0">
-          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-300/60">
-            Min. 2 IMEI
-          </span>
-        </div>
-      </div>
+      )}
 
       <Card glass className="p-6 space-y-6">
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">

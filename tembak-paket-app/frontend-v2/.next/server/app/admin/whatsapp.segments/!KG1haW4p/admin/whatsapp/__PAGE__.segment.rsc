@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
 2:I[61304,[],"ClientPageRoot"]
-3:I[75934,["8320","static/chunks/41ade5dc-716d85a2757e44a6.js","3180","static/chunks/3180-df345afd2d78e220.js","1482","static/chunks/app/(main)/admin/whatsapp/page-1dfa917f4a500095.js"],"default"]
+3:I[75934,["8320","static/chunks/41ade5dc-716d85a2757e44a6.js","3180","static/chunks/3180-df345afd2d78e220.js","1482","static/chunks/app/(main)/admin/whatsapp/page-87894db818eafd71.js"],"default"]
 6:I[90484,[],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"XP7gvU8erMYx4yRirpKCU"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"dOn9Ae22YWPvJC8cBJUi1"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null
