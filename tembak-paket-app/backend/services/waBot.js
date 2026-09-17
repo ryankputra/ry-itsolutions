@@ -161,12 +161,21 @@ function extractMessageTextAndDetails(rawObj) {
 }
 
 let isBackfilling = false;
+let hasBackfilled = false;
 async function backfillStoreToHistory() {
-    if (isBackfilling) return 0;
+    if (isBackfilling || hasBackfilled) return 0;
     isBackfilling = true;
     try {
+        const historyCount = await dbGet("SELECT COUNT(*) as cnt FROM wa_chat_history").catch(() => null);
+        if (historyCount && historyCount.cnt > 0) {
+            hasBackfilled = true;
+            isBackfilling = false;
+            return 0;
+        }
+
         const rows = await dbAll("SELECT id, remoteJid, messageContent, createdAt FROM wa_message_store ORDER BY createdAt ASC").catch(() => []);
         if (!rows || rows.length === 0) {
+            hasBackfilled = true;
             isBackfilling = false;
             return 0;
         }
@@ -192,6 +201,7 @@ async function backfillStoreToHistory() {
         if (count > 0) {
             logWABot(`[WA Hydration] Berhasil mengimpor ${count} riwayat pesan dari wa_message_store.`, "info");
         }
+        hasBackfilled = true;
         isBackfilling = false;
         return count;
     } catch (e) {
@@ -641,8 +651,7 @@ async function initWABot(forceNew = false) {
             printQRInTerminal: false,
             logger: customLogger,
             browser: Browsers.macOS("Chrome"),
-            syncFullHistory: true,
-            shouldSyncHistoryMessage: () => true,
+            syncFullHistory: false,
             markOnlineOnConnect: true,
             qrTimeout: 60000,
             connectTimeoutMs: 60000,
@@ -1493,7 +1502,18 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
  */
 async function sendTextMessage(targetPhone, message) {
     try {
-        if (connectionState !== "open" || !sock) {
+        let isConnected = (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id));
+        if (!isConnected && sock) {
+            for (let i = 0; i < 4; i++) {
+                await new Promise(r => setTimeout(r, 500));
+                if (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id)) {
+                    isConnected = true;
+                    break;
+                }
+            }
+        }
+
+        if (!sock || !isConnected) {
             return { status: false, message: "WhatsApp Baileys bot belum terhubung / belum login." };
         }
 

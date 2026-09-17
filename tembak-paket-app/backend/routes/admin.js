@@ -2622,9 +2622,6 @@ function normalizePhone(p) {
 // GET /api/admin/whatsapp/conversations
 router.get('/admin/whatsapp/conversations', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        if (waBot.backfillStoreToHistory) {
-            await waBot.backfillStoreToHistory().catch(() => {});
-        }
 
         const rows = await dbAll(`
             SELECT h1.*,
