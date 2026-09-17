@@ -15,7 +15,7 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
   const { user, setUser } = useApp();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const [gameState, setGameState] = useState<"idle" | "playing" | "gameover">("idle");
+  const [gameState, setGameState] = useState<"idle" | "ready" | "playing" | "gameover">("idle");
   const [score, setScore] = useState(0);
   const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
@@ -68,7 +68,7 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
     droneRef.current = {
       x: 50,
       y: 150,
-      vy: -3,
+      vy: 0,
       gravity: 0.38,
       jump: -6.5,
       size: 24,
@@ -76,19 +76,38 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
     obstaclesRef.current = [];
     scoreRef.current = 0;
     setScore(0);
-    setGameState("playing");
+    setGameState("ready");
   };
 
   const handleJump = () => {
-    if (gameState === "playing") {
+    if (gameState === "ready") {
+      playPopSound();
+      droneRef.current.vy = droneRef.current.jump;
+      setGameState("playing");
+    } else if (gameState === "playing") {
       playPopSound();
       droneRef.current.vy = droneRef.current.jump;
     }
   };
 
+  // Keyboard controls (Space or ArrowUp)
+  useEffect(() => {
+    if (gameState !== "playing" && gameState !== "ready") return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === " " || e.key === "ArrowUp") {
+        e.preventDefault();
+        handleJump();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [gameState]);
+
   // Main Canvas Render Loop
   useEffect(() => {
-    if (gameState !== "playing") return;
+    if (gameState !== "playing" && gameState !== "ready") return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -118,21 +137,28 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
         ctx.fill();
       });
 
-      // 2. Update Drone Physics
       const drone = droneRef.current;
-      drone.vy += drone.gravity;
-      drone.y += drone.vy;
 
-      // Floor & Ceiling Collision
-      if (drone.y + drone.size / 2 >= height - 20 || drone.y - drone.size / 2 <= 0) {
-        setGameState("gameover");
-        return;
+      if (gameState === "ready") {
+        // Hovering gently in place before player's first tap
+        drone.y = 150 + Math.sin(frameCount * 0.08) * 8;
+        drone.vy = 0;
+      } else {
+        // 2. Update Drone Physics
+        drone.vy += drone.gravity;
+        drone.y += drone.vy;
+
+        // Floor & Ceiling Collision
+        if (drone.y + drone.size / 2 >= height - 20 || drone.y - drone.size / 2 <= 0) {
+          setGameState("gameover");
+          return;
+        }
       }
 
       // Draw Drone (Cyber Mascot with Glowing Ring)
       ctx.save();
       ctx.translate(drone.x, drone.y);
-      const angle = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, drone.vy * 0.08));
+      const angle = gameState === "ready" ? 0 : Math.min(Math.PI / 4, Math.max(-Math.PI / 4, drone.vy * 0.08));
       ctx.rotate(angle);
 
       // Drone Glow
@@ -177,80 +203,82 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
 
       ctx.restore();
 
-      // 3. Spawn Obstacles
-      if (frameCount % 90 === 0) {
-        const topH = Math.floor(Math.random() * (height - gap - 90)) + 30;
-        const botH = height - topH - gap;
-        obstaclesRef.current.push({
-          x: width,
-          topHeight: topH,
-          bottomHeight: botH,
-          passed: false,
-          coinY: topH + gap / 2,
-          coinCollected: false,
-        });
-      }
+      if (gameState === "playing") {
+        // 3. Spawn Obstacles
+        if (frameCount % 90 === 0) {
+          const topH = Math.floor(Math.random() * (height - gap - 90)) + 30;
+          const botH = height - topH - gap;
+          obstaclesRef.current.push({
+            x: width,
+            topHeight: topH,
+            bottomHeight: botH,
+            passed: false,
+            coinY: topH + gap / 2,
+            coinCollected: false,
+          });
+        }
 
-      // 4. Update & Render Obstacles & Coins
-      const obstacles = obstaclesRef.current;
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obs = obstacles[i];
-        obs.x -= 2.2;
+        // 4. Update & Render Obstacles & Coins
+        const obstacles = obstaclesRef.current;
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.x -= 2.2;
 
-        // Draw Obstacles (Neon Cyber Pillars)
-        ctx.fillStyle = "#1E293B";
-        ctx.strokeStyle = "#3B82F6";
-        ctx.lineWidth = 2;
+          // Draw Obstacles (Neon Cyber Pillars)
+          ctx.fillStyle = "#1E293B";
+          ctx.strokeStyle = "#3B82F6";
+          ctx.lineWidth = 2;
 
-        // Top Pillar
-        ctx.fillRect(obs.x, 0, 44, obs.topHeight);
-        ctx.strokeRect(obs.x, 0, 44, obs.topHeight);
+          // Top Pillar
+          ctx.fillRect(obs.x, 0, 44, obs.topHeight);
+          ctx.strokeRect(obs.x, 0, 44, obs.topHeight);
 
-        // Bottom Pillar
-        const botY = height - obs.bottomHeight;
-        ctx.fillRect(obs.x, botY, 44, obs.bottomHeight);
-        ctx.strokeRect(obs.x, botY, 44, obs.bottomHeight);
+          // Bottom Pillar
+          const botY = height - obs.bottomHeight;
+          ctx.fillRect(obs.x, botY, 44, obs.bottomHeight);
+          ctx.strokeRect(obs.x, botY, 44, obs.bottomHeight);
 
-        // Draw Coin if not collected
-        if (!obs.coinCollected) {
-          const coinX = obs.x + 22;
-          const coinY = obs.coinY;
+          // Draw Coin if not collected
+          if (!obs.coinCollected) {
+            const coinX = obs.x + 22;
+            const coinY = obs.coinY;
 
-          ctx.fillStyle = "#F59E0B";
-          ctx.beginPath();
-          ctx.arc(coinX, coinY, 10, 0, Math.PI * 2);
-          ctx.fill();
+            ctx.fillStyle = "#F59E0B";
+            ctx.beginPath();
+            ctx.arc(coinX, coinY, 10, 0, Math.PI * 2);
+            ctx.fill();
 
-          ctx.fillStyle = "#FEF08A";
-          ctx.font = "bold 10px sans-serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("R", coinX, coinY);
+            ctx.fillStyle = "#FEF08A";
+            ctx.font = "bold 10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("R", coinX, coinY);
 
-          // Coin Collection Check
-          const dist = Math.hypot(drone.x - coinX, drone.y - coinY);
-          if (dist < 22) {
-            obs.coinCollected = true;
-            scoreRef.current += 1;
-            setScore(scoreRef.current);
-            playDingSound();
+            // Coin Collection Check
+            const dist = Math.hypot(drone.x - coinX, drone.y - coinY);
+            if (dist < 22) {
+              obs.coinCollected = true;
+              scoreRef.current += 1;
+              setScore(scoreRef.current);
+              playDingSound();
+            }
           }
-        }
 
-        // Collision Check with Pillars
-        const obsWidth = 44;
-        if (
-          drone.x + 10 > obs.x &&
-          drone.x - 10 < obs.x + obsWidth &&
-          (drone.y - 10 < obs.topHeight || drone.y + 10 > height - obs.bottomHeight)
-        ) {
-          setGameState("gameover");
-          return;
-        }
+          // Collision Check with Pillars
+          const obsWidth = 44;
+          if (
+            drone.x + 10 > obs.x &&
+            drone.x - 10 < obs.x + obsWidth &&
+            (drone.y - 10 < obs.topHeight || drone.y + 10 > height - obs.bottomHeight)
+          ) {
+            setGameState("gameover");
+            return;
+          }
 
-        // Remove offscreen obstacles
-        if (obs.x + obsWidth < 0) {
-          obstacles.splice(i, 1);
+          // Remove offscreen obstacles
+          if (obs.x + obsWidth < 0) {
+            obstacles.splice(i, 1);
+          }
         }
       }
 
@@ -259,6 +287,25 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
       ctx.fillRect(0, height - 20, width, 20);
       ctx.fillStyle = "#3B82F6";
       ctx.fillRect(0, height - 20, width, 2);
+
+      // Draw pulsing instruction overlay when in READY state
+      if (gameState === "ready") {
+        ctx.save();
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        ctx.fillRect(30, height / 2 + 15, width - 60, 52);
+        ctx.strokeStyle = "#3B82F6";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(30, height / 2 + 15, width - 60, 52);
+
+        ctx.fillStyle = "#60A5FA";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const pulse = Math.sin(frameCount * 0.1) * 0.25 + 0.75;
+        ctx.globalAlpha = pulse;
+        ctx.fillText("KETUK / TEKAN SPASI UNTUK TERBANG!", width / 2, height / 2 + 41);
+        ctx.restore();
+      }
 
       animFrameRef.current = requestAnimationFrame(loop);
     };
@@ -334,11 +381,11 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
         <canvas ref={canvasRef} width={360} height={320} className="w-full h-full block" />
 
         {/* Top Floating HUD */}
-        {gameState === "playing" && (
+        {(gameState === "playing" || gameState === "ready") && (
           <div className="absolute top-3 left-4 right-4 flex items-center justify-between pointer-events-none">
             <div className="px-3 py-1 rounded-full bg-slate-900/80 border border-blue-500/30 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>TERBANG</span>
+              <span className={`w-2 h-2 rounded-full ${gameState === "ready" ? "bg-amber-400" : "bg-emerald-400 animate-ping"}`} />
+              <span>{gameState === "ready" ? "SIAP TERBANG" : "TERBANG"}</span>
             </div>
 
             <div className="px-3.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black text-sm flex items-center gap-1 shadow-md">
@@ -389,7 +436,7 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">GAME OVER</span>
               <h3 className="text-lg font-black text-white">Koin Terkumpul: {score}</h3>
               <p className="text-xs text-slate-300 mt-0.5">
-                {score > 0 ? "Hasil penerbangan Anda sangat bagus!" : "Jangan menyerah, coba lagi besok!"}
+                {score > 0 ? "Hasil penerbangan Anda sangat bagus!" : "Jangan menyerah, coba main lagi!"}
               </p>
             </div>
 
@@ -416,9 +463,9 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
                     e.stopPropagation();
                     startGame();
                   }}
-                  className="text-[11px] font-bold text-slate-400 hover:text-white underline"
+                  className="text-[11px] font-bold text-slate-400 hover:text-white underline block mx-auto py-1"
                 >
-                  Main Ulang (Latihan)
+                  Main Ulang (Persiapan Dulu)
                 </button>
               </div>
             )}
