@@ -590,24 +590,31 @@ export default function LandingPage() {
 
       {/* Warranty Section (id="garansi") */}
       <section id="garansi" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-[#004080] via-[#005bb5] to-[#0066cc] text-white relative overflow-hidden shadow-xl">
-          <div className="max-w-2xl space-y-4 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white font-bold text-xs">
-              <svg className="w-5 h-5 text-emerald-600 inline shrink-0 mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg> Perlindungan & Transparansi
+        <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0284c7] text-white relative overflow-hidden shadow-2xl border border-white/10">
+          {/* Ambient Glows */}
+          <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-20 -top-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="max-w-2xl space-y-5 relative z-10">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-emerald-300 font-bold text-xs tracking-wide">
+              <svg className="w-4 h-4 text-emerald-400 inline shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg> Perlindungan &amp; Transparansi
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
-              Layanan Bergaransi Sinyal & Verifikasi QR Realtime
+
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-snug drop-shadow-xs">
+              Layanan Bergaransi Sinyal &amp; Verifikasi QR Realtime
             </h2>
-            <p className="text-xs sm:text-sm text-white/90 leading-relaxed">
+
+            <p className="text-xs sm:text-sm text-slate-100/90 leading-relaxed font-medium">
               Setiap pengerjaan dilengkapi surat garansi digital dan QR Code yang dapat discan kapan saja untuk memeriksa status dan masa berlaku garansi perangkat.
             </p>
+
             <div className="pt-2">
               <Link
                 href="/cek-garansi"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-white/90 transition-all"
+                className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white text-blue-950 font-extrabold text-xs sm:text-sm shadow-xl hover:bg-blue-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 Cek Status Garansi
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                <svg className="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
               </Link>
             </div>
           </div>
@@ -672,7 +679,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-6 border-t border-hairline text-center text-xs text-ink-muted space-y-1.5">
         <p className="font-semibold text-ink">© {new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
-        <p className="text-[11px] text-ink-muted">Portal Layanan Aktivasi Sinyal & Database CEIR</p>
+        <p className="text-[11px] text-ink-muted">Platform Solusi IT, Otomasi Digital &amp; FinTech Terintegrasi</p>
       </footer>
     </div>
   );

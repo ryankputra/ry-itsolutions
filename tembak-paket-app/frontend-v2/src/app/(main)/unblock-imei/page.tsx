@@ -999,13 +999,9 @@ function UnblockImeiContent() {
 
                 {/* Disclaimer Box for Cutoff */}
                 {selectedSpeed === 'slow' && (
-                  <div className={`p-3 rounded-2xl border text-xs space-y-1 transition-all ${
-                    isPast14Wib 
-                      ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-2xs" 
-                      : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200"
-                  }`}>
-                    <div className="font-bold flex items-center gap-1.5 text-xs">
-                      <svg className={`w-4 h-4 shrink-0 ${isPast14Wib ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <div className="p-3.5 rounded-2xl border-2 bg-amber-50/95 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700/80 text-amber-950 dark:text-amber-100 shadow-xs space-y-1.5 transition-all">
+                    <div className="font-extrabold flex items-center gap-1.5 text-xs text-amber-950 dark:text-amber-200">
+                      <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                       </svg>
                       <span>
@@ -1014,14 +1010,14 @@ function UnblockImeiContent() {
                           : "Informasi Detail Ketentuan Jadwal Pengiriman Server:"}
                       </span>
                     </div>
-                    <p className="text-[11px] leading-relaxed opacity-90 pl-5.5">
+                    <p className="text-xs leading-relaxed font-medium text-amber-900 dark:text-amber-200/90 pl-5.5">
                       {isPast14Wib ? (
                         <>
-                          <strong className="font-semibold text-amber-950 dark:text-amber-100">Batas cut-off pengiriman hari ini (14:00 WIB) telah terlewati.</strong> Pesanan Anda tetap dapat dibuat sekarang dan akan diikutsertakan pada jadwal pengiriman batch server besok pagi (estimasi selesai max 00:00 WIB hari berikutnya).
+                          <strong className="font-bold text-amber-950 dark:text-amber-100 underline decoration-amber-400/70">Batas cut-off pengiriman hari ini (14:00 WIB) telah terlewati.</strong> Pesanan Anda tetap dapat dibuat sekarang dan akan diikutsertakan pada jadwal pengiriman batch server besok pagi (estimasi selesai max 00:00 WIB hari berikutnya).
                         </>
                       ) : (
                         <>
-                          Pemesanan sebelum pukul <strong className="font-semibold text-blue-950 dark:text-blue-100">14:00 WIB</strong> akan langsung dikirim ke server pada batch hari ini dengan target estimasi penyelesaian paling lambat pukul <strong className="font-semibold text-blue-950 dark:text-blue-100">00:00 WIB malam ini</strong>.
+                          Pemesanan sebelum pukul <strong className="font-bold text-amber-950 dark:text-amber-100 underline decoration-amber-400/70">14:00 WIB</strong> akan langsung dikirim ke server pada batch hari ini dengan target estimasi penyelesaian paling lambat pukul <strong className="font-bold text-amber-950 dark:text-amber-100 underline decoration-amber-400/70">00:00 WIB malam ini</strong>.
                         </>
                       )}
                     </p>
