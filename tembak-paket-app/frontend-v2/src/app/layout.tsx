@@ -23,8 +23,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Ry-ITSolutions",
-  description: "Cepat. Ringkas. Beli paket dalam hitungan detik.",
+  metadataBase: new URL("https://ry-itsolutionts.web.id"),
+  title: {
+    default: "Ry-ITSolutions - Platform Solusi IT, Otomasi Digital & FinTech",
+    template: "%s | Ry-ITSolutions",
+  },
+  description: "Pusat layanan IT terpadu: Aktivasi sinyal seluler IMEI bergaransi, Payment Gateway GoPay & QRIS SaaS, Cek Database CEIR Kemenperin & Bea Cukai realtime.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",
@@ -35,6 +39,19 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Ry-ITSolutions",
+  },
+  openGraph: {
+    title: "Ry-ITSolutions - Platform Solusi IT, Otomasi Digital & FinTech",
+    description: "Pusat layanan IT terpadu: Aktivasi sinyal seluler IMEI bergaransi, Payment Gateway GoPay & QRIS SaaS, Cek Database CEIR Kemenperin & Bea Cukai realtime.",
+    url: "https://ry-itsolutionts.web.id",
+    siteName: "Ry-ITSolutions",
+    locale: "id_ID",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ry-ITSolutions - Platform Solusi IT, Otomasi Digital & FinTech",
+    description: "Pusat layanan IT terpadu: Aktivasi sinyal seluler IMEI bergaransi, Payment Gateway GoPay & QRIS SaaS, Cek Database CEIR Kemenperin & Bea Cukai realtime.",
   },
   formatDetection: {
     telephone: false,

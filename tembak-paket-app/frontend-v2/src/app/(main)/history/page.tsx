@@ -792,6 +792,9 @@ function HistoryContent() {
                 completedAt: selectedInvoiceTrx.updatedAt || selectedInvoiceTrx.completedAt || selectedInvoiceTrx.createdAt,
                 updatedAt: selectedInvoiceTrx.updatedAt,
                 speed_label: selectedInvoiceTrx.speed_label || selectedInvoiceTrx.speedLabel,
+                user_image: selectedInvoiceTrx.user_image || selectedInvoiceTrx.userImage,
+                user_image_ceir: selectedInvoiceTrx.user_image_ceir || selectedInvoiceTrx.userImageCeir,
+                admin_image: selectedInvoiceTrx.admin_image || selectedInvoiceTrx.adminImage,
                 warranty: selectedInvoiceTrx.warranty || {
                   hasWarranty: !selectedInvoiceTrx.service_type?.includes("ceir"),
                   remainingDays: selectedInvoiceTrx.remainingDays,

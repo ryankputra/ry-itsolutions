@@ -80,7 +80,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   const imeiAnalysis = data.imei && data.imei !== '-' ? analyzeImei(data.imei) : null;
   const warranty = data.warranty;
-  const isSuccess = data.status === 'success' || data.status === 'completed';
+  const isSuccess = (data.status || '').toLowerCase() === 'success' || (data.status || '').toLowerCase() === 'completed';
   const isTopUp = data.serviceType === 'topup' || data.serviceType === 'topup_qris' || (data.packageName || '').toLowerCase().includes('top up') || (data.packageName || '').toLowerCase().includes('topup');
   const isGatewayService = !isTopUp && (data.serviceType === 'gateway' || data.serviceType === 'apikey' || (data.packageName || '').toLowerCase().includes('gateway') || (data.packageName || '').toLowerCase().includes('api key'));
   const isCeirService = !isTopUp && !isGatewayService && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || (warranty?.hasWarranty === false && !isGatewayService));
@@ -323,7 +323,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
         `*Layanan:* ${data.packageName || 'Langganan API Key Gateway'}\n` +
         `*Masa Aktif:* 30 Hari\n` +
-        `*Status:* ${isSuccess ? 'SUKSES / AKTIF' : data.status.toUpperCase()}\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / AKTIF' : (data.status || 'COMPLETED').toUpperCase()}\n` +
         `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
     } else if (isTopUp) {
@@ -340,7 +340,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         `*Perangkat / IMEI:* ${imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : 'Smartphone'} (${data.imei})\n` +
         `*Layanan:* ${data.packageName || 'Layanan Aktivasi IMEI'}\n` +
         `*Garansi Sinyal:* ${dynWarranty.durationLabel} (${dynWarranty.statusText})\n` +
-        `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : data.status.toUpperCase()}\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : (data.status || 'COMPLETED').toUpperCase()}\n` +
         `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
         `*Cek Nota & Status Garansi Online:* \n${verifyUrl}\n\n` +
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
@@ -490,10 +490,10 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
               <div className="text-right">
                 <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
                   isSuccess ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                  data.status === 'pending' || data.status === 'processing' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                  (data.status || '').toLowerCase() === 'pending' || (data.status || '').toLowerCase() === 'processing' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                   'bg-rose-100 text-rose-800 border border-rose-200'
                 }`}>
-                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isGatewayService ? 'LANGGANAN AKTIF' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : data.status.toUpperCase()}
+                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isGatewayService ? 'LANGGANAN AKTIF' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : (data.status || 'COMPLETED').toUpperCase()}
                 </span>
                 <p className="text-[10px] text-slate-400 font-mono mt-1">
                   TRX: #{data.trxId ? data.trxId.substring(0, 16) : 'N/A'}

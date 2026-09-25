@@ -140,6 +140,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
       {/* Hamburger Menu for Mobile */}
       <button 
         onClick={onMenuClick}
+        aria-label="Buka Menu Sidebar"
         className="text-ink hover:text-primary transition-colors md:hidden p-2 -ml-2"
       >
         <span className="sr-only">Open sidebar</span>
@@ -155,6 +156,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           {/* Dark Mode Toggle Button */}
           <button
             onClick={toggleDarkMode}
+            aria-label={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
             className="p-2 text-ink-muted hover:text-ink transition-colors rounded-full hover:bg-parchment flex items-center justify-center"
             title={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap (Obsidian)"}
           >
@@ -173,6 +175,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <div className="relative" ref={notifRef}>
             <button 
               onClick={handleOpenNotif}
+              aria-label="Buka Notifikasi"
               className="relative p-2 text-ink-muted hover:text-ink transition-colors rounded-full hover:bg-parchment"
             >
               <span className="sr-only">Notifications</span>

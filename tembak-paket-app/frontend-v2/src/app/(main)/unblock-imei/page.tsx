@@ -475,11 +475,9 @@ function UnblockImeiContent() {
     }
 
     (files || []).forEach(f => {
-      formData.append("screenshot", f);
       formData.append("image", f);
     });
     (ceirFiles || []).forEach(f => {
-      formData.append("ceir_screenshot", f);
       formData.append("ceir_image", f);
     });
 

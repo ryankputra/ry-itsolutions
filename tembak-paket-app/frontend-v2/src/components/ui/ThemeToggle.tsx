@@ -57,6 +57,7 @@ export function ThemeToggle({ className = "", variant = "icon" }: ThemeTogglePro
       <button
         type="button"
         onClick={toggleTheme}
+        aria-label={`Mode Tampilan (${isDark ? "Gelap" : "Terang"})`}
         className={`w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-parchment font-bold text-ink transition-colors ${className}`}
       >
         <div className="flex items-center gap-2.5">
@@ -84,6 +85,7 @@ export function ThemeToggle({ className = "", variant = "icon" }: ThemeTogglePro
     <button
       type="button"
       onClick={toggleTheme}
+      aria-label={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
       className={`p-2 rounded-xl border transition-all duration-200 flex items-center justify-center group ${
         isDark
           ? "bg-slate-800/80 hover:bg-slate-800 text-amber-400 border-white/10 shadow-xs"

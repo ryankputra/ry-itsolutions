@@ -811,22 +811,20 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             }
 
             let imagePaths = [];
-            const imgFiles = [
-                ...(req.files && req.files['image'] ? req.files['image'] : []),
-                ...(req.files && req.files['screenshot'] ? req.files['screenshot'] : [])
-            ];
+            const imgFiles = req.files && req.files['image'] && req.files['image'].length > 0
+                ? req.files['image']
+                : (req.files && req.files['screenshot'] ? req.files['screenshot'] : []);
             if (imgFiles.length > 0) {
-                imagePaths = imgFiles.map(f => `/public/uploads/manual_orders/${f.filename}`);
+                imagePaths = Array.from(new Set(imgFiles.map(f => `/public/uploads/manual_orders/${f.filename}`)));
             }
             const imagePath = imagePaths.length > 0 ? imagePaths.join(',') : null;
 
             let ceirImagePaths = [];
-            const ceirFilesList = [
-                ...(req.files && req.files['ceir_image'] ? req.files['ceir_image'] : []),
-                ...(req.files && req.files['ceir_screenshot'] ? req.files['ceir_screenshot'] : [])
-            ];
+            const ceirFilesList = req.files && req.files['ceir_image'] && req.files['ceir_image'].length > 0
+                ? req.files['ceir_image']
+                : (req.files && req.files['ceir_screenshot'] ? req.files['ceir_screenshot'] : []);
             if (ceirFilesList.length > 0) {
-                ceirImagePaths = ceirFilesList.map(f => `/public/uploads/manual_orders/${f.filename}`);
+                ceirImagePaths = Array.from(new Set(ceirFilesList.map(f => `/public/uploads/manual_orders/${f.filename}`)));
             }
             const ceirImagePath = ceirImagePaths.length > 0 ? ceirImagePaths.join(',') : null;
 

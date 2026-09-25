@@ -761,13 +761,18 @@ export default function LandingPage() {
             >
               <button
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                aria-expanded={openFaq === idx}
+                aria-controls={`faq-answer-${idx}`}
                 className="w-full p-4 text-left font-bold text-xs sm:text-sm text-ink flex items-center justify-between gap-4 hover:bg-parchment/50 transition-colors"
               >
                 <span>{faq.q}</span>
                 <span className="text-base font-mono text-ink-muted">{openFaq === idx ? "−" : "+"}</span>
               </button>
               {openFaq === idx && (
-                <div className="p-4 pt-0 text-xs text-ink-muted leading-relaxed border-t border-hairline/60 bg-parchment/30 animate-fadeIn">
+                <div
+                  id={`faq-answer-${idx}`}
+                  className="p-4 pt-0 text-xs text-ink-muted leading-relaxed border-t border-hairline/60 bg-parchment/30 animate-fadeIn"
+                >
                   {faq.a}
                 </div>
               )}
