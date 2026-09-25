@@ -55,19 +55,23 @@ export default function LandingPage() {
   // Dark Mode Support
   const [isDark, setIsDark] = useState(false);
 
-  // Scroll Progress, Active Nav Section & Scroll Reveal Observer
+  // Scroll Progress, Active Nav Section & Floating Header Observer
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("");
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 20);
+
       const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
       if (totalScroll > 0) {
-        setScrollProgress((window.scrollY / totalScroll) * 100);
+        setScrollProgress((scrollY / totalScroll) * 100);
       }
 
       const sections = ['layanan', 'harga', 'garansi', 'faq'];
-      const scrollPos = window.scrollY + 200;
+      const scrollPos = scrollY + 200;
       for (const sec of sections) {
         const el = document.getElementById(sec);
         if (el) {
@@ -138,8 +142,14 @@ export default function LandingPage() {
       />
 
       {/* Public Top Navbar */}
-      <header className="sticky top-0 z-50 bg-canvas/85 backdrop-blur-xl border-b border-hairline transition-all duration-300 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+      <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'pt-2.5 px-3 sm:px-6' : 'w-full'}`}>
+        <div
+          className={`mx-auto flex items-center justify-between transition-all duration-300 ${
+            isScrolled
+              ? 'max-w-5xl h-14 sm:h-16 px-4 sm:px-6 rounded-2xl sm:rounded-full bg-canvas/80 backdrop-blur-2xl border border-hairline/80 shadow-xl shadow-slate-900/10 dark:shadow-primary/15'
+              : 'max-w-7xl h-16 sm:h-20 px-4 sm:px-6 lg:px-8 bg-canvas/85 backdrop-blur-xl border-b border-hairline'
+          }`}
+        >
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5">
               <Logo size={32} />
@@ -178,6 +188,7 @@ export default function LandingPage() {
               onClick={toggleDarkMode}
               className="p-2 text-ink-muted hover:text-ink transition-colors rounded-full hover:bg-parchment flex items-center justify-center"
               title={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
+              aria-label={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
             >
               {isDark ? (
                 <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
