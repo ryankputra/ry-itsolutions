@@ -2376,5 +2376,8 @@ module.exports = {
     testAdminNotification,
     notifyWarrantyClaim,
     recordChatMessage,
-    backfillStoreToHistory
+    backfillStoreToHistory,
+    getStoredMessage,
+    normalizeProtoMessage,
+    storeMessage
 };
