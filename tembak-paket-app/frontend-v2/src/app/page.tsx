@@ -55,6 +55,56 @@ export default function LandingPage() {
   // Dark Mode Support
   const [isDark, setIsDark] = useState(false);
 
+  // Scroll Progress, Active Nav Section & Scroll Reveal Observer
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeSection, setActiveSection] = useState("");
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScroll > 0) {
+        setScrollProgress((window.scrollY / totalScroll) * 100);
+      }
+
+      const sections = ['layanan', 'harga', 'garansi', 'faq'];
+      const scrollPos = window.scrollY + 200;
+      for (const sec of sections) {
+        const el = document.getElementById(sec);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPos >= top && scrollPos < top + height) {
+            setActiveSection(sec);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    // IntersectionObserver for luxury scroll reveal
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed');
+          }
+        });
+      },
+      { threshold: 0.08 }
+    );
+
+    const revealElements = document.querySelectorAll('.reveal-on-scroll');
+    revealElements.forEach((el) => observer.observe(el));
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      observer.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -81,18 +131,44 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-canvas text-ink selection:bg-primary selection:text-white scroll-smooth transition-colors duration-200">
+      {/* Top Scroll Progress Bar */}
+      <div
+        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-indigo-600 z-[100] transition-all duration-150 pointer-events-none"
+        style={{ width: `${scrollProgress}%` }}
+      />
+
       {/* Public Top Navbar */}
-      <header className="sticky top-0 z-50 bg-canvas/80 backdrop-blur-md border-b border-hairline transition-colors">
+      <header className="sticky top-0 z-50 bg-canvas/85 backdrop-blur-xl border-b border-hairline transition-all duration-300 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5">
               <Logo size={32} />
             </Link>
             <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-ink-muted">
-              <a href="#layanan" className="hover:text-primary transition-colors">Layanan</a>
-              <a href="#harga" className="hover:text-primary transition-colors">Daftar Paket</a>
-              <a href="#garansi" className="hover:text-primary transition-colors">Garansi</a>
-              <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
+              <a
+                href="#layanan"
+                className={`transition-all ${activeSection === 'layanan' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
+              >
+                Layanan
+              </a>
+              <a
+                href="#harga"
+                className={`transition-all ${activeSection === 'harga' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
+              >
+                Daftar Paket
+              </a>
+              <a
+                href="#garansi"
+                className={`transition-all ${activeSection === 'garansi' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
+              >
+                Garansi
+              </a>
+              <a
+                href="#faq"
+                className={`transition-all ${activeSection === 'faq' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
+              >
+                FAQ
+              </a>
             </nav>
           </div>
 
@@ -274,11 +350,59 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+
+          {/* Animated Floating Scroll Indicator */}
+          <div className="pt-8 flex justify-center">
+            <a
+              href="#layanan"
+              className="inline-flex flex-col items-center gap-2 text-xs font-bold text-ink-muted hover:text-primary transition-colors group"
+            >
+              <span>Jelajahi Ekosistem Layanan</span>
+              <div className="w-9 h-9 rounded-full border border-hairline bg-parchment flex items-center justify-center shadow-xs group-hover:border-primary group-hover:scale-110 transition-all animate-bounce">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </div>
+            </a>
+          </div>
         </div>
       </section>
 
+      {/* Luxury Continuous Ticker Marquee */}
+      <div className="w-full bg-parchment/60 border-y border-hairline py-3.5 overflow-hidden backdrop-blur-xs relative my-2">
+        <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-canvas to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-canvas to-transparent z-10 pointer-events-none" />
+        <div className="animate-marquee gap-8 items-center text-xs font-bold text-ink-muted tracking-wide uppercase">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="flex items-center gap-8 shrink-0">
+              <span className="flex items-center gap-2 text-primary">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                Aktivasi Sinyal Instant All Operator
+              </span>
+              <span className="text-hairline">•</span>
+              <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                Garansi Digital Realtime dengan QR Verification
+              </span>
+              <span className="text-hairline">•</span>
+              <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                Payment Gateway GoPay &amp; QRIS SaaS
+              </span>
+              <span className="text-hairline">•</span>
+              <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                Cek Database Gateway CEIR Kemenperin
+              </span>
+              <span className="text-hairline">•</span>
+              <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                Integrasi API &amp; Webhook Realtime
+              </span>
+              <span className="text-hairline">•</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Services Grid (id="layanan") - 6 Universal IT Solutions Pillars */}
-      <section id="layanan" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <section id="layanan" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 reveal-on-scroll">
         <div className="text-center max-w-3xl mx-auto space-y-3">
           <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider border border-primary/20">
             Ekosistem Solusi IT Terpadu
@@ -466,11 +590,11 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section (id="harga") - 100% Real-time Database Integrated */}
-      <section id="harga" className="py-16 bg-parchment/40 border-t border-hairline transition-colors">
+      <section id="harga" className="py-16 bg-parchment/40 border-t border-hairline transition-colors reveal-on-scroll">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-primary">Daftar Paket</span>
-            <h2 className="text-3xl font-black text-ink tracking-tight">Pilihan Paket & Harga</h2>
+            <h2 className="text-3xl font-black text-ink tracking-tight">Pilihan Paket &amp; Harga</h2>
             <p className="text-sm text-ink-muted">Harga terintegrasi langsung dengan database sistem kami.</p>
           </div>
 
@@ -488,7 +612,7 @@ export default function LandingPage() {
                   <span className="text-xs text-ink-muted">/ IMEI</span>
                 </div>
                 <p className="text-xs text-ink-muted leading-relaxed">
-                  Pengecekan data pendaftaran server CEIR & Bea Cukai lengkap dengan log query.
+                  Pengecekan data pendaftaran server CEIR &amp; Bea Cukai lengkap dengan log query.
                 </p>
                 <ul className="text-xs space-y-2 text-ink-muted pt-1">
                   <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Terkoneksi Database Pusat CEIR</li>
@@ -524,7 +648,7 @@ export default function LandingPage() {
                       <span className="text-xs text-ink-muted">/ unit</span>
                     </div>
                     <p className="text-xs text-ink-muted leading-relaxed">
-                      Aktivasi sinyal seluler iPhone & Android semua operator dengan masa garansi aktif {pkg?.duration || "Garansi Aktif"}.
+                      Aktivasi sinyal seluler iPhone &amp; Android semua operator dengan masa garansi aktif {pkg?.duration || "Garansi Aktif"}.
                     </p>
                     <ul className="text-xs space-y-2 text-ink-muted pt-1">
                       <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Sinyal All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)</li>
@@ -546,7 +670,7 @@ export default function LandingPage() {
                   <span className="text-[11px] font-bold text-primary uppercase">All Operator</span>
                   <h3 className="text-xl font-bold text-ink">Unblock IMEI HP Inter</h3>
                   <p className="text-xs text-ink-muted leading-relaxed">
-                    Aktivasi sinyal seluler iPhone & Android untuk semua operator dengan jaminan garansi.
+                    Aktivasi sinyal seluler iPhone &amp; Android untuk semua operator dengan jaminan garansi.
                   </p>
                 </div>
                 <Link
@@ -589,7 +713,7 @@ export default function LandingPage() {
       </section>
 
       {/* Warranty Section (id="garansi") */}
-      <section id="garansi" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="garansi" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal-on-scroll">
         <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0284c7] text-white relative overflow-hidden shadow-2xl border border-white/10">
           {/* Ambient Glows */}
           <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
@@ -622,7 +746,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section (id="faq") */}
-      <section id="faq" className="py-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <section id="faq" className="py-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 reveal-on-scroll">
         <div className="text-center space-y-2">
           <span className="text-xs font-bold uppercase tracking-wider text-primary">Pusat Informasi</span>
           <h2 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight">Pertanyaan yang Sering Diajukan</h2>
