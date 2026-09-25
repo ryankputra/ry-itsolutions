@@ -719,7 +719,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                     {data.speed_label || data.speedLabel || (
                       (data.speed || data.speed_option) === 'fast' ? 'Fast (1-3 Jam)' :
                       (data.speed || data.speed_option) === 'semi' ? 'Semi Fast (1-12 Jam)' :
-                      'Slow (Max kirim jam 14:00, selesai max jam 00:00 WIB)'
+                      'Slow (Cut-off 14:00 WIB, estimasi selesai max 00:00 WIB)'
                     )}
                   </span>
                 </div>
