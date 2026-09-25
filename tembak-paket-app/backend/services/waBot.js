@@ -215,11 +215,51 @@ setTimeout(() => {
     backfillStoreToHistory().catch(() => {});
 }, 3000);
 
+function normalizeProtoMessage(msgObj) {
+    if (!msgObj) return null;
+    let m = msgObj.message || msgObj;
+    if (typeof m.toJSON === 'function') {
+        m = m.toJSON();
+    }
+    // Unwrap nested wrappers recursively if any
+    let depth = 0;
+    while (m && typeof m === 'object' && depth < 5) {
+        depth++;
+        if (m.deviceSentMessage?.message) {
+            m = m.deviceSentMessage.message;
+        } else if (m.ephemeralMessage?.message) {
+            m = m.ephemeralMessage.message;
+        } else if (m.viewOnceMessage?.message) {
+            m = m.viewOnceMessage.message;
+        } else if (m.viewOnceMessageV2?.message) {
+            m = m.viewOnceMessageV2.message;
+        } else if (m.documentWithCaptionMessage?.message) {
+            m = m.documentWithCaptionMessage.message;
+        } else {
+            break;
+        }
+        if (m && typeof m.toJSON === 'function') {
+            m = m.toJSON();
+        }
+    }
+
+    if (typeof m === 'string') {
+        return { conversation: m };
+    }
+    if (m?.text && typeof m.text === 'string' && !m.conversation && !m.extendedTextMessage) {
+        return { conversation: m.text };
+    }
+    return m;
+}
+
 async function storeMessage(id, remoteJid, messageObj) {
     if (!id || !messageObj) return;
     try {
-        messageStore.set(id, messageObj);
-        const serialized = JSON.stringify(messageObj);
+        const plainMsg = normalizeProtoMessage(messageObj);
+        if (!plainMsg) return;
+
+        messageStore.set(id, plainMsg);
+        const serialized = JSON.stringify(plainMsg);
         await dbRun(
             "INSERT OR REPLACE INTO wa_message_store (id, remoteJid, messageContent, createdAt) VALUES (?, ?, ?, ?)",
             [id, remoteJid || "", serialized, Date.now()]
@@ -232,25 +272,51 @@ async function storeMessage(id, remoteJid, messageObj) {
 
 async function getStoredMessage(key) {
     if (!key?.id) return undefined;
-    const inMem = messageStore.get(key.id);
-    if (inMem) {
-        try {
-            return proto.Message.fromObject(inMem.message || inMem);
-        } catch (e) {
-            return inMem.message || inMem;
+
+    // 1. Try memory cache first by exact ID or case variants
+    const candidateIds = [key.id, key.id.toUpperCase(), key.id.toLowerCase()];
+    for (const kId of candidateIds) {
+        const inMem = messageStore.get(kId);
+        if (inMem) {
+            try {
+                const plain = normalizeProtoMessage(inMem);
+                if (plain) return proto.Message.fromObject(plain);
+            } catch (e) {
+                if (inMem) return inMem;
+            }
         }
     }
+
+    // 2. Try SQLite DB store by exact key.id or case-insensitive match
     try {
-        const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ?", [key.id]);
+        const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ? OR LOWER(id) = LOWER(?)", [key.id, key.id]);
         if (row?.messageContent) {
             const parsed = JSON.parse(row.messageContent);
-            try {
-                return proto.Message.fromObject(parsed.message || parsed);
-            } catch (e) {
-                return parsed.message || parsed;
+            const plain = normalizeProtoMessage(parsed);
+            if (plain) {
+                try {
+                    return proto.Message.fromObject(plain);
+                } catch (e) {
+                    return plain;
+                }
             }
         }
     } catch (e) {}
+
+    // 3. Fallback: try finding recent sent message for same remoteJid in DB
+    if (key.remoteJid) {
+        try {
+            const cleanPhoneNum = (key.remoteJid.replace('@s.whatsapp.net', '').split(':')[0] || '').replace(/\D/g, '');
+            const recentRow = await dbGet(
+                "SELECT body FROM wa_chat_history WHERE remoteJid = ? OR senderPhone = ? ORDER BY timestamp DESC LIMIT 1",
+                [key.remoteJid, cleanPhoneNum]
+            );
+            if (recentRow?.body) {
+                return proto.Message.fromObject({ conversation: recentRow.body });
+            }
+        } catch (e) {}
+    }
+
     return undefined;
 }
 
@@ -1466,8 +1532,11 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
 
     try {
         const sent = await sock.sendMessage(finalJid, finalContent, sendOpts);
-        if (sent?.key?.id && sent?.message) {
-            await storeMessage(sent.key.id, finalJid, sent.message);
+        if (sent?.key?.id) {
+            await storeMessage(sent.key.id, finalJid, sent.message || protoPayload);
+        }
+        if (msgId && sent?.key?.id && sent.key.id !== msgId) {
+            await storeMessage(msgId, finalJid, sent.message || protoPayload);
         }
         const textBody = finalContent.text || finalContent.caption || (finalContent.image ? "[Foto]" : "[Pesan]");
         await recordChatMessage(sent?.key?.id || msgId, finalJid, "Admin", 1, textBody, finalContent.image ? 'image' : 'text', Date.now());
@@ -1484,8 +1553,8 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
                         try { fs.unlinkSync(path.join(SESSIONS_DIR, f)); } catch (e) {}
                     });
                     const retried = await sock.sendMessage(finalJid, finalContent, sendOpts);
-                    if (retried?.key?.id && retried?.message) {
-                        await storeMessage(retried.key.id, finalJid, retried.message);
+                    if (retried?.key?.id) {
+                        await storeMessage(retried.key.id, finalJid, retried.message || protoPayload);
                     }
                     return retried;
                 }
