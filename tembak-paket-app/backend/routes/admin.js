@@ -343,6 +343,24 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
             if (m && r.value) speedRangeMap[m[1]] = r.value;
         });
 
+        const toIsoDateString = (val) => {
+            if (!val) return new Date().toISOString();
+            if (typeof val === 'number') return new Date(val).toISOString();
+            const d = new Date(val);
+            if (!isNaN(d.getTime())) return d.toISOString();
+            if (typeof val === 'string') {
+                const parts = val.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+                if (parts) {
+                    const day = parseInt(parts[1], 10);
+                    const month = parseInt(parts[2], 10) - 1;
+                    const year = parseInt(parts[3], 10);
+                    const parsed = new Date(year, month, day);
+                    if (!isNaN(parsed.getTime())) return parsed.toISOString();
+                }
+            }
+            return new Date().toISOString();
+        };
+
         let categorizedOrders = orders.map(o => {
             const pkgId = (o.packageId || '').toLowerCase();
             const sType = (o.service_type || '').toLowerCase();
@@ -358,6 +376,9 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
 
             return {
                 ...o,
+                createdAt: toIsoDateString(o.createdAt),
+                updatedAt: o.updatedAt ? toIsoDateString(o.updatedAt) : null,
+                completedAt: o.completedAt ? toIsoDateString(o.completedAt) : null,
                 speed_label: speedLabel,
                 speed_range: speedRangeMap[(o.speed_option || 'slow').toLowerCase()] || speedRangeMap['slow'],
                 is_automated: isAuto,
