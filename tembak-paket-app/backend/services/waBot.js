@@ -1062,26 +1062,6 @@ async function initWABot(forceNew = false) {
                 // Ignore empty JID, group chats (@g.us), broadcast channels, and newsletters
                 if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast") || remoteJid.includes("@newsletter")) continue;
 
-                // Determine sender phone number cleanly
-                const cleanRemotePhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", "").split(":")[0]);
-                const adminPhones = await getAdminPhoneNumbers();
-                const cleanAdminList = adminPhones.map(p => cleanPhone(p)).filter(Boolean);
-
-                // STRICT ADMIN CHECK:
-                // Only authorized if message was sent from the bot's own account (fromMe)
-                // OR the sender's phone number is explicitly in the admin list.
-                const isSenderAdmin = Boolean(
-                    msg.key.fromMe ||
-                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone))
-                );
-
-                // IF SENDER IS NOT AN ADMIN:
-                // SILENTLY IGNORE! NO REPLY, NO COMMANDS, NO MESSAGES WHATSOEVER!
-                if (!isSenderAdmin) {
-                    // Do not respond to regular users under any circumstances
-                    continue;
-                }
-
                 const messageText = (
                     msg.message.conversation ||
                     msg.message.extendedTextMessage?.text ||
@@ -1091,11 +1071,41 @@ async function initWABot(forceNew = false) {
 
                 if (!messageText) continue;
 
-                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses)
+                // Check if message is a command or quick shortcut
                 const isCommand = (
                     messageText.startsWith(".") ||
-                    /^(1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu)\b/i.test(messageText)
+                    /^(1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|orderan|order|list|pending|proseslist)\b/i.test(messageText)
                 );
+
+                // Determine sender phone number cleanly (handling @s.whatsapp.net, :device, and @lid)
+                const participantJid = msg.key.participant || "";
+                const rawSender = (remoteJid || participantJid).replace("@s.whatsapp.net", "").replace("@lid", "").split(":")[0];
+                let cleanRemotePhone = cleanPhone(rawSender);
+
+                if (!cleanRemotePhone && (remoteJid.includes("@lid") || participantJid.includes("@lid"))) {
+                    try {
+                        const contactRow = await dbGet("SELECT phone FROM wa_contacts WHERE jid = ? OR jid = ?", [remoteJid, participantJid]);
+                        if (contactRow && contactRow.phone) {
+                            cleanRemotePhone = cleanPhone(contactRow.phone);
+                        }
+                    } catch (e) {}
+                }
+
+                const adminPhones = await getAdminPhoneNumbers();
+                const cleanAdminList = adminPhones.map(p => cleanPhone(p)).filter(Boolean);
+
+                const isSenderAdmin = Boolean(
+                    msg.key.fromMe ||
+                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone))
+                );
+
+                if (!isSenderAdmin) {
+                    if (isCommand) {
+                        logWABot(`⚠️ Perintah Admin "${messageText}" dari ${remoteJid} (Phone: ${cleanRemotePhone || 'unknown'}) DITOLAK: Nomor pengirim belum terdaftar sebagai admin.`, "warn");
+                    }
+                    continue;
+                }
+
                 if (!isCommand) continue;
 
                 logWABot(`[WABot Command] Memproses perintah Admin "${messageText}" dari ${cleanRemotePhone || remoteJid}`, "info");
