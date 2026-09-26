@@ -318,14 +318,16 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     const isImeiTarget = rawTarget.length === 15 || rawTarget.startsWith("35") || rawTarget.startsWith("86");
     const defaultPhone = !isImeiTarget && rawTarget.length <= 13 ? rawTarget : "";
 
-    const { value: phone } = await Swal.fire({
+    const swalRes = await Swal.fire({
       title: "Kirim Nota ke WhatsApp",
       input: "text",
       inputLabel: "Nomor WhatsApp Pelanggan (contoh: 08123456789):",
       inputValue: defaultPhone,
       inputPlaceholder: "08xxxxxxxxxx",
       showCancelButton: true,
-      confirmButtonText: "Buka WhatsApp",
+      showDenyButton: true,
+      confirmButtonText: "Kirim via Bot WA",
+      denyButtonText: "Buka WA Web",
       cancelButtonText: "Batal",
       inputValidator: (value: string | null) => {
         if (!value || value.replace(/\D/g, '').length < 9) {
@@ -334,8 +336,9 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       }
     });
 
-    if (!phone) return;
+    if (swalRes.isDismissed || !swalRes.value) return;
 
+    const phone = swalRes.value;
     let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
       cleanPhone = '62' + cleanPhone.substring(1);
@@ -373,8 +376,43 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
     }
 
-    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
-    window.open(waUrl, '_blank');
+    if (swalRes.isConfirmed) {
+      Swal.fire({
+        title: "Mengirim Nota...",
+        text: "Sedang mengirim nota via Bot WhatsApp...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      try {
+        const res = await fetch("/api/admin/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetPhone: cleanPhone, message: messageText }),
+          credentials: "include",
+        });
+        const safeJsonData = await res.json().catch(() => null);
+        if (res.ok && safeJsonData?.status) {
+          Swal.fire({ title: "Berhasil!", text: safeJsonData.message || "Nota berhasil dikirim via Bot WhatsApp!", timer: 2000, showConfirmButton: false });
+        } else {
+          Swal.fire({
+            title: "Gagal Kirim via Bot",
+            text: safeJsonData?.message || "Bot WA tidak terhubung. Ingin buka WA Web?",
+            showCancelButton: true,
+            confirmButtonText: "Buka WA Web",
+            cancelButtonText: "Batal",
+          }).then((r) => {
+            if (r.isConfirmed) {
+              window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`, '_blank');
+            }
+          });
+        }
+      } catch (e: any) {
+        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`, '_blank');
+      }
+    } else if (swalRes.isDenied) {
+      window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`, '_blank');
+    }
   };
 
   // Helper to parse CEIR result details from Ceirgo API

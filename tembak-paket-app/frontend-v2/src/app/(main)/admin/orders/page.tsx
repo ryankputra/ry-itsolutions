@@ -97,14 +97,17 @@ export default function AdminOrdersPage() {
     const rawTarget = trx.targetPhone || "";
     const isImeiTarget = rawTarget.length === 15 || rawTarget.startsWith("35") || rawTarget.startsWith("86");
     const defaultPhone = trx.customerPhone || trx.userVerifiedPhone || trx.userPhone || (!isImeiTarget && rawTarget.length <= 13 ? rawTarget : "");
-    const { value: phone } = await Swal.fire({
+
+    const swalRes = await Swal.fire({
       title: "Kirim Nota via WhatsApp",
       input: "text",
       inputLabel: "Nomor WhatsApp Pelanggan (misal: 08123456789):",
       inputValue: defaultPhone,
       inputPlaceholder: "08xxxxxxxxxx",
       showCancelButton: true,
-      confirmButtonText: "Buka WhatsApp",
+      showDenyButton: true,
+      confirmButtonText: "Kirim via Bot WA",
+      denyButtonText: "Buka WA Web",
       cancelButtonText: "Batal",
       inputValidator: (val: string | null) => {
         if (!val || val.replace(/\D/g, "").length < 9) {
@@ -113,8 +116,9 @@ export default function AdminOrdersPage() {
       },
     });
 
-    if (!phone) return;
+    if (swalRes.isDismissed || !swalRes.value) return;
 
+    const phone = swalRes.value;
     const cleanPhone = phone.replace(/^0/, "62").replace(/\D/g, "");
     const imeiList = trx.imei || "-";
     const statusText =
@@ -128,18 +132,53 @@ export default function AdminOrdersPage() {
 
     const noteText = typeof trx?.admin_note === 'string' ? trx.admin_note : (trx?.admin_note ? JSON.stringify(trx.admin_note) : (typeof trx?.api_response === 'string' ? trx.api_response : (trx?.api_response ? JSON.stringify(trx.api_response) : "")));
 
-    const msg = encodeURIComponent(
+    const plainMsg =
       `*NOTA TRANSAKSI - RY-ITSOLUTIONS*\n\n` +
-        `ID Pesanan: #${trx?.id ? String(trx.id).substring(0, 14) : "-"}\n` +
-        `Layanan: ${trx?.packageName || "Layanan Resmi"}\n` +
-        `IMEI/Target: ${imeiList}\n` +
-        `Status: *${statusText}*\n` +
-        (noteText ? `Catatan/SN: ${noteText}\n` : "") +
-        `Waktu: ${trx?.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}\n\n` +
-        `Terima kasih telah bertransaksi bersama kami!`
-    );
+      `ID Pesanan: #${trx?.id ? String(trx.id).substring(0, 14) : "-"}\n` +
+      `Layanan: ${trx?.packageName || "Layanan Resmi"}\n` +
+      `IMEI/Target: ${imeiList}\n` +
+      `Status: *${statusText}*\n` +
+      (noteText ? `Catatan/SN: ${noteText}\n` : "") +
+      `Waktu: ${trx?.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}\n\n` +
+      `Terima kasih telah bertransaksi bersama kami!`;
 
-    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
+    if (swalRes.isConfirmed) {
+      Swal.fire({
+        title: "Mengirim Nota...",
+        text: "Sedang mengirim nota via Bot WhatsApp...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      try {
+        const res = await fetch("/api/admin/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetPhone: cleanPhone, message: plainMsg }),
+          credentials: "include",
+        });
+        const d = await safeJson(res);
+        if (res.ok && d?.status) {
+          Swal.fire({ title: "Berhasil!", text: d.message || "Nota berhasil dikirim via Bot WhatsApp!", timer: 2000, showConfirmButton: false });
+        } else {
+          Swal.fire({
+            title: "Gagal Kirim via Bot",
+            text: d?.message || "Bot WA tidak terhubung. Ingin buka WA Web?",
+            showCancelButton: true,
+            confirmButtonText: "Buka WA Web",
+            cancelButtonText: "Batal",
+          }).then((r) => {
+            if (r.isConfirmed) {
+              window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(plainMsg)}`, "_blank");
+            }
+          });
+        }
+      } catch (e: any) {
+        Swal.fire({ title: "Error", text: "Terjadi kesalahan koneksi saat mengirim nota via bot." });
+      }
+    } else if (swalRes.isDenied) {
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(plainMsg)}`, "_blank");
+    }
   };
 
   // Sub-tab filtering: manual IMEI vs automated
