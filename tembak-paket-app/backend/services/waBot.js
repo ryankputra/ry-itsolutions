@@ -493,6 +493,34 @@ function purgeStalePeerSessions() {
     }
 }
 
+function purgeOldPreKeys() {
+    try {
+        if (!fs.existsSync(SESSIONS_DIR)) return 0;
+        const files = fs.readdirSync(SESSIONS_DIR);
+        const now = Date.now();
+        const maxAgeMs = 3 * 86400 * 1000; // 3 hari
+        let count = 0;
+        for (const file of files) {
+            if (file.startsWith("pre-key-") || file.startsWith("sender-key-")) {
+                try {
+                    const filePath = path.join(SESSIONS_DIR, file);
+                    const stats = fs.statSync(filePath);
+                    if (now - stats.mtimeMs > maxAgeMs) {
+                        fs.unlinkSync(filePath);
+                        count++;
+                    }
+                } catch (e) {}
+            }
+        }
+        if (count > 0) {
+            logWABot(`🧹 Otomatis membersihkan ${count} file pre-key kadaluwarsa (>3 hari).`, "info");
+        }
+        return count;
+    } catch (e) {
+        return 0;
+    }
+}
+
 function cleanPhone(raw) {
     if (!raw) return "";
     const str = String(raw).trim();
@@ -672,7 +700,7 @@ async function initWABot(forceNew = false) {
         }
         logWABot(`Baileys Library v${baileysLibVer} | MD Version: ${waVersion.join(".")}`, "info");
         applyBaileysPatches();
-        // Session preservation: Do NOT purge peer sessions on startup to keep Signal ratchet keys intact
+        purgeOldPreKeys();
         checkAndAutoUpgradeBaileys(baileysLibVer);
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
