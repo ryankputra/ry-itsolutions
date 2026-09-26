@@ -85,10 +85,32 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   const isGatewayService = !isTopUp && (data.serviceType === 'gateway' || data.serviceType === 'apikey' || (data.packageName || '').toLowerCase().includes('gateway') || (data.packageName || '').toLowerCase().includes('api key'));
   const isCeirService = !isTopUp && !isGatewayService && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || (warranty?.hasWarranty === false && !isGatewayService));
 
+  // Helper to parse date string safely (handling ISO, timestamps, and id-ID locale strings)
+  const safeParseDate = (dateVal: any): Date => {
+    if (!dateVal) return new Date();
+    if (typeof dateVal === "number") return new Date(dateVal);
+    if (dateVal instanceof Date && !isNaN(dateVal.getTime())) return dateVal;
+    
+    const parsed = new Date(dateVal);
+    if (!isNaN(parsed.getTime())) return parsed;
+    
+    if (typeof dateVal === "string") {
+      const parts = dateVal.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+      if (parts) {
+        const day = parseInt(parts[1], 10);
+        const month = parseInt(parts[2], 10) - 1;
+        const year = parseInt(parts[3], 10);
+        const d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+    return new Date();
+  };
+
   // Dynamic Warranty & Duration Computation (Strictly matching product duration from completion date)
   const computeDynamicWarranty = () => {
     const pkg = (data.packageName || '').toLowerCase();
-    const doneDate = new Date(data.completedAt || data.updatedAt || data.createdAt || Date.now());
+    const doneDate = safeParseDate(data.completedAt || data.updatedAt || data.createdAt);
 
     if (isGatewayService) {
       const expiryDate = new Date(doneDate.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -292,10 +314,15 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   };
 
   const handleShareWhatsApp = async () => {
+    const rawTarget = data.customerPhone || data.userPhone || data.targetPhone || "";
+    const isImeiTarget = rawTarget.length === 15 || rawTarget.startsWith("35") || rawTarget.startsWith("86");
+    const defaultPhone = !isImeiTarget && rawTarget.length <= 13 ? rawTarget : "";
+
     const { value: phone } = await Swal.fire({
       title: "Kirim Nota ke WhatsApp",
       input: "text",
       inputLabel: "Nomor WhatsApp Pelanggan (contoh: 08123456789):",
+      inputValue: defaultPhone,
       inputPlaceholder: "08xxxxxxxxxx",
       showCancelButton: true,
       confirmButtonText: "Buka WhatsApp",

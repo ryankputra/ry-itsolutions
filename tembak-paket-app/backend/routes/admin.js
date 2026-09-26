@@ -314,11 +314,17 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
         const { type } = req.query; // 'manual' | 'automated' | undefined
         
         const orders = await dbAll(
-            `SELECT * FROM transactions 
-             WHERE service_type IN ('imei', 'ceir', 'barcode') 
-                OR packageId LIKE 'cek_%' 
-                OR packageId LIKE 'create_%' 
-             ORDER BY createdAt DESC`
+            `SELECT t.*, 
+                    u.verifiedPhone as userVerifiedPhone, 
+                    u.phone as userPhone, 
+                    u.username as userName,
+                    COALESCE(NULLIF(u.verifiedPhone, ''), NULLIF(u.phone, '')) as customerPhone
+             FROM transactions t
+             LEFT JOIN users u ON t.userId = u.id
+             WHERE t.service_type IN ('imei', 'ceir', 'barcode') 
+                OR t.packageId LIKE 'cek_%' 
+                OR t.packageId LIKE 'create_%' 
+             ORDER BY t.createdAt DESC`
         );
 
         const automatedCodes = new Set([
@@ -516,7 +522,19 @@ router.post(['/admin/orders/:id/retry-ceirgo', '/admin/manual-orders/:id/retry-c
             const refId = cd.reference_id || cd.order_id || cd.trx_id || `CRG_${Date.now()}`;
             const serverStatus = (cd.status || cd.order_status || 'processing').toLowerCase();
             const finalStatus = (serverStatus === 'success' || serverStatus === 'completed') ? 'success' : 'processing';
-            const note = typeof cd.result === 'string' ? cd.result : (cd.message || 'Sukses disubmit ulang ke CeirGO.');
+            let note = '';
+            if (typeof cd.result === 'string') {
+                note = cd.result;
+            } else if (cd.result && typeof cd.result === 'object') {
+                const keys = Object.keys(cd.result);
+                if (keys.length > 0) {
+                    note = keys.map(k => `${k}: ${Array.isArray(cd.result[k]) ? cd.result[k].join(', ') : cd.result[k]}`).join(' | ');
+                } else {
+                    note = JSON.stringify(cd.result);
+                }
+            } else {
+                note = cd.message || 'Sukses disubmit ulang ke CeirGO.';
+            }
 
             if (cd.remaining_balance != null) {
                 const rb = Number(cd.remaining_balance);
