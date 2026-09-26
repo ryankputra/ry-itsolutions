@@ -1659,6 +1659,15 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         const clean = cleanPhone(rawNumber);
         if (clean && clean.length >= 8) {
             finalJid = `${clean}@s.whatsapp.net`;
+            // USync pre-key refresh: query WhatsApp servers to sync Signal session prekeys before encrypting
+            try {
+                if (sock && typeof sock.onWhatsApp === "function") {
+                    const [res] = await sock.onWhatsApp(clean);
+                    if (res?.jid) {
+                        finalJid = res.jid;
+                    }
+                }
+            } catch (e) {}
         } else {
             throw new Error(`Nomor telepon tujuan tidak valid: ${targetJid}`);
         }
