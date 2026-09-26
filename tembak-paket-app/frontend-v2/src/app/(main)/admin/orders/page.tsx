@@ -94,7 +94,9 @@ export default function AdminOrdersPage() {
   };
 
   const handleAdminQuickShareWA = async (trx: any) => {
-    const defaultPhone = trx.targetPhone || "";
+    const rawTarget = trx.targetPhone || "";
+    const isImeiTarget = rawTarget.length === 15 || rawTarget.startsWith("35") || rawTarget.startsWith("86");
+    const defaultPhone = trx.customerPhone || trx.userVerifiedPhone || trx.userPhone || (!isImeiTarget && rawTarget.length <= 13 ? rawTarget : "");
     const { value: phone } = await Swal.fire({
       title: "Kirim Nota via WhatsApp",
       input: "text",
@@ -124,13 +126,15 @@ export default function AdminOrdersPage() {
         ? "GAGAL"
         : "DALAM ANTREAN";
 
+    const noteText = typeof trx?.admin_note === 'string' ? trx.admin_note : (trx?.admin_note ? JSON.stringify(trx.admin_note) : (typeof trx?.api_response === 'string' ? trx.api_response : (trx?.api_response ? JSON.stringify(trx.api_response) : "")));
+
     const msg = encodeURIComponent(
       `*NOTA TRANSAKSI - RY-ITSOLUTIONS*\n\n` +
         `ID Pesanan: #${trx?.id ? String(trx.id).substring(0, 14) : "-"}\n` +
         `Layanan: ${trx?.packageName || "Layanan Resmi"}\n` +
         `IMEI/Target: ${imeiList}\n` +
         `Status: *${statusText}*\n` +
-        (trx?.admin_note ? `Catatan/SN: ${trx.admin_note}\n` : "") +
+        (noteText ? `Catatan/SN: ${noteText}\n` : "") +
         `Waktu: ${trx?.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}\n\n` +
         `Terima kasih telah bertransaksi bersama kami!`
     );
@@ -595,6 +599,8 @@ export default function AdminOrdersPage() {
                       className="text-xs h-8 gap-1.5"
                       onClick={() => {
                         const firstImei = o.imei ? o.imei.split(/[\n,]+/)[0].trim() : "";
+                        const custPhone = o.customerPhone || o.userVerifiedPhone || o.userPhone || (o.targetPhone && !o.targetPhone.startsWith("35") && !o.targetPhone.startsWith("86") && o.targetPhone.length <= 13 ? o.targetPhone : "");
+                        const safeNote = typeof o.admin_note === 'string' ? o.admin_note : (o.admin_note ? JSON.stringify(o.admin_note) : (typeof o.api_response === 'string' ? o.api_response : (o.api_response ? JSON.stringify(o.api_response) : "")));
                         setSelectedInvoiceTrx({
                           trxId: o.id,
                           imei: firstImei || o.targetPhone || "N/A",
@@ -603,7 +609,10 @@ export default function AdminOrdersPage() {
                           createdAt: o.createdAt,
                           amount: o.platformFee || o.originalPrice || 0,
                           status: o.status,
-                          adminNote: o.admin_note,
+                          adminNote: safeNote,
+                          customerPhone: custPhone,
+                          userPhone: custPhone,
+                          targetPhone: custPhone
                         });
                       }}
                     >
