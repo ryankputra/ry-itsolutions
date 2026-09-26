@@ -20,7 +20,11 @@ import {
   Copy,
   Check,
   X,
-  PhoneCall
+  PhoneCall,
+  Key,
+  ShieldCheck,
+  RefreshCw,
+  QrCode
 } from "lucide-react";
 
 interface Conversation {
@@ -68,6 +72,73 @@ export default function AdminWhatsAppChatPage() {
   // New chat modal
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatPhone, setNewChatPhone] = useState("");
+
+  // Pairing & E2E modal
+  const [showPairingModal, setShowPairingModal] = useState(false);
+  const [pairingPhone, setPairingPhone] = useState("087767287284");
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [requestingCode, setRequestingCode] = useState(false);
+  const [fixingE2e, setFixingE2e] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const handleRequestPairingCode = async () => {
+    if (!pairingPhone.trim() || requestingCode) return;
+    setRequestingCode(true);
+    setGeneratedCode(null);
+    try {
+      const res = await fetch("/api/admin/whatsapp/pairing-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ phone: pairingPhone.trim() }),
+      });
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
+        setGeneratedCode(d.code);
+        Swal.fire({
+          icon: "success",
+          title: "Kode Pairing Diterbitkan!",
+          text: `Kode: ${d.code}. Masukkan di WhatsApp HP (${pairingPhone}).`,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Gagal Membuat Kode",
+          text: d?.message || "Terjadi kesalahan saat meminta kode pairing.",
+        });
+      }
+    } catch (e: any) {
+      Swal.fire({ icon: "error", title: "Error", text: e.message });
+    } finally {
+      setRequestingCode(false);
+    }
+  };
+
+  const handleFixE2E = async () => {
+    if (fixingE2e) return;
+    setFixingE2e(true);
+    try {
+      const res = await fetch("/api/admin/whatsapp/fix-e2e", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const d = await safeJson(res);
+      if (res.ok && d?.status) {
+        Swal.fire({
+          icon: "success",
+          title: "Enkripsi E2E Diperbarui",
+          text: `Berhasil membersihkan ${d.cleaned || 0} sesi kontak lama. Kunci Signal telah disinkronkan ulang.`,
+        });
+      } else {
+        Swal.fire({ icon: "error", title: "Gagal Perbarui Enkripsi", text: d?.message });
+      }
+    } catch (e: any) {
+      Swal.fire({ icon: "error", title: "Error", text: e.message });
+    } finally {
+      setFixingE2e(false);
+    }
+  };
 
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -271,6 +342,11 @@ export default function AdminWhatsAppChatPage() {
           <Button size="sm" onClick={() => setShowNewChatModal(true)} className="gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
             <Plus className="w-4 h-4" />
             Chat Baru
+          </Button>
+
+          <Button size="sm" variant="outline" onClick={() => setShowPairingModal(true)} className="gap-1.5 text-xs font-bold text-emerald-600 border-emerald-600/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
+            <Key className="w-3.5 h-3.5" />
+            Tautkan WA / Kode
           </Button>
 
           <Button size="sm" variant="outline" onClick={() => { loadConversations(); if (activeJid) loadMessages(activeJid); }} className="gap-1.5 text-xs">
@@ -533,6 +609,116 @@ export default function AdminWhatsAppChatPage() {
               </Button>
               <Button size="sm" onClick={handleStartNewChat} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
                 Buka Chat Window
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Pairing & E2E Modal */}
+      {showPairingModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
+          <Card className="max-w-lg w-full bg-canvas border border-hairline p-6 rounded-3xl shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-hairline pb-3">
+              <div className="flex items-center gap-2">
+                <Key className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-base text-ink">Penautan Perangkat & Enkripsi WA</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPairingModal(false)}
+                className="w-7 h-7 rounded-full bg-parchment hover:bg-hairline flex items-center justify-center text-ink text-xs transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Status Info */}
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-3 h-3 rounded-full ${waStatus === "open" ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                <div>
+                  <p className="text-xs font-bold text-ink">
+                    Status Sesi: {waStatus === "open" ? "Terhubung" : "Belum Terhubung / Menghubungkan"}
+                  </p>
+                  <p className="text-[11px] text-ink-muted">
+                    {waStatus === "open" ? `Nomor Aktif: +${connectedPhone || "6287767287284"}` : "Perlu tautkan perangkat atau refresh koneksi."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Minta Kode Pairing */}
+            <div className="p-4 rounded-2xl bg-parchment/40 border border-hairline space-y-3">
+              <h4 className="font-bold text-xs text-ink flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 text-emerald-600" />
+                Minta Kode Pairing 8 Digit
+              </h4>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Nomor WA (contoh: 087767287284)"
+                  value={pairingPhone}
+                  onChange={(e) => setPairingPhone(e.target.value)}
+                  className="flex-1 text-xs"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleRequestPairingCode}
+                  isLoading={requestingCode}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0"
+                >
+                  Buat Kode
+                </Button>
+              </div>
+
+              {generatedCode && (
+                <div className="p-4 rounded-2xl bg-emerald-600/10 border border-emerald-500/30 text-center space-y-2 animate-in zoom-in-95">
+                  <p className="text-[11px] text-ink-muted font-medium">Masukkan kode 8 digit ini di WhatsApp HP Anda:</p>
+                  <div className="text-2xl sm:text-3xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 font-mono select-all">
+                    {generatedCode}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedCode.replace("-", ""));
+                      setCopiedCode(true);
+                      setTimeout(() => setCopiedCode(false), 2000);
+                    }}
+                    className="gap-1 text-xs font-bold mx-auto"
+                  >
+                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedCode ? "Tersalin!" : "Salin Kode"}</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Tool Perbaiki Enkripsi */}
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+              <h4 className="font-bold text-xs text-ink flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                Perbaiki Pesan "Menunggu Pesan Ini..."
+              </h4>
+              <p className="text-[11px] text-ink-muted leading-relaxed">
+                Jika pesan di HP tertahan dengan status "Menunggu pesan ini...", klik tombol di bawah untuk membersihkan kunci Signal kontak yang pernah korup.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleFixE2E}
+                isLoading={fixingE2e}
+                className="w-full text-xs font-bold text-amber-700 dark:text-amber-300 border-amber-500/40 hover:bg-amber-500/10 gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Perbarui Enkripsi Sesi (Fix E2E)
+              </Button>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <Button variant="ghost" size="sm" onClick={() => setShowPairingModal(false)}>
+                Tutup
               </Button>
             </div>
           </Card>

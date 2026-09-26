@@ -579,11 +579,11 @@ async function getAdminPhoneNumbers() {
     const adminPhones = new Set();
 
     // 0. Primary Administrator Numbers (Guaranteed Delivery)
-    // 6287767287284: Bot number that also acts as Admin (sends to self)
-    const primaryAdmins = ["6287767287284"];
+    // 6287767287284 & 6285156692166: Authorized Admin Remote Control Numbers
+    const primaryAdmins = ["6287767287284", "6285156692166"];
     primaryAdmins.forEach(num => {
         const cp = cleanPhone(num);
-        if (cp && !cp.endsWith("70")) adminPhones.add(cp);
+        if (cp) adminPhones.add(cp);
     });
 
     // 1. From environment variables
@@ -691,12 +691,14 @@ async function initWABot(forceNew = false) {
 
         let waVersion = [2, 3000, 1043857760];
         try {
-            const v = await fetchLatestBaileysVersion();
+            const fetchPromise = fetchLatestBaileysVersion();
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Version fetch timeout (STB network)")), 3500));
+            const v = await Promise.race([fetchPromise, timeoutPromise]);
             if (v && v.version) {
                 waVersion = v.version;
             }
         } catch (e) {
-            console.warn("[WABot] Using default version fallback:", e.message);
+            logWABot(`Using default version fallback: ${e.message}`, "warn");
         }
         logWABot(`Baileys Library v${baileysLibVer} | MD Version: ${waVersion.join(".")}`, "info");
         applyBaileysPatches();
@@ -1118,22 +1120,34 @@ async function requestPairingCode(phoneNumber) {
             return { status: false, message: "Nomor WhatsApp tidak valid. Format contoh: 087767287284" };
         }
 
-        if (!sock) {
-            await initWABot(false);
+        if (!sock || connectionState === "disconnected" || global.baileysStatus === "disconnected") {
+            await initWABot(true);
         }
 
-        // Tunggu socket siap
-        for (let i = 0; i < 25; i++) {
-            if (sock && typeof sock.requestPairingCode === "function" && sock.ws?.isOpen) break;
-            await new Promise(r => setTimeout(r, 200));
+        let isReady = false;
+        for (let i = 0; i < 60; i++) {
+            const isWsOpen = Boolean(sock?.ws?.isOpen || sock?.ws?.socket?.readyState === 1);
+            if (sock && isWsOpen && typeof sock.requestPairingCode === "function") {
+                isReady = true;
+                break;
+            }
+            if (!sock) {
+                await initWABot(false);
+            }
+            await new Promise(r => setTimeout(r, 250));
         }
 
-        if (!sock || typeof sock.requestPairingCode !== "function") {
-            return { status: false, message: "Socket WhatsApp belum siap. Silakan klik Reset Sesi WA lalu coba lagi." };
+        const isWsOpen = Boolean(sock?.ws?.isOpen || sock?.ws?.socket?.readyState === 1);
+        if (!isReady || !sock || typeof sock.requestPairingCode !== "function" || !isWsOpen) {
+            return { status: false, message: "Koneksi server WhatsApp sedang menyiapkan jaringan. Silakan klik tombol sekali lagi dalam 3 detik." };
         }
 
         logWABot(`Meminta kode pairing 8 digit untuk nomor: ${clean}...`, "info");
-        const rawCode = await sock.requestPairingCode(clean);
+        const codePromise = sock.requestPairingCode(clean);
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout meminta kode pairing dari server WhatsApp. Silakan coba lagi.")), 15000)
+        );
+        const rawCode = await Promise.race([codePromise, timeoutPromise]);
         const code = rawCode?.match(/.{1,4}/g)?.join("-") || rawCode;
         logWABot(`✅ KODE PAIRING 8 DIGIT: ${code}. Masukkan kode ini di WhatsApp HP Anda.`, "info");
         return { status: true, code: code, phone: clean };
@@ -1352,6 +1366,8 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         command = ".status";
     } else if (command === "help" || command === "bantuan" || command === "menu") {
         command = ".help";
+    } else if (command === "orderan" || command === "order" || command === "list" || command === "pending" || command === "proseslist") {
+        command = ".orderan";
     }
 
     if (orderIdArg) {
@@ -1390,32 +1406,80 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         return;
     }
 
+    if (command === ".orderan" || command === ".order" || command === ".list" || command === ".pending" || command === ".proseslist") {
+        const pendingOrders = await dbAll(
+            "SELECT * FROM transactions WHERE status IN ('pending', 'processing', 'in_queue') ORDER BY createdAt DESC LIMIT 15"
+        );
+        if (!pendingOrders || pendingOrders.length === 0) {
+            await replyWhatsApp(replyJid, `*TIDAK ADA PESANAN TERTUNDA*\n\nSemua pesanan saat ini sudah selesai diproses.` + BOT_FOOTER);
+            return;
+        }
+
+        let listText = `📋 *DAFTAR PESANAN PERLU PROSES (${pendingOrders.length})*\n\n`;
+        pendingOrders.forEach((item, index) => {
+            const num = index + 1;
+            const st = (item.status || "PENDING").toUpperCase();
+            listText += `*${num}. [${item.id}]*\n` +
+                `   • *User:* ${item.userName || "User"} (${item.customerPhone || item.targetPhone || "-"})\n` +
+                `   • *Layanan:* ${item.packageName || "Paket"}\n` +
+                (item.imei ? `   • *IMEI:* \`${item.imei}\`\n` : "") +
+                `   • *Status:* *${st}*\n\n`;
+        });
+
+        listText += `💡 *PETUNJUK KONTROL CEPAT:*\n` +
+            `• Balas *.proses <nomor>*\n  (misal: *.proses 1*)\n` +
+            `• Balas *.sukses <nomor> <catatan>*\n  (misal: *.sukses 1 Terdaftar*)\n` +
+            `• Balas *.gagal <nomor> <alasan>*\n  (misal: *.gagal 1 IMEI Salah*)` +
+            BOT_FOOTER;
+
+        await replyWhatsApp(replyJid, listText);
+        return;
+    }
+
     if (command === ".bantuan" || command === ".help" || command === ".menu") {
         const helpMsg = `*PANDUAN PERINTAH BOT ADMIN Ry-ITSolutions*\n\n` +
-            `• *.proses <ID_ORDER>*\n` +
-            `  Mengubah status pesanan menjadi PROCESSING.\n\n` +
-            `• *.sukses <ID_ORDER> <CATATAN>*\n` +
-            `  Menyelesaikan pesanan (status SUCCESS) dan menyimpan catatan.\n\n` +
-            `• *.gagal <ID_ORDER> <ALASAN>*\n` +
-            `  Membatalkan pesanan (status FAILED) & refund saldo user otomatis.\n\n` +
-            `• *.status <ID_ORDER>*\n` +
-            `  Mengecek status & rincian pesanan saat ini.` +
+            `• *.orderan* (atau *.list*)\n` +
+            `  Melihat daftar pesanan tertunda/perlu diproses langsung dari database.\n\n` +
+            `• *.proses <ID_ORDER / NOMOR>*\n` +
+            `  Mengubah status pesanan menjadi PROCESSING (misal: *.proses 1*).\n\n` +
+            `• *.sukses <ID_ORDER / NOMOR> <CATATAN>*\n` +
+            `  Menyelesaikan pesanan & kirim nota ke pembeli (misal: *.sukses 1 Selesai*).\n\n` +
+            `• *.gagal <ID_ORDER / NOMOR> <ALASAN>*\n` +
+            `  Membatalkan pesanan & auto-refund saldo user (misal: *.gagal 1 IMEI Salah*).\n\n` +
+            `• *.status <ID_ORDER / NOMOR>*\n` +
+            `  Mengecek rincian status pesanan saat ini.\n\n` +
+            `• *.fixwa*\n` +
+            `  Memperbarui enkripsi sesi jika terjadi kendala E2EE.` +
             BOT_FOOTER;
         await replyWhatsApp(replyJid, helpMsg);
         return;
     }
 
     if (!orderIdArg) {
-        await replyWhatsApp(replyJid, `*Format salah!*\nGunakan: \`${command} <ID_ORDER>\`\nKetik \`.help\` untuk panduan.`);
+        await replyWhatsApp(replyJid, `*Format salah!*\nGunakan: \`${command} <ID_ORDER / NOMOR>\`\nContoh: \`${command} 1\` atau ketik \`.orderan\` untuk melihat daftar.`);
         return;
     }
 
-    // Search transaction by exact ID or prefix match
+    // Search transaction by exact ID, numeric index shortcut (1, 2, 3), or prefix match
     const cleanId = orderIdArg.trim();
-    const trx = await dbGet(
-        "SELECT * FROM transactions WHERE id = ? OR id LIKE ? ORDER BY createdAt DESC LIMIT 1",
-        [cleanId, `%${cleanId}%`]
-    );
+    let trx = null;
+
+    if (/^\d{1,2}$/.test(cleanId)) {
+        const offset = parseInt(cleanId, 10) - 1;
+        const activeRows = await dbAll(
+            "SELECT * FROM transactions WHERE status IN ('pending', 'processing', 'in_queue') ORDER BY createdAt DESC LIMIT 20"
+        );
+        if (activeRows && activeRows[offset]) {
+            trx = activeRows[offset];
+        }
+    }
+
+    if (!trx) {
+        trx = await dbGet(
+            "SELECT * FROM transactions WHERE id = ? OR id LIKE ? ORDER BY createdAt DESC LIMIT 1",
+            [cleanId, `%${cleanId}%`]
+        );
+    }
 
     if (!trx) {
         await replyWhatsApp(replyJid, `*Pesanan Tidak Ditemukan!*\nOrder ID \`${cleanId}\` tidak ada di database.`);
@@ -1666,12 +1730,18 @@ async function sendTextMessage(targetPhone, message) {
  * Helper to reply to a WhatsApp JID
  */
 async function replyWhatsApp(jid, text) {
-    if (!sock || connectionState !== "open") return;
+    if (!sock) return;
     try {
         let cleanJid = jid;
-        if (cleanJid && !cleanJid.includes("@g.us") && !cleanJid.includes("@lid")) {
-            const rawPhone = cleanJid.split("@")[0].split(":")[0];
-            cleanJid = `${rawPhone}@s.whatsapp.net`;
+        if (cleanJid && (cleanJid.includes("@lid") || cleanJid.includes(":"))) {
+            const myPhone = sock.user?.id ? cleanPhone(sock.user.id.split(":")[0]) : null;
+            if (myPhone) {
+                cleanJid = `${myPhone}@s.whatsapp.net`;
+            }
+        }
+        if (cleanJid && !cleanJid.includes("@g.us") && !cleanJid.includes("@s.whatsapp.net")) {
+            const rawPhone = cleanPhone(cleanJid.split("@")[0].split(":")[0]);
+            if (rawPhone) cleanJid = `${rawPhone}@s.whatsapp.net`;
         }
         await sendAndStoreMessage(cleanJid, { text });
     } catch (e) {

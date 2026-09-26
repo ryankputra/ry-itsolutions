@@ -234,6 +234,25 @@ app.post('/api/admin/whatsapp/logout', isAuthenticated, isAdmin, async (req, res
     const ok = await waBot.logoutWABot();
     res.json({ status: ok, message: ok ? "WhatsApp Bot berhasil logout dan sesi dihapus." : "Gagal logout WhatsApp." });
 });
+app.post('/api/admin/whatsapp/pairing-code', (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
+    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
+        return next();
+    }
+    return isAuthenticated(req, res, () => isAdmin(req, res, next));
+}, async (req, res) => {
+    try {
+        const phone = req.body?.phone || req.body?.phoneNumber || '6287767287284';
+        const result = await waBot.requestPairingCode(phone);
+        if (result.status) {
+            res.json({ status: true, success: true, code: result.code, phone: result.phone, message: "Kode pairing 8 digit berhasil dibuat." });
+        } else {
+            res.status(500).json({ status: false, success: false, message: result.message || "Gagal membuat kode pairing." });
+        }
+    } catch (err) {
+        res.status(500).json({ status: false, success: false, message: err.message });
+    }
+});
 app.post('/api/admin/whatsapp/test', (req, res, next) => {
     const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
     if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
