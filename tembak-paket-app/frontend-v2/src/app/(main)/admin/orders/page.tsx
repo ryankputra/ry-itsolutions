@@ -462,6 +462,18 @@ export default function AdminOrdersPage() {
                   </div>
                 )}
 
+                {/* Result / Admin Note Display */}
+                {(o?.admin_note || o?.api_response) && (
+                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs space-y-1">
+                    <p className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                      <span>📌 Hasil Status Provider / Catatan:</span>
+                    </p>
+                    <p className="font-medium text-emerald-900 dark:text-emerald-100 whitespace-pre-wrap font-mono bg-white/60 dark:bg-black/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-900">
+                      {o.admin_note || (typeof o.api_response === "string" ? o.api_response : JSON.stringify(o.api_response))}
+                    </p>
+                  </div>
+                )}
+
                 {/* Admin Action Form Inline */}
                 {manualActionData?.id === o.id ? (
                   <div className="p-3.5 bg-parchment/40 rounded-xl border border-hairline space-y-3 pt-2">
