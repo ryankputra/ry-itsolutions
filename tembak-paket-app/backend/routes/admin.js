@@ -316,9 +316,9 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
         const orders = await dbAll(
             `SELECT t.*, 
                     u.verifiedPhone as userVerifiedPhone, 
-                    u.phone as userPhone, 
-                    u.username as userName,
-                    COALESCE(NULLIF(u.verifiedPhone, ''), NULLIF(u.phone, '')) as customerPhone
+                    u.verifiedPhone as userPhone, 
+                    u.name as userName,
+                    NULLIF(u.verifiedPhone, '') as customerPhone
              FROM transactions t
              LEFT JOIN users u ON t.userId = u.id
              WHERE t.service_type IN ('imei', 'ceir', 'barcode') 
