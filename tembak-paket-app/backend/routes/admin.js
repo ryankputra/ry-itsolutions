@@ -491,11 +491,11 @@ router.post('/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async 
     }
 });
 
-// 7b. POST /api/admin/orders/:id/retry-ceirgo (Retry CeirGO Order Execution from Admin Queue)
-router.post('/admin/orders/:id/retry-ceirgo', isAuthenticated, isAdmin, async (req, res) => {
+// 7b. POST /api/admin/manual-orders/:id/retry-ceirgo & /api/admin/orders/:id/retry-ceirgo
+router.post(['/admin/orders/:id/retry-ceirgo', '/admin/manual-orders/:id/retry-ceirgo'], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const trxId = req.params.id;
-        const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
+        const trx = await dbGet("SELECT * FROM transactions WHERE id = ? OR id LIKE ?", [trxId, `%${trxId}%`]);
         if (!trx) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
 
         const canonicalCode = (trx.packageId || trx.service_type || '').replace(/^ceirgo_price_/, '');
