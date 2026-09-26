@@ -273,9 +273,16 @@ async function storeMessage(id, remoteJid, messageObj) {
 async function getStoredMessage(key) {
     if (!key?.id) return undefined;
 
-    // 1. Try memory cache first by exact ID or case variants
-    const candidateIds = [key.id, key.id.toUpperCase(), key.id.toLowerCase()];
+    // 1. Try memory cache first by exact ID or case & prefix variants
+    const candidateIds = [
+        key.id,
+        key.id.toUpperCase(),
+        key.id.toLowerCase(),
+        key.id.replace(/^(3EB0|BAE5|RYY)/i, '')
+    ];
+
     for (const kId of candidateIds) {
+        if (!kId) continue;
         const inMem = messageStore.get(kId);
         if (inMem) {
             try {
@@ -289,15 +296,18 @@ async function getStoredMessage(key) {
 
     // 2. Try SQLite DB store by exact key.id or case-insensitive match
     try {
-        const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ? OR LOWER(id) = LOWER(?)", [key.id, key.id]);
-        if (row?.messageContent) {
-            const parsed = JSON.parse(row.messageContent);
-            const plain = normalizeProtoMessage(parsed);
-            if (plain) {
-                try {
-                    return proto.Message.fromObject(plain);
-                } catch (e) {
-                    return plain;
+        for (const kId of candidateIds) {
+            if (!kId) continue;
+            const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ? OR LOWER(id) = LOWER(?)", [kId, kId]);
+            if (row?.messageContent) {
+                const parsed = JSON.parse(row.messageContent);
+                const plain = normalizeProtoMessage(parsed);
+                if (plain) {
+                    try {
+                        return proto.Message.fromObject(plain);
+                    } catch (e) {
+                        return plain;
+                    }
                 }
             }
         }
@@ -308,7 +318,7 @@ async function getStoredMessage(key) {
         try {
             const cleanPhoneNum = (key.remoteJid.replace('@s.whatsapp.net', '').split(':')[0] || '').replace(/\D/g, '');
             const recentRow = await dbGet(
-                "SELECT body FROM wa_chat_history WHERE remoteJid = ? OR senderPhone = ? ORDER BY timestamp DESC LIMIT 1",
+                "SELECT body FROM wa_chat_history WHERE (remoteJid = ? OR senderPhone = ?) AND body IS NOT NULL AND body != '' ORDER BY timestamp DESC LIMIT 1",
                 [key.remoteJid, cleanPhoneNum]
             );
             if (recentRow?.body) {
@@ -714,6 +724,31 @@ async function initWABot(forceNew = false) {
             },
             msgRetryCounterCache,
             getMessage: getStoredMessage,
+            shouldSyncHistoryMessage: () => false,
+            retryRequestDelayMs: 250,
+            maxMsgRetryCount: 5,
+            patchMessageBeforeSending: (message) => {
+                const requiresPatch = !!(
+                    message.buttonsMessage ||
+                    message.templateMessage ||
+                    message.listMessage ||
+                    message.interactiveMessage
+                );
+                if (requiresPatch) {
+                    message = {
+                        viewOnceMessage: {
+                            message: {
+                                messageContextInfo: {
+                                    deviceListMetadataVersion: 2,
+                                    deviceListMetadata: {},
+                                },
+                                ...message,
+                            },
+                        },
+                    };
+                }
+                return message;
+            },
             printQRInTerminal: false,
             logger: customLogger,
             browser: Browsers.macOS("Chrome"),
