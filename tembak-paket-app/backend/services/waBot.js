@@ -1079,13 +1079,29 @@ async function initWABot(forceNew = false) {
 
                 // Determine sender phone number cleanly (handling @s.whatsapp.net, :device, and @lid)
                 const participantJid = msg.key.participant || "";
-                const rawSender = (remoteJid || participantJid).replace("@s.whatsapp.net", "").replace("@lid", "").split(":")[0];
-                let cleanRemotePhone = cleanPhone(rawSender);
+                const isLid = remoteJid.includes("@lid") || participantJid.includes("@lid");
 
-                if (!cleanRemotePhone && (remoteJid.includes("@lid") || participantJid.includes("@lid"))) {
+                let cleanRemotePhone = "";
+                const rawSender = (remoteJid || participantJid).replace("@s.whatsapp.net", "").replace("@lid", "").split(":")[0];
+
+                // Known Admin LIDs mapping
+                const knownAdminLids = new Set([
+                    "217489191489706@lid",
+                    "217489191489706",
+                    "15062853009567@lid",
+                    "15062853009567"
+                ]);
+
+                if (rawSender === "217489191489706") {
+                    cleanRemotePhone = "6285156692166";
+                } else if (rawSender === "15062853009567") {
+                    cleanRemotePhone = "6287767287284";
+                } else if (!isLid) {
+                    cleanRemotePhone = cleanPhone(rawSender);
+                } else {
                     try {
                         const contactRow = await dbGet("SELECT phone FROM wa_contacts WHERE jid = ? OR jid = ?", [remoteJid, participantJid]);
-                        if (contactRow && contactRow.phone) {
+                        if (contactRow && contactRow.phone && !contactRow.phone.includes("@lid") && contactRow.phone.length <= 13) {
                             cleanRemotePhone = cleanPhone(contactRow.phone);
                         }
                     } catch (e) {}
@@ -1096,7 +1112,10 @@ async function initWABot(forceNew = false) {
 
                 const isSenderAdmin = Boolean(
                     msg.key.fromMe ||
-                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone))
+                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone)) ||
+                    knownAdminLids.has(remoteJid) ||
+                    knownAdminLids.has(participantJid) ||
+                    knownAdminLids.has(rawSender)
                 );
 
                 if (!isSenderAdmin) {
@@ -1740,19 +1759,39 @@ async function sendTextMessage(targetPhone, message) {
  * Helper to reply to a WhatsApp JID
  */
 async function replyWhatsApp(jid, text) {
-    if (!sock) return;
+    if (!sock || !jid) return;
     try {
         let cleanJid = jid;
-        if (cleanJid && (cleanJid.includes("@lid") || cleanJid.includes(":"))) {
-            const myPhone = sock.user?.id ? cleanPhone(sock.user.id.split(":")[0]) : null;
-            if (myPhone) {
-                cleanJid = `${myPhone}@s.whatsapp.net`;
+
+        // Convert known LID to real phone number JID
+        if (cleanJid.includes("@lid")) {
+            const rawLid = cleanJid.split("@")[0].split(":")[0];
+            if (rawLid === "217489191489706") {
+                cleanJid = "6285156692166@s.whatsapp.net";
+            } else if (rawLid === "15062853009567") {
+                cleanJid = "6287767287284@s.whatsapp.net";
+            } else {
+                try {
+                    const contactRow = await dbGet("SELECT phone FROM wa_contacts WHERE jid = ?", [jid]);
+                    if (contactRow && contactRow.phone && !contactRow.phone.includes("@lid") && contactRow.phone.length <= 13) {
+                        const cp = cleanPhone(contactRow.phone);
+                        if (cp) cleanJid = `${cp}@s.whatsapp.net`;
+                    }
+                } catch (e) {}
             }
         }
-        if (cleanJid && !cleanJid.includes("@g.us") && !cleanJid.includes("@s.whatsapp.net")) {
+
+        // Clean :device suffix if present (e.g. 6285156692166:12@s.whatsapp.net -> 6285156692166@s.whatsapp.net)
+        if (cleanJid.includes(":") && cleanJid.includes("@s.whatsapp.net")) {
+            cleanJid = cleanJid.split(":")[0] + "@s.whatsapp.net";
+        }
+
+        if (!cleanJid.includes("@g.us") && !cleanJid.includes("@s.whatsapp.net") && !cleanJid.includes("@lid")) {
             const rawPhone = cleanPhone(cleanJid.split("@")[0].split(":")[0]);
             if (rawPhone) cleanJid = `${rawPhone}@s.whatsapp.net`;
         }
+
+        logWABot(`[replyWhatsApp] Replying to ${jid} (mapped: ${cleanJid})`, "info");
         await sendAndStoreMessage(cleanJid, { text });
     } catch (e) {
         console.error(`[WABot] Gagal mengirim balasan ke ${jid}:`, e.message);
