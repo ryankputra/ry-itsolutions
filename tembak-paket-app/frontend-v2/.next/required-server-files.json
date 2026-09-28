@@ -103,7 +103,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/Users/ryankptr/ry-itsolutions/",
+    "outputFileTracingRoot": "/Users/ryankptr/tembak-paket-app/",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -303,7 +303,7 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.ts",
     "turbopack": {
-      "root": "/Users/ryankptr/ry-itsolutions/"
+      "root": "/Users/ryankptr/tembak-paket-app/"
     },
     "distDirRoot": ".next",
     "_originalRewrites": {
@@ -345,7 +345,7 @@
       "fallback": []
     }
   },
-  "appDir": "/Users/ryankptr/ry-itsolutions/tembak-paket-app/frontend-v2",
+  "appDir": "/Users/ryankptr/tembak-paket-app/tembak-paket-app/frontend-v2",
   "relativeAppDir": "tembak-paket-app/frontend-v2",
   "files": [
     ".next/package.json",

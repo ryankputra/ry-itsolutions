@@ -2,6 +2,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL, safeJson } from "@/lib/api";
+import { parseCeirResponse } from "@/lib/ceirParser";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
@@ -612,6 +613,42 @@ function HistoryContent() {
                 {(() => {
                   const rawNote = (trx.admin_note || trx.adminNote || "").trim();
                   if (!rawNote) return null;
+
+                  // For CEIR/barcode transactions, parse and display as formatted timeline
+                  const svcType = (trx.service_type || trx.serviceType || "").toLowerCase();
+                  const pkgName = (trx.package_name || trx.packageName || "").toLowerCase();
+                  const isCeirTrx = svcType === "ceir" || svcType === "barcode" || pkgName.includes("ceir") || pkgName.includes("barcode");
+
+                  if (isCeirTrx) {
+                    const parsed = parseCeirResponse(rawNote);
+                    if (parsed.rows.length > 0) {
+                      return (
+                        <div className="p-2.5 rounded-xl bg-sky-50/80 border border-sky-200 text-xs space-y-2">
+                          <span className="font-bold text-[10px] text-sky-700 uppercase block">Log CEIR</span>
+                          <div className="space-y-1.5">
+                            {parsed.rows.map((row, idx) => (
+                              <div key={idx} className="flex items-start gap-2 text-[11px]">
+                                <div className="flex flex-col items-center shrink-0 mt-0.5">
+                                  <div className="w-2 h-2 rounded-full bg-sky-500" />
+                                  {idx < parsed.rows.length - 1 && (
+                                    <div className="w-px h-full min-h-[16px] bg-sky-300" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0 pb-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-sky-800">{row.action}</span>
+                                    <span className="text-sky-500 text-[10px]">{row.tanggal}</span>
+                                  </div>
+                                  <p className="text-ink-muted leading-relaxed break-words">{row.note}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+
                   const isLeakedOrGeneric = /sedang dikerjakan oleh admin|sedang diproses oleh admin|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
                   if (isLeakedOrGeneric) return null;
                   return (
@@ -705,13 +742,15 @@ function HistoryContent() {
                     {/* Selesai */}
                     {isCompleted && (
                       <>
-                        <button
-                          type="button"
-                          onClick={() => setReviewTarget(trx)}
-                          className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
-                        >
-                          <span>Beri Ulasan (+500 Koin)</span>
-                        </button>
+                        {(trx.service_type === 'unblock_imei' || trx.serviceType === 'unblock_imei' || (!trx.service_type && !trx.serviceType)) && (
+                          <button
+                            type="button"
+                            onClick={() => setReviewTarget(trx)}
+                            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
+                          >
+                            <span>Beri Ulasan (+10 Koin)</span>
+                          </button>
+                        )}
 
                         <button
                           type="button"

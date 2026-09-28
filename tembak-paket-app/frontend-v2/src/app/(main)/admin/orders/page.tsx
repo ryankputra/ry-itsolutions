@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
+import { parseCeirResponse } from "@/lib/ceirParser";
 import {
   Clock,
   RotateCw,
@@ -431,6 +432,37 @@ export default function AdminOrdersPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Log Layanan CEIR / Admin Note Display */}
+                {o?.admin_note ? (
+                  <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs space-y-1.5">
+                    <p className="font-bold text-[10px] text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                      Log Layanan / Catatan Admin:
+                    </p>
+                    {orderQueueSubTab === "automated" ? (
+                      (() => {
+                        const parsed = parseCeirResponse(o.admin_note);
+                        if (parsed.rows.length > 0) {
+                          return (
+                            <div className="space-y-1 mt-1">
+                              {parsed.rows.map((r, idx) => (
+                                <div key={idx} className="flex items-start gap-2 text-[11px] font-mono">
+                                  <span className="text-amber-600 font-bold shrink-0">{r.no}.</span>
+                                  <span className="text-ink-muted shrink-0">{r.tanggal}</span>
+                                  <span className="font-bold text-amber-700 dark:text-amber-300 shrink-0">[{r.action}]</span>
+                                  <span className="text-ink break-words">{r.note}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return <p className="text-ink font-mono text-[11px] whitespace-pre-wrap">{o.admin_note}</p>;
+                      })()
+                    ) : (
+                      <p className="text-ink font-mono text-[11px] whitespace-pre-wrap">{o.admin_note}</p>
+                    )}
+                  </div>
+                ) : null}
 
                 {/* Screenshot Proofs (Manual Tab) */}
                 {orderQueueSubTab === "manual" && (o?.user_image || o?.user_image_ceir) && (

@@ -36,6 +36,7 @@ function UnblockImeiContent() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [ketentuanOpen, setKetentuanOpen] = useState(true);
   const [showSuccessPop, setShowSuccessPop] = useState(false);
   const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: "" });
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -647,11 +648,11 @@ function UnblockImeiContent() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xs text-ink tracking-tight">Promo Diskon Multi-IMEI &amp; Dual SIM</span>
+                <span className="font-extrabold text-xs text-ink tracking-tight">Promo Diskon Multi-IMEI</span>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-white">Hemat Otomatis</span>
               </div>
               <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">
-                Daftarkan {wholesalePromoInfo.minQty} IMEI atau lebih (HP Dual SIM / Multi-Device sekaligus) otomatis dapat harga grosir spesial mulai dari <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {wholesalePromoInfo.minPrice.toLocaleString('id-ID')} / IMEI</span>.
+                Daftarkan {wholesalePromoInfo.minQty} IMEI atau lebih untuk pemrosesan banyak IMEI sekaligus, otomatis dapat harga grosir spesial mulai dari <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {wholesalePromoInfo.minPrice.toLocaleString('id-ID')} / IMEI</span>.
               </p>
             </div>
           </div>
@@ -664,20 +665,33 @@ function UnblockImeiContent() {
       )}
 
       <Card glass className="p-6 space-y-6">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
-          <h3 className="font-bold flex items-center gap-1.5 text-base">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm shadow-inner">
+          <h3
+            className="font-bold flex items-center gap-1.5 text-base cursor-pointer select-none"
+            onClick={() => setKetentuanOpen(!ketentuanOpen)}
+          >
             <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
-            <span>Ketentuan Layanan</span>
+            <span className="flex-1">Ketentuan Layanan</span>
+            <svg
+              className={`w-4 h-4 text-amber-600 transition-transform duration-200 ${ketentuanOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
           </h3>
-          <ul className="list-decimal pl-5 space-y-2 leading-relaxed">
-            <li>Cuma buat <b>HP Inter (Internasional)</b> ya.</li>
-            <li>Buat user iPhone, <i>wajib banget</i> pastiin HP lo <b>bukan barang bypass-an</b>!</li>
-            <li>Pastiin <b>IC Baseband HP lo masih sehat</b>. Cara ngeceknya: masukin SIM Card, kalo munculnya <span className="font-semibold text-rose-600">"Tidak ada layanan" (No Service)</span> berarti aman. BUKAN "Tidak ada SIM" (No SIM Card) ya.</li>
-            <li>Kalo HP lo statusnya <b>simlock</b>, wajib udah kepasang <i>rsim</i> atau <i>sim sticker</i> dari awal.</li>
-            <li>Proses ini manual dikerjain admin (estimasi 1-24 jam). Kalo gagal gara-gara sistem, <b>saldo lo di-refund 100%</b>. (TAPI KALO GAGAL KARENA KESALAHAN LO SENDIRI, NO REFUND!).</li>
-          </ul>
+          {ketentuanOpen && (
+            <ul className="list-decimal pl-5 space-y-2 leading-relaxed mt-3">
+              <li>Cuma buat <b>HP Inter (Internasional)</b> ya.</li>
+              <li>Buat user iPhone, <i>wajib banget</i> pastiin HP lo <b>bukan barang bypass-an</b>!</li>
+              <li>Pastiin <b>IC Baseband HP lo masih sehat</b>. Cara ngeceknya: masukin SIM Card, kalo munculnya <span className="font-semibold text-rose-600">&quot;Tidak ada layanan&quot; (No Service)</span> berarti aman. BUKAN &quot;Tidak ada SIM&quot; (No SIM Card) ya.</li>
+              <li>Kalo HP lo statusnya <b>simlock</b>, wajib udah kepasang <i>rsim</i> atau <i>sim sticker</i> dari awal.</li>
+            </ul>
+          )}
         </div>
 
         {error && <div className="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{error}</div>}
