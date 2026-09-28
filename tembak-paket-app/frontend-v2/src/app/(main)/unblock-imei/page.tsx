@@ -32,6 +32,7 @@ function UnblockImeiContent() {
   const [files, setFiles] = useState<File[]>([]);
   const [ceirFiles, setCeirFiles] = useState<File[]>([]);
   const [agreed, setAgreed] = useState(false);
+  const [showTerms, setShowTerms] = useState(true);
   
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -190,14 +191,6 @@ function UnblockImeiContent() {
   }, [safePackages]);
 
   const speedCost = selectedSpeed && speedPricing ? Number(speedPricing[`imei_speed_${selectedSpeed}`] || speedPricing[selectedSpeed] || 0) : 0;
-  const wholesaleMinQty = Number(pkgSpeedPrices?.wholesale_min_qty) || 2;
-  const wholesalePrices = pkgSpeedPrices?.wholesale_prices || {};
-  const wholesalePriceForSpeed = Number(wholesalePrices[selectedSpeed] || 0);
-  const isWholesaleActive = Boolean(
-    pkgSpeedPrices?.wholesale_enabled &&
-    imeiCount >= wholesaleMinQty &&
-    wholesalePriceForSpeed > 0
-  );
 
   let regularPricePerImei = 0;
   if (selectedPkg) {
@@ -209,6 +202,28 @@ function UnblockImeiContent() {
       regularPricePerImei = basePrice + speedCost;
     }
   }
+
+  // Multi-IMEI Wholesale Price Logic (Qty >= 2)
+  const isPkgWholesaleEnabled = Boolean(
+    pkgSpeedPrices?.wholesale_enabled === true || 
+    pkgSpeedPrices?.wholesale_enabled === 1 || 
+    pkgSpeedPrices?.wholesale_enabled === "true" ||
+    pkgSpeedPrices?.wholesale_enabled === "1"
+  );
+  const wholesalePrices = pkgSpeedPrices?.wholesale_prices || {};
+  let calculatedWholesalePrice = isPkgWholesaleEnabled ? Number(wholesalePrices[selectedSpeed] || 0) : 0;
+  if (isPkgWholesaleEnabled && calculatedWholesalePrice <= 0 && selectedPkg) {
+    const resellerFee = Number(selectedPkg.reseller_fee || selectedPkg.resellerPrice || 0);
+    if (resellerFee > 0 && resellerFee < regularPricePerImei) {
+      calculatedWholesalePrice = resellerFee;
+    }
+  }
+
+  const wholesaleMinQty = isPkgWholesaleEnabled ? (Number(pkgSpeedPrices?.wholesale_min_qty) || 2) : 2;
+  const hasValidWholesaleDiscount = isPkgWholesaleEnabled && calculatedWholesalePrice > 0 && calculatedWholesalePrice < regularPricePerImei;
+
+  const isWholesaleActive = hasValidWholesaleDiscount && imeiCount >= wholesaleMinQty && regularPricePerImei > 0;
+  const wholesalePriceForSpeed = isWholesaleActive ? calculatedWholesalePrice : regularPricePerImei;
 
   const pricePerImei = isWholesaleActive ? wholesalePriceForSpeed : regularPricePerImei;
   const rawTotalPrice = pricePerImei * imeiCount;
@@ -244,6 +259,7 @@ function UnblockImeiContent() {
     }
     if (!agreed) {
       missing.push("Centang persetujuan Syarat & Ketentuan Layanan.");
+      setShowTerms(true);
     }
 
     if (missing.length > 0) {
@@ -527,7 +543,7 @@ function UnblockImeiContent() {
   const allowedSpeedsForPkg: string[] = (() => {
     if (!selectedPkg) return ['fast', 'semi', 'slow'];
     if (Object.keys(pkgSpeedPrices).length > 0) {
-      const activeKeys = Object.keys(pkgSpeedPrices).filter(k => Number(pkgSpeedPrices[k]) > 0);
+      const activeKeys = Object.keys(pkgSpeedPrices).filter(k => ['fast', 'semi', 'slow'].includes(k) && Number(pkgSpeedPrices[k]) > 0);
       if (activeKeys.length > 0) return activeKeys;
     }
     if (!selectedPkg.allowed_speeds) return ['fast', 'semi', 'slow'];
@@ -633,7 +649,7 @@ function UnblockImeiContent() {
       {/* Broadcast Announcement Banner */}
       <BroadcastBanner initialAnnouncements={announcements} />
 
-      {/* Promo Diskon Multi-IMEI & Dual SIM Banner */}
+      {/* Promo Diskon Multi-IMEI Banner */}
       {wholesalePromoInfo.hasPromo && (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-primary/10 to-indigo-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-start sm:items-center gap-3">
@@ -645,11 +661,11 @@ function UnblockImeiContent() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xs text-ink tracking-tight">Promo Diskon Multi-IMEI &amp; Dual SIM</span>
+                <span className="font-extrabold text-xs text-ink tracking-tight">Promo Diskon Multi-IMEI / Grosir</span>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-white">Hemat Otomatis</span>
               </div>
               <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">
-                Daftarkan {wholesalePromoInfo.minQty} IMEI atau lebih (HP Dual SIM / Multi-Device sekaligus) otomatis dapat harga grosir spesial mulai dari <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {wholesalePromoInfo.minPrice.toLocaleString('id-ID')} / IMEI</span>.
+                Daftarkan {wholesalePromoInfo.minQty} IMEI atau lebih sekaligus untuk otomatis mendapatkan harga grosir spesial mulai dari <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {wholesalePromoInfo.minPrice.toLocaleString('id-ID')} / IMEI</span>.
               </p>
             </div>
           </div>
@@ -662,20 +678,37 @@ function UnblockImeiContent() {
       )}
 
       <Card glass className="p-6 space-y-6">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm space-y-3 shadow-inner">
-          <h3 className="font-bold flex items-center gap-1.5 text-base">
-            <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-            <span>Ketentuan Layanan</span>
-          </h3>
-          <ul className="list-decimal pl-5 space-y-2 leading-relaxed">
-            <li>Cuma buat <b>HP Inter (Internasional)</b> ya.</li>
-            <li>Buat user iPhone, <i>wajib banget</i> pastiin HP lo <b>bukan barang bypass-an</b>!</li>
-            <li>Pastiin <b>IC Baseband HP lo masih sehat</b>. Cara ngeceknya: masukin SIM Card, kalo munculnya <span className="font-semibold text-rose-600">"Tidak ada layanan" (No Service)</span> berarti aman. BUKAN "Tidak ada SIM" (No SIM Card) ya.</li>
-            <li>Kalo HP lo statusnya <b>simlock</b>, wajib udah kepasang <i>rsim</i> atau <i>sim sticker</i> dari awal.</li>
-            <li>Proses ini manual dikerjain admin (estimasi 1-24 jam). Kalo gagal gara-gara sistem, <b>saldo lo di-refund 100%</b>. (TAPI KALO GAGAL KARENA KESALAHAN LO SENDIRI, NO REFUND!).</li>
-          </ul>
+        {/* Collapsible Ketentuan Layanan Box */}
+        <div id="terms-box" className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 rounded-2xl overflow-hidden transition-all shadow-xs">
+          <button
+            type="button"
+            onClick={() => setShowTerms(!showTerms)}
+            className="w-full p-3.5 sm:p-4 flex items-center justify-between font-bold text-sm sm:text-base text-left bg-amber-100/60 dark:bg-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <span>Ketentuan Layanan</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+              <span>{showTerms ? "Sembunyikan" : "Buka Ketentuan"}</span>
+              <svg className={`w-4 h-4 transition-transform duration-200 ${showTerms ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </div>
+          </button>
+
+          {showTerms && (
+            <div className="p-4 pt-2 border-t border-amber-200/60 dark:border-amber-800/40 space-y-2 text-xs sm:text-sm leading-relaxed">
+              <ul className="list-decimal pl-5 space-y-2">
+                <li>Cuma buat <b>HP Inter (Internasional)</b> ya.</li>
+                <li>Buat user iPhone, <i>wajib banget</i> pastiin HP lo <b>bukan barang bypass-an</b>!</li>
+                <li>Pastiin <b>IC Baseband HP lo masih sehat</b>. Cara ngeceknya: masukin SIM Card, kalo munculnya <span className="font-semibold text-rose-600 dark:text-rose-400">"Tidak ada layanan" (No Service)</span> berarti aman. BUKAN "Tidak ada SIM" (No SIM Card) ya.</li>
+                <li>Kalo HP lo statusnya <b>simlock</b>, wajib udah kepasang <i>rsim</i> atau <i>sim sticker</i> dari awal.</li>
+              </ul>
+            </div>
+          )}
         </div>
 
         {error && <div className="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{error}</div>}
@@ -704,13 +737,13 @@ function UnblockImeiContent() {
                 required 
               />
 
-              {/* Panduan Multi-IMEI / Dual SIM */}
+              {/* Panduan Multi-IMEI */}
               <div className="flex items-start gap-2 p-2.5 rounded-xl bg-primary/5 border border-primary/10 text-xs text-ink-muted">
                 <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
                 </svg>
                 <p className="text-[11px] leading-relaxed">
-                  <span className="font-bold text-ink">Punya HP Dual SIM (IMEI 1 &amp; 2) atau mau unblock 2 HP sekaligus?</span> Masukkan tiap 15 digit IMEI di baris baru. Pembelian minimal 2 IMEI otomatis mendapatkan harga diskon grosir!
+                  <span className="font-bold text-ink">Pemrosesan Banyak IMEI Sekaligus:</span> Masukkan setiap 15 digit nomor IMEI di baris baru (atau pisahkan dengan koma).{hasValidWholesaleDiscount ? " Pembelian 2 IMEI atau lebih otomatis mendapatkan harga grosir!" : ""}
                 </p>
               </div>
 
@@ -890,9 +923,25 @@ function UnblockImeiContent() {
                       .filter(([k, v]) => !k.startsWith("wholesale_") && typeof v !== "boolean" && Number(v) >= 1000)
                       .map(([, v]) => Number(v));
                     const lowestPrice = validSpPrices.length > 0 ? Math.min(...validSpPrices) : Number(opt.price || 0);
-                    const activeCardPrice = isSelected && selectedSpeed && optSp[selectedSpeed] && Number(optSp[selectedSpeed]) >= 1000
+                    const regularCardPrice = isSelected && selectedSpeed && optSp[selectedSpeed] && Number(optSp[selectedSpeed]) >= 1000
                       ? Number(optSp[selectedSpeed])
                       : lowestPrice;
+
+                    const isCardWholesaleEnabled = Boolean(
+                      optSp?.wholesale_enabled === true || 
+                      optSp?.wholesale_enabled === 1 || 
+                      optSp?.wholesale_enabled === "true" ||
+                      optSp?.wholesale_enabled === "1"
+                    );
+                    let cardWholesalePrice = isCardWholesaleEnabled ? Number(optSp.wholesale_prices?.[selectedSpeed] || 0) : 0;
+                    if (isCardWholesaleEnabled && cardWholesalePrice <= 0) {
+                      const resFee = Number(opt.reseller_fee || opt.resellerPrice || 0);
+                      if (resFee > 0 && resFee < regularCardPrice) {
+                        cardWholesalePrice = resFee;
+                      }
+                    }
+                    const hasWholesaleAvailable = isCardWholesaleEnabled && cardWholesalePrice > 0 && cardWholesalePrice < regularCardPrice;
+                    const hasCardWholesale = isWholesaleActive && hasWholesaleAvailable;
 
                     return (
                       <button
@@ -917,18 +966,24 @@ function UnblockImeiContent() {
 
                         {/* Pricing */}
                         <div>
-                          <p className="text-[9px] text-ink-muted line-through">
-                            Rp {(activeCardPrice + 20000).toLocaleString("id-ID")}
+                          {hasCardWholesale && (
+                            <p className="text-[9px] text-ink-muted line-through">
+                              Rp {regularCardPrice.toLocaleString("id-ID")}
+                            </p>
+                          )}
+                          <p className={`font-black text-xs sm:text-sm ${hasCardWholesale ? 'text-emerald-600 dark:text-emerald-400' : 'text-primary'}`}>
+                            {hasCardWholesale
+                              ? `Rp ${cardWholesalePrice.toLocaleString("id-ID")}`
+                              : (isSelected ? `Rp ${regularCardPrice.toLocaleString("id-ID")}` : `Mulai Rp ${lowestPrice.toLocaleString("id-ID")}`)}
                           </p>
-                          <p className="font-black text-xs sm:text-sm text-primary">
-                            {isSelected ? `Rp ${activeCardPrice.toLocaleString("id-ID")}` : `Mulai Rp ${lowestPrice.toLocaleString("id-ID")}`}
-                          </p>
-                          {optSp.wholesale_enabled && (
-                            <div className="mt-1 pt-1 border-t border-hairline/60 flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {hasWholesaleAvailable && (
+                            <div className={`mt-1 pt-1 border-t border-hairline/60 flex items-center gap-1 text-[9px] font-bold ${
+                              hasCardWholesale ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'
+                            }`}>
                               <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
                               </svg>
-                              <span>Grosir &ge;{optSp.wholesale_min_qty || 2} IMEI</span>
+                              <span>{hasCardWholesale ? 'Grosir Multi-IMEI Aktif' : `Grosir Rp ${cardWholesalePrice.toLocaleString("id-ID")} (≥2 IMEI)`}</span>
                             </div>
                           )}
                         </div>
@@ -959,40 +1014,73 @@ function UnblockImeiContent() {
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {speedOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setSelectedSpeed(opt.id)}
-                      className={`p-2.5 rounded-2xl border text-center transition-all ${
-                        selectedSpeed === opt.id
-                          ? "border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary font-bold"
-                          : "border-hairline bg-canvas hover:bg-parchment"
-                      }`}
-                    >
-                      <div className="font-bold text-xs capitalize truncate">{opt.label}</div>
-                      {opt.rangeText && (
-                        <div
-                          className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2"
-                          style={{ color: '#d97706' }}
-                        >
-                          {opt.rangeText}
-                        </div>
-                      )}
-                      <div className="text-[10px] font-extrabold mt-0.5 text-primary">
-                        {opt.isSpecificPrice
-                          ? `Rp ${Number(opt.price).toLocaleString("id-ID")}`
-                          : opt.price === 0
-                          ? "Gratis"
-                          : `+Rp ${Number(opt.price).toLocaleString("id-ID")}`}
-                      </div>
-                      {pkgSpeedPrices.wholesale_enabled && pkgSpeedPrices.wholesale_prices?.[opt.id] && (
-                        <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/40 px-1 py-0.5 rounded mt-1">
-                          &ge;{pkgSpeedPrices.wholesale_min_qty || 2} IMEI: Rp {Number(pkgSpeedPrices.wholesale_prices[opt.id]).toLocaleString("id-ID")}
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                  {speedOptions.map((opt) => {
+                    const regPrice = opt.isSpecificPrice
+                      ? Number(opt.price)
+                      : (selectedPkg ? (Number(selectedPkg.price || 0) + Number(opt.price || 0)) : Number(opt.price || 0));
+
+                    let optWholesalePrice = Number(pkgSpeedPrices.wholesale_prices?.[opt.id] || 0);
+                    if (optWholesalePrice <= 0 && regPrice > 0) {
+                      const resFee = Number(selectedPkg?.reseller_fee || selectedPkg?.resellerPrice || 0);
+                      if (resFee > 0 && resFee < regPrice) {
+                        optWholesalePrice = resFee;
+                      }
+                    }
+
+                    const isSpeedWholesaleActive = isWholesaleActive && optWholesalePrice > 0 && optWholesalePrice < regPrice;
+
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setSelectedSpeed(opt.id)}
+                        className={`p-2.5 rounded-2xl border text-center transition-all ${
+                          selectedSpeed === opt.id
+                            ? "border-primary bg-primary/5 shadow-sm text-primary ring-1 ring-primary font-bold"
+                            : "border-hairline bg-canvas hover:bg-parchment"
+                        }`}
+                      >
+                        <div className="font-bold text-xs capitalize truncate">{opt.label}</div>
+                        {opt.rangeText && (
+                          <div
+                            className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2"
+                            style={{ color: '#d97706' }}
+                          >
+                            {opt.rangeText}
+                          </div>
+                        )}
+
+                        {isSpeedWholesaleActive ? (
+                          <div>
+                            <div className="text-[9px] text-ink-muted line-through mt-0.5">
+                              Rp {regPrice.toLocaleString("id-ID")}
+                            </div>
+                            <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                              Rp {optWholesalePrice.toLocaleString("id-ID")}
+                            </div>
+                            <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/60 px-1 py-0.5 rounded mt-1">
+                              Grosir Qty ≥2
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-[10px] font-extrabold mt-0.5 text-primary">
+                              {opt.isSpecificPrice
+                                ? `Rp ${Number(opt.price).toLocaleString("id-ID")}`
+                                : opt.price === 0
+                                ? "Gratis"
+                                : `+Rp ${Number(opt.price).toLocaleString("id-ID")}`}
+                            </div>
+                            {optWholesalePrice > 0 && optWholesalePrice < regPrice && (
+                              <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/40 px-1 py-0.5 rounded mt-1">
+                                ≥2 IMEI: Rp {optWholesalePrice.toLocaleString("id-ID")}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Disclaimer Box for Cutoff */}
@@ -1147,7 +1235,7 @@ function UnblockImeiContent() {
             {/* Price Breakdown Summary */}
             <div className="p-4 rounded-2xl bg-parchment/60 border border-hairline space-y-2 text-xs">
               {/* Wholesale Active Status or Incentive Callout */}
-              {isWholesaleActive ? (
+              {isWholesaleActive && wholesaleSavings > 0 ? (
                 <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
                   <div className="flex items-center gap-1.5 font-bold">
                     <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -1159,10 +1247,12 @@ function UnblockImeiContent() {
                     Hemat Rp {wholesaleSavings.toLocaleString("id-ID")}
                   </span>
                 </div>
-              ) : imeiCount === 1 && pkgSpeedPrices.wholesale_enabled && pkgSpeedPrices.wholesale_prices?.[selectedSpeed] ? (
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
-                  <span>Tambah 1 IMEI lagi untuk harga grosir Rp {Number(pkgSpeedPrices.wholesale_prices[selectedSpeed]).toLocaleString("id-ID")}/IMEI!</span>
-                  <span className="font-bold text-amber-700 shrink-0 ml-1">Hemat Rp {((regularPricePerImei - Number(pkgSpeedPrices.wholesale_prices[selectedSpeed])) * 2).toLocaleString("id-ID")}</span>
+              ) : (imeiCount === 1 && hasValidWholesaleDiscount) ? (
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                  <span>Input 2 atau lebih IMEI untuk otomatis mendapatkan Harga Grosir Multi-IMEI!</span>
+                  <span className="font-bold text-amber-700 dark:text-amber-300 shrink-0 ml-1">
+                    Hemat s/d Rp {Math.max(0, (Number(regularPricePerImei) || 0) - (Number(calculatedWholesalePrice) || 0)).toLocaleString("id-ID")}/IMEI
+                  </span>
                 </div>
               ) : null}
 
@@ -1253,9 +1343,15 @@ function UnblockImeiContent() {
                   type="checkbox"
                   className="mt-1 w-5 h-5 rounded border-hairline text-primary"
                   checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    if (checked && !showTerms) {
+                      setShowTerms(true);
+                    }
+                    setAgreed(checked);
+                  }}
                 />
-                <span className="text-xs text-ink-muted">
+                <span className="text-xs text-ink-muted leading-relaxed">
                   Saya menyatakan bahwa HP saya memenuhi seluruh persyaratan di atas dan setuju memproses pesanan ini.
                 </span>
               </label>

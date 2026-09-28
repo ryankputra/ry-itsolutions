@@ -1,4 +1,5 @@
 const { calculateTransactionWarranty } = require("../utils/warrantyHelper");
+const { generatePriceUpdateBanner, generateCeirLogBanner } = require("./priceBannerGenerator");
 /**
  * WhatsApp Admin Notifier & Controller Service (Self-Hosted via Baileys)
  * Free, zero third-party API costs.
@@ -336,6 +337,14 @@ async function getStoredMessage(key) {
 async function resolveWhatsAppJid(phone) {
     const clean = cleanPhone(phone);
     if (!clean) return null;
+    if (sock && typeof sock.onWhatsApp === "function") {
+        try {
+            const [res] = await sock.onWhatsApp(clean);
+            if (res?.jid) {
+                return res.jid;
+            }
+        } catch (e) {}
+    }
     return `${clean}@s.whatsapp.net`;
 }
 
@@ -1071,11 +1080,8 @@ async function initWABot(forceNew = false) {
 
                 if (!messageText) continue;
 
-                // Check if message is a command or quick shortcut
-                const isCommand = (
-                    messageText.startsWith(".") ||
-                    /^(1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|orderan|order|list|pending|proseslist)\b/i.test(messageText)
-                );
+                // Enforce strict dot prefix for all admin commands to prevent accidental triggers during regular chats
+                const isCommand = messageText.startsWith(".");
 
                 // Determine sender phone number cleanly (handling @s.whatsapp.net, :device, and @lid)
                 const participantJid = msg.key.participant || "";
@@ -1363,8 +1369,45 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
             }
         }
 
-        await sendAndStoreMessage(custJid, { text: custMsg });
-        logWABot(`✅ Notifikasi status '${newStatus}' pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerPhone})`, "info");
+        let msgPayload = { text: custMsg };
+
+        // Automatically generate & attach PNG log card image for completed CEIR orders
+        if (serviceKind === "ceir" && (newStatus === "success" || newStatus === "completed")) {
+            try {
+                const noteText = customNote || trx.admin_note || "";
+                let rows = [];
+                const numberedPattern = /(\d+)[\.\)]\s*([0-9]{4}-[0-9]{2}-[0-9]{2}(?:\s+[0-9]{2}:[0-9]{2}:[0-9]{2})?)\s*\|\s*Action:\s*([^|]+)\s*\|\s*Note:\s*(.*?)(?=(?:\s*\d+[\.\)]\s*[0-9]{4}-)|$)/gi;
+                let match;
+                while ((match = numberedPattern.exec(noteText)) !== null) {
+                    rows.push({
+                        no: parseInt(match[1], 10),
+                        date: match[2]?.trim() || '',
+                        action: match[3]?.trim() || 'CEIR_EVENT',
+                        note: match[4]?.trim() || '-'
+                    });
+                }
+
+                const pngBuffer = await generateCeirLogBanner({
+                    orderId: trx.id,
+                    imei: trx.imei || '-',
+                    serviceName: trx.packageName || 'Cek Status CEIR',
+                    statusText: 'TERDAFTAR RESMI DI CEIR',
+                    rows
+                });
+
+                if (pngBuffer && Buffer.isBuffer(pngBuffer)) {
+                    msgPayload = {
+                        image: pngBuffer,
+                        caption: custMsg
+                    };
+                }
+            } catch (bannerErr) {
+                console.warn(`[WABot] Gagal membuat PNG banner log CEIR: ${bannerErr.message}`);
+            }
+        }
+
+        await sendAndStoreMessage(custJid, msgPayload);
+        logWABot(`✅ Notifikasi status '${newStatus}' pesanan ${trx.id} (dengan media=${!!msgPayload.image}) berhasil terkirim ke WhatsApp pelanggan (${customerPhone})`, "info");
         console.log(`[WABot] Notifikasi status '${newStatus}' berhasil dikirim ke pelanggan (${customerPhone}).`);
     } catch (err) {
         logWABot(`❌ Gagal kirim notifikasi status ke pelanggan: ${err.message}`, "error");
@@ -1760,6 +1803,52 @@ async function sendTextMessage(targetPhone, message) {
         return { status: true, message: `Pesan berhasil dikirim ke ${phone}` };
     } catch (error) {
         console.error("[WABot] Send message error:", error.message);
+        return { status: false, message: error.message };
+    }
+}
+
+/**
+ * Send WhatsApp image message with optional caption text
+ */
+async function sendImageMessage(targetPhone, imageInput, caption = '') {
+    try {
+        let isConnected = (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id));
+        if (!isConnected && sock) {
+            for (let i = 0; i < 4; i++) {
+                await new Promise(r => setTimeout(r, 500));
+                if (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id)) {
+                    isConnected = true;
+                    break;
+                }
+            }
+        }
+
+        if (!sock || !isConnected) {
+            return { status: false, message: "WhatsApp Baileys bot belum terhubung / belum login." };
+        }
+
+        const phone = cleanPhone(targetPhone);
+        if (!phone) return { status: false, message: "Nomor tujuan tidak valid." };
+
+        let imageBuffer;
+        if (Buffer.isBuffer(imageInput)) {
+            imageBuffer = imageInput;
+        } else if (typeof imageInput === 'string') {
+            const base64Data = imageInput.replace(/^data:image\/\w+;base64,/, '');
+            imageBuffer = Buffer.from(base64Data, 'base64');
+        } else {
+            return { status: false, message: "Format gambar tidak valid." };
+        }
+
+        const jid = `${phone}@s.whatsapp.net`;
+        await sendAndStoreMessage(jid, {
+            image: imageBuffer,
+            caption: caption ? caption.trim() : ''
+        });
+        console.log(`[WABot] Gambar nota terkirim ke: ${phone}`);
+        return { status: true, message: `Nota WhatsApp (Gambar PNG & Teks) berhasil dikirim ke ${phone}` };
+    } catch (error) {
+        console.error("[WABot] Send image error:", error.message);
         return { status: false, message: error.message };
     }
 }
@@ -2424,7 +2513,7 @@ async function notifyNewProductBroadcast({ product, customMessage, targetMode = 
 
     if (pType === 'imei') {
         bannerFileName = 'banner_imei.jpg';
-        headerTitle = '📱 *LAYANAN BARU: UNBLOCK IMEI RESMI* 📱';
+        headerTitle = '📱 *LAYANAN BARU: UNBLOCK IMEI* 📱';
         directLink = product.link || 'https://ry-itsolutionts.web.id/unblock-imei';
         
         let speedList = ['Instant (Fast)', 'Semi-Fast', 'Hemat'];
@@ -2436,7 +2525,7 @@ async function notifyNewProductBroadcast({ product, customMessage, targetMode = 
 `📦 *Nama Paket:* *${product.duration || product.name}*
 💰 *Harga Spesial:* *${priceStr}*
 📶 *Jaringan:* All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)
-🛡️ *Jaminan Garansi:* Resmi Anti Begal Sinyal / Hilang Sinyal
+🛡️ *Jaminan Garansi:* Garansi Sinyal Stabil / Anti Begal Sinyal
 ⚡ *Pilihan Server:* ${speedList.join(' • ')}
 ━━━━━━━━━━━━━━━━━━━━━━━
 📝 *Informasi Layanan:*
@@ -2546,7 +2635,115 @@ _Ry-ITSolutions Official Support & Store_`;
     };
 }
 
+/**
+ * Broadcast price update notification with automatically generated banner to users via WhatsApp.
+ * @param {Object} options
+ * @param {string} options.title - Header title for text message & banner
+ * @param {string} options.subtitle - Subtitle / category context
+ * @param {Array<{name: string, price: string|number, note?: string, highlight?: boolean}>} options.items - Price list items
+ * @param {string} [options.customNote] - Additional note for users
+ * @param {string} [options.targetMode='all'] - 'all' or 'admin_only'
+ */
+async function notifyPriceUpdateBroadcast({
+    title = 'UPDATE HARGA TERBARU',
+    subtitle = 'Layanan Digital Ry-ITSolutions',
+    items = [],
+    customNote = '',
+    targetMode = 'all'
+}) {
+    if (!Array.isArray(items) || items.length === 0) {
+        console.warn('[notifyPriceUpdateBroadcast] Tidak ada item harga untuk dibroadcast.');
+        return { success: false, reason: 'No price items' };
+    }
+
+    // 1. Generate visual banner PNG buffer via sharp/SVG AI generator
+    let bannerBuffer = null;
+    try {
+        bannerBuffer = await generatePriceUpdateBanner({
+            title,
+            subtitle,
+            items,
+            footerNote: customNote || 'Harga terbaru berlaku mulai sekarang • Garansi Sinyal Stabil'
+        });
+    } catch (e) {
+        console.error('[notifyPriceUpdateBroadcast] Gagal membuat banner image:', e.message);
+    }
+
+    // 2. Build structured WhatsApp caption text
+    let priceListText = '';
+    items.forEach(item => {
+        const pStr = typeof item.price === 'number'
+            ? `Rp ${item.price.toLocaleString('id-ID')}`
+            : String(item.price || 'Rp 0');
+        priceListText += `• *${item.name}*: *${pStr}*${item.note ? ` _(${item.note})_` : ''}\n`;
+    });
+
+    const caption = 
+`📢 *${title.toUpperCase()}* 📢
+━━━━━━━━━━━━━━━━━━━━━━━
+Halo kak! Ada pembaruan tarif & harga layanan terbaru di *Ry-ITSolutions*:
+
+📦 *Rincian Tarif Terbaru:*
+${priceListText}
+━━━━━━━━━━━━━━━━━━━━━━━
+${customNote ? `💡 *Informasi Tambahan:*\n${customNote}\n━━━━━━━━━━━━━━━━━━━━━━━\n` : ''}👉 *CEK & PESAN SEKARANG:*
+https://ry-itsolutionts.web.id/unblock-imei
+
+_Ry-ITSolutions Official Support & Store_`;
+
+    const payload = bannerBuffer
+        ? { image: bannerBuffer, caption, viewOnce: false }
+        : { text: caption };
+
+    // 3. Collect target phone numbers
+    const adminPhones = await getAdminPhoneNumbers();
+    const targetPhones = new Set();
+    adminPhones.forEach(p => {
+        const c = cleanPhone(p);
+        if (c && c.length >= 8) targetPhones.add(c);
+    });
+
+    if (targetMode === 'all') {
+        const userRows = await dbAll("SELECT verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ''");
+        userRows.forEach(u => {
+            const c = cleanPhone(u.verifiedPhone);
+            if (c && c.length >= 8) targetPhones.add(c);
+        });
+    }
+
+    const results = [];
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const phone of targetPhones) {
+        const jid = `${phone}@s.whatsapp.net`;
+        try {
+            const sent = await sendAndStoreMessage(jid, payload);
+            results.push({ phone, success: true, id: sent?.key?.id });
+            sentCount++;
+            console.log(`[WABot PriceUpdate] Berhasil kirim update harga ke ${phone}`);
+        } catch (err) {
+            results.push({ phone, success: false, error: err.message });
+            failedCount++;
+            console.error(`[WABot PriceUpdate] Gagal kirim update harga ke ${phone}:`, err.message);
+        }
+
+        if (targetPhones.size > 1) {
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    return {
+        success: sentCount > 0,
+        totalTarget: targetPhones.size,
+        totalSent: sentCount,
+        totalFailed: failedCount,
+        details: results
+    };
+}
+
 module.exports = {
+    notifyPriceUpdateBroadcast,
     notifyPromoBroadcast,
     getBroadcastRecipients,
     notifyNewProductBroadcast,
@@ -2557,6 +2754,7 @@ module.exports = {
     closeWABot,
     getWAStatus,
     sendTextMessage,
+    sendImageMessage,
     notifyNewOrder,
     notifyCustomerOnStatusChange,
     getCustomerPhoneForTransaction,

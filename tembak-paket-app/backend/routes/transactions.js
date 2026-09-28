@@ -204,8 +204,24 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
                 const ceirData = orderRes.data;
                 refId = ceirData.reference_id || ceirData.order_id || ceirData.trx_id || `CRG_${Date.now()}`;
                 const ceirStatus = (ceirData.status || ceirData.order_status || 'processing').toLowerCase();
-                finalStatus = (ceirStatus === 'success' || ceirStatus === 'completed') ? 'success' : 'processing';
-                adminNote = typeof ceirData.result === 'string' ? ceirData.result : (ceirData.message || 'Pesanan otomatis CeirGO berhasil diterima server.');
+                finalStatus = (ceirStatus === 'success' || ceirStatus === 'completed' || ceirStatus === 'succeeded') ? 'success' : 'processing';
+                
+                let formattedLog = 'Pesanan otomatis CeirGO berhasil diterima server.';
+                if (ceirData.result) {
+                    if (typeof ceirData.result === 'string') {
+                        formattedLog = ceirData.result;
+                    } else if (Array.isArray(ceirData.result)) {
+                        formattedLog = ceirData.result.map((item, idx) => {
+                            if (item.history && Array.isArray(item.history)) {
+                                return item.history.map((h, hIdx) => `${h.no || (hIdx + 1)}. ${h.date || h.tanggal || ''} | Action: ${h.action || 'CEIR_EVENT'} | Note: ${h.note || '-'}`).join('\n');
+                            }
+                            return `${item.no || (idx + 1)}. ${item.date || item.tanggal || ''} | Action: ${item.action || 'CEIR_EVENT'} | Note: ${item.note || '-'}`;
+                        }).join('\n');
+                    } else if (typeof ceirData.result === 'object') {
+                        formattedLog = ceirData.result.note || ceirData.result.message || JSON.stringify(ceirData.result);
+                    }
+                }
+                adminNote = formattedLog;
                 apiResponse = JSON.stringify(ceirData.result || ceirData);
                 if (ceirData.remaining_balance != null) {
                     const rb = Number(ceirData.remaining_balance);
@@ -233,7 +249,13 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         if (finalStatus === "success") {
             try {
                 const { processReferralReward } = require("../services/referralService");
-                processReferralReward(trx.id).catch(e => console.error("[Referral Error]", e.message));
+                processReferralReward(trx.id).catch(() => {});
+            } catch (e) {}
+
+            // Send automatic WA notification to customer with CeirGO Log Query detail
+            try {
+                const { notifyCustomerOnStatusChange } = require("../services/waBot");
+                notifyCustomerOnStatusChange(trx.id, "success", adminNote).catch(e => console.error('[Auto CeirGO WA Notif Error]', e.message));
             } catch (e) {}
         }
 
@@ -1122,28 +1144,30 @@ router.get('/user/transactions', isAuthenticated, async (req, res) => {
 
             const purchaseVal = Number(item.platformFee || item.originalPrice || item.price || 0);
 
-            // Error Masking: Prevent provider terms leaking to end-user
+            // Error Masking: Only mask internal system code tracebacks, preserve real CeirGO query logs
             let cleanAdminNote = item.admin_note;
             const isAutomatedService = item.service_type === 'ceir' || item.service_type === 'barcode' || (item.packageId && (item.packageId.startsWith('cek_') || item.packageId.startsWith('create_')));
 
-            if (cleanAdminNote && /ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(cleanAdminNote)) {
-                cleanAdminNote = "Pesanan sedang dalam antrean proses verifikasi oleh sistem/admin.";
+            if (cleanAdminNote && /sqlite|exception|fatal error|undefined/i.test(cleanAdminNote) && !/CEIR|Action:|Terdaftar|Bea Cukai/i.test(cleanAdminNote)) {
+                cleanAdminNote = "Pesanan sedang dalam proses verifikasi sistem.";
             }
 
             let cleanApiResponse = item.api_response;
-            if (cleanApiResponse && /ceirgo|balance|upps|provider|api|sqlite|exception/i.test(cleanApiResponse)) {
-                cleanApiResponse = "Sedang Diproses";
+            if (cleanApiResponse && /sqlite|exception|fatal error|undefined/i.test(cleanApiResponse)) {
+                cleanApiResponse = "Diproses";
             }
 
             // Duration cleanup: Automated services are always instant
             const cleanSpeedOption = isAutomatedService ? 'instant' : item.speed_option;
 
-            // Balance purchases are paid immediately upon checkout: normalize to in_queue if pending/unpaid or still waiting in queue
+            // Preserve completed/success/failed status from database
             let effectiveStatus = item.status;
             const noteLower = (item.admin_note || "").toLowerCase();
-            if (item.payment_method === 'balance' || item.paymentMethod === 'balance') {
-                if (effectiveStatus === 'pending' || effectiveStatus === 'unpaid' || (effectiveStatus === 'processing' && noteLower.includes("menunggu"))) {
-                    effectiveStatus = 'in_queue';
+            if (effectiveStatus !== 'success' && effectiveStatus !== 'completed' && effectiveStatus !== 'failed' && effectiveStatus !== 'cancelled' && effectiveStatus !== 'refunded') {
+                if (item.payment_method === 'balance' || item.paymentMethod === 'balance') {
+                    if (effectiveStatus === 'pending' || effectiveStatus === 'unpaid' || (effectiveStatus === 'processing' && noteLower.includes("menunggu verifikasi admin"))) {
+                        effectiveStatus = 'in_queue';
+                    }
                 }
             }
 

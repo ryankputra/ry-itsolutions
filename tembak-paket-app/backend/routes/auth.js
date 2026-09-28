@@ -427,17 +427,29 @@ router.post('/auth/register', async (req, res) => {
 router.post('/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+        if (!email || !password) return res.status(400).json({ status: false, message: "Email dan password wajib diisi." });
+
+        const user = await dbGet('SELECT * FROM users WHERE email = ?', [email.trim().toLowerCase()]);
         if (!user) return res.status(401).json({ status: false, message: "Email atau password salah." });
         const isPasswordMatch = await bcrypt.compare(password, user.password);
         if (!isPasswordMatch) return res.status(401).json({ status: false, message: "Email atau password salah." });
         if (user.role !== 'admin' && user.status !== 'approved') return res.status(403).json({ status: false, message: "Akun Anda belum disetujui oleh Admin." });
 
+        req.session = req.session || {};
         req.session.userId = user.id;
-        logUserActivity({ userId: user.id, userName: user.name, userEmail: user.email, action: 'LOGIN', description: 'Login berhasil via Email/Password', req });
-        updatePresence(user, req, '/');
+
+        try { logUserActivity({ userId: user.id, userName: user.name, userEmail: user.email, action: 'LOGIN', description: 'Login berhasil via Email/Password', req }); } catch (e) {}
+        try { updatePresence(user, req, '/'); } catch (e) {}
+
         const { password: _, ...userWithoutPassword } = user;
-        if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
+        try {
+            if (userWithoutPassword.savedPhones && typeof userWithoutPassword.savedPhones === 'string') {
+                userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
+            }
+        } catch (e) {
+            userWithoutPassword.savedPhones = [];
+        }
+
         res.status(200).json({ status: true, message: "Login berhasil!", user: userWithoutPassword });
     } catch (error) {
         console.error("Login error:", error);

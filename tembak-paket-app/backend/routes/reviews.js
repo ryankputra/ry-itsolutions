@@ -128,10 +128,10 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
             [reviewId, req.session.userId, userName, userAvatar, orderId || latestTrx?.id || 'order_direct', productId || 'unblock-imei', 'imei', finalVariation, Number(rating), comment.trim(), imagesJson, transactionDate, userJoinedAt, userTotalOrders, userRole, new Date().toISOString()]
         );
 
-        // Bonus Reward +500 Koin Ry
+        // Bonus Reward +10 Koin Ry
         try {
-            await dbRun("UPDATE users SET coins = coins + 500 WHERE id = ?", [req.session.userId]);
-            await dbRun("INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, claimed_at) VALUES (?, ?, 'review_bonus', 500, ?)", [`clm_${Date.now()}`, req.session.userId, new Date().toISOString()]);
+            await dbRun("UPDATE users SET coins = coins + 10 WHERE id = ?", [req.session.userId]);
+            await dbRun("INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, claimed_at) VALUES (?, ?, 'review_bonus', 10, ?)", [`clm_${Date.now()}`, req.session.userId, new Date().toISOString()]);
         } catch (e) {}
 
         const newReviewObj = {
@@ -156,7 +156,7 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
 
         res.json({
             status: true,
-            message: "Ulasan Anda berhasil dikirim dan ditampilkan! Bonus +500 Koin Ry telah masuk ke akun Anda.",
+            message: "Ulasan Anda berhasil dikirim dan ditampilkan! Bonus +10 Koin Ry telah masuk ke akun Anda.",
             reviewId,
             review: newReviewObj
         });

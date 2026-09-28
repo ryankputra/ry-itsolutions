@@ -199,8 +199,6 @@ export default function AdminReviewsPage() {
               >
                 <option value="GARANSI 1 BULAN (MASA AKTIF SINYAL)">Garansi 1 Bulan</option>
                 <option value="GARANSI 3 BULAN (MASA AKTIF SINYAL)">Garansi 3 Bulan</option>
-                <option value="GARANSI 1 TAHUN (MASA AKTIF SINYAL)">Garansi 1 Tahun</option>
-                <option value="GARANSI PERMANEN (SEUMUR HIDUP)">Garansi Permanen</option>
                 <option value="Paket Flash 50GB 30 Hari">Paket Flash 50GB</option>
                 <option value="Paket Unlimited Bulanan">Paket Unlimited</option>
               </select>

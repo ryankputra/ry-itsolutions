@@ -97,16 +97,25 @@ function parseCeirResponse(rawInput, defaultDate) {
         : String(rawInput).trim();
     let text = String(rawTextCandidate || '').trim();
 
-    const isFailed = text.toLowerCase().includes("tidak terdaftar") || text.toLowerCase().includes("gagal") || text.toLowerCase().includes("not found");
-    let statusText = isFailed ? "TIDAK TERDAFTAR" : "TERDAFTAR DI CEIR";
+    const lowerText = text.toLowerCase();
+    const isFailed = lowerText.includes("tidak terdaftar") || lowerText.includes("gagal") || lowerText.includes("not found") || lowerText.includes("error") || lowerText.includes("balance") || lowerText.includes("tidak mencukupi") || lowerText.includes("retry");
 
-    if (text.toLowerCase().includes("beacukai") || text.toLowerCase().includes("bea cukai")) {
+    let statusText = "TERDAFTAR DI CEIR";
+    if (isFailed) {
+        if (lowerText.includes("balance") || lowerText.includes("tidak mencukupi") || lowerText.includes("retry") || lowerText.includes("error")) {
+            statusText = "PEMERIKSAAN TERTUNDA / SALDO PROVIDER";
+        } else if (lowerText.includes("tidak terdaftar") || lowerText.includes("not found")) {
+            statusText = "TIDAK TERDAFTAR DI CEIR";
+        } else {
+            statusText = "GAGAL DIPROSES";
+        }
+    } else if (lowerText.includes("beacukai") || lowerText.includes("bea cukai")) {
         statusText = "TERDAFTAR BEA CUKAI";
-    } else if (text.toLowerCase().includes("riwayat") || text.toLowerCase().includes("roamer") || foundOfficialHistory) {
+    } else if (lowerText.includes("riwayat") || lowerText.includes("roamer") || foundOfficialHistory) {
         statusText = "TERDAFTAR (MEMILIKI RIWAYAT CEIR)";
-    } else if (text.toLowerCase().includes("icloud")) {
-        statusText = text.toLowerCase().includes("clean") ? "CLEAN (iCLOUD NORMAL)" : "iCLOUD VERIFIED";
-    } else if (text.toLowerCase().includes("simlock")) {
+    } else if (lowerText.includes("icloud")) {
+        statusText = lowerText.includes("clean") ? "CLEAN (iCLOUD NORMAL)" : "iCLOUD VERIFIED";
+    } else if (lowerText.includes("simlock")) {
         statusText = "CARRIER SIMLOCK CHECKED";
     }
 

@@ -753,7 +753,7 @@ export default function AdminImeiPage() {
                     <Tag className="w-4 h-4 text-emerald-600" />
                     <div>
                       <span className="font-bold text-xs text-ink block">Harga Grosir Multi-IMEI</span>
-                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI (Dual SIM / Multi-Device)</span>
+                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI atau lebih (Multi-IMEI / Grosir)</span>
                     </div>
                   </div>
                   <input
@@ -1086,7 +1086,7 @@ export default function AdminImeiPage() {
                     <Tag className="w-4 h-4 text-emerald-600" />
                     <div>
                       <span className="font-bold text-xs text-ink block">Harga Grosir Multi-IMEI</span>
-                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI (Dual SIM / Multi-Device)</span>
+                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI atau lebih (Multi-IMEI / Grosir)</span>
                     </div>
                   </div>
                   <input

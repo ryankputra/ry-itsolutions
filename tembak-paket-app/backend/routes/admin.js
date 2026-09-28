@@ -646,6 +646,37 @@ router.post('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) 
             const normalizedKey = key.startsWith('ceirgo_price_') ? key : `ceirgo_price_${key}`;
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, String(value)]);
         }
+
+        // Trigger WA Broadcast with dynamic AI banner & WebPush notification asynchronously
+        setImmediate(async () => {
+            try {
+                const items = Object.entries(pricing).map(([k, v]) => {
+                    const cleanName = k.replace(/^ceirgo_price_/, '').replace(/_/g, ' ').toUpperCase();
+                    return {
+                        name: cleanName,
+                        price: Number(v) || 0,
+                        note: 'Layanan CeirGO API'
+                    };
+                });
+                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
+                    await waBot.notifyPriceUpdateBroadcast({
+                        title: 'UPDATE HARGA LAYANAN CEIRGO',
+                        subtitle: 'Tarif Terbaru Cek & Status IMEI CeirGO',
+                        items,
+                        customNote: 'Harga layanan CeirGO telah diperbarui. Silakan cek detail di website.'
+                    });
+                }
+                const { broadcastPushNotification } = require('../services/webPushService');
+                await broadcastPushNotification({
+                    title: 'Update Harga CeirGO',
+                    body: 'Tarif layanan CeirGO telah diperbarui!',
+                    url: '/unblock-imei'
+                });
+            } catch (e) {
+                console.error('[Admin CeirGO Pricing Broadcast Error]:', e.message);
+            }
+        });
+
         res.json({ status: true, message: "Harga layanan CeirGO berhasil diperbarui." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -659,6 +690,37 @@ router.put('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) =
             const normalizedKey = key.startsWith('ceirgo_price_') ? key : `ceirgo_price_${key}`;
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, String(value)]);
         }
+
+        // Trigger WA Broadcast with dynamic AI banner & WebPush notification asynchronously
+        setImmediate(async () => {
+            try {
+                const items = Object.entries(pricing).map(([k, v]) => {
+                    const cleanName = k.replace(/^ceirgo_price_/, '').replace(/_/g, ' ').toUpperCase();
+                    return {
+                        name: cleanName,
+                        price: Number(v) || 0,
+                        note: 'Layanan CeirGO API'
+                    };
+                });
+                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
+                    await waBot.notifyPriceUpdateBroadcast({
+                        title: 'UPDATE HARGA LAYANAN CEIRGO',
+                        subtitle: 'Tarif Terbaru Cek & Status IMEI CeirGO',
+                        items,
+                        customNote: 'Harga layanan CeirGO telah diperbarui. Silakan cek detail di website.'
+                    });
+                }
+                const { broadcastPushNotification } = require('../services/webPushService');
+                await broadcastPushNotification({
+                    title: 'Update Harga CeirGO',
+                    body: 'Tarif layanan CeirGO telah diperbarui!',
+                    url: '/unblock-imei'
+                });
+            } catch (e) {
+                console.error('[Admin CeirGO Pricing Broadcast Error]:', e.message);
+            }
+        });
+
         res.json({ status: true, message: "Harga layanan CeirGO berhasil diperbarui." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -833,6 +895,34 @@ router.put('/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req, 
                 WHERE package_code = ?
             `, [pkg.platform_fee, pkg.reseller_fee, pkg.isVisible, pkg.category, pkg.isMultiPurchase, pkg.position, pkg.package_code]);
         }
+
+        // Trigger WA Broadcast with dynamic AI banner & WebPush asynchronously
+        setImmediate(async () => {
+            try {
+                const items = packages.slice(0, 6).map(p => ({
+                    name: p.name || p.package_code,
+                    price: (Number(p.original_price) || 0) + (Number(p.platform_fee) || 0),
+                    note: `Kategori: ${p.category || 'Paket Data'}`
+                }));
+                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
+                    await waBot.notifyPriceUpdateBroadcast({
+                        title: 'UPDATE HARGA PAKET DATA',
+                        subtitle: 'Tarif Terbaru Paket Kuota Internet',
+                        items,
+                        customNote: 'Harga paket data internet telah diperbarui di website.'
+                    });
+                }
+                const { broadcastPushNotification } = require('../services/webPushService');
+                await broadcastPushNotification({
+                    title: 'Update Harga Paket Data',
+                    body: 'Daftar harga paket data telah diperbarui di website!',
+                    url: '/beli-paket'
+                });
+            } catch (e) {
+                console.error('[Admin Bulk Packages Update Broadcast Error]:', e.message);
+            }
+        });
+
         res.json({ status: true, message: "Paket berhasil diperbarui." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -2600,6 +2690,51 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             console.error('[WebPush Error]', pushErr);
         }
 
+        // 4. WhatsApp Broadcast with dynamic AI visual banner image
+        setImmediate(async () => {
+            try {
+                const imeiRows = await dbAll("SELECT * FROM imei_packages WHERE isVisible = 1 ORDER BY price ASC");
+                const items = [];
+                for (const row of imeiRows) {
+                    let speedObj = {};
+                    try { speedObj = JSON.parse(row.speed_prices || '{}'); } catch (e) {}
+                    const isWholesale = speedObj.wholesale_enabled;
+                    const wholesaleMin = speedObj.wholesale_min_qty || 2;
+
+                    const cleanDuration = (row.duration || '').replace(/\s*\(.*\)/g, '').trim();
+                    items.push({
+                        name: row.duration,
+                        price: row.price,
+                        note: `Garansi ${cleanDuration}`,
+                        highlight: true
+                    });
+
+                    if (isWholesale && speedObj.wholesale_prices) {
+                        const wholesaleRate = Object.values(speedObj.wholesale_prices).find(v => Number(v) > 0);
+                        if (wholesaleRate) {
+                            items.push({
+                                name: `Harga Qty (>=${wholesaleMin} IMEI)`,
+                                price: Number(wholesaleRate),
+                                note: `Harga per IMEI min ${wholesaleMin} unit`,
+                                highlight: true
+                            });
+                        }
+                    }
+                }
+
+                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
+                    await waBot.notifyPriceUpdateBroadcast({
+                        title: 'UPDATE HARGA UNBLOCK IMEI',
+                        subtitle: 'Tarif Aktivasi Sinyal iPhone & Android Inter',
+                        items,
+                        customNote: 'Harga paket Unblock IMEI telah diperbarui! Dapatkan harga khusus untuk pemesanan minimal 2 IMEI.'
+                    });
+                }
+            } catch (waErr) {
+                console.error('[WA Price Broadcast Error]:', waErr.message);
+            }
+        });
+
         res.json({
             status: true,
             message: `Paket '${updatedDuration}' berhasil diperbarui! Notifikasi pembaruan dan log website telah dikirimkan.`,
@@ -2767,15 +2902,21 @@ router.get('/admin/whatsapp/messages/:jid', isAuthenticated, isAdmin, async (req
 // POST /api/admin/whatsapp/send
 router.post('/admin/whatsapp/send', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { targetPhone, jid, message } = req.body;
+        const { targetPhone, jid, message, imageBase64, image } = req.body;
         const phone = targetPhone || (jid ? jid.replace('@s.whatsapp.net', '').replace(/\D/g, '') : '');
+        const imgInput = imageBase64 || image;
 
-        if (!phone || !message || !message.trim()) {
-            return res.status(400).json({ status: false, message: "Nomor tujuan dan isi pesan wajib diisi." });
+        if (!phone || (!message && !imgInput)) {
+            return res.status(400).json({ status: false, message: "Nomor tujuan dan isi pesan / gambar wajib diisi." });
         }
 
         const waBot = require('../services/waBot');
-        const result = await waBot.sendTextMessage(phone, message.trim());
+        let result;
+        if (imgInput && typeof waBot.sendImageMessage === 'function') {
+            result = await waBot.sendImageMessage(phone, imgInput, (message || '').trim());
+        } else {
+            result = await waBot.sendTextMessage(phone, (message || '').trim());
+        }
 
         if (result && result.status) {
             res.json({ status: true, message: result.message || "Pesan WhatsApp berhasil dikirim!" });

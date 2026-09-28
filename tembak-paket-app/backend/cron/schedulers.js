@@ -264,13 +264,33 @@ function initSchedulers() {
                         const remoteStatus = (ceirData.status || ceirData.order_status || '').toLowerCase();
 
                         if (remoteStatus === 'success' || remoteStatus === 'completed' || remoteStatus === 'succeeded') {
-                            const note = typeof ceirData.result === 'string' ? ceirData.result : (ceirData.note || 'Sukses diverifikasi dari CeirGO');
+                            let formattedLog = 'Sukses diverifikasi dari CeirGO';
+                            if (ceirData.result) {
+                                if (typeof ceirData.result === 'string') {
+                                    formattedLog = ceirData.result;
+                                } else if (Array.isArray(ceirData.result)) {
+                                    formattedLog = ceirData.result.map((item, idx) => {
+                                        if (item.history && Array.isArray(item.history)) {
+                                            return item.history.map((h, hIdx) => `${h.no || (hIdx + 1)}. ${h.date || h.tanggal || ''} | Action: ${h.action || 'CEIR_EVENT'} | Note: ${h.note || '-'}`).join('\n');
+                                        }
+                                        return `${item.no || (idx + 1)}. ${item.date || item.tanggal || ''} | Action: ${item.action || 'CEIR_EVENT'} | Note: ${item.note || '-'}`;
+                                    }).join('\n');
+                                } else if (typeof ceirData.result === 'object') {
+                                    formattedLog = ceirData.result.note || ceirData.result.message || JSON.stringify(ceirData.result);
+                                }
+                            }
                             await dbRun("UPDATE transactions SET status = 'success', admin_note = ?, api_response = ? WHERE id = ?",
-                                [note, JSON.stringify(ceirData.result || ceirData), order.id]);
-                            sseSend(order.userId, 'transaction_update', { id: order.id, status: 'success', note });
+                                [formattedLog, JSON.stringify(ceirData.result || ceirData), order.id]);
+                            sseSend(order.userId, 'transaction_update', { id: order.id, status: 'success', note: formattedLog });
                             try {
                                 const { processReferralReward } = require('../services/referralService');
                                 processReferralReward(order.id).catch(() => {});
+                            } catch (e) {}
+
+                            // Auto notify customer via WhatsApp with CeirGO Log Query detail
+                            try {
+                                const { notifyCustomerOnStatusChange } = require('../services/waBot');
+                                notifyCustomerOnStatusChange(order.id, 'success', formattedLog).catch(() => {});
                             } catch (e) {}
                         } else if (remoteStatus === 'failed' || remoteStatus === 'cancelled' || remoteStatus === 'rejected') {
                             const reason = ceirData.reason || ceirData.error || 'Gagal dari server CeirGO';

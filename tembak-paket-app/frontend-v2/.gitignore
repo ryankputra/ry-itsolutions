@@ -32,8 +32,8 @@ yarn-error.log*
 # vercel
 .vercel
 
-# Next.js output (Allow .next folder for instant STB deployment)
-# /.next/
+# Next.js output
+/.next/
 *.pack.gz
 *.pack
 

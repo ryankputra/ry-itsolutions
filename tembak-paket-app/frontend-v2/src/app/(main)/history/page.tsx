@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL, safeJson } from "@/lib/api";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import WriteReviewModal from "@/components/ui/WriteReviewModal";
 import { InstantQrisPaymentModal } from "@/components/ui/InstantQrisPaymentModal";
 import { useApp } from "@/lib/store";
+import { parseCeirResponse } from "@/lib/ceirParser";
 
 function HistoryContent() {
   const { updateBalance } = useApp();
@@ -18,8 +20,11 @@ function HistoryContent() {
   const resolveTabKey = (t: string | null) => {
     if (!t) return "all";
     const low = t.toLowerCase();
-    if (low === "refund" || low === "cancelled" || low === "failed") return "canceled";
-    if (low === "in_queue" || low === "antrean") return "waiting";
+    if (low === "success" || low === "selesai" || low === "completed" || low === "done") return "completed";
+    if (low === "refund" || low === "cancelled" || low === "canceled" || low === "failed") return "canceled";
+    if (low === "in_queue" || low === "antrean" || low === "waiting" || low === "menunggu") return "waiting";
+    if (low === "processing" || low === "diproses") return "processing";
+    if (low === "unpaid" || low === "pending" || low === "belum_bayar") return "unpaid";
     return low;
   };
 
@@ -608,16 +613,79 @@ function HistoryContent() {
                   </div>
                 </div>
 
-                {/* Safe User Note Box (Zero Technical Error Leakage) */}
+                {/* Safe User Note Box (Displays CeirGO Log Query & Order Notes) */}
                 {(() => {
                   const rawNote = (trx.admin_note || trx.adminNote || "").trim();
                   if (!rawNote) return null;
-                  const isLeakedOrGeneric = /sedang dikerjakan oleh admin|sedang diproses oleh admin|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
-                  if (isLeakedOrGeneric) return null;
+                  const isLeakedInternalError = /sedang dikerjakan oleh admin|sedang diproses oleh admin|upps|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
+                  if (isLeakedInternalError) return null;
+
+                  const parsed = parseCeirResponse(rawNote);
+                  const hasStructuredLogs = parsed && Array.isArray(parsed.rows) && parsed.rows.length > 0 && parsed.rows.some(r => r.action !== "CEIR_VERIFIED" && r.action !== "NOT_FOUND");
+
+                  if (hasStructuredLogs) {
+                    return (
+                      <div className="p-3 rounded-2xl bg-parchment/60 border border-hairline/80 space-y-2">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-hairline/60">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="font-bold text-[10px] sm:text-[11px] text-primary uppercase tracking-wide">
+                              Catatan Pesanan &amp; Riwayat CEIR
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                            {parsed.rows.length} Catatan Riwayat
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                          {parsed.rows.map((row, rIdx) => {
+                            const actLow = (row.action || "").toLowerCase();
+                            const isAdd = actLow.includes("add");
+                            const isRemove = actLow.includes("remove");
+                            const badgeStyle = isAdd
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                              : isRemove
+                              ? "bg-amber-100 text-amber-800 border-amber-300"
+                              : "bg-slate-100 text-slate-700 border-slate-300";
+
+                            return (
+                              <div
+                                key={rIdx}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2 rounded-xl bg-white border border-hairline/70 shadow-2xs text-xs"
+                              >
+                                <div className="flex items-start sm:items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                    {row.no || rIdx + 1}
+                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold text-ink text-[11px]">
+                                      {row.tanggal || row.date}
+                                    </span>
+                                    <span className="text-[10px] text-ink-muted">
+                                      Note: <span className="text-ink font-mono">{row.note || "-"}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                                <span
+                                  className={`self-start sm:self-center px-2 py-0.5 text-[10px] font-mono font-medium rounded-md border shrink-0 ${badgeStyle}`}
+                                >
+                                  {row.action || "CEIR_EVENT"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div className="p-2.5 rounded-xl bg-parchment border border-hairline text-xs space-y-0.5">
-                      <span className="font-bold text-[10px] text-primary uppercase block">Catatan Pesanan:</span>
-                      <p className="text-ink text-[11px] leading-relaxed break-words">
+                    <div className="p-3 rounded-2xl bg-parchment/60 border border-hairline/80 space-y-1">
+                      <span className="font-bold text-[10px] text-primary uppercase block tracking-wide">
+                        Catatan Pesanan:
+                      </span>
+                      <p className="text-ink text-[11px] leading-relaxed break-words whitespace-pre-line font-medium">
                         {rawNote}
                       </p>
                     </div>
@@ -703,15 +771,54 @@ function HistoryContent() {
                     )}
 
                     {/* Selesai */}
-                    {isCompleted && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setReviewTarget(trx)}
-                          className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
-                        >
-                          <span>Beri Ulasan (+500 Koin)</span>
-                        </button>
+                    {isCompleted && (() => {
+                      const pkgNameLow = (trx.packageName || trx.package_name || trx.name || "").toLowerCase();
+                      const pkgIdLow = (trx.packageId || trx.package_id || "").toLowerCase();
+                      const sTypeLow = (trx.service_type || trx.type || "").toLowerCase();
+                      const descLow = (trx.description || trx.notes || "").toLowerCase();
+
+                      const isTopUpOrNonImei = 
+                        sTypeLow.includes('topup') ||
+                        sTypeLow.includes('top_up') ||
+                        sTypeLow.includes('top-up') ||
+                        sTypeLow.includes('qris') ||
+                        sTypeLow.includes('gopay') ||
+                        sTypeLow.includes('deposit') ||
+                        sTypeLow.includes('ceir') ||
+                        sTypeLow.includes('barcode') ||
+                        sTypeLow.includes('gateway') ||
+                        pkgIdLow.includes('topup') ||
+                        pkgIdLow.includes('top_up') ||
+                        pkgIdLow.includes('top-up') ||
+                        pkgIdLow.includes('qris') ||
+                        pkgIdLow.includes('cek_') ||
+                        pkgIdLow.includes('create_') ||
+                        pkgIdLow.includes('ceir') ||
+                        pkgIdLow.includes('gateway') ||
+                        pkgNameLow.includes('top up') ||
+                        pkgNameLow.includes('topup') ||
+                        pkgNameLow.includes('saldo') ||
+                        pkgNameLow.includes('qris') ||
+                        pkgNameLow.includes('deposit') ||
+                        pkgNameLow.includes('ceir') ||
+                        pkgNameLow.includes('gateway') ||
+                        descLow.includes('top up') ||
+                        descLow.includes('topup') ||
+                        descLow.includes('saldo');
+
+                      const isUnblockImeiOrder = !isTopUpOrNonImei && (Boolean(trx.imei) || sTypeLow.includes('imei') || pkgNameLow.includes('imei') || pkgNameLow.includes('unblock'));
+
+                      return (
+                        <>
+                          {isUnblockImeiOrder && (
+                            <button
+                              type="button"
+                              onClick={() => setReviewTarget(trx)}
+                              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
+                            >
+                              <span>Beri Ulasan (+10 Koin)</span>
+                            </button>
+                          )}
 
                         <button
                           type="button"
@@ -739,7 +846,8 @@ function HistoryContent() {
                           Beli Lagi
                         </Link>
                       </>
-                    )}
+                    );
+                  })()}
 
                     {/* Dibatalkan / Gagal / Pengembalian Dana */}
                     {!isPending && !isWaiting && !isProcessing && !isCompleted && (
