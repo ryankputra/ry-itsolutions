@@ -157,7 +157,7 @@ export default function LandingPage() {
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                 <Link
-                  href="/unblock-imei"
+                  href="/add-roamer"
                   className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-primary text-white hover:bg-primary/90 font-bold text-sm shadow-xl shadow-primary/25 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -264,7 +264,7 @@ export default function LandingPage() {
 
                 <div className="pt-1">
                   <Link
-                    href={`/unblock-imei${testImei.length >= 8 ? `?imei=${testImei}` : ""}`}
+                    href={`/add-roamer${testImei.length >= 8 ? `?imei=${testImei}` : ""}`}
                     className="w-full py-2.5 rounded-xl bg-primary text-white hover:bg-primary/90 font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-primary/20 transition-colors"
                   >
                     Proses Unblock Perangkat Ini
@@ -311,7 +311,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <Link
-              href="/unblock-imei"
+              href="/add-roamer"
               className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1"
             >
               Lihat Paket Sinyal &gt;
@@ -533,7 +533,7 @@ export default function LandingPage() {
                     </ul>
                   </div>
                   <Link
-                    href={`/unblock-imei`}
+                    href={`/add-roamer`}
                     className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs text-center shadow-md shadow-primary/20 transition-all block"
                   >
                     Buka Gembok ({pkg?.duration || "Pilih Paket"})
@@ -550,7 +550,7 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <Link
-                  href="/unblock-imei"
+                  href="/add-roamer"
                   className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs text-center shadow-md transition-all block"
                 >
                   Lihat Paket di Dashboard

@@ -115,7 +115,7 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
       if (res.status === 401) {
         Swal.fire({
           title: "Silakan Login",
-          text: "Silakan masuk ke akun Anda terlebih dahulu untuk memberikan ulasan dan klaim bonus +500 Koin.",
+          text: "Silakan masuk ke akun Anda terlebih dahulu untuk memberikan ulasan dan klaim bonus +10 Koin.",
           icon: "info",
           showCancelButton: true,
           confirmButtonText: "Login Sekarang",
@@ -163,7 +163,7 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
             : "Belum ada ulasan"}
         </p>
       </div>
-      <button onClick={handleWriteReviewClick} className="rounded-full bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 shadow-xs transition-colors hover:bg-amber-400">Beri Ulasan (+500 Koin)</button>
+      <button onClick={handleWriteReviewClick} className="rounded-full bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 shadow-xs transition-colors hover:bg-amber-400">Beri Ulasan (+10 Koin)</button>
     </div>
     {loading ? <div className="py-6 text-center text-xs text-ink-muted">Memuat ulasan...</div> : !reviews.length ? <div className="rounded-2xl border border-dashed border-hairline bg-parchment/40 p-4 py-8 text-center"><h4 className="text-xs font-bold text-ink">Belum Ada Ulasan Pelanggan</h4></div> : <div className="divide-y divide-hairline">
       {reviews.map((review) => {

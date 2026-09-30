@@ -187,30 +187,30 @@ export default function ProfilePage() {
       </div>
 
       {/* ============================================================ */}
-      {/* 1.5. DEDICATED ADMIN CONTROL CARD (Apple Obsidian Card)     */}
+      {/* 1.5. DEDICATED ADMIN CONTROL CARD (Modern Slate Glassmorphism) */}
       {/* ============================================================ */}
       {user?.role === "admin" && (
-        <div className="rounded-3xl bg-[#1C1C1E] text-white border border-white/[0.08] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] space-y-3.5">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="rounded-3xl bg-slate-900/90 text-white border border-slate-800 p-4 sm:p-5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] space-y-3.5 backdrop-blur-md">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shadow-xs">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <span className="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shadow-xs">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                 </svg>
               </span>
               <div>
-                <h3 className="font-semibold text-xs sm:text-sm text-white flex items-center gap-1.5">
+                <h3 className="font-bold text-xs sm:text-sm text-slate-100 flex items-center gap-1.5">
                   <span>Panel Kontrol Admin (Owner)</span>
-                  <span className="px-2 py-0.2 rounded-full bg-primary/20 text-primary text-[9px] font-semibold">Aktif</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold">Aktif</span>
                 </h3>
-                <p className="text-[11px] text-[#86868B]">
+                <p className="text-[11px] text-slate-400">
                   Manajemen sistem, pengerjaan order manual &amp; pengaturan promo
                 </p>
               </div>
             </div>
             <Link
               href="/admin"
-              className="px-3 py-1.5 bg-primary hover:bg-primary-hover text-white font-semibold text-xs rounded-full shadow-xs transition-colors shrink-0 flex items-center gap-1"
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
             >
               <span>Buka Panel</span>
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -219,62 +219,62 @@ export default function ProfilePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-center">
             {/* Dashboard */}
             <Link
               href="/admin"
-              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+              className="p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 transition-all flex flex-col items-center group active:scale-95"
             >
-              <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
                 </svg>
               </div>
-              <span className="text-xs font-black mt-1.5 text-slate-100">Dashboard</span>
-              <span className="text-[9px] text-amber-400 font-medium">Statistik Toko</span>
+              <span className="text-xs font-bold mt-2 text-slate-100">Dashboard</span>
+              <span className="text-[10px] text-slate-400 font-medium">Statistik Toko</span>
             </Link>
 
             {/* Order Manual */}
             <Link
               href="/admin#manual-orders"
-              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+              className="p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 transition-all flex flex-col items-center group active:scale-95"
             >
-              <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                 </svg>
               </div>
-              <span className="text-xs font-black mt-1.5 text-slate-100">Order Manual</span>
-              <span className="text-[9px] text-amber-400 font-medium">Proses IMEI</span>
+              <span className="text-xs font-bold mt-2 text-slate-100">Order Manual</span>
+              <span className="text-[10px] text-slate-400 font-medium">Proses IMEI</span>
             </Link>
 
             {/* Pengguna */}
             <Link
               href="/admin#users"
-              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+              className="p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 transition-all flex flex-col items-center group active:scale-95"
             >
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                 </svg>
               </div>
-              <span className="text-xs font-black mt-1.5 text-slate-100">Member</span>
-              <span className="text-[9px] text-amber-400 font-medium">Data Pelanggan</span>
+              <span className="text-xs font-bold mt-2 text-slate-100">Member</span>
+              <span className="text-[10px] text-slate-400 font-medium">Data Pelanggan</span>
             </Link>
 
             {/* Pengaturan */}
             <Link
               href="/admin#settings"
-              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex flex-col items-center group"
+              className="p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 transition-all flex flex-col items-center group active:scale-95"
             >
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <span className="text-xs font-black mt-1.5 text-slate-100">Pengaturan</span>
-              <span className="text-[9px] text-amber-400 font-medium">Maintenance</span>
+              <span className="text-xs font-bold mt-2 text-slate-100">Pengaturan</span>
+              <span className="text-[10px] text-slate-400 font-medium">Maintenance</span>
             </Link>
           </div>
         </div>
@@ -332,7 +332,7 @@ export default function ProfilePage() {
             },
             {
               label: "Selesai",
-              href: "/history?tab=success",
+              href: "/history?tab=completed",
               badge: orderCounts.success > 0 ? orderCounts.success : null,
               icon: (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -351,9 +351,9 @@ export default function ProfilePage() {
               ),
             },
           ].map((item, idx) => (
-            <div
+            <Link
               key={idx}
-              onClick={() => router.push(item.href)}
+              href={item.href}
               className="flex flex-col items-center justify-center p-1.5 rounded-xl hover:bg-parchment/60 transition-colors cursor-pointer group relative"
             >
               <div className="relative text-ink-muted group-hover:text-primary transition-colors">
@@ -367,7 +367,7 @@ export default function ProfilePage() {
               <span className="text-[10px] font-bold text-ink mt-1.5 truncate max-w-full">
                 {item.label}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
 

@@ -1,0 +1,40 @@
+[
+  {
+    "id": "task_1790609471285",
+    "sender": "R Y Y S T O R E",
+    "command": "guys laporan hari ini.. ada kendala apa?",
+    "role": "doni",
+    "createdAt": "2026-09-28T15:31:11.285Z",
+    "status": "pending"
+  },
+  {
+    "id": "task_1790610439646",
+    "sender": "R Y Y S T O R E",
+    "command": "halo guys hari ini ada kendala apa?",
+    "createdAt": "2026-09-28T15:47:19.676Z",
+    "status": "pending"
+  },
+  {
+    "id": "task_1790612486668",
+    "sender": "R Y Y S T O R E",
+    "command": "ada planing apa hari ini?",
+    "status": "pending",
+    "createdAt": "2026-09-28T16:21:26.668Z"
+  },
+  {
+    "id": "task_1790612937943",
+    "sender": "R Y Y S T O R E",
+    "command": "di panel kontrol admin ini tampilannya desain kan ulang dan buatkan ulang saja agar rapi",
+    "photoId": "AgACAgUAAyEFAATsr4ypAAPdarqVyYDXK0rLXSmiKPcF60Q7s3cAAnUTaxvysdhVoBh-4_88rsMBAAMCAAN4AAM9BA",
+    "status": "pending",
+    "createdAt": "2026-09-28T16:28:57.943Z"
+  },
+  {
+    "id": "task_1790614682915",
+    "sender": "R Y Y S T O R E",
+    "command": "progresnya gimana?",
+    "photoId": null,
+    "status": "pending",
+    "createdAt": "2026-09-28T16:58:02.916Z"
+  }
+]

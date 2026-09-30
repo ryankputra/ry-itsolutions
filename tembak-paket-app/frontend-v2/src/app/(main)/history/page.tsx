@@ -19,8 +19,9 @@ function HistoryContent() {
   const resolveTabKey = (t: string | null) => {
     if (!t) return "all";
     const low = t.toLowerCase();
-    if (low === "refund" || low === "cancelled" || low === "failed") return "canceled";
-    if (low === "in_queue" || low === "antrean") return "waiting";
+    if (low === "refund" || low === "cancelled" || low === "failed" || low === "dibatalkan") return "canceled";
+    if (low === "in_queue" || low === "antrean" || low === "perlu_diproses" || low === "waiting") return "waiting";
+    if (low === "selesai" || low === "success" || low === "done" || low === "completed" || low === "finish") return "completed";
     return low;
   };
 
@@ -223,14 +224,18 @@ function HistoryContent() {
 
   const normalizedHistory = history.map((trx) => {
     const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
-    // Only treat as waiting admin if explicitly unpaid/pending with balance or in_queue
+    const lowStatus = (trx.status || '').toLowerCase();
+    const isCompletedStatus = ['success', 'completed', 'selesai', 'done', 'active', 'approved', 'finished'].includes(lowStatus);
+    const isFailedStatus = ['failed', 'canceled', 'cancelled', 'rejected', 'refunded'].includes(lowStatus);
+    const isProcessingStatus = ['processing', 'in_progress'].includes(lowStatus);
+
     const isWaitingAdmin = (
-      trx.status === 'in_queue' ||
-      trx.status === 'waiting' ||
-      trx.status === 'waiting_admin' ||
-      (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid'))
+      lowStatus === 'in_queue' ||
+      lowStatus === 'waiting' ||
+      lowStatus === 'waiting_admin' ||
+      (isBalancePaid && (lowStatus === 'pending' || lowStatus === 'unpaid'))
     );
-    if (isWaitingAdmin && trx.status !== 'processing' && trx.status !== 'success' && trx.status !== 'failed') {
+    if (isWaitingAdmin && !isProcessingStatus && !isCompletedStatus && !isFailedStatus) {
       return { ...trx, status: 'in_queue' };
     }
     return trx;
@@ -253,7 +258,15 @@ function HistoryContent() {
       return status === "processing" || status === "in_progress";
     }
     if (activeTab === "completed") {
-      return status === "success" || status === "completed";
+      return (
+        status === "success" ||
+        status === "completed" ||
+        status === "selesai" ||
+        status === "done" ||
+        status === "active" ||
+        status === "approved" ||
+        status === "finished"
+      );
     }
     if (activeTab === "canceled") {
       return (

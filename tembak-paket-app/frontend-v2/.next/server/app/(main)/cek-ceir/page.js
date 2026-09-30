@@ -2,10 +2,11 @@
         .app-screen {
           position: relative;
           width: 100%;
-          max-width: 380px;
-          height: 600px;
+          max-width: 480px;
+          min-height: 520px;
+          max-height: 90vh;
           background: #18181b;
-          border-radius: 36px;
+          border-radius: 28px;
           overflow: hidden;
           display: flex;
           flex-direction: column;

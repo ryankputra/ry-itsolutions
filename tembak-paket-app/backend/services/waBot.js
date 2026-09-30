@@ -1735,9 +1735,9 @@ async function notifyNewOrder(orderData) {
         const isTopUp = serviceType === "topup" || serviceType === "topup_qris" || (packageName || "").toLowerCase().includes("top up") || (packageName || "").toLowerCase().includes("topup");
         const isCeir = serviceType === "ceir" || serviceType === "barcode" || (packageName || "").toLowerCase().includes("ceir") || (packageName || "").toLowerCase().includes("barcode");
         const isAutomated = isCeir;
-        const speedDisplay = isAutomated 
-            ? "Instant (Otomatis Sistem)" 
-            : `${optTitle} (${speedRangeText})`;
+        let speedDisplay = isAutomated 
+                        ? "Instant (Otomatis Sistem)" 
+                        : `${optTitle} (${optName === "slow" ? "1‑12 Jam" : optName === "fast" ? "1‑3 Jam" : "1‑12 Jam"})`;
 
         let serviceDetailLines = `*Layanan:* ${packageName || "Layanan"}
 `;
