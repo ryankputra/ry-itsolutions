@@ -2217,6 +2217,106 @@ https://ry-itsolutionts.web.id`;
 }
 
 /**
+ * Broadcast Price Change Notification to WhatsApp (Admin & Users)
+ * Triggered when admin edits IMEI package duration & price.
+ */
+async function notifyPriceChangeBroadcast({ packages, customMessage, targetMode = 'all', updatedPackage }) {
+    if (!Array.isArray(packages) || packages.length === 0) throw new Error("Data paket tidak valid");
+
+    const priceList = packages.map(p => {
+        const priceStr = `Rp ${Number(p.price || 0).toLocaleString('id-ID')}`;
+        let line = `• *${p.duration}:* ${priceStr}`;
+        if (p.speed_prices && typeof p.speed_prices === 'object') {
+            const speeds = Object.entries(p.speed_prices)
+                .filter(([, v]) => Number(v) > 0)
+                .map(([k, v]) => `${k} Rp ${Number(v).toLocaleString('id-ID')}`);
+            if (speeds.length) line += ` (${speeds.join(' • ')})`;
+        }
+        return line;
+    }).join('\n');
+
+    const changedName = updatedPackage?.duration || packages[0]?.duration || 'Paket';
+
+    const caption =
+`📢 *UPDATE HARGA ADD ROAMER* 📢
+━━━━━━━━━━━━━━━━━━━━━━━
+Halo kak! Ada pembaruan tarif & harga layanan terbaru di Ry-ITSolutions:
+
+📦 *Rincian Tarif Terbaru:*
+${priceList}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+💡 *Informasi Tambahan:*
+Harga paket Add Roamer telah diperbarui! Nikmati juga diskon otomatis untuk order dengan jumlah tertentu.
+${customMessage ? `\n${customMessage}\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━
+👉 *CEK & PESAN SEKARANG:*
+https://ry-itsolutionts.web.id/add-roamer
+
+_Ry-ITSolutions Official Support & Store_`;
+
+    const bannerPath = path.resolve(__dirname, '../../frontend-v2/public/banners/banner_imei.jpg');
+    let imageBuffer = null;
+    if (fs.existsSync(bannerPath)) {
+        try {
+            imageBuffer = fs.readFileSync(bannerPath);
+        } catch (e) {
+            console.warn('[notifyPriceChangeBroadcast] Gagal membaca banner image:', e.message);
+        }
+    }
+
+    const payload = imageBuffer
+        ? { image: imageBuffer, caption, viewOnce: false }
+        : { text: caption };
+
+    const adminPhones = await getAdminPhoneNumbers();
+    const targetPhones = new Set();
+
+    adminPhones.forEach(p => {
+        const c = cleanPhone(p);
+        if (c && c.length >= 8) targetPhones.add(c);
+    });
+
+    if (targetMode === 'all') {
+        const userRows = await dbAll("SELECT verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ''");
+        userRows.forEach(u => {
+            const c = cleanPhone(u.verifiedPhone);
+            if (c && c.length >= 8) targetPhones.add(c);
+        });
+    }
+
+    const results = [];
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const phone of targetPhones) {
+        const jid = `${phone}@s.whatsapp.net`;
+        try {
+            const sent = await sendAndStoreMessage(jid, payload);
+            results.push({ phone, success: true, id: sent?.key?.id });
+            sentCount++;
+            console.log(`[WABot PriceUpdate] Berhasil kirim update harga ke ${phone}`);
+        } catch (err) {
+            results.push({ phone, success: false, error: err.message });
+            failedCount++;
+            console.error(`[WABot PriceUpdate] Gagal kirim update harga ke ${phone}:`, err.message);
+        }
+
+        if (targetPhones.length > 1) {
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    return {
+        success: sentCount > 0,
+        totalTarget: targetPhones.length,
+        totalSent: sentCount,
+        totalFailed: failedCount,
+        details: results
+    };
+}
+
+/**
  * Broadcast New Product Notification to WhatsApp (Admin & Users)
  * Dynamically tailored message based on product category/type.
  */
@@ -2357,8 +2457,9 @@ _Ry-ITSolutions Official Support & Store_`;
 
 module.exports = {
     notifyPromoBroadcast,
-    getBroadcastRecipients,
+    notifyPriceChangeBroadcast,
     notifyNewProductBroadcast,
+    getBroadcastRecipients,
 
     getWALogs,
     initWABot,

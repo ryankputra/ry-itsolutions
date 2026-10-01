@@ -2561,6 +2561,19 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             console.error('[WebPush Error]', pushErr);
         }
 
+        // 4. WhatsApp broadcast with banner image to all verified users
+        try {
+            const { notifyPriceChangeBroadcast } = require('../services/waBot');
+            const allPackages = await dbAll("SELECT duration, price, speed_prices FROM imei_packages WHERE isVisible = 1 ORDER BY id");
+            notifyPriceChangeBroadcast({
+                packages: allPackages,
+                updatedPackage: { duration: updatedDuration, price: updatedPrice },
+                targetMode: 'all'
+            }).catch(waErr => console.error('[WABot PriceUpdate Broadcast Error]', waErr.message));
+        } catch (waErr) {
+            console.error('[WABot PriceUpdate Init Error]', waErr.message);
+        }
+
         res.json({
             status: true,
             message: `Paket '${updatedDuration}' berhasil diperbarui! Notifikasi pembaruan dan log website telah dikirimkan.`,
