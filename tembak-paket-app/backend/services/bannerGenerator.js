@@ -91,81 +91,69 @@ function generatePriceBanner({ packages, storeName = 'Ry-ITSolutions' }) {
     let y = 0;
     const parts = [];
 
-    // Background — deep space gradient like Apple keynote slides
+    // Background — clean Apple white
     parts.push(`<defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#000000"/>
-            <stop offset="55%" stop-color="#0A0A0F"/>
-            <stop offset="100%" stop-color="#14141C"/>
-        </linearGradient>
         <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#0A84FF"/>
-            <stop offset="100%" stop-color="#5E5CE6"/>
+            <stop offset="0%" stop-color="#0071E3"/>
+            <stop offset="100%" stop-color="#0071E3"/>
         </linearGradient>
     </defs>`);
-
-    parts.push(`<rect x="0" y="0" width="${CARD_W}" height="${CARD_H}" rx="48" fill="url(#bg)"/>`);
-
-    // Subtle top accent line
-    parts.push(`<rect x="${PAD}" y="34" width="72" height="6" rx="3" fill="url(#accent)"/>`);
+    parts.push(`<rect x="0" y="0" width="${CARD_W}" height="${CARD_H}" rx="44" fill="#FFFFFF"/>`);
 
     // Header
     y = HEADER_H - 18;
-    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="800" fill="#FFFFFF" letter-spacing="-1.5">ADD ROAMER</text>`);
+    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="58" font-weight="800" fill="#1D1D1F" letter-spacing="-1.5">ADD ROAMER</text>`);
     y = HEADER_H + SUB_H - 6;
-    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="500" fill="#8E8E93">Tarif &amp; Harga Terbaru</text>`);
+    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="500" fill="#86868B">Tarif &amp; Harga Terbaru</text>`);
 
     // Divider
     y = HEADER_H + SUB_H + 8;
-    parts.push(`<rect x="${PAD}" y="${y}" width="${CONTENT_W}" height="1" fill="#2C2C2E"/>`);
+    parts.push(`<rect x="${PAD}" y="${y}" width="${CONTENT_W}" height="1" fill="#D2D2D7"/>`);
 
-    // Price rows — Apple stacked product card style
+    // Price rows — Apple settings-list style: hairlines, no boxes
     y = HEADER_H + SUB_H + 40;
     items.forEach((it, i) => {
         const rowY = y + i * ITEM_H;
 
-        // Row card
-        parts.push(`<rect x="${PAD}" y="${rowY}" width="${CONTENT_W}" height="104" rx="28" fill="#1C1C1E"/>`);
-
         // Left: duration + speed
-        parts.push(`<text x="${PAD + 40}" y="${rowY + 46}" font-family="-apple-system, 'SF Pro Display', Arial, sans-serif" font-size="34" font-weight="700" fill="#FFFFFF">${esc(it.duration)}</text>`);
-        parts.push(`<text x="${PAD + 40}" y="${rowY + 84}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="24" font-weight="500" fill="#0A84FF">${esc(SPEED_LABEL[it.speedId])} <tspan fill="#8E8E93" font-weight="400">· ${esc(SPEED_DESC[it.speedId])}</tspan></text>`);
+        parts.push(`<text x="${PAD + 0}" y="${rowY + 46}" font-family="-apple-system, 'SF Pro Display', Arial, sans-serif" font-size="34" font-weight="700" fill="#1D1D1F">${esc(it.duration)}</text>`);
+        parts.push(`<text x="${PAD + 0}" y="${rowY + 84}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="24" font-weight="500" fill="#0071E3">${esc(SPEED_LABEL[it.speedId])} <tspan fill="#86868B" font-weight="400">· ${esc(SPEED_DESC[it.speedId])}</tspan></text>`);
 
         // Right: price
-        const priceX = PAD + CONTENT_W - 40;
-        parts.push(`<text x="${priceX}" y="${rowY + 62}" font-family="-apple-system, 'SF Pro Display', Arial, sans-serif" font-size="40" font-weight="800" fill="#FFFFFF" text-anchor="end">${esc(rupiah(it.price))}</text>`);
+        const priceX = PAD + CONTENT_W - 0;
+        parts.push(`<text x="${priceX}" y="${rowY + 62}" font-family="-apple-system, 'SF Pro Display', Arial, sans-serif" font-size="40" font-weight="800" fill="#1D1D1F" text-anchor="end">${esc(rupiah(it.price))}</text>`);
 
         if (it.wholesale) {
-            const wsW = 250;
+            const wsW = 262;
             const wsX = priceX - wsW;
             const wsY = rowY + 6;
-            parts.push(`<rect x="${wsX - wsW - 14}" y="${wsY}" width="${wsW}" height="34" rx="17" fill="#0A84FF" opacity="0.16"/>`);
-            parts.push(`<text x="${wsX - 14 - wsW / 2}" y="${wsY + 23}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="20" font-weight="700" fill="#64D2FF" text-anchor="middle">Grosir ≥${it.wsQty} ${esc(rupiah(it.wholesale))}</text>`);
+            parts.push(`<rect x="${wsX}" y="${wsY}" width="${wsW}" height="34" rx="17" fill="#0071E3" opacity="0.1"/>`);
+            parts.push(`<text x="${wsX + wsW / 2}" y="${wsY + 23}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="20" font-weight="600" fill="#0071E3" text-anchor="middle">Grosir ≥${it.wsQty} ${esc(rupiah(it.wholesale))}</text>`);
         }
 
         if (i < items.length - 1) {
-            parts.push(`<rect x="${PAD + 20}" y="${rowY + 108}" width="${CONTENT_W - 40}" height="1" fill="#2C2C2E" opacity="0.6"/>`);
+            parts.push(`<rect x="${PAD}" y="${rowY + ITEM_H - 4}" width="${CONTENT_W}" height="1" fill="#D2D2D7"/>`);
         }
     });
 
     // Footer — CTA
     y = CARD_H - FOOTER_H + 40;
-    parts.push(`<rect x="${PAD}" y="${y}" width="${CONTENT_W}" height="1" fill="#2C2C2E"/>`);
+    parts.push(`<rect x="${PAD}" y="${y}" width="${CONTENT_W}" height="1" fill="#D2D2D7"/>`);
 
     y += 52;
-    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, 'SF Pro Display', Arial, sans-serif" font-size="32" font-weight="700" fill="#FFFFFF">Pesan sekarang</text>`);
+    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, 'SF Pro Display', Arial, sans-serif" font-size="32" font-weight="700" fill="#1D1D1F">Pesan sekarang</text>`);
     y += 42;
-    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="26" font-weight="500" fill="#0A84FF">ry-itsolutionts.web.id/add-roamer</text>`);
+    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="26" font-weight="500" fill="#0071E3">ry-itsolutionts.web.id/add-roamer</text>`);
 
     // Store name footer
     y += 62;
-    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="22" font-weight="500" fill="#636366">${esc(storeName)} · Official Store</text>`);
+    parts.push(`<text x="${PAD}" y="${y}" font-family="-apple-system, 'SF Pro Text', Arial, sans-serif" font-size="22" font-weight="500" fill="#86868B">${esc(storeName)} · Official Store</text>`);
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}">${parts.join('')}</svg>`;
 
     const resvg = new Resvg(svg, {
         fitTo: { mode: 'width', value: CARD_W },
-        background: '#000000'
+        background: '#FFFFFF'
     });
     return resvg.render().asPng();
 }
