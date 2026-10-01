@@ -2568,7 +2568,8 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             notifyPriceChangeBroadcast({
                 packages: allPackages,
                 updatedPackage: { duration: updatedDuration, price: updatedPrice },
-                targetMode: 'all'
+                targetMode: 'all',
+                onlyPhones: req.body.test_phone ? [req.body.test_phone] : undefined
             }).catch(waErr => console.error('[WABot PriceUpdate Broadcast Error]', waErr.message));
         } catch (waErr) {
             console.error('[WABot PriceUpdate Init Error]', waErr.message);
