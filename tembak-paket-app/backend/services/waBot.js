@@ -2279,14 +2279,14 @@ https://ry-itsolutionts.web.id/add-roamer
 
 _Ry-ITSolutions Official Support & Store_`;
 
-    const bannerPath = path.resolve(__dirname, '../../frontend-v2/public/banners/banner_imei.jpg');
+    const { generatePriceBanner } = require('./bannerGenerator');
     let imageBuffer = null;
-    if (fs.existsSync(bannerPath)) {
-        try {
-            imageBuffer = fs.readFileSync(bannerPath);
-        } catch (e) {
-            console.warn('[notifyPriceChangeBroadcast] Gagal membaca banner image:', e.message);
-        }
+    try {
+        imageBuffer = generatePriceBanner({ packages });
+    } catch (e) {
+        console.warn('[notifyPriceChangeBroadcast] Gagal generate banner:', e.message);
+        const bannerPath = path.resolve(__dirname, '../../frontend-v2/public/banners/banner_imei.jpg');
+        if (fs.existsSync(bannerPath)) imageBuffer = fs.readFileSync(bannerPath);
     }
 
     const payload = imageBuffer

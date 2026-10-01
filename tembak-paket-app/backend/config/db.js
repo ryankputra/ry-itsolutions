@@ -251,7 +251,7 @@ async function initializeDatabase() {
                         userName,
                         userAvatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}&backgroundColor=2563eb&textColor=ffffff`,
                         orderId: `trx_seed_${index + 1}`,
-                        productId: "unblock-imei",
+                        productId: "add-roamer",
                         serviceType: "imei",
                         variation,
                         rating,
