@@ -11,12 +11,12 @@ const { isAuthenticated } = require('../middleware/auth');
 router.get('/reviews', async (req, res) => {
     try {
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        const productId = req.query.productId || req.query.serviceType || 'unblock-imei';
+        const productId = req.query.productId || req.query.serviceType || 'add-roamer';
         let query = "SELECT * FROM reviews WHERE 1=1";
         const params = [];
         if (productId && productId !== 'all') {
-            if (productId === 'unblock-imei' || productId === 'imei') {
-                query += " AND (productId IN ('unblock-imei', 'imei') OR serviceType IN ('unblock-imei', 'imei'))";
+            if (productId === 'unblock-imei' || productId === 'imei' || productId === 'add-roamer') {
+                query += " AND (productId IN ('unblock-imei', 'imei', 'add-roamer') OR serviceType IN ('unblock-imei', 'imei'))";
             } else {
                 query += " AND (productId = ? OR serviceType = ?)";
                 params.push(productId, productId);
@@ -125,7 +125,7 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
 
         await dbRun(
             `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
-            [reviewId, req.session.userId, userName, userAvatar, orderId || latestTrx?.id || 'order_direct', productId || 'unblock-imei', 'imei', finalVariation, Number(rating), comment.trim(), imagesJson, transactionDate, userJoinedAt, userTotalOrders, userRole, new Date().toISOString()]
+            [reviewId, req.session.userId, userName, userAvatar, orderId || latestTrx?.id || 'order_direct', productId || 'add-roamer', 'imei', finalVariation, Number(rating), comment.trim(), imagesJson, transactionDate, userJoinedAt, userTotalOrders, userRole, new Date().toISOString()]
         );
 
         // Bonus Reward +500 Koin Ry
@@ -140,7 +140,7 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
             userName,
             userAvatar,
             orderId: orderId || latestTrx?.id || 'order_direct',
-            productId: productId || 'unblock-imei',
+            productId: productId || 'add-roamer',
             serviceType: 'imei',
             variation: finalVariation,
             rating: Number(rating),
