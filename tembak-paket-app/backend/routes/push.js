@@ -65,7 +65,7 @@ router.post('/push/subscribe', async (req, res) => {
             body: 'Selamat! Anda akan menerima update langsung di status bar HP saat ada layanan & promo baru di Ry-ITSolutions.',
             icon: '/logo.png',
             badge: '/badge.png',
-            url: '/unblock-imei',
+            url: '/add-roamer',
             tag: 'welcome-push'
         }).catch((err) => {
             console.error('[WebPush] Welcome push failed:', err.message);
@@ -131,7 +131,7 @@ router.post('/push/test-me', async (req, res) => {
             body: 'Sukses! Notifikasi bilah HP Anda berfungsi normal dan siap menerima info layanan & promo baru.',
             icon: '/logo.png',
             badge: '/badge.png',
-            url: '/unblock-imei',
+            url: '/add-roamer',
             tag: testTag
         });
 

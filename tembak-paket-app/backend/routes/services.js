@@ -474,7 +474,7 @@ router.post('/public/claim-warranty', async (req, res) => {
         if (!trx) {
             return res.status(404).json({
                 status: false,
-                message: `Tidak ditemukan riwayat pesanan unblock IMEI untuk nomor ${cleanImei}. Pastikan nomor IMEI telah benar.`
+                message: `Tidak ditemukan riwayat pesanan Add Roamer untuk nomor ${cleanImei}. Pastikan nomor IMEI telah benar.`
             });
         }
 
@@ -519,12 +519,12 @@ router.post('/public/claim-warranty', async (req, res) => {
         // 4. Create support ticket in DB
         const ticketId = `GRS-${Date.now().toString().slice(-6)}`;
         const nowIso = new Date().toISOString();
-        const subject = `[Klaim Garansi Sinyal] IMEI: ${cleanImei} - ${trx.packageName || 'Unblock IMEI'}`;
+        const subject = `[Klaim Garansi Sinyal] IMEI: ${cleanImei} - ${trx.packageName || 'Add Roamer'}`;
         const detailMsg = `Klaim Garansi Sinyal Diajukan:\n` +
             `- Nama Pelanggan: ${customerName.trim()}\n` +
             `- WhatsApp: ${cleanCustPhone}\n` +
             `- IMEI: ${cleanImei}\n` +
-            `- Layanan: ${trx.packageName || 'Unblock IMEI'}\n` +
+            `- Layanan: ${trx.packageName || 'Add Roamer'}\n` +
             `- ID Transaksi: ${trx.id}\n` +
             `- Kendala: ${issueDescription || 'Sinyal hilang / Tidak ada layanan'}\n` +
             `- Status Garansi: ${warranty.durationLabel} (${warranty.isPermanent ? 'Permanen' : 'Sisa ' + warranty.remainingDays + ' Hari'})`;
@@ -1053,12 +1053,12 @@ Anda SANGAT PINTAR, natural, ramah, dan fleksibel seperti ChatGPT asli.
 Anda BISA dan BERSEDIA menjawab pertanyaan apa pun:
 1. Pertanyaan di luar konteks produk (pengetahuan umum, teknologi smartphone, coding, sains, matematika, nasihat, tips hidup, resep, atau obrolan santai). JANGAN PERNAH menolak pertanyaan di luar konteks!
 2. Pertanyaan analitik akun: hitung dan jelaskan pengeluaran pengguna, jumlah order sukses, saldo RyPay, dan koin reward berdasarkan DATA PENGGUNA di bawah.
-3. Layanan Ry-ITSolutions (Buka Blokir IMEI, Payment Gateway GoPay & QRIS SaaS, Cek Garansi Apple, Top Up Saldo).
+3. Layanan Ry-ITSolutions (Add Roamer, Payment Gateway GoPay & QRIS SaaS, Cek Garansi Apple, Top Up Saldo).
 
 ${userContextText}
 
 DATA LAYANAN TERKINI RY-ITSOLUTIONS:
-- Unblock IMEI: ${imeiListStr} (Garansi 3 Bulan penuh, all operator, kirim sblm 14:00 WIB selesai maks 00:00 WIB).
+- Add Roamer: ${imeiListStr} (Garansi 3 Bulan penuh, all operator, kirim sblm 14:00 WIB selesai maks 00:00 WIB).
 - Gateway GoPay & QRIS SaaS: Aktivasi Rp 35.000 (30 hari), perpanjang Rp 10.000/bln, fee 0%, direct settlement, webhook 0.2s.
 - Top Up Saldo RyPay: Min Rp 10.000, 0% admin fee, dynamic QRIS otomatis 24 jam.
 - Kupon Promo: ${couponListStr}

@@ -488,7 +488,7 @@ function SettingsContent() {
                   ? "Akun memiliki hak akses administrator penuh untuk mengelola konfigurasi, layanan, dan transaksi sistem."
                   : user?.role === "reseller"
                   ? "Akun Anda aktif sebagai Mitra Reseller. Anda berhak mendapatkan harga grosir terendah dan antrean pemrosesan prioritas utama."
-                  : "Akun Anda berstatus Member Reguler. Tingkatkan status akun Anda ke Mitra Reseller untuk mendapatkan harga grosir unblock IMEI dan pengerjaan prioritas antrean pertama."}
+                  : "Akun Anda berstatus Member Reguler. Tingkatkan status akun Anda ke Mitra Reseller untuk mendapatkan harga grosir Add Roamer dan pengerjaan prioritas antrean pertama."}
               </p>
 
               {user?.role !== "admin" && user?.role !== "reseller" && (
@@ -535,7 +535,7 @@ function SettingsContent() {
           </div>
 
           <div className="p-3 rounded-xl bg-parchment/40 border border-hairline text-xs text-ink-muted leading-relaxed">
-            Bot WhatsApp resmi Ry-ITSolutions akan mengirimkan notifikasi digital setiap kali transaksi Anda berhasil, termasuk nota pembayaran QRIS, link garansi unblock IMEI, dan informasi update sistem.
+            Bot WhatsApp resmi Ry-ITSolutions akan mengirimkan notifikasi digital setiap kali transaksi Anda berhasil, termasuk nota pembayaran QRIS, link garansi Add Roamer, dan informasi update sistem.
           </div>
 
           <form onSubmit={handleSavePhone} className="space-y-4">

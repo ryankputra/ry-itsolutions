@@ -210,7 +210,7 @@ async function runTests() {
                     testUser.id,
                     testUser.name,
                     'imei_manual_3bln',
-                    'Buka Blokir IMEI 3 Bulan',
+                    'Add Roamer 3 Bulan',
                     testPrice,
                     testPrice,
                     testUser.email,

@@ -49,7 +49,7 @@ async function runWaTest() {
     const mockOrderData = {
         id: `TEST-ORD-${dummyOrderNumber}`,
         userName: "Budi (Testing Pelanggan)",
-        packageName: "Unblock IMEI 3 Bulan Garansi (Star Seller)",
+        packageName: "Add Roamer 3 Bulan Garansi (Star Seller)",
         serviceType: "imei",
         imei: "351234161234567",
         price: 250000,

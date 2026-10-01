@@ -343,7 +343,14 @@ self.__SERVER_FILES_MANIFEST={
         }
       ],
       "fallback": []
-    }
+    },
+    "_originalRedirects": [
+      {
+        "source": "/unblock-imei",
+        "destination": "/add-roamer",
+        "permanent": false
+      }
+    ]
   },
   "appDir": "/Users/ryankptr/tembak-paket-app/tembak-paket-app/frontend-v2",
   "relativeAppDir": "tembak-paket-app/frontend-v2",

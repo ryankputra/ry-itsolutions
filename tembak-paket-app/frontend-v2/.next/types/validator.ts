@@ -65,6 +65,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/(main)/add-roamer/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/add-roamer">> = Specific
+  const handler = {} as typeof import("../../src/app/(main)/add-roamer/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/(main)/admin/broadcast/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/admin/broadcast">> = Specific
@@ -357,15 +366,6 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends AppPageConfig<"/topup">> = Specific
   const handler = {} as typeof import("../../src/app/(main)/topup/page.js")
-  type __Check = __IsExpected<typeof handler>
-  // @ts-ignore
-  type __Unused = __Check
-}
-
-// Validate ../../src/app/(main)/unblock-imei/page.tsx
-{
-  type __IsExpected<Specific extends AppPageConfig<"/unblock-imei">> = Specific
-  const handler = {} as typeof import("../../src/app/(main)/unblock-imei/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

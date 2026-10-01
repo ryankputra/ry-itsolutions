@@ -1121,7 +1121,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 broadcastPushNotification({
                     title: title || '🔥 Promo Spesial Ry-ITSolutions!',
                     body: pushBody,
-                    url: '/unblock-imei',
+                    url: '/add-roamer',
                     tag: `promo-${Date.now()}`
                 }).catch(() => {});
             } catch (pErr) {}
@@ -1451,7 +1451,7 @@ router.post('/admin/reviews', isAuthenticated, isAdmin, async (req, res) => {
             INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            reviewId, dummyUserId, userName, avatarClean, `trx_adm_${Date.now()}`, productId || 'unblock-imei', serviceType || 'imei',
+            reviewId, dummyUserId, userName, avatarClean, `trx_adm_${Date.now()}`, productId || 'add-roamer', serviceType || 'imei',
             variation || 'GARANSI 3 BULAN', Number(rating) || 5, comment, JSON.stringify(images || []), Number(likesCount) || 5,
             transactionDate || new Date().toISOString().substring(0, 10), userJoinedAt || '2026-01-15T08:30:00.000Z', Number(userTotalOrders) || 12, userRole || 'Pembeli Terverifikasi', new Date().toISOString()
         ]);
@@ -1867,7 +1867,7 @@ router.post('/admin/test-warranty-claim-wa', (req, res, next) => {
         const { notifyWarrantyClaim } = require('../services/waBot');
         const results = await notifyWarrantyClaim({
             imei: req.body?.imei || '356789123456789',
-            packageName: req.body?.packageName || 'Unblock IMEI 3 Bulan (All Operator)',
+            packageName: req.body?.packageName || 'Add Roamer 3 Bulan (All Operator)',
             customerName: req.body?.customerName || 'Ryan (Uji Coba Klaim Garansi)',
             customerPhone: req.body?.customerPhone || '6287767287284',
             issueDescription: req.body?.issueDescription || 'Sinyal tiba-tiba hilang / No Service setelah 1 bulan pemakaian.',
@@ -1950,7 +1950,7 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
         const mockOrder = {
             id: `TEST-IMEI-${dummyNum}`,
             userName: "Budi (Testing Pelanggan)",
-            packageName: "Unblock IMEI 3 Bulan Garansi (Star Seller)",
+            packageName: "Add Roamer 3 Bulan Garansi (Star Seller)",
             serviceType: "imei",
             imei: "351234161234567",
             price: 250000,
@@ -2364,7 +2364,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 
 
 // ============================================================
-// CRUD PAKET DURASI UNBLOCK IMEI
+// CRUD PAKET DURASI ADD ROAMER
 // ============================================================
 
 // 1. POST /api/admin/imei-packages
@@ -2422,7 +2422,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 waBot.notifyNewProductBroadcast({
                     product: {
                         type: 'imei',
-                        name: `Paket Unblock IMEI ${duration.trim()}`,
+                        name: `Paket Add Roamer ${duration.trim()}`,
                         duration: duration.trim(),
                         price: numPrice,
                         speeds: parsedSpeeds,
@@ -2435,7 +2435,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 
             if (req.body.send_web_notification !== false) {
                 const annId = `ann_prod_${Date.now()}`;
-                const annMsg = `[PRODUK BARU] Paket Unblock IMEI ${duration.trim()} kini telah tersedia seharga Rp ${numPrice.toLocaleString('id-ID')}! Cek sekarang di menu Buka IMEI.`;
+                const annMsg = `[PRODUK BARU] Paket Add Roamer ${duration.trim()} kini telah tersedia seharga Rp ${numPrice.toLocaleString('id-ID')}! Cek sekarang di menu Add Roamer.`;
                 dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, annMsg, new Date().toISOString()]).catch(() => {});
                 sseBroadcast('announcement', { message: annMsg, bgColor: '#059669' });
             }
@@ -2448,7 +2448,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 broadcastPushNotification({
                     title: `🔥 Layanan Baru: Paket IMEI ${duration.trim()}!`,
                     body: `Telah hadir paket baru seharga Rp ${numPrice.toLocaleString('id-ID')} (${parsedSpeeds.join(', ')}). Buka untuk detail!`,
-                    url: '/unblock-imei',
+                    url: '/add-roamer',
                     icon: '/logo.png',
                     tag: `new-imei-${id}`
                 }).catch(pErr => console.error('[Auto WebPush Error]', pErr));
@@ -2538,7 +2538,7 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
         // 2. In-App Website Notification & Announcement Banner
         try {
             const annId = `ann_pkg_upd_${Date.now()}`;
-            const annMsg = `[UPDATE PAKET IMEI] Paket ${updatedDuration} telah diperbarui dengan harga mulai Rp ${updatedPrice.toLocaleString('id-ID')}! Cek di menu Buka IMEI.`;
+            const annMsg = `[UPDATE PAKET IMEI] Paket ${updatedDuration} telah diperbarui dengan harga mulai Rp ${updatedPrice.toLocaleString('id-ID')}! Cek di menu Add Roamer.`;
             await dbRun("INSERT OR REPLACE INTO announcements (id, message, createdAt, bgColor, is_active) VALUES (?, ?, ?, ?, 1)",
                 [annId, annMsg, new Date().toISOString(), '#2563eb']
             );
@@ -2553,7 +2553,7 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             broadcastPushNotification({
                 title: `Update Paket IMEI: ${updatedDuration}`,
                 body: `Harga & paket ${updatedDuration} baru saja diperbarui mulai Rp ${updatedPrice.toLocaleString('id-ID')}. Cek detail sekarang!`,
-                url: '/unblock-imei',
+                url: '/add-roamer',
                 icon: '/logo.png',
                 tag: `update-imei-${id}`
             }).catch(pErr => console.error('[Auto WebPush Error]', pErr));

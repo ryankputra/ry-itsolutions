@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
   },
   productionBrowserSourceMaps: false,
 
+  async redirects() {
+    return [
+      { source: '/unblock-imei', destination: '/add-roamer', permanent: false },
+    ];
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:3001';
     const gatewayUrl = process.env.GOPAY_GATEWAY_URL || 'http://127.0.0.1:3002';

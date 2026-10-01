@@ -12,6 +12,12 @@
       "priority": true,
       "statusCode": 308,
       "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    },
+    {
+      "source": "/unblock-imei",
+      "destination": "/add-roamer",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/unblock-imei(?:/)?$"
     }
   ],
   "headers": [
@@ -117,6 +123,12 @@
       "regex": "^/_not\\-found(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/add-roamer",
+      "regex": "^/add\\-roamer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/add\\-roamer(?:/)?$"
     },
     {
       "page": "/admin",
@@ -339,12 +351,6 @@
       "regex": "^/topup(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/topup(?:/)?$"
-    },
-    {
-      "page": "/unblock-imei",
-      "regex": "^/unblock\\-imei(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/unblock\\-imei(?:/)?$"
     },
     {
       "page": "/videos",

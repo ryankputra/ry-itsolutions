@@ -49,7 +49,7 @@ export default function ReferralPage() {
   };
 
   const shareToWhatsapp = () => {
-    const text = `Halo! Mau unblock IMEI atau cek status garansi HP tanpa ribet & cepat? Daftar di Ry-ITSolutions lewat link aku dapat promo potongan harga lho: ${referralLink}`;
+    const text = `Halo! Mau Add Roamer atau cek status garansi HP tanpa ribet & cepat? Daftar di Ry-ITSolutions lewat link aku dapat promo potongan harga lho: ${referralLink}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -210,7 +210,7 @@ export default function ReferralPage() {
             </div>
             <h4 className="font-bold text-sm text-ink">Teman Mendaftar</h4>
             <p className="text-xs text-ink-muted leading-relaxed">
-              Teman Anda mendaftar akun dan melakukan pesanan unblock IMEI atau layanan lainnya.
+              Teman Anda mendaftar akun dan melakukan pesanan Add Roamer atau layanan lainnya.
             </p>
           </div>
 

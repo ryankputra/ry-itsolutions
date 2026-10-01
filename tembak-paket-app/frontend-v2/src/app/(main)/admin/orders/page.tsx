@@ -249,7 +249,7 @@ export default function AdminOrdersPage() {
               </div>
               <div>
                 <p className={`font-bold text-xs sm:text-sm ${orderQueueSubTab === "manual" ? "text-primary" : "text-ink"}`}>
-                  Antrean Buka IMEI (Manual Admin)
+                  Antrean Add Roamer (Manual Admin)
                 </p>
                 <p className="text-[11px] text-ink-muted">Verifikasi nomor IMEI, status garansi, & upload bukti hasil.</p>
               </div>

@@ -797,7 +797,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             }
 
             const trxId = `trx_m_${Date.now()}`;
-            const packageName = service_type === 'imei' ? `Unblock IMEI (${duration}) x${imeiCount}` : `Cek CEIR (${duration})`;
+            const packageName = service_type === 'imei' ? `Add Roamer (${duration}) x${imeiCount}` : `Cek CEIR (${duration})`;
 
             if (appliedCoupon && !isQrisPayment) {
                 try {

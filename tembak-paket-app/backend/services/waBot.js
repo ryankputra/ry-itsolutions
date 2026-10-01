@@ -1221,10 +1221,10 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
             const durLabel = warranty?.durationLabel || "Sesuai Paket";
             if (newStatus === "processing") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN UNBLOCK IMEI SEDANG DIPROSES*\n\n` +
+                    `*PESANAN ADD ROAMER SEDANG DIPROSES*\n\n` +
                     `• *Order ID:* #${trx.id}\n` +
                     `• *IMEI:* ${trx.imei || "-"}\n` +
-                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Add Roamer"}\n` +
                     `• *Status:* Sedang Dikerjakan Admin\n` +
                     (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
                     `\nTim teknis kami sedang memproses dan mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
@@ -1232,10 +1232,10 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
                     BOT_FOOTER;
             } else if (newStatus === "success" || newStatus === "completed") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN UNBLOCK IMEI TELAH SELESAI (SUKSES)*\n\n` +
+                    `*PESANAN ADD ROAMER TELAH SELESAI (SUKSES)*\n\n` +
                     `• *Order ID:* #${trx.id}\n` +
                     `• *IMEI:* ${trx.imei || "-"}\n` +
-                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Add Roamer"}\n` +
                     `• *Garansi Sinyal:* ${durLabel} (Aktif)\n` +
                     `• *Status:* Selesai / Sinyal Aktif\n` +
                     (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
@@ -1244,10 +1244,10 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
                     BOT_FOOTER;
             } else if (newStatus === "failed" || newStatus === "cancelled") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PEMBERITAHUAN PESANAN UNBLOCK IMEI*\n\n` +
+                    `*PEMBERITAHUAN PESANAN ADD ROAMER*\n\n` +
                     `• *Order ID:* #${trx.id}\n` +
                     `• *IMEI:* ${trx.imei || "-"}\n` +
-                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Add Roamer"}\n` +
                     `• *Status:* Dibatalkan / Gagal\n` +
                     `• *Alasan:* ${customNote || "Pesanan tidak dapat diproses oleh admin."}\n\n` +
                     `Silakan cek saldo akun Anda di website atau hubungi admin jika ada pertanyaan: https://ry-itsolutionts.web.id/history` +
@@ -1990,7 +1990,7 @@ async function notifyWarrantyClaim({ imei, packageName, customerName, customerPh
         `🚨 *KLAIM GARANSI SINYAL MASUK (PRIORITAS)*\n\n` +
         `Halo Admin, seorang pelanggan baru saja mengajukan klaim garansi karena sinyal perangkatnya terputus/hilang.\n\n` +
         `• *Nomor IMEI:* ${imei}\n` +
-        `• *Paket Layanan:* ${packageName || 'Unblock IMEI'}\n` +
+        `• *Paket Layanan:* ${packageName || 'Add Roamer'}\n` +
         `• *Status Garansi:* ${warrantyText || 'Garansi Aktif'}\n` +
         `• *Nama Pelanggan:* ${customerName || 'Pelanggan'}\n` +
         `• *WhatsApp Pelanggan:* ${cleanCustPhone || '-'}\n` +
@@ -2122,7 +2122,7 @@ async function notifyPromoBroadcast({ coupon, customMessage, targetMode = 'admin
     const quotaStr = claimLimit ? `${Math.max(0, claimLimit - claimedCount)} Kuota Tersisa` : 'Kuota Terbuka';
 
     const claimUrl = `https://ry-itsolutionts.web.id/vouchers?claim=${encodeURIComponent(code)}`;
-    const orderUrl = `https://ry-itsolutionts.web.id/unblock-imei?coupon=${encodeURIComponent(code)}`;
+    const orderUrl = `https://ry-itsolutionts.web.id/add-roamer?coupon=${encodeURIComponent(code)}`;
 
     const caption = 
 `*Ry-IT Solutions Official*
@@ -2229,12 +2229,12 @@ async function notifyNewProductBroadcast({ product, customMessage, targetMode = 
     let bannerFileName = 'banner_imei.jpg';
     let headerTitle = '🚀 *PRODUK BARU TERSEDIA DI RY-ITSOLUTIONS* 🚀';
     let detailSection = '';
-    let directLink = 'https://ry-itsolutionts.web.id/unblock-imei';
+    let directLink = 'https://ry-itsolutionts.web.id/add-roamer';
 
     if (pType === 'imei') {
         bannerFileName = 'banner_imei.jpg';
-        headerTitle = '📱 *LAYANAN BARU: UNBLOCK IMEI RESMI* 📱';
-        directLink = product.link || 'https://ry-itsolutionts.web.id/unblock-imei';
+        headerTitle = '📱 *LAYANAN BARU: ADD ROAMER RESMI* 📱';
+        directLink = product.link || 'https://ry-itsolutionts.web.id/add-roamer';
         
         let speedList = ['Instant (Fast)', 'Semi-Fast', 'Hemat'];
         if (Array.isArray(product.speeds) && product.speeds.length > 0) {

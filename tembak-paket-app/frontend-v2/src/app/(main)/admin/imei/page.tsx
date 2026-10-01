@@ -284,7 +284,7 @@ export default function AdminImeiPage() {
         <div>
           <h2 className="text-lg font-bold text-ink flex items-center gap-2">
             <Smartphone className="w-5 h-5 text-primary" />
-            Layanan Unblock IMEI & CEIR
+            Layanan Add Roamer & CEIR
           </h2>
           <p className="text-xs text-ink-muted mt-0.5">
             Kontrol status buka/tutup layanan, tarif 3 kecepatan proses, durasi paket, dan integrasi server pusat CEIR.

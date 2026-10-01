@@ -67,7 +67,7 @@ function calculateTransactionWarranty(trx) {
         };
     }
 
-    // 4. UNBLOCK IMEI (WARRANTY DYNAMICALLY MATCHES PRODUCT DURATION)
+    // 4. ADD ROAMER (WARRANTY DYNAMICALLY MATCHES PRODUCT DURATION)
     let durationMonths = 0;
     let isPermanent = false;
 

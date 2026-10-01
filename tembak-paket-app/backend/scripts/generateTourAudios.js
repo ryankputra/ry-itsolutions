@@ -13,7 +13,7 @@ const tourAudios = [
   },
   {
     file: 'step_3.mp3',
-    text: 'Menu Buka Sinyal IMEI adalah layanan utama kami untuk mengaktifkan kembali sinyal HP luar negeri all operator. Masukkan nomor IMEI, lampirkan foto bintang pagar nol enam pagar, pilih durasi yang diinginkan, dan pesanan Anda langsung kami proses.'
+    text: 'Menu Add Roamer adalah layanan utama kami untuk mengaktifkan kembali sinyal HP luar negeri all operator. Masukkan nomor IMEI, lampirkan foto bintang pagar nol enam pagar, pilih durasi yang diinginkan, dan pesanan Anda langsung kami proses.'
   },
   {
     file: 'step_4.mp3',

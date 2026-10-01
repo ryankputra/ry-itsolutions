@@ -31,7 +31,7 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "Berapa lama proses pengerjaan unblock IMEI HP Inter?",
+      q: "Berapa lama proses pengerjaan Add Roamer HP Inter?",
       a: "Rata-rata pengerjaan berkisar antara 1 hingga 24 jam kerja tergantung opsi kecepatan layanan (Fast, Semi-Fast, atau Reguler) yang Anda pilih."
     },
     {
@@ -192,7 +192,7 @@ export default function LandingPage() {
               <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs font-semibold text-ink-muted">
                 <span className="flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                  Buka Sinyal All Operator
+                  Add Roamer All Operator
                 </span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
@@ -290,7 +290,7 @@ export default function LandingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Card 1: Buka Gembok IMEI */}
+          {/* Card 1: Add Roamer */}
           <div className="p-6 sm:p-7 rounded-3xl bg-canvas border border-hairline shadow-xs hover:border-primary/40 hover:shadow-md transition-all space-y-4 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform">
@@ -504,7 +504,7 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* 2. Paket Unblock IMEI (Live from imeiPackages) */}
+            {/* 2. Paket Add Roamer (Live from imeiPackages) */}
             {imeiPackages.length > 0 ? (
               imeiPackages.map((pkg, idx) => (
                 <div 
@@ -516,7 +516,7 @@ export default function LandingPage() {
                   </div>
                   <div className="space-y-3.5">
                     <span className="text-[11px] font-bold text-primary uppercase">Durasi {pkg?.duration || "1 Bulan"}</span>
-                    <h3 className="text-xl font-bold text-ink">Buka Gembok IMEI</h3>
+                    <h3 className="text-xl font-bold text-ink">Add Roamer</h3>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-black text-primary">
                         Rp {Number(pkg?.price || 0).toLocaleString('id-ID')}
@@ -536,7 +536,7 @@ export default function LandingPage() {
                     href={`/add-roamer`}
                     className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs text-center shadow-md shadow-primary/20 transition-all block"
                   >
-                    Buka Gembok ({pkg?.duration || "Pilih Paket"})
+                    Add Roamer ({pkg?.duration || "Pilih Paket"})
                   </Link>
                 </div>
               ))
@@ -544,7 +544,7 @@ export default function LandingPage() {
               <div className="p-6 sm:p-8 rounded-3xl bg-canvas border-2 border-primary shadow-md relative space-y-5 flex flex-col justify-between">
                 <div className="space-y-3.5">
                   <span className="text-[11px] font-bold text-primary uppercase">All Operator</span>
-                  <h3 className="text-xl font-bold text-ink">Unblock IMEI HP Inter</h3>
+                  <h3 className="text-xl font-bold text-ink">Add Roamer HP Inter</h3>
                   <p className="text-xs text-ink-muted leading-relaxed">
                     Aktivasi sinyal seluler iPhone & Android untuk semua operator dengan jaminan garansi.
                   </p>
@@ -650,7 +650,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 text-center space-y-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-ink">Mulai Aktivasi IMEI Anda Sekarang</h2>
           <p className="text-xs sm:text-sm text-ink-muted max-w-lg mx-auto">
-            Daftar akun gratis dan nikmati kemudahan unblock IMEI serta cek garansi digital online.
+            Daftar akun gratis dan nikmati kemudahan Add Roamer serta cek garansi digital online.
           </p>
           <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
             <Link

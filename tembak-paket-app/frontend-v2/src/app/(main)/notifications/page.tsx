@@ -131,7 +131,7 @@ export default function NotificationsPage() {
     notifications.push({
       id: `prod-${pkg.id}`,
       type: "products",
-      title: `Layanan Baru: Paket Unblock IMEI ${pkg.duration}`,
+      title: `Layanan Baru: Paket Add Roamer ${pkg.duration}`,
       description: `Aktivasi sinyal resmi All Operator (Garansi Sinyal Anti Begal). Mulai Rp ${Number(pkg.price || 0).toLocaleString("id-ID")}.`,
       time: "Tersedia",
       icon: (
@@ -142,7 +142,7 @@ export default function NotificationsPage() {
       iconBg: "bg-emerald-50 border-emerald-200",
       timestamp: pkg.createdAt ? new Date(pkg.createdAt).getTime() : 0,
       actionText: "Beli Sekarang",
-      action: () => router.push("/unblock-imei"),
+      action: () => router.push("/add-roamer"),
     });
   });
 
@@ -182,7 +182,7 @@ export default function NotificationsPage() {
         ),
         iconBg: "bg-indigo-50 border-indigo-200",
         actionText: "Cek Layanan",
-        action: () => router.push("/unblock-imei"),
+        action: () => router.push("/add-roamer"),
       });
     });
   }

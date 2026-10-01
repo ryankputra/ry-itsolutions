@@ -127,7 +127,7 @@ export const PushNotificationBanner: React.FC = () => {
               <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             </h4>
             <p className="text-[11px] sm:text-xs text-ink-muted leading-relaxed">
-              Dapatkan info di status bar HP saat ada layanan baru (misal: Unblock IMEI) & promo diskon spesial.
+              Dapatkan info di status bar HP saat ada layanan baru (misal: Add Roamer) & promo diskon spesial.
             </p>
           </div>
         </div>

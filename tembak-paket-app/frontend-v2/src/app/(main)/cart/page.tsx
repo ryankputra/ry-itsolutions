@@ -164,7 +164,7 @@ export default function CartPage() {
   const isImeiService = (item: CartItem) => {
     const sType = (item.serviceType || "").toLowerCase();
     const pName = (item.packageName || "").toLowerCase();
-    return sType.includes("imei") || sType.includes("ceir") || pName.includes("imei") || pName.includes("ceir") || pName.includes("buka blokir");
+    return sType.includes("imei") || sType.includes("ceir") || pName.includes("imei") || pName.includes("ceir") || pName.includes("add roamer");
   };
 
   // Price calculations
@@ -370,11 +370,11 @@ export default function CartPage() {
           <div>
             <h3 className="font-bold text-base text-ink">Keranjang Anda Masih Kosong</h3>
             <p className="text-xs text-ink-muted mt-1 max-w-sm mx-auto">
-              Yuk pilih layanan buka IMEI, cek CEIR, atau paket aktivasi terbaik untuk dimasukkan ke keranjang.
+              Yuk pilih layanan Add Roamer, cek CEIR, atau paket aktivasi terbaik untuk dimasukkan ke keranjang.
             </p>
           </div>
           <Button
-            onClick={() => router.push("/unblock-imei")}
+            onClick={() => router.push("/add-roamer")}
             className="bg-primary hover:bg-primary-focus text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 mx-auto"
           >
             <span>Mulai Belanja Sekarang</span>
