@@ -2470,7 +2470,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { duration, price, isVisible, allowed_speeds, speed_prices } = req.body;
+        const { duration, price, isVisible, allowed_speeds, speed_prices, send_wa } = req.body;
 
         const existing = await dbGet("SELECT * FROM imei_packages WHERE id = ?", [id]);
         if (!existing) {
@@ -2561,18 +2561,20 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             console.error('[WebPush Error]', pushErr);
         }
 
-        // 4. WhatsApp broadcast with banner image to all verified users
-        try {
-            const { notifyPriceChangeBroadcast } = require('../services/waBot');
-            const allPackages = await dbAll("SELECT duration, price, allowed_speeds, speed_prices FROM imei_packages WHERE isVisible = 1 ORDER BY id");
-            notifyPriceChangeBroadcast({
-                packages: allPackages,
-                updatedPackage: { duration: updatedDuration, price: updatedPrice },
-                targetMode: 'all',
-                onlyPhones: req.body.test_phone ? [req.body.test_phone] : undefined
-            }).catch(waErr => console.error('[WABot PriceUpdate Broadcast Error]', waErr.message));
-        } catch (waErr) {
-            console.error('[WABot PriceUpdate Init Error]', waErr.message);
+        // 4. WhatsApp broadcast with banner image to all verified users (opt-in)
+        if (send_wa === true || send_wa === 1 || send_wa === 'true') {
+            try {
+                const { notifyPriceChangeBroadcast } = require('../services/waBot');
+                const allPackages = await dbAll("SELECT duration, price, allowed_speeds, speed_prices FROM imei_packages WHERE isVisible = 1 ORDER BY id");
+                notifyPriceChangeBroadcast({
+                    packages: allPackages,
+                    updatedPackage: { duration: updatedDuration, price: updatedPrice },
+                    targetMode: 'all',
+                    onlyPhones: req.body.test_phone ? [req.body.test_phone] : undefined
+                }).catch(waErr => console.error('[WABot PriceUpdate Broadcast Error]', waErr.message));
+            } catch (waErr) {
+                console.error('[WABot PriceUpdate Init Error]', waErr.message);
+            }
         }
 
         res.json({
