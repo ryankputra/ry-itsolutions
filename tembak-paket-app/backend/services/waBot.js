@@ -2232,7 +2232,7 @@ function safeParseSpeedPrices(raw) {
  * Broadcast Price Change Notification to WhatsApp (Admin & Users)
  * Triggered when admin edits IMEI package duration & price.
  */
-async function notifyPriceChangeBroadcast({ packages, customMessage, targetMode = 'all', updatedPackage }) {
+async function notifyPriceChangeBroadcast({ packages, customMessage, targetMode = 'all', updatedPackage, onlyPhones }) {
     if (!Array.isArray(packages) || packages.length === 0) throw new Error("Data paket tidak valid");
 
     const speedLabels = { fast: 'Fast', semi: 'Semi', slow: 'Slow' };
@@ -2313,7 +2313,12 @@ _Ry-ITSolutions Official Support & Store_`;
     let sentCount = 0;
     let failedCount = 0;
 
+    const onlySet = Array.isArray(onlyPhones) && onlyPhones.length
+        ? new Set(onlyPhones.map(cleanPhone).filter(c => c && c.length >= 8))
+        : null;
+
     for (const phone of targetPhones) {
+        if (onlySet && !onlySet.has(phone)) continue;
         const jid = `${phone}@s.whatsapp.net`;
         try {
             const sent = await sendAndStoreMessage(jid, payload);
