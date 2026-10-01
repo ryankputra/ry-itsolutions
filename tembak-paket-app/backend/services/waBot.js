@@ -2216,6 +2216,18 @@ https://ry-itsolutionts.web.id`;
     };
 }
 
+function safeParseSpeedPrices(raw) {
+    if (!raw) return {};
+    try {
+        if (typeof raw === 'string') {
+            const v = JSON.parse(raw);
+            return (v && typeof v === 'object') ? v : {};
+        }
+        if (typeof raw === 'object') return raw;
+    } catch (e) { /* malformed json */ }
+    return {};
+}
+
 /**
  * Broadcast Price Change Notification to WhatsApp (Admin & Users)
  * Triggered when admin edits IMEI package duration & price.
@@ -2223,16 +2235,28 @@ https://ry-itsolutionts.web.id`;
 async function notifyPriceChangeBroadcast({ packages, customMessage, targetMode = 'all', updatedPackage }) {
     if (!Array.isArray(packages) || packages.length === 0) throw new Error("Data paket tidak valid");
 
+    const speedLabels = { fast: 'Fast', semi: 'Semi', slow: 'Slow' };
+
     const priceList = packages.map(p => {
-        const priceStr = `Rp ${Number(p.price || 0).toLocaleString('id-ID')}`;
-        let line = `• *${p.duration}:* ${priceStr}`;
-        if (p.speed_prices && typeof p.speed_prices === 'object') {
-            const speeds = Object.entries(p.speed_prices)
-                .filter(([, v]) => Number(v) > 0)
-                .map(([k, v]) => `${k} Rp ${Number(v).toLocaleString('id-ID')}`);
-            if (speeds.length) line += ` (${speeds.join(' • ')})`;
+        const sp = typeof p.speed_prices === 'string' ? safeParseSpeedPrices(p.speed_prices) : (p.speed_prices || {});
+        const allowed = Array.isArray(sp.allowed_speeds) && sp.allowed_speeds.length ? sp.allowed_speeds : ['fast', 'semi', 'slow'];
+        const lines = [];
+        for (const id of allowed) {
+            const raw = sp[id];
+            const price = Number(raw);
+            if (!price) continue;
+            let line = `• *${p.duration} ${speedLabels[id]}:* Rp ${price.toLocaleString('id-ID')}`;
+            const ws = sp.wholesale_prices && sp.wholesale_prices[id];
+            if (ws && Number(ws) > 0 && Number(ws) < price) {
+                const wsQty = sp.wholesale_min_qty || 2;
+                line += ` (Grosir ≥${wsQty}: Rp ${Number(ws).toLocaleString('id-ID')})`;
+            }
+            lines.push(line);
         }
-        return line;
+        if (!lines.length) {
+            lines.push(`• *${p.duration} Slow:* Rp ${Number(p.price || 0).toLocaleString('id-ID')}`);
+        }
+        return lines.join('\n');
     }).join('\n');
 
     const changedName = updatedPackage?.duration || packages[0]?.duration || 'Paket';

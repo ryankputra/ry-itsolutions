@@ -2564,7 +2564,7 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
         // 4. WhatsApp broadcast with banner image to all verified users
         try {
             const { notifyPriceChangeBroadcast } = require('../services/waBot');
-            const allPackages = await dbAll("SELECT duration, price, speed_prices FROM imei_packages WHERE isVisible = 1 ORDER BY id");
+            const allPackages = await dbAll("SELECT duration, price, allowed_speeds, speed_prices FROM imei_packages WHERE isVisible = 1 ORDER BY id");
             notifyPriceChangeBroadcast({
                 packages: allPackages,
                 updatedPackage: { duration: updatedDuration, price: updatedPrice },
