@@ -65,7 +65,14 @@ export default function IGTestiPreview() {
         {/* Header: avatar + info IG */}
         <div className="p-4 flex items-center gap-3.5">
           <div className="relative shrink-0">
-            <div className="w-12 h-12 rounded-full p-[2.5px] bg-gradient-to-tr from-amber-400 via-rose-500 to-fuchsia-600">
+            <a
+              href={`${IG_URL}/stories/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Buka Instagram story @unlocksinyalsolo"
+              title="Story Instagram 24 jam"
+              className="block w-12 h-12 rounded-full p-[2.5px] bg-gradient-to-tr from-amber-400 via-rose-500 to-fuchsia-600 hover:scale-105 transition-transform"
+            >
               <img
                 src="/ig-testi/ig-profile.jpg"
                 alt="Foto profil Instagram unlocksinyalsolo"
@@ -73,7 +80,7 @@ export default function IGTestiPreview() {
                 height={44}
                 className="w-[44px] h-[44px] rounded-full object-cover ring-2 ring-parchment"
               />
-            </div>
+            </a>
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
@@ -81,7 +88,7 @@ export default function IGTestiPreview() {
               <svg className="h-3.5 w-3.5 shrink-0 fill-primary" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.2 14.6l-3.1-3.1 1.4-1.4 1.7 1.7 4.5-4.5 1.4 1.4-5.9 5.9z" /></svg>
             </div>
             <p className="text-[11.5px] text-ink-muted font-medium truncate">
-              unlocksinyalsolo &middot; {highlights.length} highlight &middot; {totalItems} testimoni
+              unlocksinyalsolo &middot; {highlights.length} highlight testimoni
             </p>
           </div>
           <a
