@@ -8,14 +8,17 @@ const CACHE_TTL = 5 * 60 * 1000;
 let cache = { at: 0, data: null };
 
 // ponytail: manual upload dulu (taruh file di public/ig-testi).
-// Saat token IG Graph siap, ganti body scanDir() dgn fetch ke
-// https://graph.facebook.com/v21.0/me/media?fields=media_url,caption,timestamp&access_token=...
-// dan simpan hasilnya ke ig-testi/ + _meta.json oleh cron.
+// Cron igSyncService yang isi folder ini saat IG_GRAPH_TOKEN ter-set:
+// - ig-testi-N.jpg  = cover highlight (judul TESTI/ULASAN/REVIEW)
+// - ig-story-<id>.jpg = story 24 jam (diarsip permanen, cap 40)
+// Feed post biasa TIDAK ditarik.
 
 function scanDir() {
     try {
         const profile = fs.existsSync(path.join(IG_DIR, 'ig-profile.jpg'));
-        const files = fs.readdirSync(IG_DIR)
+
+        // Cover highlight: ig-testi-N.jpg (index-based, isi cron).
+        const covers = fs.readdirSync(IG_DIR)
             .filter((f) => /^ig-testi-\d+\.(jpg|jpeg|png|webp)$/i.test(f))
             .sort((a, b) => {
                 const na = parseInt(a.match(/\d+/)[0], 10);
@@ -23,23 +26,34 @@ function scanDir() {
                 return na - nb;
             });
 
-        // Judul highlight dari metadata cron (kalau ada).
-        let highlights = [];
-        try {
-            const meta = JSON.parse(fs.readFileSync(path.join(IG_DIR, '_meta.json'), 'utf8'));
-            if (Array.isArray(meta)) {
-                highlights = meta.map((m) => ({ title: String(m.title || 'TESTI'), count: Number(m.mediaCount) || 0 }));
-            }
-        } catch {}
+        // Stories: ig-story-<id>.jpg, urut termuda.
+        const stories = fs.readdirSync(IG_DIR)
+            .filter((f) => /^ig-story-.*\.jpg$/i.test(f))
+            .map((f) => {
+                const st = fs.statSync(path.join(IG_DIR, f));
+                return { url: `/ig-testi/${f}`, timestamp: st.mtime.toISOString() };
+            })
+            .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+        // Metadata cron (judul highlight + story terarsip).
+        let meta = null;
+        try { meta = JSON.parse(fs.readFileSync(path.join(IG_DIR, '_meta.json'), 'utf8')); } catch {}
+
+        const highlights = Array.isArray(meta?.highlights) && meta.highlights.length
+            ? meta.highlights
+            : covers.map((f, i) => ({ title: `TESTI ${i + 1}`, cover: `/ig-testi/${f}` }));
 
         return {
             profile,
-            count: files.length,
-            images: files.map((f) => `/ig-testi/${f}`),
-            highlights
+            count: covers.length + stories.length,
+            images: covers.map((f) => `/ig-testi/${f}`),
+            highlights,
+            stories: Array.isArray(meta?.stories) && meta.stories.length
+                ? meta.stories.slice(0, 12)
+                : stories.slice(0, 12)
         };
     } catch {
-        return { profile: false, count: 0, images: [], highlights: [] };
+        return { profile: false, count: 0, images: [], highlights: [], stories: [] };
     }
 }
 

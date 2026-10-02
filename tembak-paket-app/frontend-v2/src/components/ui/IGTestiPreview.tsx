@@ -10,7 +10,8 @@ interface IGFeed {
   profile: boolean;
   count: number;
   images: string[];
-  highlights?: { title: string; count: number }[];
+  highlights?: { title: string; cover?: string; mediaCount?: number }[];
+  stories?: { url: string; timestamp?: string }[];
 }
 
 export default function IGTestiPreview() {
@@ -21,19 +22,33 @@ export default function IGTestiPreview() {
       .then(safeJson)
       .then((data) => {
         if (data?.status && Array.isArray(data.images)) {
-          setFeed({ profile: Boolean(data.profile), count: Number(data.count) || 0, images: data.images });
+          setFeed({
+            profile: Boolean(data.profile),
+            count: Number(data.count) || 0,
+            images: data.images,
+            highlights: Array.isArray(data.highlights) ? data.highlights : undefined,
+            stories: Array.isArray(data.stories) ? data.stories : undefined,
+          });
         }
       })
       .catch(() => {});
   }, []);
 
-  // ponytail: kalau folder ig-testi kosong, sembunyikan card.
-  // Cron sync highlight IG yang isi folder ini (butuh IG_GRAPH_TOKEN).
-  if (!feed.images.length) return null;
-
   const highlightNames = feed.highlights?.length
     ? feed.highlights.map((h) => h.title)
     : FALLBACK_HIGHLIGHTS;
+
+  const storyList = feed.stories?.length ? feed.stories : [];
+
+  // Cover highlight: dari metadata cron (prioritas), fallback ig-testi-N.jpg.
+  const highlightCovers = (
+    feed.highlights?.length
+      ? feed.highlights.map((h) => h.cover).filter(Boolean)
+      : feed.images
+  ).slice(0, 8);
+
+  // ponytail: bila folder ig-testi kosong (cron belum jalan), sembunyikan card.
+  if (!feed.images.length && !storyList.length) return null;
 
   return (
     <a
@@ -66,7 +81,7 @@ export default function IGTestiPreview() {
             <svg className="h-3.5 w-3.5 shrink-0 fill-primary" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.2 14.6l-3.1-3.1 1.4-1.4 1.7 1.7 4.5-4.5 1.4 1.4-5.9 5.9z" /></svg>
           </div>
           <p className="text-[11.5px] text-ink-muted font-medium truncate">
-            unlocksinyalsolo &middot; {highlightNames.length} highlight testimoni
+            unlocksinyalsolo &middot; {highlightNames.length} highlight &middot; {storyList.length} story
           </p>
         </div>
         <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary/8 group-hover:bg-primary/12 transition-colors">
@@ -80,23 +95,63 @@ export default function IGTestiPreview() {
       {/* Highlight rings */}
       <div className="px-4 pt-3.5 pb-1">
         <div className="flex gap-3.5 overflow-x-auto no-scrollbar">
-          {highlightNames.map((h) => (
-            <div key={h} className="flex flex-col items-center gap-1.5 shrink-0 w-14">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-fuchsia-600 p-[2.5px]">
-                <div className="w-full h-full rounded-full bg-parchment flex items-center justify-center">
-                  <svg className="h-5 w-5 fill-rose-500" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+          {highlightNames.map((h, i) => {
+            const hl = feed.highlights?.[i];
+            const cover = hl?.cover || feed.images[i];
+            return (
+              <div key={h} className="flex flex-col items-center gap-1.5 shrink-0 w-14">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-fuchsia-600 p-[2.5px]">
+                  {cover ? (
+                    <img
+                      src={cover}
+                      alt={h}
+                      width={44}
+                      height={44}
+                      className="w-full h-full rounded-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-parchment flex items-center justify-center">
+                      <svg className="h-5 w-5 fill-rose-500" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+                    </div>
+                  )}
                 </div>
+                <span className="text-[9px] font-semibold text-ink-muted whitespace-nowrap">{h}</span>
               </div>
-              <span className="text-[9px] font-semibold text-ink-muted whitespace-nowrap">{h}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+
+      {/* Stories testimoni (24 jam, auto-sync) */}
+      {storyList.length > 0 && (
+        <div className="pt-3 pb-1">
+          <div className="px-4 mb-2 flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">Story terbaru</span>
+            <span className="ml-auto text-[10px] text-ink-muted/70">{storyList.length} story</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar px-4">
+            {storyList.map((s) => (
+              <div
+                key={s.url}
+                className="shrink-0 w-[88px] aspect-[3/5] rounded-2xl overflow-hidden bg-canvas ring-1 ring-hairline relative"
+              >
+                <img src={s.url} alt="Story testimoni" className="w-full h-full object-cover" loading="lazy" />
+                {s.timestamp && (
+                  <span className="absolute bottom-1 left-1 right-1 text-[8px] text-white font-semibold drop-shadow">
+                    {new Date(s.timestamp).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Cover highlight testimoni */}
       <div className="p-4.5 pt-3">
         <div className="grid grid-cols-4 gap-1.5">
-          {feed.images.slice(0, 4).map((src, i) => (
+          {highlightCovers.map((src, i) => (
             <div key={src} className="aspect-square rounded-xl overflow-hidden bg-canvas">
               <img
                 src={src}
