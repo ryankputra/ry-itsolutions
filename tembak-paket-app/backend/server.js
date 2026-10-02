@@ -32,6 +32,7 @@ const transactionRoutes = require('./routes/transactions');
 const serviceRoutes = require('./routes/services');
 const adminRoutes = require('./routes/admin');
 const reviewRoutes = require('./routes/reviews');
+const igFeedRoutes = require('./routes/igfeed');
 const gameRoutes = require('./routes/games');
 const telegramRoutes = require('./routes/telegram');
 const orderRoutes = require('./routes/orders');
@@ -55,6 +56,7 @@ const uploadDirs = [
     path.join(__dirname, 'public', 'uploads', 'avatars'),
     path.join(__dirname, 'public', 'uploads', 'manual_orders'),
     path.join(__dirname, 'public', 'uploads', 'reviews'),
+    path.join(__dirname, 'public', 'ig-testi'),
     path.join(__dirname, 'backups'),
     path.join(__dirname, 'sessions')
 ];
@@ -171,6 +173,7 @@ app.use('/api', transactionRoutes.router);
 app.use('/api', serviceRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', reviewRoutes);
+app.use('/api', igFeedRoutes);
 app.use('/api', gameRoutes);
 app.use('/api', telegramRoutes.router);
 app.use('/api/webhook', webhookRoutes);

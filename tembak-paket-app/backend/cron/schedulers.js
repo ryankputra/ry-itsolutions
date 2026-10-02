@@ -290,6 +290,20 @@ function initSchedulers() {
             console.error('[Scheduler][CeirgoPoll] Error:', e.message);
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
+    // Instagram feed sync — tarik testimoni terbaru ke public/ig-testi.
+    // ponytail: jalan hanya kalau IG_GRAPH_TOKEN ter-set di .env. Tanpa token
+    // cron no-op, frontend tetap baca folder manual. Saat token siap, ganti
+    // TODO di syncInstagramFeed() dengan fetch graph.facebook.com + simpan file.
+    cron.schedule('*/30 * * * *', async () => {
+        try {
+            if (!process.env.IG_GRAPH_TOKEN || !process.env.IG_USER_ID) return;
+            const { syncInstagramFeed } = require('../services/igSyncService');
+            await syncInstagramFeed();
+        } catch (e) {
+            console.error('[Scheduler][IgSync] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
 }
 
 module.exports = {

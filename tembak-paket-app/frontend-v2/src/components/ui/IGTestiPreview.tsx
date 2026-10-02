@@ -1,7 +1,34 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { safeJson } from "@/lib/api";
+
+const IG_URL = "https://www.instagram.com/unlocksinyalsolo";
+const HIGHLIGHTS = ["TESTI SEPT '26", "TESTI AUG'26", "TESTI JULE'26", "TESTI JUNE '26"];
+
+interface IGFeed {
+  profile: boolean;
+  count: number;
+  images: string[];
+}
+
 export default function IGTestiPreview() {
-  const IG_URL = "https://www.instagram.com/unlocksinyalsolo";
-  const HIGHLIGHTS = ["TESTI SEPT '26", "TESTI AUG'26", "TESTI JULE'26", "TESTI JUNE '26"];
-  const THUMBS = [0, 1, 2, 3, 4, 5, 6];
+  const [feed, setFeed] = useState<IGFeed>({ profile: false, count: 0, images: [] });
+
+  useEffect(() => {
+    fetch(`/api/ig-feed?_t=${Date.now()}`, { cache: "no-store" })
+      .then(safeJson)
+      .then((data) => {
+        if (data?.status && Array.isArray(data.images)) {
+          setFeed({ profile: Boolean(data.profile), count: Number(data.count) || 0, images: data.images });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // ponytail: kalau folder ig-testi kosong, sembunyikan card.
+  // Saat token IG Graph siap, cron yang isi folder ini otomatis.
+  if (!feed.images.length) return null;
 
   return (
     <a
@@ -34,7 +61,7 @@ export default function IGTestiPreview() {
             <svg className="h-3.5 w-3.5 shrink-0 fill-primary" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.2 14.6l-3.1-3.1 1.4-1.4 1.7 1.7 4.5-4.5 1.4 1.4-5.9 5.9z" /></svg>
           </div>
           <p className="text-[11.5px] text-ink-muted font-medium truncate">
-            add roamer.id · 72 followers · 7 posts
+            unlocksinyalsolo &middot; {feed.count} testimoni
           </p>
         </div>
         <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary/8 group-hover:bg-primary/12 transition-colors">
@@ -64,11 +91,11 @@ export default function IGTestiPreview() {
       {/* Grid testi */}
       <div className="p-4.5 pt-3">
         <div className="grid grid-cols-4 gap-1.5">
-          {THUMBS.map((i) => (
-            <div key={i} className="aspect-square rounded-xl overflow-hidden bg-canvas">
+          {feed.images.map((src, i) => (
+            <div key={src} className="aspect-square rounded-xl overflow-hidden bg-canvas">
               <img
-                src={`/ig-testi/ig-testi-${i}.jpg`}
-                alt={`Testimoni pelanggan add roamer ${i + 1}`}
+                src={src}
+                alt={`Testimoni pelanggan ${i + 1}`}
                 className="w-full h-full object-cover"
                 loading="lazy"
               />

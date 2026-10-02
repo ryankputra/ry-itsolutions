@@ -15,6 +15,7 @@ import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { ProductReviewsSection } from "@/components/ui/ProductReviewsSection";
 import IGTestiPreview from "@/components/ui/IGTestiPreview";
 import WAGroupPopup from "@/components/ui/WAGroupPopup";
+import WAGroupChip from "@/components/ui/WAGroupChip";
 import { safeJson } from "@/lib/api";
 
 function UnblockImeiContent() {
@@ -1318,10 +1319,10 @@ function UnblockImeiContent() {
 
       </Card>
 
+      <IGTestiPreview />
+
       {/* Shopee-Style Customer Reviews Section (Ulasan Real Pelanggan) */}
       <ProductReviewsSection productId="add-roamer" title="Ulasan Pelanggan Add Roamer" />
-
-      <IGTestiPreview />
 
       <ShopeeVoucherModal
         isOpen={showVoucherModal}
@@ -1359,6 +1360,7 @@ function UnblockImeiContent() {
       />
 
       <WAGroupPopup />
+      <WAGroupChip />
     </div>
   );
 }
