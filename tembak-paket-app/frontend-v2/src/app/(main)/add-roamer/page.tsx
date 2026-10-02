@@ -13,6 +13,8 @@ import { CouponItem } from "@/components/ui/ShopeeVoucherCard";
 import { ShopeeVoucherModal } from "@/components/ui/ShopeeVoucherModal";
 import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { ProductReviewsSection } from "@/components/ui/ProductReviewsSection";
+import IGTestiPreview from "@/components/ui/IGTestiPreview";
+import WAGroupPopup from "@/components/ui/WAGroupPopup";
 import { safeJson } from "@/lib/api";
 
 function UnblockImeiContent() {
@@ -1319,6 +1321,8 @@ function UnblockImeiContent() {
       {/* Shopee-Style Customer Reviews Section (Ulasan Real Pelanggan) */}
       <ProductReviewsSection productId="add-roamer" title="Ulasan Pelanggan Add Roamer" />
 
+      <IGTestiPreview />
+
       <ShopeeVoucherModal
         isOpen={showVoucherModal}
         onClose={() => setShowVoucherModal(false)}
@@ -1353,6 +1357,8 @@ function UnblockImeiContent() {
         recipientLabel="IMEI Target"
         recipientValue={imei}
       />
+
+      <WAGroupPopup />
     </div>
   );
 }

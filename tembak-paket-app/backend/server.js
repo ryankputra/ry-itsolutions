@@ -249,6 +249,25 @@ app.post('/api/admin/whatsapp/test', (req, res, next) => {
     }
 });
 
+// Internal (localhost-only): kirim reminder ulasan ke user yang sudah beli IMEI
+// sukses tapi belum mengulas. Dipakai oleh script admin/cron.
+app.post('/api/internal/review-reminder', async (req, res) => {
+    try {
+        const ip = req.ip || req.socket?.remoteAddress || "";
+        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
+        }
+        const { phone, message } = req.body || {};
+        if (!phone || !message) {
+            return res.status(400).json({ status: false, message: "phone dan message wajib diisi." });
+        }
+        const result = await waBot.sendTextMessage(phone, String(message));
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // 9. Initialize Cron Schedulers
 initSchedulers();
 

@@ -60,8 +60,10 @@ function HistoryContent() {
       const data = await safeJson(res);
       if (data?.status && Array.isArray(data.data)) {
         setHistory(data.data);
+        maybeAutoOpenReview(data.data);
       } else if (data?.status && Array.isArray(data.transactions)) {
         setHistory(data.transactions);
+        maybeAutoOpenReview(data.transactions);
       } else {
         setHistory([]);
       }
@@ -71,6 +73,22 @@ function HistoryContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Link langsung dari WhatsApp reminder: ?ulasan=1 -> buka modal ulasan untuk
+  // transaksi IMEI sukses terakhir yang belum diulas.
+  const maybeAutoOpenReview = (items: any[]) => {
+    try {
+      if (!searchParams.get("ulasan")) return;
+      // Belum login: API user/transactions akan 401 -> arahkan login dulu.
+      if (!items || items.length === 0) return;
+      const target = items.find(
+        (t) =>
+          (t.status === "success" || t.status === "completed") &&
+          (t.service_type === "imei" || t.serviceType === "imei" || !t.service_type)
+      );
+      if (target) setReviewTarget(target);
+    } catch {}
   };
 
   useEffect(() => {
@@ -824,7 +842,7 @@ function HistoryContent() {
         onClose={() => setReviewTarget(null)}
         orderId={reviewTarget?.id}
         productId={reviewTarget?.service_type || reviewTarget?.serviceType || "add-roamer"}
-        variation={reviewTarget?.package_name || reviewTarget?.packageName || "Layanan Official"}
+        variation={reviewTarget?.package_name || reviewTarget?.packageName || "Layanan Add Roamer"}
       />
 
       {/* Invoice Modal */}

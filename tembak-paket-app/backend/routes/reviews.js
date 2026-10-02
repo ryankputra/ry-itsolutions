@@ -12,18 +12,19 @@ router.get('/reviews', async (req, res) => {
     try {
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         const productId = req.query.productId || req.query.serviceType || 'add-roamer';
-        let query = "SELECT * FROM reviews WHERE 1=1";
+        // LEFT JOIN transactions: enrich variation dengan packageName + speed_option asli,
+        // sehingga ulasan tidak pernah menampilkan nama paket yang tidak pernah dijual.
+        let query = `SELECT r.*, t.packageName AS trxPackageName, t.speed_option AS trxSpeed FROM reviews r LEFT JOIN transactions t ON r.orderId = t.id WHERE 1=1`;
         const params = [];
         if (productId && productId !== 'all') {
             if (productId === 'unblock-imei' || productId === 'imei' || productId === 'add-roamer') {
-                query += " AND (productId IN ('unblock-imei', 'imei', 'add-roamer') OR serviceType IN ('unblock-imei', 'imei'))";
+                query += " AND (r.productId IN ('unblock-imei', 'imei', 'add-roamer') AND r.serviceType IN ('unblock-imei', 'imei'))";
             } else {
-                query += " AND (productId = ? OR serviceType = ?)";
+                query += " AND (r.productId = ? OR r.serviceType = ?)";
                 params.push(productId, productId);
             }
         }
-        // Show real customer reviews FIRST (non-seed first), then newest first
-        query += " ORDER BY (CASE WHEN id LIKE 'rev_seed_%' THEN 1 ELSE 0 END) ASC, createdAt DESC";
+        query += " ORDER BY r.createdAt DESC";
 
         const reviewsList = await dbAll(query, params);
 
@@ -35,11 +36,23 @@ router.get('/reviews', async (req, res) => {
             sumRating += Number(r.rating) || 5;
             const star = Math.min(5, Math.max(1, Math.round(r.rating)));
             ratingCounts[star] = (ratingCounts[star] || 0) + 1;
-            let imgs = [];
+            const imgs = [];
             try { imgs = JSON.parse(r.images || '[]'); } catch(e){}
             if (imgs && imgs.length > 0) withPhotosCount++;
+
+            // Enrich variation: pakai packageName + speed_option asli dari transaksi
+            // supaya label selalu akurat (cepat/lambat), tidak bisa salah input user.
+            let finalVariation = r.variation || "";
+            if (r.trxPackageName) {
+                const pkg = String(r.trxPackageName).replace(/\s*\((slow|fast|normal)\)$/i, "").trim();
+                const speed = r.trxSpeed ? String(r.trxSpeed).trim() : "";
+                finalVariation = speed
+                    ? `${pkg} (${speed.charAt(0).toUpperCase()}${speed.slice(1).toLowerCase()})`
+                    : pkg;
+            }
             return {
                 ...r,
+                variation: finalVariation,
                 images: imgs
             };
         });
@@ -70,16 +83,39 @@ router.get('/reviews', async (req, res) => {
 });
 
 // 2. GET /api/reviews/check-eligibility
+// Hanya yang sudah punya transaksi IMEI sukses untuk produk ini yang boleh mengulas.
 router.get('/reviews/check-eligibility', isAuthenticated, async (req, res) => {
     try {
+        const targetProduct = (req.query.productId || req.query.serviceType || 'add-roamer').toString();
+
         const userTrx = await dbAll(
-            `SELECT id, packageName, service_type, createdAt FROM transactions WHERE userId = ? ORDER BY createdAt DESC`,
+            `SELECT t.id, t.packageName, t.service_type, t.speed_option, t.createdAt, t.status
+             FROM transactions t
+             WHERE t.userId = ? AND t.status = 'success' AND t.service_type = 'imei'
+             ORDER BY t.createdAt DESC`,
             [req.session.userId]
         );
 
+        const hasImeiOrder = (userTrx || []).length > 0;
+
+        // Cek apakah user sudah pernah memberi ulasan untuk produk ini
+        const existingReview = await dbGet(
+            `SELECT r.id FROM reviews r
+             WHERE r.userId = ? AND (r.productId = ? OR r.serviceType = 'imei')
+             LIMIT 1`,
+            [req.session.userId, targetProduct]
+        );
+
+        const canReview = hasImeiOrder && !existingReview;
+
         res.json({
             status: true,
-            canReview: true,
+            canReview,
+            reason: !hasImeiOrder
+                ? "Belum ada transaksi Add Roamer yang selesai. Pesan dulu untuk bisa mengulas."
+                : existingReview
+                    ? "Anda sudah pernah memberikan ulasan untuk layanan ini."
+                    : null,
             completedOrders: userTrx || []
         });
     } catch (err) {
@@ -103,10 +139,24 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
             return res.status(401).json({ status: false, message: "User tidak ditemukan. Silakan login ulang." });
         }
 
+        // Validasi server-side: wajib transaksi IMEI sukses, dan belum pernah ulas produk ini.
         const latestTrx = await dbGet(
-            `SELECT id, packageName, createdAt FROM transactions WHERE userId = ? ORDER BY createdAt DESC LIMIT 1`,
+            `SELECT id, packageName, speed_option, createdAt FROM transactions
+             WHERE userId = ? AND status = 'success' AND service_type = 'imei'
+             ORDER BY createdAt DESC LIMIT 1`,
             [req.session.userId]
         );
+        if (!latestTrx) {
+            return res.status(403).json({ status: false, message: "Belum ada transaksi Add Roamer yang selesai. Selesaikan pesanan untuk bisa memberikan ulasan." });
+        }
+
+        const alreadyReviewed = await dbGet(
+            `SELECT id FROM reviews WHERE userId = ? AND (productId = ? OR serviceType = 'imei') LIMIT 1`,
+            [req.session.userId, String(productId || 'add-roamer')]
+        );
+        if (alreadyReviewed) {
+            return res.status(403).json({ status: false, message: "Anda sudah pernah memberikan ulasan untuk layanan ini." });
+        }
 
         const orderCount = await dbGet("SELECT COUNT(*) AS total FROM transactions WHERE userId = ?", [req.session.userId]);
         const userName = userObj.name || userObj.email?.split('@')[0] || 'Pembeli Terverifikasi';
@@ -121,17 +171,21 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
         const reviewId = `rev_${Date.now()}`;
         const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
 
-        const finalVariation = variation || latestTrx?.packageName || 'GARANSI 3 BULAN (MASA AKTIF SINYAL)';
+        // finalVariation selalu dari transaksi asli + speed_option (Slow/Fast)
+        const pkgClean = String(latestTrx.packageName || variation || "Layanan Add Roamer").replace(/\s*\((slow|fast|normal)\)$/i, "").trim();
+        const speedRaw = String(latestTrx.speed_option || "").trim();
+        const speedLabel = speedRaw ? ` (${speedRaw.charAt(0).toUpperCase()}${speedRaw.slice(1).toLowerCase()})` : "";
+        const finalVariation = `${pkgClean}${speedLabel}`;
 
         await dbRun(
             `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
             [reviewId, req.session.userId, userName, userAvatar, orderId || latestTrx?.id || 'order_direct', productId || 'add-roamer', 'imei', finalVariation, Number(rating), comment.trim(), imagesJson, transactionDate, userJoinedAt, userTotalOrders, userRole, new Date().toISOString()]
         );
 
-        // Bonus Reward +500 Koin Ry
+        // Bonus Reward +10 RyPoints
         try {
-            await dbRun("UPDATE users SET coins = coins + 500 WHERE id = ?", [req.session.userId]);
-            await dbRun("INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, claimed_at) VALUES (?, ?, 'review_bonus', 500, ?)", [`clm_${Date.now()}`, req.session.userId, new Date().toISOString()]);
+            await dbRun("UPDATE users SET coins = coins + 10 WHERE id = ?", [req.session.userId]);
+            await dbRun("INSERT INTO user_coin_claims (id, userId, claim_type, coins_amount, claimed_at) VALUES (?, ?, 'review_bonus', 10, ?)", [`clm_${Date.now()}`, req.session.userId, new Date().toISOString()]);
         } catch (e) {}
 
         const newReviewObj = {
@@ -156,7 +210,7 @@ router.post('/reviews', isAuthenticated, async (req, res) => {
 
         res.json({
             status: true,
-            message: "Ulasan Anda berhasil dikirim dan ditampilkan! Bonus +500 Koin Ry telah masuk ke akun Anda.",
+            message: "Ulasan Anda berhasil dikirim dan ditampilkan! Bonus +10 RyPoints telah masuk ke akun Anda.",
             reviewId,
             review: newReviewObj
         });

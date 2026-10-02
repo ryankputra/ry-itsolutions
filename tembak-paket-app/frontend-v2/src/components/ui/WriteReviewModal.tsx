@@ -164,17 +164,9 @@ export function WriteReviewModal({
           {/* Variation Selection */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-ink">Pilihan Layanan / Paket</label>
-            <select
-              value={selectedVariation}
-              onChange={(e) => setSelectedVariation(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:border-primary focus:ring-1 focus:ring-primary outline-none font-medium"
-            >
-              <option value="GARANSI 3 BULAN (MASA AKTIF SINYAL)">GARANSI 3 BULAN (MASA AKTIF SINYAL)</option>
-              <option value="GARANSI 1 TAHUN (MASA AKTIF SINYAL)">GARANSI 1 TAHUN (MASA AKTIF SINYAL)</option>
-              <option value="GARANSI PERMANEN (BEACUKAI RESMI)">GARANSI PERMANEN (BEACUKAI RESMI)</option>
-              <option value="GARANSI 1 BULAN (REGULER)">GARANSI 1 BULAN (REGULER)</option>
-              <option value="CEIR RESMI KEMENPERIN">CEIR RESMI KEMENPERIN</option>
-            </select>
+            <div className="w-full h-10 px-3 flex items-center rounded-xl border border-hairline bg-parchment text-xs text-ink font-medium select-all">
+              {selectedVariation}
+            </div>
           </div>
 
           {/* Comment input */}

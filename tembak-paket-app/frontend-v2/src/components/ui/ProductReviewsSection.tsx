@@ -56,6 +56,7 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
   const [showWriteModal, setShowWriteModal] = useState(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<Review | null>(null);
   const [likedReviewIds, setLikedReviewIds] = useState<string[]>([]);
+  const [canReview, setCanReview] = useState(false);
 
   const fetchReviews = () => {
     setLoading(true);
@@ -106,6 +107,17 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
 
   useEffect(() => { fetchReviews(); }, [productId]);
 
+  useEffect(() => {
+    // Cek eligibility: hanya pembeli IMEI sukses yang belum ulas yang lihat tombol.
+    fetch(`/api/reviews/check-eligibility?productId=${encodeURIComponent(productId)}&_t=${Date.now()}`, {
+      cache: "no-store",
+      credentials: "include"
+    })
+      .then(safeJson)
+      .then((data) => { if (data?.status) setCanReview(Boolean(data.canReview)); })
+      .catch(() => setCanReview(false));
+  }, [productId]);
+
   const handleWriteReviewClick = async () => {
     try {
       const res = await fetch(`/api/reviews/check-eligibility?productId=${encodeURIComponent(productId)}&_t=${Date.now()}`, {
@@ -132,8 +144,14 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
       if (data?.status && data.canReview) {
         return setShowWriteModal(true);
       }
+      // Tidak eligible: tampilkan alasan, JANGAN buka modal.
+      return Swal.fire({
+        title: "Belum Bisa Ulas",
+        text: data?.reason || "Anda harus menyelesaikan transaksi Add Roamer terlebih dahulu untuk memberikan ulasan.",
+        icon: "info",
+        confirmButtonColor: "#0066cc",
+      });
     } catch {}
-    setShowWriteModal(true);
   };
 
   const handleLike = async (id: string) => {
@@ -163,7 +181,9 @@ export function ProductReviewsSection({ productId = "unblock-imei", title = "Ula
             : "Belum ada ulasan"}
         </p>
       </div>
-      <button onClick={handleWriteReviewClick} className="rounded-full bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 shadow-xs transition-colors hover:bg-amber-400">Beri Ulasan (+10 Koin)</button>
+      {canReview && (
+        <button onClick={handleWriteReviewClick} className="rounded-full bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 shadow-xs transition-colors hover:bg-amber-400">Beri Ulasan (+10 Koin)</button>
+      )}
     </div>
     {loading ? <div className="py-6 text-center text-xs text-ink-muted">Memuat ulasan...</div> : !reviews.length ? <div className="rounded-2xl border border-dashed border-hairline bg-parchment/40 p-4 py-8 text-center"><h4 className="text-xs font-bold text-ink">Belum Ada Ulasan Pelanggan</h4></div> : <div className="divide-y divide-hairline">
       {reviews.map((review) => {
