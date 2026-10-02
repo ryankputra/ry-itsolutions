@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
-const IG_DIR = path.join(__dirname, '..', 'public', 'ig-testi');
+const IG_DIR = path.join(__dirname, '..', '..', 'frontend-v2', 'public', 'ig-testi');
 const CACHE_TTL = 5 * 60 * 1000;
 let cache = { at: 0, data: null };
 

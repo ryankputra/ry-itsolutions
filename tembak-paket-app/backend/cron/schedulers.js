@@ -291,12 +291,12 @@ function initSchedulers() {
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
-    // Instagram highlight & story sync — highlight ASLI via session cookie.
-    // ponytail: jalan hanya kalau IG_SESSION + IG_USER_ID ter-set di .env.
-    // Tanpa cookie, cron no-op dan frontend pakai isi folder manual.
+    // Instagram highlight sync — profile publik, no login. Ponytail: jalan
+    // hanya kalau IG_SYNC_ENABLED ter-set di .env. Tanpa env, cron no-op
+    // dan frontend pakai isi folder manual.
     cron.schedule('*/30 * * * *', async () => {
         try {
-            if (!process.env.IG_SESSION || !process.env.IG_USER_ID) return;
+            if (!process.env.IG_SYNC_ENABLED) return;
             const { syncInstagramFeed } = require('../services/igSyncService');
             await syncInstagramFeed();
         } catch (e) {

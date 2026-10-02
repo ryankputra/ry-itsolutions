@@ -106,7 +106,7 @@ export default function IGTestiPreview() {
                 <button
                   key={h.id || h.title}
                   type="button"
-                  onClick={() => setActive(i)}
+                  onClick={() => (h.items?.length ? setActive(i) : h.url && window.open(h.url, "_blank", "noopener,noreferrer"))}
                   className="flex flex-col items-center gap-1.5 shrink-0 w-14 group"
                 >
                   <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-fuchsia-600 p-[2.5px] transition-transform group-active:scale-95">
