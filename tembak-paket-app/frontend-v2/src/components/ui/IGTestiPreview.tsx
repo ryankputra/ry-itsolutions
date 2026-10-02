@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { safeJson } from "@/lib/api";
 
 const IG_URL = "https://www.instagram.com/unlocksinyalsolo";
-const HIGHLIGHTS = ["TESTI SEPT '26", "TESTI AUG'26", "TESTI JULE'26", "TESTI JUNE '26"];
+const FALLBACK_HIGHLIGHTS = ["TESTI SEPT '26", "TESTI AUG'26", "TESTI JULE'26", "TESTI JUNE '26"];
 
 interface IGFeed {
   profile: boolean;
   count: number;
   images: string[];
+  highlights?: { title: string; count: number }[];
 }
 
 export default function IGTestiPreview() {
@@ -27,8 +28,12 @@ export default function IGTestiPreview() {
   }, []);
 
   // ponytail: kalau folder ig-testi kosong, sembunyikan card.
-  // Saat token IG Graph siap, cron yang isi folder ini otomatis.
+  // Cron sync highlight IG yang isi folder ini (butuh IG_GRAPH_TOKEN).
   if (!feed.images.length) return null;
+
+  const highlightNames = feed.highlights?.length
+    ? feed.highlights.map((h) => h.title)
+    : FALLBACK_HIGHLIGHTS;
 
   return (
     <a
@@ -61,7 +66,7 @@ export default function IGTestiPreview() {
             <svg className="h-3.5 w-3.5 shrink-0 fill-primary" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.2 14.6l-3.1-3.1 1.4-1.4 1.7 1.7 4.5-4.5 1.4 1.4-5.9 5.9z" /></svg>
           </div>
           <p className="text-[11.5px] text-ink-muted font-medium truncate">
-            unlocksinyalsolo &middot; {feed.count} testimoni
+            unlocksinyalsolo &middot; {highlightNames.length} highlight testimoni
           </p>
         </div>
         <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary/8 group-hover:bg-primary/12 transition-colors">
@@ -75,7 +80,7 @@ export default function IGTestiPreview() {
       {/* Highlight rings */}
       <div className="px-4 pt-3.5 pb-1">
         <div className="flex gap-3.5 overflow-x-auto no-scrollbar">
-          {HIGHLIGHTS.map((h) => (
+          {highlightNames.map((h) => (
             <div key={h} className="flex flex-col items-center gap-1.5 shrink-0 w-14">
               <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-fuchsia-600 p-[2.5px]">
                 <div className="w-full h-full rounded-full bg-parchment flex items-center justify-center">
@@ -88,14 +93,14 @@ export default function IGTestiPreview() {
         </div>
       </div>
 
-      {/* Grid testi */}
+      {/* Cover highlight testimoni */}
       <div className="p-4.5 pt-3">
         <div className="grid grid-cols-4 gap-1.5">
-          {feed.images.map((src, i) => (
+          {feed.images.slice(0, 4).map((src, i) => (
             <div key={src} className="aspect-square rounded-xl overflow-hidden bg-canvas">
               <img
                 src={src}
-                alt={`Testimoni pelanggan ${i + 1}`}
+                alt={`Cover testimoni ${i + 1}`}
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
@@ -104,7 +109,7 @@ export default function IGTestiPreview() {
         </div>
 
         <div className="flex items-center justify-center gap-1.5 mt-3.5 text-[12px] font-bold text-primary">
-          Lihat ribuan testimoni asli di Instagram
+          Lihat semua testimoni di Instagram
           <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
         </div>
       </div>

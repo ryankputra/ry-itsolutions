@@ -22,9 +22,24 @@ function scanDir() {
                 const nb = parseInt(b.match(/\d+/)[0], 10);
                 return na - nb;
             });
-        return { profile, count: files.length, images: files.map((f) => `/ig-testi/${f}`) };
+
+        // Judul highlight dari metadata cron (kalau ada).
+        let highlights = [];
+        try {
+            const meta = JSON.parse(fs.readFileSync(path.join(IG_DIR, '_meta.json'), 'utf8'));
+            if (Array.isArray(meta)) {
+                highlights = meta.map((m) => ({ title: String(m.title || 'TESTI'), count: Number(m.mediaCount) || 0 }));
+            }
+        } catch {}
+
+        return {
+            profile,
+            count: files.length,
+            images: files.map((f) => `/ig-testi/${f}`),
+            highlights
+        };
     } catch {
-        return { profile: false, count: 0, images: [] };
+        return { profile: false, count: 0, images: [], highlights: [] };
     }
 }
 

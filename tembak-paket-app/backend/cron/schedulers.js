@@ -291,7 +291,7 @@ function initSchedulers() {
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
-    // Instagram feed sync — tarik testimoni terbaru ke public/ig-testi.
+    // Instagram highlight sync — tarik cover testimoni ke public/ig-testi.
     // ponytail: jalan hanya kalau IG_GRAPH_TOKEN ter-set di .env. Tanpa token
     // cron no-op, frontend tetap baca folder manual. Saat token siap, ganti
     // TODO di syncInstagramFeed() dengan fetch graph.facebook.com + simpan file.
