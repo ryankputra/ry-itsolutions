@@ -291,12 +291,12 @@ function initSchedulers() {
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
-    // Instagram highlight & story sync — tarik cover testimoni + story ke public/ig-testi.
-    // ponytail: jalan hanya kalau IG_GRAPH_TOKEN ter-set di .env. Tanpa token
-    // cron no-op, frontend tetap baca folder manual. Sync tiap 30 menit.
+    // Instagram highlight & story sync — highlight ASLI via session cookie.
+    // ponytail: jalan hanya kalau IG_SESSION + IG_USER_ID ter-set di .env.
+    // Tanpa cookie, cron no-op dan frontend pakai isi folder manual.
     cron.schedule('*/30 * * * *', async () => {
         try {
-            if (!process.env.IG_GRAPH_TOKEN || !process.env.IG_USER_ID) return;
+            if (!process.env.IG_SESSION || !process.env.IG_USER_ID) return;
             const { syncInstagramFeed } = require('../services/igSyncService');
             await syncInstagramFeed();
         } catch (e) {

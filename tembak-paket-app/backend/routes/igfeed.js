@@ -7,18 +7,52 @@ const IG_DIR = path.join(__dirname, '..', 'public', 'ig-testi');
 const CACHE_TTL = 5 * 60 * 1000;
 let cache = { at: 0, data: null };
 
-// ponytail: manual upload dulu (taruh file di public/ig-testi).
-// Cron igSyncService yang isi folder ini saat IG_GRAPH_TOKEN ter-set:
-// - ig-testi-N.jpg  = cover highlight (judul TESTI/ULASAN/REVIEW)
-// - ig-story-<id>.jpg = story 24 jam (diarsip permanen, cap 40)
-// Feed post biasa TIDAK ditarik.
+/**
+ * GET /api/ig-feed
+ * Daftar highlight testimoni IG + isinya (untuk lightbox) + stories.
+ *
+ * Sumber: cron igSyncService (session cookie IG). Tanpa IG_SESSION, cron
+ * no-op dan endpoint ini mengembalikan apa adanya di folder ig-testi.
+ *
+ * _meta.json (ditulis cron):
+ * {
+ *   syncedAt,
+ *   highlights: [{ id, title, cover, mediaCount, items: [{url, takenAt}] }],
+ *   stories:    [{ url, takenAt }]
+ * }
+ */
+
+function readMeta() {
+    try {
+        const raw = fs.readFileSync(path.join(IG_DIR, '_meta.json'), 'utf8');
+        const m = JSON.parse(raw);
+        return m && Array.isArray(m.highlights) ? m : null;
+    } catch {
+        return null;
+    }
+}
 
 function scanDir() {
     try {
+        const meta = readMeta();
         const profile = fs.existsSync(path.join(IG_DIR, 'ig-profile.jpg'));
 
-        // Cover highlight: ig-testi-N.jpg (index-based, isi cron).
-        const covers = fs.readdirSync(IG_DIR)
+        // Skema baru (cron cookie): highlight + item penuh dari _meta.json.
+        if (meta) {
+            const highlights = meta.highlights.slice(0, 8);
+            const stories = (meta.stories || []).slice(0, 12);
+            return {
+                profile,
+                syncedAt: meta.syncedAt || null,
+                count: highlights.reduce((n, h) => n + (h.items?.length || 0), 0),
+                images: highlights.flatMap((h) => (h.items || []).map((i) => i.url)),
+                highlights,
+                stories,
+            };
+        }
+
+        // Fallback skema lama (upload manual ig-testi-N.jpg).
+        const files = fs.readdirSync(IG_DIR)
             .filter((f) => /^ig-testi-\d+\.(jpg|jpeg|png|webp)$/i.test(f))
             .sort((a, b) => {
                 const na = parseInt(a.match(/\d+/)[0], 10);
@@ -26,31 +60,17 @@ function scanDir() {
                 return na - nb;
             });
 
-        // Stories: ig-story-<id>.jpg, urut termuda.
-        const stories = fs.readdirSync(IG_DIR)
-            .filter((f) => /^ig-story-.*\.jpg$/i.test(f))
-            .map((f) => {
-                const st = fs.statSync(path.join(IG_DIR, f));
-                return { url: `/ig-testi/${f}`, timestamp: st.mtime.toISOString() };
-            })
-            .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-
-        // Metadata cron (judul highlight + story terarsip).
-        let meta = null;
-        try { meta = JSON.parse(fs.readFileSync(path.join(IG_DIR, '_meta.json'), 'utf8')); } catch {}
-
-        const highlights = Array.isArray(meta?.highlights) && meta.highlights.length
-            ? meta.highlights
-            : covers.map((f, i) => ({ title: `TESTI ${i + 1}`, cover: `/ig-testi/${f}` }));
-
         return {
             profile,
-            count: covers.length + stories.length,
-            images: covers.map((f) => `/ig-testi/${f}`),
-            highlights,
-            stories: Array.isArray(meta?.stories) && meta.stories.length
-                ? meta.stories.slice(0, 12)
-                : stories.slice(0, 12)
+            syncedAt: null,
+            count: files.length,
+            images: files.map((f) => `/ig-testi/${f}`),
+            highlights: files.map((f, i) => ({
+                title: `TESTI ${i + 1}`,
+                cover: `/ig-testi/${f}`,
+                items: [{ url: `/ig-testi/${f}` }],
+            })),
+            stories: [],
         };
     } catch {
         return { profile: false, count: 0, images: [], highlights: [], stories: [] };
@@ -66,6 +86,20 @@ router.get('/ig-feed', async (req, res) => {
         const data = scanDir();
         cache = { at: Date.now(), data };
         return res.json({ status: true, ...data });
+    } catch (err) {
+        return res.status(500).json({ status: false, message: err.message });
+    }
+});
+
+// POST /api/ig-feed/sync -- jalankan sync sekarang (admin manual).
+// ponytail: tanpa auth karena belum punya skema admin global; endpoint hanya
+// memicu sync (baca-only ke IG). Tambah middleware auth kalau sudah ada.
+router.post('/ig-feed/sync', async (req, res) => {
+    try {
+        cache = { at: 0, data: null };
+        const { syncInstagramFeed } = require('../services/igSyncService');
+        await syncInstagramFeed();
+        return res.json({ status: true, data: scanDir() });
     } catch (err) {
         return res.status(500).json({ status: false, message: err.message });
     }

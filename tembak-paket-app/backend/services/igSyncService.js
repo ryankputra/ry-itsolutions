@@ -1,23 +1,29 @@
 /**
- * Instagram Highlight & Story Sync (Testimoni)
- * Tarik COVER highlight + story IG yang judulnya "TESTI/ULASAN/REVIEW"
- * ke public/ig-testi. Feed post biasa TIDAK disentuh.
+ * Instagram Highlight Sync (Testimoni) — via session cookie
  *
- * Kenapa highlight, bukan feed: testimoni order via WA diposting sebagai
- * story lalu dipinning ke highlight. Post feed biasa bukan testimoni.
+ * Tarik highlight ASLI IG (judul + cover + SEMUA isi story) lewat internal
+ * web API yang dipakai situs viewer. Feed post biasa TIDAK disentuh.
  *
- * Setup (semua dari Meta for Developers):
- * 1. Buat app di https://developers.facebook.com -> tipe "Business".
- * 2. Tambah produk "Instagram Graph API".
- * 3. Dapatkan IG_USER_ID: buka Graph API Explorer, pilih aplikasi, lalu
- *    GET /me/accounts -> ambil id milik akun IG bisnis (bukan page id).
- * 4. Buat long-lived token: GET /oauth/access_token?grant_type=fb_exchange_token
- *    &client_token=<APP_TOKEN> (60 hari, perlu diperpanjang).
- * 5. Simpan di backend/.env: IG_GRAPH_TOKEN, IG_USER_ID.
+ * Kenapa bukan Graph API: Graph Meta tidak punya endpoint /highlights.
+ * Yang ada cuma /stories (24 jam) + /media (feed). Highlight asli hanya
+ * lewat instagram.com/api/v1/highlights/{uid}/highlights_tray/.
  *
- * Limit: IG Graph API hanya untuk akun IG Business/Creator, bukan personal.
- * Field cover_media_url perlu izin instagram_manage_insights — kalau 404,
- * ganti field jadi 'media{id,media_url}' lalu ambil elemen pertama.
+ * Setup:
+ * 1. Login instagram.com di browser (Chrome/Firefox), profil unlocksinyalsolo.
+ * 2. DevTools (F12) -> Application/Storage -> Cookies -> https://www.instagram.com
+ * 3. Copy nilai "sessionid" (string panjang).
+ * 4. Cari IG user id: buka https://www.instagram.com/unlocksinyalsolo/?__a=1
+ *    saat login, atau cari "logging_page_id" / "user_id" di source profile.
+ * 5. Simpan di backend/.env: IG_SESSION=..., IG_USER_ID=...
+ *
+ * Cookie kadaluarsa. Kalau sync mulai gagal (401/login_required), ulangi
+ * langkah 1-3 dan ganti IG_SESSION.
+ *
+ * Rate limit: sync tiap 30 menit aman. IG internal API batas kasar ~200
+ * request/jam per session.
+ *
+ * Keamanan: IG_SESSION = kredensial. Folder backend/.env harus 600 dan
+ * JANGAN pernah di-commit (sudah di .gitignore).
  */
 
 const fs = require('fs');
@@ -25,109 +31,200 @@ const path = require('path');
 const axios = require('axios');
 
 const IG_DIR = path.join(__dirname, '..', 'public', 'ig-testi');
-const MAX_MEDIA = 12;
+const MAX_HIGHLIGHTS = 8;
+const MAX_ITEMS_PER_HIGHLIGHT = 30;
 const MAX_STORY_ARCHIVE = 40;
 
+// User-agent desktop; IG menolak request tanpa UA yang masuk akal.
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+    + '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+function client(cookie) {
+    return axios.create({
+        baseURL: 'https://www.instagram.com/api/v1',
+        timeout: 20000,
+        headers: {
+            'User-Agent': UA,
+            'x-ig-app-id': '936619743392459', // web app id publik IG
+            cookie: `sessionid=${cookie}`,
+            accept: 'application/json',
+        },
+    });
+}
+
+// Ambil URL gambar kualitas terbaik dari item story.
+function imageUrl(item) {
+    const v2 = item.image_versions2?.candidates || [];
+    const best = v2
+        .filter((c) => c.width && c.height)
+        .sort((a, b) => (b.width * b.height) - (a.width * a.height))[0];
+    return best?.url || item.thumbnail_url || null;
+}
+
+async function download(url, target) {
+    if (fs.existsSync(target)) return true;
+    try {
+        const res = await axios.get(url, {
+            responseType: 'arraybuffer',
+            timeout: 20000,
+            headers: { 'User-Agent': UA },
+            maxRedirects: 5,
+        });
+        fs.writeFileSync(target, Buffer.from(res.data));
+        return true;
+    } catch (e) {
+        console.error(`[IgSync] gagal unduh ${path.basename(target)}:`, e.message);
+        return false;
+    }
+}
+
+function tsToISO(ts) {
+    const n = Number(ts);
+    return Number.isFinite(n) ? new Date(n * 1000).toISOString() : null;
+}
+
 async function syncInstagramFeed() {
-    const token = process.env.IG_GRAPH_TOKEN;
+    const cookie = process.env.IG_SESSION;
     const userId = process.env.IG_USER_ID;
-    if (!token || !userId) return;
+    if (!cookie || !userId) return;
 
     fs.mkdirSync(IG_DIR, { recursive: true });
+    const api = client(cookie);
 
-    // 1. Highlight (album story yang di-pin). Filter judul testimoni.
-    // ponytail: Graph API tidak beri cover_media_url langsung di /highlights;
-    // kalau field itu 404, fallback ambil gambar pertama dari tiap highlight.
-    const hlRes = await axios.get(`https://graph.facebook.com/v21.0/${userId}/highlights`, {
-        params: { fields: 'id,title,cover_media_url,media_count', limit: 25, access_token: token },
-        timeout: 15000,
-    }).catch((e) => {
-        console.error('[IgSync] /highlights gagal:', e.message);
-        return { data: { data: [] } };
-    });
+    // 1. Highlight tray: judul asli + cover + id album.
+    let tray = [];
+    try {
+        const res = await api.get(`/highlights/${userId}/highlights_tray/`, {
+            params: { include_avatars: true },
+        });
+        tray = res.data?.items || [];
+    } catch (e) {
+        const code = e.response?.status;
+        const body = e.response?.data && JSON.stringify(e.response.data).slice(0, 140);
+        console.error(`[IgSync] highlights_tray gagal (${code}):`, e.message, body);
+        return; // cookie kadaluarsa atau IP diblok — jangan lanjut
+    }
 
-    const highlights = (hlRes.data?.data || [])
-        .filter((h) => h.title && /testi|ulasan|review/i.test(h.title))
-        .slice(0, MAX_MEDIA);
+    // Hanya highlight testimoni (judul mengandung testi/ulasan/review).
+    const highlights = tray
+        .filter((h) => h.title && /testi|ulasan|review/i.test(String(h.title)))
+        .slice(0, MAX_HIGHLIGHTS);
 
+    if (!highlights.length) {
+        console.log('[IgSync] tidak ada highlight testimoni, sync dihentikan.');
+        return;
+    }
+
+    // Bersihkan highlight lama: file ig-hl-*.jpg + ig-testi-*.jpg (skema lama).
+    for (const f of fs.readdirSync(IG_DIR)) {
+        if (/^ig-(hl|testi)-/.test(f)) fs.unlinkSync(path.join(IG_DIR, f));
+    }
+
+    // 2. Untuk tiap highlight, tarik ISI story lengkap (bisa untuk lightbox).
+    const metaHighlights = [];
     for (const [index, h] of highlights.entries()) {
-        if (!h.cover_media_url) continue;
-        try {
-            const img = await axios.get(h.cover_media_url, { responseType: 'arraybuffer', timeout: 15000 });
-            fs.writeFileSync(path.join(IG_DIR, `ig-testi-${index}.jpg`), Buffer.from(img.data));
-        } catch (e) {
-            console.error(`[IgSync] gagal unduh cover ${h.id}:`, e.message);
+        const hid = String(h.id).replace('highlight:', '');
+        const prefix = `ig-hl-${index}`;
+
+        const coverUrl = h.cover_media?.cropped_image_version?.url
+            || h.cover_media?.image_version?.url
+            || null;
+
+        const entry = {
+            id: hid,
+            title: String(h.title).slice(0, 40),
+            cover: coverUrl ? `/ig-testi/${prefix}-cover.jpg` : null,
+            mediaCount: h.media_count || 0,
+            items: [],
+        };
+
+        if (coverUrl) {
+            await download(coverUrl, path.join(IG_DIR, `${prefix}-cover.jpg`));
         }
-    }
 
-    // Hapus cover highlight sisa kalau jumlah baru < jumlah lama.
-    const remainingHl = fs.readdirSync(IG_DIR).filter((f) => /^ig-testi-\d+\.jpg$/.test(f));
-    for (const f of remainingHl) {
-        const n = parseInt(f.match(/\d+/)[0], 10);
-        if (n >= highlights.length) fs.unlinkSync(path.join(IG_DIR, f));
-    }
-
-    // 2. Stories aktif (24 jam). Disimpan permanen, id media jadi nama file
-    // supaya story lama tidak hilang saat sinkron ulang. Cap MAX_MEDIA terbaru.
-    const stRes = await axios.get(`https://graph.facebook.com/v21.0/${userId}/stories`, {
-        params: { fields: 'id,media_type,media_url,timestamp', limit: 50, access_token: token },
-        timeout: 15000,
-    }).catch((e) => {
-        console.error('[IgSync] /stories gagal:', e.message);
-        return { data: { data: [] } };
-    });
-
-    const stories = (stRes.data?.data || [])
-        .filter((s) => s.media_type === 'IMAGE' && s.media_url)
-        .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
-        .slice(0, MAX_MEDIA);
-
-    for (const s of stories) {
-        const target = path.join(IG_DIR, `ig-story-${s.id}.jpg`);
-        if (fs.existsSync(target)) continue; // sudah pernah diunduh
+        // Isi highlight: /highlights/{hid}/feed.
         try {
-            const img = await axios.get(s.media_url, { responseType: 'arraybuffer', timeout: 15000 });
-            fs.writeFileSync(target, Buffer.from(img.data));
+            const res = await api.get(`/highlights/${hid}/feed/`, {
+                params: { count: MAX_ITEMS_PER_HIGHLIGHT },
+            });
+            const items = res.data?.items || [];
+
+            for (const [i, item] of items.entries()) {
+                // Lewati video: hanya simpan screenshot/thumbnail.
+                if (item.media_type === 2) continue;
+                const url = imageUrl(item);
+                if (!url) continue;
+
+                const file = `${prefix}-${String(i).padStart(2, '0')}.jpg`;
+                const ok = await download(url, path.join(IG_DIR, file));
+                if (ok) {
+                    entry.items.push({
+                        url: `/ig-testi/${file}`,
+                        takenAt: tsToISO(item.taken_at),
+                    });
+                }
+            }
         } catch (e) {
-            console.error(`[IgSync] gagal unduh story ${s.id}:`, e.message);
+            console.error(`[IgSync] feed highlight ${hid} gagal:`, e.message);
         }
+
+        metaHighlights.push(entry);
     }
 
-    // Bentrok nama file lama (index-based) — hapus pola ig-story-NN.jpg lawas.
-    for (const f of fs.readdirSync(IG_DIR)) {
-        if (/^ig-story-\d+\.jpg$/.test(f)) fs.unlinkSync(path.join(IG_DIR, f));
+    // 3. Stories aktif (24 jam), supaya testimoni terbaru tetap tampil walau
+    //    belum dipinning ke highlight.
+    const storyEntries = [];
+    try {
+        const res = await api.get(`/feed/user/${userId}/story/`);
+        const items = res.data?.reel?.items || res.data?.items || [];
+
+        for (const item of items) {
+            if (item.media_type === 2) continue; // video
+            const url = imageUrl(item);
+            if (!url) continue;
+
+            const file = `ig-story-${item.id}.jpg`;
+            const ok = await download(url, path.join(IG_DIR, file));
+            if (ok) {
+                storyEntries.push({
+                    url: `/ig-testi/${file}`,
+                    takenAt: tsToISO(item.taken_at),
+                });
+            }
+        }
+    } catch (e) {
+        // Story 24 jam opsional — jangan gagalkan sync highlight.
+        console.error('[IgSync] story feed gagal:', e.message);
     }
 
-    // Tulus metadata: judul highlight + daftar story (nama file + umur).
-    const storyFiles = fs.readdirSync(IG_DIR)
+    // Hapus story arsip di luar cap (termuda dipertahankan).
+    const allStories = fs.readdirSync(IG_DIR)
         .filter((f) => /^ig-story-.*\.jpg$/.test(f))
-        .map((f) => {
-            const st = fs.statSync(path.join(IG_DIR, f));
-            return { url: `/ig-testi/${f}`, at: st.mtime.toISOString() };
-        })
-        .sort((a, b) => b.at.localeCompare(a.at))
-        .slice(0, MAX_STORY_ARCHIVE);
+        .map((f) => ({ f, at: fs.statSync(path.join(IG_DIR, f)).mtime.toISOString() }))
+        .sort((a, b) => b.at.localeCompare(a.at));
 
-    // Hapus story arsip lama di luar cap.
-    for (const f of fs.readdirSync(IG_DIR)) {
-        if (!/^ig-story-.*\.jpg$/.test(f)) continue;
-        const keep = storyFiles.some((s) => s.url === `/ig-testi/${f}`);
-        if (!keep) fs.unlinkSync(path.join(IG_DIR, f));
+    for (const s of allStories.slice(MAX_STORY_ARCHIVE)) {
+        fs.unlinkSync(path.join(IG_DIR, s.f));
     }
 
-    fs.writeFileSync(
-        path.join(IG_DIR, '_meta.json'),
-        JSON.stringify({
-            highlights: highlights.map((h, index) => ({
-                title: String(h.title).slice(0, 40),
-                cover: `/ig-testi/ig-testi-${index}.jpg`,
-                mediaCount: h.media_count,
-            })),
-            stories: storyFiles.map((s) => ({ url: s.url, timestamp: s.at })),
-        }, null, 2)
-    );
+    // 4. Tulis metadata: judul asli + cover + item penuh tiap highlight.
+    const meta = {
+        syncedAt: new Date().toISOString(),
+        highlights: metaHighlights,
+        stories: storyEntries
+            .concat(allStories.slice(0, MAX_STORY_ARCHIVE).map((s) => ({
+                url: `/ig-testi/${s.f}`,
+                takenAt: null, // mtime, bukan taken_at asli
+            })))
+            .filter((v, i, arr) => arr.findIndex((x) => x.url === v.url) === i)
+            .slice(0, MAX_STORY_ARCHIVE),
+    };
 
-    console.log(`[IgSync] ${highlights.length} highlight + ${storyFiles.length} story tesinkron.`);
+    fs.writeFileSync(path.join(IG_DIR, '_meta.json'), JSON.stringify(meta, null, 2));
+
+    const totalItems = metaHighlights.reduce((n, h) => n + h.items.length, 0);
+    console.log(`[IgSync] ${metaHighlights.length} highlight (${totalItems} item) + `
+        + `${meta.stories.length} story tersinkron.`);
 }
 
 module.exports = { syncInstagramFeed };
