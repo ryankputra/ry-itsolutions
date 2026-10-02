@@ -54,7 +54,7 @@ export default function IGTestiPreview() {
 
   // ponytail: bila folder ig-testi kosong (cron belum jalan), sembunyikan card.
   const totalItems = feed.highlights?.reduce((n, h) => n + (h.items?.length || 0), 0) || 0;
-  if (!feed.images.length && !feed.stories?.length) return null;
+  if (!feed.images.length && !feed.stories?.length && !feed.highlights?.length) return null;
 
   const storyList = feed.stories ?? [];
   const highlights = feed.highlights ?? [];
