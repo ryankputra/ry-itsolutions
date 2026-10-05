@@ -310,6 +310,19 @@ function initSchedulers() {
             console.error('[Scheduler][CeirgoPoll] Error:', e.message);
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
+    // Instagram highlight sync — profile publik, no login. Ponytail: jalan
+    // hanya kalau IG_SYNC_ENABLED ter-set di .env. Tanpa env, cron no-op
+    // dan frontend pakai isi folder manual.
+    cron.schedule('*/30 * * * *', async () => {
+        try {
+            if (!process.env.IG_SYNC_ENABLED) return;
+            const { syncInstagramFeed } = require('../services/igSyncService');
+            await syncInstagramFeed();
+        } catch (e) {
+            console.error('[Scheduler][IgSync] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
 }
 
 module.exports = {

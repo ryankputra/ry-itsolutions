@@ -56,7 +56,7 @@ router.post(['/deploy', '/webhook/deploy'], (req, res) => {
         console.log(`[WEBHOOK_DEPLOY] Working Directory: ${repoRoot}`);
         console.log(`==================================================`);
 
-        const deployCmd = `git fetch --all && git reset --hard origin/main && (npm --prefix tembak-paket-app/backend install --omit=dev --no-audit || npm --prefix backend install --omit=dev --no-audit || true) && (pm2 restart all || pm2 restart frontend backend)`;
+        const deployCmd = `git -C "${repoRoot}" pull && pm2 restart frontend || pm2 restart all`;
 
         exec(deployCmd, { cwd: repoRoot, shell: true }, (err, stdout, stderr) => {
             if (err) {
@@ -111,7 +111,7 @@ router.all(["/test-admin-wa", "/webhook/test-admin-wa"], async (req, res) => {
 
             `*TEST 2: REGISTRASI PENGGUNA BARU (PENDING)*\n──────────────────────\n*Nama:* Pelanggan Test (Manual)\n*Email:* test.manual@ry-itsolutions.web.id\n*Metode:* Form Registrasi Web\n*Waktu:* ${timeStr}\n──────────────────────\nHarap tinjau & setujui akun ini di Panel Admin:\nhttps://ry-itsolutionts.web.id/admin`,
 
-            `*TEST 3: PESANAN BARU MASUK*\n──────────────────────\n*Order ID:* \`RY-TEST-2026\`\n*Pelanggan:* Toko Ryan Pratama\n*Layanan:* Unblock IMEI 3 Bulan (All Operator)\n*IMEI:* \`354892018492019\`\n*Total Biaya:* Rp 150.000\n*Kecepatan:* Fast (1-3 Jam)\n──────────────────────\n*CARA CEPAT PROSES (BALAS PESAN INI):*\n• Ketik *1* atau *.proses* -> Mulai proses\n• Ketik *2* atau *.sukses* -> Selesaikan\n• Ketik *3* atau *.gagal* -> Tolak & refund\n──────────────────────`
+            `*TEST 3: PESANAN BARU MASUK*\n──────────────────────\n*Order ID:* \`RY-TEST-2026\`\n*Pelanggan:* Toko Ryan Pratama\n*Layanan:* Add Roamer 3 Bulan (All Operator)\n*IMEI:* \`354892018492019\`\n*Total Biaya:* Rp 150.000\n*Kecepatan:* Fast (1-3 Jam)\n──────────────────────\n*CARA CEPAT PROSES (BALAS PESAN INI):*\n• Ketik *1* atau *.proses* -> Mulai proses\n• Ketik *2* atau *.sukses* -> Selesaikan\n• Ketik *3* atau *.gagal* -> Tolak & refund\n──────────────────────`
         ];
 
         const results = [];

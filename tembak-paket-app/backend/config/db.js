@@ -224,57 +224,9 @@ async function initializeDatabase() {
             try { await dbRun("ALTER TABLE reviews ADD COLUMN userTotalOrders INTEGER DEFAULT 1"); } catch(e){}
             try { await dbRun("ALTER TABLE reviews ADD COLUMN userRole TEXT DEFAULT 'buyer'"); } catch(e){}
 
-            // Seed Reviews safely
-            try {
-                const seedReviews = [
-                    ["Rahul Pramudia", 14, "Reseller VIP", 5, "Proses kurang dari 3 jam, sinyal Telkomsel 4G langsung aktif di iPhone 13 Pro Inter. CS juga responsif.", 8, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
-                    ["Dika Store Official", 28, "Reseller VIP", 5, "Sudah beberapa unit untuk stok konter, semua masuk jaringan dengan aman. Prosesnya jelas dan mudah dipantau.", 5, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
-                    ["Bintang Cellular Surabaya", 35, "Konter Mitra", 5, "Unit pelanggan kembali dapat sinyal 5G tanpa pengaturan tambahan. Cocok untuk kebutuhan konter.", 12, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
-                    ["Hendra Wijaya", 9, "Pembeli Terverifikasi", 5, "iPhone 14 Pro Max saya langsung mendeteksi Telkomsel 5G. Detail garansi juga diterima dengan rapi.", 3, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
-                    ["Rizky Maulana", 4, "Pembeli Terverifikasi", 5, "Sinyal XL aktif setelah proses selesai. Admin menjelaskan estimasi dari awal sehingga tidak bingung.", 4, "GARANSI 1 BULAN (MASA AKTIF SINYAL)"],
-                    ["Nadia Putri", 7, "Pembeli Terverifikasi", 5, "Samsung Inter berhasil dapat jaringan Indosat. Bukti transaksi dan masa garansi sudah sesuai pesanan.", 6, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
-                    ["Amanah Phone", 18, "Reseller VIP", 5, "Untuk unit iPhone eks luar negeri, jaringan langsung terbaca setelah selesai. Pelayanan stabil untuk reseller.", 9, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
-                    ["Fajar Setiawan", 2, "Pembeli Terverifikasi", 5, "Order pertama aman, SIM Telkomsel langsung terdaftar dan panggilan normal.", 2, "GARANSI 1 BULAN (MASA AKTIF SINYAL)"],
-                    ["Laras Mobile", 23, "Konter Mitra", 5, "Pengerjaan beberapa unit rapi dan statusnya mudah dicek. Sinyal operator lokal langsung muncul.", 11, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
-                    ["Yoga Pratama", 8, "Pembeli Terverifikasi", 5, "Tidak perlu setting APN, kartu XL dan Axis langsung bisa dipakai seperti biasa.", 5, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
-                    ["Kirana Cell", 12, "Reseller VIP", 5, "Layanan membantu untuk stok iPhone Inter. Estimasi sesuai dan sinyal kembali aktif.", 7, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
-                    ["Bagas Putra", 3, "Pembeli Terverifikasi", 5, "Prosesnya jelas dan hasilnya sesuai. Kartu Telkomsel bisa internet dan telepon normal.", 3, "GARANSI 1 BULAN (MASA AKTIF SINYAL)"],
-                    ["Sumber Jaya Gadget", 31, "Konter Mitra", 5, "Sudah cocok untuk kebutuhan konter, update pengerjaan konsisten dan tidak ada kendala sinyal setelah aktif.", 10, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
-                    ["Dewi Anggraini", 5, "Pembeli Terverifikasi", 4, "Proses agak lama dikit jam 8 malam tp sinyal tetep aman. Setelah selesai Telkomsel langsung aktif.", 4, "GARANSI 2 BULAN (MASA AKTIF SINYAL)"],
-                    ["Rama Cellular", 16, "Reseller VIP", 4.5, "Hasil sinyal aman dan sesuai pesanan. Waktu proses sedikit melewati perkiraan, tetapi admin tetap memberi pembaruan.", 6, "GARANSI 3 BULAN (MASA AKTIF SINYAL)"],
-                ];
-                const sampleReviews = seedReviews.map(([userName, userTotalOrders, userRole, rating, comment, likesCount, variation], index) => {
-                    const date = new Date(Date.now() - 86400000 * (index + 1)).toISOString();
-                    return {
-                        id: `rev_seed_${index + 1}`,
-                        userId: `usr_seed_${index + 1}`,
-                        userName,
-                        userAvatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}&backgroundColor=2563eb&textColor=ffffff`,
-                        orderId: `trx_seed_${index + 1}`,
-                        productId: "unblock-imei",
-                        serviceType: "imei",
-                        variation,
-                        rating,
-                        comment,
-                        images: JSON.stringify([]),
-                        likesCount,
-                        transactionDate: date,
-                        userJoinedAt: new Date(Date.UTC(2026, 0, index + 2)).toISOString(),
-                        userTotalOrders,
-                        userRole,
-                        createdAt: date,
-                    };
-                });
-                await dbRun("DELETE FROM reviews WHERE userId LIKE 'usr_seed%'");
-                for (const r of sampleReviews) {
-                    await dbRun("INSERT OR IGNORE INTO users (id, name, email, password, role, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
-                        [r.userId, r.userName, `${r.userId}@customer.local`, 'seed_pass', 'user', r.userJoinedAt]);
-                    await dbRun(
-                        `INSERT OR REPLACE INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [r.id, r.userId, r.userName, r.userAvatar, r.orderId, r.productId, r.serviceType, r.variation, r.rating, r.comment, r.images, r.likesCount, r.transactionDate, r.userJoinedAt, r.userTotalOrders, r.userRole, r.createdAt]
-                    );
-                }
-            } catch (e) { console.error("Error seeding reviews:", e); }
+            // NOTE: Review seeding dihapus. Ulasan palsu (trx_seed_N, usr_seed_N,
+            // timestamp 1/hari) justru mengikis kepercayaan. Hanya tampilkan ulasan asli.
+            try { await dbRun("DELETE FROM reviews WHERE userId LIKE 'usr_seed%'"); } catch (e) {}
 
             try {
                 await dbRun(`ALTER TABLE packages ADD COLUMN position INTEGER DEFAULT 0`);

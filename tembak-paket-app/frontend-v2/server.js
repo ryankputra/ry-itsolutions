@@ -1,5 +1,7 @@
 const { createServer } = require('http');
 const { parse } = require('url');
+const fs = require('fs');
+const path = require('path');
 const next = require('next');
 
 const dev = false;
@@ -8,10 +10,32 @@ const port = parseInt(process.env.PORT || '3005', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
+// Next 16 enumerates public/ once at boot; igSyncService rewrites /ig-testi/hl-*.jpg
+// every 30 min, so those files must be served straight from disk, not by Next.
+const IG_TESTI_DIR = path.join(__dirname, 'public', 'ig-testi');
+const IG_TESTI_PREFIX = '/ig-testi/';
+const MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json' };
+
+function serveIgTesti(req, res, pathname) {
+  const rel = decodeURIComponent(pathname.slice(IG_TESTI_PREFIX.length));
+  const file = path.join(IG_TESTI_DIR, rel);
+  if (!file.startsWith(IG_TESTI_DIR + path.sep)) { res.statusCode = 403; return res.end('Forbidden'); }
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) { res.statusCode = 404; return res.end('Not found'); }
+    res.statusCode = 200;
+    res.setHeader('Content-Type', MIME[path.extname(file).toLowerCase()] || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    fs.createReadStream(file).pipe(res);
+  });
+}
+
 app.prepare().then(() => {
   createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
+      if (parsedUrl.pathname.startsWith(IG_TESTI_PREFIX) && (req.method === 'GET' || req.method === 'HEAD')) {
+        return serveIgTesti(req, res, parsedUrl.pathname);
+      }
       await handle(req, res, parsedUrl);
     } catch (err) {
       console.error('Error handling request:', req.url, err);

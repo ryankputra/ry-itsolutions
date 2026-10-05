@@ -402,7 +402,7 @@ async function handleTelegramMessage(msg) {
 
         await dbRun(
             `INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [reviewId, dummyUserId, nameClean, avatarClean, `trx_tg_${Date.now()}`, 'unblock-imei', 'imei', variation, ratingNum, comment, imagesJson, 5, new Date().toISOString(), '2026-01-15T08:30:00.000Z', 14, 'Pembeli Terverifikasi', new Date().toISOString()]
+            [reviewId, dummyUserId, nameClean, avatarClean, `trx_tg_${Date.now()}`, 'add-roamer', 'imei', variation, ratingNum, comment, imagesJson, 5, new Date().toISOString(), '2026-01-15T08:30:00.000Z', 14, 'Pembeli Terverifikasi', new Date().toISOString()]
         );
 
         const successButtons = [

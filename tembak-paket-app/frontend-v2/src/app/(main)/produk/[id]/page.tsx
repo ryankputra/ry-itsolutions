@@ -7,7 +7,7 @@ export default function DynamicProductPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const router = useRouter();
 
-  let title = "Unblock IMEI Inter Buka Sinyal All Operator (Garansi Masa Aktif Sinyal Max 3 Bulan)";
+  let title = "Add Roamer Inter Add Roamer All Operator (Garansi Masa Aktif Sinyal Max 3 Bulan)";
   let serviceType = "imei";
   let price = 150000;
   let variations = [
@@ -38,8 +38,8 @@ export default function DynamicProductPage({ params }: { params: Promise<{ id: s
   const handleCheckout = () => {
     if (serviceType === "ceir" || id === "cek-ceir") {
       router.push("/cek-ceir");
-    } else if (serviceType === "imei" || id === "unblock-imei") {
-      router.push("/unblock-imei");
+    } else if (serviceType === "imei" || id === "add-roamer") {
+      router.push("/add-roamer");
     } else {
       router.push("/beli-paket");
     }

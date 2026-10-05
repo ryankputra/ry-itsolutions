@@ -9,7 +9,7 @@ import { Suspense } from "react";
 import Script from "next/script";
 import "./globals.css";
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "GANTI_DENGAN_GOOGLE_CLIENT_ID_ANDA";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "242207995436-frlr9hd1vn1fateamv3hst9u5a6601kh.apps.googleusercontent.com";
 
 const inter = Inter({
   subsets: ["latin"],

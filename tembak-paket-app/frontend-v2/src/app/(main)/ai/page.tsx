@@ -111,7 +111,7 @@ const QUICK_PROMPTS = [
   { label: '📊 Berapa Pengeluaran Saya?', query: 'Berapa total pengeluaran saya selama ini dan riwayat pesanan saya?' },
   { label: '📦 Total Order Saya', query: 'Berapa total order yang sudah saya lakukan dan berapa yang sukses?' },
   { label: '📡 Kenapa Sinyal HP Hilang?', query: 'Jelaskan kenapa sinyal iPhone atau smartphone luar negeri bisa hilang atau terkena begal?' },
-  { label: '📱 Info Buka IMEI (3 Bulan)', query: 'Berapa harga dan ketentuan buka blokir IMEI 3 Bulan?' },
+  { label: '📱 Info Add Roamer (3 Bulan)', query: 'Berapa harga dan ketentuan add roamer IMEI 3 Bulan?' },
   { label: '⚡ Gateway GoPay & QRIS', query: 'Jelaskan fitur Payment Gateway GoPay & QRIS SaaS serta biaya aktivasinya' },
   { label: '🎟️ Voucher & Promo Aktif', query: 'Apakah ada kode kupon diskon atau voucher promo yang aktif saat ini?' },
   { label: '🔋 Tips Rawat Battery Health', query: 'Bagaimana tips merawat kesehatan baterai (battery health) iPhone agar awet?' },
@@ -213,7 +213,7 @@ export default function AiChatPage() {
 Saya dilengkapi kemampuan cerdas dan terhubung langsung ke **database sistem** secara *real-time*. Anda dapat menanyakan apapun kepada saya:
 
 • 📊 **Statistik Akun Anda**: Menghitung total pengeluaran belanja, jumlah order sukses, saldo RyPay, dan poin.
-• 📱 **Layanan Unblock IMEI All Operator**: Tarif paket 3 Bulan (mulai ${formatRupiah(imei3Bln)}), cek garansi, dan syarat teknis.
+• 📱 **Layanan Add Roamer All Operator**: Tarif paket 3 Bulan (mulai ${formatRupiah(imei3Bln)}), cek garansi, dan syarat teknis.
 • ⚡ **Payment Gateway GoPay & Dynamic QRIS SaaS**: Biaya aktivasi Rp 35.000, 0% fee, dan integrasi API webhook.
 • 💡 **Wawasan Teknologi & Smartphone**: Cara rawat battery health, penyebab sinyal hilang/begal, cek IMEI, dan tips beli HP second.
 • 🧮 **Kalkulator Cerdas**: Hitung cepat biaya, diskon promo, atau operasi matematika.
@@ -223,7 +223,7 @@ Silakan pilih topik cepat di bawah atau tanyakan apapun yang ingin Anda ketahui!
       timestamp: formatTime(new Date()),
       actions: [
         { label: '📊 Cek Pengeluaran Saya', href: '/history' },
-        { label: '📱 Layanan IMEI', href: '/unblock-imei' },
+        { label: '📱 Layanan IMEI', href: '/add-roamer' },
         { label: '⚡ Gateway GoPay', href: '/gateway' },
         { label: '💳 Top Up Saldo', href: '/topup' },
       ],
@@ -336,7 +336,7 @@ ${mathResult.details ? `• **Keterangan**: ${mathResult.details}
 *Apakah ada nominal atau estimasi biaya pesanan lainnya yang ingin Anda hitung?*`,
         actions: [
           { label: 'Isi Saldo RyPay', href: '/topup' },
-          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
+          { label: 'Layanan Add Roamer', href: '/add-roamer' },
         ],
       };
     }
@@ -410,7 +410,7 @@ Halo **${u.name}**! Berikut rincian seluruh pesanan yang pernah Anda lakukan:
 ${recentList}`,
           actions: [
             { label: 'Buka Menu Riwayat Order', href: '/history' },
-            { label: 'Pesan Layanan Baru', href: '/unblock-imei' },
+            { label: 'Pesan Layanan Baru', href: '/add-roamer' },
           ],
         };
       }
@@ -442,7 +442,7 @@ ${recentList}`,
         reply: `Tentu saja bisa! Saya adalah **Ry-AI**, asisten kecerdasan buatan serba bisa dari Ry-ITSolutions. Anda dapat menanyakan topik apa pun kepada saya, baik itu:\n\n1. 🧠 **Pertanyaan Umum & Sains**: Penjelasan seputar teknologi, pemrograman, sains, tips kehidupan, hingga cara kerja sistem komputer.\n2. 📊 **Analitik & Pengeluaran Akun**: Menghitung total uang yang sudah Anda belanjakan selama ini di Ry-ITSolutions, statistik order sukses, dan sisa saldo dompet RyPay Anda.\n3. 📱 **Dunia Gadget & Smartphone**: Tips merawat Battery Health iPhone, penyebab sinyal hilang/begal, perbedaan unit resmi iBox vs Inter, hingga cara cek IMEI.\n4. 🧮 **Kalkulator & Perhitungan Cepat**: Menghitung rumus, operasi matematika, atau kalkulasi persen diskon.\n5. 💬 **Diskusi & Obrolan Santai**: Tanya jawab santai, meminta rekomendasi, atau berdiskusi seputar ide bisnis digital.\n\nSilakan tanyakan hal apa pun yang ada di pikiran Anda, saya siap menjawabnya!`,
         actions: [
           { label: '📊 Cek Pengeluaran Saya', href: '/history' },
-          { label: '📱 Layanan Unblock IMEI', href: '/unblock-imei' },
+          { label: '📱 Layanan Add Roamer', href: '/add-roamer' },
           { label: '⚡ Gateway GoPay & QRIS', href: '/gateway' },
         ],
       };
@@ -463,7 +463,7 @@ ${recentList}`,
 *Cara Cek IMEI Cepat:* Buka dial telepon dan tekan \`*#06#\`.`,
         actions: [
           { label: 'Cek Status Database CEIR', href: '/cek-ceir' },
-          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
+          { label: 'Layanan Add Roamer', href: '/add-roamer' },
         ],
       };
     }
@@ -484,9 +484,9 @@ Ada dua kemungkinan utama mengapa sinyal HP (khususnya iPhone/Android) hilang:
    - Jika chip IC Baseband di motherboard rusak, HP tidak dapat membaca kartu SIM sama sekali.
    - *Ciri khas:* Muncul status "Tidak Ada SIM" padahal SIM terpasang, atau dial \`*#06#\` kosong tidak memunculkan nomor.
 
-*Solusi:* Jika saat dial \`*#06#\` nomor IMEI 15 digit Anda tetap muncul jelas, berarti mesin HP Anda sehat dan sinyal dapat dipulihkan dengan layanan **Unblock IMEI** kami!`,
+*Solusi:* Jika saat dial \`*#06#\` nomor IMEI 15 digit Anda tetap muncul jelas, berarti mesin HP Anda sehat dan sinyal dapat dipulihkan dengan layanan **Add Roamer** kami!`,
         actions: [
-          { label: 'Pulihkan Sinyal (Unblock IMEI)', href: '/unblock-imei' },
+          { label: 'Pulihkan Sinyal (Add Roamer)', href: '/add-roamer' },
           { label: 'Cek Status CEIR Gratis', href: '/cek-ceir' },
         ],
       };
@@ -507,9 +507,9 @@ Ada dua kemungkinan utama mengapa sinyal HP (khususnya iPhone/Android) hilang:
   - Biasanya masuk tanpa deklarasi pabean resmi, sehingga rentan mengalami pemblokiran sinyal sewaktu-waktu jika regulasi jaringan diperketat.
   - Harga belinya lebih terjangkau dibanding unit resmi.
 
-*Jika Anda memiliki unit Inter yang hilang sinyal, Ry-ITSolutions menyediakan aktivasi Unblock IMEI All Operator bergaransi penuh.*`,
+*Jika Anda memiliki unit Inter yang hilang sinyal, Ry-ITSolutions menyediakan aktivasi Add Roamer All Operator bergaransi penuh.*`,
         actions: [
-          { label: 'Buka Blokir Sinyal Inter', href: '/unblock-imei' },
+          { label: 'Tambah Roamer Inter', href: '/add-roamer' },
           { label: 'Cek Garansi Apple', href: '/cek-garansi' },
         ],
       };
@@ -552,7 +552,7 @@ Kesehatan baterai lithium-ion dipengaruhi oleh suhu panas dan siklus pengisian d
    - Cek stiker barcode di bagian belakang kotak kemasan box asli HP.`,
         actions: [
           { label: 'Cek Database CEIR', href: '/cek-ceir' },
-          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
+          { label: 'Layanan Add Roamer', href: '/add-roamer' },
         ],
       };
     }
@@ -599,7 +599,7 @@ Kesehatan baterai lithium-ion dipengaruhi oleh suhu panas dan siklus pengisian d
 
 Jika masih ada yang ingin Anda tanyakan seputar layanan IMEI, gateway pembayaran, saldo akun, atau panduan smartphone, jangan ragu untuk bertanya lagi ya!`,
         actions: [
-          { label: 'Buka Menu IMEI', href: '/unblock-imei' },
+          { label: 'Buka Menu IMEI', href: '/add-roamer' },
           { label: 'Gateway GoPay', href: '/gateway' },
         ],
       };
@@ -612,7 +612,7 @@ Jika masih ada yang ingin Anda tanyakan seputar layanan IMEI, gateway pembayaran
 Saya terus belajar mandiri dan tersinkronisasi langsung dengan sistem Ry-ITSolutions agar selalu dapat memberikan jawaban yang akurat, cepat, dan bermanfaat bagi Anda. Ada hal lain yang bisa saya bantu hari ini?`,
         actions: [
           { label: 'Cek Pengeluaran Saya', href: '/history' },
-          { label: 'Buka Menu IMEI', href: '/unblock-imei' },
+          { label: 'Buka Menu IMEI', href: '/add-roamer' },
         ],
       };
     }
@@ -622,14 +622,14 @@ Saya terus belajar mandiri dan tersinkronisasi langsung dengan sistem Ry-ITSolut
         reply: `Saya adalah **Ry-AI**, asisten kecerdasan buatan resmi dari **Ry-ITSolutions**.
 
 Saya dirancang untuk:
-1. Memberikan informasi real-time seputar layanan Unblock IMEI, Payment Gateway GoPay & QRIS, dan cek garansi.
+1. Memberikan informasi real-time seputar layanan Add Roamer, Payment Gateway GoPay & QRIS, dan cek garansi.
 2. Menghitung pengeluaran belanja dan rekap riwayat pesanan akun Anda secara instan.
 3. Menjawab pertanyaan teknis seputar smartphone, teknologi seluler, dan perhitungan matematika.
 
 Ada yang ingin Anda diskusikan bersama saya?`,
         actions: [
           { label: 'Cek Pengeluaran Saya', href: '/history' },
-          { label: 'Layanan Unblock IMEI', href: '/unblock-imei' },
+          { label: 'Layanan Add Roamer', href: '/add-roamer' },
         ],
       };
     }
@@ -638,8 +638,8 @@ Ada yang ingin Anda diskusikan bersama saya?`,
     // 4. CORE SERVICES: IMEI, GATEWAY, TOPUP, VOUCHER, CS, RESELLER
     // -------------------------------------------------------------
 
-    // DOMAIN: UNBLOCK IMEI
-    if (q.includes('imei') || q.includes('sinyal') || q.includes('unblock') || q.includes('buka blokir')) {
+    // DOMAIN: ADD ROAMER
+    if (q.includes('imei') || q.includes('sinyal') || q.includes('unblock') || q.includes('add roamer')) {
       const imeiPkgs: LiveImeiPackage[] = k?.imeiPackages || [];
       const slowRange = k?.speeds?.slow?.range || 'Max kirim 14:00 WIB, selesai max 00:00 WIB';
       const fastStatus = k?.speeds?.fast?.status || 'hidden';
@@ -652,9 +652,9 @@ Ada yang ingin Anda diskusikan bersama saya?`,
       }
 
       return {
-        reply: `### Daftar Paket & Tarif Unblock IMEI Real-Time
+        reply: `### Daftar Paket & Tarif Add Roamer Real-Time
 
-Berikut paket buka blokir sinyal IMEI yang aktif di database sistem:
+Berikut paket tambah roamer IMEI yang aktif di database sistem:
 
 ${imeiListText}
 
@@ -664,7 +664,7 @@ ${imeiListText}
 • Syarat wajib: IC Baseband normal (muncul "Tidak Ada Layanan / No Service", bukan "Tidak Ada SIM")
 • Estimasi pengerjaan reguler: ${slowRange}`,
         actions: [
-          { label: 'Order Unblock IMEI', href: '/unblock-imei' },
+          { label: 'Order Add Roamer', href: '/add-roamer' },
           { label: 'Isi Saldo RyPay', href: '/topup' },
         ],
       };
@@ -718,7 +718,7 @@ Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/
           reply: `### Kode Voucher & Promo Diskon Aktif\n\nBerikut kode promo yang sedang **AKTIF** di sistem database kami:\n\n${couponList}\n\n*Masukkan kode kupon di atas pada kolom Voucher saat melakukan checkout!*`,
           actions: [
             { label: 'Klaim di Menu Voucher', href: '/vouchers' },
-            { label: 'Order Layanan Sekarang', href: '/unblock-imei' },
+            { label: 'Order Layanan Sekarang', href: '/add-roamer' },
           ],
         };
       }
@@ -744,10 +744,10 @@ Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/
     // DOMAIN: GREETINGS
     if (/^(halo|hai|hi|pagi|siang|sore|malam|assalamualaikum|ping|p)$/i.test(q) || /^(halo|hai|hi|pagi|siang|sore|malam) /i.test(q)) {
       return {
-        reply: `Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nSaya dapat membantu Anda untuk:\n• 📊 **Menghitung Pengeluaran & Riwayat Pesanan Akun Anda**\n• 📱 **Layanan Buka Blokir IMEI All Operator (Garansi 3 Bulan)**\n• ⚡ **SaaS Payment Gateway GoPay & Dynamic QRIS (Fee 0%)**\n• 💡 **Pertanyaan Seputar Teknologi Smartphone & Cek Garansi**\n• 🧮 **Perhitungan Matematika & Biaya Layanan**\n\nAda yang ingin Anda tanyakan atau hitung?`,
+        reply: `Halo! Senang bisa menyapa Anda. Saya **Ry-AI**, asisten cerdas resmi dari **Ry-ITSolutions**.\n\nSaya dapat membantu Anda untuk:\n• 📊 **Menghitung Pengeluaran & Riwayat Pesanan Akun Anda**\n• 📱 **Layanan Add Roamer All Operator (Garansi 3 Bulan)**\n• ⚡ **SaaS Payment Gateway GoPay & Dynamic QRIS (Fee 0%)**\n• 💡 **Pertanyaan Seputar Teknologi Smartphone & Cek Garansi**\n• 🧮 **Perhitungan Matematika & Biaya Layanan**\n\nAda yang ingin Anda tanyakan atau hitung?`,
         actions: [
           { label: 'Cek Pengeluaran Saya', href: '/history' },
-          { label: 'Buka Menu IMEI', href: '/unblock-imei' },
+          { label: 'Buka Menu IMEI', href: '/add-roamer' },
           { label: 'Gateway GoPay', href: '/gateway' },
           { label: 'Top Up RyPay', href: '/topup' },
         ],
@@ -758,10 +758,10 @@ Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/
     // 5. INTELLIGENT ADAPTIVE FALLBACK (RAMAH & MULTI-KONTEKS)
     // -------------------------------------------------------------
     return {
-      reply: `Terima kasih atas pertanyaan Anda seputar: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat membantu menjawab pertanyaan teknis, menghitung transaksi Anda, atau mengarahkan Anda ke solusi terbaik:\n\n1. **Statistik Pengeluaran & Pesanan**: Ketik *"Berapa pengeluaran saya?"* untuk melihat audit belanja akun Anda.\n2. **Aktivasi & Buka Blokir IMEI All Operator**: Pemulihan sinyal HP No Service dengan garansi penuh 3 bulan.\n3. **Payment Gateway GoPay & QRIS SaaS**: Automasi pembayaran toko online dengan fee 0% dan settlement instan.\n4. **Wawasan Teknologi & Gadget**: Edukasi seputar baterai, baseband, aturan CEIR, dan tips membeli smartphone.\n\nSilakan ketik pertanyaan Anda lebih detail atau pilih menu layanan di bawah!`,
+      reply: `Terima kasih atas pertanyaan Anda seputar: **"${userText}"**.\n\nSebagai asisten cerdas **Ry-ITSolutions**, saya dapat membantu menjawab pertanyaan teknis, menghitung transaksi Anda, atau mengarahkan Anda ke solusi terbaik:\n\n1. **Statistik Pengeluaran & Pesanan**: Ketik *"Berapa pengeluaran saya?"* untuk melihat audit belanja akun Anda.\n2. **Aktivasi & Add Roamer All Operator**: Pemulihan sinyal HP No Service dengan garansi penuh 3 bulan.\n3. **Payment Gateway GoPay & QRIS SaaS**: Automasi pembayaran toko online dengan fee 0% dan settlement instan.\n4. **Wawasan Teknologi & Gadget**: Edukasi seputar baterai, baseband, aturan CEIR, dan tips membeli smartphone.\n\nSilakan ketik pertanyaan Anda lebih detail atau pilih menu layanan di bawah!`,
       actions: [
         { label: '📊 Cek Pengeluaran Saya', href: '/history' },
-        { label: '📱 Layanan Unblock IMEI', href: '/unblock-imei' },
+        { label: '📱 Layanan Add Roamer', href: '/add-roamer' },
         { label: '⚡ Gateway GoPay & QRIS', href: '/gateway' },
         { label: '💳 Top Up Saldo RyPay', href: '/topup' },
       ],
@@ -1114,7 +1114,7 @@ Solusi gateway pembayaran QRIS otomatis untuk website toko online, bot Telegram/
           <input
             ref={inputRef}
             type="text"
-            placeholder="Tanyakan pengeluaran Anda, unblock IMEI, kalkulator, info HP..."
+            placeholder="Tanyakan pengeluaran Anda, Add Roamer, kalkulator, info HP..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={isTyping}

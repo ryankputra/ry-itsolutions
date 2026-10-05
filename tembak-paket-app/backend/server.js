@@ -32,6 +32,7 @@ const transactionRoutes = require('./routes/transactions');
 const serviceRoutes = require('./routes/services');
 const adminRoutes = require('./routes/admin');
 const reviewRoutes = require('./routes/reviews');
+const igFeedRoutes = require('./routes/igfeed');
 const gameRoutes = require('./routes/games');
 const telegramRoutes = require('./routes/telegram');
 const orderRoutes = require('./routes/orders');
@@ -55,6 +56,7 @@ const uploadDirs = [
     path.join(__dirname, 'public', 'uploads', 'avatars'),
     path.join(__dirname, 'public', 'uploads', 'manual_orders'),
     path.join(__dirname, 'public', 'uploads', 'reviews'),
+    path.join(__dirname, 'public', 'ig-testi'),
     path.join(__dirname, 'backups'),
     path.join(__dirname, 'sessions')
 ];
@@ -171,6 +173,7 @@ app.use('/api', transactionRoutes.router);
 app.use('/api', serviceRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', reviewRoutes);
+app.use('/api', igFeedRoutes);
 app.use('/api', gameRoutes);
 app.use('/api', telegramRoutes.router);
 app.use('/api/webhook', webhookRoutes);
@@ -263,6 +266,25 @@ app.post('/api/admin/whatsapp/test', (req, res, next) => {
     try {
         const results = await waBot.testAdminNotification(req.body?.message);
         res.json({ status: true, message: "Pesan uji coba telah dikirim ke nomor admin.", data: results });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// Internal (localhost-only): kirim reminder ulasan ke user yang sudah beli IMEI
+// sukses tapi belum mengulas. Dipakai oleh script admin/cron.
+app.post('/api/internal/review-reminder', async (req, res) => {
+    try {
+        const ip = req.ip || req.socket?.remoteAddress || "";
+        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
+        }
+        const { phone, message } = req.body || {};
+        if (!phone || !message) {
+            return res.status(400).json({ status: false, message: "phone dan message wajib diisi." });
+        }
+        const result = await waBot.sendTextMessage(phone, String(message));
+        res.json(result);
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }

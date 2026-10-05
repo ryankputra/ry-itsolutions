@@ -2,6 +2,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL, safeJson } from "@/lib/api";
+import { parseCeirResponse } from "@/lib/ceirParser";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
@@ -18,8 +19,9 @@ function HistoryContent() {
   const resolveTabKey = (t: string | null) => {
     if (!t) return "all";
     const low = t.toLowerCase();
-    if (low === "refund" || low === "cancelled" || low === "failed") return "canceled";
-    if (low === "in_queue" || low === "antrean") return "waiting";
+    if (low === "refund" || low === "cancelled" || low === "failed" || low === "dibatalkan") return "canceled";
+    if (low === "in_queue" || low === "antrean" || low === "perlu_diproses" || low === "waiting") return "waiting";
+    if (low === "selesai" || low === "success" || low === "done" || low === "completed" || low === "finish") return "completed";
     return low;
   };
 
@@ -58,8 +60,10 @@ function HistoryContent() {
       const data = await safeJson(res);
       if (data?.status && Array.isArray(data.data)) {
         setHistory(data.data);
+        maybeAutoOpenReview(data.data);
       } else if (data?.status && Array.isArray(data.transactions)) {
         setHistory(data.transactions);
+        maybeAutoOpenReview(data.transactions);
       } else {
         setHistory([]);
       }
@@ -69,6 +73,22 @@ function HistoryContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Link langsung dari WhatsApp reminder: ?ulasan=1 -> buka modal ulasan untuk
+  // transaksi IMEI sukses terakhir yang belum diulas.
+  const maybeAutoOpenReview = (items: any[]) => {
+    try {
+      if (!searchParams.get("ulasan")) return;
+      // Belum login: API user/transactions akan 401 -> arahkan login dulu.
+      if (!items || items.length === 0) return;
+      const target = items.find(
+        (t) =>
+          (t.status === "success" || t.status === "completed") &&
+          (t.service_type === "imei" || t.serviceType === "imei" || !t.service_type)
+      );
+      if (target) setReviewTarget(target);
+    } catch {}
   };
 
   useEffect(() => {
@@ -222,14 +242,18 @@ function HistoryContent() {
 
   const normalizedHistory = history.map((trx) => {
     const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
-    // Only treat as waiting admin if explicitly unpaid/pending with balance or in_queue
+    const lowStatus = (trx.status || '').toLowerCase();
+    const isCompletedStatus = ['success', 'completed', 'selesai', 'done', 'active', 'approved', 'finished'].includes(lowStatus);
+    const isFailedStatus = ['failed', 'canceled', 'cancelled', 'rejected', 'refunded'].includes(lowStatus);
+    const isProcessingStatus = ['processing', 'in_progress'].includes(lowStatus);
+
     const isWaitingAdmin = (
-      trx.status === 'in_queue' ||
-      trx.status === 'waiting' ||
-      trx.status === 'waiting_admin' ||
-      (isBalancePaid && (trx.status === 'pending' || trx.status === 'unpaid'))
+      lowStatus === 'in_queue' ||
+      lowStatus === 'waiting' ||
+      lowStatus === 'waiting_admin' ||
+      (isBalancePaid && (lowStatus === 'pending' || lowStatus === 'unpaid'))
     );
-    if (isWaitingAdmin && trx.status !== 'processing' && trx.status !== 'success' && trx.status !== 'failed') {
+    if (isWaitingAdmin && !isProcessingStatus && !isCompletedStatus && !isFailedStatus) {
       return { ...trx, status: 'in_queue' };
     }
     return trx;
@@ -252,7 +276,15 @@ function HistoryContent() {
       return status === "processing" || status === "in_progress";
     }
     if (activeTab === "completed") {
-      return status === "success" || status === "completed";
+      return (
+        status === "success" ||
+        status === "completed" ||
+        status === "selesai" ||
+        status === "done" ||
+        status === "active" ||
+        status === "approved" ||
+        status === "finished"
+      );
     }
     if (activeTab === "canceled") {
       return (
@@ -453,11 +485,11 @@ function HistoryContent() {
           <div>
             <h3 className="font-bold text-base text-ink">Belum ada pesanan</h3>
             <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-              Tidak ada riwayat transaksi di kategori ini. Yuk cek layanan buka IMEI atau diskon voucher promo terbaru.
+              Tidak ada riwayat transaksi di kategori ini. Yuk cek layanan Add Roamer atau diskon voucher promo terbaru.
             </p>
           </div>
           <Button
-            onClick={() => router.push("/unblock-imei")}
+            onClick={() => router.push("/add-roamer")}
             className="bg-primary hover:bg-primary-focus text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 mx-auto"
           >
             <span>Order Layanan Sekarang</span>
@@ -612,6 +644,42 @@ function HistoryContent() {
                 {(() => {
                   const rawNote = (trx.admin_note || trx.adminNote || "").trim();
                   if (!rawNote) return null;
+
+                  // For CEIR/barcode transactions, parse and display as formatted timeline
+                  const svcType = (trx.service_type || trx.serviceType || "").toLowerCase();
+                  const pkgName = (trx.package_name || trx.packageName || "").toLowerCase();
+                  const isCeirTrx = svcType === "ceir" || svcType === "barcode" || pkgName.includes("ceir") || pkgName.includes("barcode");
+
+                  if (isCeirTrx) {
+                    const parsed = parseCeirResponse(rawNote);
+                    if (parsed.rows.length > 0) {
+                      return (
+                        <div className="p-2.5 rounded-xl bg-sky-50/80 border border-sky-200 text-xs space-y-2">
+                          <span className="font-bold text-[10px] text-sky-700 uppercase block">Log CEIR</span>
+                          <div className="space-y-1.5">
+                            {parsed.rows.map((row, idx) => (
+                              <div key={idx} className="flex items-start gap-2 text-[11px]">
+                                <div className="flex flex-col items-center shrink-0 mt-0.5">
+                                  <div className="w-2 h-2 rounded-full bg-sky-500" />
+                                  {idx < parsed.rows.length - 1 && (
+                                    <div className="w-px h-full min-h-[16px] bg-sky-300" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0 pb-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-sky-800">{row.action}</span>
+                                    <span className="text-sky-500 text-[10px]">{row.tanggal}</span>
+                                  </div>
+                                  <p className="text-ink-muted leading-relaxed break-words">{row.note}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+
                   const isLeakedOrGeneric = /sedang dikerjakan oleh admin|sedang diproses oleh admin|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
                   if (isLeakedOrGeneric) return null;
                   return (
@@ -705,13 +773,15 @@ function HistoryContent() {
                     {/* Selesai */}
                     {isCompleted && (
                       <>
-                        <button
-                          type="button"
-                          onClick={() => setReviewTarget(trx)}
-                          className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
-                        >
-                          <span>Beri Ulasan (+500 Koin)</span>
-                        </button>
+                        {(trx.service_type === 'unblock_imei' || trx.serviceType === 'unblock_imei' || (!trx.service_type && !trx.serviceType)) && (
+                          <button
+                            type="button"
+                            onClick={() => setReviewTarget(trx)}
+                            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-xs transition-colors flex items-center gap-1"
+                          >
+                            <span>Beri Ulasan (+10 Koin)</span>
+                          </button>
+                        )}
 
                         <button
                           type="button"
@@ -733,7 +803,7 @@ function HistoryContent() {
                         </button>
 
                         <Link
-                          href="/unblock-imei"
+                          href="/add-roamer"
                           className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-focus text-white text-xs font-bold shadow-xs transition-colors"
                         >
                           Beli Lagi
@@ -751,7 +821,7 @@ function HistoryContent() {
                           Tanya CS
                         </Link>
                         <Link
-                          href="/unblock-imei"
+                          href="/add-roamer"
                           className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-focus text-white text-xs font-bold shadow-xs transition-colors"
                         >
                           Order Ulang
@@ -771,8 +841,8 @@ function HistoryContent() {
         isOpen={!!reviewTarget}
         onClose={() => setReviewTarget(null)}
         orderId={reviewTarget?.id}
-        productId={reviewTarget?.service_type || reviewTarget?.serviceType || "unblock-imei"}
-        variation={reviewTarget?.package_name || reviewTarget?.packageName || "Layanan Official"}
+        productId={reviewTarget?.service_type || reviewTarget?.serviceType || "add-roamer"}
+        variation={reviewTarget?.package_name || reviewTarget?.packageName || "Layanan Add Roamer"}
       />
 
       {/* Invoice Modal */}

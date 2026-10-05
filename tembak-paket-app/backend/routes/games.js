@@ -68,7 +68,7 @@ const TRIVIA_QUESTIONS = [
     },
     {
         id: "q6",
-        question: "Apakah proses pemutihan/unblock IMEI resmi memerlukan rooting atau bongkar fisik mesin?",
+        question: "Apakah proses pemutihan/Add Roamer resmi memerlukan rooting atau bongkar fisik mesin?",
         options: [
             "Tidak, pemrosesan legal berbasis pendaftaran server database operator",
             "Ya, harus mengganti motherboard mesin",

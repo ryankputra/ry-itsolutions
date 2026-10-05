@@ -216,7 +216,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                   <div className="p-4 border-b border-hairline hover:bg-parchment/50 transition-colors cursor-pointer">
                     <p className="text-xs font-bold text-primary mb-1">SELAMAT DATANG</p>
                     <p className="text-sm font-semibold text-ink leading-tight">Hai {user?.name?.split(' ')[0]} </p>
-                    <p className="text-xs text-ink-muted mt-1">Platform PPOB dan Unblock IMEI Terpercaya. Gunakan layanan kami dengan bijak.</p>
+                    <p className="text-xs text-ink-muted mt-1">Platform PPOB dan Add Roamer Terpercaya. Gunakan layanan kami dengan bijak.</p>
                   </div>
                 )}
 

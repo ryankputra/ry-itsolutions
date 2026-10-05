@@ -1,5 +1,4 @@
 const { calculateTransactionWarranty } = require("../utils/warrantyHelper");
-const { generatePriceUpdateBanner, generateCeirLogBanner } = require("./priceBannerGenerator");
 /**
  * WhatsApp Admin Notifier & Controller Service (Self-Hosted via Baileys)
  * Free, zero third-party API costs.
@@ -274,16 +273,9 @@ async function storeMessage(id, remoteJid, messageObj) {
 async function getStoredMessage(key) {
     if (!key?.id) return undefined;
 
-    // 1. Try memory cache first by exact ID or case & prefix variants
-    const candidateIds = [
-        key.id,
-        key.id.toUpperCase(),
-        key.id.toLowerCase(),
-        key.id.replace(/^(3EB0|BAE5|RYY)/i, '')
-    ];
-
+    // 1. Try memory cache first by exact ID or case variants
+    const candidateIds = [key.id, key.id.toUpperCase(), key.id.toLowerCase()];
     for (const kId of candidateIds) {
-        if (!kId) continue;
         const inMem = messageStore.get(kId);
         if (inMem) {
             try {
@@ -297,18 +289,15 @@ async function getStoredMessage(key) {
 
     // 2. Try SQLite DB store by exact key.id or case-insensitive match
     try {
-        for (const kId of candidateIds) {
-            if (!kId) continue;
-            const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ? OR LOWER(id) = LOWER(?)", [kId, kId]);
-            if (row?.messageContent) {
-                const parsed = JSON.parse(row.messageContent);
-                const plain = normalizeProtoMessage(parsed);
-                if (plain) {
-                    try {
-                        return proto.Message.fromObject(plain);
-                    } catch (e) {
-                        return plain;
-                    }
+        const row = await dbGet("SELECT messageContent FROM wa_message_store WHERE id = ? OR LOWER(id) = LOWER(?)", [key.id, key.id]);
+        if (row?.messageContent) {
+            const parsed = JSON.parse(row.messageContent);
+            const plain = normalizeProtoMessage(parsed);
+            if (plain) {
+                try {
+                    return proto.Message.fromObject(plain);
+                } catch (e) {
+                    return plain;
                 }
             }
         }
@@ -319,7 +308,7 @@ async function getStoredMessage(key) {
         try {
             const cleanPhoneNum = (key.remoteJid.replace('@s.whatsapp.net', '').split(':')[0] || '').replace(/\D/g, '');
             const recentRow = await dbGet(
-                "SELECT body FROM wa_chat_history WHERE (remoteJid = ? OR senderPhone = ?) AND body IS NOT NULL AND body != '' ORDER BY timestamp DESC LIMIT 1",
+                "SELECT body FROM wa_chat_history WHERE remoteJid = ? OR senderPhone = ? ORDER BY timestamp DESC LIMIT 1",
                 [key.remoteJid, cleanPhoneNum]
             );
             if (recentRow?.body) {
@@ -337,14 +326,6 @@ async function getStoredMessage(key) {
 async function resolveWhatsAppJid(phone) {
     const clean = cleanPhone(phone);
     if (!clean) return null;
-    if (sock && typeof sock.onWhatsApp === "function") {
-        try {
-            const [res] = await sock.onWhatsApp(clean);
-            if (res?.jid) {
-                return res.jid;
-            }
-        } catch (e) {}
-    }
     return `${clean}@s.whatsapp.net`;
 }
 
@@ -502,34 +483,6 @@ function purgeStalePeerSessions() {
     }
 }
 
-function purgeOldPreKeys() {
-    try {
-        if (!fs.existsSync(SESSIONS_DIR)) return 0;
-        const files = fs.readdirSync(SESSIONS_DIR);
-        const now = Date.now();
-        const maxAgeMs = 3 * 86400 * 1000; // 3 hari
-        let count = 0;
-        for (const file of files) {
-            if (file.startsWith("pre-key-") || file.startsWith("sender-key-")) {
-                try {
-                    const filePath = path.join(SESSIONS_DIR, file);
-                    const stats = fs.statSync(filePath);
-                    if (now - stats.mtimeMs > maxAgeMs) {
-                        fs.unlinkSync(filePath);
-                        count++;
-                    }
-                } catch (e) {}
-            }
-        }
-        if (count > 0) {
-            logWABot(`🧹 Otomatis membersihkan ${count} file pre-key kadaluwarsa (>3 hari).`, "info");
-        }
-        return count;
-    } catch (e) {
-        return 0;
-    }
-}
-
 function cleanPhone(raw) {
     if (!raw) return "";
     const str = String(raw).trim();
@@ -588,11 +541,11 @@ async function getAdminPhoneNumbers() {
     const adminPhones = new Set();
 
     // 0. Primary Administrator Numbers (Guaranteed Delivery)
-    // 6287767287284 & 6285156692166: Authorized Admin Remote Control Numbers
-    const primaryAdmins = ["6287767287284", "6285156692166"];
+    // 6287767287284: Bot number that also acts as Admin (sends to self)
+    const primaryAdmins = ["6287767287284"];
     primaryAdmins.forEach(num => {
         const cp = cleanPhone(num);
-        if (cp) adminPhones.add(cp);
+        if (cp && !cp.endsWith("70")) adminPhones.add(cp);
     });
 
     // 1. From environment variables
@@ -700,18 +653,16 @@ async function initWABot(forceNew = false) {
 
         let waVersion = [2, 3000, 1043857760];
         try {
-            const fetchPromise = fetchLatestBaileysVersion();
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Version fetch timeout (STB network)")), 3500));
-            const v = await Promise.race([fetchPromise, timeoutPromise]);
+            const v = await fetchLatestBaileysVersion();
             if (v && v.version) {
                 waVersion = v.version;
             }
         } catch (e) {
-            logWABot(`Using default version fallback: ${e.message}`, "warn");
+            console.warn("[WABot] Using default version fallback:", e.message);
         }
         logWABot(`Baileys Library v${baileysLibVer} | MD Version: ${waVersion.join(".")}`, "info");
         applyBaileysPatches();
-        purgeOldPreKeys();
+        // Session preservation: Do NOT purge peer sessions on startup to keep Signal ratchet keys intact
         checkAndAutoUpgradeBaileys(baileysLibVer);
 
         const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
@@ -763,31 +714,6 @@ async function initWABot(forceNew = false) {
             },
             msgRetryCounterCache,
             getMessage: getStoredMessage,
-            shouldSyncHistoryMessage: () => false,
-            retryRequestDelayMs: 250,
-            maxMsgRetryCount: 5,
-            patchMessageBeforeSending: (message) => {
-                const requiresPatch = !!(
-                    message.buttonsMessage ||
-                    message.templateMessage ||
-                    message.listMessage ||
-                    message.interactiveMessage
-                );
-                if (requiresPatch) {
-                    message = {
-                        viewOnceMessage: {
-                            message: {
-                                messageContextInfo: {
-                                    deviceListMetadataVersion: 2,
-                                    deviceListMetadata: {},
-                                },
-                                ...message,
-                            },
-                        },
-                    };
-                }
-                return message;
-            },
             printQRInTerminal: false,
             logger: customLogger,
             browser: Browsers.macOS("Chrome"),
@@ -1071,6 +997,26 @@ async function initWABot(forceNew = false) {
                 // Ignore empty JID, group chats (@g.us), broadcast channels, and newsletters
                 if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast") || remoteJid.includes("@newsletter")) continue;
 
+                // Determine sender phone number cleanly
+                const cleanRemotePhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", "").split(":")[0]);
+                const adminPhones = await getAdminPhoneNumbers();
+                const cleanAdminList = adminPhones.map(p => cleanPhone(p)).filter(Boolean);
+
+                // STRICT ADMIN CHECK:
+                // Only authorized if message was sent from the bot's own account (fromMe)
+                // OR the sender's phone number is explicitly in the admin list.
+                const isSenderAdmin = Boolean(
+                    msg.key.fromMe ||
+                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone))
+                );
+
+                // IF SENDER IS NOT AN ADMIN:
+                // SILENTLY IGNORE! NO REPLY, NO COMMANDS, NO MESSAGES WHATSOEVER!
+                if (!isSenderAdmin) {
+                    // Do not respond to regular users under any circumstances
+                    continue;
+                }
+
                 const messageText = (
                     msg.message.conversation ||
                     msg.message.extendedTextMessage?.text ||
@@ -1080,57 +1026,11 @@ async function initWABot(forceNew = false) {
 
                 if (!messageText) continue;
 
-                // Enforce strict dot prefix for all admin commands to prevent accidental triggers during regular chats
-                const isCommand = messageText.startsWith(".");
-
-                // Determine sender phone number cleanly (handling @s.whatsapp.net, :device, and @lid)
-                const participantJid = msg.key.participant || "";
-                const isLid = remoteJid.includes("@lid") || participantJid.includes("@lid");
-
-                let cleanRemotePhone = "";
-                const rawSender = (remoteJid || participantJid).replace("@s.whatsapp.net", "").replace("@lid", "").split(":")[0];
-
-                // Known Admin LIDs mapping
-                const knownAdminLids = new Set([
-                    "217489191489706@lid",
-                    "217489191489706",
-                    "15062853009567@lid",
-                    "15062853009567"
-                ]);
-
-                if (rawSender === "217489191489706") {
-                    cleanRemotePhone = "6285156692166";
-                } else if (rawSender === "15062853009567") {
-                    cleanRemotePhone = "6287767287284";
-                } else if (!isLid) {
-                    cleanRemotePhone = cleanPhone(rawSender);
-                } else {
-                    try {
-                        const contactRow = await dbGet("SELECT phone FROM wa_contacts WHERE jid = ? OR jid = ?", [remoteJid, participantJid]);
-                        if (contactRow && contactRow.phone && !contactRow.phone.includes("@lid") && contactRow.phone.length <= 13) {
-                            cleanRemotePhone = cleanPhone(contactRow.phone);
-                        }
-                    } catch (e) {}
-                }
-
-                const adminPhones = await getAdminPhoneNumbers();
-                const cleanAdminList = adminPhones.map(p => cleanPhone(p)).filter(Boolean);
-
-                const isSenderAdmin = Boolean(
-                    msg.key.fromMe ||
-                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone)) ||
-                    knownAdminLids.has(remoteJid) ||
-                    knownAdminLids.has(participantJid) ||
-                    knownAdminLids.has(rawSender)
+                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses)
+                const isCommand = (
+                    messageText.startsWith(".") ||
+                    /^(1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu)\b/i.test(messageText)
                 );
-
-                if (!isSenderAdmin) {
-                    if (isCommand) {
-                        logWABot(`⚠️ Perintah Admin "${messageText}" dari ${remoteJid} (Phone: ${cleanRemotePhone || 'unknown'}) DITOLAK: Nomor pengirim belum terdaftar sebagai admin.`, "warn");
-                    }
-                    continue;
-                }
-
                 if (!isCommand) continue;
 
                 logWABot(`[WABot Command] Memproses perintah Admin "${messageText}" dari ${cleanRemotePhone || remoteJid}`, "info");
@@ -1155,34 +1055,22 @@ async function requestPairingCode(phoneNumber) {
             return { status: false, message: "Nomor WhatsApp tidak valid. Format contoh: 087767287284" };
         }
 
-        if (!sock || connectionState === "disconnected" || global.baileysStatus === "disconnected") {
-            await initWABot(true);
+        if (!sock) {
+            await initWABot(false);
         }
 
-        let isReady = false;
-        for (let i = 0; i < 60; i++) {
-            const isWsOpen = Boolean(sock?.ws?.isOpen || sock?.ws?.socket?.readyState === 1);
-            if (sock && isWsOpen && typeof sock.requestPairingCode === "function") {
-                isReady = true;
-                break;
-            }
-            if (!sock) {
-                await initWABot(false);
-            }
-            await new Promise(r => setTimeout(r, 250));
+        // Tunggu socket siap
+        for (let i = 0; i < 25; i++) {
+            if (sock && typeof sock.requestPairingCode === "function" && sock.ws?.isOpen) break;
+            await new Promise(r => setTimeout(r, 200));
         }
 
-        const isWsOpen = Boolean(sock?.ws?.isOpen || sock?.ws?.socket?.readyState === 1);
-        if (!isReady || !sock || typeof sock.requestPairingCode !== "function" || !isWsOpen) {
-            return { status: false, message: "Koneksi server WhatsApp sedang menyiapkan jaringan. Silakan klik tombol sekali lagi dalam 3 detik." };
+        if (!sock || typeof sock.requestPairingCode !== "function") {
+            return { status: false, message: "Socket WhatsApp belum siap. Silakan klik Reset Sesi WA lalu coba lagi." };
         }
 
         logWABot(`Meminta kode pairing 8 digit untuk nomor: ${clean}...`, "info");
-        const codePromise = sock.requestPairingCode(clean);
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout meminta kode pairing dari server WhatsApp. Silakan coba lagi.")), 15000)
-        );
-        const rawCode = await Promise.race([codePromise, timeoutPromise]);
+        const rawCode = await sock.requestPairingCode(clean);
         const code = rawCode?.match(/.{1,4}/g)?.join("-") || rawCode;
         logWABot(`✅ KODE PAIRING 8 DIGIT: ${code}. Masukkan kode ini di WhatsApp HP Anda.`, "info");
         return { status: true, code: code, phone: clean };
@@ -1333,10 +1221,10 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
             const durLabel = warranty?.durationLabel || "Sesuai Paket";
             if (newStatus === "processing") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN UNBLOCK IMEI SEDANG DIPROSES*\n\n` +
+                    `*PESANAN ADD ROAMER SEDANG DIPROSES*\n\n` +
                     `• *Order ID:* #${trx.id}\n` +
                     `• *IMEI:* ${trx.imei || "-"}\n` +
-                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Add Roamer"}\n` +
                     `• *Status:* Sedang Dikerjakan Admin\n` +
                     (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
                     `\nTim teknis kami sedang memproses dan mengaktivasi sinyal perangkat Anda. Mohon ditunggu ya Kak.\n\n` +
@@ -1344,10 +1232,10 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
                     BOT_FOOTER;
             } else if (newStatus === "success" || newStatus === "completed") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PESANAN UNBLOCK IMEI TELAH SELESAI (SUKSES)*\n\n` +
+                    `*PESANAN ADD ROAMER TELAH SELESAI (SUKSES)*\n\n` +
                     `• *Order ID:* #${trx.id}\n` +
                     `• *IMEI:* ${trx.imei || "-"}\n` +
-                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Add Roamer"}\n` +
                     `• *Garansi Sinyal:* ${durLabel} (Aktif)\n` +
                     `• *Status:* Selesai / Sinyal Aktif\n` +
                     (customNote ? `• *Catatan Admin:* ${customNote}\n` : "") +
@@ -1356,10 +1244,10 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
                     BOT_FOOTER;
             } else if (newStatus === "failed" || newStatus === "cancelled") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PEMBERITAHUAN PESANAN UNBLOCK IMEI*\n\n` +
+                    `*PEMBERITAHUAN PESANAN ADD ROAMER*\n\n` +
                     `• *Order ID:* #${trx.id}\n` +
                     `• *IMEI:* ${trx.imei || "-"}\n` +
-                    `• *Layanan:* ${trx.packageName || "Unblock IMEI"}\n` +
+                    `• *Layanan:* ${trx.packageName || "Add Roamer"}\n` +
                     `• *Status:* Dibatalkan / Gagal\n` +
                     `• *Alasan:* ${customNote || "Pesanan tidak dapat diproses oleh admin."}\n\n` +
                     `Silakan cek saldo akun Anda di website atau hubungi admin jika ada pertanyaan: https://ry-itsolutionts.web.id/history` +
@@ -1369,45 +1257,8 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
             }
         }
 
-        let msgPayload = { text: custMsg };
-
-        // Automatically generate & attach PNG log card image for completed CEIR orders
-        if (serviceKind === "ceir" && (newStatus === "success" || newStatus === "completed")) {
-            try {
-                const noteText = customNote || trx.admin_note || "";
-                let rows = [];
-                const numberedPattern = /(\d+)[\.\)]\s*([0-9]{4}-[0-9]{2}-[0-9]{2}(?:\s+[0-9]{2}:[0-9]{2}:[0-9]{2})?)\s*\|\s*Action:\s*([^|]+)\s*\|\s*Note:\s*(.*?)(?=(?:\s*\d+[\.\)]\s*[0-9]{4}-)|$)/gi;
-                let match;
-                while ((match = numberedPattern.exec(noteText)) !== null) {
-                    rows.push({
-                        no: parseInt(match[1], 10),
-                        date: match[2]?.trim() || '',
-                        action: match[3]?.trim() || 'CEIR_EVENT',
-                        note: match[4]?.trim() || '-'
-                    });
-                }
-
-                const pngBuffer = await generateCeirLogBanner({
-                    orderId: trx.id,
-                    imei: trx.imei || '-',
-                    serviceName: trx.packageName || 'Cek Status CEIR',
-                    statusText: 'TERDAFTAR RESMI DI CEIR',
-                    rows
-                });
-
-                if (pngBuffer && Buffer.isBuffer(pngBuffer)) {
-                    msgPayload = {
-                        image: pngBuffer,
-                        caption: custMsg
-                    };
-                }
-            } catch (bannerErr) {
-                console.warn(`[WABot] Gagal membuat PNG banner log CEIR: ${bannerErr.message}`);
-            }
-        }
-
-        await sendAndStoreMessage(custJid, msgPayload);
-        logWABot(`✅ Notifikasi status '${newStatus}' pesanan ${trx.id} (dengan media=${!!msgPayload.image}) berhasil terkirim ke WhatsApp pelanggan (${customerPhone})`, "info");
+        await sendAndStoreMessage(custJid, { text: custMsg });
+        logWABot(`✅ Notifikasi status '${newStatus}' pesanan ${trx.id} berhasil terkirim ke WhatsApp pelanggan (${customerPhone})`, "info");
         console.log(`[WABot] Notifikasi status '${newStatus}' berhasil dikirim ke pelanggan (${customerPhone}).`);
     } catch (err) {
         logWABot(`❌ Gagal kirim notifikasi status ke pelanggan: ${err.message}`, "error");
@@ -1438,8 +1289,6 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         command = ".status";
     } else if (command === "help" || command === "bantuan" || command === "menu") {
         command = ".help";
-    } else if (command === "orderan" || command === "order" || command === "list" || command === "pending" || command === "proseslist") {
-        command = ".orderan";
     }
 
     if (orderIdArg) {
@@ -1478,80 +1327,32 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         return;
     }
 
-    if (command === ".orderan" || command === ".order" || command === ".list" || command === ".pending" || command === ".proseslist") {
-        const pendingOrders = await dbAll(
-            "SELECT * FROM transactions WHERE status IN ('pending', 'processing', 'in_queue') ORDER BY createdAt DESC LIMIT 15"
-        );
-        if (!pendingOrders || pendingOrders.length === 0) {
-            await replyWhatsApp(replyJid, `*TIDAK ADA PESANAN TERTUNDA*\n\nSemua pesanan saat ini sudah selesai diproses.` + BOT_FOOTER);
-            return;
-        }
-
-        let listText = `📋 *DAFTAR PESANAN PERLU PROSES (${pendingOrders.length})*\n\n`;
-        pendingOrders.forEach((item, index) => {
-            const num = index + 1;
-            const st = (item.status || "PENDING").toUpperCase();
-            listText += `*${num}. [${item.id}]*\n` +
-                `   • *User:* ${item.userName || "User"} (${item.customerPhone || item.targetPhone || "-"})\n` +
-                `   • *Layanan:* ${item.packageName || "Paket"}\n` +
-                (item.imei ? `   • *IMEI:* \`${item.imei}\`\n` : "") +
-                `   • *Status:* *${st}*\n\n`;
-        });
-
-        listText += `💡 *PETUNJUK KONTROL CEPAT:*\n` +
-            `• Balas *.proses <nomor>*\n  (misal: *.proses 1*)\n` +
-            `• Balas *.sukses <nomor> <catatan>*\n  (misal: *.sukses 1 Terdaftar*)\n` +
-            `• Balas *.gagal <nomor> <alasan>*\n  (misal: *.gagal 1 IMEI Salah*)` +
-            BOT_FOOTER;
-
-        await replyWhatsApp(replyJid, listText);
-        return;
-    }
-
     if (command === ".bantuan" || command === ".help" || command === ".menu") {
         const helpMsg = `*PANDUAN PERINTAH BOT ADMIN Ry-ITSolutions*\n\n` +
-            `• *.orderan* (atau *.list*)\n` +
-            `  Melihat daftar pesanan tertunda/perlu diproses langsung dari database.\n\n` +
-            `• *.proses <ID_ORDER / NOMOR>*\n` +
-            `  Mengubah status pesanan menjadi PROCESSING (misal: *.proses 1*).\n\n` +
-            `• *.sukses <ID_ORDER / NOMOR> <CATATAN>*\n` +
-            `  Menyelesaikan pesanan & kirim nota ke pembeli (misal: *.sukses 1 Selesai*).\n\n` +
-            `• *.gagal <ID_ORDER / NOMOR> <ALASAN>*\n` +
-            `  Membatalkan pesanan & auto-refund saldo user (misal: *.gagal 1 IMEI Salah*).\n\n` +
-            `• *.status <ID_ORDER / NOMOR>*\n` +
-            `  Mengecek rincian status pesanan saat ini.\n\n` +
-            `• *.fixwa*\n` +
-            `  Memperbarui enkripsi sesi jika terjadi kendala E2EE.` +
+            `• *.proses <ID_ORDER>*\n` +
+            `  Mengubah status pesanan menjadi PROCESSING.\n\n` +
+            `• *.sukses <ID_ORDER> <CATATAN>*\n` +
+            `  Menyelesaikan pesanan (status SUCCESS) dan menyimpan catatan.\n\n` +
+            `• *.gagal <ID_ORDER> <ALASAN>*\n` +
+            `  Membatalkan pesanan (status FAILED) & refund saldo user otomatis.\n\n` +
+            `• *.status <ID_ORDER>*\n` +
+            `  Mengecek status & rincian pesanan saat ini.` +
             BOT_FOOTER;
         await replyWhatsApp(replyJid, helpMsg);
         return;
     }
 
     if (!orderIdArg) {
-        await replyWhatsApp(replyJid, `*Format salah!*\nGunakan: \`${command} <ID_ORDER / NOMOR>\`\nContoh: \`${command} 1\` atau ketik \`.orderan\` untuk melihat daftar.`);
+        await replyWhatsApp(replyJid, `*Format salah!*\nGunakan: \`${command} <ID_ORDER>\`\nKetik \`.help\` untuk panduan.`);
         return;
     }
 
-    // Search transaction by exact ID, numeric index shortcut (1, 2, 3), or prefix match
+    // Search transaction by exact ID or prefix match
     const cleanId = orderIdArg.trim();
-    let trx = null;
-
-    if (/^\d{1,2}$/.test(cleanId)) {
-        const offset = parseInt(cleanId, 10) - 1;
-        const activeRows = await dbAll(
-            "SELECT * FROM transactions WHERE status IN ('pending', 'processing', 'in_queue') ORDER BY createdAt DESC LIMIT 20"
-        );
-        if (activeRows && activeRows[offset]) {
-            trx = activeRows[offset];
-        }
-    }
-
-    if (!trx) {
-        trx = await dbGet(
-            "SELECT * FROM transactions WHERE id = ? OR id LIKE ? ORDER BY createdAt DESC LIMIT 1",
-            [cleanId, `%${cleanId}%`]
-        );
-    }
+    const trx = await dbGet(
+        "SELECT * FROM transactions WHERE id = ? OR id LIKE ? ORDER BY createdAt DESC LIMIT 1",
+        [cleanId, `%${cleanId}%`]
+    );
 
     if (!trx) {
         await replyWhatsApp(replyJid, `*Pesanan Tidak Ditemukan!*\nOrder ID \`${cleanId}\` tidak ada di database.`);
@@ -1702,15 +1503,6 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         const clean = cleanPhone(rawNumber);
         if (clean && clean.length >= 8) {
             finalJid = `${clean}@s.whatsapp.net`;
-            // USync pre-key refresh: query WhatsApp servers to sync Signal session prekeys before encrypting
-            try {
-                if (sock && typeof sock.onWhatsApp === "function") {
-                    const [res] = await sock.onWhatsApp(clean);
-                    if (res?.jid) {
-                        finalJid = res.jid;
-                    }
-                }
-            } catch (e) {}
         } else {
             throw new Error(`Nomor telepon tujuan tidak valid: ${targetJid}`);
         }
@@ -1808,88 +1600,16 @@ async function sendTextMessage(targetPhone, message) {
 }
 
 /**
- * Send WhatsApp image message with optional caption text
- */
-async function sendImageMessage(targetPhone, imageInput, caption = '') {
-    try {
-        let isConnected = (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id));
-        if (!isConnected && sock) {
-            for (let i = 0; i < 4; i++) {
-                await new Promise(r => setTimeout(r, 500));
-                if (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id)) {
-                    isConnected = true;
-                    break;
-                }
-            }
-        }
-
-        if (!sock || !isConnected) {
-            return { status: false, message: "WhatsApp Baileys bot belum terhubung / belum login." };
-        }
-
-        const phone = cleanPhone(targetPhone);
-        if (!phone) return { status: false, message: "Nomor tujuan tidak valid." };
-
-        let imageBuffer;
-        if (Buffer.isBuffer(imageInput)) {
-            imageBuffer = imageInput;
-        } else if (typeof imageInput === 'string') {
-            const base64Data = imageInput.replace(/^data:image\/\w+;base64,/, '');
-            imageBuffer = Buffer.from(base64Data, 'base64');
-        } else {
-            return { status: false, message: "Format gambar tidak valid." };
-        }
-
-        const jid = `${phone}@s.whatsapp.net`;
-        await sendAndStoreMessage(jid, {
-            image: imageBuffer,
-            caption: caption ? caption.trim() : ''
-        });
-        console.log(`[WABot] Gambar nota terkirim ke: ${phone}`);
-        return { status: true, message: `Nota WhatsApp (Gambar PNG & Teks) berhasil dikirim ke ${phone}` };
-    } catch (error) {
-        console.error("[WABot] Send image error:", error.message);
-        return { status: false, message: error.message };
-    }
-}
-
-/**
  * Helper to reply to a WhatsApp JID
  */
 async function replyWhatsApp(jid, text) {
-    if (!sock || !jid) return;
+    if (!sock || connectionState !== "open") return;
     try {
         let cleanJid = jid;
-
-        // Convert known LID to real phone number JID
-        if (cleanJid.includes("@lid")) {
-            const rawLid = cleanJid.split("@")[0].split(":")[0];
-            if (rawLid === "217489191489706") {
-                cleanJid = "6285156692166@s.whatsapp.net";
-            } else if (rawLid === "15062853009567") {
-                cleanJid = "6287767287284@s.whatsapp.net";
-            } else {
-                try {
-                    const contactRow = await dbGet("SELECT phone FROM wa_contacts WHERE jid = ?", [jid]);
-                    if (contactRow && contactRow.phone && !contactRow.phone.includes("@lid") && contactRow.phone.length <= 13) {
-                        const cp = cleanPhone(contactRow.phone);
-                        if (cp) cleanJid = `${cp}@s.whatsapp.net`;
-                    }
-                } catch (e) {}
-            }
+        if (cleanJid && !cleanJid.includes("@g.us") && !cleanJid.includes("@lid")) {
+            const rawPhone = cleanJid.split("@")[0].split(":")[0];
+            cleanJid = `${rawPhone}@s.whatsapp.net`;
         }
-
-        // Clean :device suffix if present (e.g. 6285156692166:12@s.whatsapp.net -> 6285156692166@s.whatsapp.net)
-        if (cleanJid.includes(":") && cleanJid.includes("@s.whatsapp.net")) {
-            cleanJid = cleanJid.split(":")[0] + "@s.whatsapp.net";
-        }
-
-        if (!cleanJid.includes("@g.us") && !cleanJid.includes("@s.whatsapp.net") && !cleanJid.includes("@lid")) {
-            const rawPhone = cleanPhone(cleanJid.split("@")[0].split(":")[0]);
-            if (rawPhone) cleanJid = `${rawPhone}@s.whatsapp.net`;
-        }
-
-        logWABot(`[replyWhatsApp] Replying to ${jid} (mapped: ${cleanJid})`, "info");
         await sendAndStoreMessage(cleanJid, { text });
     } catch (e) {
         console.error(`[WABot] Gagal mengirim balasan ke ${jid}:`, e.message);
@@ -2015,9 +1735,9 @@ async function notifyNewOrder(orderData) {
         const isTopUp = serviceType === "topup" || serviceType === "topup_qris" || (packageName || "").toLowerCase().includes("top up") || (packageName || "").toLowerCase().includes("topup");
         const isCeir = serviceType === "ceir" || serviceType === "barcode" || (packageName || "").toLowerCase().includes("ceir") || (packageName || "").toLowerCase().includes("barcode");
         const isAutomated = isCeir;
-        const speedDisplay = isAutomated 
-            ? "Instant (Otomatis Sistem)" 
-            : `${optTitle} (${speedRangeText})`;
+        let speedDisplay = isAutomated 
+                        ? "Instant (Otomatis Sistem)" 
+                        : `${optTitle} (${optName === "slow" ? "1‑12 Jam" : optName === "fast" ? "1‑3 Jam" : "1‑12 Jam"})`;
 
         let serviceDetailLines = `*Layanan:* ${packageName || "Layanan"}
 `;
@@ -2270,7 +1990,7 @@ async function notifyWarrantyClaim({ imei, packageName, customerName, customerPh
         `🚨 *KLAIM GARANSI SINYAL MASUK (PRIORITAS)*\n\n` +
         `Halo Admin, seorang pelanggan baru saja mengajukan klaim garansi karena sinyal perangkatnya terputus/hilang.\n\n` +
         `• *Nomor IMEI:* ${imei}\n` +
-        `• *Paket Layanan:* ${packageName || 'Unblock IMEI'}\n` +
+        `• *Paket Layanan:* ${packageName || 'Add Roamer'}\n` +
         `• *Status Garansi:* ${warrantyText || 'Garansi Aktif'}\n` +
         `• *Nama Pelanggan:* ${customerName || 'Pelanggan'}\n` +
         `• *WhatsApp Pelanggan:* ${cleanCustPhone || '-'}\n` +
@@ -2402,7 +2122,7 @@ async function notifyPromoBroadcast({ coupon, customMessage, targetMode = 'admin
     const quotaStr = claimLimit ? `${Math.max(0, claimLimit - claimedCount)} Kuota Tersisa` : 'Kuota Terbuka';
 
     const claimUrl = `https://ry-itsolutionts.web.id/vouchers?claim=${encodeURIComponent(code)}`;
-    const orderUrl = `https://ry-itsolutionts.web.id/unblock-imei?coupon=${encodeURIComponent(code)}`;
+    const orderUrl = `https://ry-itsolutionts.web.id/add-roamer?coupon=${encodeURIComponent(code)}`;
 
     const caption = 
 `*Ry-IT Solutions Official*
@@ -2496,6 +2216,135 @@ https://ry-itsolutionts.web.id`;
     };
 }
 
+function safeParseSpeedPrices(raw) {
+    if (!raw) return {};
+    try {
+        if (typeof raw === 'string') {
+            const v = JSON.parse(raw);
+            return (v && typeof v === 'object') ? v : {};
+        }
+        if (typeof raw === 'object') return raw;
+    } catch (e) { /* malformed json */ }
+    return {};
+}
+
+/**
+ * Broadcast Price Change Notification to WhatsApp (Admin & Users)
+ * Triggered when admin edits IMEI package duration & price.
+ */
+async function notifyPriceChangeBroadcast({ packages, customMessage, targetMode = 'all', updatedPackage, onlyPhones }) {
+    if (!Array.isArray(packages) || packages.length === 0) throw new Error("Data paket tidak valid");
+
+    const speedLabels = { fast: 'Fast', semi: 'Semi', slow: 'Slow' };
+
+    const priceList = packages.map(p => {
+        const sp = typeof p.speed_prices === 'string' ? safeParseSpeedPrices(p.speed_prices) : (p.speed_prices || {});
+        const allowed = Array.isArray(sp.allowed_speeds) && sp.allowed_speeds.length ? sp.allowed_speeds : ['fast', 'semi', 'slow'];
+        const lines = [];
+        for (const id of allowed) {
+            const raw = sp[id];
+            const price = Number(raw);
+            if (!price) continue;
+            let line = `• *${p.duration} ${speedLabels[id]}:* Rp ${price.toLocaleString('id-ID')}`;
+            const ws = sp.wholesale_prices && sp.wholesale_prices[id];
+            if (ws && Number(ws) > 0 && Number(ws) < price) {
+                const wsQty = sp.wholesale_min_qty || 2;
+                line += ` (Grosir ≥${wsQty}: Rp ${Number(ws).toLocaleString('id-ID')})`;
+            }
+            lines.push(line);
+        }
+        if (!lines.length) {
+            lines.push(`• *${p.duration} Slow:* Rp ${Number(p.price || 0).toLocaleString('id-ID')}`);
+        }
+        return lines.join('\n');
+    }).join('\n');
+
+    const changedName = updatedPackage?.duration || packages[0]?.duration || 'Paket';
+
+    const caption =
+`📢 *UPDATE HARGA ADD ROAMER* 📢
+━━━━━━━━━━━━━━━━━━━━━━━
+Halo kak! Ada pembaruan tarif & harga layanan terbaru di Ry-ITSolutions:
+
+📦 *Rincian Tarif Terbaru:*
+${priceList}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+💡 *Informasi Tambahan:*
+Harga paket Add Roamer telah diperbarui! Nikmati juga diskon otomatis untuk order dengan jumlah tertentu.
+${customMessage ? `\n${customMessage}\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━
+👉 *CEK & PESAN SEKARANG:*
+https://ry-itsolutionts.web.id/add-roamer
+
+_Ry-ITSolutions Official Support & Store_`;
+
+    const { generatePriceBanner } = require('./bannerGenerator');
+    let imageBuffer = null;
+    try {
+        imageBuffer = generatePriceBanner({ packages });
+    } catch (e) {
+        console.warn('[notifyPriceChangeBroadcast] Gagal generate banner:', e.message);
+        const bannerPath = path.resolve(__dirname, '../../frontend-v2/public/banners/banner_imei.jpg');
+        if (fs.existsSync(bannerPath)) imageBuffer = fs.readFileSync(bannerPath);
+    }
+
+    const payload = imageBuffer
+        ? { image: imageBuffer, caption, viewOnce: false }
+        : { text: caption };
+
+    const adminPhones = await getAdminPhoneNumbers();
+    const targetPhones = new Set();
+
+    adminPhones.forEach(p => {
+        const c = cleanPhone(p);
+        if (c && c.length >= 8) targetPhones.add(c);
+    });
+
+    if (targetMode === 'all') {
+        const userRows = await dbAll("SELECT verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ''");
+        userRows.forEach(u => {
+            const c = cleanPhone(u.verifiedPhone);
+            if (c && c.length >= 8) targetPhones.add(c);
+        });
+    }
+
+    const results = [];
+    let sentCount = 0;
+    let failedCount = 0;
+
+    const onlySet = Array.isArray(onlyPhones) && onlyPhones.length
+        ? new Set(onlyPhones.map(cleanPhone).filter(c => c && c.length >= 8))
+        : null;
+
+    for (const phone of targetPhones) {
+        if (onlySet && !onlySet.has(phone)) continue;
+        const jid = `${phone}@s.whatsapp.net`;
+        try {
+            const sent = await sendAndStoreMessage(jid, payload);
+            results.push({ phone, success: true, id: sent?.key?.id });
+            sentCount++;
+            console.log(`[WABot PriceUpdate] Berhasil kirim update harga ke ${phone}`);
+        } catch (err) {
+            results.push({ phone, success: false, error: err.message });
+            failedCount++;
+            console.error(`[WABot PriceUpdate] Gagal kirim update harga ke ${phone}:`, err.message);
+        }
+
+        if (targetPhones.length > 1) {
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    return {
+        success: sentCount > 0,
+        totalTarget: targetPhones.length,
+        totalSent: sentCount,
+        totalFailed: failedCount,
+        details: results
+    };
+}
+
 /**
  * Broadcast New Product Notification to WhatsApp (Admin & Users)
  * Dynamically tailored message based on product category/type.
@@ -2509,12 +2358,12 @@ async function notifyNewProductBroadcast({ product, customMessage, targetMode = 
     let bannerFileName = 'banner_imei.jpg';
     let headerTitle = '🚀 *PRODUK BARU TERSEDIA DI RY-ITSOLUTIONS* 🚀';
     let detailSection = '';
-    let directLink = 'https://ry-itsolutionts.web.id/unblock-imei';
+    let directLink = 'https://ry-itsolutionts.web.id/add-roamer';
 
     if (pType === 'imei') {
         bannerFileName = 'banner_imei.jpg';
-        headerTitle = '📱 *LAYANAN BARU: UNBLOCK IMEI* 📱';
-        directLink = product.link || 'https://ry-itsolutionts.web.id/unblock-imei';
+        headerTitle = '📱 *LAYANAN BARU: ADD ROAMER* 📱';
+        directLink = product.link || 'https://ry-itsolutionts.web.id/add-roamer';
         
         let speedList = ['Instant (Fast)', 'Semi-Fast', 'Hemat'];
         if (Array.isArray(product.speeds) && product.speeds.length > 0) {
@@ -2525,7 +2374,7 @@ async function notifyNewProductBroadcast({ product, customMessage, targetMode = 
 `📦 *Nama Paket:* *${product.duration || product.name}*
 💰 *Harga Spesial:* *${priceStr}*
 📶 *Jaringan:* All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)
-🛡️ *Jaminan Garansi:* Garansi Sinyal Stabil / Anti Begal Sinyal
+🛡️ *Jaminan Garansi:* Resmi Anti Begal Sinyal / Hilang Sinyal
 ⚡ *Pilihan Server:* ${speedList.join(' • ')}
 ━━━━━━━━━━━━━━━━━━━━━━━
 📝 *Informasi Layanan:*
@@ -2635,118 +2484,11 @@ _Ry-ITSolutions Official Support & Store_`;
     };
 }
 
-/**
- * Broadcast price update notification with automatically generated banner to users via WhatsApp.
- * @param {Object} options
- * @param {string} options.title - Header title for text message & banner
- * @param {string} options.subtitle - Subtitle / category context
- * @param {Array<{name: string, price: string|number, note?: string, highlight?: boolean}>} options.items - Price list items
- * @param {string} [options.customNote] - Additional note for users
- * @param {string} [options.targetMode='all'] - 'all' or 'admin_only'
- */
-async function notifyPriceUpdateBroadcast({
-    title = 'UPDATE HARGA TERBARU',
-    subtitle = 'Layanan Digital Ry-ITSolutions',
-    items = [],
-    customNote = '',
-    targetMode = 'all'
-}) {
-    if (!Array.isArray(items) || items.length === 0) {
-        console.warn('[notifyPriceUpdateBroadcast] Tidak ada item harga untuk dibroadcast.');
-        return { success: false, reason: 'No price items' };
-    }
-
-    // 1. Generate visual banner PNG buffer via sharp/SVG AI generator
-    let bannerBuffer = null;
-    try {
-        bannerBuffer = await generatePriceUpdateBanner({
-            title,
-            subtitle,
-            items,
-            footerNote: customNote || 'Harga terbaru berlaku mulai sekarang • Garansi Sinyal Stabil'
-        });
-    } catch (e) {
-        console.error('[notifyPriceUpdateBroadcast] Gagal membuat banner image:', e.message);
-    }
-
-    // 2. Build structured WhatsApp caption text
-    let priceListText = '';
-    items.forEach(item => {
-        const pStr = typeof item.price === 'number'
-            ? `Rp ${item.price.toLocaleString('id-ID')}`
-            : String(item.price || 'Rp 0');
-        priceListText += `• *${item.name}*: *${pStr}*${item.note ? ` _(${item.note})_` : ''}\n`;
-    });
-
-    const caption = 
-`📢 *${title.toUpperCase()}* 📢
-━━━━━━━━━━━━━━━━━━━━━━━
-Halo kak! Ada pembaruan tarif & harga layanan terbaru di *Ry-ITSolutions*:
-
-📦 *Rincian Tarif Terbaru:*
-${priceListText}
-━━━━━━━━━━━━━━━━━━━━━━━
-${customNote ? `💡 *Informasi Tambahan:*\n${customNote}\n━━━━━━━━━━━━━━━━━━━━━━━\n` : ''}👉 *CEK & PESAN SEKARANG:*
-https://ry-itsolutionts.web.id/unblock-imei
-
-_Ry-ITSolutions Official Support & Store_`;
-
-    const payload = bannerBuffer
-        ? { image: bannerBuffer, caption, viewOnce: false }
-        : { text: caption };
-
-    // 3. Collect target phone numbers
-    const adminPhones = await getAdminPhoneNumbers();
-    const targetPhones = new Set();
-    adminPhones.forEach(p => {
-        const c = cleanPhone(p);
-        if (c && c.length >= 8) targetPhones.add(c);
-    });
-
-    if (targetMode === 'all') {
-        const userRows = await dbAll("SELECT verifiedPhone FROM users WHERE verifiedPhone IS NOT NULL AND TRIM(verifiedPhone) != ''");
-        userRows.forEach(u => {
-            const c = cleanPhone(u.verifiedPhone);
-            if (c && c.length >= 8) targetPhones.add(c);
-        });
-    }
-
-    const results = [];
-    let sentCount = 0;
-    let failedCount = 0;
-
-    for (const phone of targetPhones) {
-        const jid = `${phone}@s.whatsapp.net`;
-        try {
-            const sent = await sendAndStoreMessage(jid, payload);
-            results.push({ phone, success: true, id: sent?.key?.id });
-            sentCount++;
-            console.log(`[WABot PriceUpdate] Berhasil kirim update harga ke ${phone}`);
-        } catch (err) {
-            results.push({ phone, success: false, error: err.message });
-            failedCount++;
-            console.error(`[WABot PriceUpdate] Gagal kirim update harga ke ${phone}:`, err.message);
-        }
-
-        if (targetPhones.size > 1) {
-            await new Promise(r => setTimeout(r, 1000));
-        }
-    }
-
-    return {
-        success: sentCount > 0,
-        totalTarget: targetPhones.size,
-        totalSent: sentCount,
-        totalFailed: failedCount,
-        details: results
-    };
-}
-
 module.exports = {
-    notifyPriceUpdateBroadcast,
     notifyPromoBroadcast,
-    getBroadcastRecipients,
+    notifyPriceChangeBroadcast,
     notifyNewProductBroadcast,
+    getBroadcastRecipients,
 
     getWALogs,
     initWABot,
@@ -2754,7 +2496,6 @@ module.exports = {
     closeWABot,
     getWAStatus,
     sendTextMessage,
-    sendImageMessage,
     notifyNewOrder,
     notifyCustomerOnStatusChange,
     getCustomerPhoneForTransaction,

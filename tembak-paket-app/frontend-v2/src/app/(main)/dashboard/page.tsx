@@ -29,11 +29,11 @@ export default function DashboardPage() {
   // Hero Promo Carousel Slides (Signature Ry-ITSolutions Blue Identity & Talent Posters)
   const heroSlides = [
     {
-      title: "INSTANT DEALS BUKA SINYAL KILAT",
+      title: "INSTANT DEALS ADD ROAMER KILAT",
       subtitle: "Aktivasi IMEI All Operator kilat 24 jam dengan garansi digital resmi & nota transaksi.",
       badge: "LAYANAN UTAMA",
       ctaText: "BELI SEKARANG >",
-      ctaLink: "/unblock-imei",
+      ctaLink: "/add-roamer",
       bgGradient: "from-blue-950/90 via-blue-900/80 to-transparent",
       image: "/banners/banner_imei.jpg",
     },
@@ -405,8 +405,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 text-center">
           {[
             {
-              name: "Buka IMEI",
-              href: "/unblock-imei",
+              name: "Add Roamer",
+              href: "/add-roamer",
               tourKey: "service-unblock",
               iconBg: "bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary group-hover:bg-primary/20",
               icon: (
@@ -567,7 +567,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-3">
         {/* Left Discovery: Sinyal Live & Layanan */}
         <div
-          onClick={() => router.push("/unblock-imei")}
+          onClick={() => router.push("/add-roamer")}
           className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer hover:border-gray-400 transition-all"
         >
           <div className="flex items-center justify-between">
@@ -590,7 +590,7 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-ink truncate">BUKA SINYAL IMEI</p>
+              <p className="text-[10px] font-bold text-ink truncate">ADD ROAMER</p>
               <p className="text-[9px] text-ink-muted truncate">Semua Operator</p>
             </div>
           </div>
@@ -658,7 +658,7 @@ export default function DashboardPage() {
 
         {/* Right Column: BEST-SELLER PRODUCT CARD */}
         <div
-          onClick={() => router.push("/unblock-imei")}
+          onClick={() => router.push("/add-roamer")}
           className="rounded-2xl p-3 bg-canvas border border-hairline shadow-sm flex flex-col justify-between cursor-pointer group hover:border-primary/40 transition-all"
         >
           <div className="space-y-1">
@@ -671,7 +671,7 @@ export default function DashboardPage() {
               POPULER
             </span>
             <p className="text-[11px] sm:text-xs font-bold text-ink line-clamp-1 group-hover:text-primary transition-colors">
-              Paket Buka IMEI All Operator
+              Paket Add Roamer All Operator
             </p>
             <div className="flex items-center gap-1 text-[9px] text-ink-muted">
               <span className="text-amber-500 font-bold">4.9/5.0</span>
@@ -757,7 +757,7 @@ export default function DashboardPage() {
                     Cek Garansi
                   </button>
                   <button
-                    onClick={() => router.push(`/unblock-imei?imei=${cleanSearch}`)}
+                    onClick={() => router.push(`/add-roamer?imei=${cleanSearch}`)}
                     className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors"
                   >
                     Unblock
@@ -776,7 +776,7 @@ export default function DashboardPage() {
                   >
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-ink">{trx.packageName || "Unblock IMEI"}</span>
+                        <span className="font-bold text-ink">{trx.packageName || "Add Roamer"}</span>
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
                           trx.status === "success" ? "bg-emerald-100 text-emerald-800" :
                           trx.status === "pending" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"

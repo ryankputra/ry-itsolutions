@@ -314,17 +314,11 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
         const { type } = req.query; // 'manual' | 'automated' | undefined
         
         const orders = await dbAll(
-            `SELECT t.*, 
-                    u.verifiedPhone as userVerifiedPhone, 
-                    u.verifiedPhone as userPhone, 
-                    u.name as userName,
-                    NULLIF(u.verifiedPhone, '') as customerPhone
-             FROM transactions t
-             LEFT JOIN users u ON t.userId = u.id
-             WHERE t.service_type IN ('imei', 'ceir', 'barcode') 
-                OR t.packageId LIKE 'cek_%' 
-                OR t.packageId LIKE 'create_%' 
-             ORDER BY t.createdAt DESC`
+            `SELECT * FROM transactions 
+             WHERE service_type IN ('imei', 'ceir', 'barcode') 
+                OR packageId LIKE 'cek_%' 
+                OR packageId LIKE 'create_%' 
+             ORDER BY createdAt DESC`
         );
 
         const automatedCodes = new Set([
@@ -343,24 +337,6 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
             if (m && r.value) speedRangeMap[m[1]] = r.value;
         });
 
-        const toIsoDateString = (val) => {
-            if (!val) return new Date().toISOString();
-            if (typeof val === 'number') return new Date(val).toISOString();
-            const d = new Date(val);
-            if (!isNaN(d.getTime())) return d.toISOString();
-            if (typeof val === 'string') {
-                const parts = val.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-                if (parts) {
-                    const day = parseInt(parts[1], 10);
-                    const month = parseInt(parts[2], 10) - 1;
-                    const year = parseInt(parts[3], 10);
-                    const parsed = new Date(year, month, day);
-                    if (!isNaN(parsed.getTime())) return parsed.toISOString();
-                }
-            }
-            return new Date().toISOString();
-        };
-
         let categorizedOrders = orders.map(o => {
             const pkgId = (o.packageId || '').toLowerCase();
             const sType = (o.service_type || '').toLowerCase();
@@ -376,9 +352,6 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
 
             return {
                 ...o,
-                createdAt: toIsoDateString(o.createdAt),
-                updatedAt: o.updatedAt ? toIsoDateString(o.updatedAt) : null,
-                completedAt: o.completedAt ? toIsoDateString(o.completedAt) : null,
                 speed_label: speedLabel,
                 speed_range: speedRangeMap[(o.speed_option || 'slow').toLowerCase()] || speedRangeMap['slow'],
                 is_automated: isAuto,
@@ -518,11 +491,11 @@ router.post('/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async 
     }
 });
 
-// 7b. POST /api/admin/manual-orders/:id/retry-ceirgo & /api/admin/orders/:id/retry-ceirgo
-router.post(['/admin/orders/:id/retry-ceirgo', '/admin/manual-orders/:id/retry-ceirgo'], isAuthenticated, isAdmin, async (req, res) => {
+// 7b. POST /api/admin/orders/:id/retry-ceirgo (Retry CeirGO Order Execution from Admin Queue)
+router.post('/admin/orders/:id/retry-ceirgo', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const trxId = req.params.id;
-        const trx = await dbGet("SELECT * FROM transactions WHERE id = ? OR id LIKE ?", [trxId, `%${trxId}%`]);
+        const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
         if (!trx) return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
 
         const canonicalCode = (trx.packageId || trx.service_type || '').replace(/^ceirgo_price_/, '');
@@ -543,19 +516,7 @@ router.post(['/admin/orders/:id/retry-ceirgo', '/admin/manual-orders/:id/retry-c
             const refId = cd.reference_id || cd.order_id || cd.trx_id || `CRG_${Date.now()}`;
             const serverStatus = (cd.status || cd.order_status || 'processing').toLowerCase();
             const finalStatus = (serverStatus === 'success' || serverStatus === 'completed') ? 'success' : 'processing';
-            let note = '';
-            if (typeof cd.result === 'string') {
-                note = cd.result;
-            } else if (cd.result && typeof cd.result === 'object') {
-                const keys = Object.keys(cd.result);
-                if (keys.length > 0) {
-                    note = keys.map(k => `${k}: ${Array.isArray(cd.result[k]) ? cd.result[k].join(', ') : cd.result[k]}`).join(' | ');
-                } else {
-                    note = JSON.stringify(cd.result);
-                }
-            } else {
-                note = cd.message || 'Sukses disubmit ulang ke CeirGO.';
-            }
+            const note = typeof cd.result === 'string' ? cd.result : (cd.message || 'Sukses disubmit ulang ke CeirGO.');
 
             if (cd.remaining_balance != null) {
                 const rb = Number(cd.remaining_balance);
@@ -646,37 +607,6 @@ router.post('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) 
             const normalizedKey = key.startsWith('ceirgo_price_') ? key : `ceirgo_price_${key}`;
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, String(value)]);
         }
-
-        // Trigger WA Broadcast with dynamic AI banner & WebPush notification asynchronously
-        setImmediate(async () => {
-            try {
-                const items = Object.entries(pricing).map(([k, v]) => {
-                    const cleanName = k.replace(/^ceirgo_price_/, '').replace(/_/g, ' ').toUpperCase();
-                    return {
-                        name: cleanName,
-                        price: Number(v) || 0,
-                        note: 'Layanan CeirGO API'
-                    };
-                });
-                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
-                    await waBot.notifyPriceUpdateBroadcast({
-                        title: 'UPDATE HARGA LAYANAN CEIRGO',
-                        subtitle: 'Tarif Terbaru Cek & Status IMEI CeirGO',
-                        items,
-                        customNote: 'Harga layanan CeirGO telah diperbarui. Silakan cek detail di website.'
-                    });
-                }
-                const { broadcastPushNotification } = require('../services/webPushService');
-                await broadcastPushNotification({
-                    title: 'Update Harga CeirGO',
-                    body: 'Tarif layanan CeirGO telah diperbarui!',
-                    url: '/unblock-imei'
-                });
-            } catch (e) {
-                console.error('[Admin CeirGO Pricing Broadcast Error]:', e.message);
-            }
-        });
-
         res.json({ status: true, message: "Harga layanan CeirGO berhasil diperbarui." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -690,37 +620,6 @@ router.put('/admin/ceirgo-pricing', isAuthenticated, isAdmin, async (req, res) =
             const normalizedKey = key.startsWith('ceirgo_price_') ? key : `ceirgo_price_${key}`;
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [normalizedKey, String(value)]);
         }
-
-        // Trigger WA Broadcast with dynamic AI banner & WebPush notification asynchronously
-        setImmediate(async () => {
-            try {
-                const items = Object.entries(pricing).map(([k, v]) => {
-                    const cleanName = k.replace(/^ceirgo_price_/, '').replace(/_/g, ' ').toUpperCase();
-                    return {
-                        name: cleanName,
-                        price: Number(v) || 0,
-                        note: 'Layanan CeirGO API'
-                    };
-                });
-                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
-                    await waBot.notifyPriceUpdateBroadcast({
-                        title: 'UPDATE HARGA LAYANAN CEIRGO',
-                        subtitle: 'Tarif Terbaru Cek & Status IMEI CeirGO',
-                        items,
-                        customNote: 'Harga layanan CeirGO telah diperbarui. Silakan cek detail di website.'
-                    });
-                }
-                const { broadcastPushNotification } = require('../services/webPushService');
-                await broadcastPushNotification({
-                    title: 'Update Harga CeirGO',
-                    body: 'Tarif layanan CeirGO telah diperbarui!',
-                    url: '/unblock-imei'
-                });
-            } catch (e) {
-                console.error('[Admin CeirGO Pricing Broadcast Error]:', e.message);
-            }
-        });
-
         res.json({ status: true, message: "Harga layanan CeirGO berhasil diperbarui." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -895,34 +794,6 @@ router.put('/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req, 
                 WHERE package_code = ?
             `, [pkg.platform_fee, pkg.reseller_fee, pkg.isVisible, pkg.category, pkg.isMultiPurchase, pkg.position, pkg.package_code]);
         }
-
-        // Trigger WA Broadcast with dynamic AI banner & WebPush asynchronously
-        setImmediate(async () => {
-            try {
-                const items = packages.slice(0, 6).map(p => ({
-                    name: p.name || p.package_code,
-                    price: (Number(p.original_price) || 0) + (Number(p.platform_fee) || 0),
-                    note: `Kategori: ${p.category || 'Paket Data'}`
-                }));
-                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
-                    await waBot.notifyPriceUpdateBroadcast({
-                        title: 'UPDATE HARGA PAKET DATA',
-                        subtitle: 'Tarif Terbaru Paket Kuota Internet',
-                        items,
-                        customNote: 'Harga paket data internet telah diperbarui di website.'
-                    });
-                }
-                const { broadcastPushNotification } = require('../services/webPushService');
-                await broadcastPushNotification({
-                    title: 'Update Harga Paket Data',
-                    body: 'Daftar harga paket data telah diperbarui di website!',
-                    url: '/beli-paket'
-                });
-            } catch (e) {
-                console.error('[Admin Bulk Packages Update Broadcast Error]:', e.message);
-            }
-        });
-
         res.json({ status: true, message: "Paket berhasil diperbarui." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -1250,7 +1121,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 broadcastPushNotification({
                     title: title || '🔥 Promo Spesial Ry-ITSolutions!',
                     body: pushBody,
-                    url: '/unblock-imei',
+                    url: '/add-roamer',
                     tag: `promo-${Date.now()}`
                 }).catch(() => {});
             } catch (pErr) {}
@@ -1580,7 +1451,7 @@ router.post('/admin/reviews', isAuthenticated, isAdmin, async (req, res) => {
             INSERT INTO reviews (id, userId, userName, userAvatar, orderId, productId, serviceType, variation, rating, comment, images, likesCount, transactionDate, userJoinedAt, userTotalOrders, userRole, createdAt)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            reviewId, dummyUserId, userName, avatarClean, `trx_adm_${Date.now()}`, productId || 'unblock-imei', serviceType || 'imei',
+            reviewId, dummyUserId, userName, avatarClean, `trx_adm_${Date.now()}`, productId || 'add-roamer', serviceType || 'imei',
             variation || 'GARANSI 3 BULAN', Number(rating) || 5, comment, JSON.stringify(images || []), Number(likesCount) || 5,
             transactionDate || new Date().toISOString().substring(0, 10), userJoinedAt || '2026-01-15T08:30:00.000Z', Number(userTotalOrders) || 12, userRole || 'Pembeli Terverifikasi', new Date().toISOString()
         ]);
@@ -1996,7 +1867,7 @@ router.post('/admin/test-warranty-claim-wa', (req, res, next) => {
         const { notifyWarrantyClaim } = require('../services/waBot');
         const results = await notifyWarrantyClaim({
             imei: req.body?.imei || '356789123456789',
-            packageName: req.body?.packageName || 'Unblock IMEI 3 Bulan (All Operator)',
+            packageName: req.body?.packageName || 'Add Roamer 3 Bulan (All Operator)',
             customerName: req.body?.customerName || 'Ryan (Uji Coba Klaim Garansi)',
             customerPhone: req.body?.customerPhone || '6287767287284',
             issueDescription: req.body?.issueDescription || 'Sinyal tiba-tiba hilang / No Service setelah 1 bulan pemakaian.',
@@ -2079,7 +1950,7 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
         const mockOrder = {
             id: `TEST-IMEI-${dummyNum}`,
             userName: "Budi (Testing Pelanggan)",
-            packageName: "Unblock IMEI 3 Bulan Garansi (Star Seller)",
+            packageName: "Add Roamer 3 Bulan Garansi (Star Seller)",
             serviceType: "imei",
             imei: "351234161234567",
             price: 250000,
@@ -2493,7 +2364,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 
 
 // ============================================================
-// CRUD PAKET DURASI UNBLOCK IMEI
+// CRUD PAKET DURASI ADD ROAMER
 // ============================================================
 
 // 1. POST /api/admin/imei-packages
@@ -2551,7 +2422,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 waBot.notifyNewProductBroadcast({
                     product: {
                         type: 'imei',
-                        name: `Paket Unblock IMEI ${duration.trim()}`,
+                        name: `Paket Add Roamer ${duration.trim()}`,
                         duration: duration.trim(),
                         price: numPrice,
                         speeds: parsedSpeeds,
@@ -2564,7 +2435,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 
             if (req.body.send_web_notification !== false) {
                 const annId = `ann_prod_${Date.now()}`;
-                const annMsg = `[PRODUK BARU] Paket Unblock IMEI ${duration.trim()} kini telah tersedia seharga Rp ${numPrice.toLocaleString('id-ID')}! Cek sekarang di menu Buka IMEI.`;
+                const annMsg = `[PRODUK BARU] Paket Add Roamer ${duration.trim()} kini telah tersedia seharga Rp ${numPrice.toLocaleString('id-ID')}! Cek sekarang di menu Add Roamer.`;
                 dbRun("INSERT INTO announcements (id, message, createdAt) VALUES (?, ?, ?)", [annId, annMsg, new Date().toISOString()]).catch(() => {});
                 sseBroadcast('announcement', { message: annMsg, bgColor: '#059669' });
             }
@@ -2577,7 +2448,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
                 broadcastPushNotification({
                     title: `🔥 Layanan Baru: Paket IMEI ${duration.trim()}!`,
                     body: `Telah hadir paket baru seharga Rp ${numPrice.toLocaleString('id-ID')} (${parsedSpeeds.join(', ')}). Buka untuk detail!`,
-                    url: '/unblock-imei',
+                    url: '/add-roamer',
                     icon: '/logo.png',
                     tag: `new-imei-${id}`
                 }).catch(pErr => console.error('[Auto WebPush Error]', pErr));
@@ -2599,7 +2470,7 @@ const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
 router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { duration, price, isVisible, allowed_speeds, speed_prices } = req.body;
+        const { duration, price, isVisible, allowed_speeds, speed_prices, send_wa } = req.body;
 
         const existing = await dbGet("SELECT * FROM imei_packages WHERE id = ?", [id]);
         if (!existing) {
@@ -2667,7 +2538,7 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
         // 2. In-App Website Notification & Announcement Banner
         try {
             const annId = `ann_pkg_upd_${Date.now()}`;
-            const annMsg = `[UPDATE PAKET IMEI] Paket ${updatedDuration} telah diperbarui dengan harga mulai Rp ${updatedPrice.toLocaleString('id-ID')}! Cek di menu Buka IMEI.`;
+            const annMsg = `[UPDATE PAKET IMEI] Paket ${updatedDuration} telah diperbarui dengan harga mulai Rp ${updatedPrice.toLocaleString('id-ID')}! Cek di menu Add Roamer.`;
             await dbRun("INSERT OR REPLACE INTO announcements (id, message, createdAt, bgColor, is_active) VALUES (?, ?, ?, ?, 1)",
                 [annId, annMsg, new Date().toISOString(), '#2563eb']
             );
@@ -2682,7 +2553,7 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             broadcastPushNotification({
                 title: `Update Paket IMEI: ${updatedDuration}`,
                 body: `Harga & paket ${updatedDuration} baru saja diperbarui mulai Rp ${updatedPrice.toLocaleString('id-ID')}. Cek detail sekarang!`,
-                url: '/unblock-imei',
+                url: '/add-roamer',
                 icon: '/logo.png',
                 tag: `update-imei-${id}`
             }).catch(pErr => console.error('[Auto WebPush Error]', pErr));
@@ -2690,50 +2561,21 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
             console.error('[WebPush Error]', pushErr);
         }
 
-        // 4. WhatsApp Broadcast with dynamic AI visual banner image
-        setImmediate(async () => {
+        // 4. WhatsApp broadcast with banner image to all verified users (opt-in)
+        if (send_wa === true || send_wa === 1 || send_wa === 'true') {
             try {
-                const imeiRows = await dbAll("SELECT * FROM imei_packages WHERE isVisible = 1 ORDER BY price ASC");
-                const items = [];
-                for (const row of imeiRows) {
-                    let speedObj = {};
-                    try { speedObj = JSON.parse(row.speed_prices || '{}'); } catch (e) {}
-                    const isWholesale = speedObj.wholesale_enabled;
-                    const wholesaleMin = speedObj.wholesale_min_qty || 2;
-
-                    const cleanDuration = (row.duration || '').replace(/\s*\(.*\)/g, '').trim();
-                    items.push({
-                        name: row.duration,
-                        price: row.price,
-                        note: `Garansi ${cleanDuration}`,
-                        highlight: true
-                    });
-
-                    if (isWholesale && speedObj.wholesale_prices) {
-                        const wholesaleRate = Object.values(speedObj.wholesale_prices).find(v => Number(v) > 0);
-                        if (wholesaleRate) {
-                            items.push({
-                                name: `Harga Qty (>=${wholesaleMin} IMEI)`,
-                                price: Number(wholesaleRate),
-                                note: `Harga per IMEI min ${wholesaleMin} unit`,
-                                highlight: true
-                            });
-                        }
-                    }
-                }
-
-                if (typeof waBot.notifyPriceUpdateBroadcast === 'function' && items.length > 0) {
-                    await waBot.notifyPriceUpdateBroadcast({
-                        title: 'UPDATE HARGA UNBLOCK IMEI',
-                        subtitle: 'Tarif Aktivasi Sinyal iPhone & Android Inter',
-                        items,
-                        customNote: 'Harga paket Unblock IMEI telah diperbarui! Dapatkan harga khusus untuk pemesanan minimal 2 IMEI.'
-                    });
-                }
+                const { notifyPriceChangeBroadcast } = require('../services/waBot');
+                const allPackages = await dbAll("SELECT duration, price, allowed_speeds, speed_prices FROM imei_packages WHERE isVisible = 1 ORDER BY id");
+                notifyPriceChangeBroadcast({
+                    packages: allPackages,
+                    updatedPackage: { duration: updatedDuration, price: updatedPrice },
+                    targetMode: 'all',
+                    onlyPhones: req.body.test_phone ? [req.body.test_phone] : undefined
+                }).catch(waErr => console.error('[WABot PriceUpdate Broadcast Error]', waErr.message));
             } catch (waErr) {
-                console.error('[WA Price Broadcast Error]:', waErr.message);
+                console.error('[WABot PriceUpdate Init Error]', waErr.message);
             }
-        });
+        }
 
         res.json({
             status: true,
@@ -2902,21 +2744,15 @@ router.get('/admin/whatsapp/messages/:jid', isAuthenticated, isAdmin, async (req
 // POST /api/admin/whatsapp/send
 router.post('/admin/whatsapp/send', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { targetPhone, jid, message, imageBase64, image } = req.body;
+        const { targetPhone, jid, message } = req.body;
         const phone = targetPhone || (jid ? jid.replace('@s.whatsapp.net', '').replace(/\D/g, '') : '');
-        const imgInput = imageBase64 || image;
 
-        if (!phone || (!message && !imgInput)) {
-            return res.status(400).json({ status: false, message: "Nomor tujuan dan isi pesan / gambar wajib diisi." });
+        if (!phone || !message || !message.trim()) {
+            return res.status(400).json({ status: false, message: "Nomor tujuan dan isi pesan wajib diisi." });
         }
 
         const waBot = require('../services/waBot');
-        let result;
-        if (imgInput && typeof waBot.sendImageMessage === 'function') {
-            result = await waBot.sendImageMessage(phone, imgInput, (message || '').trim());
-        } else {
-            result = await waBot.sendTextMessage(phone, (message || '').trim());
-        }
+        const result = await waBot.sendTextMessage(phone, message.trim());
 
         if (result && result.status) {
             res.json({ status: true, message: result.message || "Pesan WhatsApp berhasil dikirim!" });

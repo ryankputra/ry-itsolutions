@@ -1179,11 +1179,11 @@ export default function GamesPage() {
                 onClick: () => setActiveTab("catcher"),
               },
             {
-              title: "Order Buka IMEI All Operator",
+              title: "Order Add Roamer All Operator",
               desc: "Dapatkan cashback koin setiap menyelesaikan order aktivasi",
               reward: "+1% Cashback Koin",
               action: "Belanja",
-              onClick: () => router.push("/unblock-imei"),
+              onClick: () => router.push("/add-roamer"),
             },
             {
               title: "Ajak Teman",

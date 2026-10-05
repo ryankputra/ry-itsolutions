@@ -231,7 +231,7 @@ function VouchersContent() {
               coupon={coupon}
               isClaiming={claimingId === coupon.id}
               onClaim={handleClaim}
-              onUse={() => router.push("/unblock-imei")}
+              onUse={() => router.push("/add-roamer")}
             />
           ))}
         </div>

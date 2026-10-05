@@ -31,8 +31,8 @@ export interface ProductDetailViewProps {
 }
 
 export function ProductDetailView({
-  id = "unblock-imei",
-  title = "Unblock IMEI Inter Buka Sinyal All Operator (Garansi Masa Aktif Sinyal Max 3 Bulan)",
+  id = "add-roamer",
+  title = "Add Roamer Inter Add Roamer All Operator (Garansi Masa Aktif Sinyal Max 3 Bulan)",
   subtitle = "Proses Kilat 1-24 Jam • 100% Bergaransi Resmi Ry-ITSolutions",
   originalPrice = 170000,
   price = 150000,
@@ -57,7 +57,7 @@ export function ProductDetailView({
   ],
   description = [
     "Pembelian di atas senilai Rp 100.000 mendapatkan gratis voucher diskon koin Ry.",
-    "Buka sinyal IMEI dengan garansi masa aktif sinyal hingga 3 bulan untuk iPhone & Android Inter.",
+    "Add Roamer dengan garansi masa aktif sinyal hingga 3 bulan untuk iPhone & Android Inter.",
     "Proses otomatis terpantau sistem 24 jam dengan opsi pembayaran QRIS Instant tanpa top up.",
     "Tanyakan stok / bantuan CS WhatsApp jika butuh pemrosesan jumlah banyak / grosir.",
     "Pastikan nomor IMEI target diisi dengan benar (15 digit angka).",
@@ -110,7 +110,7 @@ export function ProductDetailView({
     if (onCheckoutSubmit) {
       onCheckoutSubmit(selectedVar);
     } else {
-      router.push(`/unblock-imei`);
+      router.push(`/add-roamer`);
     }
   };
 

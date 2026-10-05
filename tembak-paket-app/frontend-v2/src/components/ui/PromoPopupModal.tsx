@@ -24,7 +24,7 @@ function parseAnnouncement(rawMessage: string) {
   if (tagMatch) {
     title = tagMatch[1];
     body = tagMatch[2];
-  } else if (body.toLowerCase().includes("unblock imei") || body.toLowerCase().includes("jam 2")) {
+  } else if (body.toLowerCase().includes("add roamer") || body.toLowerCase().includes("jam 2")) {
     title = "Jadwal Operasional IMEI";
   } else if (body.toLowerCase().includes("voucher") || body.toLowerCase().includes("promo")) {
     title = "Promo Spesial";
@@ -114,8 +114,8 @@ export function PromoPopupModal() {
   let actionText = "Lihat Promo";
   let actionHref = "/vouchers";
   if (current.message.toLowerCase().includes("imei") || current.message.toLowerCase().includes("unblock")) {
-    actionText = "Buka Unblock IMEI";
-    actionHref = "/unblock-imei";
+    actionText = "Buka Add Roamer";
+    actionHref = "/add-roamer";
   } else if (current.message.toLowerCase().includes("koin") || current.message.toLowerCase().includes("game")) {
     actionText = "Klaim RyPoints";
     actionHref = "/games";

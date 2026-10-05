@@ -44,9 +44,9 @@ const DEFAULT_STEPS: TourStep[] = [
   },
   {
     targetSelector: '[data-tour="service-unblock"]',
-    title: "Buka Sinyal IMEI All Operator",
+    title: "Add Roamer All Operator",
     badge: "Langkah 3",
-    description: "Menu Buka Sinyal IMEI adalah layanan utama kami untuk mengaktifkan kembali sinyal HP luar negeri all operator. Masukkan nomor IMEI, lampirkan foto *#06#, pilih durasi yang diinginkan, dan pesanan Anda langsung kami proses.",
+    description: "Menu Add Roamer adalah layanan utama kami untuk mengaktifkan kembali sinyal HP luar negeri all operator. Masukkan nomor IMEI, lampirkan foto *#06#, pilih durasi yang diinginkan, dan pesanan Anda langsung kami proses.",
     audioUrl: "/audio/tour/step_3.mp3",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -54,7 +54,7 @@ const DEFAULT_STEPS: TourStep[] = [
       </svg>
     ),
     preferredPlacement: "bottom",
-    actionUrl: "/unblock-imei"
+    actionUrl: "/add-roamer"
   },
   {
     targetSelector: '[data-tour="service-ceir"]',

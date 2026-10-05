@@ -91,7 +91,7 @@ export function WriteReviewModal({
         try { playCoinClaimSound(); } catch {}
         Swal.fire({
           title: "Ulasan Berhasil Terbit!",
-          text: data.message || "Terima kasih atas ulasan Anda! Bonus +500 RyPoints telah masuk ke dompet Anda.",
+          text: data.message || "Terima kasih atas ulasan Anda! Bonus +10 RyPoints telah masuk ke dompet Anda.",
           icon: "success",
           confirmButtonColor: "#0066cc",
         });
@@ -126,7 +126,7 @@ export function WriteReviewModal({
             </div>
             <div>
               <h3 className="font-extrabold text-sm text-slate-950">Berikan Ulasan Produk</h3>
-              <p className="text-[10px] text-amber-950/80 font-medium">Dapatkan Bonus +500 RyPoints</p>
+              <p className="text-[10px] text-amber-950/80 font-medium">Dapatkan Bonus +10 RyPoints</p>
             </div>
           </div>
           <button
@@ -164,17 +164,9 @@ export function WriteReviewModal({
           {/* Variation Selection */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-ink">Pilihan Layanan / Paket</label>
-            <select
-              value={selectedVariation}
-              onChange={(e) => setSelectedVariation(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:border-primary focus:ring-1 focus:ring-primary outline-none font-medium"
-            >
-              <option value="GARANSI 3 BULAN (MASA AKTIF SINYAL)">GARANSI 3 BULAN (MASA AKTIF SINYAL)</option>
-              <option value="GARANSI 1 TAHUN (MASA AKTIF SINYAL)">GARANSI 1 TAHUN (MASA AKTIF SINYAL)</option>
-              <option value="GARANSI PERMANEN (BEACUKAI RESMI)">GARANSI PERMANEN (BEACUKAI RESMI)</option>
-              <option value="GARANSI 1 BULAN (REGULER)">GARANSI 1 BULAN (REGULER)</option>
-              <option value="CEIR RESMI KEMENPERIN">CEIR RESMI KEMENPERIN</option>
-            </select>
+            <div className="w-full h-10 px-3 flex items-center rounded-xl border border-hairline bg-parchment text-xs text-ink font-medium select-all">
+              {selectedVariation}
+            </div>
           </div>
 
           {/* Comment input */}
@@ -227,7 +219,7 @@ export function WriteReviewModal({
             disabled={submitting}
             className="w-full h-11 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-amber-950 font-black text-xs shadow-md transition-transform flex items-center justify-center gap-2"
           >
-            {submitting ? "Mengirim Ulasan..." : "Kirim Ulasan & Klaim +500 RyPoints"}
+            {submitting ? "Mengirim Ulasan..." : "Kirim Ulasan & Klaim +10 RyPoints"}
           </button>
         </form>
       </div>

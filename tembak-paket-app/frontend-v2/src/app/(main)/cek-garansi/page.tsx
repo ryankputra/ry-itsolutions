@@ -267,7 +267,7 @@ function CekGaransiContent() {
 
             {/* Service & Warranty Highlight Box */}
             {!isCeirService ? (
-              // Unblock IMEI with Sinyal Warranty
+              // Add Roamer with Sinyal Warranty
               <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
                 warranty?.warrantyStatus === 'permanent' || warranty?.warrantyStatus === 'active'
                   ? 'bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-300/80 text-emerald-950'

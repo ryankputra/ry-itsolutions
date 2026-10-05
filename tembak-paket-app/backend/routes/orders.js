@@ -278,7 +278,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             userEmail: user.email,
             action: 'ORDER',
             description: `Membuat pesanan ${serviceDuration} (Rp ${Math.round(finalPrice).toLocaleString('id-ID')})`,
-            path: '/unblock-imei',
+            path: '/add-roamer',
             req
         });
 
@@ -304,7 +304,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
                 null,
                 serviceType,
                 cleanImei2 ? `${cleanImei}, ${cleanImei2}` : cleanImei,
-                null, // speed_option strictly reserved for manual Buka IMEI
+                null, // speed_option strictly reserved for manual Add Roamer
                 appliedCoupon ? appliedCoupon.code : null,
                 discountAmount,
                 refId,

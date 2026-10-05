@@ -85,10 +85,26 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   const isGatewayService = !isTopUp && (data.serviceType === 'gateway' || data.serviceType === 'apikey' || (data.packageName || '').toLowerCase().includes('gateway') || (data.packageName || '').toLowerCase().includes('api key'));
   const isCeirService = !isTopUp && !isGatewayService && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || (warranty?.hasWarranty === false && !isGatewayService));
 
+  const parseSafeDate = (val: any) => {
+    if (!val) return new Date();
+    if (typeof val === "number") return new Date(val);
+    const str = String(val).replace(" ", "T");
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? new Date() : d;
+  };
+
+  const safeToIsoString = (d: Date) => {
+    try {
+      return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    } catch {
+      return new Date().toISOString();
+    }
+  };
+
   // Dynamic Warranty & Duration Computation (Strictly matching product duration from completion date)
   const computeDynamicWarranty = () => {
-    const pkg = (data.packageName || '').toLowerCase();
-    const doneDate = new Date(data.completedAt || data.updatedAt || data.createdAt || Date.now());
+    const pkg = (data.packageName || "").toLowerCase();
+    const doneDate = parseSafeDate(data.completedAt || data.updatedAt || data.createdAt);
 
     if (isGatewayService) {
       const expiryDate = new Date(doneDate.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -98,7 +114,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         hasWarranty: false,
         warrantyStatus: "subscription",
         durationLabel: "30 Hari",
-        expiryDate: expiryDate.toISOString(),
+        expiryDate: safeToIsoString(expiryDate),
         remainingDays: rem,
         isPermanent: false,
         statusText: rem > 0 ? `Sisa ${rem} Hari (Aktif)` : "Langganan Berakhir"
@@ -159,7 +175,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       hasWarranty: rem > 0,
       warrantyStatus: rem > 0 ? "active" : "expired",
       durationLabel: durText,
-      expiryDate: expiryDate.toISOString(),
+      expiryDate: safeToIsoString(expiryDate),
       remainingDays: rem,
       isPermanent: false,
       statusText: rem > 0 ? `Sisa ${rem} Hari` : "Garansi Berakhir"

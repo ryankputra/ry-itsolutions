@@ -69,6 +69,7 @@ export default function AdminImeiPage() {
   });
   const [editingPkg, setEditingPkg] = useState<any | null>(null);
   const [savingImeiPkg, setSavingImeiPkg] = useState(false);
+  const [sendWaBroadcast, setSendWaBroadcast] = useState(false);
 
   // Server Pusat CEIR & Barcode
   const [ceirgoServices, setCeirgoServices] = useState<any[]>([]);
@@ -303,7 +304,7 @@ export default function AdminImeiPage() {
         <div>
           <h2 className="text-lg font-bold text-ink flex items-center gap-2">
             <Smartphone className="w-5 h-5 text-primary" />
-            Layanan Unblock IMEI & CEIR
+            Layanan Add Roamer & CEIR
           </h2>
           <p className="text-xs text-ink-muted mt-0.5">
             Kontrol status buka/tutup layanan, tarif 3 kecepatan proses, durasi paket, dan integrasi server pusat CEIR.
@@ -685,6 +686,7 @@ export default function AdminImeiPage() {
                                 wholesale_prices: wsPrices,
                                 wholesale_promo_note: wsNote,
                               });
+                              setSendWaBroadcast(false);
                             }}
                             className="p-1 text-primary hover:bg-primary/10 rounded-lg"
                             title="Edit paket"
@@ -1196,6 +1198,20 @@ export default function AdminImeiPage() {
                 </label>
               </div>
 
+              <div className="flex items-start gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="editPkgSendWa"
+                  checked={sendWaBroadcast}
+                  onChange={(e) => setSendWaBroadcast(e.target.checked)}
+                  className="rounded text-primary focus:ring-0 cursor-pointer mt-0.5"
+                />
+                <label htmlFor="editPkgSendWa" className="text-xs font-medium text-ink-muted select-none cursor-pointer leading-snug">
+                  Kirim notifikasi WhatsApp harga baru ke semua pelanggan
+                  <span className="block text-[10px] text-ink-muted/70 font-normal">Broadcast banner harga + rincian tarif. Centang hanya jika harga benar-benar berubah untuk hindari spam.</span>
+                </label>
+              </div>
+
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-hairline">
                 <Button type="button" variant="ghost" onClick={() => setEditingPkg(null)} className="text-xs">
                   Batal
@@ -1252,6 +1268,7 @@ export default function AdminImeiPage() {
                           wholesale_min_qty: Number(editingPkg.wholesale_min_qty) || 2,
                           wholesale_prices: (spPrices as any).wholesale_prices || {},
                           wholesale_promo_note: editingPkg.wholesale_promo_note || "",
+                          send_wa: sendWaBroadcast,
                         }),
                       });
                       const d = await res.json();

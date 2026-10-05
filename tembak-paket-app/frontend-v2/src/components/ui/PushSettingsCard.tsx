@@ -141,7 +141,7 @@ export const PushSettingsCard: React.FC<{ className?: string }> = ({ className =
             ? "Perangkat HP ini sudah terhubung. Anda dapat mengetuk tombol Uji untuk mencoba notifikasi berdering."
             : isDenied
             ? "Izin notifikasi diblokir. Ketuk ikon gembok 🔒 pada URL bar browser Anda untuk mengizinkan."
-            : "Aktifkan agar Anda langsung mendapat notifikasi di status bar HP saat ada layanan baru (misal: Unblock IMEI Fast)."}
+            : "Aktifkan agar Anda langsung mendapat notifikasi di status bar HP saat ada layanan baru (misal: Add Roamer Fast)."}
         </p>
 
         <div className="flex items-center gap-2 shrink-0">
