@@ -287,11 +287,25 @@ router.get(['/manual-services-pricing', '/manual-services/pricing'], async (req,
         for (const [key, value] of Object.entries(defaults)) {
             await dbRun("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
         }
-        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range')");
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'imei_speed_fast_maintenance_until', 'imei_speed_semi_maintenance_until', 'imei_speed_slow_maintenance_until')");
         const pricing = rows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
         for (const [key, value] of Object.entries(defaults)) {
             if (!(key in pricing)) pricing[key] = value;
         }
+
+        // Auto-expire maintenance: kembalikan ke 'active' bila estimasi waktu sudah lewat
+        const now = Date.now();
+        for (const sp of ['fast', 'semi', 'slow']) {
+            const untilKey = `imei_speed_${sp}_maintenance_until`;
+            if (pricing[untilKey]) {
+                const until = new Date(pricing[untilKey]).getTime();
+                if (!isNaN(until) && until <= now) {
+                    pricing[`${untilKey.replace('_maintenance_until', '_status')}`] = 'active';
+                    pricing[untilKey] = '';
+                }
+            }
+        }
+
         res.json({ status: true, data: pricing, pricing });
     } catch (error) {
         res.status(500).json({ status: false, message: error.message });

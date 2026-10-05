@@ -698,6 +698,24 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                         });
                     }
 
+                    // Tolak order bila opsi kecepatan sedang maintenance
+                    if (spOpt) {
+                        const spStatusRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${spOpt}_status`]);
+                        const spUntilRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${spOpt}_maintenance_until`]);
+                        const spStatus = spStatusRow ? spStatusRow.value : 'active';
+                        const untilMs = spUntilRow && spUntilRow.value ? new Date(spUntilRow.value).getTime() : NaN;
+                        const stillMaintenance = spStatus === 'maintenance' && (isNaN(untilMs) || untilMs > Date.now());
+                        if (stillMaintenance) {
+                            const untilTxt = (!isNaN(untilMs) && untilMs > Date.now())
+                                ? new Date(untilMs).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' WIB'
+                                : 'waktu belum dapat ditentukan';
+                            return res.status(400).json({
+                                status: false,
+                                message: `Layanan kecepatan '${spOpt}' sedang maintenance. Estimasi tersedia kembali: ${untilTxt}. Silakan pilih opsi kecepatan lain.`
+                            });
+                        }
+                    }
+
                     // 1. Check if package has dynamic speed pricing configured
                     let pkgSpeedPrices = {};
                     if (pkg.speed_prices) {

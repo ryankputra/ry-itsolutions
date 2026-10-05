@@ -1,8 +1,9 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { X, RotateCw, Globe, Smartphone, Laptop, FileText, User as UserIcon } from 'lucide-react';
+import { X, RotateCw, Globe, Smartphone, Laptop, FileText, User as UserIcon, Power } from 'lucide-react';
+import Swal from '@/lib/sweetalert';
 
 export interface OnlineUser {
   userId: string;
@@ -35,6 +36,8 @@ export const AdminOnlineUsersModal: React.FC<AdminOnlineUsersModalProps> = ({
   onRefresh,
   onViewUserLogs
 }) => {
+  const [killing, setKilling] = useState<Record<string, boolean>>({});
+
   if (!isOpen) return null;
 
   const formatDuration = (seconds: number) => {
@@ -43,6 +46,48 @@ export const AdminOnlineUsersModal: React.FC<AdminOnlineUsersModalProps> = ({
     if (mins < 60) return `${mins} menit`;
     const hours = Math.floor(mins / 60);
     return `${hours} jam ${mins % 60}m`;
+  };
+
+  const handleKillSession = async (u: OnlineUser) => {
+    const confirm = await Swal.fire({
+      title: "Putuskan Sesi?",
+      text: `Sesi pengguna ${u.name} akan diputus paksa. Pengguna tersebut otomatis keluar dan harus login kembali.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      confirmButtonText: "Ya, Putuskan",
+      cancelButtonText: "Batal",
+    });
+    if (!confirm.isConfirmed) return;
+
+    setKilling((prev) => ({ ...prev, [u.userId]: true }));
+    try {
+      const res = await fetch(`/api/presence/kill/${encodeURIComponent(u.userId)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.status) {
+        Swal.fire({
+          icon: "success",
+          title: "Sesi Diputus",
+          text: data.message || `Sesi ${u.name} berhasil diputus.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+        onRefresh?.();
+      } else {
+        Swal.fire("Gagal", data?.message || "Gagal memutus sesi.", "error");
+      }
+    } catch (e: any) {
+      Swal.fire("Error", e?.message || "Gagal menghubungi server.", "error");
+    } finally {
+      setKilling((prev) => {
+        const next = { ...prev };
+        delete next[u.userId];
+        return next;
+      });
+    }
   };
 
   return (
@@ -149,18 +194,31 @@ export const AdminOnlineUsersModal: React.FC<AdminOnlineUsersModalProps> = ({
                       </div>
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2.5 text-[11px] font-semibold rounded-xl border-hairline gap-1 shrink-0 text-primary hover:bg-primary/10"
-                      onClick={() => {
-                        onClose();
-                        onViewUserLogs?.({ id: u.userId, name: u.name, email: u.email });
-                      }}
-                    >
-                      <FileText className="w-3 h-3" />
-                      <span>Lihat Log</span>
-                    </Button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2.5 text-[11px] font-semibold rounded-xl border-hairline gap-1 text-primary hover:bg-primary/10"
+                        onClick={() => {
+                          onClose();
+                          onViewUserLogs?.({ id: u.userId, name: u.name, email: u.email });
+                        }}
+                      >
+                        <FileText className="w-3 h-3" />
+                        <span>Lihat Log</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={killing[u.userId]}
+                        className="h-7 px-2.5 text-[11px] font-semibold rounded-xl border-hairline gap-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-50"
+                        onClick={() => handleKillSession(u)}
+                        title="Putuskan sesi pengguna ini secara paksa"
+                      >
+                        <Power className={`w-3 h-3 ${killing[u.userId] ? "animate-pulse" : ""}`} />
+                        <span>{killing[u.userId] ? "Memutus..." : "Putuskan"}</span>
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Details row: Current Route, Device & IP, Last Ping */}

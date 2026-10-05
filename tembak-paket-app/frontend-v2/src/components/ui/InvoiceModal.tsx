@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import html2canvas from "html2canvas";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { parseCeirResponse } from "@/lib/ceirParser";
 import Swal from "@/lib/sweetalert";
@@ -57,14 +56,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   const [storePhone, setStorePhone] = useState("");
   const [isEditingStore, setIsEditingStore] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const printRef = useRef<HTMLDivElement>(null);
-
-  const rawImeiForQr = data?.imei ? String(data.imei) : "";
-  const verifyUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/cek-garansi?imei=${rawImeiForQr}` 
-    : `https://ry-itsolutionts.web.id/cek-garansi?imei=${rawImeiForQr}`;
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(verifyUrl)}`;
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -84,80 +76,19 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     };
   }, [isOpen, onClose]);
 
-  // Handle QR code generation hook (ALWAYS executed at top level to obey Rules of Hooks)
-  useEffect(() => {
-    if (isOpen && verifyUrl) {
-      QRCode.toDataURL(verifyUrl, { width: 160, margin: 1 })
-        .then((url: string) => setQrCodeDataUrl(url))
-        .catch(() => setQrCodeDataUrl(qrImageUrl));
-    }
-  }, [isOpen, verifyUrl, qrImageUrl]);
-
   if (!isOpen || !data) return null;
 
-  const safeStr = (val: any): string => {
-    if (val === null || val === undefined) return '';
-    if (typeof val === 'string') return val;
-    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-    try {
-      return JSON.stringify(val);
-    } catch {
-      return String(val);
-    }
-  };
-
-  const rawTrxId = safeStr(data.trxId || data.id);
-  const rawImei = safeStr(data.imei);
-  const rawPkgName = safeStr(data.packageName);
-  const rawStatus = safeStr(data.status);
-  const rawServiceType = safeStr(data.serviceType);
-
-  const imeiAnalysis = rawImei && rawImei !== '-' ? analyzeImei(rawImei) : null;
+  const imeiAnalysis = data.imei && data.imei !== '-' ? analyzeImei(data.imei) : null;
   const warranty = data.warranty;
-  const statusLower = rawStatus.toLowerCase();
-  const pkgLower = rawPkgName.toLowerCase();
-  const serviceLower = rawServiceType.toLowerCase();
-
-  const isSuccess = statusLower === 'success' || statusLower === 'completed';
-  const isTopUp = serviceLower === 'topup' || serviceLower === 'topup_qris' || pkgLower.includes('top up') || pkgLower.includes('topup');
-  const isGatewayService = !isTopUp && (serviceLower === 'gateway' || serviceLower === 'apikey' || pkgLower.includes('gateway') || pkgLower.includes('api key'));
-  const isCeirService = !isTopUp && !isGatewayService && (serviceLower === 'ceir' || pkgLower.includes('ceir') || (warranty?.hasWarranty === false && !isGatewayService));
-
-  // Helper to parse date string safely (handling ISO, timestamps, and id-ID locale strings)
-  const safeParseDate = (dateVal: any): Date => {
-    if (!dateVal) return new Date();
-    if (typeof dateVal === "number") return new Date(dateVal);
-    if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? new Date() : dateVal;
-    
-    const parsed = new Date(dateVal);
-    if (!isNaN(parsed.getTime())) return parsed;
-    
-    if (typeof dateVal === "string") {
-      const parts = dateVal.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-      if (parts) {
-        const day = parseInt(parts[1], 10);
-        const month = parseInt(parts[2], 10) - 1;
-        const year = parseInt(parts[3], 10);
-        const d = new Date(year, month, day);
-        if (!isNaN(d.getTime())) return d;
-      }
-    }
-    return new Date();
-  };
-
-  const safeToISO = (d: Date): string => {
-    try {
-      if (d && !isNaN(d.getTime())) {
-        return d.toISOString();
-      }
-    } catch {}
-    return new Date().toISOString();
-  };
+  const isSuccess = data.status === 'success' || data.status === 'completed';
+  const isTopUp = data.serviceType === 'topup' || data.serviceType === 'topup_qris' || (data.packageName || '').toLowerCase().includes('top up') || (data.packageName || '').toLowerCase().includes('topup');
+  const isGatewayService = !isTopUp && (data.serviceType === 'gateway' || data.serviceType === 'apikey' || (data.packageName || '').toLowerCase().includes('gateway') || (data.packageName || '').toLowerCase().includes('api key'));
+  const isCeirService = !isTopUp && !isGatewayService && (data.serviceType === 'ceir' || (data.packageName || '').toLowerCase().includes('ceir') || (warranty?.hasWarranty === false && !isGatewayService));
 
   // Dynamic Warranty & Duration Computation (Strictly matching product duration from completion date)
   const computeDynamicWarranty = () => {
-    const pkg = pkgLower;
-    const doneDate = safeParseDate(data.completedAt || data.updatedAt || data.createdAt);
+    const pkg = (data.packageName || '').toLowerCase();
+    const doneDate = new Date(data.completedAt || data.updatedAt || data.createdAt || Date.now());
 
     if (isGatewayService) {
       const expiryDate = new Date(doneDate.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -167,7 +98,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         hasWarranty: false,
         warrantyStatus: "subscription",
         durationLabel: "30 Hari",
-        expiryDate: safeToISO(expiryDate),
+        expiryDate: expiryDate.toISOString(),
         remainingDays: rem,
         isPermanent: false,
         statusText: rem > 0 ? `Sisa ${rem} Hari (Aktif)` : "Langganan Berakhir"
@@ -194,7 +125,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     } else if (pkg.includes("12 bulan") || pkg.includes("1 tahun") || pkg.includes("12month") || pkg.includes("1year")) {
       durationMonths = 12;
     } else if (pkg.includes("6 bulan") || pkg.includes("6 month") || pkg.includes("6m")) {
-      durationMonths = 3;
+      durationMonths = 6;
     } else if (pkg.includes("3 bulan") || pkg.includes("3 month") || pkg.includes("3m")) {
       durationMonths = 3;
     } else if (pkg.includes("2 bulan") || pkg.includes("2 month") || pkg.includes("2m")) {
@@ -228,7 +159,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       hasWarranty: rem > 0,
       warrantyStatus: rem > 0 ? "active" : "expired",
       durationLabel: durText,
-      expiryDate: safeToISO(expiryDate),
+      expiryDate: expiryDate.toISOString(),
       remainingDays: rem,
       isPermanent: false,
       statusText: rem > 0 ? `Sisa ${rem} Hari` : "Garansi Berakhir"
@@ -332,6 +263,21 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     window.print();
   };
 
+  const verifyUrl = typeof window !== "undefined" 
+    ? `${window.location.origin}/cek-garansi?imei=${data.imei}` 
+    : `https://ry-itsolutionts.web.id/cek-garansi?imei=${data.imei}`;
+
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(verifyUrl)}`;
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (verifyUrl) {
+      QRCode.toDataURL(verifyUrl, { width: 160, margin: 1 })
+        .then((url: string) => setQrCodeDataUrl(url))
+        .catch(() => setQrCodeDataUrl(qrImageUrl));
+    }
+  }, [verifyUrl, qrImageUrl]);
+
   const formatDate = (isoString: string) => {
     try {
       const d = new Date(isoString);
@@ -346,18 +292,13 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   };
 
   const handleShareWhatsApp = async () => {
-    const rawTarget = data.customerPhone || data.userPhone || data.targetPhone || "";
-    const isImeiTarget = rawTarget.length === 15 || rawTarget.startsWith("35") || rawTarget.startsWith("86");
-    const defaultPhone = !isImeiTarget && rawTarget.length <= 13 ? rawTarget : "";
-
-    const swalRes = await Swal.fire({
-      title: "Kirim Nota via WhatsApp",
+    const { value: phone } = await Swal.fire({
+      title: "Kirim Nota ke WhatsApp",
       input: "text",
       inputLabel: "Nomor WhatsApp Pelanggan (contoh: 08123456789):",
-      inputValue: defaultPhone,
       inputPlaceholder: "08xxxxxxxxxx",
       showCancelButton: true,
-      confirmButtonText: "Kirim via Bot WA",
+      confirmButtonText: "Buka WhatsApp",
       cancelButtonText: "Batal",
       inputValidator: (value: string | null) => {
         if (!value || value.replace(/\D/g, '').length < 9) {
@@ -366,9 +307,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       }
     });
 
-    if (swalRes.isDismissed || !swalRes.value) return;
+    if (!phone) return;
 
-    const phone = swalRes.value;
     let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
       cleanPhone = '62' + cleanPhone.substring(1);
@@ -383,7 +323,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
         `*Layanan:* ${data.packageName || 'Langganan API Key Gateway'}\n` +
         `*Masa Aktif:* 30 Hari\n` +
-        `*Status:* ${isSuccess ? 'SUKSES / AKTIF' : (data.status || 'COMPLETED').toUpperCase()}\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / AKTIF' : data.status.toUpperCase()}\n` +
         `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
     } else if (isTopUp) {
@@ -394,147 +334,41 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         `*Status:* SUKSES / SALDO MASUK\n` +
         `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
-    } else if (isCeirService) {
-      const ceirLogSummary = ceirInfo?.logs?.map((l: any) => `${l.index}. [${l.date}] ${l.action}: ${l.note}`).join('\n') || '';
-      messageText = `Halo Kak, berikut laporan resmi pengecekan database CEIR dari *${currentStore}*:\n\n` +
-        `*ID Transaksi:* #${(data.trxId || data.id || '').substring(0, 14)}\n` +
-        `*IMEI:* ${data.imei || '-'}\n` +
-        `*Status Database CEIR:* ${ceirInfo?.status || 'SELESAI'}\n` +
-        `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
-        (ceirLogSummary ? `*Rincian Log Query CEIR:*\n${ceirLogSummary}\n\n` : '') +
-        `*Cek Laporan Online:* \n${verifyUrl}\n\n` +
-        `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
     } else {
       messageText = `Halo Kak, berikut bukti nota transaksi & surat garansi digital dari *${currentStore}*:\n\n` +
         `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
         `*Perangkat / IMEI:* ${imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : 'Smartphone'} (${data.imei})\n` +
         `*Layanan:* ${data.packageName || 'Layanan Aktivasi IMEI'}\n` +
         `*Garansi Sinyal:* ${dynWarranty.durationLabel} (${dynWarranty.statusText})\n` +
-        `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : (data.status || 'COMPLETED').toUpperCase()}\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : data.status.toUpperCase()}\n` +
         `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
         `*Cek Nota & Status Garansi Online:* \n${verifyUrl}\n\n` +
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
     }
 
-    if (swalRes.isConfirmed) {
-      Swal.fire({
-        title: "Membuat & Mengirim Gambar Nota...",
-        text: "Sedang mengolah gambar nota PNG dengan watermark...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
-
-      let imageBase64 = "";
-      if (printRef.current) {
-        try {
-          const { toPng } = await import("html-to-image");
-          const rawDataUrl = await toPng(printRef.current, {
-            pixelRatio: 2,
-            backgroundColor: "#ffffff",
-            cacheBust: true,
-          });
-
-          // Draw custom store watermark diagonal overlay on canvas
-          const img = new Image();
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error("Gagal membuat elemen canvas gambar nota"));
-            img.src = rawDataUrl;
-          });
-
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0);
-            ctx.save();
-            ctx.font = "bold 24px sans-serif";
-            ctx.fillStyle = "rgba(15, 23, 42, 0.12)";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            const wmText = `${currentStore} • ry-itsolutionts.web.id`;
-            ctx.rotate(-Math.PI / 8);
-            for (let x = -canvas.width; x < canvas.width * 2; x += 360) {
-              for (let y = -canvas.height; y < canvas.height * 2; y += 220) {
-                ctx.fillText(wmText, x, y);
-              }
-            }
-            ctx.restore();
-            imageBase64 = canvas.toDataURL("image/png");
-          } else {
-            imageBase64 = rawDataUrl;
-          }
-        } catch (err: any) {
-          console.error("Gagal capture gambar nota via html-to-image:", err);
-        }
-      }
-
-      try {
-        const res = await fetch("/api/admin/whatsapp/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            targetPhone: cleanPhone,
-            message: messageText,
-            imageBase64: imageBase64 || undefined
-          }),
-          credentials: "include",
-        });
-        const safeJsonData = await res.json().catch(() => null);
-        if (res.ok && safeJsonData?.status) {
-          Swal.fire({ title: "Berhasil!", text: safeJsonData.message || "Nota (Gambar PNG & Teks) berhasil dikirim via Bot WhatsApp!", timer: 2500, showConfirmButton: false });
-        } else {
-          Swal.fire({
-            title: "Gagal Kirim",
-            text: safeJsonData?.message || "Gagal mengirim nota via Bot WhatsApp.",
-            icon: "error"
-          });
-        }
-      } catch (e: any) {
-        Swal.fire({
-          title: "Kesalahan Jaringan",
-          text: e.message || "Gagal terhubung ke server WhatsApp Bot.",
-          icon: "error"
-        });
-      }
-    }
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
+    window.open(waUrl, '_blank');
   };
 
   // Helper to parse CEIR result details from Ceirgo API
   const parseCeirDetails = () => {
-    try {
-      const rawNote = typeof data.adminNote === 'string' ? data.adminNote : (data.adminNote ? JSON.stringify(data.adminNote) : "");
-      const parsed = parseCeirResponse(rawNote, formatDate(data.createdAt));
-      const logRows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+    const rawNote = data.adminNote || "";
+    const parsed = parseCeirResponse(rawNote, formatDate(data.createdAt));
 
-      const isReg = parsed?.isRegistered ?? true;
-      return {
-        status: parsed?.status || "SELESAI",
-        isRegistered: isReg,
-        gateway: "Central CEIR Database & IMEI Verification Gateway",
-        logs: logRows.map((r, idx) => ({
-          index: r?.no || idx + 1,
-          date: r?.tanggal || r?.date || formatDate(data.createdAt),
-          action: r?.action || "CEIR_EVENT",
-          note: r?.note || "-",
-          imsi: r?.imsi || "",
-          imei: r?.imei || ""
-        })),
-        rawNote: parsed?.rawText || rawNote || "Data IMEI telah berhasil diverifikasi oleh server CEIR.",
-        operators: isReg ? "Semua Operator Seluler (Telkomsel, Indosat, XL, Smartfren, Tri)" : "Pemeriksaan Gagal / Perlu Cek Ulang"
-      };
-    } catch (e) {
-      return {
-        status: "GAGAL",
-        isRegistered: false,
-        gateway: "Central CEIR Database",
-        logs: [],
-        rawNote: typeof data.adminNote === 'string' ? data.adminNote : JSON.stringify(data.adminNote || ""),
-        operators: "Status tidak tersedia"
-      };
-    }
+    return {
+      status: parsed.status,
+      gateway: "Central CEIR Database & IMEI Verification Gateway",
+      logs: parsed.rows.map(r => ({
+        index: r.no,
+        date: r.tanggal,
+        action: r.action,
+        note: r.note,
+        imsi: r.imsi,
+        imei: r.imei
+      })),
+      rawNote: parsed.rawText || "Data IMEI telah berhasil diverifikasi oleh server CEIR.",
+      operators: "Semua Operator Seluler (Telkomsel, Indosat, XL, Smartfren, Tri)"
+    };
   };
 
   const ceirInfo = isCeirService ? parseCeirDetails() : null;
@@ -656,13 +490,13 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
               <div className="text-right">
                 <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
                   isSuccess ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                  (data.status || '').toLowerCase() === 'pending' || (data.status || '').toLowerCase() === 'processing' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                  data.status === 'pending' || data.status === 'processing' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                   'bg-rose-100 text-rose-800 border border-rose-200'
                 }`}>
-                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isGatewayService ? 'LANGGANAN AKTIF' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : (data.status || 'COMPLETED').toUpperCase()}
+                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isGatewayService ? 'LANGGANAN AKTIF' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : data.status.toUpperCase()}
                 </span>
                 <p className="text-[10px] text-slate-400 font-mono mt-1">
-                  TRX: #{rawTrxId ? rawTrxId.substring(0, 16) : 'N/A'}
+                  TRX: #{data.trxId ? data.trxId.substring(0, 16) : 'N/A'}
                 </p>
               </div>
             </div>
@@ -727,55 +561,31 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
             {/* If CEIR Service: Render Structured CEIR Verification Report Box */}
             {isCeirService && ceirInfo && (
-              <div className={`p-4 rounded-2xl text-xs space-y-3 border ${
-                ceirInfo.isRegistered 
-                  ? 'bg-emerald-50/70 border-emerald-200' 
-                  : 'bg-amber-50/70 border-amber-300'
-              }`}>
-                <div className={`flex items-center justify-between border-b pb-2 ${
-                  ceirInfo.isRegistered ? 'border-emerald-200/80' : 'border-amber-200/80'
-                }`}>
+              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
                   <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-lg text-white flex items-center justify-center font-bold text-xs ${
-                      ceirInfo.isRegistered ? 'bg-emerald-600' : 'bg-amber-600'
-                    }`}>
-                      {ceirInfo.isRegistered ? (
-                        <svg className="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                      ) : (
-                        <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-                      )}
+                    <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                      <svg className="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                     </div>
                     <div>
-                      <p className={`font-black text-xs uppercase tracking-wider ${
-                        ceirInfo.isRegistered ? 'text-emerald-950' : 'text-amber-950'
-                      }`}>Laporan Pengecekan Database CEIR</p>
-                      <p className={`text-[10px] font-medium ${
-                        ceirInfo.isRegistered ? 'text-emerald-700' : 'text-amber-700'
-                      }`}>{ceirInfo.gateway}</p>
+                      <p className="font-black text-emerald-950 text-xs uppercase tracking-wider">Laporan Pengecekan Database CEIR</p>
+                      <p className="text-[10px] text-emerald-700 font-medium">{ceirInfo.gateway}</p>
                     </div>
                   </div>
-                  <span className={`font-bold text-[10px] px-2 py-0.5 rounded border font-mono ${
-                    ceirInfo.isRegistered ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-100 text-amber-900 border-amber-300'
-                  }`}>
-                    {ceirInfo.isRegistered ? 'HTTP 200 OK' : 'RESP / RETRY'}
+                  <span className="font-bold text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300 font-mono">
+                    HTTP 200 OK
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-800">
-                  <div className={`bg-white/80 p-2.5 rounded-xl border ${
-                    ceirInfo.isRegistered ? 'border-emerald-200/60' : 'border-amber-200/60'
-                  }`}>
+                  <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
                     <span className="text-[10px] text-slate-500 block">Status Database CEIR</span>
-                    <span className={`font-black text-xs block mt-0.5 ${
-                      ceirInfo.isRegistered ? 'text-emerald-800' : 'text-amber-800'
-                    }`}>
+                    <span className="font-black text-emerald-800 text-xs block mt-0.5">
                       {ceirInfo.status}
                     </span>
                   </div>
 
-                  <div className={`bg-white/80 p-2.5 rounded-xl border ${
-                    ceirInfo.isRegistered ? 'border-emerald-200/60' : 'border-amber-200/60'
-                  }`}>
+                  <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
                     <span className="text-[10px] text-slate-500 block">Jangkauan Sinyal Seluler</span>
                     <span className="font-bold text-slate-800 text-xs block mt-0.5">
                       {ceirInfo.operators}

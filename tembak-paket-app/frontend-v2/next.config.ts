@@ -10,9 +10,6 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  // Hide Next.js framework identity header
-  poweredByHeader: false,
-
   // Explicitly specify workspace root to avoid inference warning and path mismatch
   outputFileTracingRoot: path.join(__dirname, "../../"),
 
@@ -69,32 +66,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/sw.js',
-        headers: [
-          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
-          { key: 'Pragma', value: 'no-cache' },
-          { key: 'Expires', value: '0' }
-        ]
-      },
-      {
         source: '/api/stream',
         headers: [
           { key: 'Cache-Control', value: 'no-cache, no-transform' },
           { key: 'Connection', value: 'keep-alive' },
           { key: 'X-Accel-Buffering', value: 'no' }
         ]
-      },
-      {
-        source: '/:path*',
-        headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }
-        ]
       }
-    ];
+    ]
   }
 };
 

@@ -3,8 +3,8 @@
  */
 
 // Luhn Algorithm validation for 15-digit IMEI
-export function validateImeiLuhn(imei: any): boolean {
-  const cleanImei = String(imei || "").replace(/\D/g, "");
+export function validateImeiLuhn(imei: string): boolean {
+  const cleanImei = imei.replace(/\D/g, "");
   if (cleanImei.length !== 15) return false;
 
   let sum = 0;
@@ -228,9 +228,8 @@ export interface ImeiAnalysis {
   isApple: boolean;
 }
 
-export function analyzeImei(input: any): ImeiAnalysis {
-  const strInput = typeof input === "string" ? input : (input !== null && input !== undefined ? String(input) : "");
-  const clean = strInput.replace(/\D/g, "");
+export function analyzeImei(input: string): ImeiAnalysis {
+  const clean = input.replace(/\D/g, "");
   const isValidLength = clean.length === 15;
   const isValidLuhn = isValidLength ? validateImeiLuhn(clean) : false;
 

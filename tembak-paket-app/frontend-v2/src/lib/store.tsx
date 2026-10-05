@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { API_URL, safeJson } from "./api";
 import { bindSwalSounds, playTopupSuccessSound, playPopSound } from "./soundFx";
+import Swal from "./sweetalert";
 
 const MENU_SETTINGS_STORAGE_KEY = "menu_settings";
 const CART_STORAGE_KEY = "ry_cart_items";
@@ -247,6 +248,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const payload = JSON.parse(ev.data);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('transaction_status_update', { detail: payload }));
+        }
+      } catch (err) { }
+    });
+
+    // Admin memutus sesi secara paksa -> logout & redirect ke login
+    sse.addEventListener("force_logout", (ev) => {
+      try {
+        const payload = JSON.parse(ev.data);
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          Swal.fire({
+            icon: "warning",
+            title: "Sesi Diputus",
+            text: payload?.reason || "Sesi Anda telah diputus oleh Admin. Silakan login kembali.",
+            confirmButtonColor: "#dc2626",
+            confirmButtonText: "Login Kembali",
+            allowOutsideClick: false,
+          }).then(() => {
+            window.location.href = "/login";
+          });
         }
       } catch (err) { }
     });

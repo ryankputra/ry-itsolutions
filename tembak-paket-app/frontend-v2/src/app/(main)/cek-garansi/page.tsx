@@ -23,30 +23,6 @@ function CekGaransiContent() {
   const [claimPhone, setClaimPhone] = useState("");
   const [claimIssue, setClaimIssue] = useState("Sinyal tiba-tiba hilang (No Service / Tidak Ada Layanan)");
   const [submittingClaim, setSubmittingClaim] = useState(false);
-  const [userActiveImeis, setUserActiveImeis] = useState<any[]>([]);
-
-  useEffect(() => {
-    async function loadUserActiveImeis() {
-      try {
-        const res = await fetch("/api/user/transactions", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status && Array.isArray(data.data)) {
-            const imeiTrxs = data.data.filter((t: any) => t.imei && t.imei.replace(/\D/g, '').length >= 8);
-            setUserActiveImeis(imeiTrxs);
-            
-            // If no initial query imei provided, auto select and check the latest active IMEI!
-            if (!initialImei && imeiTrxs.length > 0) {
-              const latestImei = imeiTrxs[0].imei.replace(/\D/g, '');
-              setSearchImei(latestImei);
-              doCheck(latestImei);
-            }
-          }
-        }
-      } catch (e) {}
-    }
-    loadUserActiveImeis();
-  }, [initialImei]);
 
   useEffect(() => {
     if (searchParams.get("action") === "claim" && result) {
@@ -254,38 +230,6 @@ function CekGaransiContent() {
               </span>
             </div>
           )}
-
-          {/* User Active IMEIs Quick Selector */}
-          {userActiveImeis.length > 0 && (
-            <div className="pt-2 border-t border-hairline space-y-1.5">
-              <span className="text-[11px] font-bold text-ink-muted block">Pilih IMEI Terdaftar Akun Anda:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {userActiveImeis.slice(0, 5).map((t, idx) => {
-                  const clean = t.imei.replace(/\D/g, '');
-                  const isSelected = searchImei === clean;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setSearchImei(clean);
-                        router.push(`/cek-garansi?imei=${clean}`);
-                        doCheck(clean);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-                        isSelected
-                          ? 'bg-primary text-white shadow-xs'
-                          : 'bg-canvas border border-hairline hover:bg-parchment text-ink'
-                      }`}
-                    >
-                      <span>{clean}</span>
-                      <span className="text-[10px] font-sans opacity-80">({t.packageName || 'Aktivasi'})</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </form>
 
         {error && (
@@ -435,67 +379,43 @@ function CekGaransiContent() {
             <div className="space-y-3 pt-2">
               <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">Alur Proses Transaksi</p>
               {!isCeirService ? (
-                <div className="relative py-2">
-                  <div className="grid grid-cols-4 gap-2 text-center text-xs relative z-10">
-                    {[
-                      { step: 1, label: "Order Masuk", done: true },
-                      { step: 2, label: "Validasi IMEI", done: true },
-                      { step: 3, label: "Proses Server", done: isProcessing || isCompleted, active: isProcessing },
-                      { step: 4, label: "Sinyal ON", done: isCompleted }
-                    ].map((st) => (
-                      <div key={st.step} className="flex flex-col items-center gap-1.5">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-md ${
-                          st.done
-                            ? 'bg-emerald-500 text-white shadow-emerald-500/30 ring-2 ring-emerald-400/40'
-                            : st.active
-                            ? 'bg-blue-600 text-white ring-4 ring-blue-500/30 animate-pulse'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-300 dark:border-slate-700'
-                        }`}>
-                          {st.done ? (
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                            </svg>
-                          ) : (
-                            <span>{st.step}</span>
-                          )}
-                        </div>
-                        <span className={`text-[11px] font-bold leading-tight ${st.done ? 'text-emerald-600 dark:text-emerald-400' : st.active ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-slate-400'}`}>
-                          {st.label}
-                        </span>
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  {[
+                    { step: 1, label: "Order Masuk", done: true },
+                    { step: 2, label: "Validasi IMEI", done: true },
+                    { step: 3, label: "Proses Server", done: isProcessing || isCompleted },
+                    { step: 4, label: "Sinyal ON", done: isCompleted }
+                  ].map((st) => (
+                    <div key={st.step} className="flex flex-col items-center gap-1.5">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                        st.done ? 'bg-primary text-white shadow-sm' : 'bg-parchment text-ink-muted border border-hairline'
+                      }`}>
+                        {st.done ? <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> : st.step}
                       </div>
-                    ))}
-                  </div>
+                      <span className={`text-[11px] font-semibold leading-tight ${st.done ? 'text-ink' : 'text-ink-muted'}`}>
+                        {st.label}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="relative py-2">
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs relative z-10">
-                    {[
-                      { step: 1, label: "Order Dibuat", done: true },
-                      { step: 2, label: "Query Database CEIR", done: isProcessing || isCompleted, active: isProcessing },
-                      { step: 3, label: "Hasil Cek Selesai", done: isCompleted }
-                    ].map((st) => (
-                      <div key={st.step} className="flex flex-col items-center gap-1.5">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-md ${
-                          st.done
-                            ? 'bg-emerald-500 text-white shadow-emerald-500/30 ring-2 ring-emerald-400/40'
-                            : st.active
-                            ? 'bg-blue-600 text-white ring-4 ring-blue-500/30 animate-pulse'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-300 dark:border-slate-700'
-                        }`}>
-                          {st.done ? (
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                            </svg>
-                          ) : (
-                            <span>{st.step}</span>
-                          )}
-                        </div>
-                        <span className={`text-[11px] font-bold leading-tight ${st.done ? 'text-emerald-600 dark:text-emerald-400' : st.active ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-slate-400'}`}>
-                          {st.label}
-                        </span>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  {[
+                    { step: 1, label: "Order Dibuat", done: true },
+                    { step: 2, label: "Query Database CEIR", done: isProcessing || isCompleted },
+                    { step: 3, label: "Hasil Cek Selesai", done: isCompleted }
+                  ].map((st) => (
+                    <div key={st.step} className="flex flex-col items-center gap-1.5">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                        st.done ? 'bg-primary text-white shadow-sm' : 'bg-parchment text-ink-muted border border-hairline'
+                      }`}>
+                        {st.done ? <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> : st.step}
                       </div>
-                    ))}
-                  </div>
+                      <span className={`text-[11px] font-semibold leading-tight ${st.done ? 'text-ink' : 'text-ink-muted'}`}>
+                        {st.label}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -551,8 +471,10 @@ function CekGaransiContent() {
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {result.user_image && Array.from(new Set((result.user_image || '').split(',').map((s: string) => s.trim()))).filter(Boolean).map((cleanUrl: any, idx: number) => {
-                    const uniqueList = Array.from(new Set((result.user_image || '').split(',').map((s: string) => s.trim()))).filter(Boolean);
+                  {result.user_image && result.user_image.split(',').map((imgUrl: string, idx: number) => {
+                    const cleanUrl = imgUrl.trim();
+                    if (!cleanUrl) return null;
+                    const totalImgs = result.user_image.split(',').length;
                     return (
                       <a
                         key={`uimg-${idx}`}
@@ -562,14 +484,14 @@ function CekGaransiContent() {
                         className="group p-3 rounded-2xl bg-parchment/70 border border-hairline hover:border-primary/50 transition-all flex flex-col gap-2"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-ink">Foto Screenshot *#06# {uniqueList.length > 1 ? `#${idx + 1}` : ''}</span>
-                          <span className="text-[10px] text-primary group-hover:underline">Buka</span>
+                          <span className="text-[11px] font-bold text-ink">Foto IMEI Pelanggan {totalImgs > 1 ? `#${idx + 1}` : ''}</span>
+                          <span className="text-[10px] text-primary group-hover:underline">Buka </span>
                         </div>
                         <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-hairline relative">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={cleanUrl}
-                            alt={`Foto Screenshot *#06# ${idx + 1}`}
+                            alt={`Foto IMEI Pelanggan ${idx + 1}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
@@ -577,8 +499,10 @@ function CekGaransiContent() {
                     );
                   })}
 
-                  {result.user_image_ceir && Array.from(new Set((result.user_image_ceir || '').split(',').map((s: string) => s.trim()))).filter(Boolean).map((cleanUrl: any, idx: number) => {
-                    const uniqueList = Array.from(new Set((result.user_image_ceir || '').split(',').map((s: string) => s.trim()))).filter(Boolean);
+                  {result.user_image_ceir && result.user_image_ceir.split(',').map((imgUrl: string, idx: number) => {
+                    const cleanUrl = imgUrl.trim();
+                    if (!cleanUrl) return null;
+                    const totalImgs = result.user_image_ceir.split(',').length;
                     return (
                       <a
                         key={`ceirimg-${idx}`}
@@ -588,14 +512,14 @@ function CekGaransiContent() {
                         className="group p-3 rounded-2xl bg-parchment/70 border border-hairline hover:border-primary/50 transition-all flex flex-col gap-2"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-ink">Screenshot Cek CEIR {uniqueList.length > 1 ? `#${idx + 1}` : ''}</span>
-                          <span className="text-[10px] text-primary group-hover:underline">Buka</span>
+                          <span className="text-[11px] font-bold text-ink">Screenshot CEIR Pelanggan {totalImgs > 1 ? `#${idx + 1}` : ''}</span>
+                          <span className="text-[10px] text-primary group-hover:underline">Buka </span>
                         </div>
                         <div className="w-full h-36 rounded-xl bg-black/5 overflow-hidden flex items-center justify-center border border-hairline relative">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={cleanUrl}
-                            alt={`Screenshot Cek CEIR ${idx + 1}`}
+                            alt={`Screenshot CEIR Pelanggan ${idx + 1}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>

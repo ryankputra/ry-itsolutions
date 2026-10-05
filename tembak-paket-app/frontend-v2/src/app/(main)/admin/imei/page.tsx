@@ -29,6 +29,14 @@ const SPEED_TIERS = [
   { id: "slow", label: "Slow", desc: "Paling Hemat" },
 ];
 
+// Urutan siklus status: aktif -> maintenance -> hidden -> aktif
+const SPEED_STATUS_CYCLE = ["active", "maintenance", "hidden"] as const;
+const SPEED_STATUS_META: Record<string, { label: string; className: string }> = {
+  active: { label: "Aktif", className: "bg-emerald-500/10 text-emerald-700 border border-emerald-300" },
+  maintenance: { label: "Maintenance", className: "bg-amber-500/10 text-amber-700 border border-amber-300" },
+  hidden: { label: "Hidden", className: "bg-slate-100 text-slate-500 border border-slate-200" },
+};
+
 export default function AdminImeiPage() {
   const [loading, setLoading] = useState(false);
 
@@ -87,6 +95,17 @@ export default function AdminImeiPage() {
       return;
     }
     debounceRef.current = setTimeout(doSave, 1000);
+  };
+
+  // Siklus status opsi kecepatan: aktif -> maintenance -> hidden
+  const cycleSpeedStatus = (speedId: string) => {
+    const key = `imei_speed_${speedId}_status`;
+    const current = SPEED_STATUS_CYCLE.indexOf((pricing[key] as typeof SPEED_STATUS_CYCLE[number]) || "hidden");
+    const next = SPEED_STATUS_CYCLE[(current + 1) % SPEED_STATUS_CYCLE.length];
+    const updated = { ...pricing, [key]: next };
+    if (next !== "maintenance") updated[`imei_speed_${speedId}_maintenance_until`] = "";
+    setPricing(updated);
+    autoSavePricing(updated, true);
   };
 
   const loadData = async () => {
@@ -372,21 +391,12 @@ export default function AdminImeiPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      const updated = {
-                        ...pricing,
-                        imei_speed_fast_status: pricing.imei_speed_fast_status === "hidden" ? "active" : "hidden",
-                      };
-                      setPricing(updated);
-                      autoSavePricing(updated, true);
-                    }}
+                    onClick={() => cycleSpeedStatus("fast")}
                     className={`px-2 py-0.5 text-[10px] font-bold rounded-full transition-all ${
-                      pricing.imei_speed_fast_status !== "hidden"
-                        ? "bg-emerald-500/10 text-emerald-700 border border-emerald-300"
-                        : "bg-slate-100 text-slate-500 border border-slate-200"
+                      SPEED_STATUS_META[pricing.imei_speed_fast_status || "hidden"]?.className || SPEED_STATUS_META.hidden.className
                     }`}
                   >
-                    {pricing.imei_speed_fast_status !== "hidden" ? "Aktif" : "Hidden"}
+                    {SPEED_STATUS_META[pricing.imei_speed_fast_status || "hidden"]?.label || "Hidden"}
                   </button>
                 </div>
 
@@ -412,6 +422,19 @@ export default function AdminImeiPage() {
                       autoSavePricing(updated);
                     }}
                   />
+                  {pricing.imei_speed_fast_status === "maintenance" && (
+                    <Input
+                      label="Estimasi Kembali (opsional, kosongkan = belum tentu)"
+                      type="datetime-local"
+                      value={(pricing.imei_speed_fast_maintenance_until || "").slice(0, 16)}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const updated = { ...pricing, imei_speed_fast_maintenance_until: raw ? new Date(raw).toISOString() : "" };
+                        setPricing(updated);
+                        autoSavePricing(updated);
+                    }}
+                  />
+                  )}
                 </div>
               </div>
 
@@ -424,21 +447,12 @@ export default function AdminImeiPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      const updated = {
-                        ...pricing,
-                        imei_speed_semi_status: pricing.imei_speed_semi_status === "hidden" ? "active" : "hidden",
-                      };
-                      setPricing(updated);
-                      autoSavePricing(updated, true);
-                    }}
+                    onClick={() => cycleSpeedStatus("semi")}
                     className={`px-2 py-0.5 text-[10px] font-bold rounded-full transition-all ${
-                      pricing.imei_speed_semi_status !== "hidden"
-                        ? "bg-emerald-500/10 text-emerald-700 border border-emerald-300"
-                        : "bg-slate-100 text-slate-500 border border-slate-200"
+                      SPEED_STATUS_META[pricing.imei_speed_semi_status || "hidden"]?.className || SPEED_STATUS_META.hidden.className
                     }`}
                   >
-                    {pricing.imei_speed_semi_status !== "hidden" ? "Aktif" : "Hidden"}
+                    {SPEED_STATUS_META[pricing.imei_speed_semi_status || "hidden"]?.label || "Hidden"}
                   </button>
                 </div>
 
@@ -464,6 +478,19 @@ export default function AdminImeiPage() {
                       autoSavePricing(updated);
                     }}
                   />
+                  {pricing.imei_speed_semi_status === "maintenance" && (
+                    <Input
+                      label="Estimasi Kembali (opsional, kosongkan = belum tentu)"
+                      type="datetime-local"
+                      value={(pricing.imei_speed_semi_maintenance_until || "").slice(0, 16)}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const updated = { ...pricing, imei_speed_semi_maintenance_until: raw ? new Date(raw).toISOString() : "" };
+                        setPricing(updated);
+                        autoSavePricing(updated);
+                    }}
+                  />
+                  )}
                 </div>
               </div>
 
@@ -476,21 +503,12 @@ export default function AdminImeiPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      const updated = {
-                        ...pricing,
-                        imei_speed_slow_status: pricing.imei_speed_slow_status === "hidden" ? "active" : "hidden",
-                      };
-                      setPricing(updated);
-                      autoSavePricing(updated, true);
-                    }}
+                    onClick={() => cycleSpeedStatus("slow")}
                     className={`px-2 py-0.5 text-[10px] font-bold rounded-full transition-all ${
-                      pricing.imei_speed_slow_status !== "hidden"
-                        ? "bg-emerald-500/10 text-emerald-700 border border-emerald-300"
-                        : "bg-slate-100 text-slate-500 border border-slate-200"
+                      SPEED_STATUS_META[pricing.imei_speed_slow_status || "hidden"]?.className || SPEED_STATUS_META.hidden.className
                     }`}
                   >
-                    {pricing.imei_speed_slow_status !== "hidden" ? "Aktif" : "Hidden"}
+                    {SPEED_STATUS_META[pricing.imei_speed_slow_status || "hidden"]?.label || "Hidden"}
                   </button>
                 </div>
 
@@ -516,6 +534,19 @@ export default function AdminImeiPage() {
                       autoSavePricing(updated);
                     }}
                   />
+                  {pricing.imei_speed_slow_status === "maintenance" && (
+                    <Input
+                      label="Estimasi Kembali (opsional, kosongkan = belum tentu)"
+                      type="datetime-local"
+                      value={(pricing.imei_speed_slow_maintenance_until || "").slice(0, 16)}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const updated = { ...pricing, imei_speed_slow_maintenance_until: raw ? new Date(raw).toISOString() : "" };
+                        setPricing(updated);
+                        autoSavePricing(updated);
+                    }}
+                  />
+                  )}
                 </div>
               </div>
             </div>
@@ -753,7 +784,7 @@ export default function AdminImeiPage() {
                     <Tag className="w-4 h-4 text-emerald-600" />
                     <div>
                       <span className="font-bold text-xs text-ink block">Harga Grosir Multi-IMEI</span>
-                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI atau lebih (Multi-IMEI / Grosir)</span>
+                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI (Dual SIM / Multi-Device)</span>
                     </div>
                   </div>
                   <input
@@ -1086,7 +1117,7 @@ export default function AdminImeiPage() {
                     <Tag className="w-4 h-4 text-emerald-600" />
                     <div>
                       <span className="font-bold text-xs text-ink block">Harga Grosir Multi-IMEI</span>
-                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI atau lebih (Multi-IMEI / Grosir)</span>
+                      <span className="text-[10px] text-ink-muted">Diskon untuk pesanan minimal 2 IMEI (Dual SIM / Multi-Device)</span>
                     </div>
                   </div>
                   <input

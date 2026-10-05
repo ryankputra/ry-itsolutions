@@ -303,18 +303,15 @@ export default function NotificationsPage() {
         data={
           selectedInvoiceTrx
             ? {
-                trxId: selectedInvoiceTrx.id || selectedInvoiceTrx.trxId || "",
-                imei: selectedInvoiceTrx.imei || "",
-                packageName: selectedInvoiceTrx.package_name || selectedInvoiceTrx.packageName || "Aktivasi IMEI",
-                serviceType: selectedInvoiceTrx.service_type || selectedInvoiceTrx.serviceType || "imei",
-                createdAt: selectedInvoiceTrx.createdAt || selectedInvoiceTrx.created_at || new Date().toISOString(),
-                amount: selectedInvoiceTrx.amount || selectedInvoiceTrx.baseAmount || 0,
-                status: selectedInvoiceTrx.status || "completed",
-                user_image: selectedInvoiceTrx.user_image || selectedInvoiceTrx.proofImage || selectedInvoiceTrx.userImage,
-                user_image_ceir: selectedInvoiceTrx.user_image_ceir || selectedInvoiceTrx.proofImage2 || selectedInvoiceTrx.userImageCeir,
-                admin_image: selectedInvoiceTrx.admin_image || selectedInvoiceTrx.adminImage,
+                trxId: selectedInvoiceTrx.id,
+                imei: selectedInvoiceTrx.imei,
+                packageName: selectedInvoiceTrx.package_name || selectedInvoiceTrx.packageName,
+                serviceType: selectedInvoiceTrx.service_type || selectedInvoiceTrx.serviceType,
+                createdAt: selectedInvoiceTrx.createdAt,
+                amount: selectedInvoiceTrx.amount || selectedInvoiceTrx.baseAmount,
+                status: selectedInvoiceTrx.status,
                 warranty: selectedInvoiceTrx.warranty || {
-                  hasWarranty: !(selectedInvoiceTrx.service_type || selectedInvoiceTrx.serviceType || "")?.includes("ceir"),
+                  hasWarranty: !selectedInvoiceTrx.service_type?.includes("ceir"),
                   remainingDays: selectedInvoiceTrx.remainingDays,
                 },
                 adminNote: selectedInvoiceTrx.admin_note || selectedInvoiceTrx.adminNote,

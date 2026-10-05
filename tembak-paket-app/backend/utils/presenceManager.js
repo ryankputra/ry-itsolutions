@@ -111,6 +111,45 @@ function removePresence(userId) {
 }
 
 /**
+ * Force-kill a user's presence + all server-side sessions (admin tool)
+ * Returns the number of session files deleted.
+ */
+function forceKillPresence(userId) {
+    if (!userId) return 0;
+    const uid = String(userId);
+    activeUsers.delete(uid);
+    lastDbUpdateMap.delete(uid);
+
+    // Mark lastSeen in DB so the user appears offline immediately
+    try {
+        dbRun('UPDATE users SET lastSeen = ? WHERE id = ?', [new Date().toISOString(), uid]);
+    } catch (e) {}
+
+    // Destroy all express-session files belonging to this user
+    let deleted = 0;
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const sessionsDir = path.join(__dirname, '..', 'sessions');
+        if (fs.existsSync(sessionsDir)) {
+            for (const file of fs.readdirSync(sessionsDir)) {
+                if (file === 'baileys_auth' || file.startsWith('.')) continue;
+                const fullPath = path.join(sessionsDir, file);
+                try {
+                    const raw = fs.readFileSync(fullPath, 'utf8');
+                    if (raw.includes(`"userId":${JSON.stringify(uid)}`) || raw.includes(`"userId":"${uid}"`)) {
+                        fs.unlinkSync(fullPath);
+                        deleted++;
+                    }
+                } catch (e) {}
+            }
+        }
+    } catch (e) {}
+
+    return deleted;
+}
+
+/**
  * Get online statistics (users active within the last 60 seconds)
  */
 function getOnlineStats(timeoutMs = 60000) {
@@ -155,6 +194,7 @@ function isUserOnline(userId, timeoutMs = 60000) {
 module.exports = {
     updatePresence,
     removePresence,
+    forceKillPresence,
     getOnlineStats,
     isUserOnline,
     getClientIp,

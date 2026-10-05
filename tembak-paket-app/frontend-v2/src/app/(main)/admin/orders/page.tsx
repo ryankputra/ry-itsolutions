@@ -93,27 +93,49 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleAdminQuickShareWA = (trx: any) => {
-    if (!trx || typeof trx !== "object") return;
-    const imeiStr = typeof trx.imei === "string" ? trx.imei : (trx.imei !== null && trx.imei !== undefined ? String(trx.imei) : "");
-    const firstImei = imeiStr ? imeiStr.split(/[\n,]+/)[0].trim() : "";
-    const rawCustPhone = trx.customerPhone || trx.userVerifiedPhone || trx.userPhone || (trx.targetPhone && !String(trx.targetPhone).startsWith("35") && !String(trx.targetPhone).startsWith("86") && String(trx.targetPhone).length <= 13 ? String(trx.targetPhone) : "");
-    const custPhone = typeof rawCustPhone === "string" ? rawCustPhone : (rawCustPhone ? String(rawCustPhone) : "");
-    const safeNote = typeof trx.admin_note === 'string' ? trx.admin_note : (trx.admin_note ? JSON.stringify(trx.admin_note) : (typeof trx.api_response === 'string' ? trx.api_response : (trx.api_response ? JSON.stringify(trx.api_response) : "")));
-
-    setSelectedInvoiceTrx({
-      trxId: String(trx.id || ""),
-      imei: firstImei || (trx.targetPhone ? String(trx.targetPhone) : "N/A"),
-      packageName: trx.packageName || "Layanan Resmi",
-      serviceType: trx.service_type,
-      createdAt: trx.createdAt,
-      amount: trx.platformFee || trx.originalPrice || 0,
-      status: trx.status,
-      adminNote: safeNote,
-      customerPhone: custPhone,
-      userPhone: custPhone,
-      targetPhone: custPhone
+  const handleAdminQuickShareWA = async (trx: any) => {
+    const defaultPhone = trx.targetPhone || "";
+    const { value: phone } = await Swal.fire({
+      title: "Kirim Nota via WhatsApp",
+      input: "text",
+      inputLabel: "Nomor WhatsApp Pelanggan (misal: 08123456789):",
+      inputValue: defaultPhone,
+      inputPlaceholder: "08xxxxxxxxxx",
+      showCancelButton: true,
+      confirmButtonText: "Buka WhatsApp",
+      cancelButtonText: "Batal",
+      inputValidator: (val: string | null) => {
+        if (!val || val.replace(/\D/g, "").length < 9) {
+          return "Masukkan nomor WhatsApp yang valid!";
+        }
+      },
     });
+
+    if (!phone) return;
+
+    const cleanPhone = phone.replace(/^0/, "62").replace(/\D/g, "");
+    const imeiList = trx.imei || "-";
+    const statusText =
+      trx.status === "success"
+        ? "SELESAI (SUKSES)"
+        : trx.status === "processing"
+        ? "SEDANG DIPROSES"
+        : trx.status === "failed"
+        ? "GAGAL"
+        : "DALAM ANTREAN";
+
+    const msg = encodeURIComponent(
+      `*NOTA TRANSAKSI - RY-ITSOLUTIONS*\n\n` +
+        `ID Pesanan: #${trx?.id ? String(trx.id).substring(0, 14) : "-"}\n` +
+        `Layanan: ${trx?.packageName || "Layanan Resmi"}\n` +
+        `IMEI/Target: ${imeiList}\n` +
+        `Status: *${statusText}*\n` +
+        (trx?.admin_note ? `Catatan/SN: ${trx.admin_note}\n` : "") +
+        `Waktu: ${trx?.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}\n\n` +
+        `Terima kasih telah bertransaksi bersama kami!`
+    );
+
+    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
   };
 
   // Sub-tab filtering: manual IMEI vs automated
@@ -354,12 +376,12 @@ export default function AdminOrdersPage() {
                       </span>
                     </div>
                     <p className="text-xs text-ink mt-0.5">
-                      Pelanggan: <span className="font-bold">{o?.userName ? String(o.userName) : "Pelanggan"}</span>
-                      {o?.targetPhone ? <span className="ml-1 text-ink-muted font-mono">({String(o.targetPhone)})</span> : null}
+                      Pelanggan: <span className="font-bold">{o?.userName || "Pelanggan"}</span>
+                      {o?.targetPhone && <span className="ml-1 text-ink-muted font-mono">({o.targetPhone})</span>}
                     </p>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {Boolean(o?.imei)
-                        ? String(o.imei).split(",").map((im: string, i: number) => (
+                      {typeof o?.imei === "string" && o.imei
+                        ? o.imei.split(",").map((im: string, i: number) => (
                             <span
                               key={i}
                               className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-md border border-primary/20 font-mono"
@@ -437,18 +459,6 @@ export default function AdminOrdersPage() {
                         </div>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* Result / Admin Note Display */}
-                {(o?.admin_note || o?.api_response) && (
-                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs space-y-1">
-                    <p className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                      <span>📌 Hasil Status Provider / Catatan:</span>
-                    </p>
-                    <p className="font-medium text-emerald-900 dark:text-emerald-100 whitespace-pre-wrap font-mono bg-white/60 dark:bg-black/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-900">
-                      {typeof o.admin_note === 'string' ? o.admin_note : (o.admin_note ? JSON.stringify(o.admin_note) : (typeof o.api_response === 'string' ? o.api_response : (o.api_response ? JSON.stringify(o.api_response) : "")))}
-                    </p>
                   </div>
                 )}
 
@@ -572,24 +582,16 @@ export default function AdminOrdersPage() {
                       size="sm"
                       className="text-xs h-8 gap-1.5"
                       onClick={() => {
-                        const imeiStr = typeof o.imei === "string" ? o.imei : (o.imei !== null && o.imei !== undefined ? String(o.imei) : "");
-                        const firstImei = imeiStr ? imeiStr.split(/[\n,]+/)[0].trim() : "";
-                        const rawTarget = o.targetPhone ? String(o.targetPhone) : "";
-                        const isImeiTarget = rawTarget.length === 15 || rawTarget.startsWith("35") || rawTarget.startsWith("86");
-                        const custPhone = o.customerPhone || o.userVerifiedPhone || o.userPhone || (!isImeiTarget && rawTarget.length <= 13 ? rawTarget : "");
-                        const safeNote = typeof o.admin_note === 'string' ? o.admin_note : (o.admin_note ? JSON.stringify(o.admin_note) : (typeof o.api_response === 'string' ? o.api_response : (o.api_response ? JSON.stringify(o.api_response) : "")));
+                        const firstImei = o.imei ? o.imei.split(/[\n,]+/)[0].trim() : "";
                         setSelectedInvoiceTrx({
-                          trxId: String(o.id || ""),
-                          imei: firstImei || rawTarget || "N/A",
+                          trxId: o.id,
+                          imei: firstImei || o.targetPhone || "N/A",
                           packageName: o.packageName || "Layanan Resmi",
                           serviceType: o.service_type,
                           createdAt: o.createdAt,
                           amount: o.platformFee || o.originalPrice || 0,
                           status: o.status,
-                          adminNote: safeNote,
-                          customerPhone: custPhone,
-                          userPhone: custPhone,
-                          targetPhone: custPhone
+                          adminNote: o.admin_note,
                         });
                       }}
                     >

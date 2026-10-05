@@ -55,60 +55,6 @@ export default function LandingPage() {
   // Dark Mode Support
   const [isDark, setIsDark] = useState(false);
 
-  // Scroll Progress, Active Nav Section & Floating Header Observer
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [activeSection, setActiveSection] = useState("");
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      setIsScrolled(scrollY > 20);
-
-      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
-      if (totalScroll > 0) {
-        setScrollProgress((scrollY / totalScroll) * 100);
-      }
-
-      const sections = ['layanan', 'harga', 'garansi', 'faq'];
-      const scrollPos = scrollY + 200;
-      for (const sec of sections) {
-        const el = document.getElementById(sec);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPos >= top && scrollPos < top + height) {
-            setActiveSection(sec);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-
-    // IntersectionObserver for luxury scroll reveal
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-revealed');
-          }
-        });
-      },
-      { threshold: 0.08 }
-    );
-
-    const revealElements = document.querySelectorAll('.reveal-on-scroll');
-    revealElements.forEach((el) => observer.observe(el));
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      observer.disconnect();
-    };
-  }, []);
-
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -135,50 +81,18 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-canvas text-ink selection:bg-primary selection:text-white scroll-smooth transition-colors duration-200">
-      {/* Top Scroll Progress Bar */}
-      <div
-        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-indigo-600 z-[100] transition-all duration-150 pointer-events-none"
-        style={{ width: `${scrollProgress}%` }}
-      />
-
       {/* Public Top Navbar */}
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'pt-2.5 px-3 sm:px-6' : 'w-full'}`}>
-        <div
-          className={`mx-auto flex items-center justify-between transition-all duration-300 ${
-            isScrolled
-              ? 'max-w-5xl h-14 sm:h-16 px-4 sm:px-6 rounded-2xl sm:rounded-full bg-canvas/80 backdrop-blur-2xl border border-hairline/80 shadow-xl shadow-slate-900/10 dark:shadow-primary/15'
-              : 'max-w-7xl h-16 sm:h-20 px-4 sm:px-6 lg:px-8 bg-canvas/85 backdrop-blur-xl border-b border-hairline'
-          }`}
-        >
+      <header className="sticky top-0 z-50 bg-canvas/80 backdrop-blur-md border-b border-hairline transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5">
               <Logo size={32} />
             </Link>
             <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-ink-muted">
-              <a
-                href="#layanan"
-                className={`transition-all ${activeSection === 'layanan' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
-              >
-                Layanan
-              </a>
-              <a
-                href="#harga"
-                className={`transition-all ${activeSection === 'harga' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
-              >
-                Daftar Paket
-              </a>
-              <a
-                href="#garansi"
-                className={`transition-all ${activeSection === 'garansi' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
-              >
-                Garansi
-              </a>
-              <a
-                href="#faq"
-                className={`transition-all ${activeSection === 'faq' ? 'text-primary font-bold underline decoration-2 underline-offset-4' : 'hover:text-primary'}`}
-              >
-                FAQ
-              </a>
+              <a href="#layanan" className="hover:text-primary transition-colors">Layanan</a>
+              <a href="#harga" className="hover:text-primary transition-colors">Daftar Paket</a>
+              <a href="#garansi" className="hover:text-primary transition-colors">Garansi</a>
+              <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
             </nav>
           </div>
 
@@ -188,7 +102,6 @@ export default function LandingPage() {
               onClick={toggleDarkMode}
               className="p-2 text-ink-muted hover:text-ink transition-colors rounded-full hover:bg-parchment flex items-center justify-center"
               title={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
-              aria-label={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
             >
               {isDark ? (
                 <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -361,59 +274,11 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-
-          {/* Animated Floating Scroll Indicator */}
-          <div className="pt-8 flex justify-center">
-            <a
-              href="#layanan"
-              className="inline-flex flex-col items-center gap-2 text-xs font-bold text-ink-muted hover:text-primary transition-colors group"
-            >
-              <span>Jelajahi Ekosistem Layanan</span>
-              <div className="w-9 h-9 rounded-full border border-hairline bg-parchment flex items-center justify-center shadow-xs group-hover:border-primary group-hover:scale-110 transition-all animate-bounce">
-                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                </svg>
-              </div>
-            </a>
-          </div>
         </div>
       </section>
 
-      {/* Luxury Continuous Ticker Marquee */}
-      <div className="w-full bg-parchment/60 border-y border-hairline py-3.5 overflow-hidden backdrop-blur-xs relative my-2">
-        <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-canvas to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-canvas to-transparent z-10 pointer-events-none" />
-        <div className="animate-marquee gap-8 items-center text-xs font-bold text-ink-muted tracking-wide uppercase">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="flex items-center gap-8 shrink-0">
-              <span className="flex items-center gap-2 text-primary">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                Aktivasi Sinyal Instant All Operator
-              </span>
-              <span className="text-hairline">•</span>
-              <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                Garansi Digital Realtime dengan QR Verification
-              </span>
-              <span className="text-hairline">•</span>
-              <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                Payment Gateway GoPay &amp; QRIS SaaS
-              </span>
-              <span className="text-hairline">•</span>
-              <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                Cek Database Gateway CEIR Kemenperin
-              </span>
-              <span className="text-hairline">•</span>
-              <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                Integrasi API &amp; Webhook Realtime
-              </span>
-              <span className="text-hairline">•</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Services Grid (id="layanan") - 6 Universal IT Solutions Pillars */}
-      <section id="layanan" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 reveal-on-scroll">
+      <section id="layanan" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="text-center max-w-3xl mx-auto space-y-3">
           <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider border border-primary/20">
             Ekosistem Solusi IT Terpadu
@@ -601,11 +466,11 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section (id="harga") - 100% Real-time Database Integrated */}
-      <section id="harga" className="py-16 bg-parchment/40 border-t border-hairline transition-colors reveal-on-scroll">
+      <section id="harga" className="py-16 bg-parchment/40 border-t border-hairline transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-primary">Daftar Paket</span>
-            <h2 className="text-3xl font-black text-ink tracking-tight">Pilihan Paket &amp; Harga</h2>
+            <h2 className="text-3xl font-black text-ink tracking-tight">Pilihan Paket & Harga</h2>
             <p className="text-sm text-ink-muted">Harga terintegrasi langsung dengan database sistem kami.</p>
           </div>
 
@@ -623,7 +488,7 @@ export default function LandingPage() {
                   <span className="text-xs text-ink-muted">/ IMEI</span>
                 </div>
                 <p className="text-xs text-ink-muted leading-relaxed">
-                  Pengecekan data pendaftaran server CEIR &amp; Bea Cukai lengkap dengan log query.
+                  Pengecekan data pendaftaran server CEIR & Bea Cukai lengkap dengan log query.
                 </p>
                 <ul className="text-xs space-y-2 text-ink-muted pt-1">
                   <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Terkoneksi Database Pusat CEIR</li>
@@ -659,7 +524,7 @@ export default function LandingPage() {
                       <span className="text-xs text-ink-muted">/ unit</span>
                     </div>
                     <p className="text-xs text-ink-muted leading-relaxed">
-                      Aktivasi sinyal seluler iPhone &amp; Android semua operator dengan masa garansi aktif {pkg?.duration || "Garansi Aktif"}.
+                      Aktivasi sinyal seluler iPhone & Android semua operator dengan masa garansi aktif {pkg?.duration || "Garansi Aktif"}.
                     </p>
                     <ul className="text-xs space-y-2 text-ink-muted pt-1">
                       <li className="flex items-center gap-2"><svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Sinyal All Operator (Telkomsel, Indosat, XL, Tri, Smartfren)</li>
@@ -681,7 +546,7 @@ export default function LandingPage() {
                   <span className="text-[11px] font-bold text-primary uppercase">All Operator</span>
                   <h3 className="text-xl font-bold text-ink">Unblock IMEI HP Inter</h3>
                   <p className="text-xs text-ink-muted leading-relaxed">
-                    Aktivasi sinyal seluler iPhone &amp; Android untuk semua operator dengan jaminan garansi.
+                    Aktivasi sinyal seluler iPhone & Android untuk semua operator dengan jaminan garansi.
                   </p>
                 </div>
                 <Link
@@ -724,32 +589,25 @@ export default function LandingPage() {
       </section>
 
       {/* Warranty Section (id="garansi") */}
-      <section id="garansi" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal-on-scroll">
-        <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0284c7] text-white relative overflow-hidden shadow-2xl border border-white/10">
-          {/* Ambient Glows */}
-          <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 -top-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="max-w-2xl space-y-5 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-emerald-300 font-bold text-xs tracking-wide">
-              <svg className="w-4 h-4 text-emerald-400 inline shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg> Perlindungan &amp; Transparansi
+      <section id="garansi" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-[#004080] via-[#005bb5] to-[#0066cc] text-white relative overflow-hidden shadow-xl">
+          <div className="max-w-2xl space-y-4 relative z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white font-bold text-xs">
+              <svg className="w-5 h-5 text-emerald-600 inline shrink-0 mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg> Perlindungan & Transparansi
             </div>
-
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-snug drop-shadow-xs">
-              Layanan Bergaransi Sinyal &amp; Verifikasi QR Realtime
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
+              Layanan Bergaransi Sinyal & Verifikasi QR Realtime
             </h2>
-
-            <p className="text-xs sm:text-sm text-slate-100/90 leading-relaxed font-medium">
+            <p className="text-xs sm:text-sm text-white/90 leading-relaxed">
               Setiap pengerjaan dilengkapi surat garansi digital dan QR Code yang dapat discan kapan saja untuk memeriksa status dan masa berlaku garansi perangkat.
             </p>
-
             <div className="pt-2">
               <Link
                 href="/cek-garansi"
-                className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white text-blue-950 font-extrabold text-xs sm:text-sm shadow-xl hover:bg-blue-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-white/90 transition-all"
               >
                 Cek Status Garansi
-                <svg className="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
               </Link>
             </div>
           </div>
@@ -757,7 +615,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section (id="faq") */}
-      <section id="faq" className="py-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 reveal-on-scroll">
+      <section id="faq" className="py-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="text-center space-y-2">
           <span className="text-xs font-bold uppercase tracking-wider text-primary">Pusat Informasi</span>
           <h2 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight">Pertanyaan yang Sering Diajukan</h2>
@@ -772,18 +630,13 @@ export default function LandingPage() {
             >
               <button
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                aria-expanded={openFaq === idx}
-                aria-controls={`faq-answer-${idx}`}
                 className="w-full p-4 text-left font-bold text-xs sm:text-sm text-ink flex items-center justify-between gap-4 hover:bg-parchment/50 transition-colors"
               >
                 <span>{faq.q}</span>
                 <span className="text-base font-mono text-ink-muted">{openFaq === idx ? "−" : "+"}</span>
               </button>
               {openFaq === idx && (
-                <div
-                  id={`faq-answer-${idx}`}
-                  className="p-4 pt-0 text-xs text-ink-muted leading-relaxed border-t border-hairline/60 bg-parchment/30 animate-fadeIn"
-                >
+                <div className="p-4 pt-0 text-xs text-ink-muted leading-relaxed border-t border-hairline/60 bg-parchment/30 animate-fadeIn">
                   {faq.a}
                 </div>
               )}
@@ -819,7 +672,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-6 border-t border-hairline text-center text-xs text-ink-muted space-y-1.5">
         <p className="font-semibold text-ink">© {new Date().getFullYear()} Ry-ITSolutions. All rights reserved.</p>
-        <p className="text-[11px] text-ink-muted">Platform Solusi IT, Otomasi Digital &amp; FinTech Terintegrasi</p>
+        <p className="text-[11px] text-ink-muted">Portal Layanan Aktivasi Sinyal & Database CEIR</p>
       </footer>
     </div>
   );

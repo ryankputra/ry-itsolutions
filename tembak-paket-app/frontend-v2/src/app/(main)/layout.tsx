@@ -21,18 +21,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
-    // Force purge stale PWA Service Worker caches for instant update
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((reg) => reg.unregister());
-      });
-      if ("caches" in window) {
-        caches.keys().then((keys) => {
-          keys.forEach((key) => caches.delete(key));
-        });
-      }
-    }
-
     // Listen for PWA Install Prompt
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
