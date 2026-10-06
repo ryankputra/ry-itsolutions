@@ -118,7 +118,6 @@ function UnblockImeiContent() {
     const map = new Map<string, any>();
     safePackages.forEach(p => {
       if (!p) return;
-      if (p.is_open_now === false) return;
       const dur = (p.duration || '').trim().toLowerCase();
       if (!map.has(dur)) {
         map.set(dur, p);
@@ -913,6 +912,7 @@ function UnblockImeiContent() {
                   <p className="text-xs text-ink-muted col-span-3">Belum ada pilihan paket.</p>
                 ) : (
                   uniquePackages.map((opt, idx) => {
+                    const isClosed = opt.is_open_now === false;
                     const isSelected = selectedPkgId === opt.id;
                     const isBestSeller = (opt.duration || "").toLowerCase().includes("3 bulan") || idx === 0;
 
@@ -934,8 +934,11 @@ function UnblockImeiContent() {
                       <button
                         key={opt.id || idx}
                         type="button"
-                        onClick={() => setSelectedPkgId(opt.id)}
+                        disabled={isClosed}
+                        onClick={() => !isClosed && setSelectedPkgId(opt.id)}
                         className={`relative p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                          isClosed ? "opacity-60 cursor-not-allowed border-amber-200 bg-amber-50/30" : ""
+                        } ${
                           isSelected
                             ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-[1.01]"
                             : "border-hairline bg-canvas hover:border-primary/40 hover:bg-parchment"
@@ -944,7 +947,11 @@ function UnblockImeiContent() {
                         {/* Top tag */}
                         <div className="flex items-center justify-between gap-1 mb-1.5">
                           <span className="font-bold text-xs text-ink truncate">{opt.duration}</span>
-                          {opt.open_hour !== null && opt.open_hour !== undefined && opt.open_hour !== opt.close_hour ? (
+                          {opt.is_open_now === false ? (
+                            <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-[8px] font-bold uppercase tracking-wider shrink-0 border border-amber-300">
+                              Tutup
+                            </span>
+                          ) : opt.open_hour !== null && opt.open_hour !== undefined && opt.open_hour !== opt.close_hour ? (
                             <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[8px] font-bold uppercase tracking-wider shrink-0 border border-primary/20">
                               {String(opt.open_hour).padStart(2, "0")}–{String(opt.close_hour).padStart(2, "0")} WIB
                             </span>
