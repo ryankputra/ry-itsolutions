@@ -58,10 +58,14 @@ export default function AdminImeiPage() {
     wholesale_min_qty: number;
     wholesale_prices: { fast: string; semi: string; slow: string };
     wholesale_promo_note: string;
+    open_hour: string;
+    close_hour: string;
   }>({
     duration: "",
     allowed_speeds: ["fast", "semi", "slow"],
     speed_prices: { fast: "", semi: "", slow: "" },
+    open_hour: "",
+    close_hour: "",
     wholesale_enabled: false,
     wholesale_min_qty: 2,
     wholesale_prices: { fast: "", semi: "", slow: "" },
@@ -223,6 +227,8 @@ export default function AdminImeiPage() {
           isVisible: 1,
           allowed_speeds: activeSpeeds,
           speed_prices: spPrices,
+          open_hour: newImeiPkg.open_hour === "" ? null : Number(newImeiPkg.open_hour),
+          close_hour: newImeiPkg.close_hour === "" ? null : Number(newImeiPkg.close_hour),
           wholesale_enabled: newImeiPkg.wholesale_enabled,
           wholesale_min_qty: Number(newImeiPkg.wholesale_min_qty) || 2,
           wholesale_prices: (spPrices as any).wholesale_prices || {},
@@ -236,6 +242,8 @@ export default function AdminImeiPage() {
           duration: "",
           allowed_speeds: ["fast", "semi", "slow"],
           speed_prices: { fast: "", semi: "", slow: "" },
+          open_hour: "",
+          close_hour: "",
           wholesale_enabled: false,
           wholesale_min_qty: 2,
           wholesale_prices: { fast: "", semi: "", slow: "" },
@@ -657,6 +665,15 @@ export default function AdminImeiPage() {
                           >
                             {isVisible ? "Aktif" : "Hidden"}
                           </button>
+                          {pkg.is_open_now === false ? (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-600 border border-amber-300">
+                              Tutup
+                            </span>
+                          ) : pkg.open_hour !== null && pkg.open_hour !== undefined && pkg.open_hour !== pkg.close_hour ? (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary border border-primary/30">
+                              {String(pkg.open_hour).padStart(2, "0")}–{String(pkg.close_hour).padStart(2, "0")} WIB
+                            </span>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => {
@@ -703,6 +720,8 @@ export default function AdminImeiPage() {
                                 ...pkg,
                                 allowed_speeds: speeds,
                                 speed_prices: spObj,
+                                open_hour: pkg.open_hour === null || pkg.open_hour === undefined ? "" : String(pkg.open_hour),
+                                close_hour: pkg.close_hour === null || pkg.close_hour === undefined ? "" : String(pkg.close_hour),
                                 wholesale_enabled: wsEnabled,
                                 wholesale_min_qty: wsMinQty,
                                 wholesale_prices: wsPrices,
@@ -745,6 +764,36 @@ export default function AdminImeiPage() {
                 onChange={(e) => setNewImeiPkg({ ...newImeiPkg, duration: e.target.value })}
                 required
               />
+
+              <div className="p-3 rounded-xl border border-hairline bg-canvas space-y-2">
+                <label className="text-[11px] font-bold text-ink/80 block">Jam Tersedia Produk (WIB)</label>
+                <p className="text-[10px] text-ink-muted leading-snug">
+                  Produk hanya bisa dibeli pada rentang jam ini. Kosongkan keduanya untuk buka 24 jam.
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={newImeiPkg.open_hour}
+                    onChange={(e) => setNewImeiPkg({ ...newImeiPkg, open_hour: e.target.value })}
+                    className="flex-1 px-2.5 py-2 rounded-lg border border-hairline bg-canvas text-xs font-bold text-ink outline-none focus:border-primary"
+                  >
+                    <option value="">Buka 24 jam</option>
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-ink-muted font-bold">sampai</span>
+                  <select
+                    value={newImeiPkg.close_hour}
+                    onChange={(e) => setNewImeiPkg({ ...newImeiPkg, close_hour: e.target.value })}
+                    className="flex-1 px-2.5 py-2 rounded-lg border border-hairline bg-canvas text-xs font-bold text-ink outline-none focus:border-primary"
+                  >
+                    <option value="">Buka 24 jam</option>
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {[
@@ -1207,6 +1256,43 @@ export default function AdminImeiPage() {
                 )}
               </div>
 
+              <div className="p-3 rounded-xl border border-hairline bg-canvas space-y-2">
+                <label className="text-[11px] font-bold text-ink/80 block">Jam Tersedia Produk (WIB)</label>
+                <p className="text-[10px] text-ink-muted leading-snug">
+                  Produk hanya bisa dibeli pada rentang jam ini. Kosongkan keduanya untuk buka 24 jam.
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={editingPkg.open_hour ?? ""}
+                    onChange={(e) => setEditingPkg({ ...editingPkg, open_hour: e.target.value })}
+                    className="flex-1 px-2.5 py-2 rounded-lg border border-hairline bg-canvas text-xs font-bold text-ink outline-none focus:border-primary"
+                  >
+                    <option value="">Buka 24 jam</option>
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-ink-muted font-bold">sampai</span>
+                  <select
+                    value={editingPkg.close_hour ?? ""}
+                    onChange={(e) => setEditingPkg({ ...editingPkg, close_hour: e.target.value })}
+                    className="flex-1 px-2.5 py-2 rounded-lg border border-hairline bg-canvas text-xs font-bold text-ink outline-none focus:border-primary"
+                  >
+                    <option value="">Buka 24 jam</option>
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+                    ))}
+                  </select>
+                </div>
+                {editingPkg.open_hour !== "" && editingPkg.close_hour !== "" && editingPkg.open_hour !== editingPkg.close_hour && (
+                  <p className="text-[10px] text-amber-600 font-medium">
+                    {Number(editingPkg.open_hour) > Number(editingPkg.close_hour)
+                      ? "Rentang ini melewati tengah malam (mis. 22:00–06:00)."
+                      : `Tersedia ${String(editingPkg.open_hour).padStart(2, "0")}:00 – ${String(editingPkg.close_hour).padStart(2, "0")}:00 WIB.`}
+                  </p>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
@@ -1286,6 +1372,8 @@ export default function AdminImeiPage() {
                           isVisible: editingPkg.isVisible,
                           allowed_speeds: curSpeeds,
                           speed_prices: spPrices,
+                          open_hour: editingPkg.open_hour === "" || editingPkg.open_hour === undefined || editingPkg.open_hour === null ? null : Number(editingPkg.open_hour),
+                          close_hour: editingPkg.close_hour === "" || editingPkg.close_hour === undefined || editingPkg.close_hour === null ? null : Number(editingPkg.close_hour),
                           wholesale_enabled: Boolean(editingPkg.wholesale_enabled),
                           wholesale_min_qty: Number(editingPkg.wholesale_min_qty) || 2,
                           wholesale_prices: (spPrices as any).wholesale_prices || {},

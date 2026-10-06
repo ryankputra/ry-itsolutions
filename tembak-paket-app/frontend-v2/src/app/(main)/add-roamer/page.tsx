@@ -118,6 +118,7 @@ function UnblockImeiContent() {
     const map = new Map<string, any>();
     safePackages.forEach(p => {
       if (!p) return;
+      if (p.is_open_now === false) return;
       const dur = (p.duration || '').trim().toLowerCase();
       if (!map.has(dur)) {
         map.set(dur, p);
@@ -943,11 +944,15 @@ function UnblockImeiContent() {
                         {/* Top tag */}
                         <div className="flex items-center justify-between gap-1 mb-1.5">
                           <span className="font-bold text-xs text-ink truncate">{opt.duration}</span>
-                          {isBestSeller && (
+                          {opt.open_hour !== null && opt.open_hour !== undefined && opt.open_hour !== opt.close_hour ? (
+                            <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[8px] font-bold uppercase tracking-wider shrink-0 border border-primary/20">
+                              {String(opt.open_hour).padStart(2, "0")}–{String(opt.close_hour).padStart(2, "0")} WIB
+                            </span>
+                          ) : isBestSeller ? (
                             <span className="px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider shrink-0">
                               TERLARIS
                             </span>
-                          )}
+                          ) : null}
                         </div>
 
                         {/* Pricing */}
