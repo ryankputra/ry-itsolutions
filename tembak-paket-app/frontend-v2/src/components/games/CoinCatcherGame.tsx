@@ -154,6 +154,13 @@ export default function CoinCatcherGame({ canPlay, onCoinsClaimed }: CoinCatcher
       const basketX = basketXRef.current;
       const basketY = height - 30;
 
+      // Catcher — 3D hover-bot: lit from upper-left, shadow below
+      // Ground shadow
+      ctx.fillStyle = "rgba(2, 6, 23, 0.45)";
+      ctx.beginPath();
+      ctx.ellipse(basketX, basketY + 20, 30, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
       // Glow under basket
       const basketGlow = ctx.createRadialGradient(basketX, basketY, 4, basketX, basketY, 35);
       basketGlow.addColorStop(0, "rgba(16, 185, 129, 0.6)");
@@ -177,14 +184,77 @@ export default function CoinCatcherGame({ canPlay, onCoinsClaimed }: CoinCatcher
         }
       };
 
-      // Catcher Basket Body
-      ctx.fillStyle = "#10B981";
-      drawRoundRect(ctx, basketX - basketWidth / 2, basketY, basketWidth, 14, 7);
+      // Hover thrusters (behind body, glowing down)
+      [basketX - basketWidth / 2 + 8, basketX + basketWidth / 2 - 8].forEach((tx) => {
+        const flame = 4 + Math.sin(frameCount * 0.3 + tx) * 2;
+        const tg = ctx.createLinearGradient(tx, basketY + 6, tx, basketY + 22);
+        tg.addColorStop(0, "rgba(254, 240, 138, 0.9)");
+        tg.addColorStop(1, "rgba(245, 158, 11, 0)");
+        ctx.fillStyle = tg;
+        ctx.beginPath();
+        ctx.moveTo(tx - flame, basketY + 8);
+        ctx.lineTo(tx + flame, basketY + 8);
+        ctx.lineTo(tx, basketY + 8 + flame * 2.5);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // Body shell with vertical light gradient
+      const bodyGrad = ctx.createLinearGradient(basketX, basketY - 16, basketX, basketY + 12);
+      bodyGrad.addColorStop(0, "#6EE7B7");
+      bodyGrad.addColorStop(0.45, "#10B981");
+      bodyGrad.addColorStop(1, "#065F46");
+      ctx.fillStyle = bodyGrad;
+      drawRoundRect(ctx, basketX - basketWidth / 2, basketY - 4, basketWidth, 18, 8);
       ctx.fill();
 
-      ctx.fillStyle = "#34D399";
-      drawRoundRect(ctx, basketX - basketWidth / 2 + 4, basketY + 3, basketWidth - 8, 4, 2);
+      // Bottom rim (open catcher lip, front-facing)
+      ctx.fillStyle = "#064E3B";
+      drawRoundRect(ctx, basketX - basketWidth / 2, basketY + 10, basketWidth, 5, 2.5);
       ctx.fill();
+
+      // Top catch-tray inner shadow (concave opening)
+      ctx.fillStyle = "rgba(2, 6, 23, 0.45)";
+      drawRoundRect(ctx, basketX - basketWidth / 2 + 4, basketY - 2, basketWidth - 8, 4, 2);
+      ctx.fill();
+
+      // Top highlight strip
+      ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+      drawRoundRect(ctx, basketX - basketWidth / 2 + 6, basketY - 3, basketWidth - 20, 1.5, 1);
+      ctx.fill();
+
+      // Antenna with blinking light
+      ctx.strokeStyle = "#34D399";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(basketX + basketWidth / 2 - 6, basketY - 4);
+      ctx.lineTo(basketX + basketWidth / 2 - 6, basketY - 14);
+      ctx.stroke();
+      const blink = Math.sin(frameCount * 0.15) > 0.3 ? 1 : 0.25;
+      ctx.fillStyle = `rgba(254, 240, 138, ${blink})`;
+      ctx.beginPath();
+      ctx.arc(basketX + basketWidth / 2 - 6, basketY - 15, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Visor eyes (two glowing sensors)
+      [-9, 9].forEach((ex) => {
+        const eyeGrad = ctx.createRadialGradient(basketX + ex - 1, basketY + 3, 0.5, basketX + ex, basketY + 4, 5);
+        eyeGrad.addColorStop(0, "#FFFFFF");
+        eyeGrad.addColorStop(0.4, "#6EE7B7");
+        eyeGrad.addColorStop(1, "#047857");
+        ctx.fillStyle = eyeGrad;
+        ctx.beginPath();
+        ctx.arc(basketX + ex, basketY + 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        // Pupil tracks nearest falling item
+        const target = itemsRef.current.find((it) => Math.abs(it.x - (basketX + ex)) < 40 && it.y < basketY);
+        const px = target ? Math.max(-1.5, Math.min(1.5, (target.x - (basketX + ex)) * 0.1)) : 0;
+        const py = target ? Math.max(-1, Math.min(1, (target.y - (basketY + 4)) * 0.03)) : 0;
+        ctx.fillStyle = "#022C22";
+        ctx.beginPath();
+        ctx.arc(basketX + ex + px, basketY + 4 + py, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       // 4. Update & Render Falling Items
       const items = itemsRef.current;
@@ -194,42 +264,150 @@ export default function CoinCatcherGame({ canPlay, onCoinsClaimed }: CoinCatcher
 
         // Draw Items
         if (item.type === "coin") {
-          // Golden Coin
-          ctx.fillStyle = "#F59E0B";
+          // Golden Coin — spinning 3D cylinder
+          ctx.save();
+          ctx.translate(item.x, item.y);
+          // Drop shadow
+          ctx.fillStyle = "rgba(2, 6, 23, 0.4)";
           ctx.beginPath();
-          ctx.arc(item.x, item.y, item.size, 0, Math.PI * 2);
+          ctx.ellipse(1.5, item.size + 3, item.size, item.size * 0.3, 0, 0, Math.PI * 2);
           ctx.fill();
-
-          ctx.fillStyle = "#FEF08A";
-          ctx.font = "bold 9px sans-serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("R", item.x, item.y);
+          // Rim (edge of cylinder, darker)
+          ctx.fillStyle = "#B45309";
+          ctx.beginPath();
+          ctx.ellipse(0, 2, item.size, item.size * 0.42, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Face — spin squashes horizontally to fake rotation
+          const spin = Math.sin(frameCount * 0.12 + item.x * 0.5);
+          const faceW = Math.max(2.5, item.size * Math.abs(spin));
+          const faceGrad = ctx.createLinearGradient(0, -item.size, 0, item.size);
+          faceGrad.addColorStop(0, "#FEF08A");
+          faceGrad.addColorStop(0.5, "#F59E0B");
+          faceGrad.addColorStop(1, "#B45309");
+          ctx.fillStyle = faceGrad;
+          ctx.beginPath();
+          ctx.ellipse(0, -1, faceW, item.size * 0.42, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Rim highlight arc
+          ctx.strokeStyle = "rgba(254, 240, 138, 0.7)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(0, -1, faceW * 0.7, item.size * 0.3, 0, Math.PI * 1.2, Math.PI * 1.8);
+          ctx.stroke();
+          // "R" emboss only when face is near full
+          if (Math.abs(spin) > 0.55) {
+            ctx.fillStyle = "#FEF08A";
+            ctx.font = "bold 9px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("R", 0, -1);
+          }
+          ctx.restore();
         } else if (item.type === "gem") {
-          // Diamond Gem
-          ctx.fillStyle = "#06B6D4";
+          // Diamond Gem — faceted 3D crystal
+          ctx.save();
+          ctx.translate(item.x, item.y);
+          const r = item.size;
+          // Drop shadow
+          ctx.fillStyle = "rgba(2, 6, 23, 0.4)";
           ctx.beginPath();
-          ctx.arc(item.x, item.y, item.size, 0, Math.PI * 2);
+          ctx.ellipse(1, r + 2, r * 0.8, r * 0.25, 0, 0, Math.PI * 2);
           ctx.fill();
-
+          // Lower pavilion (bottom cone, darker facet)
+          ctx.fillStyle = "#0E7490";
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.7, 0);
+          ctx.lineTo(r * 0.7, 0);
+          ctx.lineTo(0, r);
+          ctx.closePath();
+          ctx.fill();
+          // Crown left facet
+          ctx.fillStyle = "#22D3EE";
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.7, 0);
+          ctx.lineTo(0, -r);
+          ctx.lineTo(-r * 0.25, 0);
+          ctx.closePath();
+          ctx.fill();
+          // Crown right facet
+          ctx.fillStyle = "#0891B2";
+          ctx.beginPath();
+          ctx.moveTo(r * 0.7, 0);
+          ctx.lineTo(0, -r);
+          ctx.lineTo(r * 0.25, 0);
+          ctx.closePath();
+          ctx.fill();
+          // Center table facet (brightest, top view)
           ctx.fillStyle = "#CFFAFE";
           ctx.beginPath();
-          ctx.arc(item.x - 2, item.y - 2, 4, 0, Math.PI * 2);
+          ctx.moveTo(-r * 0.25, 0);
+          ctx.lineTo(0, -r);
+          ctx.lineTo(r * 0.25, 0);
+          ctx.closePath();
           ctx.fill();
-        } else {
-          // Red Bomb
-          ctx.fillStyle = "#EF4444";
+          // Top vertex sparkle
+          ctx.fillStyle = "#FFFFFF";
           ctx.beginPath();
-          ctx.arc(item.x, item.y, item.size, 0, Math.PI * 2);
+          ctx.arc(0, -r * 0.75, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+          // Girdle line separating crown/pavilion
+          ctx.strokeStyle = "rgba(207, 250, 254, 0.6)";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.7, 0);
+          ctx.lineTo(r * 0.7, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          // Red Bomb — 3D sphere with shading
+          ctx.save();
+          ctx.translate(item.x, item.y);
+          const br = item.size;
+          // Drop shadow
+          ctx.fillStyle = "rgba(2, 6, 23, 0.4)";
+          ctx.beginPath();
+          ctx.ellipse(1.5, br + 2, br * 0.85, br * 0.28, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Sphere body with radial light gradient
+          const bombGrad = ctx.createRadialGradient(-br * 0.3, -br * 0.35, br * 0.1, 0, 0, br);
+          bombGrad.addColorStop(0, "#FCA5A5");
+          bombGrad.addColorStop(0.35, "#EF4444");
+          bombGrad.addColorStop(1, "#7F1D1D");
+          ctx.fillStyle = bombGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, br, 0, Math.PI * 2);
+          ctx.fill();
+          // Specular highlight
+          ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+          ctx.beginPath();
+          ctx.ellipse(-br * 0.35, -br * 0.4, br * 0.28, br * 0.16, -0.6, 0, Math.PI * 2);
+          ctx.fill();
+          // Bottom ambient occlusion
+          ctx.fillStyle = "rgba(2, 6, 23, 0.35)";
+          ctx.beginPath();
+          ctx.ellipse(0, br * 0.55, br * 0.7, br * 0.28, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // Fuse cap on top of sphere
+          ctx.fillStyle = "#78350F";
+          ctx.beginPath();
+          ctx.rect(item.x - 3, item.y - item.size - 2, 6, 4);
           ctx.fill();
 
-          // Fuse
+          // Fuse — sputtering spark
           ctx.strokeStyle = "#F59E0B";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(item.x, item.y - item.size);
+          ctx.moveTo(item.x, item.y - item.size - 2);
           ctx.lineTo(item.x + 4, item.y - item.size - 5);
           ctx.stroke();
+          // Spark glow at fuse tip
+          const sparkFlick = 1.5 + Math.sin(frameCount * 0.5 + item.x) * 1;
+          ctx.fillStyle = "#FEF08A";
+          ctx.beginPath();
+          ctx.arc(item.x + 4, item.y - item.size - 5, sparkFlick, 0, Math.PI * 2);
+          ctx.fill();
         }
 
         // Collision Check with Basket

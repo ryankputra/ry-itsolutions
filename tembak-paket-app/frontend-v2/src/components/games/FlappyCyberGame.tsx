@@ -161,16 +161,6 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
       const angle = gameState === "ready" ? 0 : Math.min(Math.PI / 4, Math.max(-Math.PI / 4, drone.vy * 0.08));
       ctx.rotate(angle);
 
-      // Drone Glow
-      const glowGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 18);
-      glowGrad.addColorStop(0, "rgba(59, 130, 246, 0.8)");
-      glowGrad.addColorStop(1, "rgba(59, 130, 246, 0)");
-      ctx.fillStyle = glowGrad;
-      ctx.beginPath();
-      ctx.arc(0, 0, 20, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Helper function for roundRect compatibility
       const drawRoundRect = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
         if (typeof c.roundRect === "function") {
           c.roundRect(x, y, w, h, r);
@@ -185,20 +175,121 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
         }
       };
 
-      // Drone Body
-      ctx.fillStyle = "#2563EB";
-      drawRoundRect(ctx, -12, -8, 24, 16, 6);
-      ctx.fill();
-
-      // Cyber Visor
-      ctx.fillStyle = "#38BDF8";
-      drawRoundRect(ctx, 0, -5, 10, 10, 3);
-      ctx.fill();
-
-      // Thruster Trail
-      ctx.fillStyle = "#F59E0B";
+      // 3D Drone: lights everything from upper-left
+      // Ground shadow (sells altitude, offset opposite to light)
+      ctx.fillStyle = "rgba(2, 6, 23, 0.45)";
       ctx.beginPath();
-      ctx.arc(-14, 0, 4 + Math.sin(frameCount * 0.3) * 2, 0, Math.PI * 2);
+      ctx.ellipse(2, 20, 20, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Drone Glow
+      const glowGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 18);
+      glowGrad.addColorStop(0, "rgba(59, 130, 246, 0.8)");
+      glowGrad.addColorStop(1, "rgba(59, 130, 246, 0)");
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Armature crossbar (behind body, reads as depth)
+      ctx.fillStyle = "#1D4ED8";
+      drawRoundRect(ctx, -17, -2, 34, 5, 2.5);
+      ctx.fill();
+      // Armature top highlight
+      ctx.fillStyle = "#3B82F6";
+      drawRoundRect(ctx, -17, -2, 34, 1.5, 1);
+      ctx.fill();
+
+      // Rotor mounts at each arm tip
+      [-17, 17].forEach((ax) => {
+        ctx.fillStyle = "#1E3A8A";
+        ctx.beginPath();
+        ctx.arc(ax, 0, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Drone Body — vertical gradient fakes a lit 3D shell
+      const bodyGrad = ctx.createLinearGradient(0, -11, 0, 11);
+      bodyGrad.addColorStop(0, "#60A5FA");
+      bodyGrad.addColorStop(0.45, "#2563EB");
+      bodyGrad.addColorStop(1, "#1E3A8A");
+      ctx.fillStyle = bodyGrad;
+      drawRoundRect(ctx, -12, -9, 24, 18, 7);
+      ctx.fill();
+
+      // Bottom ambient occlusion
+      ctx.fillStyle = "rgba(2, 6, 23, 0.35)";
+      drawRoundRect(ctx, -12, 4, 24, 6, 5);
+      ctx.fill();
+
+      // Body specular sheen
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      drawRoundRect(ctx, -9, -7, 14, 3, 1.5);
+      ctx.fill();
+
+      // Cyber Visor — glass cockpit, spherical highlight
+      const visorGrad = ctx.createLinearGradient(0, -6, 0, 6);
+      visorGrad.addColorStop(0, "#7DD3FC");
+      visorGrad.addColorStop(0.5, "#38BDF8");
+      visorGrad.addColorStop(1, "#0369A1");
+      ctx.fillStyle = visorGrad;
+      drawRoundRect(ctx, -1, -6, 11, 12, 4);
+      ctx.fill();
+      // Visor glare
+      ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+      drawRoundRect(ctx, 1, -4.5, 3, 4, 1.5);
+      ctx.fill();
+      // Visor scanline
+      ctx.fillStyle = "rgba(2, 6, 23, 0.3)";
+      drawRoundRect(ctx, -1, 1, 11, 1.5, 0.75);
+      ctx.fill();
+
+      // Spinning rotors: 2 blades with spin blur, for each mount
+      [-17, 17].forEach((ax) => {
+        const spin = frameCount * 0.9 + (ax < 0 ? 0 : Math.PI);
+        // Spinning blade arc
+        ctx.save();
+        ctx.translate(ax, -4);
+        ctx.rotate(spin);
+        ctx.fillStyle = "rgba(148, 163, 184, 0.45)";
+        ctx.beginPath();
+        ctx.ellipse(7, 0, 7, 1.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(148, 163, 184, 0.45)";
+        ctx.beginPath();
+        ctx.ellipse(-7, 0, 7, 1.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // Rotor dome
+        ctx.fillStyle = "#334155";
+        ctx.beginPath();
+        ctx.arc(ax, -4, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#94A3B8";
+        ctx.beginPath();
+        ctx.arc(ax - 0.6, -4.6, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+        // Motion ring when airborne
+        if (gameState === "playing") {
+          ctx.strokeStyle = "rgba(148, 163, 184, 0.2)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(ax, -4, 8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+
+      // Thruster Trail (flame gradient + glow)
+      const thrusterPulse = 4 + Math.sin(frameCount * 0.3) * 2;
+      const flameGrad = ctx.createLinearGradient(-26, 0, -8, 0);
+      flameGrad.addColorStop(0, "rgba(239, 68, 68, 0)");
+      flameGrad.addColorStop(0.5, "#F59E0B");
+      flameGrad.addColorStop(1, "#FEF08A");
+      ctx.fillStyle = flameGrad;
+      ctx.beginPath();
+      ctx.moveTo(-8, -thrusterPulse);
+      ctx.quadraticCurveTo(-20, 0, -8, thrusterPulse);
+      ctx.closePath();
       ctx.fill();
 
       ctx.restore();
@@ -243,16 +334,44 @@ export default function FlappyCyberGame({ canPlay, onCoinsClaimed }: FlappyCyber
             const coinX = obs.x + 22;
             const coinY = obs.coinY;
 
-            ctx.fillStyle = "#F59E0B";
+            ctx.save();
+            ctx.translate(coinX, coinY);
+            // Drop shadow
+            ctx.fillStyle = "rgba(2, 6, 23, 0.4)";
             ctx.beginPath();
-            ctx.arc(coinX, coinY, 10, 0, Math.PI * 2);
+            ctx.ellipse(1.5, 13, 10, 3, 0, 0, Math.PI * 2);
             ctx.fill();
-
-            ctx.fillStyle = "#FEF08A";
-            ctx.font = "bold 10px sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("R", coinX, coinY);
+            // Rim (cylinder edge)
+            ctx.fillStyle = "#B45309";
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 10, 4.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Face — horizontal squash fakes spin
+            const spin = Math.sin(frameCount * 0.12 + coinX * 0.5);
+            const faceW = Math.max(2.5, 10 * Math.abs(spin));
+            const faceGrad = ctx.createLinearGradient(0, -10, 0, 10);
+            faceGrad.addColorStop(0, "#FEF08A");
+            faceGrad.addColorStop(0.5, "#F59E0B");
+            faceGrad.addColorStop(1, "#B45309");
+            ctx.fillStyle = faceGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, -1, faceW, 4.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Rim highlight arc
+            ctx.strokeStyle = "rgba(254, 240, 138, 0.7)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.ellipse(0, -1, faceW * 0.7, 3, 0, Math.PI * 1.2, Math.PI * 1.8);
+            ctx.stroke();
+            // "R" only when face near full
+            if (Math.abs(spin) > 0.55) {
+              ctx.fillStyle = "#FEF08A";
+              ctx.font = "bold 10px sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("R", 0, -1);
+            }
+            ctx.restore();
 
             // Coin Collection Check
             const dist = Math.hypot(drone.x - coinX, drone.y - coinY);

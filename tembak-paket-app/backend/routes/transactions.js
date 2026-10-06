@@ -264,6 +264,13 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         sendTelegramNotification(`<b>⚡ Direct QRIS Paid & Auto CeirGO!</b>\n<b>Layanan:</b> ${trx.packageName}\n<b>IMEI:</b> <code>${trx.imei}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`, 'group');
     } else {
         // Manual IMEI or other service: Status in_queue (Menunggu Konfirmasi Admin)
+        const autoRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_auto_processing'").catch(() => null);
+        const autoProcessingOn = autoRow && ['true', '1', 'on', 'yes'].includes(String(autoRow.value).toLowerCase());
+        const isImeiOrder = trx.service_type === 'imei';
+        if (isImeiOrder && autoProcessingOn) {
+            await dbRun("UPDATE transactions SET status = 'processing', api_response = 'Pembayaran QRIS Terverifikasi. Pesanan masuk pengerjaan otomatis.', admin_note = 'Auto-processing aktif: pesanan langsung masuk pengerjaan.' WHERE id = ?", [trx.id]);
+            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'processing', message: 'Pembayaran terverifikasi! Pesanan Anda langsung masuk ke pengerjaan.' });
+        } else {
         await dbRun("UPDATE transactions SET status = 'in_queue', api_response = 'Pembayaran QRIS Terverifikasi. Menunggu Konfirmasi Admin.', admin_note = 'Pembayaran QRIS terverifikasi. Menunggu konfirmasi & pengerjaan oleh Admin.' WHERE id = ?", [trx.id]);
         sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'in_queue', message: 'Pembayaran terverifikasi! Pesanan masuk dalam antrean menunggu konfirmasi admin.' });
         const notifMsg = 
@@ -298,6 +305,7 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
                 }).catch(waErr => console.error('[WABot QRIS Error]', waErr.message));
             }).catch(() => {});
         } catch (e) {}
+        }
     }
 
     // Record Coupon usage if applied on this QRIS transaction
@@ -808,7 +816,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 const userCoins = userObj?.coins || 0;
                 const priceAfterCoupon = Math.max(0, totalPrice - discountAmount);
                 if (priceAfterCoupon >= 50000 && userCoins > 0) {
-                    const maxCoinByPercent = Math.floor(priceAfterCoupon * 0.1);
+                    const maxCoinByPercent = Math.floor(priceAfterCoupon * 0.02);
                     const maxCoinHardCap = 5000;
                     const maxCoinDeductible = Math.min(maxCoinByPercent, maxCoinHardCap);
                     coinsToDeduct = Math.min(userCoins, maxCoinDeductible, priceAfterCoupon);
@@ -975,6 +983,15 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             let finalStatus = 'in_queue';
             let apiResponse = 'Pembayaran Saldo Berhasil. Menunggu Konfirmasi Admin.';
             let adminNote = 'Pesanan terbayar dengan saldo akun. Menunggu konfirmasi & pengerjaan oleh Admin.';
+
+            // AUTO-PROCESSING untuk order Add Roamer (bila admin aktifkan)
+            const autoRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_auto_processing'");
+            const autoProcessingOn = autoRow && ['true', '1', 'on', 'yes'].includes(String(autoRow.value).toLowerCase());
+            if (service_type === 'imei' && autoProcessingOn) {
+                finalStatus = 'processing';
+                apiResponse = 'Pesanan masuk ke proses pengerjaan secara otomatis.';
+                adminNote = 'Auto-processing aktif: pesanan langsung masuk pengerjaan.';
+            }
             let adminImagePath = null;
             let refId = null;
 

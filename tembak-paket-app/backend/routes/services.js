@@ -282,12 +282,13 @@ router.get(['/manual-services-pricing', '/manual-services/pricing'], async (req,
             imei_speed_slow_status: 'visible',
             imei_speed_fast_range: '1-3 Jam',
             imei_speed_semi_range: '1-12 Jam',
-            imei_speed_slow_range: 'Max kirim jam 14:00, selesai jam 00:00 WIB'
+            imei_speed_slow_range: 'Max kirim jam 14:00, selesai jam 00:00 WIB',
+            imei_auto_processing: 'false'
         };
         for (const [key, value] of Object.entries(defaults)) {
             await dbRun("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
         }
-        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'imei_speed_fast_maintenance_until', 'imei_speed_semi_maintenance_until', 'imei_speed_slow_maintenance_until')");
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'imei_speed_fast_maintenance_until', 'imei_speed_semi_maintenance_until', 'imei_speed_slow_maintenance_until', 'imei_auto_processing')");
         const pricing = rows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
         for (const [key, value] of Object.entries(defaults)) {
             if (!(key in pricing)) pricing[key] = value;

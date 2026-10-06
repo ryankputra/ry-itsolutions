@@ -551,6 +551,28 @@ export default function AdminImeiPage() {
                 </div>
               </div>
             </div>
+
+            <div className="mt-3.5 pt-3 border-t border-hairline flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-ink">Order Langsung Processing</p>
+                <p className="text-[11px] text-ink-muted mt-0.5">Order Add Roamer baru lompat langsung ke processing (lewati in_queue). Matikan untuk tetap konfirmasi manual.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = { ...pricing, imei_auto_processing: pricing.imei_auto_processing === "true" ? "false" : "true" };
+                  setPricing(updated);
+                  autoSavePricing(updated, true);
+                }}
+                className={`relative w-10 h-5.5 shrink-0 rounded-full transition-all ${pricing.imei_auto_processing === "true" ? "bg-emerald-500" : "bg-gray-300"}`}
+                style={{ height: "22px" }}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-all ${pricing.imei_auto_processing === "true" ? "translate-x-5" : ""}`}
+                  style={{ width: "17px", height: "17px" }}
+                />
+              </button>
+            </div>
           </Card>
 
           {/* Daftar Paket Durasi IMEI */}
