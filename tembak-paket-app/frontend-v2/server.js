@@ -39,7 +39,7 @@ function handleDeploy(req, res) {
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify({ status: false, message: 'Forbidden' }));
   }
-  const repoRoot = path.resolve(__dirname, '../../..');
+  const repoRoot = path.resolve(__dirname, '../..');
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ status: true, message: 'Deploy triggered', repo_root: repoRoot, ts: new Date().toISOString() }));
