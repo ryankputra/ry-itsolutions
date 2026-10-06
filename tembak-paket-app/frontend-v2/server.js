@@ -29,12 +29,43 @@ function serveIgTesti(req, res, pathname) {
   });
 }
 
+const DEPLOY_SECRET = process.env.AUTO_DEPLOY_SECRET || 'RyITSolutionsAutoDeploy2026';
+
+function handleDeploy(req, res) {
+  const parsed = parse(req.url, true);
+  const providedSecret = parsed.query.secret || req.headers['x-webhook-secret'];
+  if (!providedSecret || providedSecret !== DEPLOY_SECRET) {
+    res.statusCode = 403;
+    res.setHeader('Content-Type', 'application/json');
+    return res.end(JSON.stringify({ status: false, message: 'Forbidden' }));
+  }
+  const repoRoot = path.resolve(__dirname, '../../..');
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ status: true, message: 'Deploy triggered', repo_root: repoRoot, ts: new Date().toISOString() }));
+
+  const { exec } = require('child_process');
+  console.log(`[SELF_DEPLOY] Triggered. Working dir: ${repoRoot}`);
+  const deployCmd = `git -C "${repoRoot}" pull origin main && pm2 restart ryystore-backend && pm2 restart frontend`;
+  exec(deployCmd, { cwd: repoRoot, shell: true }, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`[SELF_DEPLOY] FAILED: ${err.message}`);
+      if (stderr) console.error(`[SELF_DEPLOY] stderr:\n${stderr}`);
+      return;
+    }
+    console.log(`[SELF_DEPLOY] Success. Output:\n${stdout}`);
+  });
+}
+
 app.prepare().then(() => {
   createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
       if (parsedUrl.pathname.startsWith(IG_TESTI_PREFIX) && (req.method === 'GET' || req.method === 'HEAD')) {
         return serveIgTesti(req, res, parsedUrl.pathname);
+      }
+      if (parsedUrl.pathname === '/_deploy' && (req.method === 'POST' || req.method === 'GET')) {
+        return handleDeploy(req, res);
       }
       await handle(req, res, parsedUrl);
     } catch (err) {
