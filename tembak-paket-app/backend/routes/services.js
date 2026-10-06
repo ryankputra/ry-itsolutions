@@ -245,7 +245,14 @@ router.get('/imei-packages', async (req, res) => {
                 ...r,
                 isVisible: r.isVisible === undefined || r.isVisible === null ? 1 : Number(r.isVisible),
                 allowed_speeds,
-                speed_prices
+                speed_prices,
+                open_hour: r.open_hour === undefined || r.open_hour === null ? null : Number(r.open_hour),
+                close_hour: r.close_hour === undefined || r.close_hour === null ? null : Number(r.close_hour),
+                // ponytail: NULL jam = buka 24 jam; flag ini dipakai UI untuk disable kartu + tombol beli
+                is_open_now: isWithinOpenHours(
+                    r.open_hour === undefined || r.open_hour === null ? null : Number(r.open_hour),
+                    r.close_hour === undefined || r.close_hour === null ? null : Number(r.close_hour)
+                )
             };
         });
         res.json({ status: true, data, packages: data });
@@ -255,18 +262,56 @@ router.get('/imei-packages', async (req, res) => {
 });
 
 // 5. GET /api/imei-service-status
+// ponytail: jam buka/tutup otomatis global (WIB). Kosong = nonaktifkan auto-close.
+function getWibNow() {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    return new Date(utc + (7 * 3600000));
+}
+function isWithinOpenHours(openH, closeH) {
+    if (openH === null || closeH === null || openH === undefined || closeH === undefined) return true;
+    const h = getWibNow().getHours();
+    if (openH === closeH) return true; // jam sama = buka 24 jam
+    if (openH < closeH) return h >= openH && h < closeH;
+    return h >= openH || h < closeH; // lintas tengah malam
+}
+async function getImeiServiceSettings() {
+    const [statusRow, noteRow, openRow, closeRow] = await Promise.all([
+        dbGet("SELECT value FROM settings WHERE key = 'imei_service_status'"),
+        dbGet("SELECT value FROM settings WHERE key = 'imei_service_note'"),
+        dbGet("SELECT value FROM settings WHERE key = 'imei_open_hour'"),
+        dbGet("SELECT value FROM settings WHERE key = 'imei_close_hour'")
+    ]);
+    const statusVal = statusRow && statusRow.value ? statusRow.value : 'open';
+    const parseHour = v => {
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) && n >= 0 && n <= 23 ? n : null;
+    };
+    return {
+        statusVal,
+        manualOpen: statusVal === 'open' || statusVal === 'true' || statusVal === '1',
+        note: noteRow && noteRow.value ? noteRow.value : '',
+        openHour: parseHour(openRow && openRow.value),
+        closeHour: parseHour(closeRow && closeRow.value)
+    };
+}
+
 router.get('/imei-service-status', async (req, res) => {
     try {
-        const row = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_status'");
-        const noteRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_note'");
-        const statusVal = row && row.value ? row.value : 'open';
-        const isOpen = statusVal === 'open' || statusVal === 'true' || statusVal === '1';
-        const note = noteRow && noteRow.value ? noteRow.value : '';
+        const s = await getImeiServiceSettings();
+        const autoOpen = isWithinOpenHours(s.openHour, s.closeHour);
+        const isOpen = s.manualOpen && autoOpen;
+        const autoClosed = s.manualOpen && !autoOpen;
         res.json({
             status: true,
-            isOpen: isOpen,
-            service_status: statusVal,
-            note: note
+            isOpen,
+            service_status: isOpen ? 'open' : 'closed',
+            note: s.note,
+            openHour: s.openHour,
+            closeHour: s.closeHour,
+            autoClosed: autoClosed,
+            // legacy: manual switch tetap dilaporkan apa adanya
+            manualOpen: s.manualOpen
         });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -1217,4 +1262,5 @@ PANDUAN MENJAWAB:
 });
 
 module.exports = router;
+module.exports.getImeiServiceSettings = getImeiServiceSettings;
 

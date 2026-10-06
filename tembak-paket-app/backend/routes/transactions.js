@@ -691,6 +691,19 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 const targetPkgId = price_key || req.body.package_id || req.body.packageId;
                 let pkg = targetPkgId ? await dbGet("SELECT * FROM imei_packages WHERE id = ?", [targetPkgId]) : null;
                 if (pkg) {
+                    // ponytail: tolak order paket di luar jam operasional per-paket (WIB). NULL = buka 24 jam.
+                    const oh = pkg.open_hour === undefined || pkg.open_hour === null ? null : Number(pkg.open_hour);
+                    const ch = pkg.close_hour === undefined || pkg.close_hour === null ? null : Number(pkg.close_hour);
+                    if (oh !== null && ch !== null && oh !== ch) {
+                        const wibHour = (new Date(Date.now() + 7 * 3600000)).getUTCHours();
+                        const inHours = oh < ch ? (wibHour >= oh && wibHour < ch) : (wibHour >= oh || wibHour < ch);
+                        if (!inHours) {
+                            return res.status(400).json({
+                                status: false,
+                                message: `Paket ${pkg.duration || ''} sedang tutup. Buka jam ${String(oh).padStart(2, '0')}:00 WIB.`
+                            });
+                        }
+                    }
                     const spOpt = speed_option || req.body.speed || 'slow';
                     let allowedSpeeds = ['fast', 'semi', 'slow'];
                     if (pkg.allowed_speeds) {

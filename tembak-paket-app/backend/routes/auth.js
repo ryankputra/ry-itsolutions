@@ -7,6 +7,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 const multer = require('multer');
 const fetch = require('node-fetch');
 const { OAuth2Client } = require('google-auth-library');
@@ -631,6 +632,13 @@ router.post('/user/avatar', isAuthenticated, avatarUpload.single('avatar'), asyn
         let avatarUrl = '';
         if (req.file) {
             avatarUrl = `/uploads/avatars/${req.file.filename}`;
+            // Hapus avatar lama dari disk agar tidak menumpuk file yatim
+            const oldRow = await dbGet("SELECT avatar FROM users WHERE id = ?", [userId]);
+            if (oldRow && oldRow.avatar && oldRow.avatar.startsWith('/uploads/avatars/')) {
+                const oldName = path.basename(oldRow.avatar);
+                const oldPath = path.join(__dirname, '..', 'public', 'uploads', 'avatars', oldName);
+                fs.promises.unlink(oldPath).catch(() => {});
+            }
         } else if (req.body.avatarBase64) {
             avatarUrl = req.body.avatarBase64;
         } else {

@@ -15,6 +15,8 @@ const { db, dbGet, dbAll, dbRun } = require('../config/db');
 const { isAuthenticated, isAdmin, sseSend, sseBroadcast } = require('../middleware/auth');
 const { sendTelegramNotification } = require('../telegramService');
 const { getKmspAdminBalance } = require('./transactions');
+const servicesRoutes = require('./services');
+const getImeiServiceSettingsPublic = servicesRoutes.getImeiServiceSettings;
 const ceirgoClient = require('../ceirgoClient');
 const waBot = require('../services/waBot');
 const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
@@ -803,16 +805,14 @@ router.put('/admin/packages/bulk-update', isAuthenticated, isAdmin, async (req, 
 // 12. Manual Services Pricing Settings & IMEI Service Status
 router.get('/admin/imei-service-status', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const row = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_status'");
-        const noteRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_service_note'");
-        const statusVal = row && row.value ? row.value : 'open';
-        const isOpen = statusVal === 'open' || statusVal === 'true' || statusVal === '1';
-        const note = noteRow && noteRow.value ? noteRow.value : '';
+        const s = await getImeiServiceSettingsPublic();
         res.json({
             status: true,
-            isOpen: isOpen,
-            service_status: statusVal,
-            note: note
+            isOpen: s.manualOpen,
+            service_status: s.statusVal,
+            note: s.note,
+            openHour: s.openHour,
+            closeHour: s.closeHour
         });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -821,18 +821,29 @@ router.get('/admin/imei-service-status', isAuthenticated, isAdmin, async (req, r
 
 router.post('/admin/imei-service-status', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const { isOpen, service_status, note } = req.body;
+        const { isOpen, service_status, note, openHour, closeHour } = req.body;
         const statusVal = (typeof isOpen !== 'undefined') ? (isOpen ? 'open' : 'closed') : (service_status || 'open');
         await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_status', ?)", [statusVal]);
         if (typeof note !== 'undefined') {
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_service_note', ?)", [note]);
         }
+        const parseHour = v => {
+            if (v === '' || v === null || v === undefined) return null;
+            const n = parseInt(v, 10);
+            return Number.isFinite(n) && n >= 0 && n <= 23 ? String(n) : null;
+        };
+        const oh = parseHour(openHour);
+        const ch = parseHour(closeHour);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_open_hour', ?)", [oh === null ? '' : oh]);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('imei_close_hour', ?)", [ch === null ? '' : ch]);
         res.json({
             status: true,
             message: `Status layanan IMEI berhasil diperbarui menjadi ${statusVal}.`,
             isOpen: statusVal === 'open',
             service_status: statusVal,
-            note: note || ''
+            note: note || '',
+            openHour: oh === null ? null : Number(oh),
+            closeHour: ch === null ? null : Number(ch)
         });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
@@ -2408,10 +2419,14 @@ router.post('/admin/imei-packages', isAuthenticated, isAdmin, async (req, res) =
         const id = `imei_${Date.now()}`;
         const speedsJson = JSON.stringify(parsedSpeeds);
         const speedPricesJson = JSON.stringify(speedPricesObj);
+        const { open_hour, close_hour } = req.body;
+        const parseHourVal = v => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 && n <= 23 ? n : null; };
+        const oh = parseHourVal(open_hour);
+        const ch = parseHourVal(close_hour);
 
         await dbRun(
-            "INSERT INTO imei_packages (id, duration, price, isVisible, allowed_speeds, speed_prices) VALUES (?, ?, ?, 1, ?, ?)",
-            [id, duration.trim(), numPrice, speedsJson, speedPricesJson]
+            "INSERT INTO imei_packages (id, duration, price, isVisible, allowed_speeds, speed_prices, open_hour, close_hour) VALUES (?, ?, ?, 1, ?, ?, ?, ?)",
+            [id, duration.trim(), numPrice, speedsJson, speedPricesJson, oh, ch]
         );
 
         if (req.body.notify_wa || req.body.send_notification) {
@@ -2514,9 +2529,21 @@ router.put('/admin/imei-packages/:id', isAuthenticated, isAdmin, async (req, res
         const speedsJson = JSON.stringify(parsedSpeeds);
         const speedPricesJson = JSON.stringify(speedPricesObj);
 
+        // ponytail: jam buka/tutup per-paket (WIB). NULL keduanya = buka 24 jam.
+        let updatedOpen = existing.open_hour === undefined || existing.open_hour === null ? null : Number(existing.open_hour);
+        let updatedClose = existing.close_hour === undefined || existing.close_hour === null ? null : Number(existing.close_hour);
+        if (req.body.open_hour !== undefined) {
+            const n = parseInt(req.body.open_hour, 10);
+            updatedOpen = Number.isFinite(n) && n >= 0 && n <= 23 ? n : null;
+        }
+        if (req.body.close_hour !== undefined) {
+            const n = parseInt(req.body.close_hour, 10);
+            updatedClose = Number.isFinite(n) && n >= 0 && n <= 23 ? n : null;
+        }
+
         await dbRun(
-            "UPDATE imei_packages SET duration = ?, price = ?, isVisible = ?, allowed_speeds = ?, speed_prices = ? WHERE id = ?",
-            [updatedDuration, updatedPrice, updatedVisible, speedsJson, speedPricesJson, id]
+            "UPDATE imei_packages SET duration = ?, price = ?, isVisible = ?, allowed_speeds = ?, speed_prices = ?, open_hour = ?, close_hour = ? WHERE id = ?",
+            [updatedDuration, updatedPrice, updatedVisible, speedsJson, speedPricesJson, updatedOpen, updatedClose, id]
         );
 
         // 1. Audit Log in Website Database (user_activity_logs)

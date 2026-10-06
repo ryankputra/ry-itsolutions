@@ -73,6 +73,8 @@ async function initializeDatabase() {
             try { await dbRun("ALTER TABLE imei_packages ADD COLUMN isVisible INTEGER DEFAULT 1"); } catch (e) { }
             try { await dbRun("ALTER TABLE imei_packages ADD COLUMN allowed_speeds TEXT DEFAULT '[\"fast\",\"semi\",\"slow\"]'"); } catch (e) { }
             try { await dbRun("ALTER TABLE imei_packages ADD COLUMN speed_prices TEXT DEFAULT '{}'"); } catch (e) { }
+            try { await dbRun("ALTER TABLE imei_packages ADD COLUMN open_hour INTEGER"); } catch (e) { }
+            try { await dbRun("ALTER TABLE imei_packages ADD COLUMN close_hour INTEGER"); } catch (e) { }
             await dbRun(`CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, userId INTEGER, subject TEXT, status TEXT, createdAt TEXT, updatedAt TEXT)`);
             await dbRun(`CREATE TABLE IF NOT EXISTS ticket_messages (id TEXT PRIMARY KEY, ticketId TEXT, senderId INTEGER, senderRole TEXT, message TEXT, createdAt TEXT)`);
             try { await dbRun("ALTER TABLE transactions ADD COLUMN user_image_ceir TEXT"); } catch (e) { }
