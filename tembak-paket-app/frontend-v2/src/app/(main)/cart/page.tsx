@@ -677,7 +677,7 @@ export default function CartPage() {
 
       {/* Floating Bottom Checkout Bar */}
       {cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-canvas/95 backdrop-blur-lg border-t border-hairline p-3 sm:px-8 shadow-2xl safe-area-pb">
+        <div className="fixed bottom-[60px] lg:bottom-0 left-0 right-0 z-40 bg-canvas/95 backdrop-blur-lg border-t border-hairline p-3 sm:px-8 shadow-2xl safe-area-pb">
           <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
             <div>
               <span className="text-[10px] text-ink-muted block">Total Pembayaran</span>

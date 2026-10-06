@@ -52,6 +52,11 @@ export const Swal = {
     if (opts.allowOutsideClick === undefined) opts.allowOutsideClick = true;
     if (opts.allowEscapeKey === undefined) opts.allowEscapeKey = true;
 
+    // Toast default: muncul di atas (bukan tengah), tap target aman
+    if (opts.toast === true && opts.position === undefined) {
+      opts.position = "top";
+    }
+
     return SwalOrigin.fire(opts);
   }) as typeof SwalOrigin.fire,
   close: (...args: any[]) => SwalOrigin.close(...args),

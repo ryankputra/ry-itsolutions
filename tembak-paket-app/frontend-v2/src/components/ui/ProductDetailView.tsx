@@ -115,7 +115,7 @@ export function ProductDetailView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-20 select-none">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-40 select-none">
       {/* Top Header Navigation Bar (Shopee Style) */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 py-2.5 flex items-center justify-between gap-3 shadow-xs">
         <button
@@ -327,7 +327,7 @@ export function ProductDetailView({
       </div>
 
       {/* 6. Sticky Bottom Action Bar (Matching Bottom of Screenshots 1, 2, 3, 4) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 p-2.5 sm:px-8 shadow-2xl safe-area-pb">
+      <div className="fixed bottom-[60px] lg:bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 p-2.5 sm:px-8 shadow-2xl safe-area-pb">
         <div className="max-w-3xl mx-auto flex items-center gap-2">
           {/* Chat CS WA Button */}
           <a
