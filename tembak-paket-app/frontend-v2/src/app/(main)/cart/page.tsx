@@ -195,8 +195,8 @@ export default function CartPage() {
 
   const priceAfterCoupon = Math.max(0, subtotal - discountAmount);
   const userCoins = user?.coins || 0;
-  // Guardrails: Minimal order Rp 50.000, Maks 10%, dan Maksimal Rp 5.000 cap
-  const maxCoinsAllowed = priceAfterCoupon >= 50000 ? Math.min(Math.floor(priceAfterCoupon * 0.1), 5000) : 0;
+  // Guardrails: Minimal order Rp 50.000, Maks 2%, dan Maksimal Rp 5.000 cap
+  const maxCoinsAllowed = priceAfterCoupon >= 50000 ? Math.min(Math.floor(priceAfterCoupon * 0.02), 5000) : 0;
   const coinsDiscount = useCoins && maxCoinsAllowed > 0 ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
   const grandTotal = Math.max(0, priceAfterCoupon - coinsDiscount);
 

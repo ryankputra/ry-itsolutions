@@ -294,6 +294,7 @@ export default function AdminVouchersPage() {
                     <option value="1">Publik (Bisa Diklaim Pengguna)</option>
                     <option value="0">Rahasia (Ketik Manual Saat Checkout)</option>
                   </select>
+                  <p className="text-[10px] text-ink-muted">Publik = tampil di daftar voucher pengguna. Rahasia = hanya pakai saat kasih kode langsung ke pelanggan.</p>
                 </div>
               </div>
 
@@ -308,6 +309,7 @@ export default function AdminVouchersPage() {
                     <option value="fixed">Nominal Tetap (Rp)</option>
                     <option value="percent">Persentase (%)</option>
                   </select>
+                  <p className="text-[10px] text-ink-muted">Nominal Tetap = potong langsung sejumlah uang. Persentase = potong persen dari total transaksi.</p>
                 </div>
                 <Input
                   label={newCoupon.discount_type === "percent" ? "Nilai Diskon (%)" : "Nilai Diskon (Rp)"}
@@ -320,28 +322,37 @@ export default function AdminVouchersPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <Input
-                  label="Min. Order (Rp)"
-                  type="number"
-                  placeholder="0"
-                  value={newCoupon.min_order_amount}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
-                />
-                <Input
-                  label="Maks. Diskon (Rp)"
-                  type="number"
-                  placeholder="0"
-                  value={newCoupon.max_discount_amount}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, max_discount_amount: e.target.value })}
-                />
-                <Input
-                  label="Batas/User"
-                  type="number"
-                  placeholder="1"
-                  value={newCoupon.max_per_user}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, max_per_user: e.target.value })}
-                  required
-                />
+                <div className="space-y-1">
+                  <Input
+                    label="Min. Order (Rp)"
+                    type="number"
+                    placeholder="0"
+                    value={newCoupon.min_order_amount}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
+                  />
+                  <p className="text-[10px] text-ink-muted">Total belanja minimum agar kupon bisa dipakai. 0 = tanpa batas.</p>
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    label="Maks. Diskon (Rp)"
+                    type="number"
+                    placeholder="0"
+                    value={newCoupon.max_discount_amount}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, max_discount_amount: e.target.value })}
+                  />
+                  <p className="text-[10px] text-ink-muted">Batas maksimal potongan. Hanya berlaku untuk tipe Persentase. 0 = tanpa batas.</p>
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    label="Batas/User"
+                    type="number"
+                    placeholder="1"
+                    value={newCoupon.max_per_user}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, max_per_user: e.target.value })}
+                    required
+                  />
+                  <p className="text-[10px] text-ink-muted">Berapa kali tiap pelanggan boleh memakai kupon ini.</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -353,6 +364,7 @@ export default function AdminVouchersPage() {
                   onChange={(e) => setNewCoupon({ ...newCoupon, max_claim_limit: e.target.value })}
                   required
                 />
+                <p className="text-[10px] text-ink-muted -mt-1">Jumlah total kupon yang bisa diklaim semua pelanggan sebelum habis.</p>
                 <Input
                   label="Kuota Pemakaian"
                   type="number"
@@ -361,6 +373,7 @@ export default function AdminVouchersPage() {
                   onChange={(e) => setNewCoupon({ ...newCoupon, max_usage_limit: e.target.value })}
                   required
                 />
+                <p className="text-[10px] text-ink-muted -mt-1">Berapa kali kupon ini boleh dipakai totalnya. Untuk publik, samakan dengan Maks. Kuota Klaim.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
