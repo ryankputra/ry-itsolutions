@@ -1307,7 +1307,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             quoted.imageMessage?.caption ||
             ""
         );
-        const match = quotedText.match(/Order ID:\s*[\`\*#]*([a-zA-Z0-9_\-]+)/i) ||
+        const match = quotedText.match(/Order ID:\s*[\`\*#]*\s*[\`\*#]*([a-zA-Z0-9_\-]+)/i) ||
                       quotedText.match(/(?:#|ID:\s*)([a-zA-Z0-9_\-]+)/i);
         if (match && match[1]) {
             orderIdArg = match[1].trim();
