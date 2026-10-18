@@ -651,7 +651,10 @@ function HistoryContent() {
                   const isCeirTrx = svcType === "ceir" || svcType === "barcode" || pkgName.includes("ceir") || pkgName.includes("barcode");
 
                   if (isCeirTrx) {
-                    const parsed = parseCeirResponse(rawNote);
+                    let parsed = parseCeirResponse(rawNote);
+                    if (parsed.rows.length === 0 && (trx.api_response || trx.apiResponse)) {
+                      parsed = parseCeirResponse(trx.api_response || trx.apiResponse);
+                    }
                     if (parsed.rows.length > 0) {
                       return (
                         <div className="p-2.5 rounded-xl bg-sky-50/80 border border-sky-200 text-xs space-y-2">
@@ -680,7 +683,7 @@ function HistoryContent() {
                     }
                   }
 
-                  const isLeakedOrGeneric = /sedang dikerjakan oleh admin|sedang diproses oleh admin|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
+                  const isLeakedOrGeneric = /sedang dikerjakan oleh admin|sedang diproses oleh admin|berhasil kami proses|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);
                   if (isLeakedOrGeneric) return null;
                   return (
                     <div className="p-2.5 rounded-xl bg-parchment border border-hairline text-xs space-y-0.5">
