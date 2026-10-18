@@ -2244,6 +2244,54 @@ router.post('/admin/gopay/logout', isAuthenticated, isAdmin, async (req, res) =>
     });
 });
 
+// 25. ShopeePay Merchant Gateway Proxy Endpoints (Port 3003)
+const SHOPPEPAY_GW_URL = process.env.SHOPPEPAY_GATEWAY_URL || 'http://127.0.0.1:3003';
+const SHOPPEPAY_GW_KEY = process.env.SHOPPEPAY_API_KEY || process.env.API_KEY || 'shopee-secret-key-2026';
+
+router.get('/admin/shoppepay/status', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const response = await axios.get(`${SHOPPEPAY_GW_URL}/token-status`, {
+            headers: { 'x-api-key': SHOPPEPAY_GW_KEY },
+            timeout: 5000
+        });
+        res.json({
+            status: true,
+            success: true,
+            data: response.data?.data || response.data || { token_status: 'valid' }
+        });
+    } catch (e) {
+        res.json({
+            status: true,
+            success: true,
+            data: {
+                token_status: 'disconnected',
+                message: 'ShopeePay gateway service unreachable: ' + e.message
+            }
+        });
+    }
+});
+
+router.post('/admin/shoppepay/update-token', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { shoppepayToken, qrisStatic } = req.body;
+        if (!shoppepayToken) {
+            return res.status(400).json({ status: false, message: 'Token ShopeePay wajib diisi.' });
+        }
+        const response = await axios.post(`${SHOPPEPAY_GW_URL}/update-token`, {
+            token: shoppepayToken
+        }, {
+            headers: { 'x-api-key': SHOPPEPAY_GW_KEY, 'content-type': 'application/json' },
+            timeout: 10000
+        });
+        if (qrisStatic) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('shoppepay_qris_static', ?)", [qrisStatic]);
+        }
+        res.json({ status: true, message: 'Token ShopeePay Merchant berhasil diperbarui!', data: response.data });
+    } catch (e) {
+        res.status(500).json({ status: false, message: 'Gagal memperbarui token ShopeePay: ' + (e.response?.data?.message || e.message) });
+    }
+});
+
 
 // ==============================================================================
 // PAYMENT GATEWAY SAAS SUBSCRIPTION MANAGEMENT FOR ADMIN

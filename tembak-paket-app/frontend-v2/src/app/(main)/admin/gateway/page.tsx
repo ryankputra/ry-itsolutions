@@ -56,6 +56,50 @@ export default function AdminGatewayPage() {
     }
   };
 
+  // ShopeePay Merchant Setup State
+  const [shoppepayStatus, setShoppepayStatus] = useState<any>({ token_status: "unknown" });
+  const [inputShopeeToken, setInputShopeeToken] = useState("");
+  const [inputShopeeQris, setInputShopeeQris] = useState("");
+  const [updatingShopee, setUpdatingShopee] = useState(false);
+
+  const loadShopeePayStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/shoppepay/status", { credentials: "include" });
+      const d = await safeJson(res);
+      if (d?.status) {
+        setShoppepayStatus(d.data || {});
+      }
+    } catch (e) {}
+  };
+
+  const updateShopeeToken = async () => {
+    if (!inputShopeeToken.trim()) {
+      Swal.fire({ title: "Perhatian", text: "Token ShopeePay wajib diisi.", icon: "warning" });
+      return;
+    }
+    setUpdatingShopee(true);
+    try {
+      const res = await fetch("/api/admin/shoppepay/update-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ shoppepayToken: inputShopeeToken, qrisStatic: inputShopeeQris }),
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire({ title: "Berhasil", text: d.message || "Token ShopeePay berhasil diperbarui.", timer: 2000, showConfirmButton: false });
+        setInputShopeeToken("");
+        loadShopeePayStatus();
+      } else {
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui token." });
+      }
+    } catch (err) {
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan jaringan." });
+    } finally {
+      setUpdatingShopee(false);
+    }
+  };
+
   const loadGatewayKeys = async () => {
     setLoadingGatewayKeys(true);
     try {
@@ -76,6 +120,7 @@ export default function AdminGatewayPage() {
   useEffect(() => {
     loadGatewayKeys();
     loadDualGateway();
+    loadShopeePayStatus();
   }, []);
 
   const handleRenewGatewayKey = async (keyItem: any) => {
@@ -318,6 +363,65 @@ export default function AdminGatewayPage() {
               💡 <b>Info:</b> Jika salah satu gateway offline, sistem secara otomatis melakukan fallback ke gateway lainnya.
             </div>
           </div>
+        </div>
+      </Card>
+
+      {/* ShopeePay Merchant Setup Card */}
+      <Card className="p-5 border border-hairline shadow-xs space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+              <Key className="w-4 h-4 text-orange-500" />
+              Setup ShopeePay Merchant (Akun Pacar)
+            </h3>
+            <p className="text-xs text-ink-muted mt-0.5">
+              Masukkan Token ShopeePay Partner (`B:...`) dan QRIS Statis toko pacar Anda untuk otomatisasi mutasi & QRIS dinamis.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+              shoppepayStatus.token_status === "valid"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                : "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
+            }`}>
+              Status: {shoppepayStatus.token_status === "valid" ? "Terhubung & Aktif" : shoppepayStatus.token_status || "Belum Dikonfigurasi"}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-hairline">
+          <div>
+            <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+              ShopeeToken (`B: ...`)
+            </label>
+            <input
+              type="password"
+              value={inputShopeeToken}
+              onChange={(e) => setInputShopeeToken(e.target.value)}
+              placeholder="Tempel SHOPEE_TOKEN di sini (diawali B:...)"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+              QRIS Statis ShopeePay Merchant (Opsional)
+            </label>
+            <input
+              type="text"
+              value={inputShopeeQris}
+              onChange={(e) => setInputShopeeQris(e.target.value)}
+              placeholder="00020101021126610016ID.CO.SHOPEE..."
+              className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <Button size="sm" onClick={updateShopeeToken} disabled={updatingShopee} className="text-xs gap-1.5 font-bold">
+            {updatingShopee ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            Simpan & Update Token ShopeePay
+          </Button>
         </div>
       </Card>
 
