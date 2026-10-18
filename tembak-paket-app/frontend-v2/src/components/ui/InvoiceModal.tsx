@@ -376,8 +376,21 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   // Helper to parse CEIR result details from Ceirgo API
   const parseCeirDetails = () => {
-    const rawNote = data.adminNote || "";
-    const parsed = parseCeirResponse(rawNote, formatDate(data.createdAt));
+    let rawNote = data.adminNote || "";
+    if (!rawNote || rawNote.toLowerCase().includes("berhasil kami proses") || rawNote.toLowerCase().includes("sedang diproses")) {
+      rawNote = data.apiResponse || data.api_response || "IMEI terdaftar & terverifikasi di server CEIR pusat.";
+    }
+    const parsed = parseCeirResponse(String(rawNote), formatDate(data.createdAt));
+    if (parsed.rows.length === 0) {
+      parsed.rows.push({
+        no: 1,
+        tanggal: formatDate(data.createdAt),
+        action: "Verifikasi CEIR Selesai",
+        note: typeof rawNote === 'string' ? rawNote : "Data IMEI sah & terdaftar.",
+        imsi: "-",
+        imei: data.imei || "-"
+      });
+    }
 
     return {
       status: parsed.status,

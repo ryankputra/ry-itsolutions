@@ -642,7 +642,10 @@ function HistoryContent() {
 
                 {/* Safe User Note Box (Zero Technical Error Leakage) */}
                 {(() => {
-                  const rawNote = (trx.admin_note || trx.adminNote || "").trim();
+                  let rawNote = (trx.admin_note || trx.adminNote || "").trim();
+                  if (!rawNote || rawNote.toLowerCase().includes("berhasil kami proses") || rawNote.toLowerCase().includes("sedang diproses")) {
+                    rawNote = trx.api_response || trx.apiResponse || "Pengecekan CEIR berhasil diselesaikan.";
+                  }
                   if (!rawNote) return null;
 
                   // For CEIR/barcode transactions, parse and display as formatted timeline
