@@ -541,8 +541,8 @@ async function getAdminPhoneNumbers() {
     const adminPhones = new Set();
 
     // 0. Primary Administrator Numbers (Guaranteed Delivery)
-    // 6287767287284: Bot number that also acts as Admin (sends to self)
-    const primaryAdmins = ["6287767287284"];
+    // 6287767287284: Bot number, 6285156692166: Primary Admin
+    const primaryAdmins = ["6287767287284", "6285156692166"];
     primaryAdmins.forEach(num => {
         const cp = cleanPhone(num);
         if (cp && !cp.endsWith("70")) adminPhones.add(cp);

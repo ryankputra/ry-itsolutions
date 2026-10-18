@@ -18,6 +18,43 @@ import WAGroupPopup from "@/components/ui/WAGroupPopup";
 import WAGroupChip from "@/components/ui/WAGroupChip";
 import { safeJson } from "@/lib/api";
 
+function PackageCountdown({ openHour }: { openHour: number }) {
+  const [timeLeft, setTimeLeft] = React.useState("");
+
+  React.useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const wibNow = new Date(utc + (7 * 3600000));
+      
+      const target = new Date(wibNow);
+      target.setHours(openHour, 0, 0, 0);
+      
+      if (wibNow.getTime() >= target.getTime()) {
+        target.setDate(target.getDate() + 1);
+      }
+      
+      const diff = target.getTime() - wibNow.getTime();
+      if (diff <= 0) {
+        setTimeLeft("Segera buka");
+        return;
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTimeLeft(`${String(hours).padStart(2, '0')}j ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`);
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [openHour]);
+
+  return <span className="font-mono text-[9px] font-bold">{timeLeft}</span>;
+}
+
 function UnblockImeiContent() {
   const { user, addToCart, updateBalance } = useApp();
   const router = useRouter();
@@ -964,6 +1001,18 @@ function UnblockImeiContent() {
 
                         {/* Pricing */}
                         <div>
+                          {opt.is_open_now === false ? (
+                            <div className="mb-1.5 p-1.5 rounded-lg bg-amber-500/10 border border-amber-300/60 text-amber-800 dark:text-amber-300">
+                              <div className="text-[10px] font-bold flex items-center justify-between">
+                                <span>Buka Pkl {String(opt.open_hour ?? 0).padStart(2, '0')}:00 WIB</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                              </div>
+                              <div className="text-[9px] text-amber-700 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                                <span>Hitung mundur:</span>
+                                <PackageCountdown openHour={opt.open_hour ?? 0} />
+                              </div>
+                            </div>
+                          ) : null}
                           <p className="text-[9px] text-ink-muted line-through">
                             Rp {(activeCardPrice + 20000).toLocaleString("id-ID")}
                           </p>
