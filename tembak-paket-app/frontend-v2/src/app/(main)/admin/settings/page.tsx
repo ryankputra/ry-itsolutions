@@ -46,6 +46,91 @@ export default function AdminSettingsPage() {
   const [paymentGateway, setPaymentGateway] = useState<"orkut" | "gopay">("orkut");
   const [savingGateway, setSavingGateway] = useState(false);
 
+  // ShopeePay Merchant Setup State
+  const [shoppepayStatus, setShoppepayStatus] = useState<any>({ token_status: "unknown" });
+  const [inputShopeeToken, setInputShopeeToken] = useState("");
+  const [inputShopeeQris, setInputShopeeQris] = useState("");
+  const [updatingShopee, setUpdatingShopee] = useState(false);
+
+  // Dual Gateway State
+  const [dualMode, setDualMode] = useState("rotate");
+  const [shoppepayUrl, setShoppepayUrl] = useState("http://127.0.0.1:3003");
+  const [paymentCounter, setPaymentCounter] = useState(0);
+  const [savingDual, setSavingDual] = useState(false);
+
+  const loadShopeePayStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/shoppepay/status", { credentials: "include" });
+      const d = await safeJson(res);
+      if (d?.status) {
+        setShoppepayStatus(d.data || {});
+      }
+    } catch (e) {}
+  };
+
+  const updateShopeeToken = async () => {
+    if (!inputShopeeToken.trim()) {
+      Swal.fire({ title: "Perhatian", text: "Token ShopeePay wajib diisi.", icon: "warning" });
+      return;
+    }
+    setUpdatingShopee(true);
+    try {
+      const res = await fetch("/api/admin/shoppepay/update-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ shoppepayToken: inputShopeeToken, qrisStatic: inputShopeeQris }),
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire({ title: "Berhasil", text: d.message || "Token ShopeePay berhasil diperbarui.", timer: 2000, showConfirmButton: false });
+        setInputShopeeToken("");
+        loadShopeePayStatus();
+      } else {
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui token." });
+      }
+    } catch (err) {
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan jaringan." });
+    } finally {
+      setUpdatingShopee(false);
+    }
+  };
+
+  const loadDualGateway = async () => {
+    try {
+      const res = await fetch("/api/admin/dual-gateway", { credentials: "include" });
+      const d = await safeJson(res);
+      if (d?.status) {
+        setDualMode(d.mode || "rotate");
+        setPaymentCounter(d.counter || 0);
+        setShoppepayUrl(d.shoppepay_url || "http://127.0.0.1:3003");
+      }
+    } catch (e) {}
+  };
+
+  const saveDualGateway = async () => {
+    setSavingDual(true);
+    try {
+      const res = await fetch("/api/admin/dual-gateway", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ mode: dualMode, shoppepay_url: shoppepayUrl }),
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire({ title: "Berhasil", text: d.message || "Dual Gateway berhasil disimpan.", timer: 1500, showConfirmButton: false });
+        loadDualGateway();
+      } else {
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal menyimpan konfigurasi." });
+      }
+    } catch (err) {
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan jaringan." });
+    } finally {
+      setSavingDual(false);
+    }
+  };
+
   // GoPay Direct Gateway State
   const [gopayStatus, setGopayStatus] = useState<any>(null);
   const [loadingGopay, setLoadingGopay] = useState(false);
@@ -395,6 +480,9 @@ export default function AdminSettingsPage() {
         }
       })
       .catch(() => {});
+
+    loadShopeePayStatus();
+    loadDualGateway();
 
     // Load Announcement
     fetch("/api/admin/announcement", { credentials: "include" })
@@ -880,10 +968,117 @@ export default function AdminSettingsPage() {
               </div>
             )}
           </Card>
-        </div>
 
-        {/* Kolom Kanan: Saldo Provider, Pengumuman, Menu, Database & Deploy */}
-        <div className="lg:col-span-6 space-y-6">
+          {/* Dual Gateway Rotator (GoPay & ShopeePay) */}
+          <Card glass className="p-5 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3 border-b border-hairline pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-emerald-500" />
+                  Dual Gateway Rotator (GoPay & ShopeePay)
+                </h3>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Atur rotasi otomatis atau prioritas manual pembayaran antara akun Anda (GoPay) dan akun pacar Anda (ShopeePay).
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-ink-muted">Total Counter: {paymentCounter}</span>
+                <Button size="sm" onClick={saveDualGateway} disabled={savingDual} className="text-xs gap-1.5 font-bold">
+                  {savingDual ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Simpan Dual Gateway
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+                  Mode Gateway
+                </label>
+                <select
+                  value={dualMode}
+                  onChange={(e) => setDualMode(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+                >
+                  <option value="rotate">🔄 Rotasi Otomatis (Ganjil GoPay, Genap ShopeePay)</option>
+                  <option value="gopay">📌 Prioritas Utama GoPay (GoBiz Anda)</option>
+                  <option value="shoppepay">📌 Prioritas Utama ShopeePay (Shopee Merchant Pacar)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+                  URL ShopeePay API Gateway (Port 3003)
+                </label>
+                <input
+                  type="text"
+                  value={shoppepayUrl}
+                  onChange={(e) => setShoppepayUrl(e.target.value)}
+                  placeholder="http://127.0.0.1:3003"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* ShopeePay Merchant Setup Card */}
+          <Card glass className="p-5 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3 border-b border-hairline pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                  <Key className="w-4 h-4 text-orange-500" />
+                  Setup ShopeePay Merchant (Akun Pacar)
+                </h3>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Masukkan Token ShopeePay Partner (`B:...`) dan QRIS Statis toko pacar Anda untuk otomatisasi mutasi & QRIS dinamis.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                  shoppepayStatus.token_status === "valid"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    : "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
+                }`}>
+                  Status: {shoppepayStatus.token_status === "valid" ? "Terhubung & Aktif" : shoppepayStatus.token_status || "Belum Dikonfigurasi"}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+                  ShopeeToken (`B: ...`)
+                </label>
+                <input
+                  type="password"
+                  value={inputShopeeToken}
+                  onChange={(e) => setInputShopeeToken(e.target.value)}
+                  placeholder="Tempel SHOPEE_TOKEN di sini (diawali B:...)"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+                  QRIS Statis ShopeePay Merchant (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={inputShopeeQris}
+                  onChange={(e) => setInputShopeeQris(e.target.value)}
+                  placeholder="00020101021126610016ID.CO.SHOPEE..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button size="sm" onClick={updateShopeeToken} disabled={updatingShopee} className="text-xs gap-1.5 font-bold">
+                {updatingShopee ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Simpan & Update Token ShopeePay
+              </Button>
+            </div>
+          </Card>
           {/* Saldo Modal Provider */}
           <Card glass className="p-5 space-y-3.5">
             <div className="flex items-center justify-between border-b border-hairline pb-3">
