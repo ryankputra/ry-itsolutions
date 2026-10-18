@@ -50,7 +50,7 @@ function AdminDashboardContent() {
       "ulasan-dummy": "/admin/reviews",
       "tema-momentum": "/admin/theme",
       pengaturan: "/admin/settings",
-      "gateway-saas": "/admin/gateway",
+      "gateway-saas": "/admin/settings",
       "log-aktivitas": "/admin/logs",
     };
     if (tabRoutes[tab]) {

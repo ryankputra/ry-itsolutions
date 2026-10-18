@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/referral", label: "Program Referral", icon: Share2 },
     { href: "/admin/theme", label: "Tema & Momentum", icon: Palette },
     { href: "/admin/logs", label: "Log Aktivitas", icon: Activity },
-    { href: "/admin/gateway", label: "Manajemen Gateway", icon: QrCode },
+
     { href: "/admin/settings", label: "Pengaturan & Server", icon: Settings },
     { href: "/admin/whatsapp", label: "Live Chat WA", icon: Smartphone },
     { href: "/admin/reviews", label: "Ulasan Pelanggan", icon: MessageSquare },
