@@ -1519,6 +1519,42 @@ router.put('/admin/payment-gateway', isAuthenticated, isAdmin, async (req, res) 
     }
 });
 
+// Dual Gateway Mode (GoPay & ShopeePay Rotation)
+router.get('/admin/dual-gateway', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const modeRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_gateway_mode'");
+        const counterRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_counter'");
+        const urlRow = await dbGet("SELECT value FROM settings WHERE key = 'shoppepay_gateway_url'");
+        res.json({
+            status: true,
+            mode: modeRow ? modeRow.value : 'rotate',
+            counter: counterRow ? parseInt(counterRow.value || '0', 10) : 0,
+            shoppepay_url: urlRow ? urlRow.value : (process.env.SHOPPEPAY_GATEWAY_URL || 'http://localhost:3003'),
+            merchants: {
+                gopay: 'GoPay Merchant (Anda)',
+                shoppepay: 'ShopeePay Merchant (Pacar)'
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.put('/admin/dual-gateway', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { mode, shoppepay_url } = req.body;
+        if (mode && ['rotate', 'gopay', 'shoppepay'].includes(mode)) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_gateway_mode', ?)", [mode]);
+        }
+        if (shoppepay_url) {
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('shoppepay_gateway_url', ?)", [shoppepay_url]);
+        }
+        res.json({ status: true, message: 'Konfigurasi Dual Gateway GoPay & ShopeePay berhasil disimpan.' });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // 20. WhatsApp & Fonnte Settings
 router.get('/admin/whatsapp-settings', isAuthenticated, isAdmin, async (req, res) => {
     try {

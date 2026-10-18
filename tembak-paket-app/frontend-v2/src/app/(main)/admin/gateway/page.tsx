@@ -15,6 +15,47 @@ export default function AdminGatewayPage() {
   const [revealedAdminKeys, setRevealedAdminKeys] = useState<Record<string, boolean>>({});
   const [actionLoadingKeyId, setActionLoadingKeyId] = useState<string | null>(null);
 
+  // Dual Gateway State (GoPay & ShopeePay)
+  const [dualMode, setDualMode] = useState("rotate");
+  const [shoppepayUrl, setShoppepayUrl] = useState("http://localhost:3003");
+  const [paymentCounter, setPaymentCounter] = useState(0);
+  const [savingDual, setSavingDual] = useState(false);
+
+  const loadDualGateway = async () => {
+    try {
+      const res = await fetch("/api/admin/dual-gateway", { credentials: "include" });
+      const d = await safeJson(res);
+      if (d?.status) {
+        setDualMode(d.mode || "rotate");
+        setPaymentCounter(d.counter || 0);
+        setShoppepayUrl(d.shoppepay_url || "http://localhost:3003");
+      }
+    } catch (e) {}
+  };
+
+  const saveDualGateway = async () => {
+    setSavingDual(true);
+    try {
+      const res = await fetch("/api/admin/dual-gateway", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ mode: dualMode, shoppepay_url: shoppepayUrl }),
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire({ title: "Berhasil", text: d.message || "Dual Gateway berhasil disimpan.", timer: 1500, showConfirmButton: false });
+        loadDualGateway();
+      } else {
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal menyimpan konfigurasi." });
+      }
+    } catch (err) {
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan jaringan." });
+    } finally {
+      setSavingDual(false);
+    }
+  };
+
   const loadGatewayKeys = async () => {
     setLoadingGatewayKeys(true);
     try {
@@ -34,6 +75,7 @@ export default function AdminGatewayPage() {
 
   useEffect(() => {
     loadGatewayKeys();
+    loadDualGateway();
   }, []);
 
   const handleRenewGatewayKey = async (keyItem: any) => {
@@ -220,6 +262,64 @@ export default function AdminGatewayPage() {
           Segarkan Data
         </Button>
       </div>
+
+      {/* Dual Gateway (GoPay & ShopeePay) Control Card */}
+      <Card className="p-5 border border-hairline shadow-xs space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+              <QrCode className="w-4 h-4 text-emerald-500" />
+              Dual Gateway Rotator (GoPay & ShopeePay)
+            </h3>
+            <p className="text-xs text-ink-muted mt-0.5">
+              Atur rotasi otomatis atau prioritas manual pembayaran antara akun Anda (GoPay) dan akun pacar Anda (ShopeePay).
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-ink-muted">Total Transaksi Counter: {paymentCounter}</span>
+            <Button size="sm" onClick={saveDualGateway} disabled={savingDual} className="text-xs gap-1.5 font-bold">
+              {savingDual ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Simpan Konfigurasi
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-hairline">
+          <div>
+            <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+              Mode Gateway
+            </label>
+            <select
+              value={dualMode}
+              onChange={(e) => setDualMode(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+            >
+              <option value="rotate">Rotasi Otomatis (Ganjil GoPay, Genap ShopeePay)</option>
+              <option value="gopay">Prioritas Utama GoPay (Saja)</option>
+              <option value="shoppepay">Prioritas Utama ShopeePay (Saja)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+              URL ShopeePay Gateway (Pacar)
+            </label>
+            <input
+              type="text"
+              value={shoppepayUrl}
+              onChange={(e) => setShoppepayUrl(e.target.value)}
+              placeholder="http://localhost:3003"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+            />
+          </div>
+
+          <div className="flex flex-col justify-end">
+            <div className="text-[11px] text-ink-muted bg-primary/5 p-2 rounded-xl border border-primary/20">
+              💡 <b>Info:</b> Jika salah satu gateway offline, sistem secara otomatis melakukan fallback ke gateway lainnya.
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
