@@ -630,7 +630,7 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-2 border-b border-hairline">
         <div>
@@ -644,9 +644,9 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Kolom Kiri: WhatsApp Bot Toko & Gateway Pembayaran */}
-        <div className="lg:col-span-6 space-y-6">
+        <div className="space-y-6">
           {/* WhatsApp Bot Toko (Baileys Engine) */}
           <Card glass className="p-5 space-y-4 border-emerald-500/30">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
@@ -1080,7 +1080,12 @@ export default function AdminSettingsPage() {
                 Simpan & Update Token ShopeePay
               </Button>
             </div>
+
           </Card>
+        </div>
+
+        {/* Kolom Kanan: Saldo, Banner, Menu, Database */}
+        <div className="space-y-6">
           {/* Saldo Modal Provider */}
           <Card glass className="p-5 space-y-3.5">
             <div className="flex items-center justify-between border-b border-hairline pb-3">
