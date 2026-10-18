@@ -980,7 +980,7 @@ export default function AdminSettingsPage() {
                   Dual Gateway Rotator (GoPay & ShopeePay)
                 </h3>
                 <p className="text-xs text-ink-muted mt-0.5">
-                  Atur rotasi otomatis atau prioritas manual pembayaran antara akun Anda (GoPay) dan akun pacar Anda (ShopeePay).
+                  Atur rotasi otomatis atau prioritas manual pembayaran antara akun utama (GoPay) dan akun mitra (ShopeePay).
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1003,8 +1003,8 @@ export default function AdminSettingsPage() {
                   className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
                 >
                   <option value="rotate">🔄 Rotasi Otomatis (Ganjil GoPay, Genap ShopeePay)</option>
-                  <option value="gopay">📌 Prioritas Utama GoPay (GoBiz Anda)</option>
-                  <option value="shoppepay">📌 Prioritas Utama ShopeePay (Shopee Merchant Pacar)</option>
+                  <option value="gopay">📌 Prioritas Utama GoPay (GoBiz Utama)</option>
+                  <option value="shoppepay">📌 Prioritas Utama ShopeePay (Shopee Merchant Mitra)</option>
                 </select>
               </div>
 
@@ -1029,10 +1029,10 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-sm font-bold text-ink flex items-center gap-2">
                   <Key className="w-4 h-4 text-orange-500" />
-                  Setup ShopeePay Merchant (Akun Pacar)
+                  Setup ShopeePay Merchant (Mitra Utama)
                 </h3>
                 <p className="text-xs text-ink-muted mt-0.5">
-                  Masukkan Token ShopeePay Partner (`B:...`) dan QRIS Statis toko pacar Anda untuk otomatisasi mutasi & QRIS dinamis.
+                  Masukkan Token ShopeePay Partner (`B:...`) dan QRIS Statis toko mitra Anda untuk otomatisasi mutasi & QRIS dinamis.
                 </p>
               </div>
               <div className="flex items-center gap-2">

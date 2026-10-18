@@ -143,6 +143,12 @@
       "namedRegex": "^/admin/broadcast(?:/)?$"
     },
     {
+      "page": "/admin/gateway",
+      "regex": "^/admin/gateway(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/gateway(?:/)?$"
+    },
+    {
       "page": "/admin/imei",
       "regex": "^/admin/imei(?:/)?$",
       "routeKeys": {},

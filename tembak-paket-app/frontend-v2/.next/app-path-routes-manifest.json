@@ -3,6 +3,8 @@
   "/_global-error/page": "/_global-error",
   "/icon.svg/route": "/icon.svg",
   "/qr/[id]/route": "/qr/[id]",
+  "/check-payment/route": "/check-payment",
+  "/create-qris/route": "/create-qris",
   "/(auth)/login/page": "/login",
   "/(auth)/register/page": "/register",
   "/page": "/",
@@ -28,6 +30,7 @@
   "/(main)/videos/page": "/videos",
   "/(main)/vouchers/page": "/vouchers",
   "/(main)/admin/broadcast/page": "/admin/broadcast",
+  "/(main)/admin/gateway/page": "/admin/gateway",
   "/(main)/admin/imei/page": "/admin/imei",
   "/(main)/admin/logs/page": "/admin/logs",
   "/(main)/admin/orders/page": "/admin/orders",
@@ -40,7 +43,5 @@
   "/(main)/admin/tickets/page": "/admin/tickets",
   "/(main)/admin/users/page": "/admin/users",
   "/(main)/admin/vouchers/page": "/admin/vouchers",
-  "/(main)/admin/whatsapp/page": "/admin/whatsapp",
-  "/create-qris/route": "/create-qris",
-  "/check-payment/route": "/check-payment"
+  "/(main)/admin/whatsapp/page": "/admin/whatsapp"
 }
