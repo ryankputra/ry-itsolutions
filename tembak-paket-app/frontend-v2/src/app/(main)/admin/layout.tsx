@@ -41,7 +41,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/imei", label: "Layanan IMEI & CEIR", icon: Smartphone },
     { href: "/admin/users", label: "Kelola Pengguna", icon: Users },
     { href: "/admin/packages", label: "Paket Kuota", icon: Package },
-    { href: "/admin/gateway", label: "Gateway GoPay & QRIS", icon: QrCode },
     { href: "/admin/tickets", label: "Pusat Bantuan CS", icon: Headphones },
     { href: "/admin/vouchers", label: "Kupon Diskon", icon: Ticket },
     { href: "/admin/broadcast", label: "Broadcast Promo", icon: Megaphone },

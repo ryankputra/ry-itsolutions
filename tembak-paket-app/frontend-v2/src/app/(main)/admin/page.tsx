@@ -187,15 +187,6 @@ function AdminDashboardContent() {
       iconColor: "text-indigo-500 bg-indigo-500/10",
     },
     {
-      href: "/admin/gateway",
-      title: "Gateway GoPay & QRIS",
-      desc: "Monitoring seluruh lisensi API Key merchant, status GoBiz, dan pengingat WhatsApp.",
-      badge: `${metrics.activeGatewayKeys} Lisensi Aktif`,
-      badgeColor: "bg-sky-500/10 text-sky-600 border-sky-500/20",
-      icon: QrCode,
-      iconColor: "text-sky-500 bg-sky-500/10",
-    },
-    {
       href: "/admin/tickets",
       title: "Pusat Bantuan CS",
       desc: "Dukungan pelanggan langsung, tanya kendala pesanan, thread percakapan tiket CS.",
@@ -305,17 +296,6 @@ function AdminDashboardContent() {
             </div>
             <p className="text-2xl font-black text-ink">{metrics.totalUsers}</p>
             <p className="text-[11px] text-ink-muted">Akun member terdaftar</p>
-          </Card>
-        </Link>
-
-        <Link href="/admin/gateway" className="block group">
-          <Card glass className="p-4 space-y-1 border-hairline group-hover:border-primary/50 transition-all shadow-2xs">
-            <div className="flex items-center justify-between text-ink-muted">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Lisensi Gateway</span>
-              <QrCode className="w-4 h-4 text-primary" />
-            </div>
-            <p className="text-2xl font-black text-primary">{metrics.activeGatewayKeys}</p>
-            <p className="text-[11px] text-ink-muted">API Key aktif digunakan</p>
           </Card>
         </Link>
       </div>
