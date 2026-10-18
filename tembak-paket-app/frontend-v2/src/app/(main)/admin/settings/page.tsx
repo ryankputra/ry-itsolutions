@@ -1035,11 +1035,11 @@ export default function AdminSettingsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                  shoppepayStatus.token_status === "valid"
+                  shoppepayStatus?.token_status === "valid"
                     ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
                     : "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
                 }`}>
-                  Status: {shoppepayStatus.token_status === "valid" ? "Terhubung & Aktif" : shoppepayStatus.token_status || "Belum Dikonfigurasi"}
+                  Status: {shoppepayStatus?.token_status === "valid" ? "Terhubung & Aktif" : shoppepayStatus?.token_status || "Belum Dikonfigurasi"}
                 </span>
               </div>
             </div>
