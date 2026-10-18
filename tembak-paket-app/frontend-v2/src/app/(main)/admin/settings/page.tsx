@@ -85,14 +85,26 @@ export default function AdminSettingsPage() {
       });
       const d = await safeJson(res);
       if (d?.status) {
-        Swal.fire({ title: "Berhasil", text: d.message || "Token ShopeePay berhasil diperbarui.", timer: 2000, showConfirmButton: false });
+        Swal.fire({ 
+          title: "Berhasil", 
+          html: `<div class="text-left text-xs space-y-1"><p><b>Status:</b> Terhubung & Aktif</p><p><b>Detail:</b> ${d.message || "Token ShopeePay berhasil diperbarui."}</p></div>`, 
+          icon: "success" 
+        });
         setInputShopeeToken("");
         loadShopeePayStatus();
       } else {
-        Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui token." });
+        Swal.fire({ 
+          title: "Koneksi Gagal", 
+          html: `<div class="text-left text-xs space-y-1"><p class="text-rose-600 font-bold">Respon Server:</p><p class="font-mono bg-canvas-muted p-2 rounded">${d?.message || "Gagal memperbarui token / Unauthorized."}</p></div>`, 
+          icon: "error" 
+        });
       }
-    } catch (err) {
-      Swal.fire({ title: "Error", text: "Terjadi kesalahan jaringan." });
+    } catch (err: any) {
+      Swal.fire({ 
+        title: "Error Jaringan", 
+        html: `<div class="text-left text-xs space-y-1"><p class="text-rose-600 font-bold">Keterangan:</p><p class="font-mono bg-canvas-muted p-2 rounded">${err.message || "Gagal menghubungi ShopeePay API Gateway."}</p></div>`, 
+        icon: "error" 
+      });
     } finally {
       setUpdatingShopee(false);
     }
@@ -1052,11 +1064,11 @@ export default function AdminSettingsPage() {
                   ShopeeToken (`B: ...`)
                 </label>
                 <input
-                  type="password"
+                  type="text"
                   value={inputShopeeToken}
                   onChange={(e) => setInputShopeeToken(e.target.value)}
                   placeholder="Tempel SHOPEE_TOKEN di sini (diawali B:...)"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary font-mono"
                 />
               </div>
 
