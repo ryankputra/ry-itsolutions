@@ -206,12 +206,16 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         showConfirmButton: false
       });
     } catch (err: any) {
-      console.error("Export Image Error:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Gagal Mengunduh Gambar",
-        text: err?.message || "Terjadi kesalahan saat memproses gambar."
-      });
+      console.warn("Export Image Fallback to print:", err);
+      try {
+        window.print();
+      } catch (printErr) {
+        Swal.fire({
+          icon: "error",
+          title: "Gagal Mencetak Nota",
+          text: "Silakan gunakan fitur cetak browser atau coba beberapa saat lagi."
+        });
+      }
     } finally {
       setIsExporting(false);
     }
@@ -259,17 +263,21 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
       Swal.fire({
         icon: "success",
         title: "PDF Berhasil Diunduh!",
-        text: "Dokumen resmi telah disimpan dalam format PDF.",
+        text: "Nota / Sertifikat resmi PDF telah disimpan.",
         timer: 1600,
         showConfirmButton: false
       });
     } catch (err: any) {
-      console.error("Export PDF Error:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Gagal Mengunduh PDF",
-        text: err?.message || "Terjadi kesalahan saat mengonversi PDF."
-      });
+      console.warn("Export PDF Fallback to print:", err);
+      try {
+        window.print();
+      } catch (printErr) {
+        Swal.fire({
+          icon: "error",
+          title: "Gagal Mencetak PDF",
+          text: "Silakan gunakan fitur cetak browser atau coba beberapa saat lagi."
+        });
+      }
     } finally {
       setIsExporting(false);
     }
@@ -391,12 +399,12 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-hidden"
+      className="fixed inset-0 z-[100] flex items-start pt-6 sm:items-center sm:pt-4 justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-xl bg-canvas text-ink rounded-2xl sm:rounded-3xl shadow-2xl border border-hairline overflow-hidden flex flex-col h-[94dvh] sm:h-auto sm:max-h-[90vh] my-auto">
+      <div className="relative w-full max-w-xl bg-canvas text-ink rounded-2xl sm:rounded-3xl shadow-2xl border border-hairline overflow-hidden flex flex-col h-auto max-h-[90vh] my-auto">
         
         {/* Top Sticky Header (Hidden on print) */}
         <div className="p-3 sm:p-4 bg-parchment border-b border-hairline flex items-center justify-between gap-2 shrink-0 print:hidden">

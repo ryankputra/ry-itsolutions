@@ -42,6 +42,6 @@
   "/(main)/admin/users/page": "app/(main)/admin/users/page.js",
   "/(main)/admin/vouchers/page": "app/(main)/admin/vouchers/page.js",
   "/(main)/admin/whatsapp/page": "app/(main)/admin/whatsapp/page.js",
-  "/create-qris/route": "app/create-qris/route.js",
-  "/check-payment/route": "app/check-payment/route.js"
+  "/check-payment/route": "app/check-payment/route.js",
+  "/create-qris/route": "app/create-qris/route.js"
 }
