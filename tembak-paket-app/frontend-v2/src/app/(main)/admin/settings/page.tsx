@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Activity,
   Key,
+  Check,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
