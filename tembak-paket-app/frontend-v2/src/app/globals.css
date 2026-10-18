@@ -53,6 +53,10 @@
     --foreground: #f5f5f7;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
@@ -62,11 +66,10 @@
     letter-spacing: -0.015em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.25s ease, color 0.25s ease;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Eliminate 300ms mobile touch delay */
   a, button, [role="button"], input, select, textarea {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -77,6 +80,30 @@
     letter-spacing: -0.022em;
     color: var(--color-ink);
   }
+}
+
+/* Scroll Animation Utilities */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.glow-gradient {
+  background: radial-gradient(circle at 50% 0%, rgba(0, 113, 227, 0.12) 0%, transparent 60%);
+}
+
+.dark .glow-gradient {
+  background: radial-gradient(circle at 50% 0%, rgba(41, 151, 255, 0.15) 0%, transparent 70%);
 }
 
 /* Apple-style Luxury SweetAlert2 Popup */
