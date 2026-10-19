@@ -1358,7 +1358,9 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
             chosenGateway = (counter % 2 !== 0) ? 'gopay' : 'shoppepay';
         }
 
+        const requestedGw = (gateway || '').toLowerCase();
         const isShopee = (chosenGateway === 'shoppepay') || (requestedGw.includes('shopee'));
+        const isGopay = !isShopee;
 
         if (isShopee) {
             const shopeeStaticRow = await dbGet("SELECT value FROM settings WHERE key = 'shoppepay_qris_static'").catch(() => null);
