@@ -1543,6 +1543,18 @@ router.post('/topup/cancel', isAuthenticated, async (req, res) => {
     }
 });
 
+// 6.5 GET /api/topup/latest-status
+router.get('/topup/latest-status', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const topUp = await dbGet("SELECT * FROM topups WHERE userId = ? ORDER BY createdAt DESC LIMIT 1", [userId]);
+        if (!topUp) return res.status(404).json({ status: false, message: 'Belum ada transaksi top-up.' });
+        res.status(200).json({ status: true, transactionStatus: topUp.status, topUp });
+    } catch (error) {
+        res.status(500).json({ status: false, message: 'Gagal memeriksa status top-up terakhir.' });
+    }
+});
+
 // 7. GET /api/topup/status/:topUpId
 router.get('/topup/status/:topUpId', isAuthenticated, async (req, res) => {
     try {
