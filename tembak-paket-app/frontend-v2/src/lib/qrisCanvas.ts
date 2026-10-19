@@ -91,15 +91,12 @@ export async function generateQrisCanvasDataUrl(
   }
 
   // 2. Render base QR Code (either from base64 image or generating from EMVCo payload)
+  let baseQrDataUrl = "";
   if (cleanPayload.startsWith("data:image/") || cleanPayload.startsWith("http://") || cleanPayload.startsWith("https://")) {
-    const qrImg = await loadImageAsync(cleanPayload);
-    if (!qrImg) return cleanPayload;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvasWidth, canvasWidth);
-    ctx.drawImage(qrImg, 0, 0, canvasWidth, canvasWidth);
+    baseQrDataUrl = cleanPayload;
   } else {
     try {
-      await QRCode.toCanvas(canvas, cleanPayload, {
+      baseQrDataUrl = await QRCode.toDataURL(cleanPayload, {
         errorCorrectionLevel,
         margin,
         width: canvasWidth,
@@ -109,11 +106,16 @@ export async function generateQrisCanvasDataUrl(
         },
       });
     } catch (qrErr) {
-      console.error("QRCode.toCanvas generation error:", qrErr);
-      // Fallback: draw error text or return payload as is if canvas generation fails
+      console.error("QRCode.toDataURL generation error:", qrErr);
       return cleanPayload;
     }
   }
+
+  const qrImg = await loadImageAsync(baseQrDataUrl);
+  if (!qrImg) return baseQrDataUrl;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvasWidth, canvasWidth);
+  ctx.drawImage(qrImg, 0, 0, canvasWidth, canvasWidth);
 
   // 3. Calculate Center White Pad Dimensions (~20-22% of total canvas width)
   const padRatio = 0.22;
