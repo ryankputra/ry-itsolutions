@@ -87,7 +87,9 @@ export function InstantQrisPaymentModal({
     if (raw) {
       // Pass both raw EMVCo code and base64 image through generateQrisCanvasDataUrl
       // to ensure the app logo (/logo.png) is rendered in the center
-      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" })
+      const activeGw = qrisData.gateway || qrisData.active_gateway || '';
+      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
+      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar })
         .then((url) => {
           if (isMounted && url) setRenderedQrImage(url);
         })
@@ -147,7 +149,9 @@ export function InstantQrisPaymentModal({
           let resolvedImage = rawImg;
           if (rawCode || rawImg) {
             try {
-              resolvedImage = await generateQrisCanvasDataUrl(rawCode || rawImg, { logoUrl: "/logo.png" });
+              const activeGw = qData.active_gateway || qData.gateway || '';
+              const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
+              resolvedImage = await generateQrisCanvasDataUrl(rawCode || rawImg, { logoUrl: "/logo.png", badge: badgeChar });
             } catch (e) {
               if (rawCode && !rawCode.startsWith("data:image/")) {
                 resolvedImage = await QRCode.toDataURL(rawCode, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
