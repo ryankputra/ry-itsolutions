@@ -92,7 +92,10 @@ export async function generateQrisCanvasDataUrl(
 
   // 2. Render base QR Code (either from base64 image or generating from EMVCo payload)
   let baseQrDataUrl = "";
-  if (cleanPayload.startsWith("data:image/") || cleanPayload.startsWith("http://") || cleanPayload.startsWith("https://")) {
+  if (cleanPayload.startsWith("http://") || cleanPayload.startsWith("https://")) {
+    return cleanPayload;
+  }
+  if (cleanPayload.startsWith("data:image/")) {
     baseQrDataUrl = cleanPayload;
   } else {
     try {
@@ -107,7 +110,7 @@ export async function generateQrisCanvasDataUrl(
       });
     } catch (qrErr) {
       console.error("QRCode.toDataURL generation error:", qrErr);
-      return "";
+      return cleanPayload.startsWith("data:image/") ? cleanPayload : "";
     }
   }
 
