@@ -70,6 +70,29 @@ export default function AdminSettingsPage() {
     } catch (e) {}
   };
 
+  const updateGopayQris = async () => {
+    setUpdatingGopayQris(true);
+    try {
+      const res = await fetch("/api/admin/gopay/update-qris", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ qrisStatic: inputGopayQris }),
+      });
+      const d = await safeJson(res);
+      if (d?.status) {
+        Swal.fire({ title: "Berhasil", text: "QRIS Statis GoPay berhasil disimpan.", icon: "success" });
+        loadGopayStatus();
+      } else {
+        Swal.fire({ title: "Gagal", text: d?.message || "Gagal menyimpan QRIS GoPay", icon: "error" });
+      }
+    } catch (err) {
+      Swal.fire({ title: "Error", text: "Terjadi kesalahan jaringan.", icon: "error" });
+    } finally {
+      setUpdatingGopayQris(false);
+    }
+  };
+
   const updateShopeeToken = async () => {
     if (!inputShopeeToken.trim()) {
       Swal.fire({ title: "Perhatian", text: "Token ShopeePay wajib diisi.", icon: "warning" });
@@ -153,6 +176,8 @@ export default function AdminSettingsPage() {
   const [gopayOtpSent, setGopayOtpSent] = useState(false);
   const [gopayRequestingOtp, setGopayRequestingOtp] = useState(false);
   const [gopayVerifyingOtp, setGopayVerifyingOtp] = useState(false);
+  const [inputGopayQris, setInputGopayQris] = useState("");
+  const [updatingGopayQris, setUpdatingGopayQris] = useState(false);
 
   // Provider Balances
   const [providerBalances, setProviderBalances] = useState<{ kmsp: number | null; ceirgo: number | null }>({
@@ -280,6 +305,9 @@ export default function AdminSettingsPage() {
       const d = await safeJson(res);
       if (d?.status && d.data) {
         setGopayStatus(d.data);
+        if (d.data.qris_string) {
+          setInputGopayQris(d.data.qris_string);
+        }
       }
     } catch (e) {
       // ignore
@@ -901,7 +929,26 @@ export default function AdminSettingsPage() {
                   </p>
                 </div>
 
-                <div className="flex gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+                    QRIS Statis GoPay Merchant (GoBiz)
+                  </label>
+                  <input
+                    type="text"
+                    value={inputGopayQris}
+                    onChange={(e) => setInputGopayQris(e.target.value)}
+                    placeholder="00020101021126610014COM.GO-JEK..."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex justify-end pt-1">
+                  <Button size="sm" onClick={updateGopayQris} disabled={updatingGopayQris} className="text-xs gap-1.5 font-bold">
+                    {updatingGopayQris ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                    Simpan QRIS GoPay
+                  </Button>
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-hairline">
                   <Button
                     size="sm"
                     variant="outline"

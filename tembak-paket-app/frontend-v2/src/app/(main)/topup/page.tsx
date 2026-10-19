@@ -83,7 +83,9 @@ export default function TopUpPage() {
 
     // If we have an EMVCo payload string (starts with 000201 or not a data:image URL), render via canvas with logo
     if (raw && (raw.startsWith("000201") || (!raw.startsWith("data:image/") && !raw.startsWith("http")))) {
-      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" })
+      const activeGw = qrisData.active_gateway || qrisData.gateway || '';
+      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
+      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar })
         .then((url) => {
           if (isMounted && url) setRenderedQrImage(url);
         })

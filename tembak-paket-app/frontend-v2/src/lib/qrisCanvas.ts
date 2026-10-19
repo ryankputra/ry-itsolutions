@@ -5,6 +5,7 @@ export interface QrisCanvasOptions {
   width?: number;
   margin?: number;
   errorCorrectionLevel?: "L" | "M" | "Q" | "H";
+  badge?: string; // e.g. 'G' for Gopay or 'S' for ShopeePay
 }
 
 /**
@@ -145,43 +146,62 @@ export async function generateQrisCanvasDataUrl(
   ctx.stroke();
   ctx.restore();
 
-  // 5. Draw Merchant / App Logo inside the White Pad
-  let logoImg = await loadImageAsync(logoUrl);
-  if (!logoImg && logoUrl !== "/logo.png") {
-    logoImg = await loadImageAsync("/logo.png");
-  }
-  if (!logoImg && logoUrl !== "/payments/qris.png") {
-    logoImg = await loadImageAsync("/payments/qris.png");
-  }
-
-  if (logoImg && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
-    const innerPadding = Math.round(padSize * 0.14);
-    const maxLogoW = padSize - innerPadding * 2;
-    const maxLogoH = padSize - innerPadding * 2;
-
-    const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
-    let drawW = maxLogoW;
-    let drawH = maxLogoH;
-
-    if (aspect > 1) {
-      drawH = maxLogoW / aspect;
-    } else {
-      drawW = maxLogoH * aspect;
-    }
-
-    const drawX = padX + (padSize - drawW) / 2;
-    const drawY = padY + (padSize - drawH) / 2;
-
-    ctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
-  } else {
-    // Graceful fallback: Draw crisp official "QRIS" badge on white pad
+  // 5. Draw Merchant / App Logo or Badge inside the White Pad
+  if (options.badge) {
     ctx.save();
-    ctx.font = `bold ${Math.round(padSize * 0.32)}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle = options.badge === 'G' ? '#00AED6' : '#EE4D2D'; // GoPay Blue or Shopee Orange
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(padX + 4, padY + 4, padSize - 8, padSize - 8, padRadius - 2);
+    } else {
+      ctx.rect(padX + 4, padY + 4, padSize - 8, padSize - 8);
+    }
+    ctx.fill();
+
+    ctx.font = `black ${Math.round(padSize * 0.55)}px system-ui, -apple-system, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#e11d48"; // QRIS red
-    ctx.fillText("QRIS", canvasWidth / 2, canvasWidth / 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(options.badge, canvasWidth / 2, canvasWidth / 2 + 1);
     ctx.restore();
+  } else {
+    let logoImg = await loadImageAsync(logoUrl);
+    if (!logoImg && logoUrl !== "/logo.png") {
+      logoImg = await loadImageAsync("/logo.png");
+    }
+    if (!logoImg && logoUrl !== "/payments/qris.png") {
+      logoImg = await loadImageAsync("/payments/qris.png");
+    }
+
+    if (logoImg && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
+      const innerPadding = Math.round(padSize * 0.14);
+      const maxLogoW = padSize - innerPadding * 2;
+      const maxLogoH = padSize - innerPadding * 2;
+
+      const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
+      let drawW = maxLogoW;
+      let drawH = maxLogoH;
+
+      if (aspect > 1) {
+        drawH = maxLogoW / aspect;
+      } else {
+        drawW = maxLogoH * aspect;
+      }
+
+      const drawX = padX + (padSize - drawW) / 2;
+      const drawY = padY + (padSize - drawH) / 2;
+
+      ctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
+    } else {
+      // Graceful fallback: Draw crisp official "QRIS" badge on white pad
+      ctx.save();
+      ctx.font = `bold ${Math.round(padSize * 0.32)}px system-ui, -apple-system, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#e11d48"; // QRIS red
+      ctx.fillText("QRIS", canvasWidth / 2, canvasWidth / 2);
+      ctx.restore();
+    }
   }
 
   // 6. Return Base64 PNG Data URL
