@@ -74,44 +74,15 @@ export function InstantQrisPaymentModal({
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Automatically render QR code using client canvas generator with badge ('G' or 'S')
+  // Automatically render QR code (direct base64 or qrserver API, robust and reliable)
   useEffect(() => {
-    let isMounted = true;
-    async function renderQr() {
-      if (!qrisData) {
-        if (isMounted) setRenderedQrImage("");
-        return;
-      }
-      const raw = qrisData.qris_code || (qrisData as any).qrisCode || "";
-      const base64 = (qrisData as any).base64Image || qrisData.qris_image || "";
-
-      if (!raw && base64) {
-        if (isMounted) setRenderedQrImage(base64);
-        return;
-      }
-      if (!raw) {
-        if (isMounted) setRenderedQrImage(base64);
-        return;
-      }
-      const activeGw = (qrisData as any).active_gateway || (qrisData as any).gateway || qrisData.merchant || "";
-      const badgeChar = activeGw.toLowerCase().includes("shopee") ? "S" : (activeGw.toLowerCase().includes("gopay") ? "G" : "");
-      
-      try {
-        const dataUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar, width: 512 });
-        if (isMounted && dataUrl) {
-          setRenderedQrImage(dataUrl);
-          return;
-        }
-      } catch (e) {}
-
-      if (isMounted) {
-        setRenderedQrImage(base64 || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}`);
-      }
+    if (!qrisData) {
+      setRenderedQrImage("");
+      return;
     }
-    renderQr();
-    return () => {
-      isMounted = false;
-    };
+    const raw = qrisData.qris_code || (qrisData as any).qrisCode || "";
+    const base64 = (qrisData as any).base64Image || qrisData.qris_image || "";
+    setRenderedQrImage(base64 || (raw ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}` : ""));
   }, [qrisData]);
 
   // Generate atau tampilkan Direct QRIS eksisting saat modal dibuka
@@ -338,10 +309,7 @@ export function InstantQrisPaymentModal({
                 </p>
                 <div className="flex items-center justify-center gap-1.5 flex-wrap">
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
-                    Bebas Biaya Admin • QRIS 24 Jam
-                  </span>
-                  <span className="text-[10px] text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full inline-block">
-                    Merchant: {qrisData.merchant || 'Direct QRIS Otomatis'}
+                    Bebas Biaya Admin • QRIS 24 Jam Otomatis
                   </span>
                 </div>
               </div>

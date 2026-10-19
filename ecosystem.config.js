@@ -33,6 +33,17 @@ module.exports = {
       },
       autorestart: true,
       watch: false
+    },
+    {
+      name: "shoppepay-gateway",
+      cwd: "../shoppepay-gateway",
+      script: "server.js",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3003
+      },
+      autorestart: true,
+      watch: false
     }
   ]
 };

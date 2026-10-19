@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "NODE_OPTIONS='--max-old-space-size=1024' next build --webpack",
+    "build": "node -e 'require(\"fs\").writeFileSync(\"public/version.json\", JSON.stringify({timestamp: Date.now()}))' && NODE_OPTIONS='--max-old-space-size=1024' next build --webpack",
     "start": "next start -p 3005",
     "lint": "eslint",
     "deploy": "npm run build && git add .next && git commit -m \"Deploy build\" && git push origin main"

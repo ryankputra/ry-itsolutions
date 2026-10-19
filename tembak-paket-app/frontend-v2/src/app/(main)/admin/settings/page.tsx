@@ -1080,6 +1080,13 @@ export default function AdminSettingsPage() {
                 />
               </div>
             </div>
+
+            <div className="p-3 bg-canvas border border-hairline rounded-xl flex items-center justify-between text-xs">
+              <span className="font-bold text-ink">Giliran Polling / Gateway Aktif Saat Ini:</span>
+              <span className="px-2.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
+                {dualMode === 'gopay' ? 'GoPay (Prioritas Utama)' : dualMode === 'shoppepay' ? 'ShopeePay (Prioritas Utama)' : (paymentCounter % 2 === 1 ? 'GoPay (Counter Ganjil)' : 'ShopeePay (Counter Genap)')}
+              </span>
+            </div>
           </Card>
 
           {/* ShopeePay Merchant Setup Card */}

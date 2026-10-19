@@ -537,22 +537,35 @@ async function getCustomerPhoneForTransaction(trx) {
 /**
  * Get list of authorized admin phone numbers
  */
-async function getAdminPhoneNumbers() {
+async function getAdminPhoneNumbers(paymentMethod = '') {
     const adminPhones = new Set();
+    const pm = String(paymentMethod || '').toLowerCase();
 
-    // 0. Primary Administrator Numbers (Guaranteed Delivery)
-    // 6287767287284: Bot number, 6285156692166: Primary Admin
-    const primaryAdmins = ["6287767287284", "6285156692166"];
+    // Specific routing based on payment method
+    const primaryGoPayAdmin = "6285156692166";
+    const primaryShopeeAdmin = "6288706611370";
+
+    if (pm.includes('shopee')) {
+        adminPhones.add(primaryShopeeAdmin);
+    } else if (pm.includes('gopay') || pm.includes('balance') || pm.includes('qris')) {
+        adminPhones.add(primaryGoPayAdmin);
+    } else {
+        adminPhones.add(primaryGoPayAdmin);
+        adminPhones.add(primaryShopeeAdmin);
+    }
+
+    // 0. Additional Primary Administrator Numbers
+    const primaryAdmins = ["6287767287284", primaryGoPayAdmin, primaryShopeeAdmin];
     primaryAdmins.forEach(num => {
         const cp = cleanPhone(num);
-        if (cp && !cp.endsWith("70")) adminPhones.add(cp);
+        if (cp) adminPhones.add(cp);
     });
 
     // 1. From environment variables
     const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || "6287767287284";
     envAdmin.split(",").forEach(num => {
         const cp = cleanPhone(num.trim());
-        if (cp && !cp.endsWith("70")) adminPhones.add(cp);
+        if (cp) adminPhones.add(cp);
     });
 
     // 2. From database settings
@@ -1694,12 +1707,6 @@ async function notifyNewOrder(orderData) {
             return;
         }
 
-        const adminPhones = await getAdminPhoneNumbers();
-        if (adminPhones.length === 0) {
-            console.warn("[WABot] Tidak ada nomor WhatsApp admin yang terkonfigurasi.");
-            return;
-        }
-
         const {
             id,
             userName,
@@ -1711,8 +1718,11 @@ async function notifyNewOrder(orderData) {
             userImage,
             userImageCeir,
             customerPhone,
-            targetPhone
+            targetPhone,
+            paymentMethod
         } = orderData;
+
+        const adminPhones = await getAdminPhoneNumbers(paymentMethod);
 
         // Fetch dynamic speed settings if available
         let speedRangeText = "Max kirim jam 14:00, selesai max jam 00:00 WIB";

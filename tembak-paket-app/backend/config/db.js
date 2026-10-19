@@ -62,6 +62,7 @@ async function initializeDatabase() {
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('announcementBgColor', '#dc2626')`);
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenanceNotificationSent', 'none')`);
             await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('paymentGateway', 'orkut')`);
+            await dbRun(`INSERT OR IGNORE INTO settings (key, value) VALUES ('shoppepay_qris_static', '00020101021126610016ID.CO.SHOPEE.WWW01189360091800238439950208238439950303UMI51440014ID.CO.QRIS.WWW0215ID10266094890610303UMI5204572253033605802ID5909Ayy Store6004SOLO61055713962070703A016304A104')`);
 
             // Manual & IMEI Columns
             try { await dbRun("ALTER TABLE transactions ADD COLUMN service_type TEXT DEFAULT 'reguler'"); } catch (e) { }

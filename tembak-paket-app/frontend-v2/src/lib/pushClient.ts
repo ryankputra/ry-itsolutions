@@ -32,12 +32,12 @@ export function getNotificationPermission(): NotificationPermission | 'unsupport
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
   try {
-    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    return reg;
-  } catch (err) {
-    // Silent catch so it never interrupts app execution
-    return null;
-  }
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      await reg.unregister();
+    }
+  } catch (err) {}
+  return null;
 }
 
 /**

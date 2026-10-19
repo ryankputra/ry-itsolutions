@@ -72,44 +72,15 @@ export default function TopUpPage() {
   // Gateway readiness state
   const [gatewayInfo, setGatewayInfo] = useState<{ active_gateway: string; is_ready: boolean; message: string } | null>(null);
 
-  // Automatically render QR Code image using client canvas generator with badge ('G' or 'S')
+  // Automatically render QR Code image (direct base64 or qrserver API, robust and reliable)
   useEffect(() => {
-    let isMounted = true;
-    async function renderQr() {
-      if (!qrisData) {
-        if (isMounted) setRenderedQrImage("");
-        return;
-      }
-      const raw = qrisData.qris_code || qrisData.qrisCode || "";
-      const base64 = qrisData.base64Image || qrisData.qris_image || "";
-
-      if (!raw && base64) {
-        if (isMounted) setRenderedQrImage(base64);
-        return;
-      }
-      if (!raw) {
-        if (isMounted) setRenderedQrImage(base64);
-        return;
-      }
-      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || "";
-      const badgeChar = activeGw.toLowerCase().includes("shopee") ? "S" : (activeGw.toLowerCase().includes("gopay") ? "G" : "");
-      
-      try {
-        const dataUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar, width: 512 });
-        if (isMounted && dataUrl) {
-          setRenderedQrImage(dataUrl);
-          return;
-        }
-      } catch (e) {}
-
-      if (isMounted) {
-        setRenderedQrImage(base64 || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}`);
-      }
+    if (!qrisData) {
+      setRenderedQrImage("");
+      return;
     }
-    renderQr();
-    return () => {
-      isMounted = false;
-    };
+    const raw = qrisData.qris_code || qrisData.qrisCode || "";
+    const base64 = qrisData.base64Image || qrisData.qris_image || "";
+    setRenderedQrImage(base64 || (raw ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}` : ""));
   }, [qrisData]);
 
   useEffect(() => {
@@ -637,8 +608,8 @@ export default function TopUpPage() {
                 <p className="text-3xl sm:text-4xl font-black text-primary">
                   Rp {qrisData.uniqueAmount.toLocaleString("id-ID")}
                 </p>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold">
-                  <span>Merchant: {qrisData.merchant || 'Direct QRIS Otomatis'}</span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] font-bold">
+                  <span>QRIS Otomatis 24 Jam • Bebas Biaya Admin</span>
                 </div>
               </div>
             </div>

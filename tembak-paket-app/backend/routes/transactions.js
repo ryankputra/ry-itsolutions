@@ -393,6 +393,49 @@ function checkGopayPaymentStatus(id, amount, gopayTrxId, startTime) {
     }
 }
 
+// ShopeePay QRIS Polling
+function checkShopeePaymentStatus(id, amount, startTime) {
+    const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
+    const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
+    const maxDurationMs = 5 * 60 * 1000;
+    const interval = 8000;
+
+    const pollingLoop = async () => {
+        try {
+            const topUp = await dbGet("SELECT * FROM topups WHERE id = ?", [id]);
+            if (!topUp || topUp.status !== 'pending') { qrisPollingTimeouts.delete(id); return; }
+            const timeElapsed = Date.now() - new Date(topUp.createdAt).getTime();
+            if (timeElapsed >= maxDurationMs) {
+                await dbRun("UPDATE topups SET status = 'expired' WHERE id = ? AND status = 'pending'", [id]);
+                qrisPollingTimeouts.delete(id);
+                return;
+            }
+
+            const response = await axios.post(`${URL}/check-payment`, {
+                amount: amount,
+                startTime: Math.floor(new Date(startTime).getTime() / 1000)
+            }, {
+                headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+                timeout: 15000
+            });
+
+            if (response.data?.success && response.data.paid) {
+                await completeTopup(id, response.data.transaction?.transactionId || 'SHOPEEPAY');
+                qrisPollingTimeouts.delete(id);
+                return;
+            }
+        } catch (error) {
+            console.error(`[SHOPEEPAY_POLL_ERROR] ${id}:`, error.message);
+        }
+        const timeoutId = setTimeout(pollingLoop, interval);
+        qrisPollingTimeouts.set(id, timeoutId);
+    };
+
+    if (!qrisPollingTimeouts.has(id)) {
+        qrisPollingTimeouts.set(id, setTimeout(pollingLoop, 5000));
+    }
+}
+
 // Dynamic QRIS Generator (Supports Nobu Bank / Orkut & GoPay Direct)
 async function generateDynamicQris(amount, provider = 'nobu') {
     const isGopay = String(provider).toLowerCase().includes('gopay');
@@ -1365,14 +1408,15 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
         if (isShopee) {
             const shopeeStaticRow = await dbGet("SELECT value FROM settings WHERE key = 'shoppepay_qris_static'").catch(() => null);
             const shopeeStatic = shopeeStaticRow ? shopeeStaticRow.value : '';
+            const dynamicShopeeCode = generateDynamicQRIS(shopeeStatic, baseAmount) || shopeeStatic;
             const topUpId = `TU-SP-${Date.now()}`;
             const expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
             
             let qrisImg = '';
-            if (shopeeStatic) {
+            if (dynamicShopeeCode) {
                 try {
                     const qrcodeLib = require('qrcode');
-                    qrisImg = await qrcodeLib.toDataURL(shopeeStatic, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
+                    qrisImg = await qrcodeLib.toDataURL(dynamicShopeeCode, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
                 } catch (e) {}
             }
 
@@ -1390,6 +1434,8 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', new Date().toISOString(), qrisImg]
             );
 
+            checkShopeePaymentStatus(topUpId, baseAmount, new Date().toISOString());
+
             return res.status(200).json({
                 status: true,
                 message: 'QRIS ShopeePay berhasil dibuat.',
@@ -1399,7 +1445,7 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 active_gateway: 'shoppepay',
                 qrisData: {
                     base64Image: qrisImg,
-                    qrisCode: shopeeStatic,
+                    qrisCode: dynamicShopeeCode,
                     uniqueAmount: baseAmount,
                     createdAt: new Date().toISOString(),
                     expiresAt: expiresAtSec,
@@ -1549,7 +1595,29 @@ router.get('/topup/latest-status', isAuthenticated, async (req, res) => {
         const userId = req.session.userId;
         const topUp = await dbGet("SELECT * FROM topups WHERE userId = ? ORDER BY createdAt DESC LIMIT 1", [userId]);
         if (!topUp) return res.status(404).json({ status: false, message: 'Belum ada transaksi top-up.' });
-        res.status(200).json({ status: true, transactionStatus: topUp.status, topUp });
+
+        if (topUp.status === 'pending' && topUp.id.startsWith('TU-SP-')) {
+            try {
+                const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
+                const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
+                const response = await axios.post(`${URL}/check-payment`, {
+                    amount: topUp.baseAmount,
+                    startTime: Math.floor(new Date(topUp.createdAt).getTime() / 1000)
+                }, {
+                    headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+                    timeout: 10000
+                });
+                if (response.data?.success && response.data.paid) {
+                    await completeTopup(topUp.id, response.data.transaction?.transactionId || 'SHOPEEPAY');
+                    const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUp.id]);
+                    const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+                    return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
+                }
+            } catch (e) {}
+        }
+
+        const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+        res.status(200).json({ status: true, transactionStatus: topUp.status, topUp, balance: userRow?.balance });
     } catch (error) {
         res.status(500).json({ status: false, message: 'Gagal memeriksa status top-up terakhir.' });
     }
@@ -1561,6 +1629,27 @@ router.get('/topup/status/:topUpId', isAuthenticated, async (req, res) => {
         const { topUpId } = req.params;
         const topUp = await dbGet("SELECT * FROM topups WHERE id = ? AND userId = ?", [topUpId, req.session.userId]);
         if (!topUp) return res.status(404).json({ status: false, message: 'Transaksi top-up tidak ditemukan.' });
+
+        if (topUp.status === 'pending' && topUp.id.startsWith('TU-SP-')) {
+            try {
+                const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
+                const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
+                const response = await axios.post(`${URL}/check-payment`, {
+                    amount: topUp.baseAmount,
+                    startTime: Math.floor(new Date(topUp.createdAt).getTime() / 1000)
+                }, {
+                    headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+                    timeout: 10000
+                });
+                if (response.data?.success && response.data.paid) {
+                    await completeTopup(topUp.id, response.data.transaction?.transactionId || 'SHOPEEPAY');
+                    const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUpId]);
+                    const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+                    return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
+                }
+            } catch (e) {}
+        }
+
         res.status(200).json({ status: true, transactionStatus: topUp.status, topUp });
     } catch (error) {
         res.status(500).json({ status: false, message: 'Gagal memeriksa status top-up.' });
