@@ -83,7 +83,7 @@ export default function TopUpPage() {
 
     // If we have an EMVCo payload string (starts with 000201 or not a data:image URL), render via canvas with logo
     if (raw && (raw.startsWith("000201") || (!raw.startsWith("data:image/") && !raw.startsWith("http")))) {
-      const activeGw = qrisData.active_gateway || qrisData.gateway || '';
+      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || '';
       const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
       generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar })
         .then((url) => {
@@ -94,7 +94,16 @@ export default function TopUpPage() {
           if (isMounted) setRenderedQrImage(qrisData.base64Image || raw);
         });
     } else if (raw) {
-      setRenderedQrImage(raw);
+      // If it's already a data:image or image url, still pass it through canvas to draw badge overlay
+      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || '';
+      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
+      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar })
+        .then((url) => {
+          if (isMounted && url) setRenderedQrImage(url);
+        })
+        .catch((err) => {
+          if (isMounted) setRenderedQrImage(raw);
+        });
     }
 
     return () => {
@@ -649,7 +658,9 @@ export default function TopUpPage() {
                   const raw = qrisData.qris_code || qrisData.base64Image;
                   if (raw && !raw.startsWith("data:image/")) {
                     try {
-                      const fallback = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" });
+                      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || '';
+                      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
+                      const fallback = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar });
                       setRenderedQrImage(fallback);
                     } catch (e) {}
                   }
