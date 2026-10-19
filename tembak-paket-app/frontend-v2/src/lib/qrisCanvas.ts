@@ -107,7 +107,7 @@ export async function generateQrisCanvasDataUrl(
       });
     } catch (qrErr) {
       console.error("QRCode.toDataURL generation error:", qrErr);
-      return cleanPayload;
+      return "";
     }
   }
 

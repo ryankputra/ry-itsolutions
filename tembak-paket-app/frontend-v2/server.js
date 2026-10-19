@@ -66,6 +66,15 @@ app.prepare().then(() => {
       if (parsedUrl.pathname.startsWith(IG_TESTI_PREFIX) && (req.method === 'GET' || req.method === 'HEAD')) {
         return serveIgTesti(req, res, parsedUrl.pathname);
       }
+      if (parsedUrl.pathname === '/sw.js' || parsedUrl.pathname.startsWith('/workbox-')) {
+        const filePath = path.join(__dirname, 'public', parsedUrl.pathname);
+        if (fs.existsSync(filePath)) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/javascript');
+          res.setHeader('Cache-Control', 'no-cache, no-transform');
+          return fs.createReadStream(filePath).pipe(res);
+        }
+      }
       if (parsedUrl.pathname === '/_deploy' && (req.method === 'POST' || req.method === 'GET')) {
         return handleDeploy(req, res);
       }

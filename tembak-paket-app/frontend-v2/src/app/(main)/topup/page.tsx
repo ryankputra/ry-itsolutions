@@ -72,40 +72,41 @@ export default function TopUpPage() {
   // Gateway readiness state
   const [gatewayInfo, setGatewayInfo] = useState<{ active_gateway: string; is_ready: boolean; message: string } | null>(null);
 
-  // Automatically render QR Code image with High error correction & center logo overlay
+  // Automatically render QR Code image using client canvas generator with badge ('G' or 'S')
   useEffect(() => {
-    if (!qrisData) {
-      setRenderedQrImage("");
-      return;
-    }
     let isMounted = true;
-    const raw = qrisData.qris_code || qrisData.base64Image || qrisData.qris_image || "";
+    async function renderQr() {
+      if (!qrisData) {
+        if (isMounted) setRenderedQrImage("");
+        return;
+      }
+      const raw = qrisData.qris_code || qrisData.qrisCode || "";
+      const base64 = qrisData.base64Image || qrisData.qris_image || "";
 
-    // If we have an EMVCo payload string (starts with 000201 or not a data:image URL), render via canvas with logo
-    if (raw && (raw.startsWith("000201") || (!raw.startsWith("data:image/") && !raw.startsWith("http")))) {
-      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || '';
-      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
-      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar })
-        .then((url) => {
-          if (isMounted && url) setRenderedQrImage(url);
-        })
-        .catch((err) => {
-          console.error("TopUp QRIS Canvas generator error:", err);
-          if (isMounted) setRenderedQrImage(qrisData.base64Image || raw);
-        });
-    } else if (raw) {
-      // If it's already a data:image or image url, still pass it through canvas to draw badge overlay
-      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || '';
-      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
-      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar })
-        .then((url) => {
-          if (isMounted && url) setRenderedQrImage(url);
-        })
-        .catch((err) => {
-          if (isMounted) setRenderedQrImage(raw);
-        });
+      if (!raw && base64) {
+        if (isMounted) setRenderedQrImage(base64);
+        return;
+      }
+      if (!raw) {
+        if (isMounted) setRenderedQrImage(base64);
+        return;
+      }
+      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || "";
+      const badgeChar = activeGw.toLowerCase().includes("shopee") ? "S" : (activeGw.toLowerCase().includes("gopay") ? "G" : "");
+      
+      try {
+        const dataUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar, width: 512 });
+        if (isMounted && dataUrl) {
+          setRenderedQrImage(dataUrl);
+          return;
+        }
+      } catch (e) {}
+
+      if (isMounted) {
+        setRenderedQrImage(base64 || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}`);
+      }
     }
-
+    renderQr();
     return () => {
       isMounted = false;
     };
@@ -652,7 +653,7 @@ export default function TopUpPage() {
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={renderedQrImage || qrisData.base64Image}
+                src={(renderedQrImage && renderedQrImage.startsWith("data:image/")) ? renderedQrImage : (qrisData.base64Image || "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(qrisData.qris_code || ""))}
                 alt="QRIS Code"
                 onError={async () => {
                   const raw = qrisData.qris_code || qrisData.base64Image;

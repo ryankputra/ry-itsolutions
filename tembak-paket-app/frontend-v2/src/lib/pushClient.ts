@@ -33,10 +33,9 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
   try {
     const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    await navigator.serviceWorker.ready;
     return reg;
   } catch (err) {
-    console.error('[PushClient] Service worker registration failed:', err);
+    // Silent catch so it never interrupts app execution
     return null;
   }
 }

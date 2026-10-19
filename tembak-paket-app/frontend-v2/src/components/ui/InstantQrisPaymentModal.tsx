@@ -74,31 +74,41 @@ export function InstantQrisPaymentModal({
   const [isChecking, setIsChecking] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Automatically render QR code with High error correction & center logo overlay
+  // Automatically render QR code using client canvas generator with badge ('G' or 'S')
   useEffect(() => {
-    if (!qrisData) {
-      setRenderedQrImage("");
-      return;
-    }
-
     let isMounted = true;
-    const raw = qrisData.qris_code || qrisData.qris_image || "";
+    async function renderQr() {
+      if (!qrisData) {
+        if (isMounted) setRenderedQrImage("");
+        return;
+      }
+      const raw = qrisData.qris_code || (qrisData as any).qrisCode || "";
+      const base64 = (qrisData as any).base64Image || qrisData.qris_image || "";
 
-    if (raw) {
-      // Pass both raw EMVCo code and base64 image through generateQrisCanvasDataUrl
-      // to ensure the app logo (/logo.png) is rendered in the center
-      const activeGw = qrisData.gateway || qrisData.active_gateway || '';
-      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
-      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar })
-        .then((url) => {
-          if (isMounted && url) setRenderedQrImage(url);
-        })
-        .catch((err) => {
-          console.error("QRIS Canvas generator error:", err);
-          if (isMounted) setRenderedQrImage(qrisData.qris_image || raw);
-        });
+      if (!raw && base64) {
+        if (isMounted) setRenderedQrImage(base64);
+        return;
+      }
+      if (!raw) {
+        if (isMounted) setRenderedQrImage(base64);
+        return;
+      }
+      const activeGw = (qrisData as any).active_gateway || (qrisData as any).gateway || qrisData.merchant || "";
+      const badgeChar = activeGw.toLowerCase().includes("shopee") ? "S" : (activeGw.toLowerCase().includes("gopay") ? "G" : "");
+      
+      try {
+        const dataUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar, width: 512 });
+        if (isMounted && dataUrl) {
+          setRenderedQrImage(dataUrl);
+          return;
+        }
+      } catch (e) {}
+
+      if (isMounted) {
+        setRenderedQrImage(base64 || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}`);
+      }
     }
-
+    renderQr();
     return () => {
       isMounted = false;
     };
@@ -368,7 +378,7 @@ export function InstantQrisPaymentModal({
               <div className="relative p-3 rounded-2xl bg-white border border-slate-200 shadow-md inline-block mx-auto">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={renderedQrImage || qrisData.qris_image}
+                  src={(renderedQrImage && renderedQrImage.startsWith("data:image/")) ? renderedQrImage : (qrisData.qris_image || "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(qrisData.qris_code || ""))}
                   alt="QRIS Pembayaran Direct"
                   onError={async () => {
                     const raw = qrisData.qris_code || qrisData.qris_image;

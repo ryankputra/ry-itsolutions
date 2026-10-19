@@ -21,7 +21,7 @@
   "app/(main)/admin/broadcast/page.tsx -> @/lib/pushClient": {
     "id": 51016,
     "files": [
-      "static/chunks/1016.8ab3d59feea29bf0.js"
+      "static/chunks/1016.7cfb3fdb11416b04.js"
     ]
   },
   "app/(main)/layout.tsx -> @/lib/sweetalert": {
