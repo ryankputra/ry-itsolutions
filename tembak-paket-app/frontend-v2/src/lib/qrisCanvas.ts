@@ -91,22 +91,28 @@ export async function generateQrisCanvasDataUrl(
   }
 
   // 2. Render base QR Code (either from base64 image or generating from EMVCo payload)
-  if (cleanPayload.startsWith("data:image/")) {
+  if (cleanPayload.startsWith("data:image/") || cleanPayload.startsWith("http://") || cleanPayload.startsWith("https://")) {
     const qrImg = await loadImageAsync(cleanPayload);
     if (!qrImg) return cleanPayload;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvasWidth, canvasWidth);
     ctx.drawImage(qrImg, 0, 0, canvasWidth, canvasWidth);
   } else {
-    await QRCode.toCanvas(canvas, cleanPayload, {
-      errorCorrectionLevel,
-      margin,
-      width: canvasWidth,
-      color: {
-        dark: "#000000",
-        light: "#ffffff",
-      },
-    });
+    try {
+      await QRCode.toCanvas(canvas, cleanPayload, {
+        errorCorrectionLevel,
+        margin,
+        width: canvasWidth,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      });
+    } catch (qrErr) {
+      console.error("QRCode.toCanvas generation error:", qrErr);
+      // Fallback: draw error text or return payload as is if canvas generation fails
+      return cleanPayload;
+    }
   }
 
   // 3. Calculate Center White Pad Dimensions (~20-22% of total canvas width)
@@ -158,7 +164,7 @@ export async function generateQrisCanvasDataUrl(
     }
     ctx.fill();
 
-    ctx.font = `black ${Math.round(padSize * 0.55)}px system-ui, -apple-system, sans-serif`;
+    ctx.font = `900 ${Math.round(padSize * 0.52)}px system-ui, -apple-system, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
