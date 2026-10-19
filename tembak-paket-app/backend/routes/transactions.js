@@ -1344,10 +1344,68 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
             return res.status(400).json({ status: false, message: `Jumlah top up minimal Rp ${minLimit.toLocaleString('id-ID')}` });
         }
 
-        const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
-        const activeGateway = gwRow ? gwRow.value : 'orkut';
-        const requestedGw = String(gateway || provider || paymentMethod || '').toLowerCase();
-        const isGopay = (requestedGw === 'gopay') || (activeGateway === 'gopay' && requestedGw !== 'nobu' && requestedGw !== 'orkut');
+        const modeRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_gateway_mode'").catch(() => null);
+        const mode = modeRow ? modeRow.value : 'rotate'; // 'rotate', 'gopay', 'shoppepay'
+
+        let chosenGateway = 'gopay';
+        if (mode === 'shoppepay') {
+            chosenGateway = 'shoppepay';
+        } else if (mode === 'rotate') {
+            const counterRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_counter'").catch(() => null);
+            let counter = counterRow ? parseInt(counterRow.value || '0', 10) : 0;
+            counter = (counter + 1) % 1000000;
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_counter', ?)", [String(counter)]).catch(() => {});
+            chosenGateway = (counter % 2 !== 0) ? 'gopay' : 'shoppepay';
+        }
+
+        const isShopee = (chosenGateway === 'shoppepay') || (requestedGw.includes('shopee'));
+
+        if (isShopee) {
+            const shopeeStaticRow = await dbGet("SELECT value FROM settings WHERE key = 'shoppepay_qris_static'").catch(() => null);
+            const shopeeStatic = shopeeStaticRow ? shopeeStaticRow.value : '';
+            const topUpId = `TU-SP-${Date.now()}`;
+            const expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
+            
+            let qrisImg = '';
+            if (shopeeStatic) {
+                try {
+                    const qrcodeLib = require('qrcode');
+                    qrisImg = await qrcodeLib.toDataURL(shopeeStatic, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
+                } catch (e) {}
+            }
+
+            logUserActivity({
+                userId,
+                userName: user.name,
+                userEmail: user.email,
+                action: 'TOPUP',
+                description: `Permintaan topup saldo Rp ${Math.round(baseAmount).toLocaleString('id-ID')} via ShopeePay QRIS`,
+                path: '/topup',
+                req
+            });
+            await dbRun(
+                "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', new Date().toISOString(), qrisImg]
+            );
+
+            return res.status(200).json({
+                status: true,
+                message: 'QRIS ShopeePay berhasil dibuat.',
+                topUpId,
+                gateway: 'shoppepay',
+                merchant: 'ShopeePay Merchant',
+                active_gateway: 'shoppepay',
+                qrisData: {
+                    base64Image: qrisImg,
+                    qrisCode: shopeeStatic,
+                    uniqueAmount: baseAmount,
+                    createdAt: new Date().toISOString(),
+                    expiresAt: expiresAtSec,
+                    merchant: 'ShopeePay Merchant',
+                    active_gateway: 'shoppepay'
+                }
+            });
+        }
 
         if (isGopay) {
             const gopayData = await generateGopayQris(baseAmount);
