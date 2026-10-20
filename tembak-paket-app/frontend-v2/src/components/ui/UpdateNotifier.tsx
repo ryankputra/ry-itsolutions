@@ -31,7 +31,7 @@ export function UpdateNotifier() {
   if (!updateAvailable) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-blue-400 animate-bounce">
+    <div className="fixed top-20 right-4 sm:bottom-4 sm:top-auto z-50 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-blue-400 animate-bounce">
       <div>
         <p className="font-bold text-sm">Update Baru Tersedia! 🚀</p>
         <p className="text-xs text-blue-100">Versi baru aplikasi telah di-deploy.</p>

@@ -100,7 +100,7 @@ export const PushNotificationBanner: React.FC = () => {
   if (!supported || !showBanner) return null;
 
   return (
-    <div className="fixed bottom-20 sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-50 max-w-md animate-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-24 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-50 max-w-md animate-in slide-in-from-bottom-5 duration-300">
       <div className="relative p-4 sm:p-4.5 rounded-2xl border border-primary/30 bg-canvas/95 backdrop-blur-md shadow-2xl space-y-3 ring-1 ring-primary/20">
         {/* Close button */}
         <button
