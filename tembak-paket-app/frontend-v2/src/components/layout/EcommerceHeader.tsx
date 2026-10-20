@@ -134,7 +134,6 @@ export function EcommerceHeader() {
     : [
         { label: "Beranda", href: "/dashboard" },
         { label: "Payment Gateway", href: "/gateway" },
-        { label: "Pusat Bantuan", href: "/tickets" },
         { label: "Add Roamer", href: "/add-roamer" },
         { label: "Cek CEIR", href: "/cek-ceir" },
         ...(showBarcodeMenu ? [{ label: "Create Barcode", href: "/barcode" }] : []),
