@@ -48,7 +48,7 @@ function handleDeploy(req, res) {
   console.log(`[SELF_DEPLOY] Triggered. Working dir: ${repoRoot}`);
   // ponytail: .next di-commit sbg artifact deploy; perubahan lokalnya selalu konflik, jadi reset dulu.
   // Stash sisa source changes (fitur lokal STB) biar pull bersih, lalu pulihkan.
-  const deployCmd = `git -C "${repoRoot}" checkout -- tembak-paket-app/frontend-v2/.next && git -C "${repoRoot}" stash push -u -m "auto-deploy" && git -C "${repoRoot}" pull origin main && (git -C "${repoRoot}" stash pop || true); pm2 restart rystore-backend && pm2 restart rystore-frontend`;
+  const deployCmd = `git -C "${repoRoot}" stash push -u -m "auto-deploy" && git -C "${repoRoot}" pull origin main && cd /www/wwwroot/ry-itsolutions/tembak-paket-app/frontend-v2 && tar -xzf next.tar.gz && (git -C "${repoRoot}" stash pop || true); pm2 restart rystore-backend && pm2 restart rystore-frontend`;
   exec(deployCmd, { cwd: repoRoot, shell: true }, (err, stdout, stderr) => {
     if (err) {
       console.error(`[SELF_DEPLOY] FAILED: ${err.message}`);
