@@ -176,7 +176,82 @@ export default function DashboardPage() {
   const userCoins = user?.coins || 0;
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-16">
+    <div className="space-y-4 max-w-7xl mx-auto pb-16 relative bg-canvas min-h-screen -m-4 p-4 sm:-m-8 sm:p-8 overflow-hidden">
+      {/* Animated Floating Gradient Orbs */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-10 left-10 w-96 h-96 bg-blue-500/25 dark:bg-blue-600/30 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-[450px] h-[450px] bg-indigo-500/20 dark:bg-purple-600/25 rounded-full blur-[120px]" style={{ animation: 'pulse 6s infinite ease-in-out' }} />
+        <div className="absolute top-1/2 left-1/3 w-80 h-80 bg-cyan-400/20 dark:bg-blue-500/25 rounded-full blur-[90px]" style={{ animation: 'bounce 8s infinite ease-in-out' }} />
+      </div>
+
+      {/* 3D Particle Animation Canvas Background */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <canvas
+          id="dashboardParticleCanvas"
+          className="absolute inset-0 w-full h-full opacity-35 dark:opacity-55"
+          ref={(node) => {
+            if (!node) return;
+            const canvas = node;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            let animId: number;
+            let w = (canvas.width = canvas.offsetWidth);
+            let h = (canvas.height = canvas.offsetHeight);
+            const particles: Array<{ x: number; y: number; vx: number; vy: number; r: number }> = [];
+            for (let i = 0; i < 50; i++) {
+              particles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                vx: (Math.random() - 0.5) * 0.8,
+                vy: (Math.random() - 0.5) * 0.8,
+                r: Math.random() * 2 + 1,
+              });
+            }
+            const handleResize = () => {
+              if (!canvas) return;
+              w = canvas.width = canvas.offsetWidth;
+              h = canvas.height = canvas.offsetHeight;
+            };
+            window.addEventListener('resize', handleResize);
+            const draw = () => {
+              ctx.clearRect(0, 0, w, h);
+              ctx.fillStyle = document.documentElement.classList.contains('dark') ? 'rgba(59, 130, 246, 0.45)' : 'rgba(37, 99, 235, 0.35)';
+              ctx.strokeStyle = document.documentElement.classList.contains('dark') ? 'rgba(59, 130, 246, 0.18)' : 'rgba(37, 99, 235, 0.15)';
+              ctx.lineWidth = 1;
+              particles.forEach((p, idx) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0 || p.x > w) p.vx *= -1;
+                if (p.y < 0 || p.y > h) p.vy *= -1;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+                for (let j = idx + 1; j < particles.length; j++) {
+                  const p2 = particles[j];
+                  const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                  if (dist < 120) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                  }
+                }
+              });
+              animId = requestAnimationFrame(draw);
+            };
+            draw();
+            return () => {
+              cancelAnimationFrame(animId);
+              window.removeEventListener('resize', handleResize);
+            };
+          }}
+        />
+      </div>
+      {/* Decorative Ambient Gradient Glow mimicking landing page */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-primary/10 rounded-full blur-[140px] pointer-events-none z-0" />
+
+      <div className="relative z-10 space-y-4">
+
       {/* Promo Announcement Popup Modal (Mobile & Desktop) */}
       <PromoPopupModal />
 
@@ -875,6 +950,7 @@ export default function DashboardPage() {
           adminNote: selectedInvoiceTrx.admin_note || selectedInvoiceTrx.adminNote
         } : null}
       />
+      </div>
     </div>
   );
 }

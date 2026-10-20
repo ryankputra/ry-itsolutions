@@ -81,24 +81,70 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink font-sans selection:bg-primary selection:text-white transition-colors duration-300 overflow-x-hidden">
-      {/* Favicon */}
-      <head>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230071e3' stroke-width='2.5'><path stroke-linecap='round' stroke-linejoin='round' d='M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 10V10.5M4.5 19V10.5'/></svg>" />
-      </head>
-
-      {/* Ambient Glow Background */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] glow-gradient pointer-events-none -z-10" />
+    <div className="min-h-screen bg-canvas text-ink font-sans selection:bg-primary selection:text-white transition-colors duration-300 overflow-x-hidden relative">
+      {/* 3D Particle Animation Canvas Background */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <canvas
+          id="particleCanvas"
+          className="absolute inset-0 w-full h-full opacity-40 dark:opacity-60"
+          ref={(node) => {
+            if (!node) return;
+            const canvas = node;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            let animId: number;
+            let w = (canvas.width = canvas.offsetWidth);
+            let h = (canvas.height = canvas.offsetHeight);
+            const particles: Array<{ x: number; y: number; vx: number; vy: number; r: number }> = [];
+            for (let i = 0; i < 60; i++) {
+              particles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                vx: (Math.random() - 0.5) * 0.6,
+                vy: (Math.random() - 0.5) * 0.6,
+                r: Math.random() * 2 + 1
+              });
+            }
+            const draw = () => {
+              ctx.clearRect(0, 0, w, h);
+              ctx.fillStyle = '#3b82f6';
+              ctx.strokeStyle = 'rgba(59, 130, 246, 0.15)';
+              particles.forEach((p, idx) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0 || p.x > w) p.vx *= -1;
+                if (p.y < 0 || p.y > h) p.vy *= -1;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+                for (let j = idx + 1; j < particles.length; j++) {
+                  const p2 = particles[j];
+                  const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                  if (dist < 130) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                  }
+                }
+              });
+              animId = requestAnimationFrame(draw);
+            };
+            draw();
+            return () => cancelAnimationFrame(animId);
+          }}
+        />
+      </div>
 
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-canvas/90 backdrop-blur-xl border-b border-hairline transition-colors">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4 sm:gap-10">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform text-sm sm:text-base">
                 RY
               </div>
-              <span className="font-extrabold tracking-tight text-ink text-lg">Ry-ITSolutions</span>
+              <span className="font-extrabold tracking-tight text-ink text-sm sm:text-lg">Ry-IT</span>
             </Link>
             <nav className="hidden md:flex items-center gap-8 text-xs font-mono uppercase tracking-widest text-ink-muted">
               <a href="#layanan" className="hover:text-primary transition-colors">Layanan</a>
@@ -108,63 +154,63 @@ export default function LandingPage() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={toggleDarkMode}
-              className="p-2.5 text-ink-muted hover:text-ink transition-colors border border-hairline rounded-xl bg-parchment hover:bg-parchment/80 shadow-sm"
+              className="p-2 text-ink-muted hover:text-ink transition-colors border border-hairline rounded-lg sm:rounded-xl bg-parchment hover:bg-parchment/80 shadow-sm"
               title="Toggle Theme"
             >
               {isDark ? (
-                <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
               ) : (
-                <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
               )}
             </button>
 
             <Link
               href="/cek-garansi"
-              className="px-4 py-2 border border-hairline bg-parchment hover:bg-parchment/80 font-medium text-xs text-ink transition-colors rounded-xl shadow-sm"
+              className="hidden sm:inline-flex px-3 sm:px-4 py-2 border border-hairline bg-parchment hover:bg-parchment/80 font-medium text-xs text-ink transition-colors rounded-lg sm:rounded-xl shadow-sm"
             >
               Cek Garansi
             </Link>
 
             <Link
               href="/login"
-              className="px-5 py-2.5 bg-primary text-white font-bold text-xs shadow-lg shadow-primary/25 hover:opacity-95 transition-all rounded-xl hover:scale-[1.02]"
+              className="px-3 sm:px-5 py-2 sm:py-2.5 bg-primary text-white font-bold text-[11px] sm:text-xs shadow-lg shadow-primary/25 hover:opacity-95 transition-all rounded-lg sm:rounded-xl hover:scale-[1.02]"
             >
-              Masuk / Daftar
+              Masuk
             </Link>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-36 overflow-hidden animate-fade-in-up">
+      <section className="relative pt-12 pb-24 overflow-hidden animate-fade-in-up">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
             {/* Left Copy */}
-            <div className="lg:col-span-7 space-y-8">
-              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/25 text-primary font-medium text-xs backdrop-blur-md shadow-inner">
-                <span className="w-2.5 h-2.5 rounded-full bg-primary animate-ping"></span>
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary font-medium text-xs backdrop-blur-md shadow-inner">
+                <span className="w-2 h-2 rounded-full bg-primary animate-ping"></span>
                 Infrastruktur Sinyal IMEI &amp; Gateway Pembayaran Otomatis
               </div>
 
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.1]">
                 Sinyal Tanpa Batas, <br />
                 <span className="bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   Gateway Tanpa Kendala.
                 </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-ink-muted leading-relaxed max-w-2xl font-normal">
-                Pusat solusi teknologi digital terpadu: Aktivasi sinyal HP Inter All Operator bergaransi resmi, query database CEIR nasional secara real-time, serta integrasi Payment Gateway QRIS GoPay 24 jam untuk bisnis Anda.
+              <p className="text-sm sm:text-base text-ink-muted leading-relaxed max-w-xl font-normal">
+                Pusat solusi teknologi digital terpadu: Aktivasi sinyal HP Inter All Operator bergaransi resmi, query database CEIR nasional secara real-time, serta integrasi Payment Gateway QRIS 24 jam untuk bisnis Anda.
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Link
                   href="/add-roamer"
-                  className="px-7 py-4 bg-primary text-white font-bold text-xs sm:text-sm shadow-xl shadow-primary/25 hover:opacity-95 transition-all rounded-xl flex items-center gap-2.5 hover:scale-[1.02]"
+                  className="px-6 py-3.5 bg-primary text-white font-bold text-xs sm:text-sm shadow-xl shadow-primary/25 hover:opacity-95 transition-all rounded-xl flex items-center gap-2 hover:scale-[1.02]"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
                   Aktivasi Sinyal IMEI
@@ -172,56 +218,56 @@ export default function LandingPage() {
 
                 <Link
                   href="/gateway"
-                  className="px-7 py-4 border border-hairline bg-parchment hover:bg-parchment/80 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl backdrop-blur-md shadow-sm"
+                  className="px-6 py-3.5 border border-hairline bg-parchment hover:bg-parchment/80 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl backdrop-blur-md shadow-sm"
                 >
-                  Payment Gateway GoPay
+                  Payment Gateway
                 </Link>
 
                 <Link
                   href="/cek-ceir"
-                  className="px-7 py-4 border border-hairline bg-transparent hover:bg-parchment/40 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl"
+                  className="px-6 py-3.5 border border-hairline bg-transparent hover:bg-parchment/40 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl"
                 >
                   Cek Status CEIR
                 </Link>
               </div>
 
               {/* Metrics / Trust */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-10 border-t border-hairline">
-                <div className="space-y-1">
-                  <div className="text-3xl font-black text-ink tracking-tight">100%</div>
-                  <div className="text-xs text-ink-muted font-medium">Garansi Sinyal Aktif</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-hairline">
+                <div className="space-y-0.5">
+                  <div className="text-2xl font-black text-ink tracking-tight">100%</div>
+                  <div className="text-[11px] text-ink-muted font-medium">Garansi Sinyal Aktif</div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-3xl font-black text-primary tracking-tight">24/7</div>
-                  <div className="text-xs text-ink-muted font-medium">Gateway Auto-Mutasi</div>
+                <div className="space-y-0.5">
+                  <div className="text-2xl font-black text-primary tracking-tight">24/7</div>
+                  <div className="text-[11px] text-ink-muted font-medium">Gateway Auto-Mutasi</div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-3xl font-black text-ink tracking-tight">CEIR</div>
-                  <div className="text-xs text-ink-muted font-medium">Database Nasional</div>
+                <div className="space-y-0.5">
+                  <div className="text-2xl font-black text-ink tracking-tight">CEIR</div>
+                  <div className="text-[11px] text-ink-muted font-medium">Database Nasional</div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-3xl font-black text-blue-600 tracking-tight">API</div>
-                  <div className="text-xs text-ink-muted font-medium">Webhook Instan</div>
+                <div className="space-y-0.5">
+                  <div className="text-2xl font-black text-blue-600 tracking-tight">API</div>
+                  <div className="text-[11px] text-ink-muted font-medium">Webhook Instan</div>
                 </div>
               </div>
             </div>
 
             {/* Right Widget: Modern Interactive Glassmorphic Card */}
             <div className="lg:col-span-5">
-              <div className="relative p-7 sm:p-9 rounded-3xl bg-parchment border border-hairline backdrop-blur-2xl shadow-2xl space-y-6 group hover:border-primary/50 transition-all">
+              <div className="relative p-6 sm:p-7 rounded-3xl bg-parchment border border-hairline backdrop-blur-2xl shadow-2xl space-y-5 group hover:border-primary/50 transition-all">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-500/5 rounded-3xl pointer-events-none" />
                 
-                <div className="flex items-center justify-between border-b border-hairline pb-4 relative z-10">
+                <div className="flex items-center justify-between border-b border-hairline pb-3.5 relative z-10">
                   <div>
                     <h2 className="font-bold text-sm text-ink tracking-wide">Live IMEI Inspector</h2>
-                    <p className="text-xs text-ink-muted mt-0.5">Deteksi otomatis spesifikasi perangkat dari TAC</p>
+                    <p className="text-[11px] text-ink-muted mt-0.5">Deteksi otomatis spesifikasi perangkat dari TAC</p>
                   </div>
-                  <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 font-mono text-[10px] uppercase font-bold rounded-full">
-                    Active System
+                  <span className="px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/20 font-mono text-[10px] uppercase font-bold rounded-full">
+                    Active
                   </span>
                 </div>
 
-                <div className="space-y-2 relative z-10">
+                <div className="space-y-1.5 relative z-10">
                   <label className="text-xs font-semibold text-ink">Nomor IMEI (15 Digit)</label>
                   <input
                     type="text"
@@ -229,38 +275,38 @@ export default function LandingPage() {
                     value={testImei}
                     onChange={(e) => setTestImei(e.target.value.replace(/\D/g, ""))}
                     placeholder="Contoh: 353969101788981"
-                    className="w-full px-4.5 py-4 bg-canvas border border-hairline focus:border-primary font-mono text-sm outline-none transition-all text-ink rounded-2xl placeholder:text-ink-muted/50 shadow-inner"
+                    className="w-full px-4 py-3 bg-canvas border border-hairline focus:border-primary font-mono text-xs outline-none transition-all text-ink rounded-xl placeholder:text-ink-muted/50 shadow-inner"
                   />
-                  <p className="text-[11px] text-ink-muted">Masukkan minimal 8 digit pertama IMEI Anda.</p>
+                  <p className="text-[10px] text-ink-muted">Masukkan minimal 8 digit pertama IMEI Anda.</p>
                 </div>
 
                 {analyzed?.brand ? (
-                  <div className="p-4 bg-primary/10 border border-primary/30 rounded-2xl space-y-2 relative z-10 animate-fade-in-up">
-                    <div className="flex items-center justify-between text-xs font-mono">
+                  <div className="p-3.5 bg-primary/10 border border-primary/30 rounded-xl space-y-1.5 relative z-10 animate-fade-in-up">
+                    <div className="flex items-center justify-between text-[11px] font-mono">
                       <span className="text-primary font-bold uppercase">Perangkat Teridentifikasi</span>
                       {analyzed.isValidLuhn && (
-                        <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold rounded-md">
+                        <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-bold rounded">
                           GSMA Valid
                         </span>
                       )}
                     </div>
-                    <div className="text-sm font-bold text-ink">
+                    <div className="text-xs font-bold text-ink">
                       {analyzed.brand} {analyzed.model}
                     </div>
-                    <div className="text-xs font-mono text-ink-muted">
+                    <div className="text-[11px] font-mono text-ink-muted">
                       IMEI: {testImei}
                     </div>
                   </div>
                 ) : testImei.length >= 8 ? (
-                  <div className="p-4 bg-canvas border border-hairline text-xs font-mono text-ink-muted rounded-2xl relative z-10">
+                  <div className="p-3.5 bg-canvas border border-hairline text-[11px] font-mono text-ink-muted rounded-xl relative z-10">
                     Menganalisis TAC {testImei.slice(0, 8)}...
                   </div>
                 ) : null}
 
-                <div className="pt-2 relative z-10">
+                <div className="pt-1 relative z-10">
                   <Link
                     href={`/add-roamer${testImei.length >= 8 ? `?imei=${testImei}` : ""}`}
-                    className="w-full py-4 bg-primary text-white hover:opacity-95 font-bold text-xs uppercase tracking-wider text-center block rounded-2xl shadow-lg shadow-primary/25"
+                    className="w-full py-3.5 bg-primary text-white hover:opacity-95 font-bold text-xs uppercase tracking-wider text-center block rounded-xl shadow-lg shadow-primary/25"
                   >
                     Proses Unblock Perangkat Ini &gt;
                   </Link>

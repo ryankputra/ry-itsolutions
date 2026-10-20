@@ -221,6 +221,12 @@
       "namedRegex": "^/admin/whatsapp(?:/)?$"
     },
     {
+      "page": "/adminmode",
+      "regex": "^/adminmode(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/adminmode(?:/)?$"
+    },
+    {
       "page": "/ai",
       "regex": "^/ai(?:/)?$",
       "routeKeys": {},

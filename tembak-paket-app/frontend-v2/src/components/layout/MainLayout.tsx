@@ -3,13 +3,18 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { EcommerceHeader } from "./EcommerceHeader";
 import { BottomNav } from "./BottomNav";
+import { DeveloperBar } from "@/components/DeveloperBar";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAiPage = pathname === "/ai";
 
   return (
-    <div className={`min-h-screen bg-[#F5F5F7] dark:bg-[#000000] flex flex-col transition-colors duration-200 ${isAiPage ? "h-[100dvh] max-h-[100dvh] overflow-hidden" : ""}`}>
+    <div className={`min-h-screen bg-[#F2F2F7] dark:bg-[#050505] flex flex-col transition-colors duration-200 relative ${isAiPage ? "h-[100dvh] max-h-[100dvh] overflow-hidden" : ""}`}>
+      {/* Decorative Modern Mesh/Blob Background Accents */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/3 right-10 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none" />
+
       {/* 1. Full E-Commerce Header (Top Nav) */}
       <EcommerceHeader />
 
@@ -26,6 +31,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* 3. Mobile App Bottom Navigation Bar */}
       <BottomNav />
+      <DeveloperBar />
     </div>
   );
 }

@@ -555,14 +555,14 @@ async function getAdminPhoneNumbers(paymentMethod = '') {
     }
 
     // 0. Additional Primary Administrator Numbers
-    const primaryAdmins = ["6287767287284", primaryGoPayAdmin, primaryShopeeAdmin];
+    const primaryAdmins = [primaryGoPayAdmin, primaryShopeeAdmin];
     primaryAdmins.forEach(num => {
         const cp = cleanPhone(num);
         if (cp) adminPhones.add(cp);
     });
 
     // 1. From environment variables
-    const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || "6287767287284";
+    const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || "6285156692166,6288706611370";
     envAdmin.split(",").forEach(num => {
         const cp = cleanPhone(num.trim());
         if (cp) adminPhones.add(cp);

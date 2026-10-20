@@ -25,8 +25,7 @@ module.exports = {
     {
       name: "rystore-frontend",
       cwd: "./tembak-paket-app/frontend-v2",
-      script: "node_modules/next/dist/bin/next",
-      args: "start -p 3005",
+      script: "server.js",
       env: {
         NODE_ENV: "production",
         PORT: 3005

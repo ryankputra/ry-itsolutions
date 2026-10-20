@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RY-ITSolutions — Enterprise Infrastructure & Paket Data Gateway</title>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #030712;
+      --card: rgba(17, 24, 39, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #3b82f6;
+    }
+    body {
+      font-family: 'Geist', system-ui, sans-serif;
+      background-color: var(--bg);
+      color: #f9fafb;
+      overflow-x: hidden;
+    }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .glass-card {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 0 0 1px var(--border), 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #60a5fa 0%, #a855f7 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-blue-500 selection:text-white">
+
+  <!-- 3D Interactive Canvas Background -->
+  <div id="canvas-container"></div>
+
+  <!-- Header / Navigation -->
+  <header class="w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between z-10">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <div>
+        <span class="font-bold text-lg tracking-tight">RY-ITSOLUTIONS</span>
+        <span class="block text-[10px] text-blue-400 font-mono tracking-widest uppercase">Gateway V2.6 Enterprise</span>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <a href="/login" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition border border-white/10">Masuk Panel</a>
+      <a href="/topup" class="px-5 py-2.5 rounded-full text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition">Topup Instan</a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="w-full max-w-5xl mx-auto px-6 py-16 md:py-24 z-10 flex flex-col items-center text-center">
+    <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono mb-8 animate-pulse">
+      <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+      <span>Dual Gateway Engine (GoPay + ShopeePay) Active</span>
+    </div>
+
+    <h1 class="text-4xl md:text-7xl font-bold tracking-tight mb-6 max-w-4xl">
+      Next-Gen Paket Data & <span class="gradient-text">Instant Payment Gateway</span>
+    </h1>
+
+    <p class="text-lg md:text-xl text-slate-400 max-w-2xl mb-12 font-light leading-relaxed">
+      Sistem injeksi otomatis berkecepatan tinggi dengan rotasi multi-gateway cerdas, QRIS EMVCo dinamis, dan sinkronisasi real-time.
+    </p>
+
+    <!-- Interactive Action Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+      <a href="/topup" class="glass-card p-6 rounded-2xl text-left hover:border-blue-500/50 transition group relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition"></div>
+        <div class="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold mb-1">Topup QRIS Instan</h3>
+        <p class="text-sm text-slate-400">Scan & bayar otomatis via GoPay atau ShopeePay dengan nominal pas.</p>
+      </a>
+
+      <a href="/login" class="glass-card p-6 rounded-2xl text-left hover:border-purple-500/50 transition group relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition"></div>
+        <div class="w-12 h-12 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-110 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold mb-1">Login Admin Panel</h3>
+        <p class="text-sm text-slate-400">Konfigurasi dual gateway, pantau transaksi, dan manajemen bot WhatsApp.</p>
+      </a>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-7xl mx-auto px-6 py-8 border-t border-white/5 text-center text-xs text-slate-500 z-10 flex flex-col md:flex-row items-center justify-between">
+    <p>&copy; 2026 RY-ITSOLUTIONS. All rights reserved.</p>
+    <div class="flex items-center space-x-6 mt-4 md:mt-0 font-mono">
+      <span class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>STB Core Online</span></span>
+      <span>Port: 3005</span>
+    </div>
+  </footer>
+
+  <!-- Three.js 3D Background Animation Script -->
+  <script>
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    // Create Particle Field
+    const particleCount = 1200;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+
+    for(let i = 0; i < particleCount * 3; i++) {
+      positions[i] = (Math.random() - 0.5) * 20;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.PointsMaterial({
+      size: 0.03,
+      color: 0x3b82f6,
+      transparent: true,
+      opacity: 0.7
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    camera.position.z = 5;
+
+    // Mouse movement interaction
+    let mouseX = 0, mouseY = 0;
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX - window.innerWidth / 2) * 0.0005;
+      mouseY = (e.clientY - window.innerHeight / 2) * 0.0005;
+    });
+
+    // Animation loop
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsedTime = clock.getElapsedTime();
+
+      particles.rotation.y = elapsedTime * 0.05 + mouseX;
+      particles.rotation.x = elapsedTime * 0.03 + mouseY;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

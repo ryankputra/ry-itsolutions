@@ -56,6 +56,7 @@ export default function AdminSettingsPage() {
 
   // Dual Gateway State
   const [dualMode, setDualMode] = useState("rotate");
+  const [rotateStart, setRotateStart] = useState("gopay");
   const [shoppepayUrl, setShoppepayUrl] = useState("http://127.0.0.1:3003");
   const [paymentCounter, setPaymentCounter] = useState(0);
   const [savingDual, setSavingDual] = useState(false);
@@ -139,6 +140,7 @@ export default function AdminSettingsPage() {
       const d = await safeJson(res);
       if (d?.status) {
         setDualMode(d.mode || "rotate");
+        setRotateStart(d.rotate_start || "gopay");
         setPaymentCounter(d.counter || 0);
         setShoppepayUrl(d.shoppepay_url || "http://127.0.0.1:3003");
       }
@@ -152,7 +154,7 @@ export default function AdminSettingsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ mode: dualMode, shoppepay_url: shoppepayUrl }),
+        body: JSON.stringify({ mode: dualMode, rotate_start: rotateStart, shoppepay_url: shoppepayUrl }),
       });
       const d = await safeJson(res);
       if (d?.status) {
@@ -204,6 +206,7 @@ export default function AdminSettingsPage() {
 
   // Sidebar Menu Settings
   const [showBeliPaket, setShowBeliPaket] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [savingMenuSettings, setSavingMenuSettings] = useState(false);
 
   // Auto Deploy Console
@@ -536,12 +539,21 @@ export default function AdminSettingsPage() {
       })
       .catch(() => {});
 
-    // Load Menu Settings
+    // Load Menu Settings & Maintenance Status
     fetch("/api/admin/menu-settings", { credentials: "include" })
       .then((r) => safeJson(r))
       .then((d) => {
         if (d?.status && d.data) {
           setShowBeliPaket(Boolean(d.data.showBeliPaket));
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/admin/maintenance-status", { credentials: "include" })
+      .then((r) => safeJson(r))
+      .then((d) => {
+        if (d?.status) {
+          setMaintenanceMode(Boolean(d.maintenanceMode));
         }
       })
       .catch(() => {});
@@ -1051,7 +1063,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div>
                 <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
                   Mode Gateway
@@ -1061,11 +1073,27 @@ export default function AdminSettingsPage() {
                   onChange={(e) => setDualMode(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
                 >
-                  <option value="rotate">🔄 Rotasi Otomatis (Ganjil GoPay, Genap ShopeePay)</option>
-                  <option value="gopay">📌 Prioritas Utama GoPay (GoBiz Utama)</option>
-                  <option value="shoppepay">📌 Prioritas Utama ShopeePay (Shopee Merchant Mitra)</option>
+                  <option value="rotate">🔄 Rotasi Otomatis</option>
+                  <option value="gopay">📌 Prioritas Utama GoPay</option>
+                  <option value="shoppepay">📌 Prioritas Utama ShopeePay</option>
                 </select>
               </div>
+
+              {dualMode === 'rotate' && (
+                <div>
+                  <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
+                    Mulai Rotasi Pertama Dari
+                  </label>
+                  <select
+                    value={rotateStart}
+                    onChange={(e) => setRotateStart(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-hairline bg-canvas text-ink font-medium focus:outline-none focus:border-primary"
+                  >
+                    <option value="gopay">GoPay Duluan (Lalu ShopeePay)</option>
+                    <option value="shoppepay">ShopeePay Duluan (Lalu GoPay)</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
@@ -1082,9 +1110,16 @@ export default function AdminSettingsPage() {
             </div>
 
             <div className="p-3 bg-canvas border border-hairline rounded-xl flex items-center justify-between text-xs">
-              <span className="font-bold text-ink">Giliran Polling / Gateway Aktif Saat Ini:</span>
-              <span className="px-2.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
-                {dualMode === 'gopay' ? 'GoPay (Prioritas Utama)' : dualMode === 'shoppepay' ? 'ShopeePay (Prioritas Utama)' : (paymentCounter % 2 === 1 ? 'GoPay (Counter Ganjil)' : 'ShopeePay (Counter Genap)')}
+              <span className="font-bold text-ink flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Giliran Polling / Gateway Aktif Saat Ini:
+              </span>
+              <span className="px-3 py-1 rounded-full font-bold bg-primary/15 text-primary text-xs shadow-sm">
+                {dualMode === 'gopay' ? 'GoPay (Prioritas Utama)' : dualMode === 'shoppepay' ? 'ShopeePay (Prioritas Utama)' : (
+                  rotateStart === 'shoppepay' 
+                    ? (paymentCounter % 2 === 0 ? 'ShopeePay' : 'GoPay')
+                    : (paymentCounter % 2 === 0 ? 'GoPay' : 'ShopeePay')
+                )} (Counter #{paymentCounter})
               </span>
             </div>
           </Card>
@@ -1248,6 +1283,45 @@ export default function AdminSettingsPage() {
             <Button className="w-full text-xs font-bold h-9" onClick={handleSaveMenuSettings} isLoading={savingMenuSettings}>
               Simpan Pengaturan Menu
             </Button>
+          </Card>
+
+          {/* Maintenance Mode Pengaturan Admin */}
+          <Card glass className="p-5 space-y-3 border-amber-500/30">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-500" />
+                  Mode Maintenance Publik
+                </h3>
+                <p className="text-xs text-ink-muted mt-0.5">Aktifkan untuk menutup akses pelanggan umum (akses hanya via /adminmode).</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={maintenanceMode}
+                  onChange={async (e) => {
+                    const val = e.target.checked;
+                    setMaintenanceMode(val);
+                    try {
+                      const res = await fetch("/api/admin/maintenance-status", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ maintenanceMode: val }),
+                        credentials: "include"
+                      });
+                      const d = await res.json();
+                      if (d.status) {
+                        Swal.fire({ title: "Berhasil", text: d.message, timer: 1500, showConfirmButton: false });
+                      }
+                    } catch (err) {
+                      Swal.fire({ title: "Gagal", text: "Terjadi kesalahan koneksi." });
+                    }
+                  }}
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
           </Card>
 
           {/* Database & Auto Deploy */}

@@ -9,14 +9,22 @@ async function getPaymentGatewaySelection(dbGet, dbRun) {
         if (mode === 'gopay') return 'gopay';
         if (mode === 'shoppepay') return 'shoppepay';
 
-        // Rotate mode (odd = gopay, even = shoppepay)
+        // Rotate mode
         const counterRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_counter'").catch(() => null);
         let counter = counterRow ? parseInt(counterRow.value || '0', 10) : 0;
         counter = (counter + 1) % 1000000;
         
         await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_counter', ?)", [String(counter)]).catch(() => {});
 
-        return (counter % 2 !== 0) ? 'gopay' : 'shoppepay';
+        const startRow = await dbGet("SELECT value FROM settings WHERE key = 'rotate_start'").catch(() => null);
+        const startWith = startRow ? startRow.value : 'gopay'; // 'gopay' or 'shoppepay'
+
+        const isEven = (counter % 2 === 0);
+        if (startWith === 'shoppepay') {
+            return isEven ? 'shoppepay' : 'gopay';
+        } else {
+            return isEven ? 'gopay' : 'shoppepay';
+        }
     } catch (err) {
         return 'gopay'; // Default fallback
     }

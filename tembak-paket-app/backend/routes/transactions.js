@@ -1333,38 +1333,47 @@ router.post('/user/transactions/:id/cancel', isAuthenticated, async (req, res) =
 // 4.5 GET /api/topup/gateway-info
 router.get('/topup/gateway-info', async (req, res) => {
     try {
-        const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
-        const activeGateway = gwRow ? gwRow.value : 'orkut';
-        const isOrkutReady = !!(process.env.ORKUT_MERCHANT_ID && process.env.ORKUT_TOKEN && QRIS_NOBU_STATIS_STRING);
-        const isGopayReady = !!(QRIS_GOPAY_STATIS_STRING);
+        const modeRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_gateway_mode'").catch(() => null);
+        const mode = modeRow ? modeRow.value : 'rotate';
+        const startRow = await dbGet("SELECT value FROM settings WHERE key = 'rotate_start'").catch(() => null);
+        const startWith = startRow ? startRow.value : 'gopay';
+        const counterRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_counter'").catch(() => null);
+        const counter = counterRow ? parseInt(counterRow.value || '0', 10) : 0;
+
+        let activeGateway = 'gopay';
+        if (mode === 'shoppepay') {
+            activeGateway = 'shoppepay';
+        } else if (mode === 'gopay') {
+            activeGateway = 'gopay';
+        } else {
+            const isEven = (counter % 2 === 0);
+            if (startWith === 'shoppepay') {
+                activeGateway = isEven ? 'shoppepay' : 'gopay';
+            } else {
+                activeGateway = isEven ? 'gopay' : 'shoppepay';
+            }
+        }
 
         res.json({
             status: true,
             data: {
                 active_gateway: activeGateway,
-                is_ready: activeGateway === 'gopay' ? isGopayReady : isOrkutReady,
-                message: `Gateway ${activeGateway.toUpperCase()} aktif & siap menerima transaksi.`,
+                mode: mode,
+                rotate_start: startWith,
+                counter: counter,
+                message: `Gateway ${activeGateway.toUpperCase()} sedang aktif untuk giliran berikutnya.`,
                 available_gateways: [
                     {
-                        id: 'orkut',
-                        code: 'qris_nobu',
-                        name: 'QRIS Nobu Bank (Semua E-Wallet / BCA / Mandiri)',
-                        merchant: 'RYYSTORE OK2285905',
-                        is_ready: isOrkutReady
+                        id: 'shoppepay',
+                        name: 'ShopeePay Merchant (Pacar)',
+                        is_ready: true
                     },
                     {
                         id: 'gopay',
-                        code: 'qris_gopay',
-                        name: 'QRIS GoPay Direct (Realtime)',
-                        merchant: 'RyyStore IT Solutions',
-                        is_ready: isGopayReady
+                        name: 'GoPay Merchant (Anda)',
+                        is_ready: true
                     }
-                ],
-                merchants: {
-                    orkut: 'RYYSTORE OK2285905',
-                    nobu: 'RYYSTORE OK2285905',
-                    gopay: 'RyyStore IT Solutions'
-                }
+                ]
             }
         });
     } catch (e) {
@@ -1393,12 +1402,23 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
         let chosenGateway = 'gopay';
         if (mode === 'shoppepay') {
             chosenGateway = 'shoppepay';
+        } else if (mode === 'gopay') {
+            chosenGateway = 'gopay';
         } else if (mode === 'rotate') {
             const counterRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_counter'").catch(() => null);
             let counter = counterRow ? parseInt(counterRow.value || '0', 10) : 0;
             counter = (counter + 1) % 1000000;
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_counter', ?)", [String(counter)]).catch(() => {});
-            chosenGateway = (counter % 2 !== 0) ? 'gopay' : 'shoppepay';
+            
+            const startRow = await dbGet("SELECT value FROM settings WHERE key = 'rotate_start'").catch(() => null);
+            const startWith = startRow ? startRow.value : 'gopay';
+            
+            const isEven = (counter % 2 === 0);
+            if (startWith === 'shoppepay') {
+                chosenGateway = isEven ? 'shoppepay' : 'gopay';
+            } else {
+                chosenGateway = isEven ? 'gopay' : 'shoppepay';
+            }
         }
 
         const requestedGw = (gateway || '').toLowerCase();
