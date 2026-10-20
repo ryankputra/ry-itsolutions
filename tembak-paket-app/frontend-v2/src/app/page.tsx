@@ -81,7 +81,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink font-sans selection:bg-primary selection:text-white transition-colors duration-300 overflow-x-hidden relative">
+    <div className="min-h-screen bg-canvas/60 backdrop-blur-xs text-ink font-sans selection:bg-primary selection:text-white transition-colors duration-300 overflow-x-hidden relative">
       {/* 3D Particle Animation Canvas Background */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <canvas

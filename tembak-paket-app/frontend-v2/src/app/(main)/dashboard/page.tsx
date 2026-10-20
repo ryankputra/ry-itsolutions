@@ -176,7 +176,7 @@ export default function DashboardPage() {
   const userCoins = user?.coins || 0;
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-16 relative bg-canvas min-h-screen -m-4 p-4 sm:-m-8 sm:p-8 overflow-hidden">
+    <div className="space-y-4 max-w-7xl mx-auto pb-16 relative bg-canvas/60 backdrop-blur-xs min-h-screen -m-4 p-4 sm:-m-8 sm:p-8 overflow-hidden">
       {/* Animated Floating Gradient Orbs */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-10 left-10 w-96 h-96 bg-blue-500/25 dark:bg-blue-600/30 rounded-full blur-[100px] animate-pulse" />
