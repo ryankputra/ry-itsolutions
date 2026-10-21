@@ -38,6 +38,16 @@ export default function DashboardPage() {
       image: "/banners/banner_imei.jpg",
     },
     {
+      title: "IKLAN SPONSOR GOOGLE ADSENSE",
+      subtitle: "Dukung pengembangan layanan dengan melihat iklan rekomendasi resmi partner kami.",
+      badge: "ADSENSE",
+      ctaText: "INFO >",
+      ctaLink: "#ads",
+      bgGradient: "from-slate-950/90 via-slate-900/80 to-transparent",
+      isAd: true,
+      adSlot: "1234567890",
+    },
+    {
       title: "PAYMENT GATEWAY GOPAY & QRIS",
       subtitle: "Terima pembayaran QRIS otomatis di web & bot toko Anda. Uang langsung masuk rekening GoPay.",
       badge: "UNOFFICIAL SAAS",
@@ -592,12 +602,30 @@ export default function DashboardPage() {
       <div className="relative w-full max-w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-hairline group box-border">
         <div className="relative w-full min-h-[165px] sm:min-h-[195px] flex flex-col justify-between p-4 sm:p-6 text-white transition-all duration-700 overflow-hidden box-border">
           {/* Background Talent Poster Image */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={heroSlides[currentSlide].image}
-            alt={heroSlides[currentSlide].title}
-            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 transform group-hover:scale-105 pointer-events-none"
-          />
+          {heroSlides[currentSlide].isAd ? (
+            <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4">
+              <div className="text-[10px] uppercase tracking-wider text-white/60 mb-2">Google AdSense Sponsor</div>
+              <div className="w-full max-w-xs bg-white rounded-xl p-2 text-black text-center min-h-[90px] flex items-center justify-center">
+                <ins
+                  className="adsbygoogle"
+                  style={{ display: "block", width: "100%" }}
+                  data-ad-client="ca-pub-2898811488813299"
+                  data-ad-slot={heroSlides[currentSlide].adSlot}
+                  data-ad-format="auto"
+                  data-full-width-responsive="true"
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={heroSlides[currentSlide].image}
+                alt={heroSlides[currentSlide].title}
+                className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 transform group-hover:scale-105 pointer-events-none"
+              />
+            </>
+          )}
 
           {/* Gradient Overlay for Text Legibility */}
           <div className={`absolute inset-0 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} transition-all duration-700`} />

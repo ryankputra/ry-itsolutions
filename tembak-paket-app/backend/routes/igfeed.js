@@ -60,13 +60,14 @@ function scanDir() {
                 return na - nb;
             });
 
+        const highlightTitles = ["TESTI OKT", "TESTI SEPT", "TESTI AUGU", "TESTI JULE", "TESTI JUNE", "TESTI MAY", "TESTI APRIL", "TESTI TESTI"];
         return {
             profile,
             syncedAt: null,
             count: files.length,
             images: files.map((f) => `/ig-testi/${f}`),
             highlights: files.map((f, i) => ({
-                title: `TESTI ${i + 1}`,
+                title: highlightTitles[i] || `TESTI ${i + 1}`,
                 cover: `/ig-testi/${f}`,
                 items: [{ url: `/ig-testi/${f}` }],
             })),
