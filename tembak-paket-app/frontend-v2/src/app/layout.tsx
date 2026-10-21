@@ -55,12 +55,19 @@ export default function RootLayout({
       className={`${inter.variable} antialiased`}
     >
       <head>
+        <meta name="google-adsense-account" content="ca-pub-2898811488813299" />
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
         />
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2898811488813299"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
       </head>
-      <body className="min-h-screen bg-canvas text-ink font-sans pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" suppressHydrationWarning>
+      <body className="min-h-screen bg-canvas text-ink font-sans pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-x-hidden w-full max-w-full" suppressHydrationWarning>
         <Suspense fallback={null}>
           <NavigationProgressBar />
         </Suspense>

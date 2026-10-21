@@ -1,4 +1,6 @@
 {
   "version": 1,
-  "outDirectory": ".next"
+  "hasExportPathMap": false,
+  "exportTrailingSlash": false,
+  "isNextImageImported": false
 }

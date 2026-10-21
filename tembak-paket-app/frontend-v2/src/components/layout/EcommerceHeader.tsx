@@ -281,7 +281,7 @@ export function EcommerceHeader() {
       {/* ============================================================ */}
       <div className="hidden lg:block bg-canvas/95 backdrop-blur-md border-b border-hairline">
         {/* 1. Top Sub-Bar */}
-        <div className="bg-gray-50/90 dark:bg-slate-950/80 border-b border-gray-200/60 dark:border-gray-800/60 text-gray-500 text-[11px] py-1 px-8">
+        <div className="bg-gray-50/90 dark:bg-slate-950/80 border-b border-gray-200/60 dark:border-gray-800/60 text-gray-500 text-[11px] py-1 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 font-medium">
@@ -329,7 +329,7 @@ export function EcommerceHeader() {
         </div>
 
         {/* 2. Main Desktop Header Bar */}
-        <div className="max-w-7xl mx-auto px-8 py-3 flex items-center gap-8 justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-4 sm:gap-8 justify-between">
           <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
             <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900 font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -553,7 +553,7 @@ export function EcommerceHeader() {
 
         {/* 3. Sub-Header Category Tabs */}
         <div className="border-t border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-[#161617]/70 backdrop-blur-md">
-          <div className="max-w-7xl mx-auto px-8 flex items-center gap-6 overflow-x-auto text-xs py-2">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-6 overflow-x-auto text-xs py-2">
             {navLinks.map((item, idx) => {
               const isActive = pathname === item.href;
               return (

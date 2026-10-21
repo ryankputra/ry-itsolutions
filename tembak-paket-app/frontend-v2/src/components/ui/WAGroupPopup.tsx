@@ -35,11 +35,11 @@ export default function WAGroupPopup() {
 
   return (
     <div
-      className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md overflow-y-auto max-h-screen animate-in fade-in duration-200"
       onClick={handleClose}
     >
       <div
-        className="relative w-full max-w-sm bg-canvas rounded-3xl border border-hairline shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
+        className="relative w-full max-w-sm my-auto max-h-[85vh] overflow-y-auto bg-canvas rounded-3xl border border-hairline shadow-2xl animate-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header gradient hijau WA */}

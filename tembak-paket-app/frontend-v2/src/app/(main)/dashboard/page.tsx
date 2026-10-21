@@ -176,7 +176,7 @@ export default function DashboardPage() {
   const userCoins = user?.coins || 0;
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-16 relative bg-canvas/60 backdrop-blur-xs min-h-screen -m-4 p-4 sm:-m-8 sm:p-8 overflow-hidden">
+    <div className="space-y-4 max-w-7xl mx-auto pb-16 relative bg-canvas/60 backdrop-blur-xs min-h-screen p-4 sm:p-8 overflow-x-hidden w-full max-w-full box-border">
       {/* Animated Floating Gradient Orbs */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-10 left-10 w-96 h-96 bg-blue-500/25 dark:bg-blue-600/30 rounded-full blur-[100px] animate-pulse" />
@@ -248,12 +248,14 @@ export default function DashboardPage() {
         />
       </div>
       {/* Decorative Ambient Gradient Glow mimicking landing page */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-primary/10 rounded-full blur-[140px] pointer-events-none z-0" />
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-primary/10 rounded-full blur-[140px]" />
+      </div>
 
       <div className="relative z-10 space-y-4">
 
       {/* Promo Announcement Popup Modal (Mobile & Desktop) */}
-      <PromoPopupModal />
+      {/* <PromoPopupModal /> */}
 
       {/* ============================================================ */}
       {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
@@ -587,14 +589,14 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 3. HERO PROMO DEALS BANNER SLIDER                           */}
       {/* ============================================================ */}
-      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-hairline group">
-        <div className="relative min-h-[165px] sm:min-h-[195px] flex flex-col justify-between p-4 sm:p-6 text-white transition-all duration-700">
+      <div className="relative w-full max-w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-hairline group box-border">
+        <div className="relative w-full min-h-[165px] sm:min-h-[195px] flex flex-col justify-between p-4 sm:p-6 text-white transition-all duration-700 overflow-hidden box-border">
           {/* Background Talent Poster Image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={heroSlides[currentSlide].image}
             alt={heroSlides[currentSlide].title}
-            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 transform group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 transform group-hover:scale-105 pointer-events-none"
           />
 
           {/* Gradient Overlay for Text Legibility */}

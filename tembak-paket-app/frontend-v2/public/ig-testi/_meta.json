@@ -1,0 +1,48 @@
+{
+  "syncedAt": "2026-10-21T00:00:00.000Z",
+  "highlights": [
+    {
+      "id": "hl-0",
+      "title": "TESTI OKT",
+      "cover": "/ig-testi/ig-testi-0.jpg",
+      "items": [{"url": "/ig-testi/ig-testi-0.jpg"}]
+    },
+    {
+      "id": "hl-1",
+      "title": "TESTI SEPT",
+      "cover": "/ig-testi/ig-testi-1.jpg",
+      "items": [{"url": "/ig-testi/ig-testi-1.jpg"}]
+    },
+    {
+      "id": "hl-2",
+      "title": "TESTI AUGU",
+      "cover": "/ig-testi/ig-testi-2.jpg",
+      "items": [{"url": "/ig-testi/ig-testi-2.jpg"}]
+    },
+    {
+      "id": "hl-3",
+      "title": "TESTI JULE",
+      "cover": "/ig-testi/ig-testi-3.jpg",
+      "items": [{"url": "/ig-testi/ig-testi-3.jpg"}]
+    },
+    {
+      "id": "hl-4",
+      "title": "TESTI JUNE",
+      "cover": "/ig-testi/ig-testi-4.jpg",
+      "items": [{"url": "/ig-testi/ig-testi-4.jpg"}]
+    },
+    {
+      "id": "hl-5",
+      "title": "TESTI MAY",
+      "cover": "/ig-testi/ig-testi-5.jpg",
+      "items": [{"url": "/ig-testi/ig-testi-5.jpg"}]
+    },
+    {
+      "id": "hl-6",
+      "title": "TESTI APRIL",
+      "cover": "/ig-testi/ig-testi-6.jpg",
+      "items": [{"url": "/ig-testi/ig-testi-6.jpg"}]
+    }
+  ],
+  "stories": []
+}

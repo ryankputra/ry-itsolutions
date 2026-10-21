@@ -122,17 +122,17 @@ export function PromoPopupModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto max-h-screen animate-in fade-in duration-200">
       {/* Backdrop blur */}
       <div
         onClick={handleClose}
-        className="absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-black/40 backdrop-blur-md transition-opacity"
         style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
       />
 
       {/* Modal Card: Premium Translucent Glassmorphism Design */}
       <div 
-        className="relative w-full max-w-[360px] sm:max-w-[400px] bg-white/45 dark:bg-slate-900/55 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-2xl border border-white/60 dark:border-white/15 z-10 flex flex-col animate-in zoom-in-95 duration-200"
+        className="relative my-auto w-full max-w-[360px] sm:max-w-[400px] max-h-[85vh] overflow-y-auto bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/60 dark:border-white/15 z-10 flex flex-col animate-in zoom-in-95 duration-200"
         style={{ backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" }}
       >
         
@@ -216,7 +216,7 @@ export function PromoPopupModal() {
 
           {/* Announcement Message */}
           <div 
-            className="p-3.5 rounded-2xl bg-white/35 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-white/10 text-xs sm:text-sm text-ink leading-relaxed font-medium whitespace-pre-line shadow-xs"
+            className="p-3.5 rounded-2xl bg-white/35 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-white/10 text-xs sm:text-sm text-ink leading-relaxed font-medium whitespace-pre-line shadow-xs max-h-[160px] overflow-y-auto"
             style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}
           >
             {parsed.body}

@@ -116,7 +116,7 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
     const bg = item.bgColor || "#0066cc";
     return (
       <div
-        className={`rounded-2xl p-3.5 sm:p-4 text-white text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm transition-all ${className}`}
+        className={`w-full max-w-full box-border rounded-2xl p-3.5 sm:p-4 text-white text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm transition-all overflow-hidden ${className}`}
         style={{ backgroundColor: bg }}
       >
         <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
@@ -178,7 +178,7 @@ export function BroadcastBanner({ className = "", initialAnnouncements }: Broadc
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className={`relative rounded-2xl p-3.5 sm:p-4 text-white shadow-sm transition-all duration-300 overflow-hidden ${className}`}
+      className={`relative w-full max-w-full box-border rounded-2xl p-3.5 sm:p-4 text-white shadow-sm transition-all duration-300 overflow-hidden ${className}`}
       style={{ backgroundColor: bg }}
     >
       {/* Top Header Controls: Badge, Slide Counter & Arrow Buttons */}
