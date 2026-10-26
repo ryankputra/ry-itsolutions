@@ -433,37 +433,81 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                {/* Log Layanan / Catatan Admin */}
+                {/* Log Layanan CEIR Otomatis atau Catatan Admin */}
                 {o?.admin_note ? (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                    <p className="font-bold text-[10px] text-slate-700 uppercase tracking-wider flex items-center justify-between">
-                      <span>Catatan / Respon Admin:</span>
-                      <span className="text-[10px] font-mono bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Log</span>
-                    </p>
-                    <div className="bg-white rounded-lg p-2.5 border border-slate-200 space-y-1 font-mono text-[11px]">
-                      {(() => {
-                        const note = String(o.admin_note);
-                        // Cek apakah format key-value panjang (seperti USERID: ... | USERNAME: ...)
-                        if (note.includes("|") && (note.includes("USERID") || note.includes("PACKAGEID") || note.includes("IMEI"))) {
-                          return note.split("|").map((item, idx) => {
-                            const parts = item.trim().split(":");
-                            if (parts.length >= 2) {
-                              const key = parts[0].trim();
-                              const val = parts.slice(1).join(":").trim();
-                              return (
-                                <div key={idx} className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-100 last:border-0">
-                                  <span className="text-slate-500 font-bold uppercase">{key}:</span>
-                                  <span className="text-slate-800 font-medium sm:text-right break-all">{val}</span>
-                                </div>
-                              );
+                  (() => {
+                    const isCeirAuto = o.service_type === "ceir" || o.packageName?.toLowerCase().includes("ceir") || o.packageId?.includes("ceir") || o.packageName?.toLowerCase().includes("imei") || o.packageId?.toLowerCase().includes("imei");
+                    if (isCeirAuto) {
+                      const parsedCeir = parseCeirResponse(o.admin_note, o.createdAt, o.api_response);
+                      return (
+                        <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-2">
+                          <div className="flex items-center justify-between border-b border-emerald-200/80 pb-1.5">
+                            <span className="font-bold text-[11px] text-emerald-950 uppercase tracking-wider">
+                              Log Layanan CEIR (Otomatis)
+                            </span>
+                            <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                              {parsedCeir.columns.length} Kolom API
+                            </span>
+                          </div>
+                          <div className="overflow-x-auto rounded-lg border border-emerald-200 bg-white shadow-xs">
+                            <table className="w-full text-left text-[11px] min-w-[450px]">
+                              <thead className="bg-emerald-100/70 text-emerald-900 border-b border-emerald-200 font-mono">
+                                <tr>
+                                  {parsedCeir.columns.map((col, cIdx) => (
+                                    <th key={cIdx} className="py-2 px-2.5 font-bold uppercase tracking-wider">
+                                      {col.replace(/_/g, " ")}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-emerald-100 font-mono text-[10px]">
+                                {parsedCeir.rows.map((row, rIdx) => (
+                                  <tr key={rIdx} className="hover:bg-emerald-50/40">
+                                    {parsedCeir.columns.map((col, cIdx) => (
+                                      <td key={cIdx} className="py-2 px-2.5 text-slate-800 break-words whitespace-pre-wrap font-sans text-xs">
+                                        {String(row[col] !== undefined && row[col] !== null ? row[col] : "-")}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                        <p className="font-bold text-[10px] text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                          <span>Catatan / Respon Admin:</span>
+                          <span className="text-[10px] font-mono bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Log</span>
+                        </p>
+                        <div className="bg-white rounded-lg p-2.5 border border-slate-200 space-y-1 font-mono text-[11px]">
+                          {(() => {
+                            const note = String(o.admin_note);
+                            if (note.includes("|") && (note.includes("USERID") || note.includes("PACKAGEID") || note.includes("IMEI"))) {
+                              return note.split("|").map((item, idx) => {
+                                const parts = item.trim().split(":");
+                                if (parts.length >= 2) {
+                                  const key = parts[0].trim();
+                                  const val = parts.slice(1).join(":").trim();
+                                  return (
+                                    <div key={idx} className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-100 last:border-0">
+                                      <span className="text-slate-500 font-bold uppercase">{key}:</span>
+                                      <span className="text-slate-800 font-medium sm:text-right break-all">{val}</span>
+                                    </div>
+                                  );
+                                }
+                                return <div key={idx} className="text-slate-700 py-0.5">{item.trim()}</div>;
+                              });
                             }
-                            return <div key={idx} className="text-slate-700 py-0.5">{item.trim()}</div>;
-                          });
-                        }
-                        return <div className="text-slate-800 whitespace-pre-wrap font-sans">{note}</div>;
-                      })()}
-                    </div>
-                  </div>
+                            return <div className="text-slate-800 whitespace-pre-wrap font-sans">{note}</div>;
+                          })()}
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : null}
 
                 {/* Screenshot Proofs (Manual Tab) */}
