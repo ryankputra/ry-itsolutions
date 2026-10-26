@@ -46,11 +46,19 @@ function HistoryContent() {
     }
   }, [searchParams]);
 
-  // Auto scroll active tab into view
+  const tabsContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto scroll active tab into view without scrolling the entire window
   useEffect(() => {
+    if (!tabsContainerRef.current) return;
     const activeEl = document.getElementById(`history-tab-${activeTab}`);
     if (activeEl) {
-      activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      const container = tabsContainerRef.current;
+      const elLeft = activeEl.offsetLeft;
+      const elWidth = activeEl.offsetWidth;
+      const containerWidth = container.offsetWidth;
+      const targetScroll = elLeft - (containerWidth / 2) + (elWidth / 2);
+      container.scrollTo({ left: Math.max(0, targetScroll), behavior: "smooth" });
     }
   }, [activeTab]);
 
@@ -369,7 +377,7 @@ function HistoryContent() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-3 pb-24">
+    <div className="w-full max-w-3xl mx-auto space-y-3 pb-24 overflow-x-hidden">
       {/* ============================================================ */}
       {/* 1. TOP HEADER (Pesanan Saya)                                */}
       {/* ============================================================ */}
@@ -416,7 +424,7 @@ function HistoryContent() {
         });
 
         return (
-          <div className="flex border-b border-hairline overflow-x-auto scrollbar-none bg-canvas sticky top-14 z-30">
+          <div ref={tabsContainerRef} className="flex border-b border-hairline overflow-x-auto scrollbar-none bg-canvas sticky top-14 z-30">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;
               const count = tabCounts[tab.key] || 0;
@@ -658,32 +666,66 @@ function HistoryContent() {
                     if (parsed.rows.length === 0 && (trx.api_response || trx.apiResponse)) {
                       parsed = parseCeirResponse(trx.api_response || trx.apiResponse);
                     }
-                    if (parsed.rows.length > 0) {
-                      return (
-                        <div className="p-2.5 rounded-xl bg-sky-50/80 border border-sky-200 text-xs space-y-2">
-                          <span className="font-bold text-[10px] text-sky-700 uppercase block">Log CEIR</span>
+
+                    const getField = (row: any, ...keys: string[]) => {
+                      for (const k of keys) {
+                        const found = Object.keys(row || {}).find(x => x.toLowerCase() === k.toLowerCase());
+                        if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== "" && String(row[found]).trim() !== "-") {
+                          return String(row[found]).trim();
+                        }
+                      }
+                      return "";
+                    };
+
+                    return (
+                      <div className="p-3 rounded-xl bg-sky-50/80 border border-sky-200 text-xs space-y-2">
+                        <div className="flex items-center justify-between border-b border-sky-200/60 pb-1.5">
+                          <span className="font-bold text-[11px] text-sky-800 uppercase flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+                            Hasil Verifikasi Database CEIR
+                          </span>
+                          <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200">
+                            {parsed.status || "TERVERIFIKASI"}
+                          </span>
+                        </div>
+
+                        {parsed.rows.length > 0 ? (
                           <div className="space-y-1.5">
-                            {parsed.rows.map((row, idx) => (
-                              <div key={idx} className="flex items-start gap-2 text-[11px]">
-                                <div className="flex flex-col items-center shrink-0 mt-0.5">
-                                  <div className="w-2 h-2 rounded-full bg-sky-500" />
-                                  {idx < parsed.rows.length - 1 && (
-                                    <div className="w-px h-full min-h-[16px] bg-sky-300" />
+                            {parsed.rows.map((row, idx) => {
+                              const action = getField(row, "action", "status", "aksi", "result") || "CEIR Selesai";
+                              const date = getField(row, "tanggal", "date", "checked_at", "created_at") || (trx.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "");
+                              const note = getField(row, "note", "keterangan", "message", "keterangan_status") || (typeof rawNote === "string" ? rawNote : "");
+                              const imei = getField(row, "imei") || trx.imei || "";
+
+                              return (
+                                <div key={idx} className="bg-white/90 p-2.5 rounded-lg border border-sky-100/90 text-[11px] space-y-1 shadow-xs">
+                                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <span className="font-bold text-sky-900 bg-sky-100/70 px-2 py-0.5 rounded text-[10px] uppercase font-mono">
+                                      {action}
+                                    </span>
+                                    {date && <span className="text-sky-600 text-[10px] font-mono">{date}</span>}
+                                  </div>
+                                  {imei && (
+                                    <div className="text-[11px] font-mono text-slate-700">
+                                      IMEI: <span className="font-bold">{imei}</span>
+                                    </div>
+                                  )}
+                                  {note && (
+                                    <p className="text-slate-600 leading-relaxed break-words font-sans text-[11px]">
+                                      {note}
+                                    </p>
                                   )}
                                 </div>
-                                <div className="flex-1 min-w-0 pb-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-sky-800">{row.action}</span>
-                                    <span className="text-sky-500 text-[10px]">{row.tanggal}</span>
-                                  </div>
-                                  <p className="text-ink-muted leading-relaxed break-words">{row.note}</p>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
-                        </div>
-                      );
-                    }
+                        ) : (
+                          <p className="text-sky-900 text-[11px] leading-relaxed break-words">
+                            {typeof rawNote === "string" ? rawNote : "Data pengecekan CEIR berhasil diverifikasi oleh server."}
+                          </p>
+                        )}
+                      </div>
+                    );
                   }
 
                   const isLeakedOrGeneric = /sedang dikerjakan oleh admin|sedang diproses oleh admin|berhasil kami proses|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit|antrean manual/i.test(rawNote);

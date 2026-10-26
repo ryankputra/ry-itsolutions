@@ -614,9 +614,9 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                       {ceirInfo.columns.length} Kolom Respon API
                     </span>
                   </div>
-                  <div className="overflow-x-auto rounded-xl border border-emerald-200/80 bg-white shadow-sm">
-                    <table className="w-full text-left text-[11px] min-w-[500px]">
-                      <thead className="bg-emerald-100/70 text-emerald-900 border-b border-emerald-200/60 font-mono">
+                  <div className="rounded-xl border border-emerald-200/80 bg-white shadow-sm overflow-hidden">
+                    <table className="w-full text-left table-auto">
+                      <thead className="bg-emerald-100/70 text-emerald-900 border-b border-emerald-200/60 font-mono text-[10px]">
                         <tr>
                           {ceirInfo.columns.map((col, cIdx) => (
                             <th key={cIdx} className="py-2 px-2.5 font-bold uppercase tracking-wider">
@@ -629,7 +629,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                         {ceirInfo.rows.map((row, rIdx) => (
                           <tr key={rIdx} className="hover:bg-emerald-50/40">
                             {ceirInfo.columns.map((col, cIdx) => (
-                              <td key={cIdx} className="py-2 px-2.5 text-slate-800 break-words whitespace-pre-wrap font-sans text-xs">
+                              <td key={cIdx} className="py-2 px-2.5 text-slate-800 break-all font-sans text-xs">
                                 {String(row[col] !== undefined && row[col] !== null ? row[col] : "-")}
                               </td>
                             ))}
@@ -638,6 +638,12 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                       </tbody>
                     </table>
                   </div>
+
+                  {ceirInfo.rawText && typeof ceirInfo.rawText === "string" && !ceirInfo.rawText.startsWith("{") && !ceirInfo.rawText.startsWith("[") && (
+                    <div className="p-2 rounded-lg bg-emerald-50/60 border border-emerald-100 text-[10px] text-emerald-900 leading-relaxed font-mono">
+                      {ceirInfo.rawText}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
