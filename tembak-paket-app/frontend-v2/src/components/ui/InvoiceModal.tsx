@@ -78,6 +78,23 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     };
   }, [isOpen, onClose]);
 
+  // QR Code data url state (Must be called unconditionally at top of component)
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+
+  const rawImei = data?.imei || "";
+  const verifyUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/cek-garansi?imei=${rawImei}`
+    : `https://ry-itsolutionts.web.id/cek-garansi?imei=${rawImei}`;
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(verifyUrl)}`;
+
+  useEffect(() => {
+    if (isOpen && rawImei) {
+      QRCode.toDataURL(verifyUrl, { width: 160, margin: 1 })
+        .then((url: string) => setQrCodeDataUrl(url))
+        .catch(() => setQrCodeDataUrl(qrImageUrl));
+    }
+  }, [isOpen, rawImei, verifyUrl, qrImageUrl]);
+
   if (!isOpen || !data) return null;
 
   const imeiAnalysis = data.imei && data.imei !== '-' ? analyzeImei(data.imei) : null;
@@ -290,20 +307,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     window.print();
   };
 
-  const verifyUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/cek-garansi?imei=${data.imei}` 
-    : `https://ry-itsolutionts.web.id/cek-garansi?imei=${data.imei}`;
-
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(verifyUrl)}`;
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
-
-  useEffect(() => {
-    if (verifyUrl) {
-      QRCode.toDataURL(verifyUrl, { width: 160, margin: 1 })
-        .then((url: string) => setQrCodeDataUrl(url))
-        .catch(() => setQrCodeDataUrl(qrImageUrl));
-    }
-  }, [verifyUrl, qrImageUrl]);
+  // QR Code was generated at component top
 
   const formatDate = (isoString: string) => {
     try {
@@ -345,12 +349,13 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
     const currentStore = customStoreName || 'Ry-ITSolutions';
     let messageText = "";
+    const safeStatusStr = (data.status || 'PENDING').toUpperCase();
     if (isGatewayService) {
       messageText = `Halo Kak, berikut bukti nota transaksi & langganan API Key Gateway dari *${currentStore}*:\n\n` +
         `*ID Transaksi:* #${(data.trxId || '').substring(0, 14)}\n` +
         `*Layanan:* ${data.packageName || 'Langganan API Key Gateway'}\n` +
         `*Masa Aktif:* 30 Hari\n` +
-        `*Status:* ${isSuccess ? 'SUKSES / AKTIF' : data.status.toUpperCase()}\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / AKTIF' : safeStatusStr}\n` +
         `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
     } else if (isTopUp) {
@@ -367,7 +372,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
         `*Perangkat / IMEI:* ${imeiAnalysis?.brand ? `${imeiAnalysis.brand} ${imeiAnalysis.model}` : 'Smartphone'} (${data.imei})\n` +
         `*Layanan:* ${data.packageName || 'Layanan Aktivasi IMEI'}\n` +
         `*Garansi Sinyal:* ${dynWarranty.durationLabel} (${dynWarranty.statusText})\n` +
-        `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : data.status.toUpperCase()}\n` +
+        `*Status:* ${isSuccess ? 'SUKSES / SELESAI' : safeStatusStr}\n` +
         `*Tanggal:* ${formatDate(data.createdAt)}\n\n` +
         `*Cek Nota & Status Garansi Online:* \n${verifyUrl}\n\n` +
         `Terima kasih atas kepercayaannya kepada *${currentStore}*!`;
@@ -510,10 +515,10 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
               <div className="text-right">
                 <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
                   isSuccess ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                  data.status === 'pending' || data.status === 'processing' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                  (data.status === 'pending' || data.status === 'processing') ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                   'bg-rose-100 text-rose-800 border border-rose-200'
                 }`}>
-                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isGatewayService ? 'LANGGANAN AKTIF' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : data.status.toUpperCase()}
+                  {isSuccess ? (isTopUp ? 'SALDO MASUK' : isGatewayService ? 'LANGGANAN AKTIF' : isCeirService ? 'SELESAI DICEK' : 'RESMI AKTIF') : (data.status || 'PENDING').toUpperCase()}
                 </span>
                 <p className="text-[10px] text-slate-400 font-mono mt-1">
                   TRX: #{data.trxId ? data.trxId.substring(0, 16) : 'N/A'}
@@ -598,7 +603,7 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                 </div>
 
                 <div className="bg-white/90 p-2.5 rounded-xl border border-emerald-200/80 font-mono text-[11px] font-bold text-slate-800">
-                  IMEI : {data.imei || ceirInfo.logs[0]?.imei || "----"}
+                  IMEI : {data.imei || (ceirInfo as any)?.logs?.[0]?.imei || "----"}
                 </div>
 
                 {/* Log Riwayat Tabel */}
