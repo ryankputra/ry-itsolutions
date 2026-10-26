@@ -5,9 +5,9 @@ const path = require('path');
 const next = require('next');
 
 const dev = false;
-const hostname = '0.0.0.0';
+const hostname = '127.0.0.1';
 const port = parseInt(process.env.PORT || '3005', 10);
-const app = next({ dev, hostname, port });
+const app = next({ dev, hostname, port, dir: __dirname });
 const handle = app.getRequestHandler();
 
 // Next 16 enumerates public/ once at boot; igSyncService rewrites /ig-testi/hl-*.jpg
@@ -60,7 +60,7 @@ function handleDeploy(req, res) {
 }
 
 app.prepare().then(() => {
-  createServer(async (req, res) => {
+  const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
       if (parsedUrl.pathname.startsWith(IG_TESTI_PREFIX) && (req.method === 'GET' || req.method === 'HEAD')) {
@@ -84,7 +84,9 @@ app.prepare().then(() => {
       res.statusCode = 500;
       res.end('Internal Server Error');
     }
-  }).listen(port, () => {
+  });
+
+  server.listen(port, hostname, () => {
     console.log(`> Frontend server ready on http://${hostname}:${port}`);
   });
 }).catch((err) => {

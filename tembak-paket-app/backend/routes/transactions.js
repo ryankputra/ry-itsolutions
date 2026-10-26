@@ -261,7 +261,7 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
 
         sseSend(trx.userId, 'transaction_status', { id: trx.id, status: finalStatus, message: adminNote });
         sseSend(trx.userId, 'transaction_update', { id: trx.id, status: finalStatus, note: adminNote });
-        sendTelegramNotification(`<b>⚡ Direct QRIS Paid & Auto CeirGO!</b>\n<b>Layanan:</b> ${trx.packageName}\n<b>IMEI:</b> <code>${trx.imei}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`, 'group');
+        // Skipped telegram notification for automated CeirGO order
     } else {
         // Manual IMEI or other service: Status in_queue (Menunggu Konfirmasi Admin)
         const autoRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_auto_processing'").catch(() => null);
@@ -1125,7 +1125,19 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
 
             if (isCeirgoService && (finalStatus === 'processing' || finalStatus === 'success')) {
                 const autoNotifMsg = `<b>⚡ Pesanan Otomatis CeirGO Diterima!</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Layanan:</b> ${packageName}\n<b>IMEI:</b> <code>${cleanImei}</code>\n<b>Ref ID:</b> <code>${refId || trxId}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`;
-                sendTelegramNotification(autoNotifMsg, 'group');
+                // Skipped admin group telegram notification for automated CeirGO orders
+
+                // Send WhatsApp notification to customer with result
+                try {
+                    const { sendWhatsAppMessage } = require('../services/waBot');
+                    const customerPhone = targetPhone || user.phone || user.verifiedPhone;
+                    if (customerPhone) {
+                        const waMsg = `✅ *HASIL CEK CEIR / IMEI*\n\n*Layanan:* ${packageName}\n*IMEI:* ${cleanImei}\n*Status:* ${finalStatus.toUpperCase()}\n*Hasil/Catatan:* ${adminNote}\n\nTerima kasih telah menggunakan layanan Ry-ITSolutions.`;
+                        sendWhatsAppMessage(customerPhone, waMsg);
+                    }
+                } catch (waErr) {
+                    console.error("[CeirGO WA Notif Error]:", waErr.message);
+                }
             } else {
                 const speedText = speed_option === 'fast' ? 'Fast (1-3 Jam)' : (speed_option === 'semi' ? 'Semi Fast (1-12 Jam)' : (speed_option === 'instant' ? 'Instant' : 'Slow'));
                 const notifMsg = 
@@ -1146,21 +1158,23 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 sendManualOrderNotification(notifMsg, trxId, firstImg);
             }
 
-            // Send WhatsApp Admin & Customer Notification
-            try {
-                notifyNewOrder({
-                    id: trxId,
-                    userName: user.name,
-                    packageName: packageName,
-                    serviceType: service_type,
-                    imei: cleanImei,
-                    price: finalPriceToPay,
-                    speedOption: speed_option || 'slow',
-                    userImage: imagePath,
-                    customerPhone: targetPhone || user.phone || user.verifiedPhone
-                }).catch((err) => console.error("[WABot] Error sending manual order notification:", err.message));
-            } catch (waErr) {
-                console.error("[WABot] Exception in notifyNewOrder:", waErr.message);
+            // Send WhatsApp Admin & Customer Notification (Skip for automated CeirGO orders)
+            if (!isCeirgoService) {
+                try {
+                    notifyNewOrder({
+                        id: trxId,
+                        userName: user.name,
+                        packageName: packageName,
+                        serviceType: service_type,
+                        imei: cleanImei,
+                        price: finalPriceToPay,
+                        speedOption: speed_option || 'slow',
+                        userImage: imagePath,
+                        customerPhone: targetPhone || user.phone || user.verifiedPhone
+                    }).catch((err) => console.error("[WABot] Error sending manual order notification:", err.message));
+                } catch (waErr) {
+                    console.error("[WABot] Exception in notifyNewOrder:", waErr.message);
+                }
             }
 
             res.json({
@@ -1357,11 +1371,11 @@ router.get('/topup/gateway-info', async (req, res) => {
         res.json({
             status: true,
             data: {
-                active_gateway: activeGateway,
-                mode: mode,
-                rotate_start: startWith,
-                counter: counter,
-                message: `Gateway ${activeGateway.toUpperCase()} sedang aktif untuk giliran berikutnya.`,
+                active_gateway: 'gopay',
+                mode: 'gopay',
+                rotate_start: 'gopay',
+                counter: 0,
+                message: `Gateway QRIS Realtime 24 Jam Aktif dan Siap Digunakan.`,
                 available_gateways: [
                     {
                         id: 'shoppepay',

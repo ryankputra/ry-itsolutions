@@ -433,34 +433,36 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                {/* Log Layanan CEIR / Admin Note Display */}
+                {/* Log Layanan / Catatan Admin */}
                 {o?.admin_note ? (
-                  <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs space-y-1.5">
-                    <p className="font-bold text-[10px] text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                      Log Layanan / Catatan Admin:
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                    <p className="font-bold text-[10px] text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                      <span>Catatan / Respon Admin:</span>
+                      <span className="text-[10px] font-mono bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Log</span>
                     </p>
-                    {orderQueueSubTab === "automated" ? (
-                      (() => {
-                        const parsed = parseCeirResponse(o.admin_note);
-                        if (parsed.rows.length > 0) {
-                          return (
-                            <div className="space-y-1 mt-1">
-                              {parsed.rows.map((r, idx) => (
-                                <div key={idx} className="flex items-start gap-2 text-[11px] font-mono">
-                                  <span className="text-amber-600 font-bold shrink-0">{r.no}.</span>
-                                  <span className="text-ink-muted shrink-0">{r.tanggal}</span>
-                                  <span className="font-bold text-amber-700 dark:text-amber-300 shrink-0">[{r.action}]</span>
-                                  <span className="text-ink break-words">{r.note}</span>
+                    <div className="bg-white rounded-lg p-2.5 border border-slate-200 space-y-1 font-mono text-[11px]">
+                      {(() => {
+                        const note = String(o.admin_note);
+                        // Cek apakah format key-value panjang (seperti USERID: ... | USERNAME: ...)
+                        if (note.includes("|") && (note.includes("USERID") || note.includes("PACKAGEID") || note.includes("IMEI"))) {
+                          return note.split("|").map((item, idx) => {
+                            const parts = item.trim().split(":");
+                            if (parts.length >= 2) {
+                              const key = parts[0].trim();
+                              const val = parts.slice(1).join(":").trim();
+                              return (
+                                <div key={idx} className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-100 last:border-0">
+                                  <span className="text-slate-500 font-bold uppercase">{key}:</span>
+                                  <span className="text-slate-800 font-medium sm:text-right break-all">{val}</span>
                                 </div>
-                              ))}
-                            </div>
-                          );
+                              );
+                            }
+                            return <div key={idx} className="text-slate-700 py-0.5">{item.trim()}</div>;
+                          });
                         }
-                        return <p className="text-ink font-mono text-[11px] whitespace-pre-wrap">{o.admin_note}</p>;
-                      })()
-                    ) : (
-                      <p className="text-ink font-mono text-[11px] whitespace-pre-wrap">{o.admin_note}</p>
-                    )}
+                        return <div className="text-slate-800 whitespace-pre-wrap font-sans">{note}</div>;
+                      })()}
+                    </div>
                   </div>
                 ) : null}
 

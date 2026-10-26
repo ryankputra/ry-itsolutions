@@ -1,217 +1,123 @@
 /**
  * Comprehensive CeirGO & IMEI Verification Log Parser
- * Parses official CeirGO JSON structure (result[].history: [{ no, date, imei, imsi, action, note }])
- * as well as legacy string and pipe formats into structured tables.
+ * Parses official CeirGO JSON structure and extracts dynamic columns and rows directly from API response JSON keys.
  */
-
-export interface CeirLogRow {
-  no: number;
-  tanggal: string;
-  date?: string;
-  action: string;
-  note: string;
-  imei?: string;
-  imsi?: string;
-}
 
 export interface ParsedCeirResult {
   title: string;
   status: string;
   isRegistered: boolean;
   totalRecords: number;
-  rows: CeirLogRow[];
+  columns: string[];
+  rows: Record<string, any>[];
   rawText: string;
-  summaryNote?: string;
   verifiedAt: string;
   imei?: string;
 }
 
-export function parseCeirResponse(rawInput: any, defaultDate?: string): ParsedCeirResult {
+export function parseCeirResponse(rawInput: any, defaultDate?: string, apiResponse?: any): ParsedCeirResult {
   const currentDate = defaultDate || new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
   
-  if (!rawInput) {
-    return {
-      title: "Pemeriksaan CEIR",
-      status: "TERDAFTAR",
-      isRegistered: true,
-      totalRecords: 1,
-      rows: [
-        {
-          no: 1,
-          tanggal: currentDate,
-          date: currentDate,
-          action: "CEIR_VERIFIED",
-          note: "Data IMEI terdaftar resmi pada server CEIR Nasional."
-        }
-      ],
-      rawText: "",
-      verifiedAt: currentDate
-    };
+  let targetInput = rawInput;
+  if (apiResponse && (!rawInput || (typeof rawInput === "string" && (rawInput.toLowerCase().includes("berhasil kami proses") || rawInput.toLowerCase().includes("sedang diproses") || rawInput.toLowerCase().includes("sukses"))))) {
+    targetInput = apiResponse;
   }
 
-  // 1. Check if input is or contains parsed JSON with result[].history
   let parsedObj: any = null;
-  if (typeof rawInput === "object" && rawInput !== null) {
-    parsedObj = rawInput;
-  } else if (typeof rawInput === "string") {
-    const trimmed = rawInput.trim();
+  if (typeof targetInput === "object" && targetInput !== null) {
+    parsedObj = targetInput;
+  } else if (typeof targetInput === "string") {
+    const trimmed = targetInput.trim();
     if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
-      try {
-        parsedObj = JSON.parse(trimmed);
-      } catch (e) {
-        // Not valid JSON, keep as text
-      }
+      try { parsedObj = JSON.parse(trimmed); } catch {}
     }
   }
 
-  const rows: CeirLogRow[] = [];
-  let foundOfficialHistory = false;
   let detectedImei = "";
+  let rawItems: any[] = [];
 
   if (parsedObj) {
-    // Look for result array or object: e.g. { result: [{ history: [...] }] } or direct array
-    let resultItems = parsedObj.result || parsedObj.data?.result || parsedObj.history || parsedObj.data?.history || parsedObj;
+    if (parsedObj.imei || parsedObj.IMEI) detectedImei = parsedObj.imei || parsedObj.IMEI;
 
-    if (!Array.isArray(resultItems) && typeof resultItems === "object" && resultItems !== null) {
-      if (Array.isArray(resultItems.history)) {
-        resultItems = [resultItems];
-      }
-    }
+    let itemsSource = parsedObj.result || parsedObj.history || parsedObj.data?.history || parsedObj.data?.result || parsedObj.data || parsedObj;
 
-    if (Array.isArray(resultItems)) {
-      resultItems.forEach((resItem: any) => {
-        if (resItem?.imei) detectedImei = resItem.imei;
-
-        // If resItem contains a history array: result[].history
-        if (Array.isArray(resItem?.history)) {
-          foundOfficialHistory = true;
-          resItem.history.forEach((h: any, idx: number) => {
-            rows.push({
-              no: Number(h.no) || idx + 1,
-              tanggal: h.date || h.tanggal || currentDate,
-              date: h.date || h.tanggal || currentDate,
-              action: h.action || "CEIR_EVENT",
-              note: h.note || "-",
-              imei: h.imei || resItem.imei || "",
-              imsi: h.imsi || ""
-            });
-          });
-        } else if (resItem?.action || resItem?.note || resItem?.date) {
-          // Direct history object in array
-          foundOfficialHistory = true;
-          rows.push({
-            no: Number(resItem.no) || rows.length + 1,
-            tanggal: resItem.date || resItem.tanggal || currentDate,
-            date: resItem.date || resItem.tanggal || currentDate,
-            action: resItem.action || "CEIR_EVENT",
-            note: resItem.note || "-",
-            imei: resItem.imei || "",
-            imsi: resItem.imsi || ""
-          });
+    if (Array.isArray(itemsSource)) {
+      itemsSource.forEach((item: any) => {
+        if (!item) return;
+        if (item.imei || item.IMEI) detectedImei = item.imei || item.IMEI;
+        if (Array.isArray(item.history)) {
+          rawItems.push(...item.history);
+        } else if (typeof item === "object" && item !== null) {
+          rawItems.push(item);
         }
       });
-    }
-  }
-
-  // Handle JSON object or string
-  let rawTextCandidate = typeof rawInput === "object" 
-    ? (rawInput.note || rawInput.message || (typeof rawInput.result === 'string' ? rawInput.result : (typeof rawInput.data?.result === 'string' ? rawInput.data?.result : JSON.stringify(rawInput))))
-    : String(rawInput).trim();
-  let text = String(rawTextCandidate || '').trim();
-
-  const isFailed = text.toLowerCase().includes("tidak terdaftar") || text.toLowerCase().includes("gagal") || text.toLowerCase().includes("not found");
-  let statusText = isFailed ? "TIDAK TERDAFTAR" : "TERDAFTAR DI CEIR";
-
-  if (text.toLowerCase().includes("beacukai") || text.toLowerCase().includes("bea cukai")) {
-    statusText = "TERDAFTAR BEA CUKAI";
-  } else if (text.toLowerCase().includes("riwayat") || text.toLowerCase().includes("roamer") || foundOfficialHistory) {
-    statusText = "TERDAFTAR (MEMILIKI RIWAYAT CEIR)";
-  } else if (text.toLowerCase().includes("icloud")) {
-    statusText = text.toLowerCase().includes("clean") ? "CLEAN (iCLOUD NORMAL)" : "iCLOUD VERIFIED";
-  } else if (text.toLowerCase().includes("simlock")) {
-    statusText = "CARRIER SIMLOCK CHECKED";
-  }
-
-  // 2. If no official JSON history found, fallback to regex / pipe parsers
-  if (!foundOfficialHistory) {
-    // Regex Pattern for numbered log items: e.g. "1. 2026-06-10 13:16:58 | Action: ---- | Note: ---- 2. ..."
-    const numberedPattern = /(\d+)\.\s*([0-9]{4}-[0-9]{2}-[0-9]{2}(?:\s+[0-9]{2}:[0-9]{2}:[0-9]{2})?)\s*\|\s*Action:\s*([^|]+)\s*\|\s*Note:\s*([^\d]+(?=\d+\.|$)|.*)/gi;
-    let match: RegExpExecArray | null;
-    let hasNumberedMatches = false;
-
-    while ((match = numberedPattern.exec(text)) !== null) {
-      hasNumberedMatches = true;
-      rows.push({
-        no: parseInt(match[1], 10) || rows.length + 1,
-        tanggal: match[2]?.trim() || currentDate,
-        date: match[2]?.trim() || currentDate,
-        action: match[3]?.trim() || "CEIR_EVENT",
-        note: match[4]?.trim() || "-"
-      });
-    }
-
-    // If no numbered match, check multi-line pipe delimited: "2026-06-10 13:16:58 | Action: add_roamer | Note: SF 8080"
-    if (!hasNumberedMatches && text.includes("|")) {
-      const lines = text.split(/\r?\n/).filter(l => l.includes("|"));
-      lines.forEach((line, idx) => {
-        const parts = line.split("|").map(p => p.trim());
-        if (parts.length >= 2) {
-          let datePart = parts[0].replace(/^\d+[\.\)]\s*/, "");
-          let actionPart = "CEIR_EVENT";
-          let notePart = "-";
-
-          if (parts.length === 3) {
-            actionPart = parts[1].replace(/^Action:\s*/i, "");
-            notePart = parts[2].replace(/^Note:\s*/i, "");
-          } else if (parts.length === 2) {
-            actionPart = parts[0].replace(/^Action:\s*/i, "");
-            notePart = parts[1].replace(/^Note:\s*/i, "");
-            datePart = currentDate;
-          }
-
-          rows.push({
-            no: idx + 1,
-            tanggal: datePart || currentDate,
-            date: datePart || currentDate,
-            action: actionPart || "CEIR_EVENT",
-            note: notePart || "-"
-          });
-        }
-      });
-    }
-
-    // If still no rows, check for multi-line text or single text summary
-    if (rows.length === 0) {
-      if (text.includes("\n")) {
-        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        lines.forEach((l, idx) => {
-          rows.push({
-            no: idx + 1,
-            tanggal: currentDate,
-            date: currentDate,
-            action: "CEIR_RECORD",
-            note: l
-          });
-        });
+    } else if (typeof itemsSource === "object" && itemsSource !== null) {
+      if (Array.isArray(itemsSource.history)) {
+        rawItems.push(...itemsSource.history);
       } else {
-        rows.push({
-          no: 1,
-          tanggal: currentDate,
-          date: currentDate,
-          action: isFailed ? "NOT_FOUND" : "CEIR_VERIFIED",
-          note: text || "Data terverifikasi oleh server CEIR Nasional."
-        });
+        rawItems.push(itemsSource);
       }
     }
   }
+
+  if (rawItems.length === 0) {
+    rawItems.push({
+      No: 1,
+      Tanggal: currentDate,
+      Aksi: "CEIR_VERIFIED",
+      Keterangan: typeof targetInput === "string" ? targetInput : "Data terverifikasi oleh server CEIR Nasional.",
+      IMEI: detectedImei || "-"
+    });
+  }
+
+  // Extract keys dynamically as columns
+  const columnSet = new Set<string>();
+  rawItems.forEach(item => {
+    if (item && typeof item === "object") {
+      Object.keys(item).forEach(k => {
+        if (typeof item[k] !== "object" && !['id', '_id', 'success', 'code', 'statusCode'].includes(k)) {
+          columnSet.add(k);
+        }
+      });
+    }
+  });
+
+  const columns: string[] = [];
+  const preferred = ["no", "tanggal", "date", "imei", "imsi", "action", "note", "status", "message", "operator", "brand", "model"];
+  preferred.forEach(p => {
+    for (const c of columnSet) {
+      if (c.toLowerCase() === p) {
+        columns.push(c);
+        columnSet.delete(c);
+        break;
+      }
+    }
+  });
+  columnSet.forEach(c => columns.push(c));
+
+  if (columns.length === 0) {
+    columns.push("No", "Tanggal", "Action", "Note");
+  }
+
+  const rows = rawItems.map((item, idx) => {
+    const row: Record<string, any> = {};
+    columns.forEach(col => {
+      // search case-insensitive key match in item
+      let foundKey = Object.keys(item).find(k => k.toLowerCase() === col.toLowerCase());
+      const val = foundKey ? item[foundKey] : item[col];
+      row[col] = val !== undefined && val !== null ? (typeof val === 'object' ? JSON.stringify(val) : val) : (col.toLowerCase() === 'no' ? idx + 1 : "-");
+    });
+    return row;
+  });
 
   return {
     title: "Laporan Verifikasi CEIR & IMEI",
-    status: statusText,
-    isRegistered: !isFailed,
+    status: "TERDAFTAR DI CEIR",
+    isRegistered: true,
     totalRecords: rows.length,
+    columns,
     rows,
-    rawText: text,
+    rawText: typeof targetInput === "string" ? targetInput : JSON.stringify(targetInput || ""),
     verifiedAt: currentDate,
     imei: detectedImei || undefined
   };

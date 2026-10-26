@@ -38,14 +38,13 @@ export default function DashboardPage() {
       image: "/banners/banner_imei.jpg",
     },
     {
-      title: "IKLAN SPONSOR GOOGLE ADSENSE",
-      subtitle: "Dukung pengembangan layanan dengan melihat iklan rekomendasi resmi partner kami.",
-      badge: "ADSENSE",
+      title: "SPONSOR RESMI & GOOGLE ADS",
+      subtitle: "Dukung terus pengembangan platform kami melalui iklan sponsor terpercaya.",
+      badge: "SPONSOR",
       ctaText: "INFO >",
-      ctaLink: "#ads",
-      bgGradient: "from-slate-950/90 via-slate-900/80 to-transparent",
+      ctaLink: "#",
+      bgGradient: "from-slate-950/95 via-blue-950/90 to-transparent",
       isAd: true,
-      adSlot: "1234567890",
     },
     {
       title: "PAYMENT GATEWAY GOPAY & QRIS",
@@ -110,6 +109,15 @@ export default function DashboardPage() {
     }, 6000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
+
+  useEffect(() => {
+    if (heroSlides[currentSlide]?.isAd) {
+      try {
+        // @ts-ignore
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      } catch (e) {}
+    }
+  }, [currentSlide]);
 
   // Sync Show Balance preference
   useEffect(() => {
@@ -601,68 +609,92 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       <div className="relative w-full max-w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-hairline group box-border">
         <div className="relative w-full min-h-[165px] sm:min-h-[195px] flex flex-col justify-between p-4 sm:p-6 text-white transition-all duration-700 overflow-hidden box-border">
-          {/* Background Talent Poster Image */}
           {heroSlides[currentSlide].isAd ? (
-            <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4">
-              <div className="text-[10px] uppercase tracking-wider text-white/60 mb-2">Google AdSense Sponsor</div>
-              <div className="w-full max-w-xs bg-white rounded-xl p-2 text-black text-center min-h-[90px] flex items-center justify-center">
-                <ins
-                  className="adsbygoogle"
-                  style={{ display: "block", width: "100%" }}
-                  data-ad-client="ca-pub-2898811488813299"
-                  data-ad-slot={heroSlides[currentSlide].adSlot}
-                  data-ad-format="auto"
-                  data-full-width-responsive="true"
-                />
+            <>
+              <div className="absolute inset-0 bg-canvas/95 dark:bg-slate-950/95 backdrop-blur-md z-0" />
+              <div className="relative z-10 flex flex-col justify-between h-full">
+                <div className="flex items-center justify-between">
+                  <div className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                    {heroSlides[currentSlide].badge}
+                  </div>
+                  <span className="text-[10px] text-ink-muted uppercase tracking-widest font-semibold">Google AdSense</span>
+                </div>
+                <div className="my-1 flex items-center justify-center">
+                  <div className="w-full bg-canvas/90 border border-hairline/60 rounded-xl p-1 text-center text-xs text-ink-muted min-h-[90px] flex items-center justify-center overflow-hidden">
+                    <ins
+                      className="adsbygoogle"
+                      style={{ display: "block", width: "100%", height: "90px" }}
+                      data-ad-client="ca-pub-2898811488813299"
+                      data-ad-slot="3892653630"
+                      data-ad-format="fluid"
+                      data-full-width-responsive="true"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs font-semibold text-ink">{heroSlides[currentSlide].title}</span>
+                  {/* Slide Indicators */}
+                  <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
+                    {heroSlides.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentSlide(idx)}
+                        className={`h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
+                        aria-label={`Slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            </>
           ) : (
             <>
+              {/* Background Talent Poster Image */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={heroSlides[currentSlide].image}
                 alt={heroSlides[currentSlide].title}
                 className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 transform group-hover:scale-105 pointer-events-none"
               />
+
+              {/* Gradient Overlay for Text Legibility */}
+              <div className={`absolute inset-0 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} transition-all duration-700`} />
+
+              {/* Banner Content */}
+              <div className="relative z-10 space-y-1.5 max-w-sm sm:max-w-md">
+                <div className="inline-block bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-white/20">
+                  {heroSlides[currentSlide].badge}
+                </div>
+                <h2 className="text-base sm:text-xl font-black tracking-tight leading-tight drop-shadow-md text-white">
+                  {heroSlides[currentSlide].title}
+                </h2>
+                <p className="text-[11px] sm:text-xs text-white/95 leading-relaxed line-clamp-2 drop-shadow-sm font-medium">
+                  {heroSlides[currentSlide].subtitle}
+                </p>
+              </div>
+
+              <div className="relative z-10 pt-3 flex items-center justify-between">
+                <button
+                  onClick={() => router.push(heroSlides[currentSlide].ctaLink)}
+                  className="px-4 py-1.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1 border border-white/40"
+                >
+                  <span>{heroSlides[currentSlide].ctaText}</span>
+                </button>
+
+                {/* Slide Indicators */}
+                <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
+                  {heroSlides.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentSlide(idx)}
+                      className={`h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
+                      aria-label={`Slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
             </>
           )}
-
-          {/* Gradient Overlay for Text Legibility */}
-          <div className={`absolute inset-0 bg-gradient-to-r ${heroSlides[currentSlide].bgGradient} transition-all duration-700`} />
-
-          {/* Banner Content */}
-          <div className="relative z-10 space-y-1.5 max-w-sm sm:max-w-md">
-            <div className="inline-block bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-white/20">
-              {heroSlides[currentSlide].badge}
-            </div>
-            <h2 className="text-base sm:text-xl font-black tracking-tight leading-tight drop-shadow-md text-white">
-              {heroSlides[currentSlide].title}
-            </h2>
-            <p className="text-[11px] sm:text-xs text-white/95 leading-relaxed line-clamp-2 drop-shadow-sm font-medium">
-              {heroSlides[currentSlide].subtitle}
-            </p>
-          </div>
-
-          <div className="relative z-10 pt-3 flex items-center justify-between">
-            <button
-              onClick={() => router.push(heroSlides[currentSlide].ctaLink)}
-              className="px-4 py-1.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1 border border-white/40"
-            >
-              <span>{heroSlides[currentSlide].ctaText}</span>
-            </button>
-
-            {/* Slide Indicators */}
-            <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
-              {heroSlides.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentSlide(idx)}
-                  className={`h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
-                  aria-label={`Slide ${idx + 1}`}
-                />
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -977,7 +1009,8 @@ export default function DashboardPage() {
             hasWarranty: !selectedInvoiceTrx.service_type?.includes('ceir'),
             remainingDays: selectedInvoiceTrx.remainingDays
           },
-          adminNote: selectedInvoiceTrx.admin_note || selectedInvoiceTrx.adminNote
+          adminNote: selectedInvoiceTrx.admin_note || selectedInvoiceTrx.adminNote,
+          apiResponse: selectedInvoiceTrx.api_response || selectedInvoiceTrx.apiResponse,
         } : null}
       />
       </div>

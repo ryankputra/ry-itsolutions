@@ -29,7 +29,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         }
       >
         {children}
-        {!isAiPage && <GoogleAdBanner className="mt-8" />}
+        {!isAiPage && (
+          <div className="mt-8">
+            <GoogleAdBanner />
+          </div>
+        )}
       </main>
 
       {/* 3. Mobile App Bottom Navigation Bar */}

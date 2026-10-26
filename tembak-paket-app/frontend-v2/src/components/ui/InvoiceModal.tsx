@@ -30,6 +30,8 @@ interface InvoiceData {
     notice?: string | null;
   };
   adminNote?: string;
+  apiResponse?: any;
+  api_response?: any;
   speed?: string;
   speed_option?: string;
   speed_label?: string;
@@ -226,7 +228,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
     try {
       setIsExporting(true);
       const { toPng } = await import("html-to-image");
-      const { jsPDF } = await import("jspdf");
+      const jsPDFModule = await import("jspdf");
+      const jsPDF = jsPDFModule.jsPDF || jsPDFModule.default;
 
       const dataUrl = await toPng(printRef.current, {
         pixelRatio: 2.5,
@@ -376,34 +379,14 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
 
   // Helper to parse CEIR result details from Ceirgo API
   const parseCeirDetails = () => {
-    let rawNote = data.adminNote || "";
-    if (!rawNote || rawNote.toLowerCase().includes("berhasil kami proses") || rawNote.toLowerCase().includes("sedang diproses")) {
-      rawNote = data.apiResponse || data.api_response || "IMEI terdaftar & terverifikasi di server CEIR pusat.";
-    }
-    const parsed = parseCeirResponse(String(rawNote), formatDate(data.createdAt));
-    if (parsed.rows.length === 0) {
-      parsed.rows.push({
-        no: 1,
-        tanggal: formatDate(data.createdAt),
-        action: "Verifikasi CEIR Selesai",
-        note: typeof rawNote === 'string' ? rawNote : "Data IMEI sah & terdaftar.",
-        imsi: "-",
-        imei: data.imei || "-"
-      });
-    }
-
+    const apiRaw = data.apiResponse || data.api_response || data.adminNote || "";
+    const parsed = parseCeirResponse(apiRaw, formatDate(data.createdAt), data.apiResponse || data.api_response);
     return {
       status: parsed.status,
       gateway: "Central CEIR Database & IMEI Verification Gateway",
-      logs: parsed.rows.map(r => ({
-        index: r.no,
-        date: r.tanggal,
-        action: r.action,
-        note: r.note,
-        imsi: r.imsi,
-        imei: r.imei
-      })),
-      rawNote: parsed.rawText || "Data IMEI telah berhasil diverifikasi oleh server CEIR.",
+      columns: parsed.columns,
+      rows: parsed.rows,
+      rawText: parsed.rawText,
       operators: "Semua Operator Seluler (Telkomsel, Indosat, XL, Smartfren, Tri)"
     };
   };
@@ -614,51 +597,37 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-800">
-                  <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
-                    <span className="text-[10px] text-slate-500 block">Status Database CEIR</span>
-                    <span className="font-black text-emerald-800 text-xs block mt-0.5">
-                      {ceirInfo.status}
-                    </span>
-                  </div>
-
-                  <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
-                    <span className="text-[10px] text-slate-500 block">Jangkauan Sinyal Seluler</span>
-                    <span className="font-bold text-slate-800 text-xs block mt-0.5">
-                      {ceirInfo.operators}
-                    </span>
-                  </div>
+                <div className="bg-white/90 p-2.5 rounded-xl border border-emerald-200/80 font-mono text-[11px] font-bold text-slate-800">
+                  IMEI : {data.imei || ceirInfo.logs[0]?.imei || "----"}
                 </div>
 
                 {/* Log Riwayat Tabel */}
                 <div className="space-y-1.5 pt-1">
-                  <p className="text-[11px] font-bold text-emerald-950">Rincian Log Query CEIR:</p>
-                  <div className="overflow-hidden rounded-xl border border-emerald-200/80 bg-white">
-                    <table className="w-full text-left text-[11px]">
-                      <thead className="bg-emerald-100/60 text-emerald-900 border-b border-emerald-200/60">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-bold text-emerald-950">Rincian Log Query CEIR (API):</p>
+                    <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded font-bold">
+                      {ceirInfo.columns.length} Kolom Respon API
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-emerald-200/80 bg-white shadow-sm">
+                    <table className="w-full text-left text-[11px] min-w-[500px]">
+                      <thead className="bg-emerald-100/70 text-emerald-900 border-b border-emerald-200/60 font-mono">
                         <tr>
-                          <th className="py-1.5 px-2.5 font-bold w-8">#</th>
-                          <th className="py-1.5 px-2.5 font-bold">Waktu</th>
-                          <th className="py-1.5 px-2.5 font-bold">Aktivitas / Event</th>
-                          <th className="py-1.5 px-2.5 font-bold">Keterangan</th>
+                          {ceirInfo.columns.map((col, cIdx) => (
+                            <th key={cIdx} className="py-2 px-2.5 font-bold uppercase tracking-wider">
+                              {col.replace(/_/g, " ")}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-emerald-100">
-                        {ceirInfo.logs.map((log) => (
-                          <tr key={log.index} className="hover:bg-emerald-50/40">
-                            <td className="py-1.5 px-2.5 font-bold text-slate-500">{log.index}</td>
-                            <td className="py-1.5 px-2.5 font-mono text-[10px] text-slate-600">{log.date}</td>
-                            <td className="py-1.5 px-2.5 font-mono font-bold text-[10px] text-emerald-800">{log.action}</td>
-                            <td className="py-1.5 px-2.5 text-slate-700">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span>{log.note}</span>
-                                {log.imsi && (
-                                  <span className="font-mono text-[9px] text-emerald-900 bg-emerald-100/80 px-1 py-0.5 rounded border border-emerald-300">
-                                    IMSI: {log.imsi}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
+                      <tbody className="divide-y divide-emerald-100 font-mono text-[10px]">
+                        {ceirInfo.rows.map((row, rIdx) => (
+                          <tr key={rIdx} className="hover:bg-emerald-50/40">
+                            {ceirInfo.columns.map((col, cIdx) => (
+                              <td key={cIdx} className="py-2 px-2.5 text-slate-800 break-words whitespace-pre-wrap font-sans text-xs">
+                                {String(row[col] !== undefined && row[col] !== null ? row[col] : "-")}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>

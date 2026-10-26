@@ -451,17 +451,15 @@ export default function CekCeirPage() {
                 <thead className="bg-canvas border-b border-hairline font-bold text-ink">
                   <tr>
                     <th className="p-2">No</th>
-                    <th className="p-2">Tanggal</th>
-                    <th className="p-2">Aksi</th>
-                    <th className="p-2">Keterangan</th>
+                    <th className="p-2">Informasi / Field (API CEIR)</th>
+                    <th className="p-2">Nilai / Detail</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline bg-canvas/50">
                   {ceirResult.rows.map((row: any, idx: number) => (
                     <tr key={idx}>
                       <td className="p-2">{row.no || idx + 1}</td>
-                      <td className="p-2">{row.date || '-'}</td>
-                      <td className="p-2 font-mono font-semibold">{row.action || '-'}</td>
+                      <td className="p-2 font-mono font-bold text-primary">{row.action || '-'}</td>
                       <td className="p-2">{row.note || '-'}</td>
                     </tr>
                   ))}

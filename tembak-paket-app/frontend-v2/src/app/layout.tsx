@@ -55,7 +55,6 @@ export default function RootLayout({
       className={`${inter.variable} antialiased`}
     >
       <head>
-        <meta name="google-adsense-account" content="ca-pub-2898811488813299" />
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"

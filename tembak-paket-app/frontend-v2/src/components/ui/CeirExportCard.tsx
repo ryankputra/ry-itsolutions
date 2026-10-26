@@ -237,41 +237,21 @@ export function CeirExportCard({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 text-[11px] font-bold border-b border-slate-200">
-                  <th className="py-2 px-3 w-10 text-center">No</th>
-                  <th className="py-2 px-3 w-36">Waktu Kejadian</th>
-                  <th className="py-2 px-3 w-40">Aksi / Event</th>
-                  <th className="py-2 px-3">Keterangan / Operator</th>
+                  {parsed.columns.map((col, cIdx) => (
+                    <th key={cIdx} className="py-2 px-3 uppercase tracking-wider">
+                      {col.replace(/_/g, " ")}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {parsed.rows.map((row) => (
-                  <tr key={row.no} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-2.5 px-3 text-center font-bold text-slate-500 text-[11px]">
-                      {row.no}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 font-medium">
-                      {row.tanggal}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-[11px] text-emerald-700">
-                      <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
-                        {row.action}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-slate-800 text-[11px] font-medium leading-relaxed">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span>{row.note}</span>
-                        {row.imsi && (
-                          <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                            IMSI: {row.imsi}
-                          </span>
-                        )}
-                        {row.imei && row.imei !== imei && (
-                          <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                            IMEI: {row.imei}
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                {parsed.rows.map((row, rIdx) => (
+                  <tr key={rIdx} className="hover:bg-slate-50/60 transition-colors">
+                    {parsed.columns.map((col, cIdx) => (
+                      <td key={cIdx} className="py-2.5 px-3 text-slate-800 text-[11px] font-medium leading-relaxed">
+                        {String(row[col] !== undefined && row[col] !== null ? row[col] : "-")}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>

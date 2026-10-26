@@ -8,7 +8,7 @@ interface GoogleAdBannerProps {
   className?: string;
 }
 
-export default function GoogleAdBanner({ slot = "1234567890", format = "auto", className = "" }: GoogleAdBannerProps) {
+export default function GoogleAdBanner({ slot = "3892653630", format = "auto", className = "" }: GoogleAdBannerProps) {
   useEffect(() => {
     try {
       // @ts-ignore

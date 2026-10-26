@@ -654,7 +654,7 @@ function HistoryContent() {
                   const isCeirTrx = svcType === "ceir" || svcType === "barcode" || pkgName.includes("ceir") || pkgName.includes("barcode");
 
                   if (isCeirTrx) {
-                    let parsed = parseCeirResponse(rawNote);
+                    let parsed = parseCeirResponse(rawNote, undefined, trx.api_response || trx.apiResponse);
                     if (parsed.rows.length === 0 && (trx.api_response || trx.apiResponse)) {
                       parsed = parseCeirResponse(trx.api_response || trx.apiResponse);
                     }
@@ -873,6 +873,7 @@ function HistoryContent() {
                   remainingDays: selectedInvoiceTrx.remainingDays,
                 },
                 adminNote: selectedInvoiceTrx.admin_note || selectedInvoiceTrx.adminNote,
+                apiResponse: selectedInvoiceTrx.api_response || selectedInvoiceTrx.apiResponse,
               }
             : null
         }

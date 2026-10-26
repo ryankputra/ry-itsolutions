@@ -578,6 +578,7 @@ function CekGaransiContent() {
           status: rawStatus,
           warranty: result.warranty,
           adminNote: result.adminNote || result.admin_note,
+          apiResponse: result.apiResponse || result.api_response,
           ceirData: result.ceirData,
           user_image: result.user_image,
           user_image_ceir: result.user_image_ceir,

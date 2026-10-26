@@ -242,7 +242,26 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             refId = cd.reference_id || cd.order_id || cd.trx_id || `CRG_${Date.now()}`;
             const serverStatus = (cd.status || cd.order_status || 'processing').toLowerCase();
             orderStatus = (serverStatus === 'success' || serverStatus === 'completed') ? 'success' : 'processing';
-            adminNote = typeof cd.result === 'string' ? cd.result : (cd.message || 'Pesanan otomatis CeirGO berhasil diterima server.');
+            if (cd.result) {
+                if (typeof cd.result === 'string') {
+                    adminNote = cd.result;
+                } else if (Array.isArray(cd.result)) {
+                    adminNote = cd.result.map((item, idx) => {
+                        if (item.history && Array.isArray(item.history)) {
+                            return item.history.map((h, hIdx) => `${h.no || (hIdx + 1)}. ${h.date || h.tanggal || ''} | Action: ${h.action || 'CEIR_EVENT'} | Note: ${h.note || '-'}`).join('\n');
+                        }
+                        return `${item.no || (idx + 1)}. ${item.date || item.tanggal || ''} | Action: ${item.action || 'CEIR_EVENT'} | Note: ${item.note || '-'}`;
+                    }).join('\n');
+                } else if (typeof cd.result === 'object') {
+                    if (cd.result.history && Array.isArray(cd.result.history)) {
+                        adminNote = cd.result.history.map((h, hIdx) => `${h.no || (hIdx + 1)}. ${h.date || h.tanggal || ''} | Action: ${h.action || 'CEIR_EVENT'} | Note: ${h.note || '-'}`).join('\n');
+                    } else {
+                        adminNote = cd.result.note || cd.result.message || JSON.stringify(cd.result);
+                    }
+                }
+            } else {
+                adminNote = cd.message || 'Pesanan otomatis CeirGO berhasil diterima server.';
+            }
             apiResponse = JSON.stringify(cd.result || cd);
 
             // Auto-sync wallet balance if returned
@@ -254,16 +273,25 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             }
             console.log(`[CeirGO Order Router] Sukses! Ref ID: ${refId}, Status: ${orderStatus}`);
         } else {
-            const errMsg = ceirRes.message || ceirRes.error || 'Respon gagal dari server pusat';
+            const errMsg = ceirRes.message || ceirRes.error || ceirRes.data?.message || 'Respon gagal dari server pusat';
+            const isBalanceErr = ceirRes.statusCode === 402 || String(errMsg).toLowerCase().includes('balance') || String(errMsg).toLowerCase().includes('saldo') || String(errMsg).toLowerCase().includes('tidak mencukupi');
+            
             console.error(`[CeirGO Order Router Error] Provider error on ${rawCode} (${cleanImei}):`, errMsg);
-            orderStatus = 'pending';
-            adminNote = `[CeirGO Internal Error] ${errMsg}`;
-            apiResponse = JSON.stringify(ceirRes);
+            
+            // Refund user balance if failed/insufficient balance
+            await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [finalPrice, userId]).catch(() => {});
+            
+            orderStatus = 'failed';
+            adminNote = isBalanceErr 
+                ? `Pesanan gagal diproses karena gangguan sementara pada jalur API pusat. Saldo Anda telah dikembalikan sepenuhnya.`
+                : `Pesanan gagal dari server pusat: ${errMsg}. Saldo Anda telah dikembalikan.`;
+            apiResponse = JSON.stringify({ error: true, message: isBalanceErr ? "Pesanan gagal diproses karena gangguan sementara pada jalur API pusat. Saldo Anda telah dikembalikan sepenuhnya." : errMsg, statusCode: ceirRes.statusCode || 500 });
         }
     } catch (dispatchErr) {
         console.error(`[CeirGO Order Router Exception] ${rawCode} (${cleanImei}):`, dispatchErr.message);
-        orderStatus = 'pending';
-        adminNote = `[CeirGO Exception] ${dispatchErr.message}`;
+        await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [finalPrice, userId]).catch(() => {});
+        orderStatus = 'failed';
+        adminNote = `Pesanan gagal karena kendala koneksi server pusat (${dispatchErr.message}). Saldo Anda telah dikembalikan secara otomatis.`;
         apiResponse = JSON.stringify({ error: dispatchErr.message });
     }
 
