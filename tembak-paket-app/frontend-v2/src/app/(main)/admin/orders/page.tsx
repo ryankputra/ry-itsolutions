@@ -23,6 +23,14 @@ import {
   Smartphone,
   Cpu,
   RefreshCw,
+  Copy,
+  ExternalLink,
+  User,
+  Phone,
+  Image as ImageIcon,
+  Zap,
+  FileText,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function AdminOrdersPage() {
@@ -51,6 +59,51 @@ export default function AdminOrdersPage() {
 
   // Retry loading
   const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
+
+  // Copied feedback key
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, key: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => {
+      setCopiedKey((prev) => (prev === key ? null : prev));
+    }, 1800);
+  };
+
+  const handleCopyReport = (o: any) => {
+    const imeis = (typeof o?.imei === "string" ? o.imei : "")
+      .split(/[\n,;]+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+      .join(", ");
+    const text = `*LAPORAN PESANAN - RY-ITSOLUTIONS*\nID: #${o.id}\nLayanan: ${o.packageName || "Add Roamer"}\nPelanggan: ${o.userName || "-"}\nNo HP: ${o.targetPhone || "-"}\nIMEI: ${imeis || "-"}\nKecepatan: ${o.speed_label || o.speed_option || "Regular"}\nStatus: ${o.status?.toUpperCase() || "PENDING"}\n${o.admin_note ? `Catatan/SN: ${o.admin_note}\n` : ""}Waktu: ${o.createdAt ? new Date(o.createdAt).toLocaleString("id-ID") : "-"}`;
+    copyToClipboard(text, `report-${o.id}`);
+    Swal.fire({
+      title: "Format Laporan Tersalin",
+      text: "Data pesanan berhasil disalin ke clipboard.",
+      icon: "success",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  };
+
+  const QUICK_NOTE_TEMPLATES = [
+    "Sinyal All Operator Aktif (Garansi)",
+    "SN: REG-",
+    "IMEI Terdaftar ke Database Operator",
+    "Garansi Aktif, Mode Pesawat 10s lalu Restart HP",
+    "Sedang dalam proses antrean server operator",
+  ];
+
+  const resolveImgUrl = (url: string) => {
+    const trimmed = (url || "").trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    if (trimmed.startsWith("/")) return trimmed;
+    return `/${trimmed}`;
+  };
 
   const loadManualData = async () => {
     setLoadingManual(true);
@@ -362,298 +415,627 @@ export default function AdminOrdersPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredOrders.map((o, index) => (
-              <div
-                key={o?.id || index}
-                className="p-4 border border-hairline rounded-xl bg-canvas space-y-3 hover:border-primary/30 transition-colors shadow-xs"
-              >
-                {/* Header Row */}
-                <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-ink">{o?.packageName || "Layanan Resmi"}</span>
-                      <span className="text-xs font-mono text-ink-muted bg-parchment/60 px-2 py-0.5 rounded border border-hairline">
-                        #{o?.id ? String(o.id).substring(0, 14) : "-"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-ink mt-0.5">
-                      Pelanggan: <span className="font-bold">{o?.userName || "Pelanggan"}</span>
-                      {o?.targetPhone && <span className="ml-1 text-ink-muted font-mono">({o.targetPhone})</span>}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {typeof o?.imei === "string" && o.imei
-                        ? o.imei.split(",").map((im: string, i: number) => (
-                            <span
-                              key={i}
-                              className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-md border border-primary/20 font-mono"
-                            >
-                              {im.trim()}
+            {filteredOrders.map((o, index) => {
+              const isManualTab = orderQueueSubTab === "manual";
+              const imeis = (typeof o?.imei === "string" ? o.imei : "")
+                .split(/[\n,;]+/)
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+              const userImages = (typeof o?.user_image === "string" ? o.user_image : "")
+                .split(",")
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+              const userCeirImages = (typeof o?.user_image_ceir === "string" ? o.user_image_ceir : "")
+                .split(",")
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+              const adminImages = (typeof o?.admin_image === "string" ? o.admin_image : "")
+                .split(",")
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+
+              if (isManualTab) {
+                return (
+                  <div
+                    key={o?.id || index}
+                    className="p-4 sm:p-5 border border-indigo-200/90 dark:border-indigo-900/60 rounded-2xl bg-canvas space-y-4 hover:border-indigo-400/80 transition-all shadow-xs"
+                  >
+                    {/* Header Row: Title, ID, Speed, Status & Price */}
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2.5">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            <Smartphone className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                            Antrean Add Roamer (Manual)
+                          </span>
+                          <span className="font-bold text-sm sm:text-base text-ink">
+                            {o?.packageName || "Add Roamer Resmi"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(String(o?.id || ""), `id-${o?.id}`)}
+                            className="text-[11px] font-mono text-ink-muted hover:text-ink bg-parchment/70 hover:bg-parchment px-2 py-0.5 rounded border border-hairline inline-flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Klik untuk salin Order ID"
+                          >
+                            <span>#{o?.id ? String(o.id).substring(0, 14) : "-"}</span>
+                            {copiedKey === `id-${o?.id}` ? (
+                              <Check className="w-3 h-3 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-ink-muted" />
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                          {o?.speed_label || (o?.speed_option && o.speed_option !== "instant") ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              <Zap className="w-3 h-3 text-amber-600" />
+                              Kecepatan: {o.speed_label || (o.speed_option === "fast" ? "Fast" : o.speed_option === "semi" ? "Semi Fast" : "Slow")}
                             </span>
-                          ))
-                        : null}
+                          ) : null}
+                          <span className="text-[11px] text-ink-muted flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {o?.createdAt ? new Date(o.createdAt).toLocaleString("id-ID") : "-"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex sm:flex-col items-end justify-between gap-1.5 shrink-0">
+                        <span
+                          className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                            o?.status === "success"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                              : o?.status === "failed"
+                              ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                              : o?.status === "processing"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                          }`}
+                        >
+                          {o?.status === "in_queue" ? "ANTREAN" : o?.status === "processing" ? "SEDANG DIPROSES" : o?.status?.toUpperCase() || "PENDING"}
+                        </span>
+                        <span className="text-sm font-bold text-ink font-mono">
+                          Rp {(Number(o?.platformFee) || Number(o?.originalPrice) || Number(o?.price) || 0).toLocaleString("id-ID")}
+                        </span>
+                      </div>
                     </div>
 
-                    {orderQueueSubTab === "manual" ? (
-                      o?.speed_option &&
-                      o.speed_option !== "instant" && (
-                        <p className="text-xs font-semibold text-primary mt-1">
-                          Kecepatan:{" "}
-                          <span className="font-bold">
-                            {o.speed_label || (o.speed_option === "fast" ? "Fast" : o.speed_option === "semi" ? "Semi Fast" : "Slow")}
+                    {/* Info Pelanggan & Kontak WhatsApp */}
+                    <div className="p-2.5 rounded-xl bg-parchment/40 dark:bg-slate-900/50 border border-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-ink-muted shrink-0" />
+                        <span className="text-ink-muted">Pelanggan:</span>
+                        <span className="font-bold text-ink">{o?.userName || "Pelanggan"}</span>
+                        {o?.userId && (
+                          <span className="text-[10px] text-ink-muted font-mono hidden md:inline">
+                            (ID: {String(o.userId).substring(0, 12)}...)
                           </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="text-ink-muted">WhatsApp:</span>
+                        {o?.targetPhone ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-ink">{o.targetPhone}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(o.targetPhone, `phone-${o.id}`)}
+                              className="text-[10px] text-primary hover:underline font-bold cursor-pointer"
+                            >
+                              {copiedKey === `phone-${o.id}` ? "Tersalin!" : "Salin"}
+                            </button>
+                            <a
+                              href={`https://wa.me/${o.targetPhone.replace(/^0/, "62").replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800"
+                            >
+                              Chat WA
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-ink-muted italic">Tidak ada nomor HP</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Hero Box: Data IMEI Target (Khusus Add Roamer) */}
+                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap pb-1 border-b border-slate-200/80 dark:border-slate-800">
+                        <span className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-primary" />
+                          Nomor IMEI Target (Pengerjaan Add Roamer)
+                        </span>
+                        {imeis.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(imeis.join(", "), `imei-all-${o.id}`)}
+                            className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>{copiedKey === `imei-all-${o.id}` ? "Semua IMEI Tersalin!" : "Salin Semua IMEI"}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {imeis.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic">Belum ada nomor IMEI yang dimasukkan.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {imeis.map((im: string, iIdx: number) => (
+                            <div
+                              key={iIdx}
+                              className="p-2.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shadow-xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono shrink-0">
+                                  {imeis.length > 1 ? `IMEI ${iIdx + 1}` : "IMEI"}
+                                </span>
+                                <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 tracking-wider truncate select-all">
+                                  {im}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(im, `im-${o.id}-${iIdx}`)}
+                                  className="px-2 py-1 rounded text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 flex items-center gap-1 transition-colors cursor-pointer"
+                                  title="Salin IMEI ini"
+                                >
+                                  {copiedKey === `im-${o.id}-${iIdx}` ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                      <span className="text-emerald-700 dark:text-emerald-400 text-[11px]">Tersalin!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      <span className="text-[11px]">Salin</span>
+                                    </>
+                                  )}
+                                </button>
+                                <a
+                                  href={`/cek-garansi?q=${encodeURIComponent(im)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 rounded text-[11px] font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors"
+                                  title="Cek Status Garansi / Sinyal IMEI"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span>Cek</span>
+                                </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bukti Foto dari Pelanggan */}
+                    {(userImages.length > 0 || userCeirImages.length > 0) && (
+                      <div className="p-3 rounded-xl bg-parchment/30 dark:bg-slate-900/40 border border-hairline space-y-2">
+                        <p className="text-xs font-bold text-ink flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                          Foto Bukti Layar dari Pelanggan:
                         </p>
-                      )
+                        <div className="flex gap-4 flex-wrap">
+                          {userImages.length > 0 && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-ink-muted uppercase">Tentang Ponsel (IMEI):</span>
+                              <div className="flex flex-wrap gap-2">
+                                {userImages.map((imgUrl: string, idx: number) => {
+                                  const src = resolveImgUrl(imgUrl);
+                                  return (
+                                    <img
+                                      key={idx}
+                                      src={src}
+                                      alt={`Bukti User ${idx + 1}`}
+                                      className="h-16 object-contain rounded-xl border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
+                                      onClick={() => {
+                                        Swal.fire({
+                                          imageUrl: src,
+                                          imageAlt: "Bukti Layar Ponsel (IMEI)",
+                                          showConfirmButton: false,
+                                          showCloseButton: true,
+                                        });
+                                      }}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {userCeirImages.length > 0 && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-ink-muted uppercase">Bukti Status CEIR:</span>
+                              <div className="flex flex-wrap gap-2">
+                                {userCeirImages.map((imgUrl: string, idx: number) => {
+                                  const src = resolveImgUrl(imgUrl);
+                                  return (
+                                    <img
+                                      key={idx}
+                                      src={src}
+                                      alt={`Bukti CEIR ${idx + 1}`}
+                                      className="h-16 object-contain rounded-xl border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
+                                      onClick={() => {
+                                        Swal.fire({
+                                          imageUrl: src,
+                                          imageAlt: "Bukti Status CEIR",
+                                          showConfirmButton: false,
+                                          showCloseButton: true,
+                                        });
+                                      }}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Catatan Admin / SN & Bukti Hasil Pengerjaan Admin */}
+                    {(o?.admin_note || adminImages.length > 0) && (
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                        {o?.admin_note && (
+                          <div className="space-y-1.5">
+                            <p className="font-bold text-[10px] text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5 text-primary" />
+                                Catatan / Serial Number (SN) Admin:
+                              </span>
+                              <span className="text-[10px] font-mono bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded">
+                                Hasil Pengerjaan
+                              </span>
+                            </p>
+                            <div className="bg-white dark:bg-slate-800 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700 font-mono text-[11px]">
+                              {(() => {
+                                const note = String(o.admin_note);
+                                if (note.includes("|") && (note.includes("USERID") || note.includes("PACKAGEID") || note.includes("IMEI"))) {
+                                  return note.split("|").map((item, idx) => {
+                                    const parts = item.trim().split(":");
+                                    if (parts.length >= 2) {
+                                      const key = parts[0].trim();
+                                      const val = parts.slice(1).join(":").trim();
+                                      return (
+                                        <div key={idx} className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
+                                          <span className="text-slate-500 font-bold uppercase">{key}:</span>
+                                          <span className="text-slate-800 dark:text-slate-200 font-medium sm:text-right break-all">{val}</span>
+                                        </div>
+                                      );
+                                    }
+                                    return <div key={idx} className="text-slate-700 dark:text-slate-300 py-0.5">{item.trim()}</div>;
+                                  });
+                                }
+                                return <div className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap font-sans text-xs">{note}</div>;
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        {adminImages.length > 0 && (
+                          <div className="space-y-1 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                            <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Bukti Sinyal / Hasil Pengerjaan Admin:
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {adminImages.map((imgUrl: string, idx: number) => {
+                                const src = resolveImgUrl(imgUrl);
+                                return (
+                                  <img
+                                    key={idx}
+                                    src={src}
+                                    alt={`Bukti Admin ${idx + 1}`}
+                                    className="h-16 object-contain rounded-xl border border-emerald-300 bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
+                                    onClick={() => {
+                                      Swal.fire({
+                                        imageUrl: src,
+                                        imageAlt: "Bukti Hasil Pengerjaan Admin",
+                                        showConfirmButton: false,
+                                        showCloseButton: true,
+                                      });
+                                    }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Admin Action Form Inline */}
+                    {manualActionData?.id === o.id ? (
+                      <div className="p-3.5 bg-indigo-50/50 dark:bg-slate-900 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-3 pt-2">
+                        <div className="flex justify-between items-center">
+                          <p className="font-bold text-xs text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                            <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
+                            Proses & Ubah Status Add Roamer
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setManualActionData(null)}
+                            className="text-xs text-ink-muted hover:text-ink cursor-pointer"
+                          >
+                            Batal
+                          </button>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-ink">Status Pengerjaan</label>
+                          <select
+                            className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-bold outline-none focus:ring-1 focus:ring-primary"
+                            value={manualActionData?.status || "pending"}
+                            onChange={(e) =>
+                              setManualActionData((prev) => (prev ? { ...prev, status: e.target.value } : null))
+                            }
+                          >
+                            <option value="pending">Pending (Menunggu Antrean)</option>
+                            <option value="processing">Processing (Sedang Dikerjakan)</option>
+                            <option value="success">Success (Berhasil Selesai & Garansi Aktif)</option>
+                            <option value="failed">Failed (Gagal / Refund Saldo)</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-ink flex items-center justify-between">
+                            <span>Catatan Admin / Serial Number (SN)</span>
+                            <span className="text-[10px] text-ink-muted font-normal">Klik template cepat:</span>
+                          </label>
+                          <div className="flex flex-wrap gap-1">
+                            {QUICK_NOTE_TEMPLATES.map((tmpl, tIdx) => (
+                              <button
+                                key={tIdx}
+                                type="button"
+                                onClick={() => {
+                                  setManualActionData((prev) => {
+                                    if (!prev) return null;
+                                    const current = prev.note || "";
+                                    const updated = current ? `${current} - ${tmpl}` : tmpl;
+                                    return { ...prev, note: updated };
+                                  });
+                                }}
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                              >
+                                + {tmpl}
+                              </button>
+                            ))}
+                          </div>
+                          <Input
+                            placeholder="Contoh: SN: REG-9921 / Sinyal All Operator Aktif (Garansi 3 Bulan)"
+                            value={manualActionData?.note || ""}
+                            onChange={(e) => setManualActionData((prev) => (prev ? { ...prev, note: e.target.value } : null))}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-ink block mb-1">
+                            Lampiran Bukti Hasil Sinyal / Pengerjaan (Opsional)
+                          </label>
+                          <input
+                            type="file"
+                            className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                            onChange={(e) =>
+                              setManualActionData((prev) => (prev ? { ...prev, file: e.target.files?.[0] || null } : null))
+                            }
+                          />
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            className="text-xs font-bold h-9 gap-1.5"
+                            onClick={async () => {
+                              const formData = new FormData();
+                              formData.append("status", manualActionData?.status || "pending");
+                              formData.append("admin_note", manualActionData?.note || "");
+                              if (manualActionData?.file) {
+                                formData.append("admin_image", manualActionData.file);
+                                formData.append("image", manualActionData.file);
+                              }
+
+                              try {
+                                const res = await fetch(`/api/admin/manual-orders/${o.id}`, {
+                                  method: "PUT",
+                                  credentials: "include",
+                                  body: formData,
+                                });
+                                const d = await res.json().catch(() => null);
+                                if (res.ok && d?.status) {
+                                  Swal.fire({ title: "Tersimpan", text: d.message || "Status pesanan berhasil diperbarui.", timer: 1500, showConfirmButton: false });
+                                  setManualActionData(null);
+                                  loadManualData();
+                                } else {
+                                  Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui status pesanan." });
+                                }
+                              } catch (e: any) {
+                                Swal.fire({ title: "Error", text: "Gagal menghubungi server." });
+                              }
+                            }}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            Simpan Perubahan
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs h-9" onClick={() => setManualActionData(null)}>
+                            Batal
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
+                      <div className="flex gap-2 flex-wrap items-center pt-2 border-t border-hairline">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-primary/5 text-primary border-primary/30 hover:bg-primary hover:text-white text-xs h-8 font-bold"
+                          onClick={() =>
+                            setManualActionData({ id: o.id, status: o.status, note: o.admin_note || "", file: null })
+                          }
+                        >
+                          Proses Pesanan
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 gap-1.5"
+                          onClick={() => {
+                            const firstImei = o.imei ? o.imei.split(/[\n,]+/)[0].trim() : "";
+                            setSelectedInvoiceTrx({
+                              trxId: o.id,
+                              imei: firstImei || o.targetPhone || "N/A",
+                              packageName: o.packageName || "Add Roamer Resmi",
+                              serviceType: o.service_type || "imei",
+                              createdAt: o.createdAt,
+                              amount: o.platformFee || o.originalPrice || 0,
+                              status: o.status,
+                              adminNote: o.admin_note,
+                              admin_image: o.admin_image,
+                              user_image: o.user_image,
+                              user_image_ceir: o.user_image_ceir,
+                            });
+                          }}
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Cetak Nota
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 text-xs h-8 font-bold gap-1.5"
+                          onClick={() => handleAdminQuickShareWA(o)}
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          Kirim WhatsApp
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 gap-1.5 text-ink-muted hover:text-ink"
+                          onClick={() => handleCopyReport(o)}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Salin Laporan
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              /* === TAMPILAN KHUSUS LOG LAYANAN CEIR (OTOMATIS) === */
+              return (
+                <div
+                  key={o?.id || index}
+                  className="p-4 sm:p-5 border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl bg-canvas space-y-4 hover:border-emerald-400/80 transition-all shadow-xs"
+                >
+                  {/* Header Row */}
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2.5">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <Cpu className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          Otomatis Server CEIR
+                        </span>
+                        <span className="font-bold text-sm sm:text-base text-ink">
+                          {o?.packageName || "Cek Riwayat Database CEIR"}
+                        </span>
+                        <span className="text-xs font-mono text-ink-muted bg-parchment/60 px-2 py-0.5 rounded border border-hairline">
+                          #{o?.id ? String(o.id).substring(0, 14) : "-"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-ink mt-1">
+                        Target: <span className="font-mono font-bold">{o?.imei || o?.targetPhone || "-"}</span>
+                        {o?.userName && <span className="ml-2 text-ink-muted">({o.userName})</span>}
+                      </p>
                       <div className="mt-1">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200">
                           Proses Instan Server
                         </span>
                       </div>
-                    )}
-                    <p className="text-[11px] text-ink-muted mt-1">{o?.createdAt ? new Date(o.createdAt).toLocaleString("id-ID") : "-"}</p>
+                      <p className="text-[11px] text-ink-muted mt-1">{o?.createdAt ? new Date(o.createdAt).toLocaleString("id-ID") : "-"}</p>
+                    </div>
+
+                    <div className="flex sm:flex-col items-end justify-between gap-1.5 shrink-0">
+                      <span
+                        className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                          o?.status === "success"
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            : o?.status === "failed"
+                            ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                            : o?.status === "processing"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                        }`}
+                      >
+                        {o?.status === "in_queue" ? "ANTREAN" : o?.status || "PENDING"}
+                      </span>
+                      <span className="text-sm font-bold text-ink font-mono">
+                        Rp {(Number(o?.platformFee) || Number(o?.originalPrice) || Number(o?.price) || 0).toLocaleString("id-ID")}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex sm:flex-col items-end justify-between gap-1.5 shrink-0">
-                    <span
-                      className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
-                        o?.status === "success"
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                          : o?.status === "failed"
-                          ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
-                          : o?.status === "processing"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                          : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                      }`}
-                    >
-                      {o?.status === "in_queue" ? "ANTREAN" : o?.status || "PENDING"}
-                    </span>
-                    <span className="text-sm font-bold text-ink font-mono">
-                      Rp {(Number(o?.platformFee) || Number(o?.originalPrice) || Number(o?.price) || 0).toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Log Layanan CEIR Otomatis atau Catatan Admin */}
-                {o?.admin_note ? (
-                  (() => {
-                    const isCeirAuto = o.service_type === "ceir" || o.packageName?.toLowerCase().includes("ceir") || o.packageId?.includes("ceir") || o.packageName?.toLowerCase().includes("imei") || o.packageId?.toLowerCase().includes("imei");
-                    if (isCeirAuto) {
-                      const parsedCeir = parseCeirResponse(o.admin_note, o.createdAt, o.api_response);
-                      return (
-                        <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-2">
-                          <div className="flex items-center justify-between border-b border-emerald-200/80 pb-1.5">
-                            <span className="font-bold text-[11px] text-emerald-950 uppercase tracking-wider">
-                              Log Layanan CEIR (Otomatis)
-                            </span>
-                            <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
-                              {parsedCeir.columns.length} Kolom API
-                            </span>
-                          </div>
-                          <div className="overflow-x-auto rounded-lg border border-emerald-200 bg-white shadow-xs">
-                            <table className="w-full text-left text-[11px] min-w-[450px]">
-                              <thead className="bg-emerald-100/70 text-emerald-900 border-b border-emerald-200 font-mono">
-                                <tr>
+                  {/* Log Layanan CEIR Otomatis (Tabel API) */}
+                  {(() => {
+                    const rawData = o?.api_response || o?.admin_note || "";
+                    const parsedCeir = parseCeirResponse(rawData, o?.createdAt, o?.api_response);
+                    return (
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-2">
+                        <div className="flex items-center justify-between border-b border-emerald-200/80 pb-1.5">
+                          <span className="font-bold text-[11px] text-emerald-950 uppercase tracking-wider">
+                            Log Layanan CEIR (Otomatis)
+                          </span>
+                          <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                            {parsedCeir.columns.length} Kolom API
+                          </span>
+                        </div>
+                        <div className="overflow-x-auto rounded-lg border border-emerald-200 bg-white shadow-xs">
+                          <table className="w-full text-left text-[11px] min-w-[450px]">
+                            <thead className="bg-emerald-100/70 text-emerald-900 border-b border-emerald-200 font-mono">
+                              <tr>
+                                {parsedCeir.columns.map((col, cIdx) => (
+                                  <th key={cIdx} className="py-2 px-2.5 font-bold uppercase tracking-wider">
+                                    {col.replace(/_/g, " ")}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-emerald-100 font-mono text-[10px]">
+                              {parsedCeir.rows.map((row, rIdx) => (
+                                <tr key={rIdx} className="hover:bg-emerald-50/40">
                                   {parsedCeir.columns.map((col, cIdx) => (
-                                    <th key={cIdx} className="py-2 px-2.5 font-bold uppercase tracking-wider">
-                                      {col.replace(/_/g, " ")}
-                                    </th>
+                                    <td key={cIdx} className="py-2 px-2.5 text-slate-800 break-words whitespace-pre-wrap font-sans text-xs">
+                                      {String(row[col] !== undefined && row[col] !== null ? row[col] : "-")}
+                                    </td>
                                   ))}
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-emerald-100 font-mono text-[10px]">
-                                {parsedCeir.rows.map((row, rIdx) => (
-                                  <tr key={rIdx} className="hover:bg-emerald-50/40">
-                                    {parsedCeir.columns.map((col, cIdx) => (
-                                      <td key={cIdx} className="py-2 px-2.5 text-slate-800 break-words whitespace-pre-wrap font-sans text-xs">
-                                        {String(row[col] !== undefined && row[col] !== null ? row[col] : "-")}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                        <p className="font-bold text-[10px] text-slate-700 uppercase tracking-wider flex items-center justify-between">
-                          <span>Catatan / Respon Admin:</span>
-                          <span className="text-[10px] font-mono bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Log</span>
-                        </p>
-                        <div className="bg-white rounded-lg p-2.5 border border-slate-200 space-y-1 font-mono text-[11px]">
-                          {(() => {
-                            const note = String(o.admin_note);
-                            if (note.includes("|") && (note.includes("USERID") || note.includes("PACKAGEID") || note.includes("IMEI"))) {
-                              return note.split("|").map((item, idx) => {
-                                const parts = item.trim().split(":");
-                                if (parts.length >= 2) {
-                                  const key = parts[0].trim();
-                                  const val = parts.slice(1).join(":").trim();
-                                  return (
-                                    <div key={idx} className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-100 last:border-0">
-                                      <span className="text-slate-500 font-bold uppercase">{key}:</span>
-                                      <span className="text-slate-800 font-medium sm:text-right break-all">{val}</span>
-                                    </div>
-                                  );
-                                }
-                                return <div key={idx} className="text-slate-700 py-0.5">{item.trim()}</div>;
-                              });
-                            }
-                            return <div className="text-slate-800 whitespace-pre-wrap font-sans">{note}</div>;
-                          })()}
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     );
-                  })()
-                ) : null}
+                  })()}
 
-                {/* Screenshot Proofs (Manual Tab) */}
-                {orderQueueSubTab === "manual" && (o?.user_image || o?.user_image_ceir) && (
-                  <div className="flex gap-4 flex-wrap pt-2 border-t border-hairline">
-                    {typeof o?.user_image === "string" && o.user_image && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-ink">Foto Bukti Layar:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {o.user_image.split(",").map((imgUrl: string, idx: number) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              key={idx}
-                              src={imgUrl}
-                              alt="Bukti User"
-                              className="h-16 object-contain rounded-xl border border-hairline bg-white p-1 cursor-zoom-in hover:scale-105 transition-transform"
-                              onClick={() => {
-                                Swal.fire({
-                                  imageUrl: imgUrl,
-                                  imageAlt: "Bukti User",
-                                  showConfirmButton: false,
-                                  showCloseButton: true,
-                                });
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Admin Action Form Inline */}
-                {manualActionData?.id === o.id ? (
-                  <div className="p-3.5 bg-parchment/40 rounded-xl border border-hairline space-y-3 pt-2">
-                    <div className="flex justify-between items-center">
-                      <p className="font-bold text-xs text-ink">Proses & Ubah Status Pesanan</p>
-                      <button
-                        type="button"
-                        onClick={() => setManualActionData(null)}
-                        className="text-xs text-ink-muted hover:text-ink"
-                      >
-                        Batal
-                      </button>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-ink">Status Pengerjaan</label>
-                      <select
-                        className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-bold outline-none focus:ring-1 focus:ring-primary"
-                        value={manualActionData?.status || "pending"}
-                        onChange={(e) =>
-                          setManualActionData((prev) => (prev ? { ...prev, status: e.target.value } : null))
-                        }
-                      >
-                        <option value="pending">Pending (Menunggu Antrean)</option>
-                        <option value="processing">Processing (Sedang Dikerjakan Server)</option>
-                        <option value="success">Success (Berhasil Selesai)</option>
-                        <option value="failed">Failed (Gagal / Refund)</option>
-                      </select>
-                    </div>
-
-                    <Input
-                      label="Catatan Admin / Serial Number (SN)"
-                      placeholder="Contoh: SN: REG-9921 / Sinyal All Operator Aktif"
-                      value={manualActionData?.note || ""}
-                      onChange={(e) => setManualActionData((prev) => (prev ? { ...prev, note: e.target.value } : null))}
-                    />
-
-                    <div>
-                      <label className="text-xs font-bold text-ink block mb-1">Lampiran Foto Bukti Hasil (Opsional)</label>
-                      <input
-                        type="file"
-                        className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                        onChange={(e) =>
-                          setManualActionData((prev) => (prev ? { ...prev, file: e.target.files?.[0] || null } : null))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        className="text-xs font-bold h-9 gap-1.5"
-                        onClick={async () => {
-                          const formData = new FormData();
-                          formData.append("status", manualActionData?.status || "pending");
-                          formData.append("admin_note", manualActionData?.note || "");
-                          if (manualActionData?.file) {
-                            formData.append("admin_image", manualActionData.file);
-                            formData.append("image", manualActionData.file);
-                          }
-
-                          try {
-                            const res = await fetch(`/api/admin/manual-orders/${o.id}`, {
-                              method: "PUT",
-                              credentials: "include",
-                              body: formData,
-                            });
-                            const d = await res.json().catch(() => null);
-                            if (res.ok && d?.status) {
-                              Swal.fire({ title: "Tersimpan", text: d.message || "Status pesanan berhasil diperbarui.", timer: 1500, showConfirmButton: false });
-                              setManualActionData(null);
-                              loadManualData();
-                            } else {
-                              Swal.fire({ title: "Gagal", text: d?.message || "Gagal memperbarui status pesanan." });
-                            }
-                          } catch (e: any) {
-                            Swal.fire({ title: "Error", text: "Gagal menghubungi server." });
-                          }
-                        }}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        Simpan Perubahan
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-xs h-9" onClick={() => setManualActionData(null)}>
-                        Batal
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
+                  {/* Footer Action Buttons */}
                   <div className="flex gap-2 flex-wrap items-center pt-2 border-t border-hairline">
-                    {orderQueueSubTab === "manual" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-primary/5 text-primary border-primary/30 hover:bg-primary hover:text-white text-xs h-8 font-bold"
-                        onClick={() =>
-                          setManualActionData({ id: o.id, status: o.status, note: o.admin_note || "", file: null })
-                        }
-                      >
-                        Proses Pesanan
-                      </Button>
-                    )}
-
-                    {orderQueueSubTab === "automated" && (
-                      <Button
-                        size="sm"
-                        disabled={retryingOrderId === o.id}
-                        onClick={() => handleRetryCeirgoOrder(o.id)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 gap-1.5 shadow-xs"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${retryingOrderId === o.id ? "animate-spin" : ""}`} />
-                        Retry Submit API
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      disabled={retryingOrderId === o.id}
+                      onClick={() => handleRetryCeirgoOrder(o.id)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 gap-1.5 shadow-xs"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${retryingOrderId === o.id ? "animate-spin" : ""}`} />
+                      Retry Submit API
+                    </Button>
 
                     <Button
                       variant="outline"
@@ -665,11 +1047,12 @@ export default function AdminOrdersPage() {
                           trxId: o.id,
                           imei: firstImei || o.targetPhone || "N/A",
                           packageName: o.packageName || "Layanan Resmi",
-                          serviceType: o.service_type,
+                          serviceType: o.service_type || "ceir",
                           createdAt: o.createdAt,
                           amount: o.platformFee || o.originalPrice || 0,
                           status: o.status,
                           adminNote: o.admin_note,
+                          apiResponse: o.api_response,
                         });
                       }}
                     >
@@ -687,9 +1070,9 @@ export default function AdminOrdersPage() {
                       Kirim WhatsApp
                     </Button>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </Card>
