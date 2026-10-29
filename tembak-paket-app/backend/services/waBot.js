@@ -21,8 +21,14 @@ const {
     makeCacheableSignalKeyStore,
     jidNormalizedUser,
     proto,
-    BufferJSON 
+    BufferJSON,
+    downloadMediaMessage
 } = require("@whiskeysockets/baileys");
+const { censorScreenshot } = require("./censorService");
+const { publishToStory, publishToFeed, publishOpenStory, saveSessionFromCookie } = require("./igDirectService");
+
+// Pending admin testimonial sessions: remoteJid -> { buffer, timestamp, caption }
+const pendingTestimonials = new Map();
 const pino = require("pino");
 const QRCode = require("qrcode");
 const path = require("path");
@@ -1089,6 +1095,53 @@ async function initWABot(forceNew = false) {
                     continue;
                 }
 
+                // 1. ADMIN IMAGE HANDLING: Testimoni auto-censor & publish IG
+                if (msg.message?.imageMessage) {
+                    try {
+                        logWABot(`[WABot Testi] Menerima gambar testimoni dari Admin ${cleanRemotePhone || remoteJid}. Memulai auto-censor...`, "info");
+                        await replyWhatsApp(remoteJid, "⏳ *Sedang mendownload & menyensor data sensitif (Gaya 1)...*\nMohon tunggu sebentar.");
+
+                        const mediaBuffer = await downloadMediaMessage(
+                            msg,
+                            'buffer',
+                            {},
+                            { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+                        );
+
+                        const { censoredBuffer, boxesCount, detectedTypes } = await censorScreenshot(mediaBuffer);
+
+                        pendingTestimonials.set(remoteJid, {
+                            buffer: censoredBuffer,
+                            timestamp: Date.now(),
+                            caption: (msg.message.imageMessage.caption || '').trim()
+                        });
+
+                        const captionTypes = detectedTypes.length > 0 ? detectedTypes.join(', ') : 'Data Sensitif';
+                        const reviewPrompt = 
+                            `📸 *HASIL SENSOR BUKTI TESTIMONI (GAYA 1)*\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `🔒 *Sensor:* ${captionTypes} (${boxesCount} area aman disensor)\n` +
+                            `🎯 *Target Akun:* *@unlocksinyalsolo*\n\n` +
+                            `Silakan balas angka untuk mempublikasikan:\n` +
+                            `1️⃣ Balas *1* ➔ Post ke *Instagram Story*\n` +
+                            `2️⃣ Balas *2* ➔ Post ke *Instagram Feed*\n` +
+                            `3️⃣ Balas *3* ➔ Post ke *Story & Feed*\n` +
+                            `0️⃣ Balas *0* ➔ Batalkan\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `_Sesi konfirmasi berlaku selama 15 menit._` +
+                            BOT_FOOTER;
+
+                        await sendAdminMediaReply(remoteJid, {
+                            image: censoredBuffer,
+                            caption: reviewPrompt
+                        });
+                    } catch (errImg) {
+                        console.error("[WABot Testi] Gagal memproses gambar admin:", errImg.message);
+                        await replyWhatsApp(remoteJid, `❌ *Gagal memproses gambar:* ${errImg.message}`);
+                    }
+                    continue;
+                }
+
                 const messageText = (
                     msg.message.conversation ||
                     msg.message.extendedTextMessage?.text ||
@@ -1098,10 +1151,11 @@ async function initWABot(forceNew = false) {
 
                 if (!messageText) continue;
 
-                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses)
+                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses, open, igsession)
                 const isCommand = (
                     messageText.startsWith(".") ||
-                    /^(1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu)\b/i.test(messageText)
+                    messageText.startsWith("#") ||
+                    /^(0|1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|open|igsession)\b/i.test(messageText)
                 );
                 if (!isCommand) continue;
 
@@ -1362,6 +1416,88 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
  * Handle Admin WhatsApp Commands
  */
 async function handleAdminCommand(replyJid, text, rawMsg = null) {
+    const rawCleanText = text.trim().toLowerCase();
+
+    // Command Khusus: Simpan / Bind Session ID Instagram (.igsession <sessionid>)
+    if (rawCleanText.startsWith(".igsession") || rawCleanText.startsWith("#igsession") || rawCleanText.startsWith("igsession")) {
+        const sessionArg = text.trim().replace(/^(\.igsession|#igsession|igsession)\s*/i, '').trim();
+        if (!sessionArg) {
+            await replyWhatsApp(replyJid, 
+                "ℹ️ *CARA BIND SESI INSTAGRAM:*\n\n" +
+                "Ketik: *.igsession <sessionid_anda>*\n\n" +
+                "_Tips: Buka instagram.com di browser -> Inspect/F12 -> Application -> Cookies -> salin nilai 'sessionid'._" + BOT_FOOTER
+            );
+            return;
+        }
+
+        await replyWhatsApp(replyJid, "⏳ *Memverifikasi & mengaitkan sesi Instagram @unlocksinyalsolo...*");
+        try {
+            const res = await saveSessionFromCookie(sessionArg, "unlocksinyalsolo");
+            await replyWhatsApp(replyJid, 
+                `✅ *AKUN INSTAGRAM BERHASIL TERHUBUNG!*\n\n` +
+                `👤 *Akun:* @${res.username}\n` +
+                `🆔 *ID:* ${res.pk}\n` +
+                `🚀 *Status:* Siap untuk Auto-Post Story & Feed testimoni!` + BOT_FOOTER
+            );
+        } catch(e) {
+            await replyWhatsApp(replyJid, `❌ *Gagal menghubungkan sesi:* ${e.message}` + BOT_FOOTER);
+        }
+        return;
+    }
+
+    // Command Khusus: Auto Story Open Toko (#open / .open / open)
+    if (rawCleanText === "#open" || rawCleanText === ".open" || rawCleanText === "open") {
+        await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan banner & mempublikasikan Story 'Ry-ITSolutions BUKA HARI INI' ke @unlocksinyalsolo...*");
+        try {
+            await publishOpenStory();
+            await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nInstagram Story 'WE ARE OPEN' telah terbit di akun *@unlocksinyalsolo*! 🎉" + BOT_FOOTER);
+        } catch (errOpen) {
+            await replyWhatsApp(replyJid, `❌ *Gagal posting Story Open:* ${errOpen.message}` + BOT_FOOTER);
+        }
+        return;
+    }
+
+    // Command Khusus: Interaksi Publikasi Testimoni Instagram
+    const pendingTesti = pendingTestimonials.get(replyJid);
+    if (pendingTesti && (Date.now() - pendingTesti.timestamp < 15 * 60 * 1000)) {
+        if (rawCleanText === "1" || rawCleanText === ".1") {
+            await replyWhatsApp(replyJid, "⏳ *Sedang mempublikasikan testimoni ke Instagram Story (@unlocksinyalsolo)...*");
+            try {
+                await publishToStory(pendingTesti.buffer);
+                pendingTestimonials.delete(replyJid);
+                await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nBukti testimoni telah terbit di *Instagram Story* *@unlocksinyalsolo*! 🚀" + BOT_FOOTER);
+            } catch (errStory) {
+                await replyWhatsApp(replyJid, `❌ *Gagal posting ke Story:* ${errStory.message}` + BOT_FOOTER);
+            }
+            return;
+        } else if (rawCleanText === "2" || rawCleanText === ".2") {
+            await replyWhatsApp(replyJid, "⏳ *Sedang mempublikasikan testimoni ke Instagram Feed (@unlocksinyalsolo)...*");
+            try {
+                await publishToFeed(pendingTesti.buffer, pendingTesti.caption);
+                pendingTestimonials.delete(replyJid);
+                await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nBukti testimoni telah terbit di *Instagram Feed* *@unlocksinyalsolo*! 📸" + BOT_FOOTER);
+            } catch (errFeed) {
+                await replyWhatsApp(replyJid, `❌ *Gagal posting ke Feed:* ${errFeed.message}` + BOT_FOOTER);
+            }
+            return;
+        } else if (rawCleanText === "3" || rawCleanText === ".3") {
+            await replyWhatsApp(replyJid, "⏳ *Sedang mempublikasikan testimoni ke Instagram Story & Feed (@unlocksinyalsolo)...*");
+            try {
+                await publishToStory(pendingTesti.buffer);
+                await publishToFeed(pendingTesti.buffer, pendingTesti.caption);
+                pendingTestimonials.delete(replyJid);
+                await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nBukti testimoni telah terbit di *Story & Feed Instagram* *@unlocksinyalsolo*! 🎉" + BOT_FOOTER);
+            } catch (errBoth) {
+                await replyWhatsApp(replyJid, `❌ *Gagal posting:* ${errBoth.message}` + BOT_FOOTER);
+            }
+            return;
+        } else if (rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
+            pendingTestimonials.delete(replyJid);
+            await replyWhatsApp(replyJid, "🚫 *Publikasi testimoni ke Instagram telah dibatalkan.*" + BOT_FOOTER);
+            return;
+        }
+    }
+
     const parts = text.trim().split(/\s+/);
     let command = parts[0].toLowerCase();
     let orderIdArg = parts[1];
@@ -1746,6 +1882,24 @@ async function replyWhatsApp(jid, text) {
         await sendAndStoreMessage(cleanJid, { text });
     } catch (e) {
         console.error(`[WABot] Gagal mengirim balasan ke ${jid}:`, e.message);
+    }
+}
+
+/**
+ * Helper khusus mengirim pesan media (gambar) balasan ke admin
+ */
+async function sendAdminMediaReply(jid, mediaPayload) {
+    if (!sock || connectionState !== "open") return;
+    try {
+        let cleanJid = jid;
+        if (cleanJid && !cleanJid.includes("@g.us") && !cleanJid.includes("@lid")) {
+            const rawPhone = cleanJid.split("@")[0].split(":")[0];
+            const clean = cleanPhone(rawPhone);
+            cleanJid = `${clean}@s.whatsapp.net`;
+        }
+        await sock.sendMessage(cleanJid, mediaPayload);
+    } catch (e) {
+        console.error(`[WABot] Gagal mengirim media balasan ke ${jid}:`, e.message);
     }
 }
 
