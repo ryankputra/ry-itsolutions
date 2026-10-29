@@ -5,17 +5,22 @@ import { useApp } from "@/lib/store";
 import { useRouter, usePathname } from "next/navigation";
 import { ModernAppLoader } from "@/components/ui/ModernAppLoader";
 import InteractiveTour from "@/components/ui/InteractiveTour";
+import RequiredPhoneModal from "@/components/ui/RequiredPhoneModal";
+import { MusicProvider } from "@/lib/musicContext";
+import { SpotifyPlayerBar } from "@/components/music/SpotifyPlayerBar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useApp();
   const router = useRouter();
   const pathname = usePathname();
   const isAiPage = pathname === "/ai";
+  const isHiburanPage = pathname === "/hiburan" || pathname?.startsWith("/hiburan/");
   const currentPath = typeof window !== "undefined" ? window.location.pathname : (pathname || "");
   const isPublicRoute = Boolean(
     currentPath.startsWith("/gateway") ||
     currentPath.startsWith("/cek-garansi") ||
-    (pathname && (pathname === "/gateway" || pathname.startsWith("/gateway/") || pathname === "/cek-garansi" || pathname.startsWith("/cek-garansi/")))
+    currentPath.startsWith("/hiburan") ||
+    (pathname && (pathname === "/gateway" || pathname.startsWith("/gateway/") || pathname === "/cek-garansi" || pathname.startsWith("/cek-garansi/") || pathname === "/hiburan" || pathname.startsWith("/hiburan/")))
   );
   const [showWaMenu, setShowWaMenu] = useState(false);
   const [showTour, setShowTour] = useState(false);
@@ -41,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const p = window.location.pathname;
-      if (p.startsWith("/gateway") || p.startsWith("/cek-garansi")) {
+      if (p.startsWith("/gateway") || p.startsWith("/cek-garansi") || p.startsWith("/hiburan")) {
         return;
       }
     }
@@ -103,12 +108,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!canRender) return null;
 
   return (
-    <>
+    <MusicProvider>
       <MainLayout>{children}</MainLayout>
 
-      {/* Floating WhatsApp Menu & Button (Hidden on /ai so it doesn't obstruct chat input) */}
-      {!isAiPage && showWaMenu && (
-        <div className="fixed bottom-[145px] right-5 sm:bottom-24 sm:right-8 z-[100] bg-zinc-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 min-w-[210px]">
+      {/* Spotify-style Persistent Global Audio Player */}
+      <SpotifyPlayerBar />
+
+      {/* Floating WhatsApp Menu & Button (Hidden on /ai and /hiburan) */}
+      {!isAiPage && !isHiburanPage && showWaMenu && (
+        <div className="fixed bottom-[180px] right-5 sm:bottom-32 sm:right-8 z-[100] bg-zinc-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 min-w-[210px]">
           <p className="text-[10px] font-black tracking-wider text-white/50 uppercase px-2 mb-1">Pilih Chat CS Admin</p>
           <a
             href="https://wa.me/6288706611370"
@@ -139,10 +147,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {!isAiPage && (
+      {!isAiPage && !isHiburanPage && (
         <button
           onClick={() => setShowWaMenu(!showWaMenu)}
-          className="fixed bottom-[85px] right-5 sm:bottom-8 sm:right-8 z-[100] bg-[#25D366] text-white p-3.5 rounded-full shadow-xl shadow-green-500/40 hover:scale-110 transition-all flex items-center justify-center animate-pulse"
+          className="fixed bottom-[125px] right-5 sm:bottom-24 sm:right-8 z-[90] bg-[#25D366] text-white p-3.5 rounded-full shadow-xl shadow-green-500/40 hover:scale-110 transition-all flex items-center justify-center animate-pulse"
           aria-label="Hubungi CS Admin"
           title="Hubungi Admin"
         >
@@ -154,6 +162,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Interactive Guided App Tour Modal */}
       <InteractiveTour isOpen={showTour} onClose={() => setShowTour(false)} />
-    </>
+
+      {/* Mandatory WhatsApp Binding Modal for Users without Phone */}
+      <RequiredPhoneModal />
+    </MusicProvider>
   );
 }

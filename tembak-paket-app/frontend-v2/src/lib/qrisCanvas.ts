@@ -157,62 +157,71 @@ export async function generateQrisCanvasDataUrl(
   ctx.stroke();
   ctx.restore();
 
-  // 5. Draw Merchant / App Logo or Badge inside the White Pad
-  if (options.badge) {
-    ctx.save();
-    ctx.fillStyle = options.badge === 'G' ? '#00AED6' : '#EE4D2D'; // GoPay Blue or Shopee Orange
-    ctx.beginPath();
-    if (typeof ctx.roundRect === "function") {
-      ctx.roundRect(padX + 4, padY + 4, padSize - 8, padSize - 8, padRadius - 2);
+  // 5. Draw Merchant / Website Logo inside the White Pad (Always Primary)
+  let logoImg = await loadImageAsync(logoUrl);
+  if (!logoImg && logoUrl !== "/logo.png") {
+    logoImg = await loadImageAsync("/logo.png");
+  }
+  if (!logoImg && logoUrl !== "/app-logo.svg") {
+    logoImg = await loadImageAsync("/app-logo.svg");
+  }
+  if (!logoImg && logoUrl !== "/payments/qris.png") {
+    logoImg = await loadImageAsync("/payments/qris.png");
+  }
+
+  if (logoImg && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
+    const innerPadding = Math.round(padSize * 0.12);
+    const maxLogoW = padSize - innerPadding * 2;
+    const maxLogoH = padSize - innerPadding * 2;
+
+    const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
+    let drawW = maxLogoW;
+    let drawH = maxLogoH;
+
+    if (aspect > 1) {
+      drawH = maxLogoW / aspect;
     } else {
-      ctx.rect(padX + 4, padY + 4, padSize - 8, padSize - 8);
-    }
-    ctx.fill();
-
-    ctx.font = `900 ${Math.round(padSize * 0.52)}px system-ui, -apple-system, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(options.badge, canvasWidth / 2, canvasWidth / 2 + 1);
-    ctx.restore();
-  } else {
-    let logoImg = await loadImageAsync(logoUrl);
-    if (!logoImg && logoUrl !== "/logo.png") {
-      logoImg = await loadImageAsync("/logo.png");
-    }
-    if (!logoImg && logoUrl !== "/payments/qris.png") {
-      logoImg = await loadImageAsync("/payments/qris.png");
+      drawW = maxLogoH * aspect;
     }
 
-    if (logoImg && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
-      const innerPadding = Math.round(padSize * 0.14);
-      const maxLogoW = padSize - innerPadding * 2;
-      const maxLogoH = padSize - innerPadding * 2;
+    const drawX = padX + (padSize - drawW) / 2;
+    const drawY = padY + (padSize - drawH) / 2;
 
-      const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
-      let drawW = maxLogoW;
-      let drawH = maxLogoH;
+    ctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
 
-      if (aspect > 1) {
-        drawH = maxLogoW / aspect;
-      } else {
-        drawW = maxLogoH * aspect;
-      }
+    // Optional mini badge in bottom right corner if gateway specified
+    if (options.badge) {
+      const badgeR = Math.round(padSize * 0.16);
+      const badgeCenterX = padX + padSize - badgeR - 2;
+      const badgeCenterY = padY + padSize - badgeR - 2;
 
-      const drawX = padX + (padSize - drawW) / 2;
-      const drawY = padY + (padSize - drawH) / 2;
-
-      ctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
-    } else {
-      // Graceful fallback: Draw crisp official "QRIS" badge on white pad
       ctx.save();
-      ctx.font = `bold ${Math.round(padSize * 0.32)}px system-ui, -apple-system, sans-serif`;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(badgeCenterX, badgeCenterY, badgeR + 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = options.badge === 'G' ? '#00AED6' : '#EE4D2D'; // GoPay Blue or Shopee Orange
+      ctx.beginPath();
+      ctx.arc(badgeCenterX, badgeCenterY, badgeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = `bold ${Math.round(badgeR * 1.2)}px system-ui, -apple-system, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = "#e11d48"; // QRIS red
-      ctx.fillText("QRIS", canvasWidth / 2, canvasWidth / 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(options.badge, badgeCenterX, badgeCenterY + 0.5);
       ctx.restore();
     }
+  } else {
+    // Graceful fallback: Draw crisp official website brand mark on white pad
+    ctx.save();
+    ctx.font = `bold ${Math.round(padSize * 0.32)}px system-ui, -apple-system, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#0284c7";
+    ctx.fillText("RY", canvasWidth / 2, canvasWidth / 2);
+    ctx.restore();
   }
 
   // 6. Return Base64 PNG Data URL

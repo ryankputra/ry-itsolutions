@@ -1,0 +1,1 @@
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/ads.txt/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"/Users/ryankptr/ry-itsolutions/tembak-paket-app/frontend-v2/src/app/ads.txt/route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

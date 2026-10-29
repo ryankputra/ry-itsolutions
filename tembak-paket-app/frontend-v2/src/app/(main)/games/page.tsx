@@ -11,7 +11,7 @@ import { safeJson } from "@/lib/api";
 import FlappyCyberGame from "@/components/games/FlappyCyberGame";
 import CoinCatcherGame from "@/components/games/CoinCatcherGame";
 
-type GameTab = "wheel" | "flappy" | "scratch" | "catcher";
+type GameTab = "wheel" | "flappy" | "scratch" | "catcher" | "trivia" | "mystery";
 
 interface GameStatus {
   coins: number;
@@ -22,6 +22,8 @@ interface GameStatus {
   can_flappy_cyber: boolean;
   can_scratch: boolean;
   can_coin_catcher: boolean;
+  can_mystery_box?: boolean;
+  can_trivia?: boolean;
 }
 
 interface TriviaQuestion {

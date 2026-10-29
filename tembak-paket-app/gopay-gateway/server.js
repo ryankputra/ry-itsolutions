@@ -623,8 +623,11 @@ app.get('/qr/:id', (req, res) => {
         <div class="amount-title">Total Pembayaran</div>
         <div class="amount-value">${formattedAmount}</div>
 
-        <div class="qr-wrapper" id="qr-container">
+        <div class="qr-wrapper" id="qr-container" style="position: relative; display: inline-block;">
             <img src="${qrImageUrl}" alt="QRIS Code">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; background: #ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); border: 1.5px solid #cbd5e1; padding: 4px; pointer-events: none;">
+                <img src="https://ry-itsolutionts.web.id/logo.png" style="width: 100%; height: 100%; object-fit: contain; border-radius: 6px;" alt="Logo" onerror="this.src='https://ry-itsolutionts.web.id/app-logo.svg'">
+            </div>
         </div>
 
         <div class="timer-box">

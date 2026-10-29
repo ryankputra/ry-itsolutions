@@ -19,7 +19,7 @@ function HistoryContent() {
   const resolveTabKey = (t: string | null) => {
     if (!t) return "all";
     const low = t.toLowerCase();
-    if (low === "refund" || low === "cancelled" || low === "failed" || low === "dibatalkan") return "canceled";
+    if (low === "pengembalian" || low === "refund" || low === "cancelled" || low === "failed" || low === "dibatalkan") return "canceled";
     if (low === "in_queue" || low === "antrean" || low === "perlu_diproses" || low === "waiting") return "waiting";
     if (low === "selesai" || low === "success" || low === "done" || low === "completed" || low === "finish") return "completed";
     return low;
@@ -151,7 +151,7 @@ function HistoryContent() {
         }
         Swal.fire({
           title: "Dibatalkan!",
-          text: data.message || "Transaksi telah dibatalkan dan dipindahkan ke tab Refund.",
+          text: data.message || "Transaksi telah dibatalkan dan dipindahkan ke tab Pengembalian.",
           icon: "success",
           timer: 1500,
           showConfirmButton: false,
@@ -245,12 +245,34 @@ function HistoryContent() {
     { key: "waiting", label: "Menunggu" },
     { key: "processing", label: "Diproses" },
     { key: "completed", label: "Selesai" },
-    { key: "canceled", label: "Refund" },
+    { key: "canceled", label: "Pengembalian" },
   ];
 
   const normalizedHistory = history.map((trx) => {
     const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
     const lowStatus = (trx.status || '').toLowerCase();
+    const rawNote = (trx.admin_note || trx.adminNote || '').toLowerCase();
+    const rawApi = typeof trx.api_response === 'string'
+      ? trx.api_response.toLowerCase()
+      : JSON.stringify(trx.api_response || '').toLowerCase();
+
+    // Catch any orders that failed / have provider retry or balance errors
+    const isExplicitError = 
+      rawNote.includes('retry error') || 
+      rawNote.includes('balance-mu tidak mencukupi') || 
+      rawNote.includes('insufficient_balance') ||
+      rawNote.includes('saldo api ceirgo') ||
+      rawNote.includes('tidak mencukupi untuk melakukan transaksi') ||
+      rawApi.includes('user_insufficient_balance_error') ||
+      rawApi.includes('"status":false') ||
+      rawApi.includes('"status": false') ||
+      rawApi.includes('"error":true') ||
+      rawApi.includes('"error": true');
+
+    if (isExplicitError && lowStatus !== 'cancelled' && lowStatus !== 'refunded') {
+      return { ...trx, status: 'cancelled' };
+    }
+
     const isCompletedStatus = ['success', 'completed', 'selesai', 'done', 'active', 'approved', 'finished'].includes(lowStatus);
     const isFailedStatus = ['failed', 'canceled', 'cancelled', 'rejected', 'refunded'].includes(lowStatus);
     const isProcessingStatus = ['processing', 'in_progress'].includes(lowStatus);
@@ -347,7 +369,7 @@ function HistoryContent() {
       };
     }
     return {
-      label: "Dibatalkan / Pengembalian Dana",
+      label: "Dibatalkan (Pengembalian)",
       textColor: "text-rose-600 font-bold",
       badgeBg: "bg-rose-50 text-rose-700 border-rose-200",
     };
@@ -663,6 +685,37 @@ function HistoryContent() {
 
                   if (isCeirTrx) {
                     let parsed = parseCeirResponse(rawNote, undefined, trx.api_response || trx.apiResponse);
+                    if (parsed.isError || ['cancelled', 'failed'].includes(String(trx.status).toLowerCase())) {
+                      let userNotice = String(trx.admin_note || trx.adminNote || parsed.errorMessage || "").trim();
+                      const lower = userNotice.toLowerCase();
+                      const isProviderTerm = lower.includes("balance-mu") || 
+                                             lower.includes("tidak mencukupi") || 
+                                             lower.includes("insufficient_balance") || 
+                                             lower.includes("ceirgo") || 
+                                             lower.includes("upps");
+
+                      if (isProviderTerm || !userNotice) {
+                        userNotice = "Pesanan dibatalkan otomatis karena jalur server pusat sedang mengalami antrean / pemeliharaan kuota. Saldo pembayaran Anda telah dikembalikan 100% ke akun Anda secara otomatis.";
+                      } else if (lower.includes("dibatalkan oleh pengguna")) {
+                        userNotice = "Pesanan dibatalkan oleh pengguna dan saldo telah dikembalikan 100% ke akun Anda.";
+                      }
+
+                      return (
+                        <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/60 text-xs space-y-1.5 shadow-xs">
+                          <div className="flex items-center justify-between border-b border-amber-200/60 pb-1">
+                            <span className="font-bold text-xs text-amber-900 dark:text-amber-300">
+                              Status Pengecekan Server
+                            </span>
+                            <span className="text-[10px] font-mono bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded font-bold">
+                              Dibatalkan & Saldo Dikembalikan
+                            </span>
+                          </div>
+                          <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
+                            {userNotice}
+                          </p>
+                        </div>
+                      );
+                    }
                     if (parsed.rows.length === 0 && (trx.api_response || trx.apiResponse)) {
                       parsed = parseCeirResponse(trx.api_response || trx.apiResponse);
                     }
@@ -677,52 +730,134 @@ function HistoryContent() {
                       return "";
                     };
 
+                    // Extract structured rows for table
+                    const tableRows: { date: string; action: string; note: string }[] = [];
+                    parsed.rows.forEach((r: any) => {
+                      const rawNoteText = getField(r, "note", "keterangan", "message", "keterangan_status") || (typeof rawNote === "string" ? rawNote : "");
+                      const subEvents = rawNoteText.split(/(?=\b\d+\.\s*(?:\d{4}-\d{2}-\d{2}|\w+))/g).map(s => s.trim()).filter(Boolean);
+
+                      if (subEvents.length > 1 || (subEvents.length === 1 && subEvents[0].includes("|"))) {
+                        subEvents.forEach(sub => {
+                          const clean = sub.replace(/^\d+\.\s*/, "");
+                          const parts = clean.split("|").map(p => p.trim());
+                          let eventDate = parts[0] || getField(r, "tanggal", "date", "checked_at") || "";
+                          let eventAction = "EVENT";
+                          let eventNote = "";
+
+                          parts.slice(1).forEach(p => {
+                            const low = p.toLowerCase();
+                            if (low.startsWith("action:")) eventAction = p.substring(7).trim();
+                            else if (low.startsWith("note:")) eventNote = p.substring(5).trim();
+                            else if (low.startsWith("status:")) eventAction = p.substring(7).trim();
+                            else eventNote = eventNote ? `${eventNote} | ${p}` : p;
+                          });
+
+                          if (eventAction === "----" && (!eventNote || eventNote === "----")) {
+                            eventAction = "Pengecekan Server";
+                            eventNote = "Sinkronisasi status jaringan operator";
+                          }
+
+                          tableRows.push({
+                            date: eventDate,
+                            action: eventAction,
+                            note: eventNote !== "----" ? eventNote : "-"
+                          });
+                        });
+                      } else {
+                        let action = getField(r, "action", "status", "aksi", "result") || "CEIR Selesai";
+                        let date = getField(r, "tanggal", "date", "checked_at", "created_at") || (trx.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "");
+                        let note = rawNoteText;
+
+                        if (action === "----" && (!note || note === "----")) {
+                          action = "Pengecekan Server";
+                          note = "Sinkronisasi status jaringan operator";
+                        }
+
+                        tableRows.push({
+                          date,
+                          action,
+                          note: note && note !== "----" ? note : "-"
+                        });
+                      }
+                    });
+
+                    const targetImei = (trx.imei || "").trim();
+
                     return (
-                      <div className="p-3 rounded-xl bg-sky-50/80 border border-sky-200 text-xs space-y-2">
-                        <div className="flex items-center justify-between border-b border-sky-200/60 pb-1.5">
-                          <span className="font-bold text-[11px] text-sky-800 uppercase flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-                            Hasil Verifikasi Database CEIR
-                          </span>
-                          <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200">
-                            {parsed.status || "TERVERIFIKASI"}
-                          </span>
+                      <div className="p-3.5 rounded-2xl bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800/60 text-xs space-y-2.5 shadow-xs">
+                        {/* Header Box */}
+                        <div className="flex items-center justify-between border-b border-sky-200/80 dark:border-sky-800/60 pb-2 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="font-bold text-xs text-sky-950 dark:text-sky-200 uppercase tracking-wide">
+                              Hasil Riwayat Database CEIR
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                              {parsed.status || "TERDAFTAR DI CEIR"}
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border border-sky-300 dark:border-sky-700 font-bold">
+                              {tableRows.length} Riwayat Terdata
+                            </span>
+                          </div>
                         </div>
 
-                        {parsed.rows.length > 0 ? (
-                          <div className="space-y-1.5">
-                            {parsed.rows.map((row, idx) => {
-                              const action = getField(row, "action", "status", "aksi", "result") || "CEIR Selesai";
-                              const date = getField(row, "tanggal", "date", "checked_at", "created_at") || (trx.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "");
-                              const note = getField(row, "note", "keterangan", "message", "keterangan_status") || (typeof rawNote === "string" ? rawNote : "");
-                              const imei = getField(row, "imei") || trx.imei || "";
+                        {/* IMEI Target Header (Cukup 1 kali) */}
+                        {targetImei && (
+                          <div className="flex items-center justify-between text-[11px] font-mono px-3 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-sky-100 dark:border-sky-900 text-slate-700 dark:text-slate-300">
+                            <span>Nomor IMEI Target:</span>
+                            <strong className="text-slate-900 dark:text-slate-100 text-xs font-mono">{targetImei}</strong>
+                          </div>
+                        )}
 
-                              return (
-                                <div key={idx} className="bg-white/90 p-2.5 rounded-lg border border-sky-100/90 text-[11px] space-y-1 shadow-xs">
-                                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                                    <span className="font-bold text-sky-900 bg-sky-100/70 px-2 py-0.5 rounded text-[10px] uppercase font-mono">
-                                      {action}
-                                    </span>
-                                    {date && <span className="text-sky-600 text-[10px] font-mono">{date}</span>}
-                                  </div>
-                                  {imei && (
-                                    <div className="text-[11px] font-mono text-slate-700">
-                                      IMEI: <span className="font-bold">{imei}</span>
-                                    </div>
-                                  )}
-                                  {note && (
-                                    <p className="text-slate-600 leading-relaxed break-words font-sans text-[11px]">
-                                      {note}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            })}
+                        {/* Responsive Table Identik Format Admin */}
+                        {tableRows.length > 0 ? (
+                          <div className="overflow-x-auto rounded-xl border border-sky-200 dark:border-sky-800 bg-white dark:bg-slate-900 shadow-xs">
+                            <table className="w-full text-left text-[11px] min-w-[420px]">
+                              <thead className="bg-sky-100/70 dark:bg-sky-900/30 text-sky-950 dark:text-sky-200 border-b border-sky-200 dark:border-sky-800 font-mono text-[10px]">
+                                <tr>
+                                  <th className="py-2 px-2.5 font-bold uppercase w-8 text-center">#</th>
+                                  <th className="py-2 px-2.5 font-bold uppercase tracking-wider">Tanggal & Waktu</th>
+                                  <th className="py-2 px-2.5 font-bold uppercase tracking-wider">Aksi / Status</th>
+                                  <th className="py-2 px-2.5 font-bold uppercase tracking-wider">Keterangan</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-sky-100 dark:divide-slate-800 font-sans text-xs">
+                                {tableRows.map((r, rIdx) => {
+                                  const isAdd = r.action.toLowerCase().includes("add");
+                                  const isRemove = r.action.toLowerCase().includes("remove");
+
+                                  return (
+                                    <tr key={rIdx} className="hover:bg-sky-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                                      <td className="py-2 px-2 text-center text-slate-400 font-mono text-[10px]">{rIdx + 1}</td>
+                                      <td className="py-2 px-2.5 text-slate-700 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
+                                        {r.date || "-"}
+                                      </td>
+                                      <td className="py-2 px-2.5">
+                                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase tracking-wide ${
+                                          isAdd
+                                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300/60"
+                                            : isRemove
+                                            ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300/60"
+                                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300/60"
+                                        }`}>
+                                          {r.action.replace(/_/g, " ")}
+                                        </span>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-slate-600 dark:text-slate-400 text-[11px] break-words">
+                                        {r.note || "-"}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
                           </div>
                         ) : (
-                          <p className="text-sky-900 text-[11px] leading-relaxed break-words">
-                            {typeof rawNote === "string" ? rawNote : "Data pengecekan CEIR berhasil diverifikasi oleh server."}
-                          </p>
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-sky-100 dark:border-sky-900 text-center text-[11px] text-slate-600 dark:text-slate-400">
+                            {typeof rawNote === "string" ? rawNote : "Data verifikasi CEIR berhasil diverifikasi oleh server."}
+                          </div>
                         )}
                       </div>
                     );
@@ -779,7 +914,7 @@ function HistoryContent() {
                           className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors"
                           title="Batalkan dan kembalikan dana ke saldo akun"
                         >
-                          Batalkan & Refund
+                          Batalkan & Pengembalian
                         </button>
                         {primaryImei && (
                           <Link

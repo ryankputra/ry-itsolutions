@@ -255,10 +255,11 @@ function initSchedulers() {
             const apiKey = process.env.CEIRGO_API_KEY;
             if (!apiKey) return;
 
-            const processingOrders = await dbAll("SELECT * FROM transactions WHERE service_type = 'ceir' AND status = 'processing' AND accessToken IS NOT NULL LIMIT 10");
+            const processingOrders = await dbAll("SELECT * FROM transactions WHERE service_type = 'ceir' AND status = 'processing' AND (accessToken IS NOT NULL OR kmspTrxId IS NOT NULL) LIMIT 10");
             for (const order of processingOrders) {
                 try {
-                    const ceirRes = await ceirgoClient.getOrderDetail(order.accessToken || order.id);
+                    const refToQuery = order.accessToken || order.kmspTrxId || order.id;
+                    const ceirRes = await ceirgoClient.getOrderDetail(refToQuery);
                     if (ceirRes.status && ceirRes.data) {
                         const ceirData = ceirRes.data;
                         const remoteStatus = (ceirData.status || ceirData.order_status || '').toLowerCase();

@@ -12,7 +12,14 @@ function calculateTransactionWarranty(trx) {
 
     const isTopUp = serviceType.includes("topup") || pkg.includes("top up") || pkg.includes("topup");
     const isGateway = serviceType === "gateway" || serviceType === "apikey" || pkg.includes("gateway") || pkg.includes("api key");
-    const isCeir = serviceType === "ceir" || serviceType === "barcode" || pkg.includes("ceir") || pkg.includes("barcode") || (trx.packageId && (String(trx.packageId).startsWith("cek_") || String(trx.packageId).startsWith("create_")));
+    const isCeir = serviceType === "ceir" || 
+                   serviceType === "barcode" || 
+                   pkg.includes("ceir") || 
+                   pkg.includes("barcode") || 
+                   pkg.includes("cek masa aktif") || 
+                   pkg.includes("cek imei") || 
+                   pkg.includes("beacukai") || 
+                   (trx.packageId && (String(trx.packageId).startsWith("cek_") || String(trx.packageId).startsWith("create_")));
     const isImei = !isTopUp && !isGateway && !isCeir;
 
     // 1. TOP UP

@@ -16,7 +16,8 @@ const { dbGet, dbAll, dbRun } = require('../config/db');
 const { isAuthenticated, sseSend } = require('../middleware/auth');
 const { escapeHtml, sendTelegramNotification } = require('../telegramService');
 const { sendManualOrderNotification } = require('./telegram');
-const { notifyNewOrder } = require('../services/waBot');
+const { notifyNewOrder, notifyPaymentSuccessToAdmin } = require('../services/waBot');
+const { getPaymentGatewaySelection, advancePaymentCounter } = require('../services/paymentRouter');
 const { logUserActivity } = require('../utils/activityLogger');
 const ceirgoClient = require('../ceirgoClient');
 const { DEFAULT_QRIS_NOBU, DEFAULT_QRIS_GOPAY, generateDynamicQRIS, generateQrisDataUrl } = require('../config/qrisGenerator');
@@ -164,9 +165,29 @@ async function completeTopup(topUpId, gopayTrxId = '') {
         sseSend(user.id, 'balance_update', { balance: updatedUser.balance, source: 'qris_topup' });
         sseSend(user.id, 'transaction_status', { id: topUpId, type: 'topup', status: 'completed', message: 'Top up via QRIS berhasil!' });
 
-        sendTelegramNotification(
-            `<b>──────────────────────</b>\n<b>💰 Top Up Berhasil (QRIS)!</b>\n<b>──────────────────────</b>\n<b>Nama Pengguna:</b> ${user.name}\n<b>Jumlah Masuk:</b> Rp ${topUp.baseAmount.toLocaleString('id-ID')}\n<b>ID Transaksi:</b> <code>${topUpId}</code>${gopayTrxId ? `\n<b>Ref:</b> <code>${gopayTrxId}</code>` : ''}`
-        );
+        // Advance Dual Gateway Rotator Counter (Hanya bergulir jika pembayaran berhasil)
+        const advRes = await advancePaymentCounter(dbGet, dbRun).catch(() => ({ nextGateway: '' }));
+
+        // Identifikasi gateway yang digunakan (ShopeePay vs GoPay)
+        const isShopee = topUpId.startsWith('TU-SP-') || String(gopayTrxId).toUpperCase().includes('SHOPEE');
+        const gatewayUsed = isShopee ? 'shoppepay' : 'gopay';
+
+        // Kirim Notifikasi Lengkap ke Admin via WhatsApp & Telegram Bot
+        try {
+            await notifyPaymentSuccessToAdmin({
+                userName: user.name || 'Pengguna',
+                userContact: user.email || user.id,
+                amount: topUp.baseAmount,
+                trxId: topUpId,
+                refTag: gopayTrxId,
+                gatewayUsed: gatewayUsed,
+                serviceOrItem: 'Top Up Saldo Akun (QRIS Realtime)',
+                nextGateway: advRes?.nextGateway || ''
+            });
+        } catch (notifErr) {
+            console.error('[Topup Admin Notif Error]', notifErr.message);
+        }
+
         return true;
     } else {
         await dbRun("ROLLBACK");
@@ -232,9 +253,65 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
                 console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
             } else {
                 const err = orderRes.message || orderRes.error || 'Respon gagal dari CeirGO';
-                finalStatus = 'pending';
-                adminNote = `CeirGO Auto-Submit: ${err}. Menunggu verifikasi admin.`;
-                apiResponse = JSON.stringify(orderRes);
+                const isBalanceErr = orderRes.statusCode === 402 ||
+                    String(err).toLowerCase().includes('balance-mu tidak mencukupi') ||
+                    String(err).toLowerCase().includes('balance') ||
+                    String(err).toLowerCase().includes('saldo') ||
+                    String(err).toLowerCase().includes('tidak mencukupi') ||
+                    String(err).toLowerCase().includes('user_insufficient_balance_error');
+
+                if (isBalanceErr) {
+                    const refundAmt = Number(trx.platformFee || trx.originalPrice || 0);
+                    if (refundAmt > 0 && trx.userId) {
+                        await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [refundAmt, trx.userId]).catch(() => {});
+                    }
+                    finalStatus = 'cancelled';
+                    adminNote = `Pesanan otomatis dibatalkan karena saldo API provider pusat tidak mencukupi. Pembayaran QRIS sebesar Rp ${refundAmt.toLocaleString('id-ID')} telah dialihkan menjadi Saldo Akun pengguna secara otomatis.`;
+                    apiResponse = JSON.stringify(orderRes);
+
+                    // Send Urgent Admin Alert
+                    try {
+                        const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+                        const adminPhones = await getAdminPhoneNumbers();
+                        const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+                        const waAdminMsg = 
+                            `🚨 *PERINGATAN: SALDO API CEIRGO KURANG (ORDER QRIS DIBATALKAN)*\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `• *Order ID:* \`${trx.id}\`\n` +
+                            `• *Layanan:* ${trx.packageName || 'Cek CEIR'}\n` +
+                            `• *Pelanggan:* ${trx.userName || 'Pelanggan'} (${trx.targetPhone || '-'})\n` +
+                            `• *Nominal Refund ke Saldo:* Rp ${refundAmt.toLocaleString('id-ID')}\n` +
+                            `• *Status:* ❌ *Dibatalkan & Masuk Saldo Akun User*\n` +
+                            `• *Waktu:* ${timeStr}\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `⚠️ *Tindakan Admin:* Segera lakukan Top-Up Saldo di https://ceirgo.id.`;
+                        for (const adm of (adminPhones || [])) {
+                            sendTextMessage(adm, waAdminMsg).catch(() => {});
+                        }
+                    } catch (e) {}
+
+                    // Send Customer WA Notification
+                    try {
+                        const { sendTextMessage } = require('../services/waBot');
+                        const custPhone = trx.targetPhone;
+                        if (custPhone) {
+                            const custMsg =
+                                `Halo Kak *${trx.userName || 'Pelanggan'}*,\n\n` +
+                                `*PEMBERITAHUAN PESANAN LAYANAN CEIR*\n\n` +
+                                `• *Order ID:* #${trx.id}\n` +
+                                `• *Layanan:* ${trx.packageName || 'Layanan CEIR'}\n` +
+                                `• *Status:* Dibatalkan Otomatis\n` +
+                                `• *Keterangan:* Jalur API server pusat sedang mengalami gangguan kuota/maintenance.\n` +
+                                `• *Pengembalian:* Dana pembayaran QRIS Anda sebesar *Rp ${refundAmt.toLocaleString('id-ID')}* telah dialihkan menjadi *Saldo Akun Website* Anda secara otomatis.\n\n` +
+                                `Cek saldo & riwayat: https://ry-itsolutionts.web.id/history`;
+                            sendTextMessage(custPhone, custMsg).catch(() => {});
+                        }
+                    } catch (custWaErr) {}
+                } else {
+                    finalStatus = 'pending';
+                    adminNote = `CeirGO Auto-Submit: ${err}. Menunggu verifikasi admin.`;
+                    apiResponse = JSON.stringify(orderRes);
+                }
             }
         } catch (ceirErr) {
             console.error(`[CeirGO Auto-Order Error]`, ceirErr.message);
@@ -260,8 +337,48 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         }
 
         sseSend(trx.userId, 'transaction_status', { id: trx.id, status: finalStatus, message: adminNote });
-        sseSend(trx.userId, 'transaction_update', { id: trx.id, status: finalStatus, note: adminNote });
-        // Skipped telegram notification for automated CeirGO order
+        // Notifikasi Admin (WhatsApp & Telegram) untuk Pesanan CEIR (Otomatis)
+        try {
+            const { sendTelegramNotification } = require('../telegramService');
+            const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+            const rbRow = await dbGet("SELECT value FROM settings WHERE key = 'lastCeirgoBalance'").catch(() => null);
+            const remainingBalanceStr = rbRow ? `Rp ${Number(rbRow.value).toLocaleString('id-ID')}` : '-';
+
+            const tgCeirMsg =
+                `<b>──────────────────────</b>\n` +
+                `🔍 <b>PESANAN CEIR (OTOMATIS SELESAI)</b>\n` +
+                `<b>──────────────────────</b>\n` +
+                `👤 <b>Pengguna:</b> ${trx.userName || 'Pelanggan'}\n` +
+                `📞 <b>Kontak:</b> <code>${trx.targetPhone || '-'}</code>\n` +
+                `📦 <b>Layanan:</b> ${trx.packageName || 'Cek CEIR'}\n` +
+                `📱 <b>IMEI:</b> <code>${trx.imei || '-'}</code>\n` +
+                `🆔 <b>ID Order:</b> <code>${trx.id}</code>\n` +
+                `⚡ <b>Status Server:</b> <b>${finalStatus.toUpperCase()}</b>\n` +
+                `💰 <b>Sisa Saldo CeirGO:</b> ${remainingBalanceStr}\n` +
+                `<b>──────────────────────</b>\n` +
+                `📋 <b>Hasil/Catatan:</b>\n<i>${(adminNote || '-').slice(0, 300)}</i>`;
+            sendTelegramNotification(tgCeirMsg, 'admin');
+
+            const waCeirMsg =
+                `🔍 *NOTIFIKASI PESANAN CEIR (OTOMATIS)*\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `• *Order ID:* \`${trx.id}\`\n` +
+                `• *Pelanggan:* ${trx.userName || 'Pelanggan'} (${trx.targetPhone || '-'})\n` +
+                `• *Layanan:* ${trx.packageName || 'Cek CEIR'}\n` +
+                `• *IMEI:* \`${trx.imei || '-'}\`\n` +
+                `• *Status:* *${finalStatus.toUpperCase()}*\n` +
+                `• *Sisa Saldo CeirGO:* ${remainingBalanceStr}\n` +
+                `• *Catatan:* ${(adminNote || '-').slice(0, 250)}\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `🤖 _Diproses otomatis oleh integrasi server CeirGO._`;
+
+            const adminPhones = await getAdminPhoneNumbers();
+            for (const adm of adminPhones) {
+                sendTextMessage(adm, waCeirMsg).catch(() => {});
+            }
+        } catch (ceirNotifErr) {
+            console.error('[Admin CeirGO Notif Error]:', ceirNotifErr.message);
+        }
     } else {
         // Manual IMEI or other service: Status in_queue (Menunggu Konfirmasi Admin)
         const autoRow = await dbGet("SELECT value FROM settings WHERE key = 'imei_auto_processing'").catch(() => null);
@@ -271,40 +388,40 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
             await dbRun("UPDATE transactions SET status = 'processing', api_response = 'Pembayaran QRIS Terverifikasi. Pesanan masuk pengerjaan otomatis.', admin_note = 'Auto-processing aktif: pesanan langsung masuk pengerjaan.' WHERE id = ?", [trx.id]);
             sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'processing', message: 'Pembayaran terverifikasi! Pesanan Anda langsung masuk ke pengerjaan.' });
         } else {
-        await dbRun("UPDATE transactions SET status = 'in_queue', api_response = 'Pembayaran QRIS Terverifikasi. Menunggu Konfirmasi Admin.', admin_note = 'Pembayaran QRIS terverifikasi. Menunggu konfirmasi & pengerjaan oleh Admin.' WHERE id = ?", [trx.id]);
-        sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'in_queue', message: 'Pembayaran terverifikasi! Pesanan masuk dalam antrean menunggu konfirmasi admin.' });
-        const notifMsg = 
-            `🔔 <b>PEMBAYARAN QRIS MANUAL BERHASIL!</b>\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `🆔 <b>Order ID:</b> <code>${trx.id}</code>\n` +
-            `👤 <b>Pelanggan:</b> ${escapeHtml(trx.userName || 'Pelanggan')}\n` +
-            `📞 <b>No. WhatsApp:</b> <code>${trx.targetPhone || '-'}</code>\n` +
-            `📦 <b>Layanan:</b> ${escapeHtml(trx.packageName)}\n` +
-            `📱 <b>IMEI:</b> <code>${trx.imei}</code>\n` +
-            `💰 <b>Nominal:</b> Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n` +
-            `⏳ <b>Status:</b> <b>DALAM ANTREAN</b>\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `💡 <i>Gunakan tombol aksi di bawah untuk memproses pesanan:</i>`;
-        sendManualOrderNotification(notifMsg, trx.id, null);
+            await dbRun("UPDATE transactions SET status = 'in_queue', api_response = 'Pembayaran QRIS Terverifikasi. Menunggu Konfirmasi Admin.', admin_note = 'Pembayaran QRIS terverifikasi. Menunggu konfirmasi & pengerjaan oleh Admin.' WHERE id = ?", [trx.id]);
+            sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'in_queue', message: 'Pembayaran terverifikasi! Pesanan masuk dalam antrean menunggu konfirmasi admin.' });
+            const notifMsg = 
+                `🔔 <b>PEMBAYARAN QRIS MANUAL BERHASIL!</b>\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `🆔 <b>Order ID:</b> <code>${trx.id}</code>\n` +
+                `👤 <b>Pelanggan:</b> ${escapeHtml(trx.userName || 'Pelanggan')}\n` +
+                `📞 <b>No. WhatsApp:</b> <code>${trx.targetPhone || '-'}</code>\n` +
+                `📦 <b>Layanan:</b> ${escapeHtml(trx.packageName)}\n` +
+                `📱 <b>IMEI:</b> <code>${trx.imei}</code>\n` +
+                `💰 <b>Nominal:</b> Rp ${(trx.platformFee || trx.originalPrice || 0).toLocaleString('id-ID')}\n` +
+                `⏳ <b>Status:</b> <b>DALAM ANTREAN</b>\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `💡 <i>Gunakan tombol aksi di bawah untuk memproses pesanan:</i>`;
+            sendManualOrderNotification(notifMsg, trx.id, null);
 
-        // Send WhatsApp Admin & Customer Notification on QRIS payment
-        try {
-            const { notifyNewOrder, getCustomerPhoneForTransaction } = require('../services/waBot');
-            getCustomerPhoneForTransaction(trx).then(custPhone => {
-                notifyNewOrder({
-                    id: trx.id,
-                    userName: trx.userName,
-                    packageName: trx.packageName,
-                    serviceType: trx.service_type,
-                    imei: trx.imei,
-                    price: trx.platformFee || trx.originalPrice || 0,
-                    speedOption: trx.speed_option || 'slow',
-                    userImage: trx.user_image,
-                    userImageCeir: trx.user_image_ceir,
-                    customerPhone: custPhone
-                }).catch(waErr => console.error('[WABot QRIS Error]', waErr.message));
-            }).catch(() => {});
-        } catch (e) {}
+            // Send WhatsApp Admin & Customer Notification on QRIS payment
+            try {
+                const { notifyNewOrder, getCustomerPhoneForTransaction } = require('../services/waBot');
+                getCustomerPhoneForTransaction(trx).then(custPhone => {
+                    notifyNewOrder({
+                        id: trx.id,
+                        userName: trx.userName,
+                        packageName: trx.packageName,
+                        serviceType: trx.service_type,
+                        imei: trx.imei,
+                        price: trx.platformFee || trx.originalPrice || 0,
+                        speedOption: trx.speed_option || 'slow',
+                        userImage: trx.user_image,
+                        userImageCeir: trx.user_image_ceir,
+                        customerPhone: custPhone
+                    }).catch(waErr => console.error('[WABot QRIS Error]', waErr.message));
+                }).catch(() => {});
+            } catch (e) {}
         }
     }
 
@@ -332,6 +449,29 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
         } catch (couponErr) {
             console.error("[QRIS Coupon Usage Error]", couponErr.message);
         }
+    }
+
+    // 1. Advance Dual Gateway Rotator Counter (Hanya bergulir jika pembayaran pesanan lunas)
+    const advRes = await advancePaymentCounter(dbGet, dbRun).catch(() => ({ nextGateway: '' }));
+
+    // 2. Identifikasi gateway yang digunakan (ShopeePay vs GoPay)
+    const isShopee = String(refTag || '').toUpperCase().includes('SHOPEE') || String(trx.paymentMethod || '').toLowerCase().includes('shopee');
+    const gatewayUsed = isShopee ? 'shoppepay' : 'gopay';
+
+    // 3. Kirim Notifikasi Lengkap Pembayaran Berhasil ke WA & Telegram Admin
+    try {
+        await notifyPaymentSuccessToAdmin({
+            userName: trx.userName || 'Pelanggan',
+            userContact: trx.targetPhone || trx.userId,
+            amount: trx.platformFee || trx.originalPrice || 0,
+            trxId: trx.id,
+            refTag: refTag || '',
+            gatewayUsed: gatewayUsed,
+            serviceOrItem: `${trx.packageName || 'Layanan'}${trx.imei ? ` (IMEI: ${trx.imei})` : ''}`,
+            nextGateway: advRes?.nextGateway || ''
+        });
+    } catch (notifErr) {
+        console.error('[FulfillPaidTrx Admin Notif Error]', notifErr.message);
     }
 
     return true;
@@ -393,22 +533,35 @@ function checkGopayPaymentStatus(id, amount, gopayTrxId, startTime) {
     }
 }
 
-// ShopeePay QRIS Polling
+// ShopeePay QRIS Polling (Mendukung Topup Saldo & Pembelian Langsung Direct QRIS)
 function checkShopeePaymentStatus(id, amount, startTime) {
     const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
     const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
     const maxDurationMs = 5 * 60 * 1000;
     const interval = 8000;
 
+    const isTopup = id.startsWith('TU-');
+
     const pollingLoop = async () => {
         try {
-            const topUp = await dbGet("SELECT * FROM topups WHERE id = ?", [id]);
-            if (!topUp || topUp.status !== 'pending') { qrisPollingTimeouts.delete(id); return; }
-            const timeElapsed = Date.now() - new Date(topUp.createdAt).getTime();
-            if (timeElapsed >= maxDurationMs) {
-                await dbRun("UPDATE topups SET status = 'expired' WHERE id = ? AND status = 'pending'", [id]);
-                qrisPollingTimeouts.delete(id);
-                return;
+            if (isTopup) {
+                const topUp = await dbGet("SELECT * FROM topups WHERE id = ?", [id]);
+                if (!topUp || topUp.status !== 'pending') { qrisPollingTimeouts.delete(id); return; }
+                const timeElapsed = Date.now() - new Date(topUp.createdAt).getTime();
+                if (timeElapsed >= maxDurationMs) {
+                    await dbRun("UPDATE topups SET status = 'expired' WHERE id = ? AND status = 'pending'", [id]);
+                    qrisPollingTimeouts.delete(id);
+                    return;
+                }
+            } else {
+                const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [id]);
+                if (!trx || trx.status !== 'pending_payment') { qrisPollingTimeouts.delete(id); return; }
+                const timeElapsed = Date.now() - new Date(trx.createdAt).getTime();
+                if (timeElapsed >= maxDurationMs) {
+                    await dbRun("UPDATE transactions SET status = 'failed', api_response = 'Waktu pembayaran QRIS habis (Expired).' WHERE id = ?", [id]);
+                    qrisPollingTimeouts.delete(id);
+                    return;
+                }
             }
 
             const response = await axios.post(`${URL}/check-payment`, {
@@ -420,7 +573,12 @@ function checkShopeePaymentStatus(id, amount, startTime) {
             });
 
             if (response.data?.success && response.data.paid) {
-                await completeTopup(id, response.data.transaction?.transactionId || 'SHOPEEPAY');
+                const refTag = response.data.transaction?.transactionId || 'SHOPEEPAY';
+                if (isTopup) {
+                    await completeTopup(id, refTag);
+                } else {
+                    await fulfillPaidTransaction(id, refTag);
+                }
                 qrisPollingTimeouts.delete(id);
                 return;
             }
@@ -932,30 +1090,47 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             }
             const ceirImagePath = ceirImagePaths.length > 0 ? ceirImagePaths.join(',') : null;
 
-            const targetPhone = String(req.body.target_phone || req.body.targetPhone || user?.verifiedPhone || '').trim();
+            const targetPhone = String(req.body.target_phone || req.body.targetPhone || user?.verifiedPhone || user?.phone || '').trim();
+            const cleanTargetDigits = targetPhone.replace(/\D/g, '');
+            if (!targetPhone || cleanTargetDigits.length < 9) {
+                return res.status(400).json({
+                    status: false,
+                    message: "Nomor WhatsApp aktif wajib diisi agar nota transaksi digital dan notifikasi pengerjaan dapat dikirimkan ke WhatsApp Anda."
+                });
+            }
             if (targetPhone && !user?.verifiedPhone) {
-                const cleanUserP = targetPhone.replace(/\D/g, '');
-                if (cleanUserP.length >= 9) {
-                    const formattedP = cleanUserP.startsWith('0') ? '62' + cleanUserP.slice(1) : (cleanUserP.startsWith('62') ? cleanUserP : '62' + cleanUserP);
-                    dbRun("UPDATE users SET verifiedPhone = ? WHERE id = ? AND (verifiedPhone IS NULL OR verifiedPhone = '')", [formattedP, req.session.userId]).catch(() => {});
-                }
+                const formattedP = cleanTargetDigits.startsWith('0') ? '62' + cleanTargetDigits.slice(1) : (cleanTargetDigits.startsWith('62') ? cleanTargetDigits : '62' + cleanTargetDigits);
+                dbRun("UPDATE users SET verifiedPhone = ? WHERE id = ? AND (verifiedPhone IS NULL OR verifiedPhone = '')", [formattedP, req.session.userId]).catch(() => {});
             }
 
-            // Handle Direct QRIS Purchase
+            // Handle Direct QRIS Purchase with Dual Gateway Rotator (GoPay & ShopeePay)
             if (isQrisPayment) {
-                const gwRow = await dbGet("SELECT value FROM settings WHERE key IN ('payment_gateway', 'paymentGateway') ORDER BY key DESC");
-                const activeGateway = gwRow ? gwRow.value : 'orkut';
+                const chosenGateway = await getPaymentGatewaySelection(dbGet);
                 const requestedGw = String(req.body.gateway || req.body.provider || req.body.paymentMethod || req.body.payment_method || '').toLowerCase();
-                const isGopay = (requestedGw === 'gopay') || (activeGateway === 'gopay' && requestedGw !== 'nobu' && requestedGw !== 'orkut');
+                let isShopee = (chosenGateway === 'shoppepay');
+                if (requestedGw.includes('shopee')) isShopee = true;
+                if (requestedGw === 'gopay') isShopee = false;
+                const isGopay = !isShopee;
 
                 let qrisImage = null;
                 let dynamicRawCode = '';
                 let uniqueAmt = finalPriceToPay;
                 let expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
                 let gopayTrxId = null;
-                let merchantName = 'RYYSTORE OK2285905';
+                let merchantName = isShopee ? 'Ayy Store (ShopeePay)' : 'RyyStore IT Solutions';
 
-                if (isGopay) {
+                if (isShopee) {
+                    const shopeeStaticRow = await dbGet("SELECT value FROM settings WHERE key = 'shoppepay_qris_static'").catch(() => null);
+                    const shopeeStatic = shopeeStaticRow ? shopeeStaticRow.value : '';
+                    dynamicRawCode = generateDynamicQRIS(shopeeStatic, finalPriceToPay) || shopeeStatic;
+                    if (dynamicRawCode) {
+                        try {
+                            const qrcodeLib = require('qrcode');
+                            qrisImage = await qrcodeLib.toDataURL(dynamicRawCode, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
+                        } catch (e) {}
+                    }
+                    expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
+                } else {
                     merchantName = 'RyyStore IT Solutions';
                     const gopayData = await generateGopayQris(finalPriceToPay);
                     qrisImage = gopayData.qris_image || gopayData.qr_image || gopayData.qris_url || gopayData.qr_url;
@@ -968,17 +1143,11 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     }
                     gopayTrxId = gopayData.trx_id;
                     expiresAtSec = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
-                } else {
-                    const uniqueCode = Math.floor(Math.random() * 900) + 100;
-                    uniqueAmt = finalPriceToPay + uniqueCode;
-                    const nobuGen = await generateDynamicQris(uniqueAmt, 'nobu');
-                    qrisImage = typeof nobuGen === 'string' ? nobuGen : (nobuGen?.dataUrl || '');
-                    dynamicRawCode = typeof nobuGen === 'string' ? '' : (nobuGen?.dynamicCode || '');
                 }
 
                 await dbRun(`
                     INSERT INTO transactions (id, userId, userName, packageId, packageName, platformFee, originalPrice, targetPhone, accessToken, paymentMethod, status, api_response, createdAt, service_type, imei, user_image, user_image_ceir, admin_image, admin_note, speed_option, coupon_code, discount_amount, qrisBase64Image, uniqueAmount)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, null, 'qris', 'pending_payment', 'Menunggu Pembayaran QRIS', ?, ?, ?, ?, ?, null, 'Menunggu Pembayaran QRIS', ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, null, ?, 'pending_payment', 'Menunggu Pembayaran QRIS', ?, ?, ?, ?, ?, null, 'Menunggu Pembayaran QRIS', ?, ?, ?, ?, ?)
                 `, [
                     trxId,
                     req.session.userId,
@@ -988,6 +1157,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     finalPriceToPay,
                     totalPrice,
                     targetPhone,
+                    isShopee ? 'shoppepay' : 'gopay',
                     new Date().toISOString(),
                     service_type,
                     cleanImei,
@@ -1000,20 +1170,21 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     uniqueAmt
                 ]);
 
-                // Start polling
-                if (isGopay && gopayTrxId) {
+                // Start polling based on active gateway
+                if (isShopee) {
+                    checkShopeePaymentStatus(trxId, finalPriceToPay, new Date().toISOString());
+                } else if (gopayTrxId) {
                     checkGopayPaymentStatus(trxId, finalPriceToPay, gopayTrxId, new Date().toISOString());
-                } else {
-                    checkOrkutPaymentStatus(trxId, uniqueAmt);
                 }
 
                 return res.status(200).json({
                     status: true,
                     message: "Silakan scan QRIS untuk menyelesaikan pembayaran pesanan Anda.",
                     trxId,
-                    paymentMethod: 'qris',
+                    paymentMethod: isShopee ? 'shoppepay' : 'gopay',
                     merchant: merchantName,
-                    gateway: isGopay ? 'gopay' : 'orkut',
+                    gateway: isShopee ? 'shoppepay' : 'gopay',
+                    active_gateway: isShopee ? 'shoppepay' : 'gopay',
                     data: {
                         id: trxId,
                         status: 'pending_payment',
@@ -1022,14 +1193,16 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                         qris_image: qrisImage,
                         qris_code: dynamicRawCode || qrisImage,
                         merchant: merchantName,
-                        expires_at: expiresAtSec
+                        expires_at: expiresAtSec,
+                        active_gateway: isShopee ? 'shoppepay' : 'gopay'
                     },
                     qrisData: {
                         base64Image: qrisImage,
                         qrisCode: dynamicRawCode,
                         uniqueAmount: uniqueAmt,
                         expiresAt: expiresAtSec,
-                        merchant: merchantName
+                        merchant: merchantName,
+                        active_gateway: isShopee ? 'shoppepay' : 'gopay'
                     }
                 });
             }
@@ -1085,9 +1258,24 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                         console.log(`[CeirGO Auto-Order] Sukses diterima server! Ref ID: ${refId}, Status: ${finalStatus}`);
                     } else {
                         const errorMsg = orderRes.message || orderRes.error || 'Respon gagal dari CeirGO';
-                        console.warn(`[CeirGO Auto-Order] Respon gagal dari CeirGO (${errorMsg}), dialihkan ke antrean manual.`);
-                        adminNote = `CeirGO Auto-Submit: ${errorMsg}. Dialihkan ke antrean manual.`;
-                        apiResponse = JSON.stringify(orderRes);
+                        const isBalanceErr = orderRes.statusCode === 402 ||
+                            String(errorMsg).toLowerCase().includes('balance-mu tidak mencukupi') ||
+                            String(errorMsg).toLowerCase().includes('balance') ||
+                            String(errorMsg).toLowerCase().includes('saldo') ||
+                            String(errorMsg).toLowerCase().includes('tidak mencukupi') ||
+                            String(errorMsg).toLowerCase().includes('user_insufficient_balance_error');
+
+                        if (isBalanceErr) {
+                            console.warn(`[CeirGO Auto-Order Balance Depleted] Saldo provider CeirGO habis. Membatalkan pesanan ${trxId} & me-refund saldo...`);
+                            await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [finalPriceToPay, req.session.userId]).catch(() => {});
+                            finalStatus = 'cancelled';
+                            adminNote = `Pesanan otomatis dibatalkan karena saldo API provider pusat tidak mencukupi. Saldo sebesar Rp ${finalPriceToPay.toLocaleString('id-ID')} telah dikembalikan secara otomatis ke akun Anda.`;
+                            apiResponse = JSON.stringify(orderRes);
+                        } else {
+                            console.warn(`[CeirGO Auto-Order] Respon gagal dari CeirGO (${errorMsg}), dialihkan ke antrean manual.`);
+                            adminNote = `CeirGO Auto-Submit: ${errorMsg}. Dialihkan ke antrean manual.`;
+                            apiResponse = JSON.stringify(orderRes);
+                        }
                     }
                 } catch (ceirErr) {
                     console.error(`[CeirGO Auto-Order Network Error]`, ceirErr.message);
@@ -1123,9 +1311,129 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 discountAmount + coinsDiscount
             ]);
 
+            if (finalStatus === 'cancelled') {
+                const freshUser = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]).catch(() => null);
+                const finalBalance = freshUser ? freshUser.balance : user.balance;
+
+                // Send real-time SSE
+                try {
+                    sseSend(req.session.userId, 'balance_update', { balance: finalBalance, source: 'ceir_order_cancelled_refund' });
+                    sseSend(req.session.userId, 'transaction_status', { id: trxId, status: 'cancelled', message: adminNote });
+                } catch (e) {}
+
+                // Send Urgent Alert to Admin (Telegram & WhatsApp)
+                try {
+                    const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+                    const { sendTelegramNotification } = require('../telegramService');
+                    const adminPhones = await getAdminPhoneNumbers();
+                    const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+                    const waAdminMsg = 
+                        `🚨 *PERINGATAN: SALDO API CEIRGO KURANG / ORDER DIBATALKAN*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                        `• *Order ID:* \`${trxId}\`\n` +
+                        `• *Layanan:* ${packageName}\n` +
+                        `• *Pelanggan:* ${user.name} (${cleanImei})\n` +
+                        `• *Nominal Refund:* Rp ${finalPriceToPay.toLocaleString('id-ID')}\n` +
+                        `• *Status:* ❌ *Dibatalkan & Saldo Di-Refund Otomatis*\n` +
+                        `• *Keterangan Provider:* Saldo API CeirGO tidak mencukupi untuk memproses pesanan ini.\n` +
+                        `• *Waktu:* ${timeStr}\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                        `⚠️ *Tindakan Admin:* Segera lakukan Top-Up Saldo di https://ceirgo.id agar layanan cek CEIR otomatis kembali aktif.`;
+                    for (const adm of (adminPhones || [])) {
+                        sendTextMessage(adm, waAdminMsg).catch(() => {});
+                    }
+                    sendTelegramNotification(
+                        `🚨 <b>PERINGATAN: SALDO API CEIRGO KURANG</b>\n` +
+                        `<b>Order ID:</b> <code>${trxId}</code>\n` +
+                        `<b>Layanan:</b> ${packageName}\n` +
+                        `<b>Pelanggan:</b> ${escapeHtml(user.name)}\n` +
+                        `<b>IMEI:</b> <code>${cleanImei}</code>\n` +
+                        `<b>Status:</b> ❌ Dibatalkan & Refund Rp ${finalPriceToPay.toLocaleString('id-ID')}\n` +
+                        `<b>Penyebab:</b> Saldo API CeirGO tidak mencukupi.\n` +
+                        `<i>Segera top-up saldo API di https://ceirgo.id</i>`,
+                        'admin'
+                    );
+                } catch (alertErr) {
+                    console.error('[Admin Alert Error]', alertErr.message);
+                }
+
+                // Send WhatsApp notification to customer if phone number exists
+                try {
+                    const { sendTextMessage } = require('../services/waBot');
+                    const custPhone = targetPhone || user.phone || user.verifiedPhone;
+                    if (custPhone) {
+                        const custMsg =
+                            `Halo Kak *${user.name || 'Pelanggan'}*,\n\n` +
+                            `*PEMBERITAHUAN PESANAN LAYANAN CEIR*\n\n` +
+                            `• *Order ID:* #${trxId}\n` +
+                            `• *Layanan:* ${packageName}\n` +
+                            `• *IMEI:* ${cleanImei}\n` +
+                            `• *Status:* Dibatalkan Otomatis\n` +
+                            `• *Keterangan:* Jalur API server pusat sedang mengalami gangguan kuota/maintenance.\n` +
+                            `• *Pengembalian:* Saldo akun Anda sebesar *Rp ${finalPriceToPay.toLocaleString('id-ID')}* telah dikembalikan 100% secara otomatis.\n\n` +
+                            `Pantau riwayat akun: https://ry-itsolutionts.web.id/history`;
+                        sendTextMessage(custPhone, custMsg).catch(() => {});
+                    }
+                } catch (custWaErr) {}
+
+                return res.json({
+                    status: false,
+                    cancelled: true,
+                    refunded: true,
+                    message: "Pesanan otomatis dibatalkan karena saldo API server pusat sedang tidak mencukupi. Saldo sebesar Rp " + finalPriceToPay.toLocaleString('id-ID') + " telah dikembalikan 100% ke akun Anda.",
+                    trxId,
+                    newBalance: finalBalance,
+                    data: {
+                        id: trxId,
+                        status: 'cancelled',
+                        admin_note: adminNote
+                    }
+                });
+            }
+
             if (isCeirgoService && (finalStatus === 'processing' || finalStatus === 'success')) {
-                const autoNotifMsg = `<b>⚡ Pesanan Otomatis CeirGO Diterima!</b>\n──────────────────────\n<b>User:</b> ${user.name}\n<b>Layanan:</b> ${packageName}\n<b>IMEI:</b> <code>${cleanImei}</code>\n<b>Ref ID:</b> <code>${refId || trxId}</code>\n<b>Status:</b> <b>${finalStatus.toUpperCase()}</b>`;
-                // Skipped admin group telegram notification for automated CeirGO orders
+                // Notifikasi Admin (Telegram & WhatsApp) untuk Pesanan CEIR via Saldo
+                try {
+                    const { sendTelegramNotification } = require('../telegramService');
+                    const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+                    const rbRow = await dbGet("SELECT value FROM settings WHERE key = 'lastCeirgoBalance'").catch(() => null);
+                    const remainingBalanceStr = rbRow ? `Rp ${Number(rbRow.value).toLocaleString('id-ID')}` : '-';
+
+                    const tgCeirMsg =
+                        `<b>──────────────────────</b>\n` +
+                        `🔍 <b>PESANAN CEIR (SALDO USER)</b>\n` +
+                        `<b>──────────────────────</b>\n` +
+                        `👤 <b>Pengguna:</b> ${user.name}\n` +
+                        `📞 <b>Kontak:</b> <code>${targetPhone || user.phone || user.verifiedPhone || '-'}</code>\n` +
+                        `📦 <b>Layanan:</b> ${packageName}\n` +
+                        `📱 <b>IMEI:</b> <code>${cleanImei}</code>\n` +
+                        `🆔 <b>ID Order:</b> <code>${trxId}</code>\n` +
+                        `⚡ <b>Status Server:</b> <b>${finalStatus.toUpperCase()}</b>\n` +
+                        `💰 <b>Sisa Saldo CeirGO:</b> ${remainingBalanceStr}\n` +
+                        `<b>──────────────────────</b>\n` +
+                        `📋 <b>Hasil/Catatan:</b>\n<i>${(adminNote || '-').slice(0, 300)}</i>`;
+                    sendTelegramNotification(tgCeirMsg, 'admin');
+
+                    const waCeirMsg =
+                        `🔍 *NOTIFIKASI PESANAN CEIR (SALDO)*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                        `• *Order ID:* \`${trxId}\`\n` +
+                        `• *Pelanggan:* ${user.name} (${targetPhone || user.phone || user.verifiedPhone || '-'})\n` +
+                        `• *Layanan:* ${packageName}\n` +
+                        `• *IMEI:* \`${cleanImei}\`\n` +
+                        `• *Status:* *${finalStatus.toUpperCase()}*\n` +
+                        `• *Sisa Saldo CeirGO:* ${remainingBalanceStr}\n` +
+                        `• *Catatan:* ${(adminNote || '-').slice(0, 250)}\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                        `🤖 _Diproses otomatis oleh integrasi server CeirGO._`;
+
+                    const adminPhones = await getAdminPhoneNumbers();
+                    for (const adm of adminPhones) {
+                        sendTextMessage(adm, waCeirMsg).catch(() => {});
+                    }
+                } catch (ceirNotifErr) {
+                    console.error('[Admin CeirGO Saldo Notif Error]:', ceirNotifErr.message);
+                }
 
                 // Send WhatsApp notification to customer with result
                 try {
@@ -1410,33 +1718,13 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
             return res.status(400).json({ status: false, message: `Jumlah top up minimal Rp ${minLimit.toLocaleString('id-ID')}` });
         }
 
-        const modeRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_gateway_mode'").catch(() => null);
-        const mode = modeRow ? modeRow.value : 'rotate'; // 'rotate', 'gopay', 'shoppepay'
-
-        let chosenGateway = 'gopay';
-        if (mode === 'shoppepay') {
-            chosenGateway = 'shoppepay';
-        } else if (mode === 'gopay') {
-            chosenGateway = 'gopay';
-        } else if (mode === 'rotate') {
-            const counterRow = await dbGet("SELECT value FROM settings WHERE key = 'payment_counter'").catch(() => null);
-            let counter = counterRow ? parseInt(counterRow.value || '0', 10) : 0;
-            counter = (counter + 1) % 1000000;
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_counter', ?)", [String(counter)]).catch(() => {});
-            
-            const startRow = await dbGet("SELECT value FROM settings WHERE key = 'rotate_start'").catch(() => null);
-            const startWith = startRow ? startRow.value : 'gopay';
-            
-            const isEven = (counter % 2 === 0);
-            if (startWith === 'shoppepay') {
-                chosenGateway = isEven ? 'shoppepay' : 'gopay';
-            } else {
-                chosenGateway = isEven ? 'gopay' : 'shoppepay';
-            }
-        }
+        // Dapatkan gateway aktif berdasarkan setting rotator (tanpa advance counter sebelum lunas)
+        const chosenGateway = await getPaymentGatewaySelection(dbGet);
 
         const requestedGw = (gateway || '').toLowerCase();
-        const isShopee = (chosenGateway === 'shoppepay') || (requestedGw.includes('shopee'));
+        let isShopee = (chosenGateway === 'shoppepay');
+        if (requestedGw.includes('shopee')) isShopee = true;
+        if (requestedGw === 'gopay') isShopee = false;
         const isGopay = !isShopee;
 
         if (isShopee) {
@@ -1630,24 +1918,41 @@ router.get('/topup/latest-status', isAuthenticated, async (req, res) => {
         const topUp = await dbGet("SELECT * FROM topups WHERE userId = ? ORDER BY createdAt DESC LIMIT 1", [userId]);
         if (!topUp) return res.status(404).json({ status: false, message: 'Belum ada transaksi top-up.' });
 
-        if (topUp.status === 'pending' && topUp.id.startsWith('TU-SP-')) {
-            try {
-                const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
-                const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
-                const response = await axios.post(`${URL}/check-payment`, {
-                    amount: topUp.baseAmount,
-                    startTime: Math.floor(new Date(topUp.createdAt).getTime() / 1000)
-                }, {
-                    headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
-                    timeout: 10000
-                });
-                if (response.data?.success && response.data.paid) {
-                    await completeTopup(topUp.id, response.data.transaction?.transactionId || 'SHOPEEPAY');
-                    const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUp.id]);
-                    const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
-                    return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
-                }
-            } catch (e) {}
+        if (topUp.status === 'pending') {
+            if (topUp.id.startsWith('TU-SP-')) {
+                try {
+                    const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
+                    const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
+                    const response = await axios.post(`${URL}/check-payment`, {
+                        amount: topUp.baseAmount,
+                        startTime: Math.floor(new Date(topUp.createdAt).getTime() / 1000)
+                    }, {
+                        headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+                        timeout: 10000
+                    });
+                    if (response.data?.success && response.data.paid) {
+                        await completeTopup(topUp.id, response.data.transaction?.transactionId || 'SHOPEEPAY');
+                        const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUp.id]);
+                        const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+                        return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
+                    }
+                } catch (e) {}
+            } else if (topUp.gopayTrxId) {
+                try {
+                    const URL = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
+                    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
+                    const response = await axios.get(`${URL}/check-payment`, {
+                        params: { amount: topUp.baseAmount, trx_id: topUp.gopayTrxId, api_key: API_KEY, start_time: topUp.createdAt },
+                        timeout: 10000
+                    });
+                    if (response.data?.success && response.data.paid) {
+                        await completeTopup(topUp.id, topUp.gopayTrxId);
+                        const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUp.id]);
+                        const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
+                        return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
+                    }
+                } catch (e) {}
+            }
         }
 
         const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
@@ -1662,26 +1967,88 @@ router.get('/topup/status/:topUpId', isAuthenticated, async (req, res) => {
     try {
         const { topUpId } = req.params;
         const topUp = await dbGet("SELECT * FROM topups WHERE id = ? AND userId = ?", [topUpId, req.session.userId]);
-        if (!topUp) return res.status(404).json({ status: false, message: 'Transaksi top-up tidak ditemukan.' });
+        if (!topUp) {
+            // Check direct order transactions table (TRX-... or trx_m_...)
+            const trx = await dbGet("SELECT * FROM transactions WHERE id = ? AND userId = ?", [topUpId, req.session.userId]);
+            if (!trx) return res.status(404).json({ status: false, message: 'Transaksi tidak ditemukan.' });
 
-        if (topUp.status === 'pending' && topUp.id.startsWith('TU-SP-')) {
-            try {
-                const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
-                const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
-                const response = await axios.post(`${URL}/check-payment`, {
-                    amount: topUp.baseAmount,
-                    startTime: Math.floor(new Date(topUp.createdAt).getTime() / 1000)
-                }, {
-                    headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
-                    timeout: 10000
-                });
-                if (response.data?.success && response.data.paid) {
-                    await completeTopup(topUp.id, response.data.transaction?.transactionId || 'SHOPEEPAY');
-                    const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUpId]);
-                    const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
-                    return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
+            if (trx.status === 'pending_payment') {
+                const isShopee = (trx.paymentMethod === 'shoppepay') || String(trx.qrisBase64Image || '').includes('SHOPEE') || trx.gateway === 'shoppepay';
+                if (isShopee) {
+                    try {
+                        const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
+                        const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
+                        const response = await axios.post(`${URL}/check-payment`, {
+                            amount: trx.platformFee || trx.originalPrice,
+                            startTime: Math.floor(new Date(trx.createdAt).getTime() / 1000)
+                        }, {
+                            headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+                            timeout: 10000
+                        });
+                        if (response.data?.success && response.data.paid) {
+                            await fulfillPaidTransaction(trx.id, response.data.transaction?.transactionId || 'SHOPEEPAY');
+                            const updatedTrx = await dbGet("SELECT * FROM transactions WHERE id = ?", [topUpId]);
+                            return res.status(200).json({ status: true, transactionStatus: 'completed', transaction: updatedTrx });
+                        }
+                    } catch (e) {}
+                } else {
+                    try {
+                        const URL = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
+                        const API_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
+                        const response = await axios.get(`${URL}/check-payment`, {
+                            params: { amount: trx.platformFee || trx.originalPrice, trx_id: trx.id, api_key: API_KEY, start_time: trx.createdAt },
+                            timeout: 10000
+                        });
+                        if (response.data?.success && response.data.paid) {
+                            await fulfillPaidTransaction(trx.id, 'GOPAY');
+                            const updatedTrx = await dbGet("SELECT * FROM transactions WHERE id = ?", [topUpId]);
+                            return res.status(200).json({ status: true, transactionStatus: 'completed', transaction: updatedTrx });
+                        }
+                    } catch (e) {}
                 }
-            } catch (e) {}
+            }
+
+            const isDone = ['success', 'completed', 'processing', 'in_queue'].includes(trx.status);
+            const isFailed = ['failed', 'cancelled', 'expired'].includes(trx.status);
+            const mappedStatus = isDone ? 'completed' : (isFailed ? 'failed' : 'pending');
+            return res.status(200).json({ status: true, transactionStatus: mappedStatus, transaction: trx });
+        }
+
+        if (topUp.status === 'pending') {
+            if (topUp.id.startsWith('TU-SP-')) {
+                try {
+                    const URL = process.env.SHOPPEPAY_GATEWAY_URL || process.env.SHOPPEPAY_URL || 'http://localhost:3003';
+                    const API_KEY = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
+                    const response = await axios.post(`${URL}/check-payment`, {
+                        amount: topUp.baseAmount,
+                        startTime: Math.floor(new Date(topUp.createdAt).getTime() / 1000)
+                    }, {
+                        headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+                        timeout: 10000
+                    });
+                    if (response.data?.success && response.data.paid) {
+                        await completeTopup(topUp.id, response.data.transaction?.transactionId || 'SHOPEEPAY');
+                        const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUpId]);
+                        const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+                        return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
+                    }
+                } catch (e) {}
+            } else if (topUp.gopayTrxId) {
+                try {
+                    const URL = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
+                    const API_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
+                    const response = await axios.get(`${URL}/check-payment`, {
+                        params: { amount: topUp.baseAmount, trx_id: topUp.gopayTrxId, api_key: API_KEY, start_time: topUp.createdAt },
+                        timeout: 10000
+                    });
+                    if (response.data?.success && response.data.paid) {
+                        await completeTopup(topUp.id, topUp.gopayTrxId);
+                        const updatedTopUp = await dbGet("SELECT * FROM topups WHERE id = ?", [topUpId]);
+                        const userRow = await dbGet("SELECT balance FROM users WHERE id = ?", [req.session.userId]);
+                        return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
+                    }
+                } catch (e) {}
+            }
         }
 
         res.status(200).json({ status: true, transactionStatus: topUp.status, topUp });

@@ -170,12 +170,18 @@ export default function CekCeirPage() {
         setCeirResult({ note, image: null, rows });
         setShowSuccessPop(true);
       } else {
+        if (typeof data?.data?.newBalance === 'number') {
+          updateBalance(data.data.newBalance);
+        } else if (typeof data?.newBalance === 'number') {
+          updateBalance(data.newBalance);
+        }
         Swal.fire({
-          title: "Gagal Membuat Pesanan",
-          text: data.message || "Gagal membuat pesanan.",
-          icon: "error"
+          title: data?.cancelled ? "Pesanan Dibatalkan & Saldo Dikembalikan" : "Gagal Membuat Pesanan",
+          text: data?.message || "Gagal membuat pesanan.",
+          icon: data?.cancelled ? "warning" : "error",
+          confirmButtonColor: "#0066cc"
         });
-        setError(data.message || "Gagal membuat pesanan.");
+        setError(data?.message || "Gagal membuat pesanan.");
       }
     } catch (err) {
       Swal.fire({

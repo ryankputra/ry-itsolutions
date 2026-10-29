@@ -19,6 +19,7 @@ const {
     fetchLatestBaileysVersion, 
     Browsers, 
     makeCacheableSignalKeyStore,
+    jidNormalizedUser,
     proto,
     BufferJSON 
 } = require("@whiskeysockets/baileys");
@@ -500,6 +501,31 @@ function isValidIndonesianMobile(phone) {
     return /^628\d{7,11}$/.test(clean);
 }
 
+/**
+ * Get active bot WhatsApp phone number
+ */
+function getBotPhoneNumber() {
+    try {
+        if (sock?.user?.id) {
+            return cleanPhone(sock.user.id.split('@')[0].split(':')[0]);
+        }
+        if (connectedPhone && connectedPhone !== 'Connected') {
+            return cleanPhone(connectedPhone.split('@')[0].split(':')[0]);
+        }
+        if (inMemoryCreds?.me?.id) {
+            return cleanPhone(inMemoryCreds.me.id.split('@')[0].split(':')[0]);
+        }
+        const credsPath = path.join(SESSIONS_DIR, 'creds.json');
+        if (fs.existsSync(credsPath)) {
+            const raw = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+            if (raw?.me?.id) {
+                return cleanPhone(raw.me.id.split('@')[0].split(':')[0]);
+            }
+        }
+    } catch (e) {}
+    return "6287767287284"; // Default fallback bot WhatsApp number
+}
+
 async function getCustomerPhoneForTransaction(trx) {
     if (!trx) return null;
     const candidate = trx.targetPhone || trx.customerPhone;
@@ -589,6 +615,18 @@ async function getAdminPhoneNumbers(paymentMethod = '') {
             });
         }
     } catch (e) {}
+
+    // CRITICAL: Keluarkan nomor bot WhatsApp itu sendiri agar tidak pernah mengirim notifikasi ke diri sendiri
+    // Pengiriman ke nomor bot sendiri memicu "Menunggu pesan ini. Tindakan ini mungkin membutuhkan waktu beberapa saat."
+    const botPhone = getBotPhoneNumber();
+    if (botPhone) {
+        adminPhones.delete(botPhone);
+    }
+
+    // Pastikan setidaknya admin utama selalu ada jika kosong
+    if (adminPhones.size === 0) {
+        adminPhones.add(primaryGoPayAdmin);
+    }
 
     return Array.from(adminPhones);
 }
@@ -736,7 +774,28 @@ async function initWABot(forceNew = false) {
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
             keepAliveIntervalMs: 25000,
-            generateHighQualityLinkPreview: false
+            generateHighQualityLinkPreview: false,
+            patchMessageBeforeSending: (message) => {
+                const requiresPatch = !!(
+                    message.buttonsMessage ||
+                    message.templateMessage ||
+                    message.listMessage
+                );
+                if (requiresPatch) {
+                    message = {
+                        viewOnceMessage: {
+                            message: {
+                                messageContextInfo: {
+                                    deviceListMetadataVersion: 2,
+                                    deviceListMetadata: {},
+                                },
+                                ...message,
+                            },
+                        },
+                    };
+                }
+                return message;
+            }
         });
 
         // Simpan kredensial langsung & pertahankan di memory state & disk secara sinkron
@@ -1206,15 +1265,35 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
                     `Pantau status: https://ry-itsolutionts.web.id/history?tab=processing` +
                     BOT_FOOTER;
             } else if (newStatus === "success" || newStatus === "completed") {
-                custMsg = `Halo Kak *${userName}*!\n\n` +
-                    `*PENGECEKAN CEIR TELAH SELESAI (SUKSES)*\n\n` +
+                let resultDetails = "";
+                if (trx.api_response) {
+                    try {
+                        let parsed = typeof trx.api_response === "string" ? JSON.parse(trx.api_response) : trx.api_response;
+                        if (Array.isArray(parsed) && parsed[0]) {
+                            const item = parsed[0];
+                            if (item.valid_until) resultDetails += `• *Masa Berlaku:* ${item.valid_until}\n`;
+                            if (item.status) resultDetails += `• *Status CEIR:* ${item.status}\n`;
+                            if (item.brand) resultDetails += `• *Brand / Model:* ${item.brand}${item.model ? ' ' + item.model : ''}\n`;
+                            if (item.barcode_url) resultDetails += `• *Link Barcode:* ${item.barcode_url}\n`;
+                        } else if (typeof parsed === "object" && parsed !== null) {
+                            if (parsed.valid_until) resultDetails += `• *Masa Berlaku:* ${parsed.valid_until}\n`;
+                            if (parsed.status && typeof parsed.status === "string") resultDetails += `• *Status CEIR:* ${parsed.status}\n`;
+                            if (parsed.brand) resultDetails += `• *Brand / Model:* ${parsed.brand}${parsed.model ? ' ' + parsed.model : ''}\n`;
+                            if (parsed.barcode_url) resultDetails += `• *Link Barcode:* ${parsed.barcode_url}\n`;
+                        }
+                    } catch (e) {}
+                }
+
+                custMsg = `Halo Kak *${userName}*! 👋\n\n` +
+                    `*HASIL PENGECEKAN CEIR TELAH SELESAI (SUKSES)*\n\n` +
                     `• *Order ID:* #${trx.id}\n` +
-                    `• *IMEI:* ${trx.imei || "-"}\n` +
                     `• *Layanan:* ${trx.packageName || "Cek Status CEIR"}\n` +
-                    `• *Status:* Selesai / Terverifikasi\n` +
-                    (customNote ? `• *Catatan:* ${customNote}\n` : "") +
-                    `\nData IMEI Anda telah selesai diperiksa di database CEIR.\n\n` +
-                    `Lihat Laporan: https://ry-itsolutionts.web.id/history?tab=completed` +
+                    `• *IMEI:* ${trx.imei || "-"}\n` +
+                    resultDetails +
+                    `• *Status:* Selesai / Terverifikasi Resmi\n` +
+                    (customNote && !customNote.includes("Pesanan-mu telah berhasil") ? `• *Catatan:* ${customNote}\n` : "") +
+                    `\nData IMEI Anda telah berhasil diperiksa dan diverifikasi oleh Server Pusat CEIR.\n\n` +
+                    `Lihat Rincian & Riwayat:\nhttps://ry-itsolutionts.web.id/history?tab=completed` +
                     BOT_FOOTER;
             } else if (newStatus === "failed" || newStatus === "cancelled") {
                 custMsg = `Halo Kak *${userName}*!\n\n` +
@@ -1511,10 +1590,15 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
     }
 
     let finalJid = targetJid;
+    const myPhone = getBotPhoneNumber();
+
     if (finalJid && !finalJid.includes("@g.us") && !finalJid.includes("@lid")) {
         const rawNumber = finalJid.split("@")[0].split(":")[0];
         const clean = cleanPhone(rawNumber);
-        if (clean && clean.length >= 8) {
+        if (clean && myPhone && clean === myPhone) {
+            console.log(`[WABot] sendAndStoreMessage: Menolak pengiriman ke nomor bot sendiri (${clean}) untuk mencegah self-chat & 'Menunggu pesan ini'.`);
+            return null;
+        } else if (clean && clean.length >= 8) {
             finalJid = `${clean}@s.whatsapp.net`;
         } else {
             throw new Error(`Nomor telepon tujuan tidak valid: ${targetJid}`);
@@ -1529,34 +1613,32 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         }
     }
 
-    // Generate deterministic custom message ID for pre-caching
-    const msgId = options.messageId || ("RYY" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 7).toUpperCase());
+    // Standard options (JANGAN inject custom non-standard messageId agar tidak memicu 'Menunggu pesan ini')
+    const sendOpts = { ...options };
 
-    // Prepare normalized proto payload for instant Signal retry response
-    let protoPayload = finalContent;
-    if (finalContent.text) {
-        protoPayload = { conversation: finalContent.text };
-    }
-
-    // Pre-cache in memory & SQLite BEFORE sending frame to network
-    await storeMessage(msgId, finalJid, protoPayload);
-
-    const sendOpts = { ...options, messageId: msgId };
+    // Explicitly sync prekeys & presence with contact to prevent 'Menunggu pesan ini'
+    try {
+        if (sock.onWhatsApp && !finalJid.includes("@g.us") && !finalJid.includes("@lid")) {
+            const rawNumber = finalJid.split("@")[0].split(":")[0];
+            await sock.onWhatsApp(rawNumber).catch(() => {});
+        }
+        if (sock.presenceSubscribe) {
+            await sock.presenceSubscribe(finalJid).catch(() => {});
+        }
+    } catch (e) {}
 
     try {
         const sent = await sock.sendMessage(finalJid, finalContent, sendOpts);
-        if (sent?.key?.id) {
-            await storeMessage(sent.key.id, finalJid, sent.message || protoPayload);
-        }
-        if (msgId && sent?.key?.id && sent.key.id !== msgId) {
-            await storeMessage(msgId, finalJid, sent.message || protoPayload);
+        const actualId = sent?.key?.id;
+        if (actualId) {
+            await storeMessage(actualId, finalJid, sent.message || finalContent);
         }
         const textBody = finalContent.text || finalContent.caption || (finalContent.image ? "[Foto]" : "[Pesan]");
-        await recordChatMessage(sent?.key?.id || msgId, finalJid, "Admin", 1, textBody, finalContent.image ? 'image' : 'text', Date.now());
+        await recordChatMessage(actualId || `MSG_${Date.now()}`, finalJid, "Admin", 1, textBody, finalContent.image ? 'image' : 'text', Date.now());
         return sent;
     } catch (sendErr) {
         // Self-healing: if session ratchet error occurs, purge stale session for this contact & retry once
-        const targetNumber = finalJid.split("@")[0].split(":")[0];
+        const targetNumber = cleanPhone(finalJid.split("@")[0].split(":")[0]);
         if (targetNumber && targetNumber.length >= 8 && fs.existsSync(SESSIONS_DIR)) {
             try {
                 const files = fs.readdirSync(SESSIONS_DIR).filter(f => f.startsWith(`session-${targetNumber}`));
@@ -1567,23 +1649,54 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
                     });
                     const retried = await sock.sendMessage(finalJid, finalContent, sendOpts);
                     if (retried?.key?.id) {
-                        await storeMessage(retried.key.id, finalJid, retried.message || protoPayload);
+                        await storeMessage(retried.key.id, finalJid, retried.message || finalContent);
                     }
                     return retried;
                 }
-            } catch (retryErr) {
-                console.warn(`[WABot] Retry send after session purge failed for ${finalJid}: ${retryErr.message}`);
+            } catch (eRetry) {
+                console.warn(`[WABot] Retry send after session purge failed for ${finalJid}: ${eRetry.message}`);
             }
         }
         throw sendErr;
     }
 }
 
+function purgePeerSession(phone) {
+    const rawNumber = cleanPhone(phone);
+    if (!rawNumber || rawNumber.length < 8) return 0;
+    try {
+        if (!fs.existsSync(SESSIONS_DIR)) return 0;
+        const files = fs.readdirSync(SESSIONS_DIR).filter(f => f.startsWith(`session-${rawNumber}`));
+        let removed = 0;
+        for (const file of files) {
+            try {
+                fs.unlinkSync(path.join(SESSIONS_DIR, file));
+                removed++;
+            } catch (e) {}
+        }
+        if (removed > 0) {
+            logWABot(`[WABot] Purged ${removed} stale session file(s) for ${rawNumber} to ensure clean Signal prekey exchange`, "info");
+        }
+        return removed;
+    } catch (e) {
+        return 0;
+    }
+}
+
 /**
  * Send WhatsApp text message
  */
-async function sendTextMessage(targetPhone, message) {
+async function sendTextMessage(targetPhone, message, options = {}) {
     try {
+        const phone = cleanPhone(targetPhone);
+        if (!phone) return { status: false, message: "Nomor tujuan tidak valid." };
+
+        const botPhone = getBotPhoneNumber();
+        if (botPhone && phone === botPhone) {
+            console.log(`[WABot] Lewati pengiriman pesan ke nomor bot sendiri (${phone}) untuk mencegah 'Menunggu pesan ini' / self-chat.`);
+            return { status: false, skipped: true, message: "Pengiriman ke nomor bot sendiri dilewati untuk mencegah 'Menunggu pesan ini'." };
+        }
+
         let isConnected = (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id));
         if (!isConnected && sock) {
             for (let i = 0; i < 4; i++) {
@@ -1599,8 +1712,9 @@ async function sendTextMessage(targetPhone, message) {
             return { status: false, message: "WhatsApp Baileys bot belum terhubung / belum login." };
         }
 
-        const phone = cleanPhone(targetPhone);
-        if (!phone) return { status: false, message: "Nomor tujuan tidak valid." };
+        if (options && options.forceFreshSession) {
+            purgePeerSession(phone);
+        }
 
         const jid = `${phone}@s.whatsapp.net`;
         await sendAndStoreMessage(jid, { text: message });
@@ -1621,7 +1735,13 @@ async function replyWhatsApp(jid, text) {
         let cleanJid = jid;
         if (cleanJid && !cleanJid.includes("@g.us") && !cleanJid.includes("@lid")) {
             const rawPhone = cleanJid.split("@")[0].split(":")[0];
-            cleanJid = `${rawPhone}@s.whatsapp.net`;
+            const clean = cleanPhone(rawPhone);
+            const myPhone = getBotPhoneNumber();
+            if (clean && myPhone && clean === myPhone) {
+                console.log(`[WABot] replyWhatsApp: Menolak membalas ke nomor bot sendiri (${clean}).`);
+                return;
+            }
+            cleanJid = `${clean}@s.whatsapp.net`;
         }
         await sendAndStoreMessage(cleanJid, { text });
     } catch (e) {
@@ -1635,6 +1755,127 @@ async function replyWhatsApp(jid, text) {
  */
 async function notifyNewOrder(orderData) {
     try {
+        const {
+            id,
+            userName,
+            packageName,
+            serviceType,
+            imei,
+            price,
+            speedOption,
+            userImage,
+            userImageCeir,
+            customerPhone,
+            targetPhone,
+            paymentMethod
+        } = orderData || {};
+
+        const adminPhones = await getAdminPhoneNumbers(paymentMethod);
+
+        // Fetch dynamic speed settings if available
+        let speedRangeText = "Max kirim jam 14:00, selesai max jam 00:00 WIB";
+        try {
+            const optKey = (speedOption || "slow").toLowerCase();
+            const sRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${optKey}_range`]);
+            if (sRow && sRow.value) {
+                speedRangeText = sRow.value;
+            } else if (optKey === "fast") {
+                speedRangeText = "1-3 Jam";
+            } else if (optKey === "semi") {
+                speedRangeText = "1-12 Jam";
+            }
+        } catch (e) {}
+
+        const optName = (speedOption || "slow").toLowerCase();
+        const optTitle = optName === "slow" ? "Slow" : optName === "fast" ? "Fast" : optName === "semi" ? "Semi Fast" : optName;
+
+        const isGateway = serviceType === "gateway" || serviceType === "apikey" || (packageName || "").toLowerCase().includes("gateway") || (packageName || "").toLowerCase().includes("api key");
+        const isTopUp = serviceType === "topup" || serviceType === "topup_qris" || (packageName || "").toLowerCase().includes("top up") || (packageName || "").toLowerCase().includes("topup");
+        const isCeir = serviceType === "ceir" || 
+                       serviceType === "barcode" || 
+                       (packageName || "").toLowerCase().includes("ceir") || 
+                       (packageName || "").toLowerCase().includes("barcode") ||
+                       (packageName || "").toLowerCase().includes("cek masa aktif") ||
+                       (packageName || "").toLowerCase().includes("beacukai") ||
+                       (packageName || "").toLowerCase().includes("cek imei");
+        const isAutomated = isCeir;
+        let speedDisplay = isAutomated 
+            ? "Instant (Otomatis Sistem)" 
+            : `${optTitle} (${optName === "slow" ? "1‑12 Jam" : optName === "fast" ? "1‑3 Jam" : "1‑12 Jam"})`;
+
+        let serviceDetailLines = `*Layanan:* ${packageName || "Layanan"}\n`;
+        let custProductLines = `• *Layanan:* ${packageName || "Layanan"}\n`;
+
+        if (isGateway) {
+            serviceDetailLines += `*Masa Aktif:* 30 Hari (QRIS Otomatis)\n`;
+            custProductLines += `• *Masa Aktif:* 30 Hari\n`;
+        } else if (isTopUp) {
+            serviceDetailLines += `*Metode:* Top Up Deposit Digital\n`;
+            custProductLines += `• *Metode:* Top Up Deposit Digital\n`;
+        } else if (isCeir) {
+            serviceDetailLines += `*IMEI:* \`${imei || "-"}\`\n*Waktu:* Instant (Otomatis Sistem)\n`;
+            custProductLines += `• *IMEI:* \`${imei || "-"}\`\n• *Waktu:* Instant (Otomatis Server)\n`;
+        } else {
+            serviceDetailLines += `*IMEI:* \`${imei || "-"}\`\n*Kecepatan:* ${speedDisplay}\n`;
+            custProductLines += `• *IMEI:* \`${imei || "-"}\`\n• *Kecepatan:* ${speedDisplay}\n`;
+        }
+
+        let orderStatusCustomer = "Sedang Diproses Admin";
+        let orderDescCustomer = "Pesanan Anda sedang dalam antrean pengerjaan oleh tim operasional kami.\nAnda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutionts.web.id/history";
+
+        if (isCeir) {
+            orderStatusCustomer = "⚡ Diproses Otomatis oleh Server";
+            orderDescCustomer = "Pesanan pengecekan CEIR Anda sedang diproses secara instan oleh server pusat.\nHasil laporan resmi akan otomatis dikirimkan ke WhatsApp ini dan tersimpan di akun Anda.";
+        } else if (isGateway) {
+            orderStatusCustomer = "⚡ Aktivasi Otomatis";
+            orderDescCustomer = "Langganan API Key Gateway Anda sedang diaktivasi otomatis oleh sistem.";
+        } else if (isTopUp) {
+            orderStatusCustomer = "Menunggu Verifikasi Deposit";
+            orderDescCustomer = "Saldo akan otomatis ditambahkan ke akun Anda setelah pembayaran terkonfirmasi.";
+        }
+
+        const shortId = (id || "").slice(-4);
+        const photoPath = (userImage || userImageCeir || "").split(",")[0].trim();
+        const webProofUrl = photoPath ? `https://ry-itsolutionts.web.id${photoPath.startsWith('/') ? '' : '/'}${photoPath}` : null;
+        let proofTextLine = "";
+        if (webProofUrl) {
+            proofTextLine = `*Bukti Struk/IMEI:* ${webProofUrl}\n`;
+        }
+
+        const isManualRoamer = !isCeir && !isGateway && !isTopUp;
+
+        const commandBlock = isManualRoamer ? (
+            `*PERINTAH CEPAT PROSES (BALAS PESAN INI):*\n` +
+            `• Balas *1* atau *.proses* : Mulai proses\n` +
+            `• Balas *2* atau *.sukses* : Selesaikan\n` +
+            `• Balas *3* atau *.gagal* : Tolak & refund\n` +
+            `_(Manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)_`
+        ) : isCeir ? (
+            `⚡ *STATUS SISTEM: PROSES OTOMATIS CEIR*\n` +
+            `• Pesanan ini diproses langsung secara instan oleh Server Pusat CeirGO.\n` +
+            `• Tidak memerlukan pengerjaan manual oleh admin.`
+        ) : isGateway ? (
+            `⚡ *STATUS SISTEM: AKTIVASI OTOMATIS*\n` +
+            `• Akses API Gateway diaktivasi langsung oleh sistem.`
+        ) : (
+            `⚡ *STATUS SISTEM: TOP UP SALDO*\n` +
+            `• Verifikasi otomatis via Payment Gateway.`
+        );
+
+        const headerTitle = isCeir 
+            ? `*LOG PESANAN CEIR MASUK (OTOMATIS)*\n\n`
+            : `*PESANAN BARU MASUK*\n\n`;
+
+        const messageBody = 
+            headerTitle +
+            `• *Order ID:* \`${id}\`\n` +
+            `• *Pelanggan:* ${userName || "Pelanggan"}\n` +
+            serviceDetailLines +
+            proofTextLine +
+            `• *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n\n` +
+            commandBlock +
+            BOT_FOOTER;
+
         let isConnected = (connectionState === "open" || global.baileysStatus === "open" || Boolean(sock?.user?.id));
         if (!isConnected && sock) {
             // Reconnect grace period up to 2.5s if socket is momentarily reconnecting
@@ -1669,26 +1910,18 @@ async function notifyNewOrder(orderData) {
                     if (custTgt) {
                         const cleanCust = cleanPhone(custTgt);
                         if (cleanCust && cleanCust.length >= 8) {
-                                            const customerMsg =
-                    `Halo Kak *${userName || "Pelanggan"}*!
-` +
-                    `Terima kasih telah memesan layanan di *Ry-ITSolutions*.
-
-` +
-                    custProductLines +
-                    `*Order ID:* #${id}
-` +
-                    `*Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}
-` +
-                    `*Status:* Sedang Diproses Admin
-
-` +
-                    `Pesanan Anda sedang dalam antrean pengerjaan oleh tim operasional kami.
-` +
-                    `Anda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutionts.web.id/history
-
-` +
-                    `_Pesan otomatis ini dikirim resmi oleh sistem Ry-ITSolutions._`;
+                            const customerMsg =
+                                `Halo Kak *${userName || "Pelanggan"}*! 👋\n\n` +
+                                `Terima kasih telah memesan layanan di *Ry-ITSolutions*.\n\n` +
+                                (isCeir ? `🔍 *DETAIL PESANAN CEIR*\n━━━━━━━━━━━━━━━━━━━━━━\n` : "") +
+                                custProductLines +
+                                `• *Order ID:* #${id}\n` +
+                                `• *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
+                                `• *Status:* ${orderStatusCustomer}\n` +
+                                (isCeir ? `━━━━━━━━━━━━━━━━━━━━━━\n` : `\n`) +
+                                `${orderDescCustomer}\n\n` +
+                                `Pantau riwayat: https://ry-itsolutionts.web.id/history\n\n` +
+                                `_Pesan otomatis ini dikirim resmi oleh sistem Ry-ITSolutions._`;
                             fetch(endpoint, {
                                 method: "POST",
                                 headers: { "Authorization": tokenRow.value, "Content-Type": "application/json" },
@@ -1707,105 +1940,18 @@ async function notifyNewOrder(orderData) {
             return;
         }
 
-        const {
-            id,
-            userName,
-            packageName,
-            serviceType,
-            imei,
-            price,
-            speedOption,
-            userImage,
-            userImageCeir,
-            customerPhone,
-            targetPhone,
-            paymentMethod
-        } = orderData;
-
-        const adminPhones = await getAdminPhoneNumbers(paymentMethod);
-
-        // Fetch dynamic speed settings if available
-        let speedRangeText = "Max kirim jam 14:00, selesai max jam 00:00 WIB";
-        try {
-            const optKey = (speedOption || "slow").toLowerCase();
-            const sRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${optKey}_range`]);
-            if (sRow && sRow.value) {
-                speedRangeText = sRow.value;
-            } else if (optKey === "fast") {
-                speedRangeText = "1-3 Jam";
-            } else if (optKey === "semi") {
-                speedRangeText = "1-12 Jam";
-            }
-        } catch (e) {}
-
-        const optName = (speedOption || "slow").toLowerCase();
-        const optTitle = optName === "slow" ? "Slow" : optName === "fast" ? "Fast" : optName === "semi" ? "Semi Fast" : optName;
-
-                const isGateway = serviceType === "gateway" || serviceType === "apikey" || (packageName || "").toLowerCase().includes("gateway") || (packageName || "").toLowerCase().includes("api key");
-        const isTopUp = serviceType === "topup" || serviceType === "topup_qris" || (packageName || "").toLowerCase().includes("top up") || (packageName || "").toLowerCase().includes("topup");
-        const isCeir = serviceType === "ceir" || serviceType === "barcode" || (packageName || "").toLowerCase().includes("ceir") || (packageName || "").toLowerCase().includes("barcode");
-        const isAutomated = isCeir;
-        let speedDisplay = isAutomated 
-                        ? "Instant (Otomatis Sistem)" 
-                        : `${optTitle} (${optName === "slow" ? "1‑12 Jam" : optName === "fast" ? "1‑3 Jam" : "1‑12 Jam"})`;
-
-        let serviceDetailLines = `*Layanan:* ${packageName || "Layanan"}
-`;
-        let custProductLines = `*Layanan:* ${packageName || "Layanan"}
-`;
-
-        if (isGateway) {
-            serviceDetailLines += `*Masa Aktif:* 30 Hari (QRIS Otomatis)
-`;
-            custProductLines += `*Masa Aktif:* 30 Hari
-`;
-        } else if (isTopUp) {
-            serviceDetailLines += `*Metode:* Top Up Deposit Digital
-`;
-            custProductLines += `*Metode:* Top Up Deposit Digital
-`;
-        } else if (isCeir) {
-            serviceDetailLines += `*IMEI:* \`${imei || "-"}\`
-*Waktu:* Instant (Otomatis Sistem)
-`;
-            custProductLines += `*IMEI:* ${imei || "-"}
-*Waktu:* Instant (Otomatis Sistem)
-`;
-        } else {
-            serviceDetailLines += `*IMEI:* \`${imei || "-"}\`
-*Kecepatan:* ${speedDisplay}
-`;
-            custProductLines += `*IMEI:* ${imei || "-"}
-*Kecepatan:* ${speedDisplay}
-`;
-        }
-
-        const shortId = id.slice(-4);
-        const photoPath = (userImage || userImageCeir || "").split(",")[0].trim();
-        const webProofUrl = photoPath ? `https://ry-itsolutionts.web.id${photoPath.startsWith('/') ? '' : '/'}${photoPath}` : null;
-        let proofTextLine = "";
-        if (webProofUrl) {
-            proofTextLine = `*Bukti Struk/IMEI:* ${webProofUrl}\n`;
-        }
-
-        const messageBody = 
-            `*PESANAN BARU MASUK*\n\n` +
-            `• *Order ID:* \`${id}\`\n` +
-            `• *Pelanggan:* ${userName || "Pelanggan"}\n` +
-            serviceDetailLines +
-            proofTextLine +
-            `• *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n\n` +
-            `*PERINTAH CEPAT PROSES (BALAS PESAN INI):*\n` +
-            `• Balas *1* atau *.proses* : Mulai proses\n` +
-            `• Balas *2* atau *.sukses* : Selesaikan\n` +
-            `• Balas *3* atau *.gagal* : Tolak & refund\n` +
-            `_(Manual: \`.proses ${shortId}\` atau \`.sukses ${shortId}\`)_` +
-            BOT_FOOTER;
-
         // 1. Send text notification to all admin numbers immediately (instant delivery)
+        const myBotNumber = getBotPhoneNumber();
         for (const phone of adminPhones) {
             const cleanAdmin = cleanPhone(phone);
             if (!cleanAdmin || cleanAdmin.length < 8) continue;
+
+            // Hindari mengirim pesan ke nomor bot itu sendiri secara mutlak untuk mencegah "Menunggu pesan ini"
+            if (myBotNumber && cleanAdmin === myBotNumber) {
+                console.log(`[WABot] Melewati notifikasi pesanan ke nomor bot sendiri (${cleanAdmin}) untuk mencegah 'Menunggu pesan ini'`);
+                continue;
+            }
+
             const adminJid = `${cleanAdmin}@s.whatsapp.net`;
 
             try {
@@ -1864,14 +2010,16 @@ async function notifyNewOrder(orderData) {
             if (cleanCust && cleanCust.length >= 8) {
                 const custJid = `${cleanCust}@s.whatsapp.net`;
                 const customerMsg =
-                    `Halo Kak *${userName || "Pelanggan"}*!\n\n` +
+                    `Halo Kak *${userName || "Pelanggan"}*! 👋\n\n` +
                     `Terima kasih telah memesan layanan di *Ry-ITSolutions*.\n\n` +
+                    (isCeir ? `🔍 *DETAIL PESANAN CEIR*\n━━━━━━━━━━━━━━━━━━━━━━\n` : "") +
                     custProductLines +
                     `• *Order ID:* #${id}\n` +
                     `• *Total Biaya:* Rp ${Number(price || 0).toLocaleString("id-ID")}\n` +
-                    `• *Status:* Sedang Diproses Admin\n\n` +
-                    `Pesanan Anda sedang dalam antrean pengerjaan oleh tim operasional kami.\n` +
-                    `Anda dapat memantau status pengerjaan kapan saja di website: https://ry-itsolutionts.web.id/history` +
+                    `• *Status:* ${orderStatusCustomer}\n` +
+                    (isCeir ? `━━━━━━━━━━━━━━━━━━━━━━\n` : `\n`) +
+                    `${orderDescCustomer}\n\n` +
+                    `Pantau riwayat: https://ry-itsolutionts.web.id/history` +
                     BOT_FOOTER;
                 try {
                     await sendAndStoreMessage(custJid, { text: customerMsg });
@@ -2030,6 +2178,96 @@ async function notifyWarrantyClaim({ imei, packageName, customerName, customerPh
     }
     return results;
 }
+
+/**
+ * Notifikasi WhatsApp & Telegram ke Admin saat Pengguna Berhasil Melakukan Pembayaran
+ * Menampilkan rincian lengkap: Nama/Kontak Pengguna, Nominal, dan Gateway Pembayaran
+ * (GoPay Direct Gateway atau ShopeePay Partner Gateway) serta status giliran rolling berikutnya.
+ */
+async function notifyPaymentSuccessToAdmin({
+    userName = 'Pelanggan',
+    userContact = '-',
+    amount = 0,
+    trxId = '-',
+    refTag = '',
+    gatewayUsed = 'gopay',
+    serviceOrItem = 'Pembayaran Layanan',
+    nextGateway = ''
+}) {
+    const isShopee = String(gatewayUsed || '').toLowerCase().includes('shopee');
+    const gatewayDisplayName = isShopee ? 'ShopeePay Gateway (Partner API)' : 'GoPay Gateway (Direct API)';
+    const nextGatewayDisplayName = String(nextGateway).toLowerCase().includes('shopee') ? 'ShopeePay Gateway' : 'GoPay Gateway';
+    const timestampWIB = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    const formattedAmount = Number(amount || 0).toLocaleString('id-ID');
+
+    // 1. Format Pesan WhatsApp Admin
+    const waMessage = 
+        `💰 *PEMBAYARAN QRIS BERHASIL DITERIMA!*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `👤 *Pengguna:* ${userName}\n` +
+        `📞 *Kontak User:* ${userContact}\n` +
+        `🏦 *Tujuan Gateway:* *${gatewayDisplayName}*\n` +
+        `💵 *Nominal Masuk:* Rp ${formattedAmount}\n` +
+        `📦 *Layanan / Jenis:* ${serviceOrItem}\n` +
+        `🆔 *ID Invoice:* \`${trxId}\`\n` +
+        (refTag ? `🔖 *Ref Transaksi:* \`${refTag}\`\n` : '') +
+        (nextGateway ? `🔄 *Rolling Gateway:* Giliran berikutnya ke *${nextGatewayDisplayName}*\n` : '') +
+        `⏰ *Waktu:* ${timestampWIB} WIB\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `✅ _Pembayaran telah diverifikasi lunas & saldo/layanan otomatis diteruskan._` +
+        BOT_FOOTER;
+
+    // 2. Format Pesan Telegram Admin
+    const tgMessage =
+        `<b>──────────────────────</b>\n` +
+        `💰 <b>PEMBAYARAN QRIS BERHASIL DITERIMA!</b>\n` +
+        `<b>──────────────────────</b>\n` +
+        `👤 <b>Pengguna:</b> ${userName}\n` +
+        `📞 <b>Kontak:</b> <code>${userContact}</code>\n` +
+        `🏦 <b>Tujuan Gateway:</b> <b>${gatewayDisplayName}</b>\n` +
+        `💵 <b>Nominal Masuk:</b> Rp ${formattedAmount}\n` +
+        `📦 <b>Layanan:</b> ${serviceOrItem}\n` +
+        `🆔 <b>ID Invoice:</b> <code>${trxId}</code>\n` +
+        (refTag ? `🔖 <b>Ref Transaksi:</b> <code>${refTag}</code>\n` : '') +
+        (nextGateway ? `🔄 <b>Rolling Gateway:</b> Beralih ke <b>${nextGatewayDisplayName}</b>\n` : '') +
+        `⏰ <b>Waktu:</b> ${timestampWIB} WIB\n` +
+        `<b>──────────────────────</b>\n` +
+        `✅ <i>Status transaksi telah lunas terverifikasi.</i>`;
+
+    const results = { whatsapp: [], telegram: false };
+
+    // Kirim ke WhatsApp Admin
+    try {
+        const adminPhones = await getAdminPhoneNumbers(gatewayUsed);
+        for (const phone of adminPhones) {
+            const clean = cleanPhone(phone);
+            if (!clean || clean.length < 8) continue;
+            const jid = `${clean}@s.whatsapp.net`;
+            try {
+                const sent = await sendAndStoreMessage(jid, { text: waMessage });
+                results.whatsapp.push({ phone: clean, success: true, id: sent?.key?.id });
+                console.log(`[WABot PaymentNotif] Notifikasi pembayaran sukses terkirim ke WA Admin ${clean}`);
+            } catch (errWa) {
+                results.whatsapp.push({ phone: clean, success: false, error: errWa.message });
+                console.error(`[WABot PaymentNotif] Gagal kirim WA ke ${clean}:`, errWa.message);
+            }
+        }
+    } catch (e) {
+        console.error('[WABot PaymentNotif] Error getting admin phones:', e.message);
+    }
+
+    // Kirim ke Telegram Admin
+    try {
+        const { sendTelegramNotification } = require('../telegramService');
+        sendTelegramNotification(tgMessage, 'admin');
+        results.telegram = true;
+    } catch (e) {
+        console.error('[Telegram PaymentNotif] Error sending telegram notification:', e.message);
+    }
+
+    return results;
+}
+
 
 
 /**
@@ -2512,8 +2750,11 @@ module.exports = {
     isValidIndonesianMobile,
     requestPairingCode,
     purgeStalePeerSessions,
+    purgePeerSession,
+    getBotPhoneNumber,
     getAdminPhoneNumbers,
     testAdminNotification,
+    notifyPaymentSuccessToAdmin,
     notifyWarrantyClaim,
     recordChatMessage,
     backfillStoreToHistory,

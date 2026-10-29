@@ -1,0 +1,23 @@
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const assetlinks = [
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "id.web.ry_itsolutionts.app",
+        sha256_cert_fingerprints: [
+          "68:69:57:08:CA:87:98:F1:E9:BA:08:83:7F:D9:4E:7A:AE:81:DF:F2:80:DA:12:4A:8E:D1:A4:B8:BE:7A:2A:07"
+        ]
+      }
+    }
+  ];
+
+  return NextResponse.json(assetlinks, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=86400, stale-while-revalidate=43200"
+    }
+  });
+}

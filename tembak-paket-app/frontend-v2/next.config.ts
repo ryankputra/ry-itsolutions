@@ -32,27 +32,22 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const backendUrl = process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:3001';
-    const gatewayUrl = process.env.GOPAY_GATEWAY_URL || 'http://127.0.0.1:3002';
     return [
       {
         source: '/create-qris',
-        destination: `${gatewayUrl}/create-qris`
+        destination: `${backendUrl}/create-qris`
       },
       {
         source: '/check-payment',
-        destination: `${gatewayUrl}/check-payment`
-      },
-      {
-        source: '/qr/:path*',
-        destination: `${gatewayUrl}/qr/:path*`
+        destination: `${backendUrl}/check-payment`
       },
       {
         source: '/api/create-qris',
-        destination: `${gatewayUrl}/create-qris`
+        destination: `${backendUrl}/create-qris`
       },
       {
         source: '/api/check-payment',
-        destination: `${gatewayUrl}/check-payment`
+        destination: `${backendUrl}/check-payment`
       },
       {
         source: '/api/:path*',

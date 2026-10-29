@@ -342,6 +342,14 @@ export default function TopUpPage() {
         setQrisData(data.qrisData);
         setTopUpId(data.topUpId || null);
         setTimeLeft(data.qrisData?.expiresAt ? data.qrisData.expiresAt - Math.floor(Date.now() / 1000) : 5 * 60);
+
+        const rawCode = data.qrisData?.qrisCode || data.qrisData?.qris_code || "";
+        const base64 = data.qrisData?.base64Image || data.qrisData?.qris_image || "";
+        if (rawCode || base64) {
+          generateQrisCanvasDataUrl(rawCode || base64, { logoUrl: "/logo.png" })
+            .then((canvasUrl) => setRenderedQrImage(canvasUrl))
+            .catch(() => {});
+        }
       } else {
         setError(data?.message || "Gagal membuat QRIS");
         setInitialBalance(null);
@@ -619,23 +627,30 @@ export default function TopUpPage() {
                 </svg>
                 {formatTime(timeLeft)}
               </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={(renderedQrImage && renderedQrImage.startsWith("data:image/")) ? renderedQrImage : (qrisData.base64Image || "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(qrisData.qris_code || ""))}
-                alt="QRIS Code"
-                onError={async () => {
-                  const raw = qrisData.qris_code || qrisData.base64Image;
-                  if (raw && !raw.startsWith("data:image/")) {
-                    try {
-                      const activeGw = qrisData.active_gateway || qrisData.gateway || qrisData.merchant || '';
-                      const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
-                      const fallback = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png", badge: badgeChar });
-                      setRenderedQrImage(fallback);
-                    } catch (e) {}
-                  }
-                }}
-                className="w-full h-full object-contain"
-              />
+              <div className="relative w-full h-full flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={(renderedQrImage && renderedQrImage.startsWith("data:image/")) ? renderedQrImage : (qrisData.base64Image || "https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=H&margin=4&data=" + encodeURIComponent(qrisData.qris_code || ""))}
+                  alt="QRIS Code"
+                  onError={async () => {
+                    const raw = qrisData.qris_code || qrisData.base64Image;
+                    if (raw && !raw.startsWith("data:image/")) {
+                      try {
+                        const fallback = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" });
+                        setRenderedQrImage(fallback);
+                      } catch (e) {}
+                    }
+                  }}
+                  className="w-full h-full object-contain"
+                />
+                {/* Center Web Logo Overlay Fallback */}
+                {(!renderedQrImage || !renderedQrImage.startsWith("data:image/")) && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-xl shadow-md border border-slate-300 p-1 flex items-center justify-center pointer-events-none">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logo.png" alt="Ry-IT Logo" className="w-full h-full object-contain rounded-lg" onError={(e) => { (e.target as any).src = '/app-logo.svg'; }} />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mx-auto">

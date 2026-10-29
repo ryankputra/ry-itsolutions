@@ -63,6 +63,25 @@ export function ManualRoamerCard({
     .map((s: string) => s.trim())
     .filter(Boolean);
 
+  const customerPhone = (() => {
+    if (!o) return null;
+    const imeiClean = String(o.imei || "").replace(/\D/g, "");
+    const candidates = [o.customerPhone, o.userVerifiedPhone, o.targetPhone];
+    for (const c of candidates) {
+      if (!c) continue;
+      const cleanDigits = String(c).trim().replace(/\D/g, "");
+      if (
+        cleanDigits.length >= 9 &&
+        cleanDigits.length <= 14 &&
+        cleanDigits !== imeiClean &&
+        (cleanDigits.startsWith("08") || cleanDigits.startsWith("628") || cleanDigits.startsWith("8"))
+      ) {
+        return String(c).trim();
+      }
+    }
+    return null;
+  })();
+
   const isEditingThisOrder = manualActionData?.id === o.id;
 
   return (
@@ -143,18 +162,18 @@ export function ManualRoamerCard({
         <div className="flex items-center gap-2 flex-wrap">
           <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
           <span className="text-ink-muted">WhatsApp:</span>
-          {o?.targetPhone ? (
+          {customerPhone ? (
             <div className="flex items-center gap-1.5">
-              <span className="font-mono font-bold text-ink">{o.targetPhone}</span>
+              <span className="font-mono font-bold text-ink">{customerPhone}</span>
               <button
                 type="button"
-                onClick={() => copyToClipboard(o.targetPhone, `phone-${o.id}`)}
+                onClick={() => copyToClipboard(customerPhone, `phone-${o.id}`)}
                 className="text-[10px] text-primary hover:underline font-bold cursor-pointer"
               >
                 {copiedKey === `phone-${o.id}` ? "Tersalin!" : "Salin"}
               </button>
               <a
-                href={`https://wa.me/${o.targetPhone.replace(/^0/, "62").replace(/\D/g, "")}`}
+                href={`https://wa.me/${customerPhone.replace(/^0/, "62").replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800"
@@ -378,7 +397,7 @@ export function ManualRoamerCard({
       )}
 
       {/* Admin Action Form Inline OR Action Buttons */}
-      {isEditingThisOrder ? (
+      {isEditingThisOrder && manualActionData ? (
         <OrderActionModal
           actionData={manualActionData}
           setActionData={setManualActionData}

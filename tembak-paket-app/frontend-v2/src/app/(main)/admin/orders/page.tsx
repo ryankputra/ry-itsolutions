@@ -119,7 +119,24 @@ export default function AdminOrdersPage() {
   };
 
   const handleAdminQuickShareWA = async (trx: any) => {
-    const defaultPhone = trx.targetPhone || "";
+    // Robust customer phone resolution: ensure IMEI is NEVER pre-filled as phone
+    const imeiClean = String(trx?.imei || "").replace(/\D/g, "");
+    const candidates = [trx?.customerPhone, trx?.userVerifiedPhone, trx?.targetPhone];
+    let defaultPhone = "";
+    for (const c of candidates) {
+      if (!c) continue;
+      const cleanDigits = String(c).trim().replace(/\D/g, "");
+      if (
+        cleanDigits.length >= 9 &&
+        cleanDigits.length <= 14 &&
+        cleanDigits !== imeiClean &&
+        (cleanDigits.startsWith("08") || cleanDigits.startsWith("628") || cleanDigits.startsWith("8"))
+      ) {
+        defaultPhone = String(c).trim();
+        break;
+      }
+    }
+
     const { value: phone } = await Swal.fire({
       title: "Kirim Nota via WhatsApp",
       input: "text",
@@ -149,15 +166,26 @@ export default function AdminOrdersPage() {
         ? "GAGAL"
         : "DALAM ANTREAN";
 
+    let extraDetails = "";
+    if (trx?.api_response) {
+      try {
+        const parsed = typeof trx.api_response === "string" ? JSON.parse(trx.api_response) : trx.api_response;
+        const item = Array.isArray(parsed) ? parsed[0] : parsed;
+        if (item?.valid_until) extraDetails += `Masa Berlaku: ${item.valid_until}\n`;
+        if (item?.status && typeof item.status === "string") extraDetails += `Status CEIR: ${item.status}\n`;
+      } catch (e) {}
+    }
+
     const msg = encodeURIComponent(
       `*NOTA TRANSAKSI - RY-ITSOLUTIONS*\n\n` +
         `ID Pesanan: #${trx?.id ? String(trx.id).substring(0, 14) : "-"}\n` +
         `Layanan: ${trx?.packageName || "Layanan Resmi"}\n` +
-        `IMEI/Target: ${imeiList}\n` +
+        `IMEI: ${imeiList}\n` +
         `Status: *${statusText}*\n` +
-        (trx?.admin_note ? `Catatan/SN: ${trx.admin_note}\n` : "") +
+        (extraDetails ? extraDetails : "") +
+        (trx?.admin_note && !trx.admin_note.includes("Pesanan-mu telah berhasil") ? `Catatan: ${trx.admin_note}\n` : "") +
         `Waktu: ${trx?.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "-"}\n\n` +
-        `Terima kasih telah bertransaksi bersama kami!`
+        `Terima kasih telah bertransaksi bersama Ry-ITSolutions!`
     );
 
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");

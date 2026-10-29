@@ -14,7 +14,9 @@ const handle = app.getRequestHandler();
 // every 30 min, so those files must be served straight from disk, not by Next.
 const IG_TESTI_DIR = path.join(__dirname, 'public', 'ig-testi');
 const IG_TESTI_PREFIX = '/ig-testi/';
-const MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json' };
+const AUDIO_DIR = path.join(__dirname, 'public', 'audio');
+const AUDIO_PREFIX = '/audio/';
+const MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.webm': 'audio/webm', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg' };
 
 function serveIgTesti(req, res, pathname) {
   const rel = decodeURIComponent(pathname.slice(IG_TESTI_PREFIX.length));
@@ -26,6 +28,38 @@ function serveIgTesti(req, res, pathname) {
     res.setHeader('Content-Type', MIME[path.extname(file).toLowerCase()] || 'application/octet-stream');
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     fs.createReadStream(file).pipe(res);
+  });
+}
+
+function serveAudio(req, res, pathname) {
+  const rel = decodeURIComponent(pathname.slice(AUDIO_PREFIX.length));
+  const file = path.join(AUDIO_DIR, rel);
+  if (!file.startsWith(AUDIO_DIR + path.sep)) { res.statusCode = 403; return res.end('Forbidden'); }
+  fs.stat(file, (err, stats) => {
+    if (err || !stats.isFile()) { res.statusCode = 404; return res.end('Not found'); }
+    const ext = path.extname(file).toLowerCase();
+    const contentType = MIME[ext] || 'audio/mpeg';
+    const range = req.headers.range;
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : stats.size - 1;
+      const chunksize = (end - start) + 1;
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${stats.size}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': contentType,
+      });
+      fs.createReadStream(file, { start, end }).pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': stats.size,
+        'Accept-Ranges': 'bytes',
+        'Content-Type': contentType,
+      });
+      fs.createReadStream(file).pipe(res);
+    }
   });
 }
 
@@ -65,6 +99,9 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url, true);
       if (parsedUrl.pathname.startsWith(IG_TESTI_PREFIX) && (req.method === 'GET' || req.method === 'HEAD')) {
         return serveIgTesti(req, res, parsedUrl.pathname);
+      }
+      if (parsedUrl.pathname.startsWith(AUDIO_PREFIX) && (req.method === 'GET' || req.method === 'HEAD')) {
+        return serveAudio(req, res, parsedUrl.pathname);
       }
       if (parsedUrl.pathname === '/sw.js' || parsedUrl.pathname.startsWith('/workbox-')) {
         const filePath = path.join(__dirname, 'public', parsedUrl.pathname);

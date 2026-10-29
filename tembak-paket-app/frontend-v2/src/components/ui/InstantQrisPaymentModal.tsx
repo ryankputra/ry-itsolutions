@@ -82,7 +82,13 @@ export function InstantQrisPaymentModal({
     }
     const raw = qrisData.qris_code || (qrisData as any).qrisCode || "";
     const base64 = (qrisData as any).base64Image || qrisData.qris_image || "";
-    setRenderedQrImage(base64 || (raw ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}` : ""));
+    if (base64 && base64.startsWith("data:image/")) {
+      setRenderedQrImage(base64);
+    } else if (raw) {
+      generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" })
+        .then((canvasUrl) => setRenderedQrImage(canvasUrl))
+        .catch(() => setRenderedQrImage(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=H&margin=4&data=${encodeURIComponent(raw)}`));
+    }
   }, [qrisData]);
 
   // Generate atau tampilkan Direct QRIS eksisting saat modal dibuka
@@ -342,23 +348,32 @@ export function InstantQrisPaymentModal({
                 <span>Batas Waktu Pembayaran: {formattedTime}</span>
               </div>
 
-              {/* QRIS Code Image Display with Robust Conversion */}
+              {/* QRIS Code Image Display with Robust Conversion & Center Logo */}
               <div className="relative p-3 rounded-2xl bg-white border border-slate-200 shadow-md inline-block mx-auto">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={(renderedQrImage && renderedQrImage.startsWith("data:image/")) ? renderedQrImage : (qrisData.qris_image || "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(qrisData.qris_code || ""))}
-                  alt="QRIS Pembayaran Direct"
-                  onError={async () => {
-                    const raw = qrisData.qris_code || qrisData.qris_image;
-                    if (raw) {
-                      try {
-                        const fallbackUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" });
-                        setRenderedQrImage(fallbackUrl);
-                      } catch (err) {}
-                    }
-                  }}
-                  className="w-48 h-48 sm:w-56 sm:h-56 object-contain mx-auto"
-                />
+                <div className="relative w-48 h-48 sm:w-56 sm:h-56 mx-auto flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={(renderedQrImage && renderedQrImage.startsWith("data:image/")) ? renderedQrImage : (qrisData.qris_image || "https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=H&margin=4&data=" + encodeURIComponent(qrisData.qris_code || ""))}
+                    alt="QRIS Pembayaran Direct"
+                    onError={async () => {
+                      const raw = qrisData.qris_code || qrisData.qris_image;
+                      if (raw) {
+                        try {
+                          const fallbackUrl = await generateQrisCanvasDataUrl(raw, { logoUrl: "/logo.png" });
+                          setRenderedQrImage(fallbackUrl);
+                        } catch (err) {}
+                      }
+                    }}
+                    className="w-full h-full object-contain mx-auto"
+                  />
+                  {/* Center Logo Overlay fallback (jika belum via canvas) */}
+                  {(!renderedQrImage || !renderedQrImage.startsWith("data:image/")) && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 bg-white rounded-xl shadow-md border border-slate-300 p-1 flex items-center justify-center pointer-events-none">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/logo.png" alt="Ry-IT Logo" className="w-full h-full object-contain rounded-lg" onError={(e) => { (e.target as any).src = '/app-logo.svg'; }} />
+                    </div>
+                  )}
+                </div>
                 <div className="mt-2.5 flex flex-col sm:flex-row items-center justify-center gap-2">
                   <button
                     type="button"

@@ -1,4 +1,8 @@
 require('dotenv').config();
+const dns = require('dns');
+if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+}
 const path = require('path');
 const fs = require('fs');
 
@@ -41,6 +45,7 @@ const gatewayRoutes = require('./routes/gateway');
 const themeRoutes = require('./routes/theme');
 const presenceRoutes = require('./routes/presence');
 const pushRoutes = require('./routes/push');
+const tiktokMusicRoutes = require('./routes/tiktokMusic');
 const waBot = require('./services/waBot');
 const { proxyCreateQris, proxyCheckPayment } = require('./services/paymentRouter');
 
@@ -183,6 +188,8 @@ app.use('/api', gatewayRoutes);
 app.use('/api/theme', themeRoutes);
 app.use('/api', presenceRoutes);
 app.use('/api', pushRoutes);
+app.use('/api/tiktok-music', tiktokMusicRoutes);
+app.use('/api/music', tiktokMusicRoutes);
 
 // Dual Payment Gateway Router (GoPay & ShopeePay with Auto-Rotation & Fallback)
 app.all(['/create-qris', '/api/create-qris'], (req, res) => proxyCreateQris(req, res, dbGet, dbRun));
@@ -234,6 +241,35 @@ app.post('/api/admin/whatsapp/test', (req, res, next) => {
     }
 });
 
+// Test Notifikasi Pembayaran Berhasil (WA Admin & Bot Telegram)
+app.post('/api/admin/payment-notification/test', (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
+    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
+        return next();
+    }
+    return isAuthenticated(req, res, () => isAdmin(req, res, next));
+}, async (req, res) => {
+    try {
+        const { advancePaymentCounter, getPaymentGatewaySelection } = require('./services/paymentRouter');
+        const advRes = await advancePaymentCounter(dbGet, dbRun).catch(() => ({ nextGateway: 'gopay' }));
+        const sampleGateway = req.body?.gateway || (advRes?.newCounter % 2 === 0 ? 'gopay' : 'shoppepay');
+        const results = await waBot.notifyPaymentSuccessToAdmin({
+            userName: req.body?.userName || "Ryan Putra (Uji Coba)",
+            userContact: req.body?.userContact || "0877-6728-7284",
+            amount: req.body?.amount || 50000,
+            trxId: req.body?.trxId || `TEST-${Date.now()}`,
+            refTag: req.body?.refTag || (sampleGateway === 'shoppepay' ? 'SHOPEEPAY-TEST-REF' : 'TRX-GP-TEST-REF'),
+            gatewayUsed: sampleGateway,
+            serviceOrItem: req.body?.serviceOrItem || "Top Up Saldo Akun / Simulasi Dual Gateway",
+            nextGateway: advRes?.nextGateway || 'shoppepay'
+        });
+        res.json({ status: true, message: "Notifikasi pembayaran berhasil dikirim ke WA Admin & Telegram Bot.", data: results, rotator: advRes });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+
 // Internal (localhost-only): kirim reminder ulasan ke user yang sudah beli IMEI
 // sukses tapi belum mengulas. Dipakai oleh script admin/cron.
 app.post('/api/internal/review-reminder', async (req, res) => {
@@ -248,6 +284,34 @@ app.post('/api/internal/review-reminder', async (req, res) => {
         }
         const result = await waBot.sendTextMessage(phone, String(message));
         res.json(result);
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// Internal (localhost-only): kirim ulang notifikasi status transaksi ke WhatsApp pelanggan
+app.post('/api/internal/resend-customer-status', async (req, res) => {
+    try {
+        const ip = req.ip || req.socket?.remoteAddress || "";
+        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
+        }
+        const { trxId, status, note, forceFresh } = req.body || {};
+        if (!trxId) {
+            return res.status(400).json({ status: false, message: "trxId wajib diisi." });
+        }
+        const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
+        if (!trx) {
+            return res.status(404).json({ status: false, message: "Transaksi tidak ditemukan." });
+        }
+        if (forceFresh && typeof waBot.purgePeerSession === 'function') {
+            const custPhone = await waBot.getCustomerPhoneForTransaction(trx);
+            if (custPhone) {
+                waBot.purgePeerSession(custPhone);
+            }
+        }
+        await waBot.notifyCustomerOnStatusChange(trx, status || trx.status, note || trx.admin_note || '');
+        res.json({ status: true, message: `Notifikasi status untuk ${trxId} berhasil diproses.` });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
     }

@@ -274,24 +274,29 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             console.log(`[CeirGO Order Router] Sukses! Ref ID: ${refId}, Status: ${orderStatus}`);
         } else {
             const errMsg = ceirRes.message || ceirRes.error || ceirRes.data?.message || 'Respon gagal dari server pusat';
-            const isBalanceErr = ceirRes.statusCode === 402 || String(errMsg).toLowerCase().includes('balance') || String(errMsg).toLowerCase().includes('saldo') || String(errMsg).toLowerCase().includes('tidak mencukupi');
+            const isBalanceErr = ceirRes.statusCode === 402 || 
+                String(errMsg).toLowerCase().includes('balance-mu tidak mencukupi') ||
+                String(errMsg).toLowerCase().includes('balance') || 
+                String(errMsg).toLowerCase().includes('saldo') || 
+                String(errMsg).toLowerCase().includes('tidak mencukupi') ||
+                String(errMsg).toLowerCase().includes('user_insufficient_balance_error');
             
             console.error(`[CeirGO Order Router Error] Provider error on ${rawCode} (${cleanImei}):`, errMsg);
             
-            // Refund user balance if failed/insufficient balance
+            // Auto-cancel and refund user balance immediately
             await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [finalPrice, userId]).catch(() => {});
             
-            orderStatus = 'failed';
+            orderStatus = 'cancelled';
             adminNote = isBalanceErr 
-                ? `Pesanan gagal diproses karena gangguan sementara pada jalur API pusat. Saldo Anda telah dikembalikan sepenuhnya.`
-                : `Pesanan gagal dari server pusat: ${errMsg}. Saldo Anda telah dikembalikan.`;
-            apiResponse = JSON.stringify({ error: true, message: isBalanceErr ? "Pesanan gagal diproses karena gangguan sementara pada jalur API pusat. Saldo Anda telah dikembalikan sepenuhnya." : errMsg, statusCode: ceirRes.statusCode || 500 });
+                ? `Pesanan otomatis dibatalkan karena saldo API server pusat tidak mencukupi. Saldo sebesar Rp ${Math.round(finalPrice).toLocaleString('id-ID')} telah dikembalikan secara otomatis ke akun Anda.`
+                : `Pesanan gagal dari server pusat: ${errMsg}. Saldo sebesar Rp ${Math.round(finalPrice).toLocaleString('id-ID')} telah dikembalikan secara otomatis.`;
+            apiResponse = JSON.stringify({ error: true, code: isBalanceErr ? "INSUFFICIENT_PROVIDER_BALANCE" : "PROVIDER_ERROR", message: adminNote, rawError: errMsg, statusCode: ceirRes.statusCode || 500 });
         }
     } catch (dispatchErr) {
         console.error(`[CeirGO Order Router Exception] ${rawCode} (${cleanImei}):`, dispatchErr.message);
         await dbRun("UPDATE users SET balance = balance + ? WHERE id = ?", [finalPrice, userId]).catch(() => {});
-        orderStatus = 'failed';
-        adminNote = `Pesanan gagal karena kendala koneksi server pusat (${dispatchErr.message}). Saldo Anda telah dikembalikan secara otomatis.`;
+        orderStatus = 'cancelled';
+        adminNote = `Pesanan otomatis dibatalkan karena kendala koneksi server pusat (${dispatchErr.message}). Saldo sebesar Rp ${Math.round(finalPrice).toLocaleString('id-ID')} telah dikembalikan secara otomatis.`;
         apiResponse = JSON.stringify({ error: dispatchErr.message });
     }
 
@@ -310,13 +315,15 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             req
         });
 
+        const customerRealPhone = user.verifiedPhone || user.phone || req.body?.targetPhone || req.body?.target_phone || req.body?.phone || null;
+
         await dbRun(
             `INSERT INTO transactions (
                 id, userId, userName, packageId, packageName, originalPrice,
                 targetPhone, paymentMethod, status, api_response, admin_note,
                 admin_image, service_type, imei, speed_option, coupon_code,
-                discount_amount, kmspTrxId, createdAt
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                discount_amount, kmspTrxId, accessToken, createdAt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 trxId,
                 userId,
@@ -324,7 +331,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
                 rawCode,
                 serviceDuration,
                 finalPrice,
-                cleanImei,
+                customerRealPhone,
                 req.body?.payment_method || req.body?.paymentMethod || 'balance',
                 orderStatus,
                 apiResponse,
@@ -336,6 +343,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
                 appliedCoupon ? appliedCoupon.code : null,
                 discountAmount,
                 refId,
+                refId,
                 new Date().toISOString()
             ]
         );
@@ -343,6 +351,93 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
         console.error("[CeirGO Order Router] Gagal menyimpan transaksi SQLite:", insertErr.message);
     }
 
+    // --- JIKA ORDER DIBATALKAN KARENA SALDO API KURANG / PROVIDER GAGAL ---
+    if (orderStatus === 'cancelled' || orderStatus === 'failed') {
+        const freshUser = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]).catch(() => null);
+        const finalBalance = freshUser ? freshUser.balance : user.balance;
+
+        // Real-time SSE updates
+        try {
+            if (typeof sseSend === 'function') {
+                sseSend(userId, 'balance_update', { balance: finalBalance, source: 'ceir_order_cancelled_refund' });
+                sseSend(userId, 'transaction_status', { id: trxId, status: 'cancelled', message: adminNote });
+            }
+        } catch (sseErr) {}
+
+        // Send Urgent Alert to Admin (Telegram & WhatsApp)
+        try {
+            const { getAdminPhoneNumbers, sendTextMessage } = require('../services/waBot');
+            const adminPhones = await getAdminPhoneNumbers();
+            const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+            const waAdminMsg = 
+                `🚨 *PERINGATAN: SALDO API CEIRGO KURANG / ORDER DIBATALKAN*\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `• *Order ID:* \`${trxId}\`\n` +
+                `• *Layanan:* ${serviceDuration}\n` +
+                `• *Pelanggan:* ${user.name || user.email || 'Pelanggan'} (${cleanImei})\n` +
+                `• *Nominal Refund:* Rp ${Math.round(finalPrice).toLocaleString('id-ID')}\n` +
+                `• *Status:* ❌ *Dibatalkan & Saldo Di-Refund Otomatis*\n` +
+                `• *Keterangan Provider:* Saldo API CeirGO tidak mencukupi untuk memproses pesanan ini.\n` +
+                `• *Waktu:* ${timeStr}\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `⚠️ *Tindakan Admin:* Segera lakukan Top-Up Saldo di https://ceirgo.id agar layanan cek CEIR otomatis kembali aktif.`;
+            
+            for (const adm of (adminPhones || [])) {
+                sendTextMessage(adm, waAdminMsg).catch(() => {});
+            }
+
+            sendTelegramNotification(
+                `🚨 <b>PERINGATAN: SALDO API CEIRGO KURANG</b>\n` +
+                `<b>Order ID:</b> <code>${trxId}</code>\n` +
+                `<b>Layanan:</b> ${serviceDuration}\n` +
+                `<b>Pelanggan:</b> ${escapeHtml(user.name || 'User')}\n` +
+                `<b>IMEI:</b> <code>${cleanImei}</code>\n` +
+                `<b>Status:</b> ❌ Dibatalkan & Refund Rp ${Math.round(finalPrice).toLocaleString('id-ID')}\n` +
+                `<b>Penyebab:</b> Saldo API CeirGO tidak mencukupi.\n` +
+                `<i>Segera top-up saldo API di https://ceirgo.id</i>`,
+                'admin'
+            );
+        } catch (alertErr) {
+            console.error('[Admin Alert Error]', alertErr.message);
+        }
+
+        // Send WhatsApp notification to customer if phone number exists
+        try {
+            const { sendTextMessage } = require('../services/waBot');
+            const custPhone = user.verifiedPhone || user.phone || req.body?.targetPhone || req.body?.target_phone;
+            if (custPhone) {
+                const custMsg =
+                    `Halo Kak *${user.name || 'Pelanggan'}*,\n\n` +
+                    `*PEMBERITAHUAN PESANAN LAYANAN CEIR*\n\n` +
+                    `• *Order ID:* #${trxId}\n` +
+                    `• *Layanan:* ${serviceDuration}\n` +
+                    `• *IMEI:* ${cleanImei}\n` +
+                    `• *Status:* Dibatalkan Otomatis\n` +
+                    `• *Keterangan:* Jalur API server pusat sedang mengalami gangguan kuota/maintenance.\n` +
+                    `• *Pengembalian:* Saldo Anda sebesar *Rp ${Math.round(finalPrice).toLocaleString('id-ID')}* telah dikembalikan 100% ke akun Anda secara otomatis.\n\n` +
+                    `Pantau riwayat akun: https://ry-itsolutionts.web.id/history`;
+                sendTextMessage(custPhone, custMsg).catch(() => {});
+            }
+        } catch (custWaErr) {}
+
+        return res.json({
+            status: false,
+            cancelled: true,
+            refunded: true,
+            message: adminNote,
+            data: {
+                trxId,
+                id: trxId,
+                status: 'cancelled',
+                amount: finalPrice,
+                adminNote,
+                newBalance: finalBalance
+            },
+            newBalance: finalBalance
+        });
+    }
+
+    // --- PESANAN SUKSES / NORMAL PROCESSING ---
     // Send Telegram Admin Notification asynchronously
     try {
         const notifMsg = `🔔 <b>PESANAN BARU (${isBarcode ? 'BARCODE' : 'LAYANAN CEIR'})</b>\n` +
@@ -385,6 +480,8 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
         }
     }
 
+    const latestUser = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]).catch(() => null);
+
     return res.json({
         status: true,
         message: userFacingMessage,
@@ -400,7 +497,7 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
             amount: finalPrice,
             result: userFacingResult,
             userNote: orderStatus === 'success' ? (typeof userFacingResult === 'string' ? userFacingResult : 'Berhasil.') : neutralQueueNote,
-            newBalance: updatedUser?.balance ?? (user.balance - finalPrice)
+            newBalance: latestUser?.balance ?? (user.balance - finalPrice)
         }
     });
 }

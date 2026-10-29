@@ -3,13 +3,17 @@
  * Parses official CeirGO JSON structure and extracts dynamic columns and rows directly from API response JSON keys.
  */
 
+export type CeirLogRow = Record<string, any>;
+
 export interface ParsedCeirResult {
   title: string;
   status: string;
   isRegistered: boolean;
+  isError?: boolean;
+  errorMessage?: string;
   totalRecords: number;
   columns: string[];
-  rows: Record<string, any>[];
+  rows: CeirLogRow[];
   rawText: string;
   verifiedAt: string;
   imei?: string;
@@ -30,6 +34,75 @@ export function parseCeirResponse(rawInput: any, defaultDate?: string, apiRespon
     const trimmed = targetInput.trim();
     if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
       try { parsedObj = JSON.parse(trimmed); } catch {}
+    }
+  }
+
+  // Check if rawInput as string or apiResponse indicates an error
+  const rawString = typeof rawInput === "string" ? rawInput.toLowerCase() : "";
+  const isStringError = 
+    rawString.includes("retry error") ||
+    rawString.includes("balance-mu tidak mencukupi") ||
+    rawString.includes("insufficient_balance") ||
+    rawString.includes("saldo api ceirgo") ||
+    rawString.includes("tidak mencukupi untuk melakukan transaksi") ||
+    rawString.includes("dibatalkan otomatis");
+
+  let apiObj: any = null;
+  if (typeof apiResponse === "object" && apiResponse !== null) {
+    apiObj = apiResponse;
+  } else if (typeof apiResponse === "string") {
+    const trimmed = apiResponse.trim();
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      try { apiObj = JSON.parse(trimmed); } catch {}
+    }
+  }
+
+  const isApiError = apiObj && typeof apiObj === "object" && (
+    apiObj.status === false ||
+    apiObj.statusCode === 402 ||
+    apiObj.error === true ||
+    apiObj.code === "USER_INSUFFICIENT_BALANCE_ERROR" ||
+    (typeof apiObj.message === "string" && (
+      apiObj.message.toLowerCase().includes("balance-mu") ||
+      apiObj.message.toLowerCase().includes("tidak mencukupi") ||
+      apiObj.message.toLowerCase().includes("insufficient_balance")
+    ))
+  );
+
+  // Detect provider error responses (e.g., status: false, error: true, or insufficient balance)
+  const isErrorPayload = isStringError || isApiError || (parsedObj && typeof parsedObj === "object" && (
+    parsedObj.status === false ||
+    parsedObj.statusCode === 402 ||
+    parsedObj.error === true ||
+    parsedObj.code === "USER_INSUFFICIENT_BALANCE_ERROR" ||
+    (typeof parsedObj.message === "string" && (
+      parsedObj.message.toLowerCase().includes("balance-mu") ||
+      parsedObj.message.toLowerCase().includes("tidak mencukupi") ||
+      parsedObj.message.toLowerCase().includes("gagal") ||
+      parsedObj.message.toLowerCase().includes("saldo")
+    ))
+  ));
+
+  // If it's an error payload and doesn't contain actual CEIR query results, return clean error state
+  if (isErrorPayload) {
+    const hasActualData = (parsedObj && (parsedObj.result || parsedObj.history || parsedObj.data?.history || parsedObj.data?.result)) ||
+                          (apiObj && (apiObj.result || apiObj.history || apiObj.data?.history || apiObj.data?.result));
+    
+    if (!hasActualData) {
+      const errMsg = "Pesanan dibatalkan otomatis karena jalur server pusat sedang mengalami antrean / pemeliharaan kuota. Saldo pembayaran Anda telah dikembalikan 100% ke akun Anda secara otomatis.";
+      return {
+        title: "Status Pengecekan CEIR",
+        status: "DIBATALKAN / PENGEMBALIAN",
+        isRegistered: false,
+        isError: true,
+        errorMessage: errMsg,
+        totalRecords: 0,
+        columns: [],
+        rows: [],
+        rawText: errMsg,
+        verifiedAt: currentDate,
+        imei: parsedObj?.imei || parsedObj?.IMEI || apiObj?.imei || undefined
+      };
     }
   }
 
@@ -60,7 +133,65 @@ export function parseCeirResponse(rawInput: any, defaultDate?: string, apiRespon
     }
   }
 
+  if (rawItems.length === 0 && typeof targetInput === "string") {
+    const text = targetInput.trim();
+    const itemChunks = text.split(/(?=\b\d+\.\s*(?:\d{4}-\d{2}-\d{2}|\w+))/g).map(s => s.trim()).filter(Boolean);
+    if (itemChunks.length > 1 || (itemChunks.length === 1 && itemChunks[0].includes("|"))) {
+      itemChunks.forEach((chunk, idx) => {
+        const cleanChunk = chunk.replace(/^\d+\.\s*/, "");
+        const parts = cleanChunk.split("|").map(p => p.trim());
+        
+        let datePart = parts[0] || currentDate;
+        let actionPart = "CEIR_LOG";
+        let notePart = "";
+
+        parts.slice(1).forEach(p => {
+          const lower = p.toLowerCase();
+          if (lower.startsWith("action:")) {
+            actionPart = p.substring(7).trim();
+          } else if (lower.startsWith("note:")) {
+            notePart = p.substring(5).trim();
+          } else if (lower.startsWith("status:")) {
+            actionPart = p.substring(7).trim();
+          } else {
+            notePart = notePart ? `${notePart} | ${p}` : p;
+          }
+        });
+
+        if (actionPart === "----" && (!notePart || notePart === "----")) {
+          actionPart = "Pengecekan Server";
+          notePart = "Sinkronisasi status jaringan operator";
+        }
+
+        rawItems.push({
+          No: idx + 1,
+          Tanggal: datePart,
+          Action: actionPart,
+          Note: notePart || "-",
+          IMEI: detectedImei || "-"
+        });
+      });
+    }
+  }
+
   if (rawItems.length === 0) {
+    const rawStr = typeof targetInput === "string" ? targetInput.toLowerCase() : "";
+    if (rawStr.includes("error") || rawStr.includes("gagal") || rawStr.includes("tidak mencukupi") || rawStr.includes("balance") || rawStr.includes("dibatalkan") || rawStr.includes("retry")) {
+      return {
+        title: "Status Pengecekan CEIR",
+        status: "DIBATALKAN / PENGEMBALIAN",
+        isRegistered: false,
+        isError: true,
+        errorMessage: "Pesanan dibatalkan otomatis karena jalur server pusat sedang mengalami antrean / pemeliharaan kuota. Saldo pembayaran Anda telah dikembalikan 100% ke akun Anda secara otomatis.",
+        totalRecords: 0,
+        columns: [],
+        rows: [],
+        rawText: "Pesanan dibatalkan otomatis karena kendala antrean kuota server pusat.",
+        verifiedAt: currentDate,
+        imei: detectedImei || undefined
+      };
+    }
+
     rawItems.push({
       No: 1,
       Tanggal: currentDate,

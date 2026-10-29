@@ -290,6 +290,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/(main)/hiburan/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/hiburan">> = Specific
+  const handler = {} as typeof import("../../src/app/(main)/hiburan/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/(main)/history/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/history">> = Specific
@@ -398,6 +407,33 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/.well-known/assetlinks.json/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/.well-known/assetlinks.json">> = Specific
+  const handler = {} as typeof import("../../src/app/.well-known/assetlinks.json/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/Ry-ITSolutions.apk/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/Ry-ITSolutions.apk">> = Specific
+  const handler = {} as typeof import("../../src/app/Ry-ITSolutions.apk/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/ads.txt/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/ads.txt">> = Specific
+  const handler = {} as typeof import("../../src/app/ads.txt/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/check-payment/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/check-payment">> = Specific
@@ -411,6 +447,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/create-qris">> = Specific
   const handler = {} as typeof import("../../src/app/create-qris/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/download/apk/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/download/apk">> = Specific
+  const handler = {} as typeof import("../../src/app/download/apk/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

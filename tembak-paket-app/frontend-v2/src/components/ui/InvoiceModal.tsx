@@ -609,9 +609,9 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
                 {/* Log Riwayat Tabel */}
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold text-emerald-950">Rincian Log Query CEIR (API):</p>
+                    <p className="text-[11px] font-bold text-emerald-950">Rincian Data Pengecekan CEIR:</p>
                     <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded font-bold">
-                      {ceirInfo.columns.length} Kolom Respon API
+                      {ceirInfo.columns.length} Kolom Data
                     </span>
                   </div>
                   <div className="rounded-xl border border-emerald-200/80 bg-white shadow-sm overflow-hidden">

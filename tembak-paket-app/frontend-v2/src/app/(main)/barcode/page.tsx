@@ -162,12 +162,18 @@ export default function BarcodePage() {
         setBarcodeResult({ note, image });
         setShowSuccessPop(true);
       } else {
+        if (typeof data?.data?.newBalance === 'number') {
+          updateBalance(data.data.newBalance);
+        } else if (typeof data?.newBalance === 'number') {
+          updateBalance(data.newBalance);
+        }
         Swal.fire({
-          title: "Gagal Membuat Barcode",
-          text: data.message || "Gagal membuat barcode.",
-          icon: "error"
+          title: data?.cancelled ? "Pesanan Dibatalkan & Saldo Dikembalikan" : "Gagal Membuat Barcode",
+          text: data?.message || "Gagal membuat barcode.",
+          icon: data?.cancelled ? "warning" : "error",
+          confirmButtonColor: "#0066cc"
         });
-        setError(data.message || "Gagal membuat barcode.");
+        setError(data?.message || "Gagal membuat barcode.");
       }
     } catch (err) {
       Swal.fire({

@@ -4,6 +4,10 @@
  * Audit Reference: backend/ceirgo_api_map.json
  */
 
+const dns = require('dns');
+if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+}
 const fetch = globalThis.fetch || require('node-fetch');
 const crypto = require('crypto');
 

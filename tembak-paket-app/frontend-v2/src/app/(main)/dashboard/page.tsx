@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useApp } from "@/lib/store";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,8 @@ export default function DashboardPage() {
 
   // Hero Carousel State
   const [currentSlide, setCurrentSlide] = useState(0);
+  const heroAdRef = useRef<HTMLModElement | null>(null);
+  const [isHeroAdFilled, setIsHeroAdFilled] = useState<boolean>(false);
 
   // Universal Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,6 +102,15 @@ export default function DashboardPage() {
       bgGradient: "from-cyan-950/90 via-blue-950/80 to-transparent",
       image: "/banners/banner_rewards.jpg",
     },
+    {
+      title: "HIBURAN SPOTIFY & MUSIK TOP HITS",
+      subtitle: "Putar 160+ lagu hits Spotify: Bernadya, Rizky Febian, Njan, Adrian Khalif & Top Charts sambil kelola layanan Anda.",
+      badge: "SPOTIFY HITS",
+      ctaText: "PUTAR SPOTIFY >",
+      ctaLink: "/hiburan",
+      bgGradient: "from-emerald-950/90 via-teal-950/80 to-transparent",
+      image: "/banners/banner_rewards.jpg",
+    },
   ];
 
   // Auto-rotate Hero Carousel
@@ -116,6 +127,33 @@ export default function DashboardPage() {
         // @ts-ignore
         (window.adsbygoogle = window.adsbygoogle || []).push({});
       } catch (e) {}
+
+      const checkHeroStatus = () => {
+        const el = heroAdRef.current;
+        if (!el) return;
+        const status = el.getAttribute("data-ad-status");
+        if (status === "filled") {
+          setIsHeroAdFilled(true);
+        } else {
+          setIsHeroAdFilled(false);
+        }
+      };
+
+      const el = heroAdRef.current;
+      if (el) {
+        const observer = new MutationObserver(() => checkHeroStatus());
+        observer.observe(el, {
+          attributes: true,
+          childList: true,
+          subtree: true,
+          attributeFilter: ["data-ad-status", "style"],
+        });
+        const timer = setInterval(checkHeroStatus, 1500);
+        return () => {
+          observer.disconnect();
+          clearInterval(timer);
+        };
+      }
     }
   }, [currentSlide]);
 
@@ -497,7 +535,7 @@ export default function DashboardPage() {
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
       {/* ============================================================ */}
       <div className="bg-parchment border border-hairline rounded-3xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)]">
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 text-center">
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 sm:gap-2 text-center">
           {[
             {
               name: "Add Roamer",
@@ -568,6 +606,18 @@ export default function DashboardPage() {
               ),
             },
             {
+              name: "Hiburan",
+              badge: "Spotify",
+              href: "/hiburan",
+              tourKey: "service-hiburan",
+              iconBg: "bg-[#1ed760]/10 dark:bg-[#1ed760]/20 border border-[#1ed760]/20 dark:border-[#1ed760]/30 text-[#1ed760] dark:text-[#1ed760] group-hover:bg-[#1ed760]/20",
+              icon: (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.48.66.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                </svg>
+              ),
+            },
+            {
               name: "Panduan",
               onClick: () => window.dispatchEvent(new Event("open_app_tour")),
               tourKey: "service-panduan",
@@ -611,40 +661,122 @@ export default function DashboardPage() {
         <div className="relative w-full min-h-[165px] sm:min-h-[195px] flex flex-col justify-between p-4 sm:p-6 text-white transition-all duration-700 overflow-hidden box-border">
           {heroSlides[currentSlide].isAd ? (
             <>
-              <div className="absolute inset-0 bg-canvas/95 dark:bg-slate-950/95 backdrop-blur-md z-0" />
-              <div className="relative z-10 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-                    {heroSlides[currentSlide].badge}
+              {/* Dummy Sponsor Banner (Shown before AdSense is approved/filled) */}
+              {!isHeroAdFilled ? (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-blue-950 z-0" />
+                  <div className="absolute -top-16 -right-16 w-52 h-52 bg-primary/25 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-16 -left-16 w-52 h-52 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+                  <div className="relative z-10 flex flex-col justify-between h-full min-h-[165px] sm:min-h-[195px]">
+                    <div className="flex items-center justify-between">
+                      <div className="bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
+                        SPONSOR RESMI & PROMO
+                      </div>
+                      <span className="text-[10px] text-slate-300 font-medium">Slot Mitra Iklan</span>
+                    </div>
+
+                    <div className="my-2 space-y-1">
+                      <h3 className="text-base sm:text-xl font-extrabold text-white tracking-tight leading-snug">
+                        🚀 Ingin Pasang Banner Iklan Bisnis Anda di Sini?
+                      </h3>
+                      <p className="text-xs text-slate-300 line-clamp-2 max-w-xl">
+                        Dilihat puluhan ribu pengguna aktif transaksi setiap hari. Promosikan toko, bot WhatsApp/Telegram, atau produk Anda sekarang!
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <a
+                        href="https://wa.me/6287767287284?text=Halo%20Admin,%20saya%20ingin%20pasang%20banner%20iklan%20sponsor%20di%20Ry-ITSolutions"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <span>HUBUNGI PASANG IKLAN &gt;</span>
+                      </a>
+
+                      {/* Slide Indicators */}
+                      <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
+                        {heroSlides.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentSlide(idx)}
+                            className={`h-1.5 rounded-full transition-all cursor-pointer ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
+                            aria-label={`Slide ${idx + 1}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-ink-muted uppercase tracking-widest font-semibold">Google AdSense</span>
-                </div>
-                <div className="my-1 flex items-center justify-center">
-                  <div className="w-full bg-canvas/90 border border-hairline/60 rounded-xl p-1 text-center text-xs text-ink-muted min-h-[90px] flex items-center justify-center overflow-hidden">
-                    <ins
-                      className="adsbygoogle"
-                      style={{ display: "block", width: "100%", height: "90px" }}
-                      data-ad-client="ca-pub-2898811488813299"
-                      data-ad-slot="3892653630"
-                      data-ad-format="fluid"
-                      data-full-width-responsive="true"
-                    />
+                </>
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-canvas/95 dark:bg-slate-950/95 backdrop-blur-md z-0" />
+                  <div className="relative z-10 flex flex-col justify-between h-full min-h-[165px] sm:min-h-[195px]">
+                    <div className="flex items-center justify-between">
+                      <div className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                        {heroSlides[currentSlide].badge}
+                      </div>
+                      <span className="text-[10px] text-ink-muted uppercase tracking-widest font-semibold">Google AdSense</span>
+                    </div>
+                    <div className="my-1 flex items-center justify-center w-full">
+                      {isHeroAdFilled ? (
+                        <div className="w-full min-h-[90px] flex items-center justify-center overflow-hidden" />
+                      ) : (
+                        <div className="w-full bg-gradient-to-r from-blue-600/10 via-indigo-600/15 to-purple-600/10 border border-blue-500/20 rounded-xl p-3 text-left">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-ink">Ingin Pasang Banner Iklan Bisnis Anda di Sini?</span>
+                            <span className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">Slot Tersedia</span>
+                          </div>
+                          <p className="text-[11px] text-ink-muted mt-1">Jangkau puluhan ribu pengguna aktif harian. Hubungi admin untuk pasang iklan sponsor.</p>
+                          <a
+                            href="https://wa.me/6287767287284?text=Halo%20Admin,%20saya%20ingin%20pasang%20banner%20iklan%20di%20Ry-ITSolutions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-primary hover:underline"
+                          >
+                            <span>Hubungi Admin WhatsApp</span>
+                            <span>&rarr;</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs font-semibold text-ink">{heroSlides[currentSlide].title}</span>
+                      {/* Slide Indicators */}
+                      <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
+                        {heroSlides.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentSlide(idx)}
+                            className={`h-1.5 rounded-full transition-all cursor-pointer ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
+                            aria-label={`Slide ${idx + 1}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs font-semibold text-ink">{heroSlides[currentSlide].title}</span>
-                  {/* Slide Indicators */}
-                  <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
-                    {heroSlides.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentSlide(idx)}
-                        className={`h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`}
-                        aria-label={`Slide ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+                </>
+              )}
+
+              {/* Ins tag kept in DOM so AdSense can measure available width and fill; reveals automatically when filled */}
+              <div
+                className={
+                  isHeroAdFilled
+                    ? "w-full my-1 relative z-20"
+                    : "absolute top-0 left-0 w-full opacity-0 pointer-events-none h-px overflow-hidden"
+                }
+              >
+                <ins
+                  ref={heroAdRef}
+                  className="adsbygoogle"
+                  style={{ display: "block", width: "100%", height: isHeroAdFilled ? "90px" : "1px" }}
+                  data-ad-client="ca-pub-2898811488813299"
+                  data-ad-slot="3892653630"
+                  data-ad-format="fluid"
+                  data-full-width-responsive="true"
+                />
               </div>
             </>
           ) : (

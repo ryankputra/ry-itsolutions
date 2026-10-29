@@ -4,10 +4,12 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { safeJson } from "@/lib/api";
 import { analyzeImei } from "@/lib/imeiHelper";
+import HeroSignalScene from "@/components/3d/HeroSignalScene";
 
 export default function LandingPage() {
   const [testImei, setTestImei] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+
   const analyzed = testImei.length >= 8 ? analyzeImei(testImei) : null;
 
   // Live Backend Data State
@@ -81,59 +83,10 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas/60 backdrop-blur-xs text-ink font-sans selection:bg-primary selection:text-white transition-colors duration-300 overflow-x-hidden relative">
-      {/* 3D Particle Animation Canvas Background */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <canvas
-          id="particleCanvas"
-          className="absolute inset-0 w-full h-full opacity-40 dark:opacity-60"
-          ref={(node) => {
-            if (!node) return;
-            const canvas = node;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            let animId: number;
-            let w = (canvas.width = canvas.offsetWidth);
-            let h = (canvas.height = canvas.offsetHeight);
-            const particles: Array<{ x: number; y: number; vx: number; vy: number; r: number }> = [];
-            for (let i = 0; i < 60; i++) {
-              particles.push({
-                x: Math.random() * w,
-                y: Math.random() * h,
-                vx: (Math.random() - 0.5) * 0.6,
-                vy: (Math.random() - 0.5) * 0.6,
-                r: Math.random() * 2 + 1
-              });
-            }
-            const draw = () => {
-              ctx.clearRect(0, 0, w, h);
-              ctx.fillStyle = '#3b82f6';
-              ctx.strokeStyle = 'rgba(59, 130, 246, 0.15)';
-              particles.forEach((p, idx) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                if (p.x < 0 || p.x > w) p.vx *= -1;
-                if (p.y < 0 || p.y > h) p.vy *= -1;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fill();
-                for (let j = idx + 1; j < particles.length; j++) {
-                  const p2 = particles[j];
-                  const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-                  if (dist < 130) {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
-                  }
-                }
-              });
-              animId = requestAnimationFrame(draw);
-            };
-            draw();
-            return () => cancelAnimationFrame(animId);
-          }}
-        />
+    <div className="min-h-screen bg-canvas text-ink font-sans selection:bg-primary selection:text-white transition-colors duration-300 overflow-x-hidden relative">
+      {/* 3D Atmospheric Background Layer (Interactive Three.js depth) */}
+      <div className="absolute top-0 left-0 right-0 h-[650px] sm:h-[750px] pointer-events-none z-0 overflow-hidden opacity-30 dark:opacity-45">
+        <HeroSignalScene isDark={isDark} className="scale-125 sm:scale-110 opacity-70" />
       </div>
 
       {/* Navbar */}
@@ -184,132 +137,152 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-12 pb-24 overflow-hidden animate-fade-in-up">
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      {/* Hero Section with Interactive 3D Three.js Visuals */}
+      <section className="relative pt-8 sm:pt-14 pb-20 sm:pb-28 overflow-hidden animate-fade-in-up">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             
             {/* Left Copy */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary font-medium text-xs backdrop-blur-md shadow-inner">
+            <div className="lg:col-span-7 space-y-5 sm:space-y-6 text-left">
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary font-medium text-xs backdrop-blur-md shadow-inner">
                 <span className="w-2 h-2 rounded-full bg-primary animate-ping"></span>
                 Infrastruktur Sinyal IMEI &amp; Gateway Pembayaran Otomatis
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.1]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.12]">
                 Sinyal Tanpa Batas, <br />
-                <span className="bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-primary via-blue-600 to-indigo-500 bg-clip-text text-transparent">
                   Gateway Tanpa Kendala.
                 </span>
               </h1>
 
-              <p className="text-sm sm:text-base text-ink-muted leading-relaxed max-w-xl font-normal">
+              <p className="text-xs sm:text-base text-ink-muted leading-relaxed max-w-xl font-normal">
                 Pusat solusi teknologi digital terpadu: Aktivasi sinyal HP Inter All Operator bergaransi resmi, query database CEIR nasional secara real-time, serta integrasi Payment Gateway QRIS 24 jam untuk bisnis Anda.
               </p>
 
-              <div className="flex flex-wrap items-center gap-3 pt-1">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
                 <Link
                   href="/add-roamer"
-                  className="px-6 py-3.5 bg-primary text-white font-bold text-xs sm:text-sm shadow-xl shadow-primary/25 hover:opacity-95 transition-all rounded-xl flex items-center gap-2 hover:scale-[1.02]"
+                  className="px-6 py-3.5 bg-primary text-white font-bold text-xs sm:text-sm shadow-xl shadow-primary/25 hover:opacity-95 transition-all rounded-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-98"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
                   Aktivasi Sinyal IMEI
                 </Link>
 
-                <Link
-                  href="/gateway"
-                  className="px-6 py-3.5 border border-hairline bg-parchment hover:bg-parchment/80 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl backdrop-blur-md shadow-sm"
-                >
-                  Payment Gateway
-                </Link>
+                <div className="grid grid-cols-2 sm:flex sm:items-center gap-3">
+                  <Link
+                    href="/gateway"
+                    className="px-4 sm:px-6 py-3.5 border border-hairline bg-parchment hover:bg-parchment/80 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl backdrop-blur-md shadow-sm text-center active:scale-98"
+                  >
+                    Payment Gateway
+                  </Link>
 
-                <Link
-                  href="/cek-ceir"
-                  className="px-6 py-3.5 border border-hairline bg-transparent hover:bg-parchment/40 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl"
-                >
-                  Cek Status CEIR
-                </Link>
+                  <Link
+                    href="/cek-ceir"
+                    className="px-4 sm:px-6 py-3.5 border border-hairline bg-transparent hover:bg-parchment/40 text-ink font-bold text-xs sm:text-sm transition-all rounded-xl text-center active:scale-98"
+                  >
+                    Cek Status CEIR
+                  </Link>
+                </div>
+
+                <div className="pt-1.5 flex items-center gap-2.5 flex-wrap">
+                  <a
+                    href="/download/apk"
+                    download="Ry-ITSolutions.apk"
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all shadow-xs active:scale-98"
+                  >
+                    <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993 0 .5511-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9994.4482.9994.9993 0 .5511-.4483.9997-.9994.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.414 13.8533 8.083 12 8.083c-1.8534 0-3.5902.331-5.1368.8667L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+                    </svg>
+                    <span>Download APK Android</span>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 rounded font-mono">2.7 MB</span>
+                  </a>
+                  <span className="text-[11px] text-ink-muted">Aplikasi Asli (Bisa Diinstall di HP)</span>
+                </div>
               </div>
 
               {/* Metrics / Trust */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-hairline">
-                <div className="space-y-0.5">
-                  <div className="text-2xl font-black text-ink tracking-tight">100%</div>
-                  <div className="text-[11px] text-ink-muted font-medium">Garansi Sinyal Aktif</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-5 sm:pt-6 border-t border-hairline">
+                <div className="p-2.5 sm:p-2 rounded-xl bg-parchment/30 sm:bg-transparent border sm:border border-transparent hover:border-hairline transition-all space-y-0.5 group">
+                  <div className="text-xl sm:text-2xl font-black text-ink tracking-tight group-hover:text-primary transition-colors">100%</div>
+                  <div className="text-[10px] sm:text-[11px] text-ink-muted font-medium">Garansi Sinyal Aktif</div>
                 </div>
-                <div className="space-y-0.5">
-                  <div className="text-2xl font-black text-primary tracking-tight">24/7</div>
-                  <div className="text-[11px] text-ink-muted font-medium">Gateway Auto-Mutasi</div>
+                <div className="p-2.5 sm:p-2 rounded-xl bg-parchment/30 sm:bg-transparent border sm:border border-transparent hover:border-hairline transition-all space-y-0.5 group">
+                  <div className="text-xl sm:text-2xl font-black text-primary tracking-tight">24/7</div>
+                  <div className="text-[10px] sm:text-[11px] text-ink-muted font-medium">Gateway Auto-Mutasi</div>
                 </div>
-                <div className="space-y-0.5">
-                  <div className="text-2xl font-black text-ink tracking-tight">CEIR</div>
-                  <div className="text-[11px] text-ink-muted font-medium">Database Nasional</div>
+                <div className="p-2.5 sm:p-2 rounded-xl bg-parchment/30 sm:bg-transparent border sm:border border-transparent hover:border-hairline transition-all space-y-0.5 group">
+                  <div className="text-xl sm:text-2xl font-black text-ink tracking-tight group-hover:text-primary transition-colors">CEIR</div>
+                  <div className="text-[10px] sm:text-[11px] text-ink-muted font-medium">Database Nasional</div>
                 </div>
-                <div className="space-y-0.5">
-                  <div className="text-2xl font-black text-blue-600 tracking-tight">API</div>
-                  <div className="text-[11px] text-ink-muted font-medium">Webhook Instan</div>
+                <div className="p-2.5 sm:p-2 rounded-xl bg-parchment/30 sm:bg-transparent border sm:border border-transparent hover:border-hairline cursor-pointer transition-all space-y-0.5 group">
+                  <div className="text-xl sm:text-2xl font-black text-blue-600 tracking-tight">API</div>
+                  <div className="text-[10px] sm:text-[11px] text-ink-muted font-medium">Webhook Instan</div>
                 </div>
               </div>
             </div>
 
-            {/* Right Widget: Modern Interactive Glassmorphic Card */}
-            <div className="lg:col-span-5">
-              <div className="relative p-6 sm:p-7 rounded-3xl bg-parchment border border-hairline backdrop-blur-2xl shadow-2xl space-y-5 group hover:border-primary/50 transition-all">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-500/5 rounded-3xl pointer-events-none" />
-                
-                <div className="flex items-center justify-between border-b border-hairline pb-3.5 relative z-10">
-                  <div>
-                    <h2 className="font-bold text-sm text-ink tracking-wide">Live IMEI Inspector</h2>
-                    <p className="text-[11px] text-ink-muted mt-0.5">Deteksi otomatis spesifikasi perangkat dari TAC</p>
-                  </div>
-                  <span className="px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/20 font-mono text-[10px] uppercase font-bold rounded-full">
-                    Active
-                  </span>
-                </div>
+            {/* Right Widget: Live TAC / IMEI Inspector & CEIR Verification Gateway */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="relative rounded-3xl bg-parchment/90 dark:bg-slate-900/80 border border-hairline backdrop-blur-2xl shadow-2xl shadow-primary/10 overflow-hidden group hover:border-primary/50 transition-all duration-300">
 
-                <div className="space-y-1.5 relative z-10">
-                  <label className="text-xs font-semibold text-ink">Nomor IMEI (15 Digit)</label>
-                  <input
-                    type="text"
-                    maxLength={15}
-                    value={testImei}
-                    onChange={(e) => setTestImei(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Contoh: 353969101788981"
-                    className="w-full px-4 py-3 bg-canvas border border-hairline focus:border-primary font-mono text-xs outline-none transition-all text-ink rounded-xl placeholder:text-ink-muted/50 shadow-inner"
-                  />
-                  <p className="text-[10px] text-ink-muted">Masukkan minimal 8 digit pertama IMEI Anda.</p>
-                </div>
-
-                {analyzed?.brand ? (
-                  <div className="p-3.5 bg-primary/10 border border-primary/30 rounded-xl space-y-1.5 relative z-10 animate-fade-in-up">
-                    <div className="flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-primary font-bold uppercase">Perangkat Teridentifikasi</span>
-                      {analyzed.isValidLuhn && (
-                        <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-bold rounded">
-                          GSMA Valid
-                        </span>
-                      )}
+                {/* Live TAC / IMEI Inspector Form */}
+                <div className="p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-hairline pb-3">
+                    <div>
+                      <h2 className="font-bold text-xs sm:text-sm text-ink tracking-wide">Live IMEI Inspector</h2>
+                      <p className="text-[10px] sm:text-[11px] text-ink-muted mt-0.5">Deteksi otomatis spesifikasi perangkat dari TAC</p>
                     </div>
-                    <div className="text-xs font-bold text-ink">
-                      {analyzed.brand} {analyzed.model}
-                    </div>
-                    <div className="text-[11px] font-mono text-ink-muted">
-                      IMEI: {testImei}
-                    </div>
+                    <span className="px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/20 font-mono text-[10px] uppercase font-bold rounded-full">
+                      Active
+                    </span>
                   </div>
-                ) : testImei.length >= 8 ? (
-                  <div className="p-3.5 bg-canvas border border-hairline text-[11px] font-mono text-ink-muted rounded-xl relative z-10">
-                    Menganalisis TAC {testImei.slice(0, 8)}...
-                  </div>
-                ) : null}
 
-                <div className="pt-1 relative z-10">
-                  <Link
-                    href={`/add-roamer${testImei.length >= 8 ? `?imei=${testImei}` : ""}`}
-                    className="w-full py-3.5 bg-primary text-white hover:opacity-95 font-bold text-xs uppercase tracking-wider text-center block rounded-xl shadow-lg shadow-primary/25"
-                  >
-                    Proses Unblock Perangkat Ini &gt;
-                  </Link>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-ink">Nomor IMEI (15 Digit)</label>
+                    <input
+                      type="text"
+                      maxLength={15}
+                      value={testImei}
+                      onChange={(e) => setTestImei(e.target.value.replace(/\D/g, ""))}
+                      placeholder="Contoh: 353969101788981"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline focus:border-primary font-mono text-xs outline-none transition-all text-ink rounded-xl placeholder:text-ink-muted/50 shadow-inner"
+                    />
+                    <p className="text-[10px] text-ink-muted">Masukkan minimal 8 digit pertama IMEI Anda.</p>
+                  </div>
+
+                  {analyzed?.brand ? (
+                    <div className="p-3.5 bg-primary/10 border border-primary/30 rounded-xl space-y-1.5 animate-fade-in-up">
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-primary font-bold uppercase">Perangkat Teridentifikasi</span>
+                        {analyzed.isValidLuhn && (
+                          <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-bold rounded">
+                            GSMA Valid
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-bold text-ink">
+                        {analyzed.brand} {analyzed.model}
+                      </div>
+                      <div className="text-[11px] font-mono text-ink-muted">
+                        IMEI: {testImei}
+                      </div>
+                    </div>
+                  ) : testImei.length >= 8 ? (
+                    <div className="p-3.5 bg-canvas border border-hairline text-[11px] font-mono text-ink-muted rounded-xl">
+                      Menganalisis TAC {testImei.slice(0, 8)}...
+                    </div>
+                  ) : null}
+
+                  <div className="pt-1">
+                    <Link
+                      href={`/add-roamer${testImei.length >= 8 ? `?imei=${testImei}` : ""}`}
+                      className="w-full py-3.5 bg-primary text-white hover:opacity-95 font-bold text-xs uppercase tracking-wider text-center block rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.01] active:scale-98 transition-all"
+                    >
+                      Proses Unblock Perangkat Ini &gt;
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

@@ -76,24 +76,62 @@ async function getEffectiveMaintenanceStatus() {
 // 1. Google OAuth
 router.post('/auth/google', async (req, res) => {
     try {
-        const { credential, referral_code } = req.body;
-        if (!credential) return res.status(400).json({ status: false, message: 'Google Token diperlukan.' });
-        if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'GANTI_DENGAN_GOOGLE_CLIENT_ID_ANDA') {
-            return res.status(500).json({ status: false, message: 'Google Login belum dikonfigurasi oleh Admin.' });
+        const { credential, access_token, token: directToken, referral_code } = req.body;
+        const rawToken = credential || access_token || directToken;
+        if (!rawToken) return res.status(400).json({ status: false, message: 'Google Token atau Kredensial diperlukan.' });
+
+        let email = null;
+        let name = 'User Google';
+
+        // 1. Coba verifikasi via Google OAuth2Client verifyIdToken jika berbentuk JWT (3 segmen)
+        if (typeof rawToken === 'string' && rawToken.split('.').length === 3) {
+            try {
+                const ticket = await googleClient.verifyIdToken({
+                    idToken: rawToken,
+                    audience: GOOGLE_CLIENT_ID
+                });
+                const payload = ticket.getPayload();
+                if (payload && payload.email) {
+                    email = payload.email;
+                    name = payload.name || payload.given_name || 'User Google';
+                }
+            } catch (jwtErr) {
+                console.warn('[Google Auth] verifyIdToken failed, fallback ke Google tokeninfo API:', jwtErr.message);
+                try {
+                    const tiRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(rawToken)}`);
+                    const tiData = await tiRes.json();
+                    if (tiData && tiData.email) {
+                        email = tiData.email;
+                        name = tiData.name || 'User Google';
+                    }
+                } catch (tiErr) {
+                    console.error('[Google Auth] tokeninfo API error:', tiErr.message);
+                }
+            }
         }
 
-        const ticket = await googleClient.verifyIdToken({
-            idToken: credential,
-            audience: GOOGLE_CLIENT_ID
-        });
-        const payload = ticket.getPayload();
+        // 2. Jika bukan JWT atau verifikasi idToken belum berhasil, verifikasi via UserInfo API (untuk access_token dari flow useGoogleLogin popup)
+        if (!email) {
+            try {
+                const uiRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${rawToken}` }
+                });
+                const uiData = await uiRes.json();
+                if (uiData && uiData.email) {
+                    email = uiData.email;
+                    name = uiData.name || uiData.given_name || 'User Google';
+                }
+            } catch (uiErr) {
+                console.error('[Google Auth] userinfo API error:', uiErr.message);
+            }
+        }
 
-        if (!payload || !payload.email) return res.status(400).json({ status: false, message: 'Gagal mendapatkan data Google.' });
+        if (!email) {
+            return res.status(400).json({ status: false, message: 'Verifikasi akun Google gagal. Token tidak valid atau sesi berakhir.' });
+        }
 
-        const email = payload.email;
-        const name = payload.name || 'User Google';
-
-        let user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+        const validEmail = email.trim().toLowerCase();
+        let user = await dbGet('SELECT * FROM users WHERE email = ?', [validEmail]);
 
         if (!user) {
             const defaultPassword = await bcrypt.hash(crypto.randomBytes(8).toString('hex'), 10);
@@ -112,10 +150,10 @@ router.post('/auth/google', async (req, res) => {
             }
 
             await dbRun('INSERT INTO users (id, name, email, password, balance, role, verifiedPhone, savedPhones, status, createdAt, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [newId, name, email, defaultPassword, 0, 'user', null, '[]', 'approved', new Date().toISOString(), generatedRefCode, referredById]);
+                [newId, name, validEmail, defaultPassword, 0, 'user', null, '[]', 'approved', new Date().toISOString(), generatedRefCode, referredById]);
 
             user = await dbGet('SELECT * FROM users WHERE id = ?', [newId]);
-            sendTelegramNotification(`<b>🎉 User Baru Mendaftar</b>\n<b>Metode:</b> 🌐 Login via Google\n<b>Nama:</b> ${name}\n<b>Email:</b> ${email}${referrerName ? `\n<b>Referral Dari:</b> ${referrerName} (ID: ${referredById})` : ''}`, 'admin');
+            sendTelegramNotification(`<b>🎉 User Baru Mendaftar</b>\n<b>Metode:</b> 🌐 Login via Google\n<b>Nama:</b> ${name}\n<b>Email:</b> ${validEmail}${referrerName ? `\n<b>Referral Dari:</b> ${referrerName} (ID: ${referredById})` : ''}`, 'admin');
 
             // WhatsApp Notification to Admin
             try {
@@ -124,7 +162,7 @@ router.post('/auth/google', async (req, res) => {
                 const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
                 const waAdminMsg = `*NOTIFIKASI PENGGUNA BARU (GOOGLE)*\n──────────────────────\n` +
                     `*Nama:* ${name}\n` +
-                    `*Email:* ${email}\n` +
+                    `*Email:* ${validEmail}\n` +
                     `*Metode:* Login via Google (Otomatis Aktif)\n` +
                     `*Waktu:* ${timeStr}\n──────────────────────\n` +
                     `Panel Admin: https://ry-itsolutionts.web.id/admin`;
@@ -145,16 +183,28 @@ router.post('/auth/google', async (req, res) => {
             return res.status(403).json({ status: false, message: 'Akun Anda diblokir.' });
         }
 
+        req.session = req.session || {};
         req.session.userId = user.id;
-        logUserActivity({ userId: user.id, userName: user.name, userEmail: user.email, action: 'LOGIN', description: 'Login berhasil via Akun Google', req });
-        updatePresence(user, req, '/');
-        const { password: _, ...userWithoutPassword } = user;
-        if (userWithoutPassword.savedPhones) userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
 
-        res.status(200).json({ status: true, message: 'Login Google Berhasil!', user: userWithoutPassword });
+        try { logUserActivity({ userId: user.id, userName: user.name, userEmail: user.email, action: 'LOGIN', description: 'Login berhasil via Akun Google', req }); } catch (e) {}
+        try { updatePresence(user, req, '/'); } catch (e) {}
+
+        const { password: _, ...userWithoutPassword } = user;
+        try {
+            if (userWithoutPassword.savedPhones && typeof userWithoutPassword.savedPhones === 'string') {
+                userWithoutPassword.savedPhones = JSON.parse(userWithoutPassword.savedPhones);
+            }
+        } catch (e) {
+            userWithoutPassword.savedPhones = [];
+        }
+
+        req.session.save((saveErr) => {
+            if (saveErr) console.error('[Google Session Save Error]', saveErr);
+            return res.status(200).json({ status: true, message: 'Login Google Berhasil!', user: userWithoutPassword });
+        });
     } catch (error) {
         console.error("Google Login Error:", error.message);
-        res.status(500).json({ status: false, message: 'Verifikasi Google gagal.' });
+        res.status(500).json({ status: false, message: `Verifikasi Google gagal: ${error.message}` });
     }
 });
 
@@ -699,6 +749,49 @@ router.put("/user/profile", isAuthenticated, async (req, res) => {
     } catch (e) {
         console.error("Error updating profile:", e);
         res.status(500).json({ status: false, message: e.message || "Gagal memperbarui profil." });
+    }
+});
+
+// 8.5b. Wajib Bind Nomor WhatsApp untuk User (Termasuk Login Google)
+router.post('/user/bind-phone', isAuthenticated, async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone || String(phone).trim().length < 8) {
+            return res.status(400).json({ status: false, message: "Nomor WhatsApp wajib diisi." });
+        }
+        let cleanP = String(phone).replace(/\D/g, "");
+        if (cleanP.startsWith("0")) cleanP = "62" + cleanP.substring(1);
+        else if (!cleanP.startsWith("62")) cleanP = "62" + cleanP;
+        if (!/^628\d{7,12}$/.test(cleanP)) {
+            return res.status(400).json({ status: false, message: "Nomor WhatsApp tidak valid. Format: 08xxxxxxxxxx" });
+        }
+
+        await dbRun("UPDATE users SET verifiedPhone = ? WHERE id = ?", [cleanP, req.session.userId]);
+        const updatedUser = await dbGet("SELECT id, name, email, role, balance, coins, avatar, verifiedPhone FROM users WHERE id = ?", [req.session.userId]);
+
+        // Kirim pesan sambutan ke nomor WhatsApp pengguna jika bot aktif
+        try {
+            const { sendTextMessage } = require('../services/waBot');
+            const welcomeMsg = 
+                `Halo Kak *${updatedUser.name}*!\n\n` +
+                `Nomor WhatsApp Anda telah *berhasil ditautkan* ke akun Ry-ITSolutions.\n` +
+                `Mulai saat ini, seluruh *nota pembelian resmi* dan pembaruan pengerjaan pesanan akan dikirimkan otomatis ke nomor ini.\n\n` +
+                `Website: https://ry-itsolutionts.web.id\n` +
+                `_Pesan otomatis resmi Ry-ITSolutions._`;
+            sendTextMessage(cleanP, welcomeMsg).catch(() => {});
+        } catch (waErr) {}
+
+        return res.json({
+            status: true,
+            message: "Nomor WhatsApp berhasil disimpan & ditautkan!",
+            user: {
+                ...updatedUser,
+                phone: updatedUser.verifiedPhone || ""
+            }
+        });
+    } catch (e) {
+        console.error("Error binding phone:", e);
+        return res.status(500).json({ status: false, message: e.message || "Gagal menyimpan nomor WhatsApp." });
     }
 });
 

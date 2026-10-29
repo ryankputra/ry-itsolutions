@@ -1047,7 +1047,7 @@ function UnblockImeiContent() {
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-ink">Pilih Kecepatan Proses Server</label>
-                  {isPast14Wib && (
+                  {selectedSpeed === 'slow' && isPast14Wib && (
                     <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-300/50 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                       <span>Lewat 14:00 WIB (Kirim Besok)</span>

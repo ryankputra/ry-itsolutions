@@ -46,27 +46,22 @@
     "afterFiles": [
       {
         "source": "/create-qris",
-        "destination": "http://127.0.0.1:3002/create-qris",
+        "destination": "http://127.0.0.1:3001/create-qris",
         "regex": "^/create-qris(?:/)?$"
       },
       {
         "source": "/check-payment",
-        "destination": "http://127.0.0.1:3002/check-payment",
+        "destination": "http://127.0.0.1:3001/check-payment",
         "regex": "^/check-payment(?:/)?$"
       },
       {
-        "source": "/qr/:path*",
-        "destination": "http://127.0.0.1:3002/qr/:path*",
-        "regex": "^/qr(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
-      },
-      {
         "source": "/api/create-qris",
-        "destination": "http://127.0.0.1:3002/create-qris",
+        "destination": "http://127.0.0.1:3001/create-qris",
         "regex": "^/api/create-qris(?:/)?$"
       },
       {
         "source": "/api/check-payment",
-        "destination": "http://127.0.0.1:3002/check-payment",
+        "destination": "http://127.0.0.1:3001/check-payment",
         "regex": "^/api/check-payment(?:/)?$"
       },
       {
@@ -123,6 +118,12 @@
       "regex": "^/_not\\-found(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/.well-known/assetlinks.json",
+      "regex": "^/\\.well\\-known/assetlinks\\.json(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/\\.well\\-known/assetlinks\\.json(?:/)?$"
     },
     {
       "page": "/add-roamer",
@@ -227,6 +228,12 @@
       "namedRegex": "^/adminmode(?:/)?$"
     },
     {
+      "page": "/ads.txt",
+      "regex": "^/ads\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ads\\.txt(?:/)?$"
+    },
+    {
       "page": "/barcode",
       "regex": "^/barcode(?:/)?$",
       "routeKeys": {},
@@ -275,6 +282,12 @@
       "namedRegex": "^/dashboard(?:/)?$"
     },
     {
+      "page": "/download/apk",
+      "regex": "^/download/apk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/download/apk(?:/)?$"
+    },
+    {
       "page": "/games",
       "regex": "^/games(?:/)?$",
       "routeKeys": {},
@@ -285,6 +298,12 @@
       "regex": "^/gateway(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/gateway(?:/)?$"
+    },
+    {
+      "page": "/hiburan",
+      "regex": "^/hiburan(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/hiburan(?:/)?$"
     },
     {
       "page": "/history",
@@ -333,6 +352,12 @@
       "regex": "^/register(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/register(?:/)?$"
+    },
+    {
+      "page": "/Ry-ITSolutions.apk",
+      "regex": "^/Ry\\-ITSolutions\\.apk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/Ry\\-ITSolutions\\.apk(?:/)?$"
     },
     {
       "page": "/saya",

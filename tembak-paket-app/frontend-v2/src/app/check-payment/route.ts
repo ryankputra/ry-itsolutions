@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GATEWAY_URL = process.env.GOPAY_GATEWAY_URL || "http://127.0.0.1:3002";
+const ROTATOR_URL = process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:3001";
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 async function handleProxy(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const targetUrl = `${GATEWAY_URL}/check-payment${url.search}`;
+    const targetUrl = `${ROTATOR_URL}/check-payment${url.search}`;
 
     const headers: Record<string, string> = {};
     req.headers.forEach((val, key) => {

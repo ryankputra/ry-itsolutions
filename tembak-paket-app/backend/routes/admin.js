@@ -316,11 +316,17 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
         const { type } = req.query; // 'manual' | 'automated' | undefined
         
         const orders = await dbAll(
-            `SELECT * FROM transactions 
-             WHERE service_type IN ('imei', 'ceir', 'barcode') 
-                OR packageId LIKE 'cek_%' 
-                OR packageId LIKE 'create_%' 
-             ORDER BY createdAt DESC`
+            `SELECT t.*, 
+                    u.verifiedPhone AS userVerifiedPhone, 
+                    u.name AS userFullName, 
+                    u.email AS userEmail, 
+                    u.savedPhones AS userSavedPhones
+             FROM transactions t
+             LEFT JOIN users u ON t.userId = u.id
+             WHERE t.service_type IN ('imei', 'ceir', 'barcode') 
+                OR t.packageId LIKE 'cek_%' 
+                OR t.packageId LIKE 'create_%' 
+             ORDER BY t.createdAt DESC`
         );
 
         const automatedCodes = new Set([
@@ -339,6 +345,31 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
             if (m && r.value) speedRangeMap[m[1]] = r.value;
         });
 
+        const isPhoneValid = (p, imei) => {
+            if (!p) return false;
+            const cleanDigits = String(p).trim().replace(/\D/g, '');
+            const cleanImei = String(imei || '').replace(/\D/g, '');
+            if (cleanDigits.length < 9 || cleanDigits.length > 14) return false;
+            if (cleanImei && cleanDigits === cleanImei) return false;
+            return cleanDigits.startsWith('08') || cleanDigits.startsWith('628') || cleanDigits.startsWith('8');
+        };
+
+        const resolveCustomerPhone = (trx) => {
+            if (isPhoneValid(trx.targetPhone, trx.imei)) return String(trx.targetPhone).trim();
+            if (isPhoneValid(trx.userVerifiedPhone, trx.imei)) return String(trx.userVerifiedPhone).trim();
+            if (trx.userSavedPhones) {
+                try {
+                    const sp = JSON.parse(trx.userSavedPhones);
+                    if (Array.isArray(sp)) {
+                        for (const p of sp) {
+                            if (isPhoneValid(p, trx.imei)) return String(p).trim();
+                        }
+                    }
+                } catch (e) {}
+            }
+            return null;
+        };
+
         let categorizedOrders = orders.map(o => {
             const pkgId = (o.packageId || '').toLowerCase();
             const sType = (o.service_type || '').toLowerCase();
@@ -352,8 +383,14 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
                 speedLabel = `${optName} (${rangeStr})`;
             }
 
+            const cleanCustPhone = resolveCustomerPhone(o);
+
             return {
                 ...o,
+                targetPhone: cleanCustPhone || null,
+                customerPhone: cleanCustPhone || null,
+                userVerifiedPhone: o.userVerifiedPhone || null,
+                userName: o.userName || o.userFullName || 'Pelanggan',
                 speed_label: speedLabel,
                 speed_range: speedRangeMap[(o.speed_option || 'slow').toLowerCase()] || speedRangeMap['slow'],
                 is_automated: isAuto,
@@ -493,8 +530,8 @@ router.post('/admin/manual-orders/:id/recheck', isAuthenticated, isAdmin, async 
     }
 });
 
-// 7b. POST /api/admin/orders/:id/retry-ceirgo (Retry CeirGO Order Execution from Admin Queue)
-router.post('/admin/orders/:id/retry-ceirgo', isAuthenticated, isAdmin, async (req, res) => {
+// 7b. POST /api/admin/orders/:id/retry-ceirgo & /api/admin/manual-orders/:id/retry-ceirgo
+router.post(['/admin/orders/:id/retry-ceirgo', '/admin/manual-orders/:id/retry-ceirgo'], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const trxId = req.params.id;
         const trx = await dbGet("SELECT * FROM transactions WHERE id = ?", [trxId]);
@@ -539,14 +576,25 @@ router.post('/admin/orders/:id/retry-ceirgo', isAuthenticated, isAdmin, async (r
             });
         } else {
             const errMsg = ceirRes.message || ceirRes.error || 'Respon gagal dari CeirGO';
+            const isBalanceErr = ceirRes.statusCode === 402 ||
+                String(errMsg).toLowerCase().includes('balance-mu tidak mencukupi') ||
+                String(errMsg).toLowerCase().includes('balance') ||
+                String(errMsg).toLowerCase().includes('saldo') ||
+                String(errMsg).toLowerCase().includes('tidak mencukupi') ||
+                String(errMsg).toLowerCase().includes('user_insufficient_balance_error');
+
             console.error(`[Admin CeirGO Retry Error] ${trxId}:`, errMsg);
+            const adminErrMsg = isBalanceErr
+                ? "Saldo API akun CeirGO pusat Anda tidak mencukupi. Silakan lakukan Top Up saldo di portal https://ceirgo.id terlebih dahulu sebelum mencoba submit ulang."
+                : `Gagal submit ulang ke CeirGO: ${errMsg}`;
+
             await dbRun(
-                "UPDATE transactions SET admin_note = ?, api_response = ? WHERE id = ?",
-                [`[CeirGO Retry Error] ${errMsg}`, JSON.stringify(ceirRes), trxId]
+                "UPDATE transactions SET status = 'cancelled', admin_note = ?, api_response = ? WHERE id = ?",
+                [`[CeirGO Retry Error] ${isBalanceErr ? 'Saldo API CeirGO Habis: Silakan top-up di ceirgo.id' : errMsg}`, JSON.stringify(ceirRes), trxId]
             );
             return res.status(400).json({
                 status: false,
-                message: `Gagal submit ulang ke CeirGO: ${errMsg}`
+                message: adminErrMsg
             });
         }
     } catch (e) {
@@ -1560,6 +1608,94 @@ router.put('/admin/dual-gateway', isAuthenticated, isAdmin, async (req, res) => 
     }
 });
 
+router.post('/admin/dual-gateway/reset-counter', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_counter', '0')");
+        res.json({ status: true, message: 'Counter rotasi berhasil di-reset ke 0.' });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/dual-gateway/simulate-rotation', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { advancePaymentCounter } = require('../services/paymentRouter');
+        const advRes = await advancePaymentCounter(dbGet, dbRun);
+        res.json({ status: true, message: `Counter berhasil digulirkan ke #${advRes.newCounter}. Giliran gateway berikutnya: ${advRes.nextGateway.toUpperCase()}`, data: advRes });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.get('/admin/dual-gateway/health', isAuthenticated, isAdmin, async (req, res) => {
+    const gopayUrl = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
+    const shoppepayUrl = process.env.SHOPPEPAY_GATEWAY_URL || 'http://localhost:3003';
+    const gopayKey = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
+    const shoppepayKey = process.env.SHOPPEPAY_GATEWAY_API_KEY || 'shopee-secret-key-2026';
+
+    const results = {
+        gopay: { online: false, message: '', latency_ms: null },
+        shoppepay: { online: false, message: '', latency_ms: null }
+    };
+
+    // Test GoPay
+    const startGp = Date.now();
+    try {
+        const gpRes = await axios.get(`${gopayUrl}/token-status`, {
+            headers: { 'x-api-key': gopayKey },
+            timeout: 4000
+        });
+        const gpData = gpRes.data?.data || gpRes.data;
+        const isConnected = gpData?.token_status === 'valid' || gpRes.status === 200;
+        results.gopay = {
+            online: true,
+            message: isConnected ? 'GoPay Gateway Online & Sesi GoBiz Aktif' : 'GoPay Gateway Online (Belum Login)',
+            latency_ms: Date.now() - startGp,
+            details: gpData
+        };
+    } catch (e) {
+        // Fallback coba /health
+        try {
+            const hRes = await axios.get(`${gopayUrl}/health`, { timeout: 3000 });
+            results.gopay = {
+                online: true,
+                message: 'GoPay Gateway Online',
+                latency_ms: Date.now() - startGp,
+                details: hRes.data
+            };
+        } catch (hErr) {
+            results.gopay = {
+                online: false,
+                message: e.response?.data?.message || e.message || 'Koneksi ke port 3002 gagal',
+                latency_ms: Date.now() - startGp
+            };
+        }
+    }
+
+    // Test ShopeePay
+    const startSp = Date.now();
+    try {
+        const spRes = await axios.get(`${shoppepayUrl}/`, {
+            headers: { 'x-api-key': shoppepayKey },
+            timeout: 4000
+        });
+        results.shoppepay = {
+            online: true,
+            message: 'ShopeePay Gateway Online & Siap',
+            latency_ms: Date.now() - startSp,
+            details: spRes.data
+        };
+    } catch (e) {
+        results.shoppepay = {
+            online: false,
+            message: e.response?.data?.message || e.message || 'Koneksi ke port 3003 gagal',
+            latency_ms: Date.now() - startSp
+        };
+    }
+
+    res.json({ status: true, data: results });
+});
+
 // 20. WhatsApp & Fonnte Settings
 router.get('/admin/whatsapp-settings', isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -2008,10 +2144,7 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
         const cleanCust = waBot.cleanPhone ? waBot.cleanPhone(targetCustomer) : targetCustomer;
 
         const rawAdmins = await waBot.getAdminPhoneNumbers();
-        const testAdmins = (rawAdmins || []).filter(num => {
-            const cp = (num || "").replace(/\D/g, "");
-            return cp && !cp.endsWith("70");
-        });
+        const testAdmins = (rawAdmins || []).filter(Boolean);
 
         // Purge stale contact sessions to force fresh Signal E2E prekey exchange with WhatsApp servers
         if (typeof waBot.purgeStalePeerSessions === 'function') {
@@ -2039,7 +2172,7 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
             logs.push({ target: `Admin (${adminP})`, test: "Test 1 Message", result: resAdmin });
         }
 
-        // 2. New Order Notification Test
+        // 2. New Order Notification Test (Add Roamer)
         const dummyNum = Math.floor(1000 + Math.random() * 9000);
         const mockOrder = {
             id: `TEST-IMEI-${dummyNum}`,
@@ -2060,7 +2193,64 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
             logs.push({ target: "Admin & Customer", test: "Test 2 notifyNewOrder", status: "error", error: e.message });
         }
 
-        // 3. Order Processing Notification Test
+        // 3. Notifikasi Pembayaran Sukses GoPay ke Admin & Telegram
+        try {
+            if (typeof waBot.notifyPaymentSuccessToAdmin === 'function') {
+                const resPayGoPay = await waBot.notifyPaymentSuccessToAdmin({
+                    userName: "Budi (Pelanggan GoPay)",
+                    userContact: cleanCust || "085156692166",
+                    amount: 250000,
+                    trxId: `INV-GOPAY-${dummyNum}`,
+                    refTag: `TEST-GP-${dummyNum}`,
+                    gatewayUsed: 'gopay',
+                    serviceOrItem: 'Add Roamer 3 Bulan Garansi',
+                    nextGateway: 'ShopeePay Gateway'
+                });
+                logs.push({ target: "Admin WA & Telegram", test: "Test 3 Payment GoPay", status: "success", result: resPayGoPay });
+            }
+        } catch (e) {
+            logs.push({ target: "Admin WA & Telegram", test: "Test 3 Payment GoPay", status: "error", error: e.message });
+        }
+
+        // 4. Notifikasi Pembayaran Sukses ShopeePay ke Admin & Telegram
+        try {
+            if (typeof waBot.notifyPaymentSuccessToAdmin === 'function') {
+                const resPayShopee = await waBot.notifyPaymentSuccessToAdmin({
+                    userName: "Siti (Pelanggan ShopeePay)",
+                    userContact: cleanCust || "085156692166",
+                    amount: 150000,
+                    trxId: `INV-SHOPEE-${dummyNum}`,
+                    refTag: `TEST-SP-${dummyNum}`,
+                    gatewayUsed: 'shopeepay',
+                    serviceOrItem: 'Cek Riwayat IMEI (CEIR GO)',
+                    nextGateway: 'GoPay Gateway'
+                });
+                logs.push({ target: "Admin WA & Telegram", test: "Test 4 Payment ShopeePay", status: "success", result: resPayShopee });
+            }
+        } catch (e) {
+            logs.push({ target: "Admin WA & Telegram", test: "Test 4 Payment ShopeePay", status: "error", error: e.message });
+        }
+
+        // 5. Notifikasi Klaim Garansi Sinyal ke Admin
+        try {
+            if (typeof waBot.notifyWarrantyClaim === 'function') {
+                const resWarranty = await waBot.notifyWarrantyClaim({
+                    imei: "351234161234567",
+                    packageName: "Add Roamer 3 Bulan Garansi",
+                    customerName: "Budi (Testing Klaim)",
+                    customerPhone: cleanCust,
+                    issueDescription: "Sinyal hilang setelah update iOS, butuh tembak ulang.",
+                    warrantyText: "Garansi Aktif (Sisa 45 Hari)",
+                    ticketId: `WRN-${dummyNum}`,
+                    trxId: `TRX-${dummyNum}`
+                });
+                logs.push({ target: "Admin WhatsApp", test: "Test 5 Warranty Claim", status: "success", result: resWarranty });
+            }
+        } catch (e) {
+            logs.push({ target: "Admin WhatsApp", test: "Test 5 Warranty Claim", status: "error", error: e.message });
+        }
+
+        // 6. Order Processing Notification Test ke Pelanggan
         const mockTrx = {
             id: mockOrder.id,
             userName: mockOrder.userName,
@@ -2073,39 +2263,23 @@ router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/wha
 
         try {
             await waBot.notifyCustomerOnStatusChange(mockTrx, "processing", "Pesanan sedang dikerjakan server teknisi.");
-            logs.push({ target: `Customer (${cleanCust})`, test: "Test 3 Processing Status", status: "success" });
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 6 Processing Status", status: "success" });
         } catch (e) {
-            logs.push({ target: `Customer (${cleanCust})`, test: "Test 3 Processing Status", status: "error", error: e.message });
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 6 Processing Status", status: "error", error: e.message });
         }
 
-        // 4. Order Success Notification Test
+        // 7. Order Success Notification Test ke Pelanggan
         try {
             await waBot.notifyCustomerOnStatusChange({ ...mockTrx, platformFee: 250000 }, "success", "Sinyal telah aktif All Operator. Silakan restart HP Kakak!");
-            logs.push({ target: `Customer (${cleanCust})`, test: "Test 4 Success Status", status: "success" });
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 7 Success Status", status: "success" });
         } catch (e) {
-            logs.push({ target: `Customer (${cleanCust})`, test: "Test 4 Success Status", status: "error", error: e.message });
-        }
-
-        // 5. Gateway Subscription Active Notification Test
-        const mockGw = {
-            id: `TEST-GW-${dummyNum}`,
-            userName: mockOrder.userName,
-            packageName: "Langganan QRIS Auto Gateway (30 Hari)",
-            targetPhone: cleanCust,
-            customerPhone: cleanCust,
-            userId: "user_test"
-        };
-        try {
-            await waBot.notifyCustomerOnStatusChange(mockGw, "success", "API Key Gateway QRIS telah aktif selama 30 hari.");
-            logs.push({ target: `Customer (${cleanCust})`, test: "Test 5 Gateway Subscription", status: "success" });
-        } catch (e) {
-            logs.push({ target: `Customer (${cleanCust})`, test: "Test 5 Gateway Subscription", status: "error", error: e.message });
+            logs.push({ target: `Customer (${cleanCust})`, test: "Test 7 Success Status", status: "error", error: e.message });
         }
 
         res.json({
             status: true,
             success: true,
-            message: `Seluruh pengujian pesan WhatsApp Bot telah selesai dikirim ke pelanggan (${cleanCust}) dan admin.`,
+            message: `Seluruh pengujian pesan WhatsApp Bot telah selesai dikirim ke pelanggan (${cleanCust}) dan seluruh admin.`,
             customerTarget: cleanCust,
             adminTargets: testAdmins,
             logs

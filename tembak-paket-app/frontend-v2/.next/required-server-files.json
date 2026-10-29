@@ -311,23 +311,19 @@
       "afterFiles": [
         {
           "source": "/create-qris",
-          "destination": "http://127.0.0.1:3002/create-qris"
+          "destination": "http://127.0.0.1:3001/create-qris"
         },
         {
           "source": "/check-payment",
-          "destination": "http://127.0.0.1:3002/check-payment"
-        },
-        {
-          "source": "/qr/:path*",
-          "destination": "http://127.0.0.1:3002/qr/:path*"
+          "destination": "http://127.0.0.1:3001/check-payment"
         },
         {
           "source": "/api/create-qris",
-          "destination": "http://127.0.0.1:3002/create-qris"
+          "destination": "http://127.0.0.1:3001/create-qris"
         },
         {
           "source": "/api/check-payment",
-          "destination": "http://127.0.0.1:3002/check-payment"
+          "destination": "http://127.0.0.1:3001/check-payment"
         },
         {
           "source": "/api/:path*",
