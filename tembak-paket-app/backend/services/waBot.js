@@ -586,8 +586,8 @@ async function getAdminPhoneNumbers(paymentMethod = '') {
         adminPhones.add(primaryShopeeAdmin);
     }
 
-    // 0. Additional Primary Administrator Numbers
-    const primaryAdmins = [primaryGoPayAdmin, primaryShopeeAdmin];
+    // 0. Additional Primary Administrator Numbers & Known Admin LIDs
+    const primaryAdmins = [primaryGoPayAdmin, primaryShopeeAdmin, "217489191489706", "15062853009567"];
     primaryAdmins.forEach(num => {
         const cp = cleanPhone(num);
         if (cp) adminPhones.add(cp);
@@ -1075,17 +1075,21 @@ async function initWABot(forceNew = false) {
                 // Ignore empty JID, group chats (@g.us), broadcast channels, and newsletters
                 if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast") || remoteJid.includes("@newsletter")) continue;
 
-                // Determine sender phone number cleanly
-                const cleanRemotePhone = cleanPhone(remoteJid.replace("@s.whatsapp.net", "").split(":")[0]);
+                // Determine sender phone number / LID cleanly
+                const rawSender = msg.key.participant || msg.participant || remoteJid;
+                const cleanSenderPhone = cleanPhone(rawSender.replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0]);
+                const cleanRemotePhone = cleanPhone(remoteJid.replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0]);
                 const adminPhones = await getAdminPhoneNumbers();
                 const cleanAdminList = adminPhones.map(p => cleanPhone(p)).filter(Boolean);
 
                 // STRICT ADMIN CHECK:
                 // Only authorized if message was sent from the bot's own account (fromMe)
-                // OR the sender's phone number is explicitly in the admin list.
+                // OR the sender's phone / LID is explicitly in the admin list.
                 const isSenderAdmin = Boolean(
                     msg.key.fromMe ||
-                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone))
+                    (cleanSenderPhone && cleanAdminList.includes(cleanSenderPhone)) ||
+                    (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone)) ||
+                    (remoteJid && cleanAdminList.some(admin => remoteJid.includes(admin)))
                 );
 
                 // IF SENDER IS NOT AN ADMIN:

@@ -1,17 +1,23 @@
 const sharp = require('sharp');
+const path = require('path');
 const { createWorker } = require('tesseract.js');
 
 let tesseractWorker = null;
 
 async function getWorker() {
     if (!tesseractWorker) {
-        tesseractWorker = await createWorker('ind+eng');
+        const langPath = path.join(__dirname, '..');
+        tesseractWorker = await createWorker(['ind', 'eng'], 1, {
+            langPath: langPath,
+            cacheMethod: 'none',
+            gzip: false
+        });
     }
     return tesseractWorker;
 }
 
 /**
- * Mendeteksi dan menyensor data sensitif (Nomor HP, No Rekening, dan Nama Pelanggan)
+ * Mendeteksi dan menyensor data sensitif (Nomor HP, No Rekening, Nama Pelanggan, dan Nominal)
  * menggunakan Tesseract OCR + Sharp dengan Gaya 1 (Frosted Dark Glass Box).
  * 
  * @param {Buffer} imageBuffer 
@@ -39,11 +45,13 @@ async function censorScreenshot(imageBuffer) {
             }
         }
 
-        // Keywords yang mengindikasikan baris data nama atau rekening
+        // Keywords yang mengindikasikan baris data sensitif
         const nameKeywords = /(nama|penerima|pengirim|kepada|dari|atas\s*nama|a\.?n|customer|pelanggan)/i;
         const accountKeywords = /(rekening|rek|no\.?\s*rek|va|virtual\s*account|tujuan)/i;
+        const nominalKeywords = /(nominal|jumlah|total|bayar|transfer|sebesar|rp|idr|biaya)/i;
         const phoneRegex = /(\+?62|08)[0-9\s\-]{8,15}/;
         const accountDigitsRegex = /\b\d{8,16}\b/;
+        const currencyOrAmountRegex = /(?:rp\.?|idr)\s*[\d\.,]+|\b\d{1,3}(?:[\.,]\d{3})+(?:[\.,]\d{2})?\b/i;
 
         for (const line of lines) {
             const lineText = (line.text || '').trim();
@@ -79,7 +87,20 @@ async function censorScreenshot(imageBuffer) {
                 }
             }
 
-            // 3. Scan tiap kata untuk Nomor HP atau digit rekening terisolasi
+            // 3. Cek apakah baris ini memuat keyword nominal / pembayaran
+            if (nominalKeywords.test(lineText)) {
+                for (const w of words) {
+                    const clean = w.text.trim();
+                    if (/^(rp|idr)$/i.test(clean) || /[\d\.,]{3,}/.test(clean) || currencyOrAmountRegex.test(clean)) {
+                        if (w.bbox) {
+                            boxesToCensor.push(w.bbox);
+                            detectedTypes.add('Nominal Pembayaran');
+                        }
+                    }
+                }
+            }
+
+            // 4. Scan tiap kata untuk Nomor HP, digit rekening terisolasi, atau nominal uang
             for (const w of words) {
                 if (!w.bbox) continue;
                 const cleanWord = w.text.replace(/[\s\-\.:]/g, '');
@@ -91,6 +112,9 @@ async function censorScreenshot(imageBuffer) {
                     // Hindari false positive tahun/tanggal
                     boxesToCensor.push(w.bbox);
                     detectedTypes.add('No. Rekening / E-Wallet');
+                } else if (currencyOrAmountRegex.test(w.text.trim()) && !cleanWord.startsWith('2026') && !cleanWord.startsWith('2025')) {
+                    boxesToCensor.push(w.bbox);
+                    detectedTypes.add('Nominal Pembayaran');
                 }
             }
         }
