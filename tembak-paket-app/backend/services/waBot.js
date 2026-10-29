@@ -1247,11 +1247,11 @@ async function processAdminImageBatch(remoteJid) {
 
                 if (!messageText) continue;
 
-                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses, open, igsession)
+                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses, open, igsession, setopen, jadwalopen)
                 const isCommand = (
                     messageText.startsWith(".") ||
                     messageText.startsWith("#") ||
-                    /^(0|1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|open|igsession)\b/i.test(messageText)
+                    /^(0|1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|open|igsession|setopen|jadwalopen|startopen|stopopen)\b/i.test(messageText)
                 );
                 if (!isCommand) continue;
 
@@ -1541,6 +1541,103 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         return;
     }
 
+    // Command Khusus: Atur Jam Posting Story Open (#setopen 10:00 / .setopen 10:00)
+    if (rawCleanText.startsWith(".setopen") || rawCleanText.startsWith("#setopen") || rawCleanText.startsWith("setopen")) {
+        const arg = text.trim().replace(/^(\.setopen|#setopen|setopen)\s*/i, '').trim().replace('.', ':');
+        const timeMatch = arg.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+        if (!timeMatch) {
+            await replyWhatsApp(replyJid,
+                "ℹ️ *CARA ATUR JADWAL POSTING STORY OPEN:*\n\n" +
+                "Ketik: *#setopen [jam:menit]*\n\n" +
+                "Contoh:\n" +
+                "• *#setopen 10:00* ➔ Terbit jam 10 pagi WIB\n" +
+                "• *#setopen 08:30* ➔ Terbit jam 8.30 pagi WIB\n" +
+                "• *#setopen 13:00* ➔ Terbit jam 1 siang WIB\n\n" +
+                "_Gunakan format 24 jam (WIB). Jadwal akan otomatis berjalan setiap hari._" + BOT_FOOTER
+            );
+            return;
+        }
+
+        const hour = timeMatch[1].padStart(2, '0');
+        const min = timeMatch[2];
+        const formattedTime = `${hour}:${min}`;
+
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ig_open_story_time', ?)", [formattedTime]);
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ig_open_story_enabled', 'true')");
+        await dbRun("DELETE FROM settings WHERE key = 'ig_open_story_last_run'");
+
+        await replyWhatsApp(replyJid,
+            `✅ *JADWAL POSTING STORY OPEN BERHASIL DIATUR!*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `⏰ Jam Posting: *${formattedTime} WIB* (Setiap Hari)\n` +
+            `🔘 Status: *🟢 Aktif (Otomatis)*\n` +
+            `🎯 Target Akun: *@unlocksinyalsolo*\n\n` +
+            `Story 'WE ARE OPEN' akan otomatis diposting setiap hari pada pukul *${formattedTime} WIB*.\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `Perintah lainnya:\n` +
+            `• *#jadwalopen* ➔ Cek jadwal aktif saat ini\n` +
+            `• *#stopopen* ➔ Nonaktifkan posting otomatis\n` +
+            `• *#startopen* ➔ Aktifkan kembali posting otomatis\n` +
+            `• *#open* ➔ Post sekarang juga secara manual` + BOT_FOOTER
+        );
+        return;
+    }
+
+    // Command Khusus: Cek Jadwal Story Open (#jadwalopen / .jadwalopen)
+    if (rawCleanText === "#jadwalopen" || rawCleanText === ".jadwalopen" || rawCleanText === "jadwalopen" || rawCleanText === "jadwal open") {
+        const timeRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_time'");
+        const enabledRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_enabled'");
+        const lastRunRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_last_run'");
+
+        const scheduledTime = timeRow?.value || '10:00';
+        const isEnabled = (enabledRow?.value ?? 'true') === 'true';
+        const lastRun = lastRunRow?.value || 'Belum terbit hari ini';
+
+        await replyWhatsApp(replyJid,
+            `📅 *JADWAL POSTING STORY OPEN TOKO*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `🔘 Status Otomatis: *${isEnabled ? "🟢 Aktif" : "🔴 Nonaktif"}*\n` +
+            `⏰ Jam Terbit: *${scheduledTime} WIB* (Setiap Hari)\n` +
+            `🗓️ Terakhir Terbit: *${lastRun}*\n` +
+            `🎯 Target Akun: *@unlocksinyalsolo*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `Untuk mengubah jam terbit, ketik contoh:\n` +
+            `👉 *#setopen 10:00* (untuk jam 10 pagi WIB)\n` +
+            `👉 *#setopen 09:00* (untuk jam 9 pagi WIB)\n\n` +
+            `Perintah cepat:\n` +
+            `• *#stopopen* ➔ Matikan posting otomatis\n` +
+            `• *#startopen* ➔ Hidupkan posting otomatis\n` +
+            `• *#open* ➔ Post sekarang secara manual` + BOT_FOOTER
+        );
+        return;
+    }
+
+    // Command Khusus: Stop / Start Story Open Auto-post
+    if (rawCleanText === "#stopopen" || rawCleanText === ".stopopen" || rawCleanText === "stopopen") {
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ig_open_story_enabled', 'false')");
+        await replyWhatsApp(replyJid,
+            `🛑 *POSTING STORY OPEN OTOMATIS DINONAKTIFKAN*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `Story open tidak akan diposting otomatis sampai Anda mengaktifkannya kembali.\n\n` +
+            `Ketik *#startopen* kapan saja untuk mengaktifkannya kembali.` + BOT_FOOTER
+        );
+        return;
+    }
+
+    if (rawCleanText === "#startopen" || rawCleanText === ".startopen" || rawCleanText === "startopen") {
+        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ig_open_story_enabled', 'true')");
+        const timeRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_time'");
+        const scheduledTime = timeRow?.value || '10:00';
+
+        await replyWhatsApp(replyJid,
+            `🟢 *POSTING STORY OPEN OTOMATIS DIAKTIFKAN*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `Story open akan otomatis terbit setiap hari pada pukul *${scheduledTime} WIB*.\n\n` +
+            `Ketik *#setopen [jam]* jika ingin mengubah jam terbit.` + BOT_FOOTER
+        );
+        return;
+    }
+
     // Command Khusus: Auto Story Open Toko (#open / .open / open)
     if (rawCleanText === "#open" || rawCleanText === ".open" || rawCleanText === "open") {
         await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan banner & mempublikasikan Story 'Ry-ITSolutions BUKA HARI INI' ke @unlocksinyalsolo...*");
@@ -1682,7 +1779,13 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             `• *.gagal <ID_ORDER> <ALASAN>*\n` +
             `  Membatalkan pesanan (status FAILED) & refund saldo user otomatis.\n\n` +
             `• *.status <ID_ORDER>*\n` +
-            `  Mengecek status & rincian pesanan saat ini.` +
+            `  Mengecek status & rincian pesanan saat ini.\n\n` +
+            `📸 *PUBLIKASI INSTAGRAM (@unlocksinyalsolo):*\n` +
+            `• *#open* ➔ Post Story Open toko sekarang secara manual\n` +
+            `• *#setopen [jam]* ➔ Atur jam posting Story Open harian (Contoh: #setopen 10:00)\n` +
+            `• *#jadwalopen* ➔ Cek status & jam posting Story Open\n` +
+            `• *#stopopen* / *#startopen* ➔ Nonaktifkan/Aktifkan jadwal otomatis\n` +
+            `• Kirim Foto Bukti ➔ Auto-sensor data sensitif & siap publish ke Story/Feed` +
             BOT_FOOTER;
         await replyWhatsApp(replyJid, helpMsg);
         return;
@@ -2003,6 +2106,38 @@ async function replyWhatsApp(jid, text) {
         console.error(`[WABot] Gagal mengirim balasan ke ${jid}:`, e.message);
     }
 }
+
+/**
+ * Notifikasi ke WhatsApp Admin saat Story Open Toko berhasil diposting otomatis via Cron
+ */
+async function notifyAdminStoryOpen(postResult) {
+    try {
+        const adminPhones = await getAdminPhoneNumbers();
+        const timeWIB = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+        const dateWIB = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+        const msg = `📢 *STORY OPEN TOKO OTOMATIS BERHASIL TERBIT!*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `🗓️ *Hari/Tanggal:* ${dateWIB}\n` +
+            `⏰ *Waktu Terbit:* ${timeWIB} WIB\n` +
+            `🎯 *Target Akun:* @unlocksinyalsolo\n` +
+            `🔒 *Layanan Terpasang:*\n` +
+            `  • ⚡ Add Roamer & Unlock Sinyal\n` +
+            `  • 🔍 Cek Status CEIR & Garansi\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `_Diposting otomatis oleh Cron Scheduler Ry-ITSolutions._` +
+            BOT_FOOTER;
+
+        for (const phone of adminPhones) {
+            try {
+                await sendAndStoreMessage(`${phone}@s.whatsapp.net`, { text: msg });
+            } catch (e) {}
+        }
+    } catch (err) {
+        console.error('[WABot] Gagal mengirim notifikasi story open ke admin:', err.message);
+    }
+}
+
 
 /**
  * Helper khusus mengirim pesan media (gambar) balasan ke admin
@@ -3030,6 +3165,7 @@ module.exports = {
     getBotPhoneNumber,
     getAdminPhoneNumbers,
     testAdminNotification,
+    notifyAdminStoryOpen,
     notifyPaymentSuccessToAdmin,
     notifyWarrantyClaim,
     recordChatMessage,

@@ -324,6 +324,60 @@ function initSchedulers() {
             console.error('[Scheduler][IgSync] Error:', e.message);
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
+    // 6. Auto-post Instagram Story Open Toko (Sesuai jam settingan admin via WhatsApp Bot)
+    cron.schedule('* * * * *', async () => {
+        try {
+            const enabledRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_enabled'");
+            const isEnabled = (enabledRow?.value ?? 'true') === 'true';
+            if (!isEnabled) return;
+
+            const timeRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_time'");
+            const scheduledTime = timeRow?.value || '10:00'; // Default jam 10.00 WIB
+
+            const now = new Date();
+            const nowTimeWIB = now.toLocaleTimeString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }).replace('.', ':');
+
+            const todayDateWIB = now.toLocaleDateString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+
+            if (nowTimeWIB === scheduledTime) {
+                const lastRunRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_last_run'");
+                if (lastRunRow?.value === todayDateWIB) {
+                    return; // Sudah terbit hari ini, hindari duplikasi
+                }
+
+                console.log(`[Scheduler][IGStoryOpen] Menjalankan jadwal Story Open (${scheduledTime} WIB) pada ${todayDateWIB}...`);
+
+                // Tandai tanggal hari ini agar tidak dipanggil ulang pada menit yang sama
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ig_open_story_last_run', ?)", [todayDateWIB]);
+
+                const { publishOpenStory } = require('../services/igDirectService');
+                const postResult = await publishOpenStory();
+
+                console.log('[Scheduler][IGStoryOpen] ✅ Story Open berhasil diposting otomatis ke Instagram:', postResult?.mediaId);
+
+                // Kirim konfirmasi notifikasi ke WhatsApp Admin
+                try {
+                    const { notifyAdminStoryOpen } = require('../services/waBot');
+                    await notifyAdminStoryOpen(postResult);
+                } catch (errNotify) {
+                    console.error('[Scheduler][IGStoryOpen] Gagal notifikasi WA admin:', errNotify.message);
+                }
+            }
+        } catch (e) {
+            console.error('[Scheduler][IGStoryOpen] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
 }
 
 module.exports = {
