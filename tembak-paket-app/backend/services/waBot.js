@@ -25,10 +25,25 @@ const {
     downloadMediaMessage
 } = require("@whiskeysockets/baileys");
 const { censorScreenshot } = require("./censorService");
-const { publishToStory, publishToFeed, publishOpenStory, saveSessionFromCookie } = require("./igDirectService");
+const { publishToStory, publishToFeed, publishOpenStory, saveSessionFromCookie, getUniqueTracks } = require("./igDirectService");
 
-// Pending admin testimonial sessions: remoteJid -> { buffer, timestamp, caption }
+// Pending admin testimonial sessions: remoteJid -> { items: [ { buffer, track, caption, boxesCount } ], timestamp }
 const pendingTestimonials = new Map();
+// Pending admin image upload batches (for multi-image send): remoteJid -> { timer, rawMsgs: [] }
+const adminImageBatches = new Map();
+// Cache IDs sent by the bot to prevent self-triggering loops
+const botSentMsgIds = new Set();
+const processedMessageIds = new Set();
+function isMsgDuplicate(id) {
+    if (!id) return false;
+    if (processedMessageIds.has(id)) return true;
+    processedMessageIds.add(id);
+    if (processedMessageIds.size > 3000) {
+        const first = processedMessageIds.values().next().value;
+        processedMessageIds.delete(first);
+    }
+    return false;
+}
 const pino = require("pino");
 const QRCode = require("qrcode");
 const path = require("path");
@@ -1071,6 +1086,11 @@ async function initWABot(forceNew = false) {
             for (const msg of messages) {
                 if (!msg.message) continue;
 
+                const msgId = msg.key?.id;
+                // Ignore messages sent by the bot itself or already processed
+                if (msgId && botSentMsgIds.has(msgId)) continue;
+                if (isMsgDuplicate(msgId)) continue;
+
                 const remoteJid = msg.key.remoteJid;
                 // Ignore empty JID, group chats (@g.us), broadcast channels, and newsletters
                 if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast") || remoteJid.includes("@newsletter")) continue;
@@ -1099,50 +1119,122 @@ async function initWABot(forceNew = false) {
                     continue;
                 }
 
+/**
+ * Memproses sekumpulan (batch) foto testimoni yang dikirim admin sekaligus
+ */
+async function processAdminImageBatch(remoteJid) {
+    const batch = adminImageBatches.get(remoteJid);
+    if (!batch || batch.rawMsgs.length === 0) return;
+    adminImageBatches.delete(remoteJid);
+
+    const msgsToProcess = [...batch.rawMsgs];
+    const totalCount = msgsToProcess.length;
+
+    logWABot(`[WABot Testi] Memproses batch ${totalCount} gambar testimoni dari ${remoteJid}...`, "info");
+
+    const processedItems = [];
+    // Dapatkan lagu unik yang berbeda-beda satu sama lain untuk setiap gambar
+    const tracks = getUniqueTracks(totalCount);
+
+    for (let i = 0; i < msgsToProcess.length; i++) {
+        const msg = msgsToProcess[i];
+        try {
+            const mediaBuffer = await downloadMediaMessage(
+                msg,
+                'buffer',
+                {},
+                { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
+            );
+
+            const { censoredBuffer, boxesCount, detectedTypes } = await censorScreenshot(mediaBuffer);
+            const rawCaption = (msg.message?.imageMessage?.caption || '').trim();
+
+            processedItems.push({
+                buffer: censoredBuffer,
+                boxesCount,
+                detectedTypes,
+                caption: rawCaption,
+                track: tracks[i]
+            });
+        } catch (errImg) {
+            console.error(`[WABot Testi] Gagal memproses gambar ke-${i + 1}:`, errImg.message);
+        }
+    }
+
+    if (processedItems.length === 0) {
+        await replyWhatsApp(remoteJid, "❌ *Gagal memproses gambar testimoni yang dikirim.*" + BOT_FOOTER);
+        return;
+    }
+
+    // Simpan batch ke pendingTestimonials
+    pendingTestimonials.set(remoteJid, {
+        items: processedItems,
+        timestamp: Date.now()
+    });
+
+    // Kirim setiap gambar yang telah disensor kembali ke WhatsApp admin
+    for (let i = 0; i < processedItems.length; i++) {
+        const itm = processedItems[i];
+        await sendAdminMediaReply(remoteJid, {
+            image: itm.buffer,
+            caption: `📸 *HASIL BLUR FOTO ${i + 1}/${processedItems.length}*\n🎵 *Musik:* ${itm.track.title} - ${itm.track.artist}\n🔒 *Area Blur:* ${itm.boxesCount} area aman disensor`
+        });
+        if (i < processedItems.length - 1) {
+            await new Promise(r => setTimeout(r, 600));
+        }
+    }
+
+    // Tampilkan rangkuman lagu yang berbeda-beda dan opsi posting terpisah
+    const trackLines = processedItems.map((itm, idx) => 
+        `• Foto ${idx + 1}: 🎵 *${itm.track.title}* (${itm.track.artist})`
+    ).join("\n");
+
+    const reviewPrompt = 
+        `📸 *SELESAI MENYENSOR ${processedItems.length} FOTO TESTIMONI*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🎶 *Setiap foto disematkan musik viral berbeda:*\n` +
+        trackLines + `\n\n` +
+        `🎯 *Target Akun:* *@unlocksinyalsolo*\n\n` +
+        `Silakan balas angka untuk mempublikasikan:\n` +
+        `1️⃣ Balas *1* ➔ Post ke *Instagram Story* (Video 15s bersuara musik nyata 🔊, terbit terpisah)\n` +
+        `2️⃣ Balas *2* ➔ Post ke *Instagram Feed* (masing-masing terbit sendiri terpisah)\n` +
+        `3️⃣ Balas *3* ➔ Post ke *Story & Feed*\n` +
+        `0️⃣ Balas *0* ➔ Batalkan\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `_Sesi konfirmasi berlaku selama 15 menit._` +
+        BOT_FOOTER;
+
+    await replyWhatsApp(remoteJid, reviewPrompt);
+}
+
                 // 1. ADMIN IMAGE HANDLING: Testimoni auto-censor & publish IG
                 if (msg.message?.imageMessage) {
-                    try {
-                        logWABot(`[WABot Testi] Menerima gambar testimoni dari Admin ${cleanRemotePhone || remoteJid}. Memulai auto-censor...`, "info");
-                        await replyWhatsApp(remoteJid, "⏳ *Sedang mendownload & menyensor data sensitif (Gaya 1)...*\nMohon tunggu sebentar.");
+                    // NEVER process outgoing image messages sent by the bot
+                    if (msg.key.fromMe) continue;
 
-                        const mediaBuffer = await downloadMediaMessage(
-                            msg,
-                            'buffer',
-                            {},
-                            { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
-                        );
-
-                        const { censoredBuffer, boxesCount, detectedTypes } = await censorScreenshot(mediaBuffer);
-
-                        pendingTestimonials.set(remoteJid, {
-                            buffer: censoredBuffer,
-                            timestamp: Date.now(),
-                            caption: (msg.message.imageMessage.caption || '').trim()
-                        });
-
-                        const captionTypes = detectedTypes.length > 0 ? detectedTypes.join(', ') : 'Data Sensitif';
-                        const reviewPrompt = 
-                            `📸 *HASIL SENSOR BUKTI TESTIMONI (GAYA 1)*\n` +
-                            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                            `🔒 *Sensor:* ${captionTypes} (${boxesCount} area aman disensor)\n` +
-                            `🎯 *Target Akun:* *@unlocksinyalsolo*\n\n` +
-                            `Silakan balas angka untuk mempublikasikan:\n` +
-                            `1️⃣ Balas *1* ➔ Post ke *Instagram Story*\n` +
-                            `2️⃣ Balas *2* ➔ Post ke *Instagram Feed*\n` +
-                            `3️⃣ Balas *3* ➔ Post ke *Story & Feed*\n` +
-                            `0️⃣ Balas *0* ➔ Batalkan\n` +
-                            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                            `_Sesi konfirmasi berlaku selama 15 menit._` +
-                            BOT_FOOTER;
-
-                        await sendAdminMediaReply(remoteJid, {
-                            image: censoredBuffer,
-                            caption: reviewPrompt
-                        });
-                    } catch (errImg) {
-                        console.error("[WABot Testi] Gagal memproses gambar admin:", errImg.message);
-                        await replyWhatsApp(remoteJid, `❌ *Gagal memproses gambar:* ${errImg.message}`);
+                    const rawCaption = (msg.message.imageMessage.caption || '').trim();
+                    // Double safety: ignore bot result messages
+                    if (rawCaption.includes('HASIL BLUR FOTO') || rawCaption.includes('HASIL SENSOR BUKTI') || rawCaption.includes('Ry-ITSolutions')) {
+                        continue;
                     }
+
+                    // Multi-screenshot batch collector dengan debounce 2.2s
+                    let batch = adminImageBatches.get(remoteJid);
+                    if (!batch) {
+                        batch = { rawMsgs: [], timer: null };
+                        adminImageBatches.set(remoteJid, batch);
+                        await replyWhatsApp(remoteJid, "⏳ *Menerima foto testimoni...*\nSedang memproses & menerapkan efek blur data sensitif...");
+                    }
+
+                    batch.rawMsgs.push(msg);
+
+                    if (batch.timer) clearTimeout(batch.timer);
+                    batch.timer = setTimeout(() => {
+                        processAdminImageBatch(remoteJid).catch(err => {
+                            console.error("[WABot Testi] Error processing image batch:", err);
+                        });
+                    }, 2200);
+
                     continue;
                 }
 
@@ -1464,33 +1556,55 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
     // Command Khusus: Interaksi Publikasi Testimoni Instagram
     const pendingTesti = pendingTestimonials.get(replyJid);
     if (pendingTesti && (Date.now() - pendingTesti.timestamp < 15 * 60 * 1000)) {
+        const items = pendingTesti.items || (pendingTesti.buffer ? [pendingTesti] : []);
+        if (items.length === 0) return;
+
         if (rawCleanText === "1" || rawCleanText === ".1") {
-            await replyWhatsApp(replyJid, "⏳ *Sedang mempublikasikan testimoni ke Instagram Story (@unlocksinyalsolo)...*");
+            await replyWhatsApp(replyJid, `⏳ *Sedang merender video 15 detik & mempublikasikan ${items.length} postingan ke Instagram Story (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
             try {
-                await publishToStory(pendingTesti.buffer);
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    await publishToStory(item.buffer, item.track);
+                    if (i < items.length - 1) {
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                }
                 pendingTestimonials.delete(replyJid);
-                await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nBukti testimoni telah terbit di *Instagram Story* *@unlocksinyalsolo*! 🚀" + BOT_FOOTER);
+                await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) bukti testimoni telah terbit terpisah di *Instagram Story* *@unlocksinyalsolo* sebagai Video 15 detik dengan musik bersuara nyata! 🔊🎶` + BOT_FOOTER);
             } catch (errStory) {
                 await replyWhatsApp(replyJid, `❌ *Gagal posting ke Story:* ${errStory.message}` + BOT_FOOTER);
             }
             return;
         } else if (rawCleanText === "2" || rawCleanText === ".2") {
-            await replyWhatsApp(replyJid, "⏳ *Sedang mempublikasikan testimoni ke Instagram Feed (@unlocksinyalsolo)...*");
+            await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Feed satu per satu (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
             try {
-                await publishToFeed(pendingTesti.buffer, pendingTesti.caption);
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    await publishToFeed(item.buffer, item.caption, item.track);
+                    if (i < items.length - 1) {
+                        await new Promise(r => setTimeout(r, 2500));
+                    }
+                }
                 pendingTestimonials.delete(replyJid);
-                await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nBukti testimoni telah terbit di *Instagram Feed* *@unlocksinyalsolo*! 📸" + BOT_FOOTER);
+                await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) bukti testimoni telah terbit terpisah di *Instagram Feed* *@unlocksinyalsolo* masing-masing dengan lagu berbeda! 📸` + BOT_FOOTER);
             } catch (errFeed) {
                 await replyWhatsApp(replyJid, `❌ *Gagal posting ke Feed:* ${errFeed.message}` + BOT_FOOTER);
             }
             return;
         } else if (rawCleanText === "3" || rawCleanText === ".3") {
-            await replyWhatsApp(replyJid, "⏳ *Sedang mempublikasikan testimoni ke Instagram Story & Feed (@unlocksinyalsolo)...*");
+            await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Story & Feed (@unlocksinyalsolo)...*`);
             try {
-                await publishToStory(pendingTesti.buffer);
-                await publishToFeed(pendingTesti.buffer, pendingTesti.caption);
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    await publishToStory(item.buffer, item.track);
+                    await new Promise(r => setTimeout(r, 1500));
+                    await publishToFeed(item.buffer, item.caption, item.track);
+                    if (i < items.length - 1) {
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                }
                 pendingTestimonials.delete(replyJid);
-                await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nBukti testimoni telah terbit di *Story & Feed Instagram* *@unlocksinyalsolo*! 🎉" + BOT_FOOTER);
+                await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) postingan telah terbit di *Story & Feed Instagram* *@unlocksinyalsolo*! 🎉` + BOT_FOOTER);
             } catch (errBoth) {
                 await replyWhatsApp(replyJid, `❌ *Gagal posting:* ${errBoth.message}` + BOT_FOOTER);
             }
@@ -1771,6 +1885,7 @@ async function sendAndStoreMessage(targetJid, content, options = {}) {
         const sent = await sock.sendMessage(finalJid, finalContent, sendOpts);
         const actualId = sent?.key?.id;
         if (actualId) {
+            botSentMsgIds.add(actualId);
             await storeMessage(actualId, finalJid, sent.message || finalContent);
         }
         const textBody = finalContent.text || finalContent.caption || (finalContent.image ? "[Foto]" : "[Pesan]");
@@ -1901,7 +2016,10 @@ async function sendAdminMediaReply(jid, mediaPayload) {
             const clean = cleanPhone(rawPhone);
             cleanJid = `${clean}@s.whatsapp.net`;
         }
-        await sock.sendMessage(cleanJid, mediaPayload);
+        const sent = await sock.sendMessage(cleanJid, mediaPayload);
+        if (sent?.key?.id) {
+            botSentMsgIds.add(sent.key.id);
+        }
     } catch (e) {
         console.error(`[WABot] Gagal mengirim media balasan ke ${jid}:`, e.message);
     }

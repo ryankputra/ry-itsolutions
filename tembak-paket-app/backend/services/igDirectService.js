@@ -1,215 +1,522 @@
-const dns = require('dns');
-try { dns.setDefaultResultOrder('ipv4first'); } catch(e) {}
-const { IgApiClient } = require('instagram-private-api');
+const axios = require('axios');
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const { execFile } = require('child_process');
+const util = require('util');
+const execFileAsync = util.promisify(execFile);
+const os = require('os');
 
+const ipv4Agent = new https.Agent({ family: 4 });
 const SESSION_FILE = path.join(__dirname, '..', 'sessions', 'ig_session.json');
-let igClient = null;
+const AUDIO_DIR = path.resolve(__dirname, '..', '..', 'frontend-v2', 'public', 'audio', 'tiktok');
+
+// Katalog lagu trending viral lengkap dengan file MP3 lokal untuk Story Video bersuara (Opsi B)
+const TRENDING_TRACKS = [
+    { title: 'Komang', artist: 'Raim Laode', filename: 'komang.mp3' },
+    { title: 'Sial', artist: 'Mahalini', filename: 'sial.mp3' },
+    { title: 'Malam Pagi', artist: 'Saixse', filename: 'malampagi.mp3' },
+    { title: 'Gala Bunga Matahari', artist: 'Sal Priadi', filename: 'galabungamatahari.mp3' },
+    { title: 'Bohongi Hati', artist: 'Mahalini', filename: 'bohongihati.mp3' },
+    { title: 'Rayuan Perempuan Gila', artist: 'Nadin Amizah', filename: 'nadinamizah.mp3' },
+    { title: 'Karna Su Sayang', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3' },
+    { title: 'Cupid', artist: 'FIFTY FIFTY', filename: 'cupid.mp3' },
+    { title: 'Cikini Gondangdia', artist: 'Duo Anggun', filename: 'cikini.mp3' },
+    { title: 'Stecu Stecu', artist: 'Faris Adam', filename: 'stecustecu.mp3' },
+    { title: 'Tabrak Tabrak Masuk', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3' },
+    { title: 'DJ Alay Gaya Kaya Artis', artist: 'DJ Desa', filename: 'djalay.mp3' }
+];
+
+function getRandomTrack() {
+    return TRENDING_TRACKS[Math.floor(Math.random() * TRENDING_TRACKS.length)];
+}
+
+function getUniqueTracks(count) {
+    const shuffled = [...TRENDING_TRACKS].sort(() => 0.5 - Math.random());
+    const result = [];
+    for (let i = 0; i < count; i++) {
+        result.push(shuffled[i % shuffled.length]);
+    }
+    return result;
+}
 
 /**
- * Simpan dan validasi sesi Instagram menggunakan cookie sessionid
+ * Mengambil atau merefresh kredensial sesi Instagram aktif
  */
-async function saveSessionFromCookie(sessionId, customUsername) {
-    const username = (customUsername || process.env.IG_USERNAME || 'unlocksinyalsolo').replace('@', '').trim();
-    if (!sessionId) {
-        throw new Error('Session ID kosong.');
+function getSessionCredentials() {
+    let sessionId = process.env.IG_SESSIONID;
+    let dsUserId = process.env.IG_DS_USER_ID || '3501066702';
+
+    if (fs.existsSync(SESSION_FILE)) {
+        try {
+            const raw = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8'));
+            if (raw.sessionId) sessionId = raw.sessionId;
+            if (raw.dsUserId) dsUserId = raw.dsUserId;
+        } catch (e) {}
     }
 
+    if (!sessionId) {
+        // Default dari cookie akun @unlocksinyalsolo yang diberikan
+        sessionId = '3501066702%3Aetn7kTIhtVppCc%3A5%3AAYnosL0hbAOlqUQbO2w3cS4DDjmfMZIOVt_BZCwnDg';
+    }
+
+    // Pastikan sessionid di URL-encode jika belum
     const cleanSession = sessionId.trim().replace(/^sessionid=/, '');
     const decoded = decodeURIComponent(cleanSession);
-    const userIdMatch = decoded.match(/^(\d+):/);
-    const dsUserId = userIdMatch ? userIdMatch[1] : '';
+    const encoded = encodeURIComponent(decoded);
 
-    const ig = new IgApiClient();
-    ig.request.defaults = { family: 4, timeout: 25000 };
-    ig.state.generateDevice(username);
+    const userMatch = decoded.match(/^(\d+):/);
+    if (userMatch) dsUserId = userMatch[1];
 
-    const cookies = [
-        `sessionid=${encodeURIComponent(decoded)}; Domain=.instagram.com; Path=/; Secure; HttpOnly`,
-        `csrftoken=missing; Domain=.instagram.com; Path=/; Secure`
-    ];
-    if (dsUserId) {
-        cookies.push(`ds_user_id=${dsUserId}; Domain=.instagram.com; Path=/; Secure`);
-    }
+    return { sessionId: encoded, dsUserId };
+}
 
-    for (const c of cookies) {
-        await ig.state.cookieJar.setCookie(c, 'https://i.instagram.com/');
-    }
+/**
+ * Simpan dan perbarui sesi Instagram dari input admin
+ */
+async function saveSessionFromCookie(sessionId, customUsername) {
+    if (!sessionId) throw new Error('Session ID kosong.');
 
-    let activeUser = null;
-    try {
-        activeUser = await ig.account.currentUser();
-        console.log(`[IGDirect] ✅ Berhasil otentikasi via Cookie untuk @${activeUser.username} (PK: ${activeUser.pk})`);
-    } catch (e) {
-        if (dsUserId) {
-            try {
-                activeUser = await ig.user.info(dsUserId);
-            } catch (e2) {
-                throw new Error(`Sesi Cookie tidak valid atau ditolak Instagram: ${e.message}`);
-            }
-        } else {
-            throw new Error(`Sesi Cookie tidak valid atau ditolak Instagram: ${e.message}`);
-        }
-    }
+    const clean = sessionId.trim().replace(/^sessionid=/, '');
+    const decoded = decodeURIComponent(clean);
+    const encoded = encodeURIComponent(decoded);
+    const userMatch = decoded.match(/^(\d+):/);
+    const dsUserId = userMatch ? userMatch[1] : '3501066702';
 
-    // Simpan ke disk
-    const serialized = await ig.state.serialize();
-    delete serialized.constants;
+    const sessionData = {
+        sessionId: encoded,
+        dsUserId,
+        username: (customUsername || 'unlocksinyalsolo').replace('@', '').trim(),
+        savedAt: new Date().toISOString()
+    };
+
     fs.mkdirSync(path.dirname(SESSION_FILE), { recursive: true });
-    fs.writeFileSync(SESSION_FILE, JSON.stringify(serialized, null, 2));
+    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2));
 
-    igClient = ig;
+    console.log(`[IGDirect] ✅ Berhasil menyimpan sesi baru untuk ID: ${dsUserId}`);
     return {
         success: true,
-        username: activeUser?.username || username,
-        pk: activeUser?.pk || dsUserId
+        username: sessionData.username,
+        pk: dsUserId
     };
 }
 
 /**
- * Inisialisasi dan Login ke Instagram dengan Session Reuse
+ * Dapatkan CSRF Token segar dari instagram.com
  */
-async function getInstagramClient() {
-    const username = (process.env.IG_USERNAME || 'unlocksinyalsolo').replace('@', '').trim();
-    const password = process.env.IG_PASSWORD;
-    const envSessionId = process.env.IG_SESSIONID;
-
-    if (igClient) {
-        return igClient;
-    }
-
-    const ig = new IgApiClient();
-    ig.request.defaults = { family: 4, timeout: 25000 };
-    ig.state.generateDevice(username);
-
-    // 1. Coba restore session jika file sesi sudah tersimpan
-    if (fs.existsSync(SESSION_FILE)) {
-        try {
-            const rawSession = fs.readFileSync(SESSION_FILE, 'utf-8');
-            const sessionData = JSON.parse(rawSession);
-            await ig.state.deserialize(sessionData);
-            console.log('[IGDirect] Berhasil memuat sesi login tersimpan untuk @' + username);
-            igClient = ig;
-            return igClient;
-        } catch (e) {
-            console.warn('[IGDirect] Gagal me-restore sesi IG lama:', e.message);
-        }
-    }
-
-    // 2. Coba login menggunakan IG_SESSIONID jika tersedia di .env
-    if (envSessionId) {
-        console.log('[IGDirect] Menghubungkan menggunakan IG_SESSIONID dari .env...');
-        try {
-            await saveSessionFromCookie(envSessionId, username);
-            return igClient;
-        } catch (eCookie) {
-            console.warn('[IGDirect] IG_SESSIONID di .env gagal digunakan:', eCookie.message);
-        }
-    }
-
-    // 3. Fallback: Login via Password jika ada
-    if (!password) {
-        throw new Error('IG_PASSWORD atau IG_SESSIONID belum dikonfigurasi di file .env');
-    }
-
-    console.log(`[IGDirect] Melakukan login ke Instagram sebagai @${username}...`);
-    try {
-        await ig.launcher.preLoginSync().catch(() => {});
-        const loggedInUser = await ig.account.login(username, password);
-
-        // Simpan sesi ke disk
-        const serialized = await ig.state.serialize();
-        delete serialized.constants;
-        fs.mkdirSync(path.dirname(SESSION_FILE), { recursive: true });
-        fs.writeFileSync(SESSION_FILE, JSON.stringify(serialized, null, 2));
-
-        console.log(`[IGDirect] ✅ Berhasil login ke Instagram: @${loggedInUser.username} (PK: ${loggedInUser.pk})`);
-        igClient = ig;
-        return igClient;
-    } catch (err) {
-        console.error('[IGDirect] ❌ Gagal login ke Instagram:', err.message);
-        if (err.message?.includes('needs_upgrade') || err.message?.includes('checkpoint')) {
-            throw new Error(
-                `Instagram memerlukan verifikasi / checkpoint untuk perangkat/IP ini.\n` +
-                `Silakan login via browser di handphone/laptop ke akun @${username}, lalu salin nilai cookie 'sessionid' dan kirim ke WhatsApp bot:\n` +
-                `👉 *.igsession <sessionid>*`
-            );
-        }
-        throw err;
-    }
-}
-
-/**
- * Format gambar agar sesuai rasio Instagram (Story: 9:16, Feed: 4:5 s/d 1:1)
- */
-async function prepareImageForStory(imageBuffer) {
-    // Rasio standar Story 1080x1920
-    const metadata = await sharp(imageBuffer).metadata();
-    const targetW = 1080;
-    const targetH = 1920;
-
-    // Buat latar belakang gelap blur dari gambar asli, lalu tempel gambar di tengah
-    const blurredBg = await sharp(imageBuffer)
-        .resize(targetW, targetH, { fit: 'cover' })
-        .blur(40)
-        .modulate({ brightness: 0.4 })
-        .toBuffer();
-
-    // Resize gambar asli agar pas di tengah tanpa terpotong
-    const foreground = await sharp(imageBuffer)
-        .resize({ width: 980, height: 1600, fit: 'inside' })
-        .toBuffer();
-
-    return await sharp(blurredBg)
-        .composite([{ input: foreground, gravity: 'center' }])
-        .jpeg({ quality: 92 })
-        .toBuffer();
-}
-
-async function prepareImageForFeed(imageBuffer) {
-    // Feed membutuhkan rasio antara 4:5 hingga 1.91:1
-    return await sharp(imageBuffer)
-        .resize(1080, 1350, { fit: 'contain', background: '#090d16' })
-        .jpeg({ quality: 92 })
-        .toBuffer();
-}
-
-/**
- * Publikasikan gambar ke Instagram Story
- */
-async function publishToStory(imageBuffer) {
-    const ig = await getInstagramClient();
-    const formattedBuffer = await prepareImageForStory(imageBuffer);
-    
-    console.log('[IGDirect] Mengunggah konten ke Instagram Story...');
-    const result = await ig.publish.story({
-        file: formattedBuffer
+async function fetchCsrfToken(sessionId, dsUserId) {
+    const res = await axios.get('https://www.instagram.com/', {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}`
+        },
+        httpsAgent: ipv4Agent
     });
 
-    console.log('[IGDirect] ✅ Berhasil terbit di Instagram Story!');
-    return { success: true, result };
+    let csrf = '';
+    const cookies = res.headers['set-cookie'] || [];
+    for (const c of cookies) {
+        if (c.includes('csrftoken=')) {
+            csrf = c.split('csrftoken=')[1].split(';')[0];
+            break;
+        }
+    }
+    return csrf || 'SKgFS6EFz6dpdUJJTBrQBGf5tHIUGVDG';
+}
+
+function escapeXml(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+/**
+ * Format gambar Story (1080x1920) dengan Ambient Background Blur & Visual Music Sticker
+ */
+async function prepareImageForStory(imageBuffer, trackInfo = null) {
+    const targetW = 1080;
+    const targetH = 1920;
+    const track = trackInfo || getRandomTrack();
+    const safeTitle = escapeXml(track.title);
+    const safeArtist = escapeXml(track.artist);
+
+    // 1. Buat latar belakang gelap blur dari gambar bukti
+    const blurredBg = await sharp(imageBuffer)
+        .resize(targetW, targetH, { fit: 'cover' })
+        .blur(45)
+        .modulate({ brightness: 0.35 })
+        .toBuffer();
+
+    // 2. Resize gambar bukti di tengah
+    const foreground = await sharp(imageBuffer)
+        .resize({ width: 920, height: 1480, fit: 'inside' })
+        .toBuffer();
+
+    // 3. Stiker Visual Pemutar Musik (Spotify/IG Music Style) di bagian atas/bawah
+    const musicStickerSvg = `
+        <svg width="${targetW}" height="${targetH}">
+            <!-- Music Player Banner -->
+            <g transform="translate(180, 110)">
+                <rect width="720" height="74" rx="37" fill="#090d16" fill-opacity="0.92" stroke="#38bdf8" stroke-width="1.8" />
+                
+                <!-- Music Icon -->
+                <circle cx="44" cy="37" r="22" fill="#0f172a" stroke="#06b6d4" stroke-width="1.5"/>
+                <text x="44" y="44" font-family="Arial, sans-serif" font-size="20" fill="#38bdf8" text-anchor="middle">🎵</text>
+                
+                <!-- Track Title & Artist -->
+                <text x="82" y="34" font-family="Arial, sans-serif" font-size="21" font-weight="bold" fill="#ffffff">${safeTitle}</text>
+                <text x="82" y="56" font-family="Arial, sans-serif" font-size="16" fill="#94a3b8">${safeArtist}</text>
+                
+                <!-- Equalizer Wave Bars -->
+                <g transform="translate(620, 22)">
+                    <rect x="0" y="10" width="4" height="20" rx="2" fill="#38bdf8" />
+                    <rect x="8" y="4" width="4" height="26" rx="2" fill="#818cf8" />
+                    <rect x="16" y="14" width="4" height="16" rx="2" fill="#38bdf8" />
+                    <rect x="24" y="2" width="4" height="28" rx="2" fill="#06b6d4" />
+                    <rect x="32" y="8" width="4" height="22" rx="2" fill="#818cf8" />
+                    <rect x="40" y="16" width="4" height="14" rx="2" fill="#38bdf8" />
+                </g>
+            </g>
+        </svg>
+    `;
+
+    return await sharp(blurredBg)
+        .composite([
+            { input: foreground, gravity: 'center' },
+            { input: Buffer.from(musicStickerSvg), top: 0, left: 0 }
+        ])
+        .jpeg({ quality: 92 })
+        .toBuffer();
+}
+
+/**
+ * Format gambar Feed (1080x1350)
+ */
+async function prepareImageForFeed(imageBuffer, trackInfo = null) {
+    const track = trackInfo || getRandomTrack();
+    const safeTitle = escapeXml(track.title);
+    const safeArtist = escapeXml(track.artist);
+    const targetW = 1080;
+    const targetH = 1350;
+
+    const formattedBase = await sharp(imageBuffer)
+        .resize(targetW, targetH, { fit: 'contain', background: '#090d16' })
+        .toBuffer();
+
+    const musicStickerSvg = `
+        <svg width="${targetW}" height="${targetH}">
+            <g transform="translate(40, 40)">
+                <rect width="480" height="56" rx="28" fill="#090d16" fill-opacity="0.88" stroke="#38bdf8" stroke-width="1.5" />
+                <text x="24" y="35" font-family="Arial, sans-serif" font-size="18" fill="#38bdf8">🎵</text>
+                <text x="50" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff">${safeTitle} • <tspan fill="#94a3b8" font-weight="normal">${safeArtist}</tspan></text>
+            </g>
+        </svg>
+    `;
+
+    return await sharp(formattedBase)
+        .composite([{ input: Buffer.from(musicStickerSvg), top: 0, left: 0 }])
+        .jpeg({ quality: 92 })
+        .toBuffer();
+}
+
+/**
+ * Mengonversi gambar 1080x1920 dan file lagu MP3 menjadi video MP4 berdurasi 15 detik (Option B)
+ */
+async function generateStoryVideo(formattedImageBuffer, track) {
+    try {
+        let audioPath = track?.filename ? path.join(AUDIO_DIR, track.filename) : null;
+        if (!audioPath || !fs.existsSync(audioPath)) {
+            const files = fs.existsSync(AUDIO_DIR) ? fs.readdirSync(AUDIO_DIR).filter(f => f.endsWith('.mp3')) : [];
+            if (files.length > 0) {
+                audioPath = path.join(AUDIO_DIR, files[0]);
+            }
+        }
+
+        if (!audioPath || !fs.existsSync(audioPath)) {
+            console.warn('[IGDirect] Audio MP3 tidak ditemukan, fallback ke unggah foto biasa.');
+            return null;
+        }
+
+        const tempDir = path.join(os.tmpdir(), 'ig_story_video');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const randId = Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        const tempImg = path.join(tempDir, `img_${randId}.jpg`);
+        const tempVid = path.join(tempDir, `vid_${randId}.mp4`);
+
+        // Resize ke 720x1280 (HD 9:16) agar encoding FFmpeg di server sangat cepat (~18 detik) dan hemat resource
+        const scaledImgBuffer = await sharp(formattedImageBuffer)
+            .resize(720, 1280, { fit: 'fill' })
+            .jpeg({ quality: 90 })
+            .toBuffer();
+
+        fs.writeFileSync(tempImg, scaledImgBuffer);
+
+        // Encode video 15 detik dengan libx264 ultrafast + aac stereo 44.1kHz secara asynchronous non-blocking
+        await execFileAsync('ffmpeg', [
+            '-y',
+            '-loop', '1',
+            '-i', tempImg,
+            '-i', audioPath,
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-tune', 'stillimage',
+            '-t', '15',
+            '-pix_fmt', 'yuv420p',
+            '-r', '15',
+            '-crf', '26',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-shortest',
+            '-movflags', '+faststart',
+            tempVid
+        ], { timeout: 90000 });
+
+        if (fs.existsSync(tempVid)) {
+            const videoBuffer = fs.readFileSync(tempVid);
+            try { fs.unlinkSync(tempImg); } catch (e) {}
+            try { fs.unlinkSync(tempVid); } catch (e) {}
+            return {
+                videoBuffer,
+                durationMs: 15000,
+                width: 720,
+                height: 1280
+            };
+        }
+    } catch (e) {
+        console.warn('[IGDirect] Peringatan: Gagal merender video FFmpeg (fallback ke foto):', e.message);
+    }
+    return null;
+}
+
+/**
+ * Publikasikan konten ke Instagram Story (Video bersuara lagu atau Foto fallback)
+ */
+async function publishToStory(imageBuffer, customTrack = null) {
+    const { sessionId, dsUserId } = getSessionCredentials();
+    const track = customTrack || getRandomTrack();
+    const formattedBuffer = await prepareImageForStory(imageBuffer, track);
+
+    const csrf = await fetchCsrfToken(sessionId, dsUserId);
+    const uploadId = Date.now().toString();
+    const entityName = `fb_uploader_${uploadId}`;
+
+    console.log(`[IGDirect] Menyiapkan konten Instagram Story dengan musik [${track.title} - ${track.artist}]...`);
+
+    // Render video MP4 15 detik bersuara lagu nyata (Option B)
+    const videoData = await generateStoryVideo(formattedBuffer, track);
+
+    if (videoData && videoData.videoBuffer) {
+        console.log(`[IGDirect] Mengunggah Story Video (MP4 bersuara musik nyata, size: ${videoData.videoBuffer.length} bytes)...`);
+
+        // 1. Upload file binary video ke rupload_igvideo (720x1280)
+        await axios.post(`https://www.instagram.com/rupload_igvideo/${entityName}`, videoData.videoBuffer, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-CSRFToken': csrf,
+                'X-Instagram-Rupload-Params': JSON.stringify({
+                    media_type: 2,
+                    upload_id: uploadId,
+                    upload_media_height: 1280,
+                    upload_media_width: 720,
+                    upload_media_duration_ms: videoData.durationMs
+                }),
+                'X-Entity-Name': entityName,
+                'X-Entity-Length': videoData.videoBuffer.length,
+                'X-Entity-Type': 'video/mp4',
+                'Offset': 0,
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                'Content-Type': 'video/mp4',
+                'Content-Length': videoData.videoBuffer.length
+            },
+            httpsAgent: ipv4Agent
+        });
+
+        // 2. Upload cover photo ke rupload_igphoto (wajib 720x1280 cocok dengan video)
+        const coverBuffer = await sharp(formattedBuffer)
+            .resize(720, 1280, { fit: 'fill' })
+            .jpeg({ quality: 90 })
+            .toBuffer();
+
+        await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, coverBuffer, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-CSRFToken': csrf,
+                'X-Instagram-Rupload-Params': JSON.stringify({
+                    media_type: 2,
+                    upload_id: uploadId,
+                    upload_media_height: 1280,
+                    upload_media_width: 720
+                }),
+                'X-Entity-Name': entityName,
+                'X-Entity-Length': coverBuffer.length,
+                'X-Entity-Type': 'image/jpeg',
+                'Offset': 0,
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                'Content-Type': 'image/jpeg',
+                'Content-Length': coverBuffer.length
+            },
+            httpsAgent: ipv4Agent
+        });
+
+        // Jeda 2.5 detik agar transcode server Instagram siap
+        await new Promise(r => setTimeout(r, 2500));
+
+        // 3. Konfigurasi penerbitan video ke Story
+        const body = new URLSearchParams({
+            upload_id: uploadId,
+            source_type: '4',
+            configure_mode: '1',
+            video_result: ''
+        }).toString();
+
+        const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure_to_story/?video=1', body, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-CSRFToken': csrf,
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            httpsAgent: ipv4Agent
+        });
+
+        const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
+        console.log(`[IGDirect] ✅ Berhasil terbit di Instagram Story (Video dengan Musik [${track.title}])! Media ID:`, publishedMediaId);
+        return {
+            success: true,
+            mediaId: publishedMediaId,
+            isVideo: true,
+            track
+        };
+    } else {
+        // Fallback Foto Statis jika ffmpeg tidak tersedia
+        console.log(`[IGDirect] Mengunggah konten ke Instagram Story (Mode Foto)...`);
+        await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, formattedBuffer, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-CSRFToken': csrf,
+                'X-Instagram-Rupload-Params': JSON.stringify({
+                    media_type: 1,
+                    upload_id: uploadId,
+                    upload_media_height: 1920,
+                    upload_media_width: 1080
+                }),
+                'X-Entity-Name': entityName,
+                'X-Entity-Length': formattedBuffer.length,
+                'X-Entity-Type': 'image/jpeg',
+                'Offset': 0,
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                'Content-Type': 'image/jpeg',
+                'Content-Length': formattedBuffer.length
+            },
+            httpsAgent: ipv4Agent
+        });
+
+        const body = new URLSearchParams({
+            upload_id: uploadId,
+            source_type: '4',
+            configure_mode: '1'
+        }).toString();
+
+        const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure_to_story/', body, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-CSRFToken': csrf,
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            httpsAgent: ipv4Agent
+        });
+
+        const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
+        console.log('[IGDirect] ✅ Berhasil terbit di Instagram Story (Foto)! Media ID:', publishedMediaId);
+        return {
+            success: true,
+            mediaId: publishedMediaId,
+            isVideo: false,
+            track
+        };
+    }
 }
 
 /**
  * Publikasikan gambar ke Instagram Feed
  */
-async function publishToFeed(imageBuffer, caption = '') {
-    const ig = await getInstagramClient();
-    const formattedBuffer = await prepareImageForFeed(imageBuffer);
+async function publishToFeed(imageBuffer, caption = '', customTrack = null) {
+    const { sessionId, dsUserId } = getSessionCredentials();
+    const track = customTrack || getRandomTrack();
+    const formattedBuffer = await prepareImageForFeed(imageBuffer, track);
 
-    const fullCaption = (caption || 'Testimoni Pembayaran & Layanan Ry-ITSolutions') + 
+    const csrf = await fetchCsrfToken(sessionId, dsUserId);
+    const uploadId = Date.now().toString();
+    const entityName = `fb_uploader_${uploadId}`;
+
+    const fullCaption = (caption || 'Testimoni Pembayaran & Layanan Prioritas Ry-ITSolutions') + 
+        `\n\n🎵 Musik: ${track.title} - ${track.artist}` +
         '\n\n---\n🌐 Website: https://ry-itsolutionts.web.id\n⚡ Unlock Sinyal • Tembak Paket • Cek CEIR\n#ryitsolutions #unlocksinyalsolo #testimoni #unlocksinyal';
 
-    console.log('[IGDirect] Mengunggah konten ke Instagram Feed...');
-    const result = await ig.publish.photo({
-        file: formattedBuffer,
-        caption: fullCaption
+    console.log(`[IGDirect] Mengunggah konten ke Instagram Feed dengan musik [${track.title}]...`);
+
+    // 1. Upload file binary
+    await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, formattedBuffer, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'X-IG-App-ID': '936619743392459',
+            'X-CSRFToken': csrf,
+            'X-Instagram-Rupload-Params': JSON.stringify({
+                media_type: 1,
+                upload_id: uploadId,
+                upload_media_height: 1350,
+                upload_media_width: 1080
+            }),
+            'X-Entity-Name': entityName,
+            'X-Entity-Length': formattedBuffer.length,
+            'X-Entity-Type': 'image/jpeg',
+            'Offset': 0,
+            'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+            'Content-Type': 'image/jpeg',
+            'Content-Length': formattedBuffer.length
+        },
+        httpsAgent: ipv4Agent
     });
 
-    console.log('[IGDirect] ✅ Berhasil terbit di Instagram Feed!');
-    return { success: true, result };
+    // 2. Konfigurasi penerbitan ke Feed
+    const body = new URLSearchParams({
+        upload_id: uploadId,
+        caption: fullCaption,
+        source_type: '4'
+    }).toString();
+
+    const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure/', body, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'X-IG-App-ID': '936619743392459',
+            'X-CSRFToken': csrf,
+            'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        httpsAgent: ipv4Agent
+    });
+
+    console.log('[IGDirect] ✅ Berhasil terbit di Instagram Feed! Media ID:', configRes.data.media?.id);
+    return {
+        success: true,
+        mediaId: configRes.data.media?.id,
+        track
+    };
 }
 
 /**
@@ -256,24 +563,21 @@ async function publishOpenStory() {
             <text x="540" y="750" font-family="Arial, sans-serif" font-size="32" font-weight="500" fill="#94a3b8" text-anchor="middle">${dateWIB}</text>
 
             <!-- Card Layanan -->
-            <g transform="translate(140, 830)">
-                <rect width="800" height="480" rx="32" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="2"/>
+            <g transform="translate(140, 840)">
+                <rect width="800" height="370" rx="32" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2"/>
                 
-                <text x="400" y="70" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#f8fafc" text-anchor="middle">LAYANAN PRIORITAS HARI INI</text>
-                <line x1="80" y1="100" x2="720" y2="100" stroke="#334155" stroke-width="2"/>
+                <text x="400" y="65" font-family="Arial, sans-serif" font-size="34" font-weight="bold" fill="#f8fafc" text-anchor="middle">LAYANAN PRIORITAS HARI INI</text>
+                <line x1="80" y1="95" x2="720" y2="95" stroke="#334155" stroke-width="2"/>
 
-                <text x="100" y="170" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#38bdf8">⚡ Unlock Sinyal &amp; Roamer</text>
-                <text x="100" y="210" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Bypass jaringan permanen &amp; temporary all operator</text>
+                <text x="100" y="165" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#38bdf8">⚡ Add Roamer &amp; Unlock Sinyal</text>
+                <text x="100" y="205" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Bypass jaringan permanen &amp; temporary all provider</text>
 
-                <text x="100" y="275" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#818cf8">📦 Tembak Paket Kuota Murah</text>
-                <text x="100" y="315" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Telkomsel, XL, Axis, Indosat, Tri</text>
-
-                <text x="100" y="380" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#34d399">🔍 Cek Status CEIR &amp; Garansi</text>
-                <text x="100" y="420" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Diagnostik legalitas Kemenperin &amp; Bea Cukai</text>
+                <text x="100" y="275" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#34d399">🔍 Cek Status CEIR &amp; Garansi</text>
+                <text x="100" y="315" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Diagnostik legalitas Kemenperin &amp; Bea Cukai</text>
             </g>
 
             <!-- Footer Kontak -->
-            <g transform="translate(140, 1420)">
+            <g transform="translate(140, 1280)">
                 <rect width="800" height="240" rx="28" fill="#1e293b" fill-opacity="0.6" stroke="#475569" stroke-width="1.5"/>
                 <text x="400" y="70" font-family="Arial, sans-serif" font-size="34" font-weight="bold" fill="#ffffff" text-anchor="middle">Fast Response via WhatsApp &amp; Web</text>
                 
@@ -291,10 +595,10 @@ async function publishOpenStory() {
 }
 
 module.exports = {
-    getInstagramClient,
-    saveSessionFromCookie,
     publishToStory,
     publishToFeed,
-    publishOpenStory
+    publishOpenStory,
+    saveSessionFromCookie,
+    getUniqueTracks
 };
 
