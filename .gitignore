@@ -13,6 +13,8 @@ tembak-paket-app/backend/backups/*
 *.pack.gz
 *.pack
 *.tar.gz
+*.tar
+*.zip
 *.traineddata
 .DS_Store
 
