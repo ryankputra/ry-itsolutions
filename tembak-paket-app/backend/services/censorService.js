@@ -275,8 +275,8 @@ async function censorScreenshot(imageBuffer, options = {}) {
 
         // 3. ANALISIS STRUKTUR KARTU & BOUNDS
         const isMobileAspect = imgHeight > imgWidth;
-        const headerTopLimit = isMobileAspect ? (imgHeight / scaleY) * 0.030 : 0;
-        const headerBottomLimit = isMobileAspect ? (imgHeight / scaleY) * 0.120 : 0;
+        const headerTopLimit = isMobileAspect ? (imgHeight / scaleY) * 0.025 : 0;
+        const headerBottomLimit = isMobileAspect ? (imgHeight / scaleY) * 0.090 : 0;
         const systemStatusRegex = /^(online|daring|terakhir dilihat|last seen|mengetik|typing|ketuk di sini|info kontak|\d{1,2}[:\.]\d{2}|\d{1,3}%)$/i;
 
         let cardLeft = Math.floor(imgWidth * 0.06);
@@ -302,8 +302,6 @@ async function censorScreenshot(imageBuffer, options = {}) {
         let imeiHeaderLine = null;
         let bcaHeaderLine = null;
         let jumlahTransferLine = null;
-        let isQrisCardDetected = false;
-        let qrisCardBbox = null;
 
         for (const line of lines) {
             const lineText = normalizeText(line.text);
@@ -314,11 +312,12 @@ async function censorScreenshot(imageBuffer, options = {}) {
             // A. WhatsApp Top Navigation Bar Contact Header
             if (isMobileAspect && line.bbox && line.bbox.y0 >= headerTopLimit && line.bbox.y1 <= headerBottomLimit) {
                 if (!systemStatusRegex.test(lineText) && lineText.length >= 2) {
+                    const clampedY1 = Math.min(imgHeight, mappedLine.y1 + 2, Math.floor(imgHeight * 0.092));
                     rawBoxes.push({
                         x0: Math.floor(imgWidth * 0.12),
-                        y0: Math.max(0, mappedLine.y0 - 4),
-                        x1: Math.floor(imgWidth * 0.72),
-                        y1: Math.min(imgHeight, mappedLine.y1 + 4)
+                        y0: Math.max(0, mappedLine.y0 - 2),
+                        x1: Math.floor(imgWidth * 0.70),
+                        y1: clampedY1
                     });
                     detectedTypes.add('WhatsApp Header Contact');
                     continue;
@@ -338,11 +337,40 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 }
             }
 
-            // C. Nomor HP & No Rekening pada Chat Bubble (+62... / 08... / 901985232254)
-            if (/^(?:\+?62|08)[\d\s-]{8,16}/.test(lineText) || (/\bimei\b/i.test(lineText) && /[\d\s]{8,}/.test(lineText)) || /\b\d{9,16}\b/.test(lineText)) {
+            // C. NOMOR IMEI, NOMOR HP & NO REKENING
+            const digitsOnly = lineText.replace(/\D/g, '');
+            const hasImeiWord = /\bimei\d?\b/i.test(lineText) || lowerLine.startsWith('imei');
+            const isImeiCandidate = hasImeiWord || (digitsOnly.length >= 14 && digitsOnly.length <= 17 && (digitsOnly.startsWith('35') || digitsOnly.startsWith('86') || digitsOnly.startsWith('01') || digitsOnly.startsWith('99') || hasImeiWord));
+            const isPhoneCandidate = /^(?:\+?62|08)[\d\s-]{8,16}/.test(lineText);
+            const isBankCandidate = /\b\d{9,16}\b/.test(lineText) || (digitsOnly.length >= 10 && digitsOnly.length <= 16);
+
+            if (isImeiCandidate) {
+                // Sensor label "IMEI / IMEI1 / IMEI2" dan seluruh angka IMEI pada baris ini
+                const imeiWords = words.filter(w => {
+                    const wClean = normalizeText(w.text).toLowerCase();
+                    return /\bimei\d?\b/i.test(wClean) || /\d+/.test(wClean);
+                });
+                if (imeiWords.length > 0) {
+                    const firstW = mapBbox(imeiWords[0].bbox, scaleX, scaleY);
+                    const lastW = mapBbox(imeiWords[imeiWords.length - 1].bbox, scaleX, scaleY);
+                    if (firstW && lastW) {
+                        const allY0 = imeiWords.map(w => mapBbox(w.bbox, scaleX, scaleY)?.y0).filter(v => v !== undefined);
+                        const allY1 = imeiWords.map(w => mapBbox(w.bbox, scaleX, scaleY)?.y1).filter(v => v !== undefined);
+                        const minX0 = Math.min(...imeiWords.map(w => mapBbox(w.bbox, scaleX, scaleY)?.x0 || 99999));
+                        const maxX1 = Math.max(...imeiWords.map(w => mapBbox(w.bbox, scaleX, scaleY)?.x1 || 0));
+                        rawBoxes.push({
+                            x0: Math.max(0, minX0 - 4),
+                            y0: Math.max(0, Math.min(...allY0) - 2),
+                            x1: Math.min(imgWidth, maxX1 + 4),
+                            y1: Math.min(imgHeight, Math.max(...allY1) + 2)
+                        });
+                        detectedTypes.add('Nomor IMEI & Label Lengkap');
+                    }
+                }
+            } else if (isPhoneCandidate || isBankCandidate) {
                 for (const w of words) {
                     const wText = normalizeText(w.text);
-                    if (/^(?:\+?62|08)/.test(wText) || /[\d-]{6,}/.test(wText) || (/^\d+$/.test(wText) && wText.length >= 4) || (/^\d{3,4}$/.test(wText) && /\bimei\b/i.test(lineText))) {
+                    if (/^(?:\+?62|08)/.test(wText) || /[\d-]{6,}/.test(wText) || (/^\d+$/.test(wText) && wText.length >= 4)) {
                         const mW = mapBbox(w.bbox, scaleX, scaleY);
                         if (mW) {
                             rawBoxes.push({
@@ -351,7 +379,7 @@ async function censorScreenshot(imageBuffer, options = {}) {
                                 x1: Math.min(imgWidth, mW.x1 + 3),
                                 y1: Math.min(imgHeight, mW.y1 + 2)
                             });
-                            detectedTypes.add('Nomor HP/Rekening/IMEI Chat');
+                            detectedTypes.add('Nomor HP/Rekening Chat');
                         }
                     }
                 }
@@ -370,6 +398,24 @@ async function censorScreenshot(imageBuffer, options = {}) {
             // F. Baris Penerima Aloysia Omega
             if (lowerLine.includes('aloysia') || lowerLine.includes('omega')) {
                 aloysiaLine = { mapped: mappedLine, lineText, words };
+                // Jika terdapat kata setelah "omega" pada baris ini (seperti "NOVENA", "NOVEN", "NOVEN-"),
+                // sensor kata tersebut secara presisi agar "Aloysia Omega" tetap terlihat 100%
+                const omegaIdx = words.findIndex(w => normalizeText(w.text).toLowerCase().includes('omega'));
+                if (omegaIdx !== -1 && omegaIdx < words.length - 1) {
+                    const wordsAfterOmega = words.slice(omegaIdx + 1);
+                    for (const w of wordsAfterOmega) {
+                        const mW = mapBbox(w.bbox, scaleX, scaleY);
+                        if (mW) {
+                            rawBoxes.push({
+                                x0: Math.max(0, mW.x0 - 3),
+                                y0: Math.max(0, mW.y0 - 2),
+                                x1: Math.min(safeCardRight, mW.x1 + 6),
+                                y1: Math.min(imgHeight, mW.y1 + 2)
+                            });
+                            detectedTypes.add('Novena Putri (Sensor Presisi)');
+                        }
+                    }
+                }
             }
 
             // G. Baris Pengirim
@@ -384,34 +430,19 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 }
             }
 
-            // I. QRIS Voucher Detection
-            if (/qris/i.test(lineText) || /satu\s*qris/i.test(lineText) || /dicetak\s*oleh/i.test(lineText)) {
-                isQrisCardDetected = true;
-                if (mappedLine) {
-                    if (!qrisCardBbox) {
-                        qrisCardBbox = { ...mappedLine };
-                    } else {
-                        qrisCardBbox.x0 = Math.min(qrisCardBbox.x0, mappedLine.x0);
-                        qrisCardBbox.y0 = Math.min(qrisCardBbox.y0, mappedLine.y0);
-                        qrisCardBbox.x1 = Math.max(qrisCardBbox.x1, mappedLine.x1);
-                        qrisCardBbox.y1 = Math.max(qrisCardBbox.y1, mappedLine.y1);
-                    }
-                }
-            }
-
-            // J. ATURAN KHUSUS "ALOYSIA OMEGA NOVENA PUTRI":
-            // SENSOR HANYA "Novena Putri", "Aloysia Omega" TETAP TERLIHAT 100%!
-            if (lowerLine.includes('novena') || lowerLine.includes('putri')) {
+            // J. ATURAN KHUSUS "NOVENA PUTRI" (Mendukung wrap line "NOVEN" dan "A PUTRI"):
+            // SENSOR HANYA "Novena Putri" / "Noven" / "A Putri", "Aloysia Omega" TETAP TERLIHAT 100%!
+            if (/noven|putri/i.test(lowerLine)) {
                 for (const wordObj of words) {
                     if (!wordObj.bbox) continue;
                     const wClean = normalizeText(wordObj.text).toLowerCase().replace(/[^a-z]/g, '');
-                    if (wClean.includes('novena') || wClean.includes('putri')) {
+                    if (wClean.startsWith('noven') || wClean.includes('putri') || (lowerLine.includes('putri') && (wClean === 'a' || wClean === 'noven'))) {
                         const mW = mapBbox(wordObj.bbox, scaleX, scaleY);
                         if (mW) {
                             rawBoxes.push({
                                 x0: Math.max(0, mW.x0 - 3),
                                 y0: Math.max(0, mW.y0 - 2),
-                                x1: Math.min(safeCardRight, mW.x1 + 15),
+                                x1: Math.min(safeCardRight, mW.x1 + 10),
                                 y1: Math.min(imgHeight, mW.y1 + 2)
                             });
                             detectedTypes.add('Novena Putri (Sensor Presisi)');
@@ -569,20 +600,6 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 y1: Math.floor(imeiBottom)
             });
             detectedTypes.add('Barcode & IMEI Lengkap');
-        }
-
-        // S. QR CODE QRIS GRAFIS
-        if (isQrisCardDetected && qrisCardBbox) {
-            const qrCardTop = Math.max(0, qrisCardBbox.y0 - Math.round(imgHeight * 0.22));
-            const qrCardBottom = qrisCardBbox.y0 - Math.round(imgHeight * 0.015);
-
-            rawBoxes.push({
-                x0: Math.floor(imgWidth * 0.35),
-                y0: Math.floor(qrCardTop),
-                x1: Math.floor(imgWidth * 0.94),
-                y1: Math.floor(qrCardBottom)
-            });
-            detectedTypes.add('QR Code QRIS');
         }
 
         // 4. MERGE BOUNDING BOXES (DISJOINT-SET UNION)

@@ -572,8 +572,8 @@ async function publishOpenStory() {
                 <text x="400" y="65" font-family="Arial, sans-serif" font-size="34" font-weight="bold" fill="#f8fafc" text-anchor="middle">LAYANAN PRIORITAS HARI INI</text>
                 <line x1="80" y1="95" x2="720" y2="95" stroke="#334155" stroke-width="2"/>
 
-                <text x="100" y="165" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#38bdf8">⚡ Add Roamer &amp; Unlock Sinyal</text>
-                <text x="100" y="205" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Bypass jaringan permanen &amp; temporary all provider</text>
+                <text x="100" y="165" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#38bdf8">⚡ Layanan Add Roamer (Unlock Sinyal)</text>
+                <text x="100" y="205" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Pilihan aktivasi 1 Bulan &amp; 3 Bulan All Operator</text>
 
                 <text x="100" y="275" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#34d399">🔍 Cek Status CEIR &amp; Garansi</text>
                 <text x="100" y="315" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Diagnostik legalitas Kemenperin &amp; Bea Cukai</text>
@@ -590,42 +590,142 @@ async function publishOpenStory() {
         </svg>
     `;
 
-    const openBuffer = await sharp(Buffer.from(openSvg))
-        .jpeg({ quality: 94 })
-        .toBuffer();
+    // SVG Story Lanjutan (Story 2): Disclaimer Add Roamer (Anti AI Slop - Vektor Presisi Sharp)
+    const disclaimerSvg = `
+        <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="disclaimerBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#070a12"/>
+                    <stop offset="50%" stop-color="#0f172a"/>
+                    <stop offset="100%" stop-color="#1c1917"/>
+                </linearGradient>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#disclaimerBg)"/>
+
+            <!-- Ambient Lights -->
+            <circle cx="540" cy="350" r="280" fill="#f59e0b" fill-opacity="0.12" filter="blur(60px)"/>
+            <circle cx="540" cy="1150" r="320" fill="#38bdf8" fill-opacity="0.10" filter="blur(70px)"/>
+
+            <!-- Logo Badge -->
+            <g transform="translate(450, 240)">
+                <circle cx="90" cy="90" r="75" fill="#0f172a" stroke="#f59e0b" stroke-width="3"/>
+                <text x="90" y="102" font-family="Arial, sans-serif" font-size="40" font-weight="900" fill="#f59e0b" text-anchor="middle">RY</text>
+            </g>
+
+            <!-- Tag -->
+            <rect x="350" y="440" width="380" height="46" rx="23" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="1.5"/>
+            <circle cx="380" cy="463" r="7" fill="#f59e0b"/>
+            <text x="400" y="471" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#fbbf24">EDUKASI &amp; TRANSPARANSI</text>
+
+            <!-- Header Titles -->
+            <text x="540" y="555" font-family="Arial, sans-serif" font-size="64" font-weight="900" fill="#ffffff" text-anchor="middle">DISCLAIMER</text>
+            <text x="540" y="620" font-family="Arial, sans-serif" font-size="46" font-weight="900" fill="#f59e0b" text-anchor="middle">LAYANAN ADD ROAMER</text>
+            <text x="540" y="668" font-family="Arial, sans-serif" font-size="24" font-weight="500" fill="#94a3b8" text-anchor="middle">Wajib Dibaca Demi Keamanan &amp; Kenyamanan Bersama</text>
+
+            <!-- Card 1: Alert Tidak Ada Permanen -->
+            <g transform="translate(120, 730)">
+                <rect width="840" height="260" rx="28" fill="#18131b" fill-opacity="0.9" stroke="#ef4444" stroke-opacity="0.8" stroke-width="2"/>
+                <rect x="30" y="25" width="48" height="48" rx="12" fill="#ef4444" fill-opacity="0.2"/>
+                <text x="54" y="57" font-family="Arial, sans-serif" font-size="26" text-anchor="middle" fill="#ef4444">✕</text>
+                
+                <text x="95" y="57" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#fca5a5">TIDAK ADA ADD ROAMER PERMANEN</text>
+                <line x1="30" y1="90" x2="810" y2="90" stroke="#334155" stroke-width="1"/>
+
+                <text x="35" y="135" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Waspada penipuan yang menjanjikan unblock permanen via Add Roamer.</text>
+                <text x="35" y="178" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Secara teknis jaringan operator seluler, Add Roamer bersifat berjangka.</text>
+                <text x="35" y="221" font-family="Arial, sans-serif" font-size="24" fill="#f87171">• Tidak ada bypass Add Roamer yang bisa aktif seumur hidup.</text>
+            </g>
+
+            <!-- Card 2: Durasi Resmi Yang Tersedia -->
+            <g transform="translate(120, 1030)">
+                <rect width="840" height="300" rx="28" fill="#0c1f1a" fill-opacity="0.9" stroke="#10b981" stroke-opacity="0.8" stroke-width="2"/>
+                <rect x="30" y="25" width="48" height="48" rx="12" fill="#10b981" fill-opacity="0.2"/>
+                <text x="54" y="57" font-family="Arial, sans-serif" font-size="26" text-anchor="middle" fill="#10b981">✓</text>
+
+                <text x="95" y="57" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#6ee7b7">HANYA TERSEDIA 1 BULAN &amp; 3 BULAN</text>
+                <line x1="30" y1="90" x2="810" y2="90" stroke="#334155" stroke-width="1"/>
+
+                <text x="35" y="135" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Ry-ITSolutions hanya melayani paket resmi 1 Bulan &amp; 3 Bulan.</text>
+                <text x="35" y="178" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Mendukung All Operator Indonesia (Telkomsel, Indosat, XL, Tri, Smartfren).</text>
+                <text x="35" y="221" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Seluruh pengerjaan bergaransi penuh sesuai masa aktif yang dipilih.</text>
+                <text x="35" y="264" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#34d399">• Transaksi transparan, aman, dan tercatat otomatis dalam nota digital.</text>
+            </g>
+
+            <!-- Card 3: Footer Kontak & Web -->
+            <g transform="translate(120, 1370)">
+                <rect width="840" height="210" rx="26" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1.5"/>
+                <text x="420" y="60" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">Konsultasi &amp; Cek IMEI Resmi</text>
+                <text x="420" y="115" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#38bdf8" text-anchor="middle">🌐 ry-itsolutionts.web.id</text>
+                <text x="420" y="165" font-family="Arial, sans-serif" font-size="22" fill="#94a3b8" text-anchor="middle">Ry-ITSolutions • Solusi Digital &amp; Jaringan Terpercaya</text>
+            </g>
+        </svg>
+    `;
+
+    const [openBuffer, disclaimerBuffer] = await Promise.all([
+        sharp(Buffer.from(openSvg)).jpeg({ quality: 94 }).toBuffer(),
+        sharp(Buffer.from(disclaimerSvg)).jpeg({ quality: 94 }).toBuffer()
+    ]);
 
     const results = {
-        instagram: null,
-        whatsapp: null
+        openStory: { instagram: null, whatsapp: null },
+        disclaimerStory: { instagram: null, whatsapp: null }
     };
 
-    // 1. Publikasi ke Instagram Story (@unlocksinyalsolo)
+    // 1. Publikasi Story 1: "WE ARE OPEN!" ke Instagram & WhatsApp
     try {
-        results.instagram = await publishToStory(openBuffer);
+        results.openStory.instagram = await publishToStory(openBuffer);
     } catch (igErr) {
-        console.error('[publishOpenStory] Gagal publish IG Story:', igErr.message);
-        results.instagramError = igErr.message;
+        console.error('[publishOpenStory] Gagal publish IG Story 1 (Open):', igErr.message);
+        results.openStory.instagramError = igErr.message;
     }
 
-    // 2. Publikasi juga ke WhatsApp Story Bot
     try {
         const { publishWhatsAppStory } = require('./waBot');
         if (typeof publishWhatsAppStory === 'function') {
-            const captionStory = `📢 *Ry-ITSolutions BUKA HARI INI!*\n\n` +
-                `⚡ Add Roamer & Unlock Sinyal\n` +
+            const captionStory1 = `📢 *Ry-ITSolutions BUKA HARI INI!*\n\n` +
+                `⚡ Layanan Add Roamer (1 Bulan & 3 Bulan)\n` +
                 `🔍 Cek Status CEIR & Garansi\n\n` +
                 `🗓️ ${dateWIB}\n` +
                 `⏰ Buka: ${timestampWIB} WIB\n\n` +
                 `🌐 https://ry-itsolutionts.web.id`;
-            results.whatsapp = await publishWhatsAppStory(openBuffer, captionStory);
+            results.openStory.whatsapp = await publishWhatsAppStory(openBuffer, captionStory1);
         }
     } catch (waErr) {
-        console.warn('[publishOpenStory] Warning saat posting ke WA Story:', waErr.message);
-        results.whatsappError = waErr.message;
+        console.warn('[publishOpenStory] Warning saat posting WA Story 1 (Open):', waErr.message);
+        results.openStory.whatsappError = waErr.message;
     }
 
-    if (!results.instagram && !results.whatsapp) {
-        throw new Error('Gagal memposting Story Open ke Instagram maupun WhatsApp Story.');
+    // Jeda 2 detik sebelum mempublikasikan Story 2 (Disclaimer)
+    await new Promise(r => setTimeout(r, 2000));
+
+    // 2. Publikasi Story 2: "DISCLAIMER ADD ROAMER" ke Instagram & WhatsApp
+    try {
+        results.disclaimerStory.instagram = await publishToStory(disclaimerBuffer);
+    } catch (igErr2) {
+        console.error('[publishOpenStory] Gagal publish IG Story 2 (Disclaimer):', igErr2.message);
+        results.disclaimerStory.instagramError = igErr2.message;
+    }
+
+    try {
+        const { publishWhatsAppStory } = require('./waBot');
+        if (typeof publishWhatsAppStory === 'function') {
+            const captionStory2 = `⚠️ *DISCLAIMER RESMI ADD ROAMER*\n\n` +
+                `❌ *Tidak ada Add Roamer yang permanen.* Waspada penipuan!\n` +
+                `✅ *Hanya tersedia opsi 1 Bulan & 3 Bulan* (All Operator).\n\n` +
+                `🛡️ Garansi penuh & nota transaksi digital resmi.\n` +
+                `🌐 https://ry-itsolutionts.web.id`;
+            results.disclaimerStory.whatsapp = await publishWhatsAppStory(disclaimerBuffer, captionStory2);
+        }
+    } catch (waErr2) {
+        console.warn('[publishOpenStory] Warning saat posting WA Story 2 (Disclaimer):', waErr2.message);
+        results.disclaimerStory.whatsappError = waErr2.message;
+    }
+
+    const anySuccess = results.openStory.instagram || results.openStory.whatsapp ||
+        results.disclaimerStory.instagram || results.disclaimerStory.whatsapp;
+
+    if (!anySuccess) {
+        throw new Error('Gagal memposting Story Open & Disclaimer ke Instagram maupun WhatsApp Story.');
     }
 
     return results;

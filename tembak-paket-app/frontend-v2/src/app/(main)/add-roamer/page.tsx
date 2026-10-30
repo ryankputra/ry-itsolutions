@@ -273,7 +273,7 @@ function UnblockImeiContent() {
       missing.push("Nomor IMEI target belum diisi atau kurang dari 15 digit angka.");
     }
     if (!selectedPkgId) {
-      missing.push("Pilih Paket Masa Aktif / Garansi (3 Bulan, 1 Tahun, atau Permanent).");
+      missing.push("Pilih Paket Masa Aktif / Garansi (1 Bulan atau 3 Bulan).");
     }
     if (files.length === 0) {
       missing.push("Unggah Bukti Screenshot *#06# HP target.");

@@ -1729,7 +1729,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan banner & mempublikasikan Story 'Ry-ITSolutions BUKA HARI INI' ke Instagram (@unlocksinyalsolo) & WhatsApp Story Bot...*");
         try {
             await publishOpenStory();
-            await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nStory 'WE ARE OPEN' telah terbit di *Instagram Story* (@unlocksinyalsolo) dan di *WhatsApp Story Bot*! 🎉" + BOT_FOOTER);
+            await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nStory 'WE ARE OPEN' dan Story Lanjutan 'DISCLAIMER ADD ROAMER (1 & 3 BULAN)' telah berhasil terbit di *Instagram Story* (@unlocksinyalsolo) dan di *WhatsApp Story Bot*! 🎉" + BOT_FOOTER);
         } catch (errOpen) {
             await replyWhatsApp(replyJid, `❌ *Gagal posting Story Open:* ${errOpen.message}` + BOT_FOOTER);
         }
