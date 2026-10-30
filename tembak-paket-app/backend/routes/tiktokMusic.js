@@ -83,21 +83,6 @@ router.get('/stream', async (req, res) => {
             return fs.createReadStream(localPath).pipe(res);
         }
     }
-
-/**
- * POST /api/music/refresh or /api/tiktok-music/refresh
- * Endpoint sinkronisasi manual tangga lagu Top Hits RyTone (Admin/User)
- */
-router.post('/refresh', async (req, res) => {
-    try {
-        const syncResult = await tiktokMusicService.syncTrendingMusic();
-        res.json(syncResult);
-    } catch (err) {
-        console.error('[Route: /api/music/refresh] Error:', err);
-        res.status(500).json({ success: false, message: 'Gagal memperbarui tangga lagu', error: err.message });
-    }
-});
-
     // 2. Ekstraksi audio stream YouTube via yt-dlp (Mendukung ID YouTube langsung maupun pencarian judul lagu)
     try {
         let streamUrl = streamUrlCache.get(rawId);
@@ -159,6 +144,30 @@ router.post('/refresh', async (req, res) => {
         if (!res.headersSent) {
             res.status(500).json({ success: false, message: "Gagal mengekstrak audio." });
         }
+    }
+});
+
+/**
+ * POST /api/music/refresh or /api/tiktok-music/refresh
+ * Endpoint sinkronisasi manual tangga lagu Top Hits RyTone (Admin/User)
+ */
+router.post('/refresh', async (req, res) => {
+    try {
+        const syncResult = await tiktokMusicService.syncTrendingMusic();
+        res.json(syncResult);
+    } catch (err) {
+        console.error('[Route: /api/music/refresh] Error:', err);
+        res.status(500).json({ success: false, message: 'Gagal memperbarui tangga lagu', error: err.message });
+    }
+});
+
+router.get('/refresh', async (req, res) => {
+    try {
+        const syncResult = await tiktokMusicService.syncTrendingMusic();
+        res.json(syncResult);
+    } catch (err) {
+        console.error('[Route: /api/music/refresh] Error:', err);
+        res.status(500).json({ success: false, message: 'Gagal memperbarui tangga lagu', error: err.message });
     }
 });
 
