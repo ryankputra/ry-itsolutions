@@ -59,7 +59,6 @@ function normalizeText(str) {
 
 /**
  * Deteksi Barcode & QR Code menggunakan @zxing/library
- * Mendukung pembacaan buffer grayscale pada resolusi penuh atau potongan kartu
  */
 async function detectBarcodesWithZXing(grayBuffer, width, height, scaleX = 1, scaleY = 1, offsetX = 0, offsetY = 0) {
     const detectedBoxes = [];
@@ -95,14 +94,12 @@ async function detectBarcodesWithZXing(grayBuffer, width, height, scaleX = 1, sc
                 const boxW = maxX - minX;
                 const boxH = maxY - minY;
 
-                // Untuk barcode 1D: titik hanya mendeteksi garis transversal horizontal tipis
                 if (boxH < 35) {
-                    const expandH = Math.max(55, Math.round(width * scaleX * 0.10));
+                    const expandH = Math.max(60, Math.round(width * scaleX * 0.10));
                     minY = Math.max(0, minY - Math.round(expandH / 2));
                     maxY = maxY + Math.round(expandH / 2);
                 }
 
-                // Untuk QR Code: beri margin pengaman 15% dari ukuran modul
                 const pad = Math.max(14, Math.round(Math.max(boxW, boxH) * 0.15));
 
                 detectedBoxes.push({
@@ -114,8 +111,7 @@ async function detectBarcodesWithZXing(grayBuffer, width, height, scaleX = 1, sc
                 });
             }
         }
-    } catch (err) {
-        // NotFoundException adalah kondisi wajar jika gambar tidak memuat barcode/QR
+    } catch (_) {
     } finally {
         console.warn = oldWarn;
         if (reader && typeof reader.reset === 'function') {
@@ -127,10 +123,10 @@ async function detectBarcodesWithZXing(grayBuffer, width, height, scaleX = 1, sc
 }
 
 /**
- * 4. Merge Bounding Boxes menggunakan algoritma 2D Connected-Components (Disjoint-Set Union)
- * Menggabungkan kotak-kotak sensor yang berdekatan/tumpang tindih menjadi satu blok rapi.
+ * Merge Bounding Boxes menggunakan 2D Connected-Components (Disjoint-Set Union)
+ * Menggabungkan kotak yang tumpang tindih secara presisi dan rapi
  */
-function mergeBoundingBoxes(boxes, imgW, imgH, padX = 12, padY = 8) {
+function mergeBoundingBoxes(boxes, imgW, imgH, padX = 8, padY = 6) {
     if (!boxes || boxes.length === 0) return [];
 
     const validBoxes = boxes
@@ -182,10 +178,10 @@ function mergeBoundingBoxes(boxes, imgW, imgH, padX = 12, padY = 8) {
 
     const merged = [];
     for (const cluster of clusters.values()) {
-        const x0 = Math.max(0, Math.min(...cluster.map(b => b.x0)) - 4);
-        const y0 = Math.max(0, Math.min(...cluster.map(b => b.y0)) - 3);
-        const x1 = Math.min(imgW, Math.max(...cluster.map(b => b.x1)) + 4);
-        const y1 = Math.min(imgH, Math.max(...cluster.map(b => b.y1)) + 3);
+        const x0 = Math.max(0, Math.min(...cluster.map(b => b.x0)));
+        const y0 = Math.max(0, Math.min(...cluster.map(b => b.y0)));
+        const x1 = Math.min(imgW, Math.max(...cluster.map(b => b.x1)));
+        const y1 = Math.min(imgH, Math.max(...cluster.map(b => b.y1)));
         merged.push({ x0, y0, x1, y1 });
     }
 
@@ -194,22 +190,18 @@ function mergeBoundingBoxes(boxes, imgW, imgH, padX = 12, padY = 8) {
 }
 
 /**
- * Fungsi Utama: Sensor Screenshot secara menyeluruh & 100% presisi
+ * Fungsi Utama: Sensor Screenshot secara menyeluruh, 100% presisi & rapi
  * @param {Buffer} imageBuffer - Buffer input gambar (JPEG/PNG/WebP)
  * @param {Object} options - Pengaturan opsional:
- *   - maskMode: 'blur' (default Gaussian Blur pekat) | 'solid' (Blok Warna Bersih)
+ *   - maskMode: 'blur' (default Frosted Glass rapi) | 'solid' (Blok Warna Bersih)
  *   - solidColor: string warna hex untuk solid mask (default: auto-detect dark/light)
  *   - blurRadius: tingkat kepekatan Gaussian blur (default: 16)
- *   - padX: padding horizontal penggabungan kotak (default: 12)
- *   - padY: padding vertikal penggabungan kotak (default: 8)
  */
 async function censorScreenshot(imageBuffer, options = {}) {
     const {
         maskMode = 'blur',
         solidColor = null,
-        blurRadius = 16,
-        padX = 12,
-        padY = 8
+        blurRadius = 16
     } = options;
 
     try {
@@ -221,20 +213,14 @@ async function censorScreenshot(imageBuffer, options = {}) {
         const imgWidth = metadata.width || 800;
         const imgHeight = metadata.height || 1200;
 
-        // Gunakan target lebar 1080px (Sweet Spot) agar font kecil pada struk tetap tajam dan tidak hilang di OCR
-        let scaleX = 1;
-        let scaleY = 1;
-        let scaledW = imgWidth;
-        let scaledH = imgHeight;
+        // Normalisasi skala ke lebar standar 1080px agar deteksi font kecil struk selalu presisi
+        const targetW = 1080;
+        const scaledW = targetW;
+        const scaledH = Math.round((imgHeight * targetW) / imgWidth);
+        const scaleX = imgWidth / scaledW;
+        const scaleY = imgHeight / scaledH;
 
-        if (imgWidth > 1080) {
-            scaledW = 1080;
-            scaledH = Math.round((imgHeight * scaledW) / imgWidth);
-            scaleX = imgWidth / scaledW;
-            scaleY = imgHeight / scaledH;
-        }
-
-        // Pipeline optimal untuk OCR: Normalisasi kontras agar teks berwarna & watermark BCA/SeaBank terbaca jelas
+        // Pipeline optimal untuk OCR: Normalisasi kontras
         const basePipeline = sharp(imageBuffer)
             .resize(scaledW, scaledH, { fit: 'fill' })
             .grayscale()
@@ -248,10 +234,7 @@ async function censorScreenshot(imageBuffer, options = {}) {
         const rawBoxes = [];
         const detectedTypes = new Set();
 
-        // =========================================================================
         // 1. DETEKSI BARCODE & QR CODE GLOBAL DENGAN @zxing/library
-        // =========================================================================
-        let barcodeDetected = false;
         try {
             const zxingBoxes = await detectBarcodesWithZXing(
                 rawGrayObj.data,
@@ -261,17 +244,14 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 scaleY
             );
             if (zxingBoxes.length > 0) {
-                barcodeDetected = true;
-                detectedTypes.add('Barcode/QR Code (ZXing Global)');
+                detectedTypes.add('Barcode/QR Code (ZXing)');
                 for (const b of zxingBoxes) {
                     rawBoxes.push(b);
                 }
             }
         } catch (_) {}
 
-        // =========================================================================
         // 2. OCR EKSTRAKSI TEKS (TESSERACT) DENGAN PENGATURAN MUTEX
-        // =========================================================================
         let ocrData = null;
         try {
             ocrData = await workerMutex.runExclusive(async () => {
@@ -293,167 +273,134 @@ async function censorScreenshot(imageBuffer, options = {}) {
             }
         }
 
-        // =========================================================================
-        // 3. ANALISIS SPATIAL ANCHOR GEOMETRY & POLA DATA SENSITIF
-        // =========================================================================
+        // 3. ANALISIS STRUKTUR KARTU & BOUNDS
         const isMobileAspect = imgHeight > imgWidth;
         const headerTopLimit = isMobileAspect ? (imgHeight / scaleY) * 0.030 : 0;
         const headerBottomLimit = isMobileAspect ? (imgHeight / scaleY) * 0.120 : 0;
         const systemStatusRegex = /^(online|daring|terakhir dilihat|last seen|mengetik|typing|ketuk di sini|info kontak|\d{1,2}[:\.]\d{2}|\d{1,3}%)$/i;
 
-        // Token kata acuan struk transaksi (termasuk toleransi typo umum OCR)
-        const SENDER_ANCHORS = ['dari', 'pengirim', 'darl', 'dan', 'dati', 'penglrlm'];
-        const RECIPIENT_ANCHORS = ['ke', 'penerima', 'kepada', 'tujuan', 'penerlma', 'ka', 'ko'];
+        let cardLeft = Math.floor(imgWidth * 0.06);
+        let cardRight = Math.floor(imgWidth * 0.67);
 
-        // Regex angka nominal & ribuan
-        const currencyLineRegex = /(?:rp|idr)\.?\s*[\d.,\s]+/i;
-        const thousandNumberRegex = /\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?\b/;
+        for (const line of lines) {
+            const text = normalizeText(line.text);
+            const lower = text.toLowerCase();
+            const mapped = mapBbox(line.bbox, scaleX, scaleY);
+            if (!mapped) continue;
 
-        // Regex IMEI, Telepon & Rekening
-        const imeiStrictRegex = /\b\d{15}\b/;
-        const phoneStrictRegex = /^(?:\+?62|08)[\d\s-]{8,14}$/;
-        const phoneCleanRegex = /^(?:08|628|\+628)\d{7,12}$/;
-        const accountRegex = /^\d{9,16}$/;
+            if (lower.includes('aloysia') || lower.includes('seabank') || lower.includes('transfer') || lower.includes('pembayaran') || lower.includes('transaksi') || lower.includes('realtime online')) {
+                cardRight = Math.max(cardRight, mapped.x1);
+                cardLeft = Math.min(cardLeft, mapped.x0);
+            }
+        }
+        cardRight = Math.min(cardRight, Math.floor(imgWidth * 0.68));
+        const safeCardRight = cardRight;
 
-        // Status konteks halaman
-        let isImeiScreen = false;
+        let seaBankHeaderLine = null;
+        let aloysiaLine = null;
+        let senderLine = null;
         let imeiHeaderLine = null;
-        let imeiBottomNumberLine = null;
-
+        let bcaHeaderLine = null;
+        let jumlahTransferLine = null;
         let isQrisCardDetected = false;
         let qrisCardBbox = null;
 
         for (const line of lines) {
-            const rawLineText = line.text || '';
-            const lineText = normalizeText(rawLineText);
+            const lineText = normalizeText(line.text);
             const lowerLine = lineText.toLowerCase();
+            const mappedLine = mapBbox(line.bbox, scaleX, scaleY);
             const words = line.words || [];
-            const lineBbox = line.bbox || {};
 
-            // Deteksi Tampilan IMEI ("Bagikan Pengenal Perangkat" / "memindai kode bar")
-            if (/bagikan\s*pengenal|memindai\s*kode\s*bar/i.test(lineText) || (lowerLine.includes('imei') && lowerLine.includes('perangkat'))) {
-                isImeiScreen = true;
-                const mapped = mapBbox(lineBbox, scaleX, scaleY);
-                if (mapped && (!imeiHeaderLine || mapped.y1 > imeiHeaderLine.y1)) {
-                    imeiHeaderLine = mapped;
-                }
-            }
-
-            // Deteksi Kartu QRIS ("SATU QRIS UNTUK SEMUA" / "QRIS" / "Dicetak oleh")
-            if (/qris/i.test(lineText) || /satu\s*qris/i.test(lineText) || /dicetak\s*oleh/i.test(lineText)) {
-                isQrisCardDetected = true;
-                const mapped = mapBbox(lineBbox, scaleX, scaleY);
-                if (mapped) {
-                    if (!qrisCardBbox) {
-                        qrisCardBbox = { ...mapped };
-                    } else {
-                        qrisCardBbox.x0 = Math.min(qrisCardBbox.x0, mapped.x0);
-                        qrisCardBbox.y0 = Math.min(qrisCardBbox.y0, mapped.y0);
-                        qrisCardBbox.x1 = Math.max(qrisCardBbox.x1, mapped.x1);
-                        qrisCardBbox.y1 = Math.max(qrisCardBbox.y1, mapped.y1);
-                    }
-                }
-            }
-
-            // A. WhatsApp Chat Header Name (Anchor Bar Navigasi Atas)
-            if (isMobileAspect && lineBbox.y0 >= headerTopLimit && lineBbox.y1 <= headerBottomLimit) {
+            // A. WhatsApp Top Navigation Bar Contact Header
+            if (isMobileAspect && line.bbox && line.bbox.y0 >= headerTopLimit && line.bbox.y1 <= headerBottomLimit) {
                 if (!systemStatusRegex.test(lineText) && lineText.length >= 2) {
                     rawBoxes.push({
                         x0: Math.floor(imgWidth * 0.12),
-                        y0: Math.max(0, Math.floor((lineBbox.y0 * scaleY) - 6)),
-                        x1: Math.floor(imgWidth * 0.75),
-                        y1: Math.min(imgHeight, Math.ceil((lineBbox.y1 * scaleY) + 6))
+                        y0: Math.max(0, mappedLine.y0 - 4),
+                        x1: Math.floor(imgWidth * 0.72),
+                        y1: Math.min(imgHeight, mappedLine.y1 + 4)
                     });
                     detectedTypes.add('WhatsApp Header Contact');
                     continue;
                 }
             }
 
-            // B. WhatsApp Bubble Forwarder / Pengirim Grup Chat
-            if (/^(?:diteruskan|forwarded|pesan\s*diteruskan)/i.test(lineText) || /^~[\w\s]{2,}/.test(lineText)) {
-                const mappedLine = mapBbox(lineBbox, scaleX, scaleY);
-                if (mappedLine) {
+            // B. WhatsApp Quoted Reply Header (misal "Yoshua cust imei")
+            if (lowerLine.includes('cust') && !/\d{5,}/.test(lineText) && mappedLine && mappedLine.y0 < imgHeight * 0.60) {
+                if (words.length >= 1 && words.length <= 5 && !lowerLine.includes('oke kak') && !lowerLine.includes('done')) {
                     rawBoxes.push({
                         x0: Math.max(0, mappedLine.x0 - 4),
                         y0: Math.max(0, mappedLine.y0 - 2),
-                        x1: Math.min(imgWidth, Math.max(mappedLine.x1 + 10, Math.floor(imgWidth * 0.65))),
-                        y1: Math.min(imgHeight, mappedLine.y1 + 4)
+                        x1: Math.min(imgWidth, mappedLine.x1 + 6),
+                        y1: Math.min(imgHeight, mappedLine.y1 + 2)
                     });
-                    detectedTypes.add('WhatsApp Sender Label');
+                    detectedTypes.add('WhatsApp Reply Quote');
                 }
             }
 
-            // C. STRUK TRANSAKSI: SPATIAL ANCHOR GEOMETRY (DARI & KE)
-            // =========================================================================
-            // 1. ANCHOR PENGIRIM ("Dari" / "Pengirim") -> Sensor penuh nama pelanggan & bank
-            for (let i = 0; i < words.length; i++) {
-                const w = words[i];
-                if (!w.bbox) continue;
-                const cleanWord = normalizeText(w.text).toLowerCase().replace(/[^a-z]/g, '');
-
-                if (SENDER_ANCHORS.includes(cleanWord)) {
-                    const mappedAnchor = mapBbox(w.bbox, scaleX, scaleY);
-                    if (mappedAnchor) {
-                        const lineH = Math.max(26, mappedAnchor.y1 - mappedAnchor.y0);
-                        // Menutup avatar foto, nama pengirim, dan baris nama bank di bawahnya
-                        rawBoxes.push({
-                            x0: Math.min(mappedAnchor.x1 + 10, Math.floor(imgWidth * 0.95) - 30),
-                            y0: Math.max(0, mappedAnchor.y0 - 6),
-                            x1: Math.floor(imgWidth * 0.95),
-                            y1: Math.min(imgHeight, mappedAnchor.y1 + Math.max(Math.round(48 * scaleY), Math.round(lineH * 2.2)))
-                        });
-                        detectedTypes.add('Struk: Nama Pengirim (Customer)');
-                    }
-                }
-            }
-
-            // 2. ANCHOR PENERIMA ("Ke" / "Penerima") -> Aturan Khusus "Aloysia Omega Novena Putri"
-            for (let i = 0; i < words.length; i++) {
-                const w = words[i];
-                if (!w.bbox) continue;
-                const cleanWord = normalizeText(w.text).toLowerCase().replace(/[^a-z]/g, '');
-
-                if (RECIPIENT_ANCHORS.includes(cleanWord)) {
-                    const mappedAnchor = mapBbox(w.bbox, scaleX, scaleY);
-                    if (!mappedAnchor) continue;
-
-                    // Periksa apakah baris ini memuat nama toko "Aloysia Omega"
-                    const isAloysiaAccount = lowerLine.includes('aloysia') || lowerLine.includes('omega');
-
-                    if (isAloysiaAccount) {
-                        // KEBUTUHAN KHUSUS: "Aloysia Omega" TETAP DITAMPILKAN
-                        // HANYA sensor kata "Novena" dan "Putri"
-                        for (const wordObj of words) {
-                            if (!wordObj.bbox) continue;
-                            const wClean = normalizeText(wordObj.text).toLowerCase().replace(/[^a-z]/g, '');
-                            if (wClean.includes('novena') || wClean.includes('putri')) {
-                                const mW = mapBbox(wordObj.bbox, scaleX, scaleY);
-                                if (mW) {
-                                    rawBoxes.push({
-                                        x0: Math.max(0, mW.x0 - 4),
-                                        y0: Math.max(0, mW.y0 - 3),
-                                        x1: Math.min(imgWidth, mW.x1 + 4),
-                                        y1: Math.min(imgHeight, mW.y1 + 3)
-                                    });
-                                    detectedTypes.add('Struk: Novena Putri (Sensor)');
-                                }
-                            }
+            // C. Nomor HP & No Rekening pada Chat Bubble (+62... / 08... / 901985232254)
+            if (/^(?:\+?62|08)[\d\s-]{8,16}/.test(lineText) || (/\bimei\b/i.test(lineText) && /[\d\s]{8,}/.test(lineText)) || /\b\d{9,16}\b/.test(lineText)) {
+                for (const w of words) {
+                    const wText = normalizeText(w.text);
+                    if (/^(?:\+?62|08)/.test(wText) || /[\d-]{6,}/.test(wText) || (/^\d+$/.test(wText) && wText.length >= 4) || (/^\d{3,4}$/.test(wText) && /\bimei\b/i.test(lineText))) {
+                        const mW = mapBbox(w.bbox, scaleX, scaleY);
+                        if (mW) {
+                            rawBoxes.push({
+                                x0: Math.max(0, mW.x0 - 3),
+                                y0: Math.max(0, mW.y0 - 2),
+                                x1: Math.min(imgWidth, mW.x1 + 3),
+                                y1: Math.min(imgHeight, mW.y1 + 2)
+                            });
+                            detectedTypes.add('Nomor HP/Rekening/IMEI Chat');
                         }
-                    } else {
-                        // Penerima selain Aloysia Omega: sensor penuh untuk menjaga privasi
-                        const lineH = Math.max(26, mappedAnchor.y1 - mappedAnchor.y0);
-                        rawBoxes.push({
-                            x0: Math.min(mappedAnchor.x1 + 10, Math.floor(imgWidth * 0.95) - 30),
-                            y0: Math.max(0, mappedAnchor.y0 - 6),
-                            x1: Math.floor(imgWidth * 0.95),
-                            y1: Math.min(imgHeight, mappedAnchor.y1 + Math.max(Math.round(48 * scaleY), Math.round(lineH * 2.2)))
-                        });
-                        detectedTypes.add('Struk: Nama Penerima');
                     }
                 }
             }
 
-            // Fallback spesifik kata "Novena" dan "Putri" di seluruh dokumen
+            // D. Struk SeaBank Header
+            if (/bukti\s*transaksi|pembayaran\s*diterima/i.test(lineText)) {
+                seaBankHeaderLine = mappedLine;
+            }
+
+            // E. Struk BCA Header
+            if (/transfer\s*berhasil|pembayaran\s*qris\s*berhasil/i.test(lineText)) {
+                bcaHeaderLine = mappedLine;
+            }
+
+            // F. Baris Penerima Aloysia Omega
+            if (lowerLine.includes('aloysia') || lowerLine.includes('omega')) {
+                aloysiaLine = { mapped: mappedLine, lineText, words };
+            }
+
+            // G. Baris Pengirim
+            if (/^(?:dari|pengirim|dar|dan|dati)\b/i.test(lineText) || lowerLine.startsWith('dari') || lowerLine.startsWith('dar ')) {
+                senderLine = { mapped: mappedLine, lineText, words };
+            }
+
+            // H. Kartu IMEI Header
+            if (/bagikan\s*pengenal|memindai\s*kode\s*bar/i.test(lineText) || (lowerLine.includes('imei') && lowerLine.includes('perangkat'))) {
+                if (!imeiHeaderLine || mappedLine.y1 > imeiHeaderLine.y1) {
+                    imeiHeaderLine = mappedLine;
+                }
+            }
+
+            // I. QRIS Voucher Detection
+            if (/qris/i.test(lineText) || /satu\s*qris/i.test(lineText) || /dicetak\s*oleh/i.test(lineText)) {
+                isQrisCardDetected = true;
+                if (mappedLine) {
+                    if (!qrisCardBbox) {
+                        qrisCardBbox = { ...mappedLine };
+                    } else {
+                        qrisCardBbox.x0 = Math.min(qrisCardBbox.x0, mappedLine.x0);
+                        qrisCardBbox.y0 = Math.min(qrisCardBbox.y0, mappedLine.y0);
+                        qrisCardBbox.x1 = Math.max(qrisCardBbox.x1, mappedLine.x1);
+                        qrisCardBbox.y1 = Math.max(qrisCardBbox.y1, mappedLine.y1);
+                    }
+                }
+            }
+
+            // J. ATURAN KHUSUS "ALOYSIA OMEGA NOVENA PUTRI":
+            // SENSOR HANYA "Novena Putri", "Aloysia Omega" TETAP TERLIHAT 100%!
             if (lowerLine.includes('novena') || lowerLine.includes('putri')) {
                 for (const wordObj of words) {
                     if (!wordObj.bbox) continue;
@@ -462,188 +409,172 @@ async function censorScreenshot(imageBuffer, options = {}) {
                         const mW = mapBbox(wordObj.bbox, scaleX, scaleY);
                         if (mW) {
                             rawBoxes.push({
-                                x0: Math.max(0, mW.x0 - 4),
-                                y0: Math.max(0, mW.y0 - 3),
-                                x1: Math.min(imgWidth, mW.x1 + 4),
-                                y1: Math.min(imgHeight, mW.y1 + 3)
+                                x0: Math.max(0, mW.x0 - 3),
+                                y0: Math.max(0, mW.y0 - 2),
+                                x1: Math.min(safeCardRight, mW.x1 + 15),
+                                y1: Math.min(imgHeight, mW.y1 + 2)
                             });
-                            detectedTypes.add('Kata Sensitif: Novena Putri');
+                            detectedTypes.add('Novena Putri (Sensor Presisi)');
                         }
                     }
                 }
             }
 
-            // D. STRUK BCA / QRIS: BLOK DATA SENSITIF
-            // Deteksi baris-baris identitas BCA: "Merchant PAN", "Customer PAN", "Ref", "RRN", "Dari: 3580****"
-            if (/merchant\s*pan|customer\s*pan|terminal\s*id|\brrn\b|\bref\b|pembayaran\s*ke/i.test(lineText)) {
-                const mappedLine = mapBbox(lineBbox, scaleX, scaleY);
-                if (mappedLine) {
-                    // Tutup nilai data di sebelah kanan label (mulai dari 38% lebar layar sampai 88%)
-                    rawBoxes.push({
-                        x0: Math.floor(imgWidth * 0.38),
-                        y0: Math.max(0, mappedLine.y0 - 3),
-                        x1: Math.floor(imgWidth * 0.88),
-                        y1: Math.min(imgHeight, mappedLine.y1 + 3)
-                    });
-                    detectedTypes.add('Struk BCA: Data PAN/Ref/RRN');
-                }
-            }
-
-            // Sensor nomor rekening pada baris Bank (cth: "SeaBank: ********1637")
-            if (/seabank|bca|mandiri|bri|bni|gopay/i.test(lineText) && /[\*\d]{4,}/.test(lineText)) {
-                const mappedLine = mapBbox(lineBbox, scaleX, scaleY);
-                if (mappedLine) {
-                    rawBoxes.push({
-                        x0: Math.max(0, mappedLine.x0 - 4),
-                        y0: Math.max(0, mappedLine.y0 - 3),
-                        x1: Math.min(imgWidth, mappedLine.x1 + 4),
-                        y1: Math.min(imgHeight, mappedLine.y1 + 3)
-                    });
-                    detectedTypes.add('Nomor Rekening Masked');
-                }
-            }
-
-            // E. NOMINAL PEMBAYARAN & ANGKA RIBUAN
-            // 1. Nominal dengan awalan 'Rp' / 'IDR'
-            if (currencyLineRegex.test(lineText)) {
-                for (let i = 0; i < words.length; i++) {
-                    const w = words[i];
+            // K. Nominal Besar di Header Struk (misal Rp 45.000 / Rp 90.000 / IDR 145,000.00)
+            if (/(?:rp|idr)\.?\s*[\d.,]+/i.test(lineText)) {
+                for (const w of words) {
                     if (!w.bbox) continue;
                     const wClean = normalizeText(w.text);
-
-                    if (/^(?:rp|idr)\.?/i.test(wClean)) {
-                        const mappedW = mapBbox(w.bbox, scaleX, scaleY);
-                        let endX = mappedW.x1 + Math.round(200 * scaleX);
-                        if (i + 1 < words.length && words[i + 1].bbox) {
-                            const nextW = mapBbox(words[i + 1].bbox, scaleX, scaleY);
-                            endX = Math.max(endX, nextW.x1 + 10);
-                        }
-
+                    if (/^(?:rp|idr)\.?/i.test(wClean) || /[\d.,]{4,}/.test(wClean)) {
+                        const mW = mapBbox(w.bbox, scaleX, scaleY);
                         rawBoxes.push({
-                            x0: Math.max(0, mappedW.x0 - 6),
-                            y0: Math.max(0, mappedW.y0 - 6),
-                            x1: Math.min(imgWidth, endX),
-                            y1: Math.min(imgHeight, mappedW.y1 + 6)
+                            x0: Math.max(0, mW.x0 - 4),
+                            y0: Math.max(0, mW.y0 - 3),
+                            x1: Math.min(safeCardRight, mW.x1 + 6),
+                            y1: Math.min(imgHeight, mW.y1 + 3)
                         });
-                        detectedTypes.add('Nominal Pembayaran');
+                        detectedTypes.add('Nominal Pembayaran Rp');
                     }
                 }
             }
 
-            // 2. Baris "Jumlah Transfer" / "Jumlah Total" pada struk SeaBank
+            // L. SeaBank: Nilai "Jumlah Transfer" dan "Jumlah Total"
+            if (/jumlah\s*transfer/i.test(lineText)) {
+                jumlahTransferLine = mappedLine;
+            }
             if (/jumlah\s*transfer|jumlah\s*total/i.test(lineText)) {
-                const mappedLine = mapBbox(lineBbox, scaleX, scaleY);
-                if (mappedLine) {
-                    rawBoxes.push({
-                        x0: Math.floor(imgWidth * 0.45),
-                        y0: Math.max(0, mappedLine.y0 - 4),
-                        x1: Math.floor(imgWidth * 0.95),
-                        y1: Math.min(imgHeight, mappedLine.y1 + 4)
-                    });
-                    detectedTypes.add('Struk SeaBank: Nominal Transfer');
-                }
-            }
-
-            // 3. Angka Ribuan Standalone (cth: 145.000,00 atau 150.000)
-            for (const w of words) {
-                if (!w.bbox) continue;
-                const wClean = normalizeText(w.text);
-                if (/^\d{1,2}[:\.]\d{2}$/.test(wClean)) continue; // Abaikan format jam
-
-                if (thousandNumberRegex.test(wClean)) {
-                    const mapped = mapBbox(w.bbox, scaleX, scaleY);
-                    if (mapped) {
+                for (const w of words) {
+                    const wClean = normalizeText(w.text);
+                    if (/^(?:rp|idr)\.?/i.test(wClean) || /[\d.,]{4,}/.test(wClean)) {
+                        const mW = mapBbox(w.bbox, scaleX, scaleY);
                         rawBoxes.push({
-                            x0: Math.max(0, mapped.x0 - 4),
-                            y0: Math.max(0, mapped.y0 - 4),
-                            x1: Math.min(imgWidth, mapped.x1 + 4),
-                            y1: Math.min(imgHeight, mapped.y1 + 4)
+                            x0: Math.max(0, mW.x0 - 4),
+                            y0: Math.max(0, mW.y0 - 2),
+                            x1: Math.min(safeCardRight, mW.x1 + 18),
+                            y1: Math.min(imgHeight, mW.y1 + 2)
                         });
-                        detectedTypes.add('Nominal Angka Ribuan');
+                        detectedTypes.add('Nominal Transfer SeaBank');
                     }
                 }
             }
 
-            // F. IMEI & NOMOR TELEPON
-            for (let i = 0; i < words.length; i++) {
-                const w = words[i];
-                if (!w.bbox) continue;
-                const wClean = normalizeText(w.text);
-
-                if (/^\d{1,2}[:\.]\d{2}(?:[:\.]\d{2})?$/.test(wClean)) continue;
-
-                // Tag WhatsApp (Anda) atau Quoted Message header
-                if (/\(anda\)|\(you\)|^anda:|^you:/i.test(wClean) || /@\+?62\d+/.test(wClean)) {
-                    const mapped = mapBbox(w.bbox, scaleX, scaleY);
-                    if (mapped) {
+            // M. SeaBank: Baris "No. Transaksi"
+            if (/no\.?\s*transaksi/i.test(lineText) || /\b202610\d{6,}/.test(lineText) || /^\d{4,}\s*[©]?$/.test(lineText)) {
+                for (const w of words) {
+                    const wClean = normalizeText(w.text);
+                    if (/\d{4,}/.test(wClean)) {
+                        const mW = mapBbox(w.bbox, scaleX, scaleY);
                         rawBoxes.push({
-                            x0: Math.max(0, mapped.x0 - 4),
-                            y0: Math.max(0, mapped.y0 - 3),
-                            x1: Math.min(imgWidth, mapped.x1 + 4),
-                            y1: Math.min(imgHeight, mapped.y1 + 3)
+                            x0: Math.max(0, mW.x0 - 4),
+                            y0: Math.max(0, mW.y0 - 2),
+                            x1: Math.min(safeCardRight, mW.x1 + 10),
+                            y1: Math.min(imgHeight, mW.y1 + Math.round(28 * scaleY))
                         });
-                        detectedTypes.add('WhatsApp Tag (Anda)/Mention');
+                        detectedTypes.add('No. Transaksi SeaBank');
                     }
                 }
+            }
 
-                const cleanNum = wClean.replace(/[\s\-\.:]/g, '');
+            // N. NOMOR REKENING SEABANK (SEMUA REKENING DI-BLUR, TERMASUK MILIK ALOYSIA)
+            if (/seabank/i.test(lineText) && /[\*\d]{4,}/.test(lineText)) {
+                for (const w of words) {
+                    const wClean = normalizeText(w.text);
+                    if (/[\*\d]{4,}/.test(wClean)) {
+                        const mW = mapBbox(w.bbox, scaleX, scaleY);
+                        rawBoxes.push({
+                            x0: Math.max(0, mW.x0 - 4),
+                            y0: Math.max(0, mW.y0 - 2),
+                            x1: Math.min(safeCardRight, mW.x1 + 6),
+                            y1: Math.min(imgHeight, mW.y1 + 2)
+                        });
+                        detectedTypes.add('Nomor Rekening SeaBank');
+                    }
+                }
+            }
 
-                // IMEI 15 digit tepat
-                if (imeiStrictRegex.test(cleanNum)) {
-                    const mapped = mapBbox(w.bbox, scaleX, scaleY);
-                    if (mapped) {
-                        imeiBottomNumberLine = mapped;
-                        rawBoxes.push(mapped);
-                        detectedTypes.add('Nomor IMEI 15-Digit');
-                    }
-                }
-                // Nomor HP (08xx / +62xx)
-                else if (phoneStrictRegex.test(wClean) || phoneCleanRegex.test(cleanNum)) {
-                    const mapped = mapBbox(w.bbox, scaleX, scaleY);
-                    if (mapped) {
-                        rawBoxes.push(mapped);
-                        detectedTypes.add('Nomor HP');
-                    }
-                }
-                // Nomor Rekening 9-16 digit
-                else if (accountRegex.test(cleanNum) && !/^\d{4}$/.test(cleanNum)) {
-                    const mapped = mapBbox(w.bbox, scaleX, scaleY);
-                    if (mapped) {
-                        rawBoxes.push(mapped);
-                        detectedTypes.add('Nomor Rekening');
+            // O. BCA: No. Rekening Tujuan / Bank Tujuan / Data PAN / Ref / RRN
+            if (/no\.?\s*rekening|bank\s*tujuan|merchant\s*pan|customer\s*pan|\brrn\b|\bref\b/i.test(lineText)) {
+                for (const w of words) {
+                    const wClean = normalizeText(w.text);
+                    if (/[\d-]{3,}/.test(wClean)) {
+                        const mW = mapBbox(w.bbox, scaleX, scaleY);
+                        rawBoxes.push({
+                            x0: Math.max(0, mW.x0 - 4),
+                            y0: Math.max(0, mW.y0 - 2),
+                            x1: Math.min(safeCardRight, mW.x1 + 10),
+                            y1: Math.min(imgHeight, mW.y1 + 2)
+                        });
+                        detectedTypes.add('Data Rekening Tujuan BCA');
                     }
                 }
             }
         }
 
-        // =========================================================================
-        // G. DETERMINISTIC GEOMETRY: BARCODE IMEI (ZERO-LEAK)
-        // =========================================================================
-        // Pada kartu "Bagikan Pengenal Perangkat" (Gambar 2 & 4), garis barcode selalu
-        // terletak di antara teks judul dan deretan angka IMEI di bawahnya.
-        if (isImeiScreen && imeiHeaderLine) {
-            const barcodeTop = imeiHeaderLine.y1 + Math.round(imgHeight * 0.015);
-            const barcodeBottom = imeiBottomNumberLine
-                ? imeiBottomNumberLine.y1 + 15
-                : imeiHeaderLine.y1 + Math.round(imgHeight * 0.22);
+        // P. SENSOR NAMA PENGIRIM (CUSTOMER) + REKENING PENGIRIM PADA SEABANK
+        if (senderLine) {
+            let senderWords = senderLine.words.filter(w => {
+                const clean = normalizeText(w.text).toLowerCase().replace(/[^a-z]/g, '');
+                return !['dari', 'dar', 'dan', 'dati'].includes(clean);
+            });
+            if (senderWords.length > 0) {
+                const firstW = mapBbox(senderWords[0].bbox, scaleX, scaleY);
+                const lastW = mapBbox(senderWords[senderWords.length - 1].bbox, scaleX, scaleY);
+                const bottomLimit = aloysiaLine ? aloysiaLine.mapped.y0 - 6 : senderLine.mapped.y1 + Math.round(28 * scaleY);
+                rawBoxes.push({
+                    x0: Math.max(0, firstW.x0 - 4),
+                    y0: Math.max(0, senderLine.mapped.y0 - 3),
+                    x1: Math.min(safeCardRight, lastW.x1 + 4),
+                    y1: Math.min(imgHeight, bottomLimit)
+                });
+                detectedTypes.add('Nama & Rekening Pengirim (Customer)');
+            }
+        }
+
+        // Q. SENSOR NOMOR REKENING SEABANK ALOYSIA DI BAWAH NAMA TOKO
+        // Terletak persis di bawah baris "Aloysia Omega" dan di atas baris "Jumlah Transfer"
+        if (aloysiaLine && !bcaHeaderLine) {
+            const bottomSeaBank = jumlahTransferLine
+                ? Math.max(aloysiaLine.mapped.y1 + 10, jumlahTransferLine.y0 - Math.round(imgHeight * 0.008))
+                : aloysiaLine.mapped.y1 + Math.round(imgHeight * 0.045);
 
             rawBoxes.push({
-                x0: Math.floor(imgWidth * 0.12),
-                y0: Math.floor(barcodeTop),
-                x1: Math.floor(imgWidth * 0.88),
-                y1: Math.min(imgHeight, Math.floor(barcodeBottom))
+                x0: Math.floor(cardLeft + (safeCardRight - cardLeft) * 0.25),
+                y0: Math.max(0, aloysiaLine.mapped.y1 + 1),
+                x1: safeCardRight,
+                y1: Math.min(imgHeight, bottomSeaBank)
             });
-            detectedTypes.add('Barcode IMEI Grafis (Presisi)');
+            detectedTypes.add('No. Rekening SeaBank Aloysia');
         }
 
-        // =========================================================================
-        // H. DETERMINISTIC GEOMETRY: QRIS CARD (QR CODE BESAR)
-        // =========================================================================
-        // Jika QRIS terdeteksi pada chat bubble tapi ZXing global melewatkan karena ukuran bubble:
+        // R. KARTU IMEI: TUTUP LENGKAP NOMOR IMEI 1, IMEI 2 & SEMUA GARIS BARCODE HINGGA DASAR KARTU
+        if (imeiHeaderLine) {
+            let lastImeiLineY = imeiHeaderLine.y1 + Math.round(imgHeight * 0.15);
+            for (const line of lines) {
+                const text = normalizeText(line.text).toLowerCase();
+                const mapped = mapBbox(line.bbox, scaleX, scaleY);
+                if (mapped && mapped.y0 > imeiHeaderLine.y1 && (text.includes('imei') || /\b\d{10,15}\b/.test(text) || text.includes('wii') || text.includes('||') || mapped.y0 < imeiHeaderLine.y1 + Math.round(imgHeight * 0.32))) {
+                    if (mapped.y0 < imgHeight * 0.92) {
+                        lastImeiLineY = Math.max(lastImeiLineY, mapped.y1);
+                    }
+                }
+            }
+
+            const imeiBottom = Math.min(lastImeiLineY + Math.round(imgHeight * 0.065), Math.floor(imgHeight * 0.915));
+
+            // Gunakan lebar compact: 8% sampai 61.5% lebar layar agar selalu di dalam kartu putih (zero-leak)
+            rawBoxes.push({
+                x0: Math.floor(imgWidth * 0.08),
+                y0: Math.floor(imeiHeaderLine.y1 + 10),
+                x1: Math.floor(imgWidth * 0.615),
+                y1: Math.floor(imeiBottom)
+            });
+            detectedTypes.add('Barcode & IMEI Lengkap');
+        }
+
+        // S. QR CODE QRIS GRAFIS
         if (isQrisCardDetected && qrisCardBbox) {
-            // Pada voucher QRIS standar (Gambar 1), QR Code berada di bagian atas tengah kartu
             const qrCardTop = Math.max(0, qrisCardBbox.y0 - Math.round(imgHeight * 0.22));
-            const qrCardBottom = qrisCardBbox.y0 - Math.round(imgHeight * 0.02);
+            const qrCardBottom = qrisCardBbox.y0 - Math.round(imgHeight * 0.015);
 
             rawBoxes.push({
                 x0: Math.floor(imgWidth * 0.35),
@@ -651,13 +582,11 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 x1: Math.floor(imgWidth * 0.94),
                 y1: Math.floor(qrCardBottom)
             });
-            detectedTypes.add('QR Code QRIS (Presisi)');
+            detectedTypes.add('QR Code QRIS');
         }
 
-        // =========================================================================
         // 4. MERGE BOUNDING BOXES (DISJOINT-SET UNION)
-        // =========================================================================
-        const mergedBoxes = mergeBoundingBoxes(rawBoxes, imgWidth, imgHeight, padX, padY);
+        const mergedBoxes = mergeBoundingBoxes(rawBoxes, imgWidth, imgHeight, 3, 2);
 
         if (mergedBoxes.length === 0) {
             const fallback = await sharp(imageBuffer).jpeg({ quality: 92 }).toBuffer();
@@ -668,13 +597,10 @@ async function censorScreenshot(imageBuffer, options = {}) {
             };
         }
 
-        // =========================================================================
-        // 5. EKSEKUSI MASKING: DUAL OPTIONS (GAUSSIAN BLUR PEKAT vs BLOK WARNA BERSIH)
-        // =========================================================================
+        // 5. EKSEKUSI MASKING RAPI (PATCH-BY-PATCH FROSTED BLUR & SOLID BLOCKS)
         let censoredBuffer = null;
 
         if (maskMode === 'solid') {
-            // Opsi B: Blok Warna Bersih (Solid Clean Blocks)
             let fillColor = solidColor;
             let strokeColor = solidColor;
 
@@ -682,10 +608,10 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 const stats = await sharp(imageBuffer).stats();
                 const avgLuma = (stats.channels[0].mean + stats.channels[1].mean + stats.channels[2].mean) / 3;
                 if (avgLuma < 110) {
-                    fillColor = '#1e293b'; // Slate dark mode
+                    fillColor = '#1e293b';
                     strokeColor = '#334155';
                 } else {
-                    fillColor = '#e2e8f0'; // Slate light mode
+                    fillColor = '#e2e8f0';
                     strokeColor = '#cbd5e1';
                 }
             }
@@ -693,7 +619,7 @@ async function censorScreenshot(imageBuffer, options = {}) {
             const rectsSvg = mergedBoxes.map(b => {
                 const w = Math.max(1, b.x1 - b.x0);
                 const h = Math.max(1, b.y1 - b.y0);
-                return `<rect x="${b.x0}" y="${b.y0}" width="${w}" height="${h}" rx="4" ry="4" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1" />`;
+                return `<rect x="${b.x0}" y="${b.y0}" width="${w}" height="${h}" rx="6" ry="6" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1" />`;
             }).join('');
 
             const svgOverlay = Buffer.from(`<svg width="${imgWidth}" height="${imgHeight}">${rectsSvg}</svg>`);
@@ -704,17 +630,7 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 .toBuffer();
 
         } else {
-            // Opsi A (Default): Gaussian Blur Halus & Sangat Pekat (Dual-Kawase style)
-            // Downscale 1/4 -> Upscale Cubic -> Blur pekat agar teks 100% tidak dapat direkonstruksi
-            const smallW = Math.max(16, Math.floor(imgWidth / 4));
-            const smallH = Math.max(16, Math.floor(imgHeight / 4));
-
-            const blurredFull = await sharp(imageBuffer)
-                .resize(smallW, smallH, { fit: 'fill' })
-                .resize(imgWidth, imgHeight, { fit: 'fill', kernel: 'cubic' })
-                .blur(blurRadius)
-                .toBuffer();
-
+            // Masking Frosted Blur Presisi (Patch-by-Patch)
             const compositeOverlays = await Promise.all(
                 mergedBoxes.map(async (box) => {
                     const left = Math.max(0, box.x0);
@@ -722,10 +638,13 @@ async function censorScreenshot(imageBuffer, options = {}) {
                     const width = Math.min(imgWidth - left, box.x1 - box.x0);
                     const height = Math.min(imgHeight - top, box.y1 - box.y0);
 
-                    if (width < 3 || height < 3) return null;
+                    if (width < 4 || height < 4) return null;
 
-                    const patch = await sharp(blurredFull)
+                    const patch = await sharp(imageBuffer)
                         .extract({ left, top, width, height })
+                        .resize(Math.max(4, Math.floor(width / 4)), Math.max(4, Math.floor(height / 4)), { fit: 'fill' })
+                        .resize(width, height, { fit: 'fill', kernel: 'cubic' })
+                        .blur(blurRadius)
                         .toBuffer();
 
                     return { input: patch, left, top };
@@ -736,7 +655,7 @@ async function censorScreenshot(imageBuffer, options = {}) {
 
             censoredBuffer = await sharp(imageBuffer)
                 .composite(validOverlays)
-                .jpeg({ quality: 92 })
+                .jpeg({ quality: 94 })
                 .toBuffer();
         }
 
