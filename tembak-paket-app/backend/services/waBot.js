@@ -1213,12 +1213,24 @@ async function processAdminImageBatch(remoteJid) {
     for (let i = 0; i < msgsToProcess.length; i++) {
         const msg = msgsToProcess[i];
         try {
-            const mediaBuffer = await downloadMediaMessage(
-                msg,
-                'buffer',
-                {},
-                { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage }
-            );
+            let mediaBuffer = null;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    mediaBuffer = await downloadMediaMessage(
+                        msg,
+                        'buffer',
+                        {},
+                        { logger: pino({ level: 'silent' }), reuploadRequest: sock?.updateMediaMessage }
+                    );
+                    if (mediaBuffer && mediaBuffer.length > 0) break;
+                } catch (dlErr) {
+                    if (attempt === 0) {
+                        await new Promise(r => setTimeout(r, 1200));
+                    } else {
+                        throw dlErr;
+                    }
+                }
+            }
 
             const { censoredBuffer, boxesCount, detectedTypes } = await censorScreenshot(mediaBuffer);
             const rawCaption = (msg.message?.imageMessage?.caption || '').trim();
@@ -1231,7 +1243,7 @@ async function processAdminImageBatch(remoteJid) {
                 track: tracks[i]
             });
         } catch (errImg) {
-            console.error(`[WABot Testi] Gagal memproses gambar ke-${i + 1}:`, errImg.message);
+            console.error(`[WABot Testi] Gagal memproses gambar ke-${i + 1}:`, errImg.message, errImg.stack || '');
         }
     }
 
