@@ -12,23 +12,36 @@ const ipv4Agent = new https.Agent({ family: 4 });
 const SESSION_FILE = path.join(__dirname, '..', 'sessions', 'ig_session.json');
 const AUDIO_DIR = path.resolve(__dirname, '..', '..', 'frontend-v2', 'public', 'audio', 'tiktok');
 
-// Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG
+const FFMPEG_BIN = process.env.FFMPEG_PATH || (fs.existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg');
+
+// Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG (dengan offset reff/drop bass)
 const TRENDING_TRACKS = [
-    { title: 'DJ Alay Gaya Kaya Artis (Viral TikTok Remix)', artist: 'DJ Desa', filename: 'djalay.mp3' },
-    { title: 'Stecu Stecu (Jedag Jedug TikTok Remix)', artist: 'Faris Adam', filename: 'stecustecu.mp3' },
-    { title: 'Tabrak Tabrak Masuk (Remix TikTok Full Bass)', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3' },
-    { title: 'Malam Pagi (Remix Jedag Jedug TikTok)', artist: 'Saixse ft. MK', filename: 'malampagi.mp3' },
-    { title: 'Cikini Ke Gondangdia (DJ Koplo Remix TikTok)', artist: 'Duo Anggrek Remix', filename: 'cikini.mp3' },
-    { title: 'Karna Su Sayang (DJ Remix TikTok Viral)', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3' },
-    { title: 'Sial (DJ Speed Up Jedag Jedug TikTok)', artist: 'Mahalini Remix', filename: 'sial.mp3' },
-    { title: 'Garam & Madu (DJ Remix TikTok Bass)', artist: 'Tenxi & Asmara', filename: 'garammadu.mp3' },
-    { title: 'Cupid (Speed Up Twin Ver TikTok Remix)', artist: 'FIFTY FIFTY', filename: 'cupid.mp3' },
-    { title: 'Sigar (DJ Jedag Jedug Koplo TikTok)', artist: 'Denny Caknan Remix', filename: 'sigar.mp3' },
-    { title: 'Cundamani (DJ Slow Bass Remix TikTok)', artist: 'Denny Caknan Remix', filename: 'cundamani.mp3' },
-    { title: 'Wirang (DJ Remix Full Bass TikTok)', artist: 'Denny Caknan Remix', filename: 'wirang.mp3' },
-    { title: 'APT. (DJ TikTok Viral Remix)', artist: 'ROSÉ & Bruno Mars', filename: 'apt.mp3' },
-    { title: 'Die With A Smile (DJ Slow TikTok Remix)', artist: 'Lady Gaga & Bruno Mars', filename: 'diewithasmile.mp3' },
-    { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3' }
+    { title: 'DJ Alay Gaya Kaya Artis (Viral TikTok Remix)', artist: 'DJ Desa', filename: 'djalay.mp3', reffSec: 18 },
+    { title: 'Stecu Stecu (Jedag Jedug TikTok Remix)', artist: 'Faris Adam', filename: 'stecustecu.mp3', reffSec: 15 },
+    { title: 'Tabrak Tabrak Masuk (Remix TikTok Full Bass)', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3', reffSec: 20 },
+    { title: 'Malam Pagi (Remix Jedag Jedug TikTok)', artist: 'Saixse ft. MK', filename: 'malampagi.mp3', reffSec: 25 },
+    { title: 'Cikini Ke Gondangdia (DJ Koplo Remix TikTok)', artist: 'Duo Anggrek Remix', filename: 'cikini.mp3', reffSec: 16 },
+    { title: 'Karna Su Sayang (DJ Remix TikTok Viral)', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3', reffSec: 22 },
+    { title: 'Sial (DJ Speed Up Jedag Jedug TikTok)', artist: 'Mahalini Remix', filename: 'sial.mp3', reffSec: 30 },
+    { title: 'Garam & Madu (DJ Remix TikTok Bass)', artist: 'Tenxi & Asmara', filename: 'garammadu.mp3', reffSec: 18 },
+    { title: 'Cupid (Speed Up Twin Ver TikTok Remix)', artist: 'FIFTY FIFTY', filename: 'cupid.mp3', reffSec: 15 },
+    { title: 'Sigar (DJ Jedag Jedug Koplo TikTok)', artist: 'Denny Caknan Remix', filename: 'sigar.mp3', reffSec: 28 },
+    { title: 'Cundamani (DJ Slow Bass Remix TikTok)', artist: 'Denny Caknan Remix', filename: 'cundamani.mp3', reffSec: 25 },
+    { title: 'Wirang (DJ Remix Full Bass TikTok)', artist: 'Denny Caknan Remix', filename: 'wirang.mp3', reffSec: 20 },
+    { title: 'APT. (DJ TikTok Viral Remix)', artist: 'ROSÉ & Bruno Mars', filename: 'apt.mp3', reffSec: 12 },
+    { title: 'Die With A Smile (DJ Slow TikTok Remix)', artist: 'Lady Gaga & Bruno Mars', filename: 'diewithasmile.mp3', reffSec: 42 },
+    { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3', reffSec: 24 },
+    { title: 'Lantas (DJ Remix TikTok Viral)', artist: 'Juicy Luicy', filename: 'lantas.mp3', reffSec: 22 },
+    { title: 'Bohongi Hati (DJ Remix Full Bass)', artist: 'Mahalini Remix', filename: 'bohongihati.mp3', reffSec: 25 },
+    { title: 'Gala Bunga Matahari (DJ TikTok Remix)', artist: 'Sal Priadi Remix', filename: 'galabungamatahari.mp3', reffSec: 30 },
+    { title: 'Jiwa Yang Bersedih (DJ Slow Bass)', artist: 'Ghea Indrawari Remix', filename: 'jiwayangbersedih.mp3', reffSec: 28 },
+    { title: 'Mati-matian (DJ Remix Jedag Jedug)', artist: 'Mahalini Remix', filename: 'matimatian.mp3', reffSec: 20 },
+    { title: 'Penjaga Hati (DJ Viral TikTok Remix)', artist: 'Nadhif Basalamah', filename: 'penjagahati.mp3', reffSec: 25 },
+    { title: 'Satu Bulan (DJ Remix Koplo Bass)', artist: 'Bernadya Remix', filename: 'satubulan.mp3', reffSec: 22 },
+    { title: 'Semua Aku Dirayakan (DJ Remix)', artist: 'Nadin Amizah Remix', filename: 'semuaakudirayakan.mp3', reffSec: 25 },
+    { title: 'Tak Segampang Itu (DJ Remix TikTok)', artist: 'Anggi Marito Remix', filename: 'taksegampangitu.mp3', reffSec: 26 },
+    { title: 'Tampar (DJ Full Bass Remix TikTok)', artist: 'Juicy Luicy Remix', filename: 'tampar.mp3', reffSec: 20 },
+    { title: 'Untungnya Hidup Tetap Berjalan (DJ Remix)', artist: 'Bernadya Remix', filename: 'untungnya.mp3', reffSec: 24 }
 ];
 
 function getRandomTrack() {
@@ -228,7 +241,7 @@ async function prepareImageForFeed(imageBuffer, trackInfo = null) {
 }
 
 /**
- * Mengonversi gambar 1080x1920 dan file lagu MP3 menjadi video MP4 berdurasi 15 detik (Option B)
+ * Mengonversi gambar 1080x1920 dan file lagu MP3 menjadi video MP4 berdurasi 15 detik (dimulai dari reff/drop bass)
  */
 async function generateStoryVideo(formattedImageBuffer, track) {
     try {
@@ -254,7 +267,7 @@ async function generateStoryVideo(formattedImageBuffer, track) {
         const tempImg = path.join(tempDir, `img_${randId}.jpg`);
         const tempVid = path.join(tempDir, `vid_${randId}.mp4`);
 
-        // Resize ke 720x1280 (HD 9:16) agar encoding FFmpeg di server sangat cepat (~18 detik) dan hemat resource
+        // Resize ke 720x1280 (HD 9:16) agar encoding FFmpeg di server sangat cepat (~2-3 detik di STB) dan hemat resource
         const scaledImgBuffer = await sharp(formattedImageBuffer)
             .resize(720, 1280, { fit: 'fill' })
             .jpeg({ quality: 90 })
@@ -262,11 +275,15 @@ async function generateStoryVideo(formattedImageBuffer, track) {
 
         fs.writeFileSync(tempImg, scaledImgBuffer);
 
-        // Encode video 15 detik dengan libx264 ultrafast + aac stereo 44.1kHz secara asynchronous non-blocking
-        await execFileAsync('ffmpeg', [
+        const startSec = track?.reffSec || 18;
+
+        // Encode video 15 detik dengan libx264 ultrafast + aac stereo 44.1kHz
+        // Menggunakan -ss SEBELUM -i audioPath untuk langsung lompat ke reff/drop bass jedag-jedug
+        await execFileAsync(FFMPEG_BIN, [
             '-y',
             '-loop', '1',
             '-i', tempImg,
+            '-ss', String(startSec),
             '-i', audioPath,
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
@@ -296,6 +313,78 @@ async function generateStoryVideo(formattedImageBuffer, track) {
         }
     } catch (e) {
         console.warn('[IGDirect] Peringatan: Gagal merender video FFmpeg (fallback ke foto):', e.message);
+    }
+    return null;
+}
+
+/**
+ * Mengonversi gambar 1080x1350 (4:5) dan file lagu MP3 menjadi video Feed berdurasi 15 detik
+ */
+async function generateFeedVideo(formattedImageBuffer, track) {
+    try {
+        let audioPath = track?.filename ? path.join(AUDIO_DIR, track.filename) : null;
+        if (!audioPath || !fs.existsSync(audioPath)) {
+            const files = fs.existsSync(AUDIO_DIR) ? fs.readdirSync(AUDIO_DIR).filter(f => f.endsWith('.mp3')) : [];
+            if (files.length > 0) {
+                audioPath = path.join(AUDIO_DIR, files[0]);
+            }
+        }
+
+        if (!audioPath || !fs.existsSync(audioPath)) return null;
+
+        const tempDir = path.join(os.tmpdir(), 'ig_feed_video');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const randId = Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        const tempImg = path.join(tempDir, `feed_img_${randId}.jpg`);
+        const tempVid = path.join(tempDir, `feed_vid_${randId}.mp4`);
+
+        // Resize ke 720x900 (aspek 4:5 standar Feed Instagram)
+        const scaledImgBuffer = await sharp(formattedImageBuffer)
+            .resize(720, 900, { fit: 'fill' })
+            .jpeg({ quality: 90 })
+            .toBuffer();
+
+        fs.writeFileSync(tempImg, scaledImgBuffer);
+
+        const startSec = track?.reffSec || 18;
+
+        await execFileAsync(FFMPEG_BIN, [
+            '-y',
+            '-loop', '1',
+            '-i', tempImg,
+            '-ss', String(startSec),
+            '-i', audioPath,
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-tune', 'stillimage',
+            '-t', '15',
+            '-pix_fmt', 'yuv420p',
+            '-r', '15',
+            '-crf', '26',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-shortest',
+            '-movflags', '+faststart',
+            tempVid
+        ], { timeout: 90000 });
+
+        if (fs.existsSync(tempVid)) {
+            const videoBuffer = fs.readFileSync(tempVid);
+            try { fs.unlinkSync(tempImg); } catch (e) {}
+            try { fs.unlinkSync(tempVid); } catch (e) {}
+            return {
+                videoBuffer,
+                durationMs: 15000,
+                width: 720,
+                height: 900
+            };
+        }
+    } catch (e) {
+        console.warn('[IGDirect] Gagal render Feed Video FFmpeg:', e.message);
     }
     return null;
 }
@@ -400,6 +489,8 @@ async function publishToStory(imageBuffer, customTrack = null) {
             success: true,
             mediaId: publishedMediaId,
             isVideo: true,
+            videoBuffer: videoData.videoBuffer,
+            imageBuffer: formattedBuffer,
             track
         };
     } else {
@@ -450,13 +541,15 @@ async function publishToStory(imageBuffer, customTrack = null) {
             success: true,
             mediaId: publishedMediaId,
             isVideo: false,
+            videoBuffer: null,
+            imageBuffer: formattedBuffer,
             track
         };
     }
 }
 
 /**
- * Publikasikan gambar ke Instagram Feed
+ * Publikasikan konten ke Instagram Feed (Video dengan Musik Reff atau Foto fallback)
  */
 async function publishToFeed(imageBuffer, caption = '', customTrack = null) {
     const { sessionId, dsUserId } = getSessionCredentials();
@@ -473,7 +566,103 @@ async function publishToFeed(imageBuffer, caption = '', customTrack = null) {
 
     console.log(`[IGDirect] Mengunggah konten ke Instagram Feed dengan musik [${track.title}]...`);
 
-    // 1. Upload file binary
+    // Coba render Video MP4 15 detik dengan musik reff / jedag-jedug
+    const videoData = await generateFeedVideo(formattedBuffer, track);
+
+    if (videoData && videoData.videoBuffer) {
+        try {
+            console.log(`[IGDirect] Mengunggah Feed Video (MP4 bersuara musik nyata, size: ${videoData.videoBuffer.length} bytes)...`);
+
+            // 1. Upload file binary video ke rupload_igvideo
+            await axios.post(`https://www.instagram.com/rupload_igvideo/${entityName}`, videoData.videoBuffer, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'X-Instagram-Rupload-Params': JSON.stringify({
+                        media_type: 2,
+                        upload_id: uploadId,
+                        upload_media_height: 900,
+                        upload_media_width: 720,
+                        upload_media_duration_ms: videoData.durationMs
+                    }),
+                    'X-Entity-Name': entityName,
+                    'X-Entity-Length': videoData.videoBuffer.length,
+                    'X-Entity-Type': 'video/mp4',
+                    'Offset': 0,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'video/mp4',
+                    'Content-Length': videoData.videoBuffer.length
+                },
+                httpsAgent: ipv4Agent
+            });
+
+            // 2. Upload cover photo ke rupload_igphoto
+            const coverBuffer = await sharp(formattedBuffer)
+                .resize(720, 900, { fit: 'fill' })
+                .jpeg({ quality: 90 })
+                .toBuffer();
+
+            await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, coverBuffer, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'X-Instagram-Rupload-Params': JSON.stringify({
+                        media_type: 2,
+                        upload_id: uploadId,
+                        upload_media_height: 900,
+                        upload_media_width: 720
+                    }),
+                    'X-Entity-Name': entityName,
+                    'X-Entity-Length': coverBuffer.length,
+                    'X-Entity-Type': 'image/jpeg',
+                    'Offset': 0,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'image/jpeg',
+                    'Content-Length': coverBuffer.length
+                },
+                httpsAgent: ipv4Agent
+            });
+
+            await new Promise(r => setTimeout(r, 2500));
+
+            // 3. Konfigurasi penerbitan video ke Feed
+            const body = new URLSearchParams({
+                upload_id: uploadId,
+                caption: fullCaption,
+                source_type: '4',
+                video_result: '',
+                clips_share_preview_to_feed: '1'
+            }).toString();
+
+            const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure/?video=1', body, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                httpsAgent: ipv4Agent
+            });
+
+            const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
+            console.log(`[IGDirect] ✅ Berhasil terbit di Instagram Feed (Video dengan Musik [${track.title}])! Media ID:`, publishedMediaId);
+            return {
+                success: true,
+                mediaId: publishedMediaId,
+                isVideo: true,
+                videoBuffer: videoData.videoBuffer,
+                track
+            };
+        } catch (vidErr) {
+            console.warn('[IGDirect] Upload feed video gagal, fallback ke posting foto feed:', vidErr.message);
+        }
+    }
+
+    // Fallback Foto Statis ke Feed
+    console.log(`[IGDirect] Mengunggah konten ke Instagram Feed (Mode Foto)...`);
     await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, formattedBuffer, {
         headers: {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -496,7 +685,6 @@ async function publishToFeed(imageBuffer, caption = '', customTrack = null) {
         httpsAgent: ipv4Agent
     });
 
-    // 2. Konfigurasi penerbitan ke Feed
     const body = new URLSearchParams({
         upload_id: uploadId,
         caption: fullCaption,
@@ -514,10 +702,12 @@ async function publishToFeed(imageBuffer, caption = '', customTrack = null) {
         httpsAgent: ipv4Agent
     });
 
-    console.log('[IGDirect] ✅ Berhasil terbit di Instagram Feed! Media ID:', configRes.data.media?.id);
+    const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
+    console.log('[IGDirect] ✅ Berhasil terbit di Instagram Feed (Foto)! Media ID:', publishedMediaId);
     return {
         success: true,
-        mediaId: configRes.data.media?.id,
+        mediaId: publishedMediaId,
+        isVideo: false,
         track
     };
 }
@@ -688,7 +878,9 @@ async function publishOpenStory() {
                 `🗓️ ${dateWIB}\n` +
                 `⏰ Buka: ${timestampWIB} WIB\n\n` +
                 `🌐 https://ry-itsolutionts.web.id`;
-            results.openStory.whatsapp = await publishWhatsAppStory(openBuffer, captionStory1);
+            const mediaToSend1 = results.openStory.instagram?.videoBuffer || openBuffer;
+            const isVid1 = Boolean(results.openStory.instagram?.videoBuffer);
+            results.openStory.whatsapp = await publishWhatsAppStory(mediaToSend1, captionStory1, isVid1);
         }
     } catch (waErr) {
         console.warn('[publishOpenStory] Warning saat posting WA Story 1 (Open):', waErr.message);
@@ -714,7 +906,9 @@ async function publishOpenStory() {
                 `✅ *Hanya tersedia opsi 1 Bulan & 3 Bulan* (All Operator).\n\n` +
                 `🛡️ Garansi penuh & nota transaksi digital resmi.\n` +
                 `🌐 https://ry-itsolutionts.web.id`;
-            results.disclaimerStory.whatsapp = await publishWhatsAppStory(disclaimerBuffer, captionStory2);
+            const mediaToSend2 = results.disclaimerStory.instagram?.videoBuffer || disclaimerBuffer;
+            const isVid2 = Boolean(results.disclaimerStory.instagram?.videoBuffer);
+            results.disclaimerStory.whatsapp = await publishWhatsAppStory(mediaToSend2, captionStory2, isVid2);
         }
     } catch (waErr2) {
         console.warn('[publishOpenStory] Warning saat posting WA Story 2 (Disclaimer):', waErr2.message);
@@ -1008,14 +1202,16 @@ async function publishRiveraStory(parsedData) {
                   `⏰ Update: ${timestampWIB} WIB\n\n` +
                   `🌐 Order via Web: https://ry-itsolutionts.web.id`;
 
-            results.whatsapp = await publishWhatsAppStory(buffer, caption);
+            const mediaToSend = results.instagram?.videoBuffer || buffer;
+            const isVid = Boolean(results.instagram?.videoBuffer);
+            results.whatsapp = await publishWhatsAppStory(mediaToSend, caption, isVid);
         }
     } catch (waErr) {
         console.warn('[publishRiveraStory] Warning saat posting WA Story 3:', waErr.message);
         results.whatsappError = waErr.message;
     }
 
-    return { ...results, buffer };
+    return { ...results, buffer, videoBuffer: results.instagram?.videoBuffer || null };
 }
 
 module.exports = {

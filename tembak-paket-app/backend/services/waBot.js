@@ -1259,9 +1259,28 @@ async function initWABot(forceNew = false) {
                         ).trim();
 
                         const pushName = (msg.pushName || "").trim();
-                        const isRiveraSender = /rivera/i.test(pushName);
+                        const participant = msg.key.participant || msg.participant || "";
+                        const rawSenderDigits = participant.replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0].replace(/\D/g, "");
 
-                        if (messageText && (isRiveraSender || /3B\s*SF|1B\s*DIGIPOS|DONE\s*ALL|FAST.*ON|SLOW.*ON/i.test(messageText))) {
+                        // 1. Identifikasi Pengirim Rivera (Nomor: 628987710248, LID: 242898352214137, atau Nama Rivera)
+                        const isRiveraSender = participant.includes("628987710248") ||
+                                               participant.includes("242898352214137") ||
+                                               rawSenderDigits === "628987710248" ||
+                                               /rivera/i.test(pushName);
+
+                        // 2. Filter Chat Santai / Obrolan Biasa:
+                        // Jika pesan merupakan quote reply ke chat anggota grup lain, abaikan agar obrolan biasa tidak memicu story
+                        const isQuotedReply = Boolean(
+                            msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+                            msg.message?.extendedTextMessage?.contextInfo?.participant
+                        );
+
+                        // 3. Pre-filter Kata Kunci Wajib (Paket + Status)
+                        const hasPackageKeyword = /(3B|1B|SF|DIGIPOS|SLOW|FAST|ROAMER)/i.test(messageText);
+                        const hasStatusKeyword = /(ON|OFF|DONE|READY|FULL|CLOSE|OPEN|SLOT|SENT|TURUN|HARGA|BERGARANSI|KLOTER)/i.test(messageText);
+                        const isDoneAll = /(\bdone\s*all\b|\bslow\s*3b\s*done\b|\bfast\s*done\b|\bselesai\s*semua\b)/i.test(messageText);
+
+                        if (messageText && (isRiveraSender || hasPackageKeyword || isDoneAll)) {
                             let groupName = groupSubjectCache.get(remoteJid);
                             if (!groupName) {
                                 try {
@@ -1271,9 +1290,21 @@ async function initWABot(forceNew = false) {
                                 } catch {}
                             }
 
-                            if (groupName && (/3B\s*&\s*REKBER/i.test(groupName) || /RIVERA/i.test(groupName))) {
-                                console.log(`[RiveraListener] 📩 Pesan grup masuk dari ${pushName} di "${groupName}": ${messageText}`);
-                                await handleRiveraGroupMessage(messageText, pushName, groupName);
+                            const isTargetGroup = groupName && (/3B\s*&\s*REKBER/i.test(groupName) || /RIVERA/i.test(groupName));
+
+                            if (isTargetGroup) {
+                                // Jika ini obrolan santai yang me-reply pesan orang lain dan tidak memuat format status lengkap, abaikan
+                                if (isQuotedReply && !(hasPackageKeyword && hasStatusKeyword)) {
+                                    console.log(`[RiveraListener] ⏩ Pesan diabaikan karena merupakan reply obrolan: "${messageText.substring(0, 40)}..."`);
+                                } else if (isDoneAll) {
+                                    console.log(`[RiveraListener] 🔔 Pesan DONE ALL masuk dari ${pushName} (${rawSenderDigits}) di "${groupName}": ${messageText}`);
+                                    await handleRiveraGroupMessage(messageText, pushName || "Rivera Group", groupName);
+                                } else if (hasPackageKeyword && hasStatusKeyword) {
+                                    console.log(`[RiveraListener] 📩 Pesan broadcast status masuk dari ${pushName} (${rawSenderDigits}) di "${groupName}": ${messageText}`);
+                                    await handleRiveraGroupMessage(messageText, pushName || "Rivera Group", groupName);
+                                } else {
+                                    console.log(`[RiveraListener] ⏩ Obrolan umum Rivera tanpa info slot: "${messageText.substring(0, 40)}..."`);
+                                }
                             }
                         }
                     } catch (gErr) {
@@ -2359,10 +2390,12 @@ async function replyWhatsApp(jid, text) {
 
 /**
  * Mempublikasikan status / story ke WhatsApp Bot (status@broadcast)
- * @param {Buffer} imageBuffer - Buffer gambar JPEG yang akan diposting
+ * Mendukung video MP4 (bersuara lagu/drop bass) dan foto JPEG
+ * @param {Buffer} mediaBuffer - Buffer gambar JPEG atau video MP4 yang akan diposting
  * @param {string} caption - Teks caption status
+ * @param {boolean} isVideoExplicit - Menandakan secara eksplisit bahwa media adalah video
  */
-async function publishWhatsAppStory(imageBuffer, caption = "") {
+async function publishWhatsAppStory(mediaBuffer, caption = "", isVideoExplicit = false) {
     if (!sock || connectionState !== "open") {
         throw new Error("WhatsApp Bot Baileys belum terhubung.");
     }
@@ -2383,12 +2416,15 @@ async function publishWhatsAppStory(imageBuffer, caption = "") {
 
         const statusJidList = Array.from(statusJidSet);
 
-        logWABot(`[WABot Story] Mengunggah Story WhatsApp ke status@broadcast (${statusJidList.length} kontak)...`, "info");
+        const isVideo = isVideoExplicit || (mediaBuffer && mediaBuffer.length > 8 && mediaBuffer.toString('utf8', 4, 8) === 'ftyp');
 
-        const sent = await sock.sendMessage("status@broadcast", {
-            image: imageBuffer,
-            caption: caption || ""
-        }, {
+        logWABot(`[WABot Story] Mengunggah Story WhatsApp (${isVideo ? 'Video MP4 bersuara musik' : 'Foto JPEG'}) ke status@broadcast (${statusJidList.length} kontak)...`, "info");
+
+        const messagePayload = isVideo
+            ? { video: mediaBuffer, mimetype: "video/mp4", caption: caption || "" }
+            : { image: mediaBuffer, caption: caption || "" };
+
+        const sent = await sock.sendMessage("status@broadcast", messagePayload, {
             statusJidList: statusJidList
         });
 
@@ -2397,7 +2433,7 @@ async function publishWhatsAppStory(imageBuffer, caption = "") {
         }
 
         logWABot(`✅ Story WhatsApp Bot berhasil diposting ke status@broadcast! ID: ${sent?.key?.id || "-"}`, "info");
-        return { status: true, id: sent?.key?.id };
+        return { status: true, id: sent?.key?.id, isVideo };
     } catch (err) {
         logWABot(`❌ Gagal posting Story WhatsApp: ${err.message}`, "error");
         console.error("[WABot Story] Gagal publish story WA:", err);

@@ -197,11 +197,14 @@ export interface MusicContextType {
   isPlayerVisible: boolean;
   isMinimized: boolean;
   isBuffering: boolean;
-  playTrack: (index: number) => void;
+  playTrack: (indexOrId: number | string) => void;
   togglePlayPause: () => void;
   seekTo: (seconds: number) => void;
+  seek: (seconds: number) => void;
   handleNextTrack: () => void;
+  nextTrack: () => void;
   handlePrevTrack: () => void;
+  prevTrack: () => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   toggleShuffle: () => void;
@@ -752,8 +755,11 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
         playTrack,
         togglePlayPause,
+        handleNextTrack,
         nextTrack: handleNextTrack,
+        handlePrevTrack,
         prevTrack: handlePrevTrack,
+        seekTo: seek,
         seek,
         setVolume,
         toggleMute,
@@ -828,9 +834,34 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       >
         <div
           id="persistent-yt-audio"
-          className="w-full h-full pointer-events-none scale-[1.08] origin-center"
+          className="w-full h-full pointer-events-none scale-[1.22] origin-center"
           style={{ width: "100%", height: "100%" }}
         />
+
+        {/* Splash Cover Curtain to seamlessly hide initial YouTube loading & intro overlay */}
+        <div
+          className={`absolute inset-0 z-20 overflow-hidden rounded-2xl transition-opacity duration-700 pointer-events-none select-none bg-black ${
+            currentTime < 2.5 && isPlaying ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {currentTrack.coverImage ? (
+            <img
+              src={currentTrack.coverImage}
+              alt={currentTrack.title}
+              className="w-full h-full object-cover brightness-90 scale-105"
+            />
+          ) : (
+            <div className="w-full h-full bg-zinc-900 flex items-center justify-center" />
+          )}
+          {/* RyTone HD Audio Engine Badge & Loading Wave */}
+          <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+            <div className="w-11 h-11 rounded-full bg-[#1ed760]/20 border border-[#1ed760]/40 flex items-center justify-center shadow-lg">
+              <span className="w-3.5 h-3.5 rounded-full bg-[#1ed760] animate-ping" />
+            </div>
+            <p className="text-[11px] font-bold text-white tracking-widest uppercase">RyTone HD Audio</p>
+          </div>
+        </div>
+
         {/* Transparent Shield Overlay to prevent any hover/click/tap reaching YouTube */}
         <div
           className="absolute inset-0 z-30 pointer-events-auto bg-transparent select-none cursor-default"
