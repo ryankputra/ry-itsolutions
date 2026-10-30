@@ -33,12 +33,104 @@ const {
     downloadMediaMessage
 } = require("@whiskeysockets/baileys");
 const { censorScreenshot } = require("./censorService");
-const { publishToStory, publishToFeed, publishOpenStory, saveSessionFromCookie, getUniqueTracks } = require("./igDirectService");
+const { publishToStory, publishToFeed, publishOpenStory, publishRiveraStory, parseRiveraMessage, saveSessionFromCookie, getUniqueTracks } = require("./igDirectService");
+
+// Cache nama grup WhatsApp: remoteJid -> subject
+const groupSubjectCache = new Map();
 
 // Pending admin testimonial sessions: remoteJid -> { items: [ { buffer, track, caption, boxesCount } ], timestamp }
 const pendingTestimonials = new Map();
 const PENDING_TESTI_DIR = path.join(__dirname, "..", "sessions", "pending_testi");
 ensureDirExists(PENDING_TESTI_DIR);
+
+/**
+ * Handler Khusus untuk Pesan dari Grup "3B & REKBER by RIVERA" (Rivera Group)
+ */
+async function handleRiveraGroupMessage(messageText, senderName, groupName) {
+    const timestampWIB = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+    const dateWIB = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    // 1. Cek apakah ini pengumuman penyelesaian (DONE ALL)
+    if (/(\bdone\s*all\b|\bslow\s*3b\s*done\b|\bfast\s*done\b|\bselesai\s*semua\b)/i.test(messageText)) {
+        console.log('[RiveraListener] 🔔 Terdeteksi pengumuman DONE ALL. Mengirimkan notifikasi ke Admin...');
+        const adminPhones = await getAdminPhoneNumbers();
+        const alertMsg = `🔔 *INFO SERVER RIVERA (ANTREAN SELESAI)!*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `💬 *Isi Pesan:* "${messageText}"\n` +
+            `👥 *Pengirim:* ${senderName || 'Rivera Group'}\n` +
+            `🏷️ *Grup:* ${groupName || '3B & REKBER by RIVERA'}\n` +
+            `⏰ *Waktu:* ${timestampWIB} WIB (${dateWIB})\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `ℹ️ _Batch pesanan pelanggan kemungkinan sudah selesai diproses server. Silakan cek status transaksi antrean dan infokan ke pelanggan terkait._` + BOT_FOOTER;
+
+        for (const phone of adminPhones) {
+            try {
+                if (sock) {
+                    await sock.sendMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
+                }
+            } catch (e) {
+                console.warn(`[RiveraListener] Gagal kirim alert ke ${phone}:`, e.message);
+            }
+        }
+        return;
+    }
+
+    // 2. Parse status / slot update menggunakan parseRiveraMessage (Gemini + Local Fallback)
+    const parsed = await parseRiveraMessage(messageText);
+
+    if (!parsed || parsed.type === "IRRELEVANT") {
+        console.log('[RiveraListener] Pesan diabaikan karena obrolan umum.');
+        return;
+    }
+
+    if (parsed.type === "DONE_NOTIFICATION") {
+        const adminPhones = await getAdminPhoneNumbers();
+        const alertMsg = `🔔 *INFO SERVER RIVERA (ANTREAN SELESAI)!*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `💬 *Isi Pesan:* "${messageText}"\n` +
+            `👥 *Pengirim:* ${senderName || 'Rivera Group'}\n` +
+            `⏰ *Waktu:* ${timestampWIB} WIB\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `ℹ️ _Batch pesanan pelanggan kemungkinan sudah selesai diproses server._` + BOT_FOOTER;
+
+        for (const phone of adminPhones) {
+            try {
+                if (sock) {
+                    await sock.sendMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
+                }
+            } catch {}
+        }
+        return;
+    }
+
+    // 3. Terbitkan Story 3 (Live Status / Update Slot) ke IG dan WA Story
+    console.log(`[RiveraListener] 🚀 Mempublikasikan Story 3 (${parsed.type}) ke Instagram & WA Story...`);
+    await publishRiveraStory(parsed);
+
+    // 4. Kirim notifikasi ringkasan ke Admin WhatsApp
+    const adminPhones = await getAdminPhoneNumbers();
+    const isFullClose = parsed.type === "FULL_CLOSE";
+    const statusLabel = isFullClose ? "🔴 ORDERAN KLOTER CLOSED" : (parsed.type === "PARTIAL_CLOSE" ? "🟡 UPDATE SLOT (PARTIAL)" : "🟢 SLOT UPDATE (OPEN)");
+
+    const summaryServices = (parsed.services || []).map(s => `• ${s.status === 'READY' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : 'Closed'} (${s.desc})`).join('\n');
+
+    const adminNotice = `📢 *STORY UPDATE SERVER RIVERA BERHASIL TERBIT!*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `💬 *Pesan Asli Rivera:*\n_"${messageText}"_\n\n` +
+        `📊 *Status:* ${statusLabel}\n` +
+        `${summaryServices}\n\n` +
+        `🛡️ *Catatan:* ${parsed.note || 'Semua Bergaransi Tanpa Drama 🎭'}\n` +
+        `⏰ *Waktu Terbit:* ${timestampWIB} WIB\n` +
+        `📸 *Media:* Tayang di Instagram Story (@unlocksinyalsolo) & WhatsApp Story Bot.` + BOT_FOOTER;
+
+    for (const phone of adminPhones) {
+        try {
+            if (sock) {
+                await sock.sendMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: adminNotice });
+            }
+        } catch {}
+    }
+}
 
 function savePendingTestimonial(remoteJid, data) {
     try {
@@ -1155,6 +1247,41 @@ async function initWABot(forceNew = false) {
                 if (isMsgDuplicate(msgId)) continue;
 
                 const remoteJid = msg.key.remoteJid;
+
+                // --- SPECIAL LISTENER: GRUP "3B & REKBER by RIVERA" (RIVERA GROUP) ---
+                if (remoteJid && remoteJid.includes("@g.us")) {
+                    try {
+                        const messageText = (
+                            msg.message?.conversation ||
+                            msg.message?.extendedTextMessage?.text ||
+                            msg.message?.imageMessage?.caption ||
+                            ""
+                        ).trim();
+
+                        const pushName = (msg.pushName || "").trim();
+                        const isRiveraSender = /rivera/i.test(pushName);
+
+                        if (messageText && (isRiveraSender || /3B\s*SF|1B\s*DIGIPOS|DONE\s*ALL|FAST.*ON|SLOW.*ON/i.test(messageText))) {
+                            let groupName = groupSubjectCache.get(remoteJid);
+                            if (!groupName) {
+                                try {
+                                    const meta = await sock.groupMetadata(remoteJid);
+                                    groupName = meta?.subject || "";
+                                    groupSubjectCache.set(remoteJid, groupName);
+                                } catch {}
+                            }
+
+                            if (groupName && (/3B\s*&\s*REKBER/i.test(groupName) || /RIVERA/i.test(groupName))) {
+                                console.log(`[RiveraListener] 📩 Pesan grup masuk dari ${pushName} di "${groupName}": ${messageText}`);
+                                await handleRiveraGroupMessage(messageText, pushName, groupName);
+                            }
+                        }
+                    } catch (gErr) {
+                        console.warn("[RiveraListener] Error:", gErr.message);
+                    }
+                    continue;
+                }
+
                 // Ignore empty JID, group chats (@g.us), broadcast channels, and newsletters
                 if (!remoteJid || remoteJid.includes("@g.us") || remoteJid.includes("@broadcast") || remoteJid.includes("@newsletter")) continue;
 
@@ -1732,6 +1859,21 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nStory 'WE ARE OPEN' dan Story Lanjutan 'DISCLAIMER ADD ROAMER (1 & 3 BULAN)' telah berhasil terbit di *Instagram Story* (@unlocksinyalsolo) dan di *WhatsApp Story Bot*! 🎉" + BOT_FOOTER);
         } catch (errOpen) {
             await replyWhatsApp(replyJid, `❌ *Gagal posting Story Open:* ${errOpen.message}` + BOT_FOOTER);
+        }
+        return;
+    }
+
+    // Command Khusus: Simulasi / Trigger Manual Story Rivera Group (#rivera [pesan])
+    if (rawCleanText.startsWith("#rivera") || rawCleanText.startsWith(".rivera")) {
+        const customMsg = rawCleanText.replace(/^([#.]rivera)/i, "").trim();
+        const testText = customMsg || `3B SF SLOW DONE MALEM SENT SAMPE SORE 🔥\n\n3B SF FAST UNDER 15 MENIT ON ‼️\n\n1B DIGIPOS ON TURUN HARGA‼️\n\nSEMUA BERGARANSI TANPA ADA DRAMA 🎭`;
+
+        await replyWhatsApp(replyJid, `⏳ *Sedang menganalisa pesan Rivera & memproses Story 3...*\n_"${testText}"_`);
+        try {
+            await handleRiveraGroupMessage(testText, "Rivera Group (Manual/Simulasi)", "3B & REKBER by RIVERA");
+            await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nStory 3 (Live Status & Slot Update) berhasil diproses dan dikirim ke Instagram Story & WhatsApp Story!` + BOT_FOOTER);
+        } catch (rErr) {
+            await replyWhatsApp(replyJid, `❌ *Gagal memproses Story Rivera:* ${rErr.message}` + BOT_FOOTER);
         }
         return;
     }
