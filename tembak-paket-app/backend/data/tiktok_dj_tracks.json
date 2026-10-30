@@ -1,0 +1,143 @@
+{
+  "lastRotated": 1793386886310,
+  "retentionDays": 3,
+  "retentionHours": 72,
+  "totalActive": 15,
+  "tracks": [
+    {
+      "id": "dj-core-1",
+      "title": "DJ Alay Gaya Kaya Artis (Viral TikTok Remix)",
+      "artist": "DJ Desa",
+      "filename": "djalay.mp3",
+      "reffSec": 18,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-2",
+      "title": "Stecu Stecu (Jedag Jedug TikTok Remix)",
+      "artist": "Faris Adam",
+      "filename": "stecustecu.mp3",
+      "reffSec": 15,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-3",
+      "title": "Tabrak Tabrak Masuk (Remix TikTok Full Bass)",
+      "artist": "Richard Jersey",
+      "filename": "tabraktabrak.mp3",
+      "reffSec": 20,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-4",
+      "title": "Malam Pagi (Remix Jedag Jedug TikTok)",
+      "artist": "Saixse ft. MK",
+      "filename": "malampagi.mp3",
+      "reffSec": 25,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-5",
+      "title": "Cikini Ke Gondangdia (DJ Koplo Remix TikTok)",
+      "artist": "Duo Anggrek Remix",
+      "filename": "cikini.mp3",
+      "reffSec": 16,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-6",
+      "title": "Karna Su Sayang (DJ Remix TikTok Viral)",
+      "artist": "Near ft. Dian Sorowea",
+      "filename": "karnasusayang.mp3",
+      "reffSec": 22,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-7",
+      "title": "Sial (DJ Speed Up Jedag Jedug TikTok)",
+      "artist": "Mahalini Remix",
+      "filename": "sial.mp3",
+      "reffSec": 30,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-8",
+      "title": "Garam & Madu (DJ Remix TikTok Bass)",
+      "artist": "Tenxi & Asmara",
+      "filename": "garammadu.mp3",
+      "reffSec": 18,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-9",
+      "title": "Cupid (Speed Up Twin Ver TikTok Remix)",
+      "artist": "FIFTY FIFTY",
+      "filename": "cupid.mp3",
+      "reffSec": 15,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-10",
+      "title": "Sigar (DJ Jedag Jedug Koplo TikTok)",
+      "artist": "Denny Caknan Remix",
+      "filename": "sigar.mp3",
+      "reffSec": 28,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-11",
+      "title": "Cundamani (DJ Slow Bass Remix TikTok)",
+      "artist": "Denny Caknan Remix",
+      "filename": "cundamani.mp3",
+      "reffSec": 25,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-12",
+      "title": "Wirang (DJ Remix Full Bass TikTok)",
+      "artist": "Denny Caknan Remix",
+      "filename": "wirang.mp3",
+      "reffSec": 20,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-13",
+      "title": "APT. (DJ TikTok Viral Remix)",
+      "artist": "ROSÉ & Bruno Mars",
+      "filename": "apt.mp3",
+      "reffSec": 12,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-14",
+      "title": "Die With A Smile (DJ Slow TikTok Remix)",
+      "artist": "Lady Gaga & Bruno Mars",
+      "filename": "diewithasmile.mp3",
+      "reffSec": 42,
+      "isCore": true,
+      "addedAt": 1793386886309
+    },
+    {
+      "id": "dj-core-15",
+      "title": "Komang (DJ Santuy Remix TikTok)",
+      "artist": "Raim Laode",
+      "filename": "komang.mp3",
+      "reffSec": 24,
+      "isCore": true,
+      "addedAt": 1793386886309
+    }
+  ]
+}
