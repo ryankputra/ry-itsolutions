@@ -238,6 +238,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [isPlayerVisible, setPlayerVisible] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
+  const [isResuming, setIsResuming] = useState<boolean>(false);
   const [videoSlotPos, setVideoSlotPos] = useState<VideoSlotPos | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -247,6 +248,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const handleNextTrackRef = useRef<() => void>(() => {});
   const shuffleQueueRef = useRef<number[]>([]);
   const playedHistoryRef = useRef<number[]>([]);
+  const isReturningFromBackgroundRef = useRef<boolean>(false);
 
   const currentTrack = tracks[currentTrackIndex] || DEFAULT_TRACKS[0];
 
@@ -291,7 +293,19 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                 if (event.data === 1) {
                   setIsPlaying(true);
                   setIsBuffering(false);
+                  // If background HTML5 audio was playing, pause it once YouTube starts playing
+                  if (audioRef.current && !audioRef.current.paused) {
+                    audioRef.current.pause();
+                  }
+                  isReturningFromBackgroundRef.current = false;
                 } else if (event.data === 2) {
+                  // If background HTML5 audio is actively playing, don't let browser's autoplay block pause the music!
+                  if (audioRef.current && !audioRef.current.paused) {
+                    return;
+                  }
+                  if (isReturningFromBackgroundRef.current.valueOf()) {
+                    return;
+                  }
                   setIsPlaying(false);
                 } else if (event.data === 0) {
                   // Track finished playing naturally -> trigger up-to-date nextTrack
@@ -408,9 +422,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         // App di-minimize atau layar HP dikunci:
         if (isPlaying && currentTrack) {
           const currentSec = ytPlayerRef.current?.getCurrentTime ? ytPlayerRef.current.getCurrentTime() : currentTime;
-          const streamUrl = `/api/music/stream?id=${currentTrack.youtubeId || currentTrack.id}`;
+          const streamUrl = `/api/music/stream?id=${encodeURIComponent(currentTrack.youtubeId || (currentTrack.title + " " + currentTrack.artist))}`;
           if (audioRef.current) {
-            if (audioRef.current.src !== window.location.origin + streamUrl && !audioRef.current.src.endsWith(streamUrl)) {
+            if (!audioRef.current.src || !audioRef.current.src.includes(streamUrl)) {
               audioRef.current.src = streamUrl;
             }
             audioRef.current.currentTime = currentSec || 0;
@@ -419,12 +433,20 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         // App dibuka kembali ke foreground:
+        isReturningFromBackgroundRef.current = true;
+        setTimeout(() => {
+          isReturningFromBackgroundRef.current = false;
+        }, 2500);
+
+        // PENTING: JANGAN pause audioRef! Biarkan lagu tetap mengalir tanpa jeda
         if (audioRef.current && !audioRef.current.paused) {
           const resumeSec = audioRef.current.currentTime;
-          audioRef.current.pause();
+          // Sinkronkan video YouTube di background jika browser mengizinkan
           if (ytPlayerRef.current?.seekTo && isPlaying) {
             ytPlayerRef.current.seekTo(resumeSec, true);
-            ytPlayerRef.current.playVideo();
+            try {
+              ytPlayerRef.current.playVideo();
+            } catch {}
           }
         }
       }
@@ -436,7 +458,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isPlaying, currentTrack, currentTime]);
 
-  // Handle Play Track (100% Full Length via YouTube or HTML5 audio)
+  // Handle Play Track (100% Full Length via YouTube or HTML5 audio stream)
   const playTrack = useCallback(
     (indexOrId: number | string) => {
       let index: number;
@@ -464,6 +486,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(true);
       setDuration(targetTrack.durationSec || 200);
 
+      // Pre-warm background HTML5 audio stream for instant zero-gap background playback
+      const fullStreamUrl = `/api/music/stream?id=${encodeURIComponent(targetTrack.youtubeId || (targetTrack.title + " " + targetTrack.artist))}`;
+      if (audioRef.current) {
+        audioRef.current.src = fullStreamUrl;
+        audioRef.current.preload = "auto";
+      }
+
       if (targetTrack.youtubeId) {
         currentPlaybackEngineRef.current = "youtube";
         if (audioRef.current && !audioRef.current.paused) {
@@ -487,7 +516,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         };
         loadVideo();
       } else {
-        // Fallback HTML5 audio (for local .mp3 tracks)
+        // Fallback Full-Length Stream (Bukan sampel 30 detik, tapi full stream dari server)
         currentPlaybackEngineRef.current = "html5";
         if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === "function") {
           ytPlayerRef.current.pauseVideo();
@@ -496,7 +525,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         if (audio) {
           audio.pause();
           audio.currentTime = 0;
-          audio.src = targetTrack.audioUrl;
+          audio.src = fullStreamUrl;
           audio.playbackRate = playbackSpeed;
           audio.play().then(() => setIsPlaying(true)).catch(() => {});
         }
@@ -513,8 +542,11 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         const state = ytPlayerRef.current.getPlayerState ? ytPlayerRef.current.getPlayerState() : -1;
         if (state === 1) {
           ytPlayerRef.current.pauseVideo();
+          if (audioRef.current) audioRef.current.pause();
           setIsPlaying(false);
         } else {
+          setIsResuming(true);
+          setTimeout(() => setIsResuming(false), 1200);
           ytPlayerRef.current.playVideo();
           setIsPlaying(true);
         }
@@ -528,8 +560,11 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         audio.pause();
         setIsPlaying(false);
       } else {
-        if (!audio.src || audio.src === "" || !audio.src.includes(currentTrack.audioUrl)) {
-          audio.src = currentTrack.audioUrl;
+        setIsResuming(true);
+        setTimeout(() => setIsResuming(false), 1200);
+        const fullStreamUrl = `/api/music/stream?id=${encodeURIComponent(currentTrack.youtubeId || (currentTrack.title + " " + currentTrack.artist))}`;
+        if (!audio.src || audio.src === "" || (!audio.src.includes(fullStreamUrl) && !audio.src.includes(currentTrack.audioUrl))) {
+          audio.src = fullStreamUrl;
           audio.playbackRate = playbackSpeed;
         }
         audio.play().then(() => setIsPlaying(true)).catch(() => {});
@@ -870,16 +905,39 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
             : undefined
         }
       >
+        {/* Video Unzoomed (Scale 1.0 Normal Asli) */}
         <div
           id="persistent-yt-audio"
-          className="w-full h-full pointer-events-none scale-[1.22] origin-center"
+          className="w-full h-full pointer-events-none"
           style={{ width: "100%", height: "100%" }}
         />
+
+        {/* RyTone Stealth Top Header Bar - 100% blocks YouTube Title, Channel Avatar, & Share Button */}
+        <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-black/95 via-black/60 to-transparent z-15 pointer-events-none flex items-center justify-between px-3.5">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <div className="w-2 h-2 rounded-full bg-[#1ed760] animate-pulse shrink-0" />
+            <p className="text-xs font-bold text-white truncate max-w-[200px] drop-shadow-md">
+              {currentTrack?.title}
+            </p>
+            <span className="text-[10px] text-zinc-400 font-medium truncate hidden sm:inline">
+              • {currentTrack?.artist}
+            </span>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-black/70 text-[#1ed760] border border-[#1ed760]/30 backdrop-blur-md shrink-0">
+            RyTone HD
+          </span>
+        </div>
+
+        {/* RyTone Stealth Bottom-Right Seal - 100% blocks YouTube Watermark */}
+        <div className="absolute bottom-2.5 right-2.5 z-15 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/85 border border-white/10 backdrop-blur-md shadow-lg">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#1ed760]" />
+          <span className="text-[10px] font-black tracking-wider text-white">RyTone</span>
+        </div>
 
         {/* Splash & State Cover Curtain to seamlessly seal YouTube loading, intro, pause, and buffer */}
         <div
           className={`absolute inset-0 z-20 overflow-hidden rounded-2xl transition-opacity duration-300 select-none bg-black ${
-            !isPlaying || isBuffering || currentTime < 2.8
+            !isPlaying || isBuffering || currentTime < 5.5 || isResuming
               ? "opacity-100 pointer-events-auto cursor-pointer"
               : "opacity-0 pointer-events-none"
           }`}
@@ -907,7 +965,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
                 </div>
                 <p className="text-[11px] font-bold text-white tracking-widest uppercase">Klik Untuk Memutar</p>
               </div>
-            ) : isBuffering ? (
+            ) : isBuffering || isResuming ? (
               <div className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 rounded-full bg-[#1ed760]/20 border border-[#1ed760]/40 flex items-center justify-center shadow-lg">
                   <span className="w-4 h-4 rounded-full bg-[#1ed760] animate-ping" />

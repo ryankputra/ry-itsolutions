@@ -337,6 +337,18 @@ function initSchedulers() {
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
+    // 5c. Pembaruan Otomatis Tangga Lagu RyTone Top Hits Harian (Chart Sync)
+    // Dijalankan setiap hari pukul 04:00 WIB
+    cron.schedule('0 4 * * *', async () => {
+        try {
+            console.log('[Scheduler][RyToneMusic] 🔄 Menjalankan auto-sync tangga lagu RyTone Top Hits harian...');
+            const tiktokMusicService = require('../services/tiktokMusicService');
+            await tiktokMusicService.syncTrendingMusic();
+        } catch (e) {
+            console.error('[Scheduler][RyToneMusic] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
     // 6. Auto-post Instagram Story Open Toko (Sesuai jam settingan admin via WhatsApp Bot)
     cron.schedule('* * * * *', async () => {
         try {

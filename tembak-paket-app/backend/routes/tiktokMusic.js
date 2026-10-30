@@ -84,17 +84,35 @@ router.get('/stream', async (req, res) => {
         }
     }
 
-    // 2. Ekstraksi audio stream YouTube via yt-dlp
+/**
+ * POST /api/music/refresh or /api/tiktok-music/refresh
+ * Endpoint sinkronisasi manual tangga lagu Top Hits RyTone (Admin/User)
+ */
+router.post('/refresh', async (req, res) => {
+    try {
+        const syncResult = await tiktokMusicService.syncTrendingMusic();
+        res.json(syncResult);
+    } catch (err) {
+        console.error('[Route: /api/music/refresh] Error:', err);
+        res.status(500).json({ success: false, message: 'Gagal memperbarui tangga lagu', error: err.message });
+    }
+});
+
+    // 2. Ekstraksi audio stream YouTube via yt-dlp (Mendukung ID YouTube langsung maupun pencarian judul lagu)
     try {
         let streamUrl = streamUrlCache.get(rawId);
         const cachedAt = streamUrlCache.get(`${rawId}_time`) || 0;
 
         if (!streamUrl || (Date.now() - cachedAt > 3 * 60 * 60 * 1000)) {
+            const isYoutubeId = /^[a-zA-Z0-9_-]{11}$/.test(rawId);
+            const queryTarget = isYoutubeId ? `https://www.youtube.com/watch?v=${rawId}` : `ytsearch1:${rawId}`;
+
             const { stdout } = await execFileAsync(YTDLP_BIN, [
+                '--js-runtimes', 'node:/usr/bin/node',
                 '-g',
                 '-f', 'bestaudio',
-                `https://www.youtube.com/watch?v=${rawId}`
-            ], { timeout: 15000 });
+                queryTarget
+            ], { timeout: 18000 });
 
             streamUrl = (stdout || '').trim().split('\n')[0];
             if (streamUrl && streamUrl.startsWith('http')) {
