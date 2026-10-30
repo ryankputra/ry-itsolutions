@@ -3513,5 +3513,6 @@ module.exports = {
     backfillStoreToHistory,
     getStoredMessage,
     normalizeProtoMessage,
-    storeMessage
+    storeMessage,
+    handleRiveraGroupMessage
 };
