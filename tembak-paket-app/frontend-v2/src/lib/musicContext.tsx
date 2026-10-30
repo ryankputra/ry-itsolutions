@@ -174,7 +174,14 @@ export const DEFAULT_TRACKS: Track[] = [
   },
 ];
 
-interface MusicContextType {
+export interface VideoSlotPos {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+export interface MusicContextType {
   tracks: Track[];
   currentTrackIndex: number;
   currentTrack: Track;
@@ -190,13 +197,12 @@ interface MusicContextType {
   isPlayerVisible: boolean;
   isMinimized: boolean;
   isBuffering: boolean;
-
-  playTrack: (indexOrId: number | string) => void;
+  playTrack: (index: number) => void;
   togglePlayPause: () => void;
-  nextTrack: () => void;
-  prevTrack: () => void;
-  seek: (seconds: number) => void;
-  setVolume: (vol: number) => void;
+  seekTo: (seconds: number) => void;
+  handleNextTrack: () => void;
+  handlePrevTrack: () => void;
+  setVolume: (volume: number) => void;
   toggleMute: () => void;
   toggleShuffle: () => void;
   toggleLoop: () => void;
@@ -207,8 +213,8 @@ interface MusicContextType {
   formatTime: (seconds: number) => string;
   refreshTracks: () => Promise<void>;
   syncWithServer: () => Promise<any>;
-  videoSlotRect: DOMRect | null;
-  setVideoSlotRect: (rect: DOMRect | null) => void;
+  videoSlotPos: VideoSlotPos | null;
+  setVideoSlotPos: (pos: VideoSlotPos | null) => void;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -228,7 +234,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [isPlayerVisible, setPlayerVisible] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
-  const [videoSlotRect, setVideoSlotRect] = useState<DOMRect | null>(null);
+  const [videoSlotPos, setVideoSlotPos] = useState<VideoSlotPos | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
@@ -259,13 +265,14 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
             width: "100%",
             playerVars: {
               autoplay: 0,
-              controls: 1,
-              disablekb: 0,
-              fs: 1,
+              controls: 0,
+              disablekb: 1,
+              fs: 0,
               rel: 0,
               modestbranding: 1,
               playsinline: 1,
               enablejsapi: 1,
+              iv_load_policy: 3,
               origin: typeof window !== "undefined" ? window.location.origin : undefined,
             },
             events: {
@@ -759,8 +766,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         formatTime,
         refreshTracks,
         syncWithServer,
-        videoSlotRect,
-        setVideoSlotRect,
+        videoSlotPos,
+        setVideoSlotPos,
       }}
     >
       <style jsx global>{`
@@ -770,6 +777,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
           height: 100% !important;
           border: 0 !important;
           border-radius: inherit;
+          pointer-events: none !important;
         }
       `}</style>
 
@@ -802,23 +810,34 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       {/* 2. Persistent YouTube Audio/Video Engine */}
       <div
         className={
-          videoSlotRect && currentTrack?.youtubeId
-            ? "fixed z-30 overflow-hidden rounded-2xl shadow-2xl transition-all duration-150 pointer-events-auto bg-black"
+          videoSlotPos && currentTrack?.youtubeId
+            ? "absolute z-20 overflow-hidden rounded-2xl shadow-xl bg-black select-none pointer-events-none"
             : "fixed bottom-0 right-0 w-[2px] h-[2px] opacity-[0.001] pointer-events-none overflow-hidden z-[-1]"
         }
         style={
-          videoSlotRect && currentTrack?.youtubeId
+          videoSlotPos && currentTrack?.youtubeId
             ? {
-                left: `${videoSlotRect.left}px`,
-                top: `${videoSlotRect.top}px`,
-                width: `${videoSlotRect.width}px`,
-                height: `${videoSlotRect.height}px`,
+                left: `${videoSlotPos.left}px`,
+                top: `${videoSlotPos.top}px`,
+                width: `${videoSlotPos.width}px`,
+                height: `${videoSlotPos.height}px`,
                 borderRadius: "1rem",
               }
             : undefined
         }
       >
-        <div id="persistent-yt-audio" className="w-full h-full" style={{ width: "100%", height: "100%" }} />
+        <div
+          id="persistent-yt-audio"
+          className="w-full h-full pointer-events-none scale-[1.08] origin-center"
+          style={{ width: "100%", height: "100%" }}
+        />
+        {/* Transparent Shield Overlay to prevent any hover/click/tap reaching YouTube */}
+        <div
+          className="absolute inset-0 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        />
       </div>
 
       {children}

@@ -72,7 +72,7 @@ export default function RyToneMusicPage() {
     toggleFavorite,
     formatTime,
     syncWithServer,
-    setVideoSlotRect,
+    setVideoSlotPos,
   } = useMusic();
 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -81,34 +81,53 @@ export default function RyToneMusicPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [toast, setToast] = useState<{ message: string; type: "success" | "loading" | "info" } | null>(null);
 
-  // Synchronize slot bounding rect for video playback positioning
+  // Synchronize slot position for seamless video playback positioning
   useEffect(() => {
-    const updateRect = () => {
+    const updatePos = () => {
       if (!currentTrack?.youtubeId) {
-        setVideoSlotRect(null);
+        setVideoSlotPos(null);
         return;
       }
       const el = document.getElementById("rytone-video-slot");
       if (el) {
         const rect = el.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
-          setVideoSlotRect(rect);
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+          setVideoSlotPos({
+            top: rect.top + scrollTop,
+            left: rect.left + scrollLeft,
+            width: rect.width,
+            height: rect.height,
+          });
+          return;
         }
-      } else {
-        setVideoSlotRect(null);
       }
+      setVideoSlotPos(null);
     };
-    updateRect();
-    const timer = setTimeout(updateRect, 150);
-    window.addEventListener("resize", updateRect);
-    window.addEventListener("scroll", updateRect, { passive: true });
+
+    updatePos();
+    const t1 = setTimeout(updatePos, 80);
+    const t2 = setTimeout(updatePos, 250);
+
+    const el = document.getElementById("rytone-video-slot");
+    let observer: ResizeObserver | null = null;
+    if (el && typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => updatePos());
+      observer.observe(el);
+    }
+
+    window.addEventListener("resize", updatePos);
+    window.addEventListener("orientationchange", updatePos);
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", updateRect);
-      window.removeEventListener("scroll", updateRect);
-      setVideoSlotRect(null);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      if (observer) observer.disconnect();
+      window.removeEventListener("resize", updatePos);
+      window.removeEventListener("orientationchange", updatePos);
+      setVideoSlotPos(null);
     };
-  }, [currentTrack?.id, currentTrack?.youtubeId, setVideoSlotRect]);
+  }, [currentTrack?.id, currentTrack?.youtubeId, setVideoSlotPos]);
 
   const showToast = (message: string, type: "success" | "loading" | "info" = "success") => {
     setToast({ message, type });
