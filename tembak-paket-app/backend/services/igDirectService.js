@@ -12,20 +12,23 @@ const ipv4Agent = new https.Agent({ family: 4 });
 const SESSION_FILE = path.join(__dirname, '..', 'sessions', 'ig_session.json');
 const AUDIO_DIR = path.resolve(__dirname, '..', '..', 'frontend-v2', 'public', 'audio', 'tiktok');
 
-// Katalog lagu trending viral lengkap dengan file MP3 lokal untuk Story Video bersuara (Opsi B)
+// Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG
 const TRENDING_TRACKS = [
-    { title: 'Komang', artist: 'Raim Laode', filename: 'komang.mp3' },
-    { title: 'Sial', artist: 'Mahalini', filename: 'sial.mp3' },
-    { title: 'Malam Pagi', artist: 'Saixse', filename: 'malampagi.mp3' },
-    { title: 'Gala Bunga Matahari', artist: 'Sal Priadi', filename: 'galabungamatahari.mp3' },
-    { title: 'Bohongi Hati', artist: 'Mahalini', filename: 'bohongihati.mp3' },
-    { title: 'Rayuan Perempuan Gila', artist: 'Nadin Amizah', filename: 'nadinamizah.mp3' },
-    { title: 'Karna Su Sayang', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3' },
-    { title: 'Cupid', artist: 'FIFTY FIFTY', filename: 'cupid.mp3' },
-    { title: 'Cikini Gondangdia', artist: 'Duo Anggun', filename: 'cikini.mp3' },
-    { title: 'Stecu Stecu', artist: 'Faris Adam', filename: 'stecustecu.mp3' },
-    { title: 'Tabrak Tabrak Masuk', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3' },
-    { title: 'DJ Alay Gaya Kaya Artis', artist: 'DJ Desa', filename: 'djalay.mp3' }
+    { title: 'DJ Alay Gaya Kaya Artis (Viral TikTok Remix)', artist: 'DJ Desa', filename: 'djalay.mp3' },
+    { title: 'Stecu Stecu (Jedag Jedug TikTok Remix)', artist: 'Faris Adam', filename: 'stecustecu.mp3' },
+    { title: 'Tabrak Tabrak Masuk (Remix TikTok Full Bass)', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3' },
+    { title: 'Malam Pagi (Remix Jedag Jedug TikTok)', artist: 'Saixse ft. MK', filename: 'malampagi.mp3' },
+    { title: 'Cikini Ke Gondangdia (DJ Koplo Remix TikTok)', artist: 'Duo Anggrek Remix', filename: 'cikini.mp3' },
+    { title: 'Karna Su Sayang (DJ Remix TikTok Viral)', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3' },
+    { title: 'Sial (DJ Speed Up Jedag Jedug TikTok)', artist: 'Mahalini Remix', filename: 'sial.mp3' },
+    { title: 'Garam & Madu (DJ Remix TikTok Bass)', artist: 'Tenxi & Asmara', filename: 'garammadu.mp3' },
+    { title: 'Cupid (Speed Up Twin Ver TikTok Remix)', artist: 'FIFTY FIFTY', filename: 'cupid.mp3' },
+    { title: 'Sigar (DJ Jedag Jedug Koplo TikTok)', artist: 'Denny Caknan Remix', filename: 'sigar.mp3' },
+    { title: 'Cundamani (DJ Slow Bass Remix TikTok)', artist: 'Denny Caknan Remix', filename: 'cundamani.mp3' },
+    { title: 'Wirang (DJ Remix Full Bass TikTok)', artist: 'Denny Caknan Remix', filename: 'wirang.mp3' },
+    { title: 'APT. (DJ TikTok Viral Remix)', artist: 'ROSÉ & Bruno Mars', filename: 'apt.mp3' },
+    { title: 'Die With A Smile (DJ Slow TikTok Remix)', artist: 'Lady Gaga & Bruno Mars', filename: 'diewithasmile.mp3' },
+    { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3' }
 ];
 
 function getRandomTrack() {
@@ -591,7 +594,41 @@ async function publishOpenStory() {
         .jpeg({ quality: 94 })
         .toBuffer();
 
-    return await publishToStory(openBuffer);
+    const results = {
+        instagram: null,
+        whatsapp: null
+    };
+
+    // 1. Publikasi ke Instagram Story (@unlocksinyalsolo)
+    try {
+        results.instagram = await publishToStory(openBuffer);
+    } catch (igErr) {
+        console.error('[publishOpenStory] Gagal publish IG Story:', igErr.message);
+        results.instagramError = igErr.message;
+    }
+
+    // 2. Publikasi juga ke WhatsApp Story Bot
+    try {
+        const { publishWhatsAppStory } = require('./waBot');
+        if (typeof publishWhatsAppStory === 'function') {
+            const captionStory = `📢 *Ry-ITSolutions BUKA HARI INI!*\n\n` +
+                `⚡ Add Roamer & Unlock Sinyal\n` +
+                `🔍 Cek Status CEIR & Garansi\n\n` +
+                `🗓️ ${dateWIB}\n` +
+                `⏰ Buka: ${timestampWIB} WIB\n\n` +
+                `🌐 https://ry-itsolutionts.web.id`;
+            results.whatsapp = await publishWhatsAppStory(openBuffer, captionStory);
+        }
+    } catch (waErr) {
+        console.warn('[publishOpenStory] Warning saat posting ke WA Story:', waErr.message);
+        results.whatsappError = waErr.message;
+    }
+
+    if (!results.instagram && !results.whatsapp) {
+        throw new Error('Gagal memposting Story Open ke Instagram maupun WhatsApp Story.');
+    }
+
+    return results;
 }
 
 module.exports = {

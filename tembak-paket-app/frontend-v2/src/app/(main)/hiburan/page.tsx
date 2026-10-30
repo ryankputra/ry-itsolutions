@@ -89,7 +89,7 @@ export default function SpotifyMusicPage() {
   const handleToggleShuffle = () => {
     toggleShuffle();
     if (!isShuffle) {
-      showToast("Mode Acak Aktif: Seluruh 25 lagu diacak tanpa pengulangan", "info");
+      showToast(`Mode Acak Aktif: Seluruh ${tracks.length} lagu diacak tanpa pengulangan`, "info");
     } else {
       showToast("Mode Berurutan Aktif: Lagu diputar berurutan dari nomor 1", "info");
     }
@@ -99,12 +99,13 @@ export default function SpotifyMusicPage() {
   const handleManualSync = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
-    showToast("Menyinkronkan daftar lagu Spotify (Global & Indo)...", "loading");
+    showToast("Menyinkronkan lagu terbaru (Global, Indo, K-Pop, Koplo)...", "loading");
     try {
-      const success = await syncWithServer();
+      const res: any = await syncWithServer();
       setLastSyncTime(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
-      if (success) {
-        showToast("Daftar lagu Spotify berhasil diperbarui", "success");
+      if (res && (res === true || res.success)) {
+        const msg = res.message || "Daftar lagu Spotify berhasil diperbarui!";
+        showToast(msg, "success");
       } else {
         showToast("Daftar lagu sudah dalam versi paling mutakhir", "info");
       }
@@ -453,7 +454,7 @@ export default function SpotifyMusicPage() {
               </p>
               <p className="text-[11px] text-ink-muted dark:text-zinc-400 truncate">
                 {isShuffle
-                  ? "Seluruh 25 lagu diacak merata tanpa ada lagu yang terulang sampai semua selesai."
+                  ? `Seluruh ${tracks.length} lagu diacak merata tanpa ada lagu yang terulang sampai semua selesai.`
                   : "Lagu otomatis bergulir berurutan dari urutan saat ini hingga akhir katalog."}
               </p>
             </div>

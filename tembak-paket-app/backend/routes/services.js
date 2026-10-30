@@ -132,7 +132,7 @@ router.get('/ai/knowledge', async (req, res) => {
             },
             cs: {
                 admin1: '088706611370',
-                admin2: settingsMap['wa_admin_number'] || '087767287284',
+                admin2: settingsMap['wa_admin_number'] || '085156692166',
                 hours: '08.00 - 23.00 WIB'
             }
         });

@@ -206,7 +206,7 @@ interface MusicContextType {
   toggleMinimize: () => void;
   formatTime: (seconds: number) => string;
   refreshTracks: () => Promise<void>;
-  syncWithServer: () => Promise<boolean>;
+  syncWithServer: () => Promise<any>;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -707,11 +707,18 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         const serverTracks = json?.data?.tracks || json?.tracks;
         if (Array.isArray(serverTracks) && serverTracks.length > 0) {
           setTracks(serverTracks);
-          return true;
+          return {
+            success: true,
+            count: serverTracks.length,
+            added: json?.addedCount || 0,
+            message: json?.message || `Berhasil memperbarui ${serverTracks.length} lagu Spotify Hits!`
+          };
         }
       }
-    } catch {}
-    return false;
+    } catch (e) {
+      console.error("[MusicSync] Error:", e);
+    }
+    return { success: false, message: "Gagal menghubungkan ke server musik" };
   }, []);
 
   return (

@@ -1,4 +1,12 @@
+const path = require("path");
+const fs = require("fs");
 const { calculateTransactionWarranty } = require("../utils/warrantyHelper");
+
+function ensureDirExists(dir) {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+}
 /**
  * WhatsApp Admin Notifier & Controller Service (Self-Hosted via Baileys)
  * Free, zero third-party API costs.
@@ -29,6 +37,101 @@ const { publishToStory, publishToFeed, publishOpenStory, saveSessionFromCookie, 
 
 // Pending admin testimonial sessions: remoteJid -> { items: [ { buffer, track, caption, boxesCount } ], timestamp }
 const pendingTestimonials = new Map();
+const PENDING_TESTI_DIR = path.join(__dirname, "..", "sessions", "pending_testi");
+ensureDirExists(PENDING_TESTI_DIR);
+
+function savePendingTestimonial(remoteJid, data) {
+    try {
+        pendingTestimonials.set(remoteJid, data);
+        const cleanJid = String(remoteJid).replace(/[^a-zA-Z0-9]/g, "_");
+        const metaPath = path.join(PENDING_TESTI_DIR, `${cleanJid}.json`);
+
+        const serializedItems = (data.items || []).map((itm, idx) => {
+            const bufPath = path.join(PENDING_TESTI_DIR, `${cleanJid}_${idx}.jpg`);
+            if (itm.buffer) {
+                fs.writeFileSync(bufPath, itm.buffer);
+            }
+            return {
+                bufPath: itm.buffer ? bufPath : null,
+                boxesCount: itm.boxesCount,
+                detectedTypes: itm.detectedTypes,
+                caption: itm.caption,
+                track: itm.track
+            };
+        });
+
+        fs.writeFileSync(metaPath, JSON.stringify({
+            timestamp: data.timestamp,
+            items: serializedItems
+        }));
+    } catch (e) {
+        console.error("[WABot] Error saving pending testimonial to disk:", e.message);
+    }
+}
+
+function getPendingTestimonial(remoteJid) {
+    try {
+        let mem = pendingTestimonials.get(remoteJid);
+        if (mem && (Date.now() - mem.timestamp < 15 * 60 * 1000)) {
+            return mem;
+        }
+
+        const cleanJid = String(remoteJid).replace(/[^a-zA-Z0-9]/g, "_");
+        const metaPath = path.join(PENDING_TESTI_DIR, `${cleanJid}.json`);
+        if (fs.existsSync(metaPath)) {
+            const raw = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+            if (Date.now() - raw.timestamp < 15 * 60 * 1000) {
+                const restoredItems = (raw.items || []).map(itm => {
+                    let buf = null;
+                    if (itm.bufPath && fs.existsSync(itm.bufPath)) {
+                        buf = fs.readFileSync(itm.bufPath);
+                    }
+                    return {
+                        buffer: buf,
+                        boxesCount: itm.boxesCount,
+                        detectedTypes: itm.detectedTypes,
+                        caption: itm.caption,
+                        track: itm.track
+                    };
+                }).filter(itm => itm.buffer);
+
+                if (restoredItems.length > 0) {
+                    const restored = {
+                        items: restoredItems,
+                        timestamp: raw.timestamp
+                    };
+                    pendingTestimonials.set(remoteJid, restored);
+                    return restored;
+                }
+            } else {
+                deletePendingTestimonial(remoteJid);
+            }
+        }
+    } catch (e) {
+        console.error("[WABot] Error restoring pending testimonial from disk:", e.message);
+    }
+    return null;
+}
+
+function deletePendingTestimonial(remoteJid) {
+    try {
+        pendingTestimonials.delete(remoteJid);
+        const cleanJid = String(remoteJid).replace(/[^a-zA-Z0-9]/g, "_");
+        const metaPath = path.join(PENDING_TESTI_DIR, `${cleanJid}.json`);
+        if (fs.existsSync(metaPath)) {
+            try {
+                const raw = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+                for (const itm of raw.items || []) {
+                    if (itm.bufPath && fs.existsSync(itm.bufPath)) {
+                        try { fs.unlinkSync(itm.bufPath); } catch (u) {}
+                    }
+                }
+            } catch (err) {}
+            try { fs.unlinkSync(metaPath); } catch (u) {}
+        }
+    } catch (e) {}
+}
+
 // Pending admin image upload batches (for multi-image send): remoteJid -> { timer, rawMsgs: [] }
 const adminImageBatches = new Map();
 // Cache IDs sent by the bot to prevent self-triggering loops
@@ -46,8 +149,6 @@ function isMsgDuplicate(id) {
 }
 const pino = require("pino");
 const QRCode = require("qrcode");
-const path = require("path");
-const fs = require("fs");
 const { exec } = require("child_process");
 const NodeCache = require("node-cache");
 const { dbGet, dbRun, dbAll } = require("../config/db");
@@ -465,11 +566,7 @@ function checkAndAutoUpgradeBaileys(currentVer) {
     });
 }
 
-function ensureDirExists(dir) {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-}
+
 
 function syncSaveCreds(creds) {
     if (!creds) return;
@@ -588,7 +685,9 @@ async function getAdminPhoneNumbers(paymentMethod = '') {
     const adminPhones = new Set();
     const pm = String(paymentMethod || '').toLowerCase();
 
-    // Specific routing based on payment method
+    // HANYA 2 NOMOR ADMIN RESMI:
+    // Admin 1: 085156692166 (GoPay / QRIS / Primary)
+    // Admin 2: 088706611370 (ShopeePay / CS / Primary)
     const primaryGoPayAdmin = "6285156692166";
     const primaryShopeeAdmin = "6288706611370";
 
@@ -601,52 +700,16 @@ async function getAdminPhoneNumbers(paymentMethod = '') {
         adminPhones.add(primaryShopeeAdmin);
     }
 
-    // 0. Additional Primary Administrator Numbers & Known Admin LIDs
-    const primaryAdmins = [primaryGoPayAdmin, primaryShopeeAdmin, "217489191489706", "15062853009567"];
-    primaryAdmins.forEach(num => {
-        const cp = cleanPhone(num);
-        if (cp) adminPhones.add(cp);
-    });
-
-    // 1. From environment variables
-    const envAdmin = process.env.WA_ADMIN_NUMBER || process.env.ADMIN_WHATSAPP || "6285156692166,6288706611370";
-    envAdmin.split(",").forEach(num => {
-        const cp = cleanPhone(num.trim());
-        if (cp) adminPhones.add(cp);
-    });
-
-    // 2. From database settings
-    try {
-        const row = await dbGet("SELECT value FROM settings WHERE key = 'wa_admin_number'");
-        if (row && row.value) {
-            row.value.split(",").forEach(num => {
-                const cp = cleanPhone(num.trim());
-                if (cp) adminPhones.add(cp);
-            });
-        }
-    } catch (e) {}
-
-    // 3. From admin users in DB
-    try {
-        const admins = await dbAll("SELECT verifiedPhone FROM users WHERE role = 'admin'");
-        if (admins && admins.length > 0) {
-            admins.forEach(a => {
-                const cp = cleanPhone(a.verifiedPhone);
-                if (cp) adminPhones.add(cp);
-            });
-        }
-    } catch (e) {}
-
-    // CRITICAL: Keluarkan nomor bot WhatsApp itu sendiri agar tidak pernah mengirim notifikasi ke diri sendiri
-    // Pengiriman ke nomor bot sendiri memicu "Menunggu pesan ini. Tindakan ini mungkin membutuhkan waktu beberapa saat."
+    // Keluarkan nomor bot WhatsApp itu sendiri jika ada
     const botPhone = getBotPhoneNumber();
     if (botPhone) {
         adminPhones.delete(botPhone);
     }
 
-    // Pastikan setidaknya admin utama selalu ada jika kosong
+    // Pastikan kedua admin utama selalu aktif
     if (adminPhones.size === 0) {
         adminPhones.add(primaryGoPayAdmin);
+        adminPhones.add(primaryShopeeAdmin);
     }
 
     return Array.from(adminPhones);
@@ -1097,19 +1160,30 @@ async function initWABot(forceNew = false) {
 
                 // Determine sender phone number / LID cleanly
                 const rawSender = msg.key.participant || msg.participant || remoteJid;
-                const cleanSenderPhone = cleanPhone(rawSender.replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0]);
-                const cleanRemotePhone = cleanPhone(remoteJid.replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0]);
+                const rawSenderDigits = (rawSender || "").replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0].replace(/\D/g, "");
+                const rawRemoteDigits = (remoteJid || "").replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0].replace(/\D/g, "");
+                const cleanSenderPhone = cleanPhone(rawSenderDigits);
+                const cleanRemotePhone = cleanPhone(rawRemoteDigits);
                 const adminPhones = await getAdminPhoneNumbers();
                 const cleanAdminList = adminPhones.map(p => cleanPhone(p)).filter(Boolean);
+
+                const KNOWN_ADMIN_LIDS = [
+                    "217489191489706", // Admin MasR (6285156692166)
+                    "160485848686703", // Admin Shopee / aloysiaomega (+62 887-0661-1370)
+                    "15062853009567"   // Bot LID
+                ];
 
                 // STRICT ADMIN CHECK:
                 // Only authorized if message was sent from the bot's own account (fromMe)
                 // OR the sender's phone / LID is explicitly in the admin list.
                 const isSenderAdmin = Boolean(
                     msg.key.fromMe ||
+                    KNOWN_ADMIN_LIDS.includes(rawSenderDigits) ||
+                    KNOWN_ADMIN_LIDS.includes(rawRemoteDigits) ||
                     (cleanSenderPhone && cleanAdminList.includes(cleanSenderPhone)) ||
                     (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone)) ||
-                    (remoteJid && cleanAdminList.some(admin => remoteJid.includes(admin)))
+                    (remoteJid && cleanAdminList.some(admin => remoteJid.includes(admin))) ||
+                    (remoteJid && KNOWN_ADMIN_LIDS.some(lid => remoteJid.includes(lid)))
                 );
 
                 // IF SENDER IS NOT AN ADMIN:
@@ -1166,8 +1240,8 @@ async function processAdminImageBatch(remoteJid) {
         return;
     }
 
-    // Simpan batch ke pendingTestimonials
-    pendingTestimonials.set(remoteJid, {
+    // Simpan batch ke pendingTestimonials (RAM & disk persisten)
+    savePendingTestimonial(remoteJid, {
         items: processedItems,
         timestamp: Date.now()
     });
@@ -1640,10 +1714,10 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
 
     // Command Khusus: Auto Story Open Toko (#open / .open / open)
     if (rawCleanText === "#open" || rawCleanText === ".open" || rawCleanText === "open") {
-        await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan banner & mempublikasikan Story 'Ry-ITSolutions BUKA HARI INI' ke @unlocksinyalsolo...*");
+        await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan banner & mempublikasikan Story 'Ry-ITSolutions BUKA HARI INI' ke Instagram (@unlocksinyalsolo) & WhatsApp Story Bot...*");
         try {
             await publishOpenStory();
-            await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nInstagram Story 'WE ARE OPEN' telah terbit di akun *@unlocksinyalsolo*! 🎉" + BOT_FOOTER);
+            await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nStory 'WE ARE OPEN' telah terbit di *Instagram Story* (@unlocksinyalsolo) dan di *WhatsApp Story Bot*! 🎉" + BOT_FOOTER);
         } catch (errOpen) {
             await replyWhatsApp(replyJid, `❌ *Gagal posting Story Open:* ${errOpen.message}` + BOT_FOOTER);
         }
@@ -1651,69 +1725,91 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
     }
 
     // Command Khusus: Interaksi Publikasi Testimoni Instagram
-    const pendingTesti = pendingTestimonials.get(replyJid);
+    const pendingTesti = getPendingTestimonial(replyJid);
     if (pendingTesti && (Date.now() - pendingTesti.timestamp < 15 * 60 * 1000)) {
         const items = pendingTesti.items || (pendingTesti.buffer ? [pendingTesti] : []);
-        if (items.length === 0) return;
-
-        if (rawCleanText === "1" || rawCleanText === ".1") {
-            await replyWhatsApp(replyJid, `⏳ *Sedang merender video 15 detik & mempublikasikan ${items.length} postingan ke Instagram Story (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
-            try {
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    await publishToStory(item.buffer, item.track);
-                    if (i < items.length - 1) {
-                        await new Promise(r => setTimeout(r, 2000));
+        if (items.length > 0) {
+            if (rawCleanText === "1" || rawCleanText === ".1") {
+                await replyWhatsApp(replyJid, `⏳ *Sedang merender video 15 detik & mempublikasikan ${items.length} postingan ke Instagram Story (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
+                try {
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        await publishToStory(item.buffer, item.track);
+                        if (i < items.length - 1) {
+                            await new Promise(r => setTimeout(r, 2000));
+                        }
                     }
+                    deletePendingTestimonial(replyJid);
+                    await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) bukti testimoni telah terbit terpisah di *Instagram Story* *@unlocksinyalsolo* sebagai Video 15 detik dengan musik bersuara nyata! 🔊🎶` + BOT_FOOTER);
+                } catch (errStory) {
+                    await replyWhatsApp(replyJid, `❌ *Gagal posting ke Story:* ${errStory.message}` + BOT_FOOTER);
                 }
-                pendingTestimonials.delete(replyJid);
-                await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) bukti testimoni telah terbit terpisah di *Instagram Story* *@unlocksinyalsolo* sebagai Video 15 detik dengan musik bersuara nyata! 🔊🎶` + BOT_FOOTER);
-            } catch (errStory) {
-                await replyWhatsApp(replyJid, `❌ *Gagal posting ke Story:* ${errStory.message}` + BOT_FOOTER);
-            }
-            return;
-        } else if (rawCleanText === "2" || rawCleanText === ".2") {
-            await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Feed satu per satu (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
-            try {
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    await publishToFeed(item.buffer, item.caption, item.track);
-                    if (i < items.length - 1) {
-                        await new Promise(r => setTimeout(r, 2500));
+                return;
+            } else if (rawCleanText === "2" || rawCleanText === ".2") {
+                await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Feed satu per satu (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
+                try {
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        await publishToFeed(item.buffer, item.caption, item.track);
+                        if (i < items.length - 1) {
+                            await new Promise(r => setTimeout(r, 2500));
+                        }
                     }
+                    deletePendingTestimonial(replyJid);
+                    await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) bukti testimoni telah terbit terpisah di *Instagram Feed* *@unlocksinyalsolo* masing-masing dengan lagu berbeda! 📸` + BOT_FOOTER);
+                } catch (errFeed) {
+                    await replyWhatsApp(replyJid, `❌ *Gagal posting ke Feed:* ${errFeed.message}` + BOT_FOOTER);
                 }
-                pendingTestimonials.delete(replyJid);
-                await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) bukti testimoni telah terbit terpisah di *Instagram Feed* *@unlocksinyalsolo* masing-masing dengan lagu berbeda! 📸` + BOT_FOOTER);
-            } catch (errFeed) {
-                await replyWhatsApp(replyJid, `❌ *Gagal posting ke Feed:* ${errFeed.message}` + BOT_FOOTER);
-            }
-            return;
-        } else if (rawCleanText === "3" || rawCleanText === ".3") {
-            await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Story & Feed (@unlocksinyalsolo)...*`);
-            try {
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    await publishToStory(item.buffer, item.track);
-                    await new Promise(r => setTimeout(r, 1500));
-                    await publishToFeed(item.buffer, item.caption, item.track);
-                    if (i < items.length - 1) {
-                        await new Promise(r => setTimeout(r, 2000));
+                return;
+            } else if (rawCleanText === "3" || rawCleanText === ".3") {
+                await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Story & Feed (@unlocksinyalsolo)...*`);
+                try {
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        await publishToStory(item.buffer, item.track);
+                        await new Promise(r => setTimeout(r, 1500));
+                        await publishToFeed(item.buffer, item.caption, item.track);
+                        if (i < items.length - 1) {
+                            await new Promise(r => setTimeout(r, 2000));
+                        }
                     }
+                    deletePendingTestimonial(replyJid);
+                    await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) postingan telah terbit di *Story & Feed Instagram* *@unlocksinyalsolo*! 🎉` + BOT_FOOTER);
+                } catch (errBoth) {
+                    await replyWhatsApp(replyJid, `❌ *Gagal posting:* ${errBoth.message}` + BOT_FOOTER);
                 }
-                pendingTestimonials.delete(replyJid);
-                await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nSemua (${items.length}) postingan telah terbit di *Story & Feed Instagram* *@unlocksinyalsolo*! 🎉` + BOT_FOOTER);
-            } catch (errBoth) {
-                await replyWhatsApp(replyJid, `❌ *Gagal posting:* ${errBoth.message}` + BOT_FOOTER);
+                return;
+            } else if (rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
+                deletePendingTestimonial(replyJid);
+                await replyWhatsApp(replyJid, "🚫 *Publikasi testimoni ke Instagram telah dibatalkan.*" + BOT_FOOTER);
+                return;
             }
-            return;
-        } else if (rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
-            pendingTestimonials.delete(replyJid);
-            await replyWhatsApp(replyJid, "🚫 *Publikasi testimoni ke Instagram telah dibatalkan.*" + BOT_FOOTER);
-            return;
         }
     }
 
+    // 0 / batal: Jika tidak ada sesi testimoni aktif, batalkan / informasikan dengan jelas
+    if (rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
+        deletePendingTestimonial(replyJid);
+        await replyWhatsApp(replyJid, "ℹ️ *Tidak ada antrean atau sesi publikasi foto testimoni yang sedang aktif.*" + BOT_FOOTER);
+        return;
+    }
+
+    // Cek apakah pesan mengutip (quote) notifikasi pesanan
+    const hasQuotedOrder = Boolean(rawMsg?.message?.extendedTextMessage?.contextInfo?.quotedMessage);
     const parts = text.trim().split(/\s+/);
+
+    // Jika admin hanya mengetik 1, 2, atau 3 tanpa ID order dan bukan reply notifikasi pesanan
+    if ((rawCleanText === "1" || rawCleanText === "2" || rawCleanText === "3") && parts.length === 1 && !hasQuotedOrder) {
+        await replyWhatsApp(replyJid, 
+            `ℹ️ *Tidak ada sesi konfirmasi foto testimoni yang aktif.*\n\n` +
+            `Jika ingin memproses pesanan, gunakan format:\n` +
+            `• *1 <ID_ORDER>* ➔ Proses pesanan\n` +
+            `• *2 <ID_ORDER> [CATATAN]* ➔ Selesaikan pesanan\n` +
+            `• *3 <ID_ORDER> [ALASAN]* ➔ Batalkan pesanan\n\n` +
+            `_Atau balas (quote reply) langsung pesan notifikasi pesanan tersebut._` + BOT_FOOTER
+        );
+        return;
+    }
     let command = parts[0].toLowerCase();
     let orderIdArg = parts[1];
     let notesArg = parts.slice(2).join(" ");
@@ -2108,6 +2204,54 @@ async function replyWhatsApp(jid, text) {
 }
 
 /**
+ * Mempublikasikan status / story ke WhatsApp Bot (status@broadcast)
+ * @param {Buffer} imageBuffer - Buffer gambar JPEG yang akan diposting
+ * @param {string} caption - Teks caption status
+ */
+async function publishWhatsAppStory(imageBuffer, caption = "") {
+    if (!sock || connectionState !== "open") {
+        throw new Error("WhatsApp Bot Baileys belum terhubung.");
+    }
+
+    try {
+        const recipientPhones = await getBroadcastRecipients("all");
+        const statusJidSet = new Set();
+        recipientPhones.forEach(p => {
+            const c = cleanPhone(p);
+            if (c && isValidIndonesianMobile(c)) {
+                statusJidSet.add(`${c}@s.whatsapp.net`);
+            }
+        });
+
+        // Pastikan kedua nomor admin resmi selalu disertakan
+        statusJidSet.add("6285156692166@s.whatsapp.net");
+        statusJidSet.add("6288706611370@s.whatsapp.net");
+
+        const statusJidList = Array.from(statusJidSet);
+
+        logWABot(`[WABot Story] Mengunggah Story WhatsApp ke status@broadcast (${statusJidList.length} kontak)...`, "info");
+
+        const sent = await sock.sendMessage("status@broadcast", {
+            image: imageBuffer,
+            caption: caption || ""
+        }, {
+            statusJidList: statusJidList
+        });
+
+        if (sent?.key?.id) {
+            botSentMsgIds.add(sent.key.id);
+        }
+
+        logWABot(`✅ Story WhatsApp Bot berhasil diposting ke status@broadcast! ID: ${sent?.key?.id || "-"}`, "info");
+        return { status: true, id: sent?.key?.id };
+    } catch (err) {
+        logWABot(`❌ Gagal posting Story WhatsApp: ${err.message}`, "error");
+        console.error("[WABot Story] Gagal publish story WA:", err);
+        throw err;
+    }
+}
+
+/**
  * Notifikasi ke WhatsApp Admin saat Story Open Toko berhasil diposting otomatis via Cron
  */
 async function notifyAdminStoryOpen(postResult) {
@@ -2120,7 +2264,7 @@ async function notifyAdminStoryOpen(postResult) {
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `🗓️ *Hari/Tanggal:* ${dateWIB}\n` +
             `⏰ *Waktu Terbit:* ${timeWIB} WIB\n` +
-            `🎯 *Target Akun:* @unlocksinyalsolo\n` +
+            `🎯 *Target Terbit:* Instagram Story (@unlocksinyalsolo) & WhatsApp Story Bot\n` +
             `🔒 *Layanan Terpasang:*\n` +
             `  • ⚡ Add Roamer & Unlock Sinyal\n` +
             `  • 🔍 Cek Status CEIR & Garansi\n` +
@@ -3166,6 +3310,7 @@ module.exports = {
     getAdminPhoneNumbers,
     testAdminNotification,
     notifyAdminStoryOpen,
+    publishWhatsAppStory,
     notifyPaymentSuccessToAdmin,
     notifyWarrantyClaim,
     recordChatMessage,
