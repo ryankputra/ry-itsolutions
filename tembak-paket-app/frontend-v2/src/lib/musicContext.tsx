@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import { Play } from "lucide-react";
 
 export interface Track {
   id: string;
@@ -397,6 +398,43 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       });
     }
   }, [currentTrack]);
+
+  // Mobile background audio resilience: seamless switch to native HTML5 stream when tab is hidden / phone locked
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // App di-minimize atau layar HP dikunci:
+        if (isPlaying && currentTrack) {
+          const currentSec = ytPlayerRef.current?.getCurrentTime ? ytPlayerRef.current.getCurrentTime() : currentTime;
+          const streamUrl = `/api/music/stream?id=${currentTrack.youtubeId || currentTrack.id}`;
+          if (audioRef.current) {
+            if (audioRef.current.src !== window.location.origin + streamUrl && !audioRef.current.src.endsWith(streamUrl)) {
+              audioRef.current.src = streamUrl;
+            }
+            audioRef.current.currentTime = currentSec || 0;
+            audioRef.current.play().catch(() => {});
+          }
+        }
+      } else {
+        // App dibuka kembali ke foreground:
+        if (audioRef.current && !audioRef.current.paused) {
+          const resumeSec = audioRef.current.currentTime;
+          audioRef.current.pause();
+          if (ytPlayerRef.current?.seekTo && isPlaying) {
+            ytPlayerRef.current.seekTo(resumeSec, true);
+            ytPlayerRef.current.playVideo();
+          }
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isPlaying, currentTrack, currentTime]);
 
   // Handle Play Track (100% Full Length via YouTube or HTML5 audio)
   const playTrack = useCallback(
@@ -838,11 +876,17 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
           style={{ width: "100%", height: "100%" }}
         />
 
-        {/* Splash Cover Curtain to seamlessly hide initial YouTube loading & intro overlay */}
+        {/* Splash & State Cover Curtain to seamlessly seal YouTube loading, intro, pause, and buffer */}
         <div
-          className={`absolute inset-0 z-20 overflow-hidden rounded-2xl transition-opacity duration-700 pointer-events-none select-none bg-black ${
-            currentTime < 2.5 && isPlaying ? "opacity-100" : "opacity-0"
+          className={`absolute inset-0 z-20 overflow-hidden rounded-2xl transition-opacity duration-300 select-none bg-black ${
+            !isPlaying || isBuffering || currentTime < 2.8
+              ? "opacity-100 pointer-events-auto cursor-pointer"
+              : "opacity-0 pointer-events-none"
           }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlayPause();
+          }}
         >
           {currentTrack.coverImage ? (
             <img
@@ -853,12 +897,31 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
           ) : (
             <div className="w-full h-full bg-zinc-900 flex items-center justify-center" />
           )}
-          {/* RyTone HD Audio Engine Badge & Loading Wave */}
-          <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
-            <div className="w-11 h-11 rounded-full bg-[#1ed760]/20 border border-[#1ed760]/40 flex items-center justify-center shadow-lg">
-              <span className="w-3.5 h-3.5 rounded-full bg-[#1ed760] animate-ping" />
-            </div>
-            <p className="text-[11px] font-bold text-white tracking-widest uppercase">RyTone HD Audio</p>
+
+          {/* RyTone Overlay Badges & Custom Interactive Play/Pause Indicator */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+            {!isPlaying ? (
+              <div className="flex flex-col items-center gap-2 group">
+                <div className="w-14 h-14 rounded-full bg-[#1ed760] text-black flex items-center justify-center shadow-2xl shadow-[#1ed760]/50 transform group-hover:scale-110 transition-transform">
+                  <Play className="w-7 h-7 fill-black ml-1 text-black" />
+                </div>
+                <p className="text-[11px] font-bold text-white tracking-widest uppercase">Klik Untuk Memutar</p>
+              </div>
+            ) : isBuffering ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-[#1ed760]/20 border border-[#1ed760]/40 flex items-center justify-center shadow-lg">
+                  <span className="w-4 h-4 rounded-full bg-[#1ed760] animate-ping" />
+                </div>
+                <p className="text-[11px] font-bold text-[#1ed760] tracking-widest uppercase animate-pulse">Menyelaraskan Audio...</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-11 h-11 rounded-full bg-[#1ed760]/20 border border-[#1ed760]/40 flex items-center justify-center shadow-lg">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#1ed760] animate-ping" />
+                </div>
+                <p className="text-[11px] font-bold text-white tracking-widest uppercase">RyTone HD Audio</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -867,6 +930,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
           className="absolute inset-0 z-30 pointer-events-auto bg-transparent select-none cursor-default"
           onClick={(e) => {
             e.stopPropagation();
+            togglePlayPause();
           }}
         />
       </div>

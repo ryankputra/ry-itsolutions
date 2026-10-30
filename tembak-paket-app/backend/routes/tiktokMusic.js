@@ -32,22 +32,115 @@ router.get('/', (req, res) => {
     }
 });
 
+const path = require('path');
+const fs = require('fs');
+const https = require('https');
+const http = require('http');
+const { execFile } = require('child_process');
+const util = require('util');
+const execFileAsync = util.promisify(execFile);
+
+const AUDIO_DIR = path.resolve(__dirname, '../../frontend-v2/public/audio/tiktok');
+const YTDLP_BIN = process.env.YTDLP_PATH || (fs.existsSync('/usr/local/bin/yt-dlp') ? '/usr/local/bin/yt-dlp' : 'yt-dlp');
+
+const streamUrlCache = new Map();
+
 /**
- * POST /api/tiktok-music/sync or /api/music/sync
- * Endpoint to trigger automated update / verification of real RyTone Top Hits
+ * GET /api/music/stream or /api/tiktok-music/stream
+ * Streaming audio murni untuk pemutaran di latar belakang (background audio mobile saat layar mati/keluar web)
  */
-router.post('/sync', async (req, res) => {
+router.get('/stream', async (req, res) => {
+    const rawId = (req.query.id || req.query.youtubeId || "").trim();
+    if (!rawId) {
+        return res.status(400).json({ success: false, message: "Parameter id lagu diperlukan." });
+    }
+
+    // 1. Cek apakah ini file lokal di folder audio (misal komang.mp3, djalay.mp3, dll)
+    const localFilename = rawId.endsWith('.mp3') ? rawId : `${rawId}.mp3`;
+    const localPath = path.join(AUDIO_DIR, localFilename);
+    if (fs.existsSync(localPath)) {
+        const stat = fs.statSync(localPath);
+        const range = req.headers.range;
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+            const chunksize = (end - start) + 1;
+            const file = fs.createReadStream(localPath, { start, end });
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': 'audio/mpeg',
+            });
+            return file.pipe(res);
+        } else {
+            res.writeHead(200, {
+                'Content-Length': stat.size,
+                'Content-Type': 'audio/mpeg',
+                'Accept-Ranges': 'bytes'
+            });
+            return fs.createReadStream(localPath).pipe(res);
+        }
+    }
+
+    // 2. Ekstraksi audio stream YouTube via yt-dlp
     try {
-        const result = await tiktokMusicService.syncTrendingMusic();
-        res.json(result);
-    } catch (err) {
-        console.error('[Route: /api/music/sync] Error:', err);
-        res.status(500).json({
-            success: false,
-            status: false,
-            message: "Gagal memperbarui tangga lagu RyTone",
-            error: err.message
+        let streamUrl = streamUrlCache.get(rawId);
+        const cachedAt = streamUrlCache.get(`${rawId}_time`) || 0;
+
+        if (!streamUrl || (Date.now() - cachedAt > 3 * 60 * 60 * 1000)) {
+            const { stdout } = await execFileAsync(YTDLP_BIN, [
+                '-g',
+                '-f', 'bestaudio',
+                `https://www.youtube.com/watch?v=${rawId}`
+            ], { timeout: 15000 });
+
+            streamUrl = (stdout || '').trim().split('\n')[0];
+            if (streamUrl && streamUrl.startsWith('http')) {
+                streamUrlCache.set(rawId, streamUrl);
+                streamUrlCache.set(`${rawId}_time`, Date.now());
+            }
+        }
+
+        if (!streamUrl || !streamUrl.startsWith('http')) {
+            const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
+            if (fs.existsSync(fallbackFile)) {
+                return fs.createReadStream(fallbackFile).pipe(res);
+            }
+            return res.status(404).json({ success: false, message: "Audio stream tidak ditemukan." });
+        }
+
+        // Proxy audio stream dari GoogleVideo langsung ke client
+        const clientReq = (streamUrl.startsWith('https') ? https : http).get(streamUrl, (upstreamRes) => {
+            res.writeHead(upstreamRes.statusCode || 200, {
+                'Content-Type': upstreamRes.headers['content-type'] || 'audio/webm',
+                'Content-Length': upstreamRes.headers['content-length'],
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'public, max-age=3600'
+            });
+            upstreamRes.pipe(res);
         });
+
+        clientReq.on('error', (err) => {
+            console.warn('[Route: /api/music/stream] Proxy error:', err.message);
+            if (!res.headersSent) {
+                res.status(502).json({ success: false, message: "Gagal mem-proxy audio stream." });
+            }
+        });
+
+        req.on('close', () => {
+            clientReq.destroy();
+        });
+    } catch (err) {
+        console.error('[Route: /api/music/stream] Extract error:', err.message);
+        const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
+        if (fs.existsSync(fallbackFile) && !res.headersSent) {
+            return fs.createReadStream(fallbackFile).pipe(res);
+        }
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: "Gagal mengekstrak audio." });
+        }
     }
 });
 

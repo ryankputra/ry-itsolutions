@@ -44,11 +44,21 @@ const TRENDING_TRACKS = [
     { title: 'Untungnya Hidup Tetap Berjalan (DJ Remix)', artist: 'Bernadya Remix', filename: 'untungnya.mp3', reffSec: 24 }
 ];
 
+const { getRandomDJTrack, getUniqueDJTracks, getActiveDJTracks } = require('./tiktokDJService');
+
 function getRandomTrack() {
+    try {
+        const djTrack = getRandomDJTrack();
+        if (djTrack) return djTrack;
+    } catch {}
     return TRENDING_TRACKS[Math.floor(Math.random() * TRENDING_TRACKS.length)];
 }
 
 function getUniqueTracks(count) {
+    try {
+        const djTracks = getUniqueDJTracks(count);
+        if (djTracks && djTracks.length > 0) return djTracks;
+    } catch {}
     const shuffled = [...TRENDING_TRACKS].sort(() => 0.5 - Math.random());
     const result = [];
     for (let i = 0; i < count; i++) {
@@ -1222,6 +1232,7 @@ module.exports = {
     generateRiveraUpdateGraphic,
     publishRiveraStory,
     saveSessionFromCookie,
-    getUniqueTracks
+    getUniqueTracks,
+    getActiveDJTracks
 };
 

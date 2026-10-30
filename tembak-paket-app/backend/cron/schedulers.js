@@ -325,6 +325,18 @@ function initSchedulers() {
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
+    // 5b. Rotasi Harian Lagu DJ Remix TikTok (Hapus lagu > 3 hari & perbarui lagu viral baru)
+    // Dijalankan setiap hari pukul 03:30 WIB
+    cron.schedule('30 3 * * *', async () => {
+        try {
+            console.log('[Scheduler][TikTokDJ] 🔄 Menjalankan rotasi lagu DJ Remix TikTok harian (Pembersihan > 3 hari & Update lagu baru)...');
+            const { rotateAndRefreshDJTracks } = require('../services/tiktokDJService');
+            await rotateAndRefreshDJTracks();
+        } catch (e) {
+            console.error('[Scheduler][TikTokDJ] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
     // 6. Auto-post Instagram Story Open Toko (Sesuai jam settingan admin via WhatsApp Bot)
     cron.schedule('* * * * *', async () => {
         try {
