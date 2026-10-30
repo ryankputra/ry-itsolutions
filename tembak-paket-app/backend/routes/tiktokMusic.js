@@ -18,7 +18,7 @@ router.get('/', (req, res) => {
         res.json({
             success: true,
             status: true,
-            message: "Berhasil memuat katalog lagu Spotify Top Hits",
+            message: "Berhasil memuat katalog lagu RyTone Top Hits",
             data: catalog
         });
     } catch (err) {
@@ -26,7 +26,7 @@ router.get('/', (req, res) => {
         res.status(500).json({
             success: false,
             status: false,
-            message: "Gagal memuat katalog lagu Spotify",
+            message: "Gagal memuat katalog lagu RyTone",
             error: err.message
         });
     }
@@ -34,7 +34,7 @@ router.get('/', (req, res) => {
 
 /**
  * POST /api/tiktok-music/sync or /api/music/sync
- * Endpoint to trigger automated update / verification of real Spotify Top Hits
+ * Endpoint to trigger automated update / verification of real RyTone Top Hits
  */
 router.post('/sync', async (req, res) => {
     try {
@@ -45,7 +45,7 @@ router.post('/sync', async (req, res) => {
         res.status(500).json({
             success: false,
             status: false,
-            message: "Gagal memperbarui tangga lagu Spotify",
+            message: "Gagal memperbarui tangga lagu RyTone",
             error: err.message
         });
     }

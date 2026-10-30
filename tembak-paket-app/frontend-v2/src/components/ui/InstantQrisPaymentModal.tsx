@@ -137,7 +137,7 @@ export function InstantQrisPaymentModal({
           if (rawCode || rawImg) {
             try {
               const activeGw = qData.active_gateway || qData.gateway || '';
-              const badgeChar = activeGw.toLowerCase().includes('shopee') ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
+              const badgeChar = (activeGw.toLowerCase().includes('shopee') || activeGw.toLowerCase().includes('shopp')) ? 'S' : (activeGw.toLowerCase().includes('gopay') ? 'G' : '');
               resolvedImage = await generateQrisCanvasDataUrl(rawCode || rawImg, { logoUrl: "/logo.png", badge: badgeChar });
             } catch (e) {
               if (rawCode && !rawCode.startsWith("data:image/")) {

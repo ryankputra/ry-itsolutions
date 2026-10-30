@@ -132,7 +132,7 @@ export function SpotifyPlayerBar() {
       {/* Main Spotify-style Player Bar */}
       <footer
         className="fixed bottom-[56px] lg:bottom-0 left-0 right-0 z-40 bg-parchment/95 dark:bg-[#121212]/95 border-t border-hairline dark:border-white/10 backdrop-blur-2xl text-ink dark:text-white select-none transition-all duration-200 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)]"
-        aria-label="Spotify Music Player"
+        aria-label="RyTone Music Player"
       >
         {/* Mobile thin top progress indicator */}
         <div className="lg:hidden w-full h-[3px] bg-black/10 dark:bg-white/10 relative overflow-hidden">
@@ -335,10 +335,10 @@ export function SpotifyPlayerBar() {
               <Link
                 href="/hiburan"
                 className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-canvas dark:bg-white/5 hover:bg-parchment dark:hover:bg-white/10 border border-hairline dark:border-white/10 text-ink-muted dark:text-zinc-300 hover:text-ink dark:hover:text-white text-xs font-semibold transition cursor-pointer"
-                title="Buka Playlist Spotify"
+                title="Buka Playlist RyTone"
               >
                 <Music className="w-3.5 h-3.5 text-[#1ed760]" />
-                <span className="hidden xl:inline">Spotify Hits</span>
+                <span className="hidden xl:inline">RyTone Hits</span>
               </Link>
             )}
 

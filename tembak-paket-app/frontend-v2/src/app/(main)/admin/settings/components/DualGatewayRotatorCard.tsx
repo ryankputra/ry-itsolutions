@@ -176,9 +176,9 @@ export function DualGatewayRotatorCard({ onSaved }: DualGatewayRotatorCardProps)
         Swal.fire({
           title: "🔄 Rolling Berhasil!",
           html: `<div class="text-left text-xs space-y-1">
-            <p><b>Counter Lama:</b> #${d.data.oldCounter}</p>
-            <p><b>Counter Baru:</b> #${d.data.newCounter}</p>
-            <p><b>Giliran Berikutnya:</b> <span class="uppercase text-emerald-600 font-bold">${d.data.nextGateway}</span></p>
+            <p><b>Counter Lama:</b> #{d.data.oldCounter}</p>
+            <p><b>Counter Baru:</b> #{d.data.newCounter}</p>
+            <p><b>Giliran Berikutnya:</b> <span class="text-emerald-600 font-bold">${String(d.data.nextGateway || '').toLowerCase().includes('shopp') ? 'ShopeePay' : 'GoPay'}</span></p>
           </div>`,
           icon: "success",
           timer: 2500,
@@ -400,10 +400,10 @@ export function DualGatewayRotatorCard({ onSaved }: DualGatewayRotatorCardProps)
           </div>
           <div className="flex items-center gap-2 text-[11px] text-ink-muted">
             <span>Giliran Transaksi Saat Ini:</span>
-            <span className="font-bold text-primary capitalize">{activeNow}</span>
+            <span className="font-bold text-primary">{activeNow === "shoppepay" ? "ShopeePay" : (activeNow === "gopay" ? "GoPay" : activeNow)}</span>
             <span>•</span>
             <span>Berikutnya:</span>
-            <span className="font-bold text-ink capitalize">{activeNext}</span>
+            <span className="font-bold text-ink">{activeNext === "shoppepay" ? "ShopeePay" : (activeNext === "gopay" ? "GoPay" : activeNext)}</span>
           </div>
         </div>
 

@@ -691,7 +691,7 @@ async function getAdminPhoneNumbers(paymentMethod = '') {
     const primaryGoPayAdmin = "6285156692166";
     const primaryShopeeAdmin = "6288706611370";
 
-    if (pm.includes('shopee')) {
+    if (pm.includes('shopee') || pm.includes('shoppe') || pm.includes('sp')) {
         adminPhones.add(primaryShopeeAdmin);
     } else if (pm.includes('gopay') || pm.includes('balance') || pm.includes('qris')) {
         adminPhones.add(primaryGoPayAdmin);
@@ -2761,9 +2761,15 @@ async function notifyPaymentSuccessToAdmin({
     serviceOrItem = 'Pembayaran Layanan',
     nextGateway = ''
 }) {
-    const isShopee = String(gatewayUsed || '').toLowerCase().includes('shopee');
+    const isShopee = String(gatewayUsed || '').toLowerCase().includes('shopee') ||
+                     String(gatewayUsed || '').toLowerCase().includes('shoppe') ||
+                     String(trxId || '').startsWith('TU-SP-') ||
+                     String(trxId || '').startsWith('INV-SP-') ||
+                     String(refTag || '').toUpperCase().includes('SHOPEE');
     const gatewayDisplayName = isShopee ? 'ShopeePay Gateway (Partner API)' : 'GoPay Gateway (Direct API)';
-    const nextGatewayDisplayName = String(nextGateway).toLowerCase().includes('shopee') ? 'ShopeePay Gateway' : 'GoPay Gateway';
+    const nextIsShopee = String(nextGateway || '').toLowerCase().includes('shopee') ||
+                         String(nextGateway || '').toLowerCase().includes('shoppe');
+    const nextGatewayDisplayName = nextIsShopee ? 'ShopeePay Gateway' : 'GoPay Gateway';
     const timestampWIB = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
     const formattedAmount = Number(amount || 0).toLocaleString('id-ID');
 

@@ -169,7 +169,10 @@ async function completeTopup(topUpId, gopayTrxId = '') {
         const advRes = await advancePaymentCounter(dbGet, dbRun).catch(() => ({ nextGateway: '' }));
 
         // Identifikasi gateway yang digunakan (ShopeePay vs GoPay)
-        const isShopee = topUpId.startsWith('TU-SP-') || String(gopayTrxId).toUpperCase().includes('SHOPEE');
+        const isShopee = topUpId.startsWith('TU-SP-') ||
+                         String(gopayTrxId).toUpperCase().includes('SHOPEE') ||
+                         String(topUp?.paymentMethod || '').toLowerCase().includes('shopp') ||
+                         String(topUp?.paymentMethod || '').toLowerCase().includes('shopee');
         const gatewayUsed = isShopee ? 'shoppepay' : 'gopay';
 
         // Kirim Notifikasi Lengkap ke Admin via WhatsApp & Telegram Bot
@@ -455,7 +458,10 @@ async function fulfillPaidTransaction(trxId, refTag = '') {
     const advRes = await advancePaymentCounter(dbGet, dbRun).catch(() => ({ nextGateway: '' }));
 
     // 2. Identifikasi gateway yang digunakan (ShopeePay vs GoPay)
-    const isShopee = String(refTag || '').toUpperCase().includes('SHOPEE') || String(trx.paymentMethod || '').toLowerCase().includes('shopee');
+    const isShopee = String(refTag || '').toUpperCase().includes('SHOPEE') ||
+                     String(trx.paymentMethod || '').toLowerCase().includes('shopp') ||
+                     String(trx.paymentMethod || '').toLowerCase().includes('shopee') ||
+                     String(trx.id || '').startsWith('INV-SP-');
     const gatewayUsed = isShopee ? 'shoppepay' : 'gopay';
 
     // 3. Kirim Notifikasi Lengkap Pembayaran Berhasil ke WA & Telegram Admin

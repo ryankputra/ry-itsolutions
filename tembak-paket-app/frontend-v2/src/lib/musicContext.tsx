@@ -207,6 +207,8 @@ interface MusicContextType {
   formatTime: (seconds: number) => string;
   refreshTracks: () => Promise<void>;
   syncWithServer: () => Promise<any>;
+  videoSlotRect: DOMRect | null;
+  setVideoSlotRect: (rect: DOMRect | null) => void;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -226,6 +228,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [isPlayerVisible, setPlayerVisible] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
+  const [videoSlotRect, setVideoSlotRect] = useState<DOMRect | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
@@ -252,13 +255,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       try {
         if ((window as any).YT && (window as any).YT.Player) {
           ytPlayerRef.current = new (window as any).YT.Player("persistent-yt-audio", {
-            height: "120",
-            width: "120",
+            height: "100%",
+            width: "100%",
             playerVars: {
               autoplay: 0,
-              controls: 0,
-              disablekb: 1,
-              fs: 0,
+              controls: 1,
+              disablekb: 0,
+              fs: 1,
               rel: 0,
               modestbranding: 1,
               playsinline: 1,
@@ -341,7 +344,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       if (savedFavs) {
         setFavorites(JSON.parse(savedFavs));
       }
-      const savedVol = localStorage.getItem("ry_spotify_player_vol");
+      const savedVol = localStorage.getItem("ry_rytone_player_vol") || localStorage.getItem("ry_spotify_player_vol");
       if (savedVol) {
         const parsed = parseFloat(savedVol);
         if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
@@ -365,7 +368,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: currentTrack.title,
         artist: currentTrack.artist,
-        album: "Spotify Hits (Full Version)",
+        album: "RyTone Hits (Full Version)",
         artwork: artworks,
       });
 
@@ -606,7 +609,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     }
     setIsMuted(clamped === 0);
     try {
-      localStorage.setItem("ry_spotify_player_vol", clamped.toString());
+      localStorage.setItem("ry_rytone_player_vol", clamped.toString());
     } catch {}
   }, []);
 
@@ -711,7 +714,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
             success: true,
             count: serverTracks.length,
             added: json?.addedCount || 0,
-            message: json?.message || `Berhasil memperbarui ${serverTracks.length} lagu Spotify Hits!`
+            message: json?.message || `Berhasil memperbarui ${serverTracks.length} lagu RyTone Hits!`
           };
         }
       }
@@ -756,8 +759,20 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         formatTime,
         refreshTracks,
         syncWithServer,
+        videoSlotRect,
+        setVideoSlotRect,
       }}
     >
+      <style jsx global>{`
+        #persistent-yt-audio,
+        #persistent-yt-audio iframe {
+          width: 100% !important;
+          height: 100% !important;
+          border: 0 !important;
+          border-radius: inherit;
+        }
+      `}</style>
+
       {/* 1. Global Persistent Audio Element (Fallback for local .mp3) */}
       <audio
         ref={audioRef}
@@ -784,13 +799,26 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         }}
       />
 
-      {/* 2. Persistent YouTube Audio Engine (100% Full Length Playback) */}
+      {/* 2. Persistent YouTube Audio/Video Engine */}
       <div
-        className="fixed bottom-0 right-0 w-[2px] h-[2px] opacity-[0.01] pointer-events-none overflow-hidden z-[-1]"
-        aria-hidden="true"
-        tabIndex={-1}
+        className={
+          videoSlotRect && currentTrack?.youtubeId
+            ? "fixed z-30 overflow-hidden rounded-2xl shadow-2xl transition-all duration-150 pointer-events-auto bg-black"
+            : "fixed bottom-0 right-0 w-[2px] h-[2px] opacity-[0.001] pointer-events-none overflow-hidden z-[-1]"
+        }
+        style={
+          videoSlotRect && currentTrack?.youtubeId
+            ? {
+                left: `${videoSlotRect.left}px`,
+                top: `${videoSlotRect.top}px`,
+                width: `${videoSlotRect.width}px`,
+                height: `${videoSlotRect.height}px`,
+                borderRadius: "1rem",
+              }
+            : undefined
+        }
       >
-        <div id="persistent-yt-audio" />
+        <div id="persistent-yt-audio" className="w-full h-full" style={{ width: "100%", height: "100%" }} />
       </div>
 
       {children}
