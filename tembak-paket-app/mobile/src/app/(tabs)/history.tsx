@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,12 +29,16 @@ import {
   AlertCircle,
   ArrowRight,
   ShieldCheck,
+  Search,
+  Check,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { apiClient } from '../../services/api';
 import { InvoiceModal, InvoiceData } from '../../components/ui/InvoiceModal';
+import { InstantQrisModal } from '../../components/ui/InstantQrisModal';
+import { parseCeirResponse } from '../../utils/ceirParser';
 import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../theme/colors';
 
@@ -50,6 +54,7 @@ export default function HistoryScreen() {
   const [filter, setFilter] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
+  const [resumePayment, setResumePayment] = useState<{ id: string; amount: number; title: string } | null>(null);
 
   // Sync tab from params if provided
   useEffect(() => {
@@ -160,67 +165,102 @@ export default function HistoryScreen() {
   };
 
   // Normalization logic matching web frontend-v2 exactly
-  const normalizedHistory = transactions.map((trx) => {
-    const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
-    const lowStatus = (trx.status || '').toLowerCase();
-    const rawNote = (trx.admin_note || trx.adminNote || '').toLowerCase();
+  const normalizedHistory = useMemo(() => {
+    return transactions.map((trx) => {
+      const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+      const lowStatus = (trx.status || '').toLowerCase();
+      const rawNote = (trx.admin_note || trx.adminNote || '').toLowerCase();
 
-    const isExplicitError =
-      rawNote.includes('retry error') ||
-      rawNote.includes('balance-mu tidak mencukupi') ||
-      rawNote.includes('insufficient_balance') ||
-      rawNote.includes('tidak mencukupi untuk melakukan transaksi');
+      const isExplicitError =
+        rawNote.includes('retry error') ||
+        rawNote.includes('balance-mu tidak mencukupi') ||
+        rawNote.includes('insufficient_balance') ||
+        rawNote.includes('tidak mencukupi untuk melakukan transaksi');
 
-    if (isExplicitError && lowStatus !== 'cancelled' && lowStatus !== 'refunded') {
-      return { ...trx, status: 'cancelled' };
-    }
+      if (isExplicitError && lowStatus !== 'cancelled' && lowStatus !== 'refunded') {
+        return { ...trx, status: 'cancelled' };
+      }
 
-    const isCompleted = ['success', 'completed', 'selesai', 'done', 'active', 'approved'].includes(lowStatus);
-    const isFailed = ['failed', 'canceled', 'cancelled', 'rejected', 'refunded'].includes(lowStatus);
-    const isProcessing = ['processing', 'in_progress'].includes(lowStatus);
+      const isCompleted = ['success', 'completed', 'selesai', 'done', 'active', 'approved'].includes(lowStatus);
+      const isFailed = ['failed', 'canceled', 'cancelled', 'rejected', 'refunded'].includes(lowStatus);
+      const isProcessing = ['processing', 'in_progress'].includes(lowStatus);
 
-    const isWaitingAdmin =
-      lowStatus === 'in_queue' ||
-      lowStatus === 'waiting' ||
-      lowStatus === 'waiting_admin' ||
-      (isBalancePaid && (lowStatus === 'pending' || lowStatus === 'unpaid'));
+      const isWaitingAdmin =
+        lowStatus === 'in_queue' ||
+        lowStatus === 'waiting' ||
+        lowStatus === 'waiting_admin' ||
+        (isBalancePaid && (lowStatus === 'pending' || lowStatus === 'unpaid'));
 
-    if (isWaitingAdmin && !isProcessing && !isCompleted && !isFailed) {
-      return { ...trx, status: 'in_queue' };
-    }
-    return trx;
-  });
+      if (isWaitingAdmin && !isProcessing && !isCompleted && !isFailed) {
+        return { ...trx, status: 'in_queue' };
+      }
+      return trx;
+    });
+  }, [transactions]);
 
-  const filtered = normalizedHistory.filter((trx) => {
-    if (filter === 'all') return true;
-    const status = (trx.status || '').toLowerCase();
-    const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+  // Dynamic counter badges per status tab
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: normalizedHistory.length,
+      unpaid: 0,
+      waiting: 0,
+      processing: 0,
+      completed: 0,
+      canceled: 0,
+    };
 
-    if (filter === 'unpaid') {
-      return (status === 'pending' || status === 'unpaid') && !isBalancePaid;
-    }
-    if (filter === 'waiting') {
-      return status === 'in_queue' || status === 'waiting';
-    }
-    if (filter === 'processing') {
-      return status === 'processing' || status === 'in_progress';
-    }
-    if (filter === 'completed') {
-      return ['success', 'completed', 'selesai', 'done'].includes(status);
-    }
-    if (filter === 'canceled') {
-      return ['canceled', 'cancelled', 'failed', 'refunded', 'rejected'].includes(status);
-    }
-    return true;
-  });
+    normalizedHistory.forEach((trx) => {
+      const status = (trx.status || '').toLowerCase();
+      const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+
+      if ((status === 'pending' || status === 'unpaid') && !isBalancePaid) {
+        counts.unpaid += 1;
+      } else if (status === 'in_queue' || status === 'waiting' || status === 'waiting_admin') {
+        counts.waiting += 1;
+      } else if (status === 'processing' || status === 'in_progress') {
+        counts.processing += 1;
+      } else if (['success', 'completed', 'selesai', 'done'].includes(status)) {
+        counts.completed += 1;
+      } else if (['canceled', 'cancelled', 'failed', 'refunded', 'rejected'].includes(status)) {
+        counts.canceled += 1;
+      }
+    });
+
+    return counts;
+  }, [normalizedHistory]);
+
+  const filtered = useMemo(() => {
+    return normalizedHistory.filter((trx) => {
+      if (filter === 'all') return true;
+      const status = (trx.status || '').toLowerCase();
+      const isBalancePaid = trx.payment_method === 'balance' || trx.paymentMethod === 'balance';
+
+      if (filter === 'unpaid') {
+        return (status === 'pending' || status === 'unpaid') && !isBalancePaid;
+      }
+      if (filter === 'waiting') {
+        return status === 'in_queue' || status === 'waiting' || status === 'waiting_admin';
+      }
+      if (filter === 'processing') {
+        return status === 'processing' || status === 'in_progress';
+      }
+      if (filter === 'completed') {
+        return ['success', 'completed', 'selesai', 'done'].includes(status);
+      }
+      if (filter === 'canceled') {
+        return ['canceled', 'cancelled', 'failed', 'refunded', 'rejected'].includes(status);
+      }
+      return true;
+    });
+  }, [normalizedHistory, filter]);
 
   const tabs = [
-    { key: 'all', label: 'Semua' },
-    { key: 'unpaid', label: 'Belum Bayar' },
-    { key: 'waiting', label: 'Menunggu' },
-    { key: 'processing', label: 'Diproses' },
-    { key: 'completed', label: 'Selesai' },
-    { key: 'canceled', label: 'Pengembalian' },
+    { key: 'all', label: 'Semua', count: tabCounts.all },
+    { key: 'unpaid', label: 'Belum Bayar', count: tabCounts.unpaid },
+    { key: 'waiting', label: 'Menunggu', count: tabCounts.waiting },
+    { key: 'processing', label: 'Diproses', count: tabCounts.processing },
+    { key: 'completed', label: 'Selesai', count: tabCounts.completed },
+    { key: 'canceled', label: 'Pengembalian', count: tabCounts.canceled },
   ];
 
   return (
@@ -268,6 +308,7 @@ export default function HistoryScreen() {
               >
                 <Text style={[styles.tabText, { color: active ? '#ffffff' : colors.textMuted }]}>
                   {tab.label}
+                  {tab.count > 0 ? ` (${tab.count})` : ''}
                 </Text>
               </Pressable>
             );
@@ -308,7 +349,7 @@ export default function HistoryScreen() {
             renderItem={({ item }) => {
               const status = (item.status || '').toLowerCase();
               const isSuccess = ['success', 'completed', 'selesai', 'done'].includes(status);
-              const isWaiting = status === 'in_queue' || status === 'waiting';
+              const isWaiting = status === 'in_queue' || status === 'waiting' || status === 'waiting_admin';
               const isProcessing = status === 'processing' || status === 'in_progress';
               const isUnpaid = (status === 'pending' || status === 'unpaid') && item.payment_method !== 'balance';
               const isCanceled = ['canceled', 'cancelled', 'failed', 'refunded'].includes(status);
@@ -321,6 +362,23 @@ export default function HistoryScreen() {
                 'Transaksi Ry-ITSolutions';
 
               const amountNum = Number(item.amount || item.total_amount || item.price || 0);
+              const primaryImei = item.imei ? item.imei.split(/[\n,]+/)[0].trim().replace(/\D/g, '') : '';
+
+              // CEIR Inspection parsing
+              const isCeir =
+                item.service_type === 'ceir' ||
+                item.service_type === 'barcode' ||
+                String(serviceTitle).toLowerCase().includes('ceir') ||
+                String(serviceTitle).toLowerCase().includes('barcode');
+
+              const ceirParsed = isCeir
+                ? parseCeirResponse(item.admin_note || item.adminNote || item.api_response, undefined, item.api_response)
+                : null;
+
+              // Safe Admin note display (no server leaks)
+              const rawNote = String(item.admin_note || item.adminNote || '').trim();
+              const isLeaked = /sedang dikerjakan oleh admin|sedang diproses oleh admin|berhasil kami proses|ceirgo|balance|upps|provider|api|sqlite|exception|auto-submit/i.test(rawNote);
+              const safeNote = isLeaked ? null : rawNote;
 
               return (
                 <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -399,6 +457,34 @@ export default function HistoryScreen() {
                     </Text>
                   ) : null}
 
+                  {/* CEIR Result Summary Card if CEIR item */}
+                  {ceirParsed && (
+                    <View style={[styles.ceirBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                      <View style={styles.ceirHeader}>
+                        <ShieldCheck size={14} color={colors.primary} />
+                        <Text style={[styles.ceirTitle, { color: colors.primary }]}>Hasil Database CEIR</Text>
+                        <View style={[styles.ceirStatusBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                          <Text style={[styles.ceirStatusText, { color: colors.success }]}>
+                            {ceirParsed.status || 'TERDAFTAR DI CEIR'}
+                          </Text>
+                        </View>
+                      </View>
+                      {ceirParsed.rows && ceirParsed.rows.length > 0 ? (
+                        <Text style={[styles.ceirRowsCount, { color: colors.textMuted }]}>
+                          Terdata {ceirParsed.rows.length} riwayat peristiwa di jaringan operator.
+                        </Text>
+                      ) : null}
+                    </View>
+                  )}
+
+                  {/* Safe Admin Note if exists */}
+                  {safeNote ? (
+                    <View style={[styles.noteBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                      <Text style={[styles.noteLabel, { color: colors.primary }]}>Catatan Pesanan:</Text>
+                      <Text style={[styles.noteText, { color: colors.text }]}>{safeNote}</Text>
+                    </View>
+                  ) : null}
+
                   <View style={styles.priceRow}>
                     <Text style={[styles.priceLabel, { color: colors.textMuted }]}>Total Pembayaran</Text>
                     <Text style={[styles.priceValue, { color: colors.primary }]}>
@@ -408,41 +494,154 @@ export default function HistoryScreen() {
 
                   {/* Actions Row */}
                   <View style={styles.actionsRow}>
-                    <Pressable
-                      style={[styles.invoiceBtn, { backgroundColor: colors.surfaceElevated }]}
-                      onPress={() => {
-                        setSelectedInvoice({
-                          id: String(item.id),
-                          service: serviceTitle,
-                          packageName: serviceTitle,
-                          imei: item.imei,
-                          targetPhone: item.phone || item.targetPhone || '-',
-                          amount: amountNum,
-                          status: isSuccess ? 'completed' : isCanceled ? 'failed' : 'pending',
-                          createdAt: item.createdAt || item.created_at || new Date().toISOString(),
-                          paymentMethod: item.payment_method || item.paymentMethod || 'RyPay Balance',
-                        });
-                      }}
-                    >
-                      <FileText size={14} color={colors.primary} style={{ marginRight: 4 }} />
-                      <Text style={[styles.invoiceBtnText, { color: colors.primary }]}>Nota Digital</Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={[styles.waQuickBtn, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}
-                      onPress={() => handleShareWhatsApp(item)}
-                    >
-                      <MessageCircle size={14} color={colors.success} style={{ marginRight: 4 }} />
-                      <Text style={[styles.waQuickBtnText, { color: colors.success }]}>Kirim WA</Text>
-                    </Pressable>
-
+                    {/* Unpaid Actions: Pay Now + Cancel */}
                     {isUnpaid && (
-                      <Pressable
-                        style={[styles.cancelBtn, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}
-                        onPress={() => handleCancelTransaction(item)}
-                      >
-                        <Text style={[styles.cancelBtnText, { color: colors.danger }]}>Batalkan</Text>
-                      </Pressable>
+                      <>
+                        <Pressable
+                          style={[styles.payNowBtn, { backgroundColor: colors.primary }]}
+                          onPress={() => {
+                            try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+                            setResumePayment({
+                              id: String(item.id),
+                              amount: amountNum,
+                              title: serviceTitle,
+                            });
+                          }}
+                        >
+                          <CreditCard size={14} color="#ffffff" style={{ marginRight: 4 }} />
+                          <Text style={styles.payNowBtnText}>Bayar Sekarang</Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={[styles.cancelBtn, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}
+                          onPress={() => handleCancelTransaction(item)}
+                        >
+                          <Text style={[styles.cancelBtnText, { color: colors.danger }]}>Batalkan</Text>
+                        </Pressable>
+                      </>
+                    )}
+
+                    {/* Waiting Actions: Track + CS + Cancel */}
+                    {isWaiting && (
+                      <>
+                        {primaryImei ? (
+                          <Pressable
+                            style={[styles.actionOutlineBtn, { borderColor: colors.border }]}
+                            onPress={() => router.push({ pathname: '/(screens)/cek-garansi', params: { imei: primaryImei } })}
+                          >
+                            <Search size={13} color={colors.text} style={{ marginRight: 4 }} />
+                            <Text style={[styles.actionOutlineText, { color: colors.text }]}>Lacak IMEI</Text>
+                          </Pressable>
+                        ) : null}
+
+                        <Pressable
+                          style={[styles.actionOutlineBtn, { borderColor: 'rgba(245, 158, 11, 0.4)' }]}
+                          onPress={() => router.push('/(screens)/tickets')}
+                        >
+                          <MessageCircle size={13} color={colors.warning} style={{ marginRight: 4 }} />
+                          <Text style={[styles.actionOutlineText, { color: colors.warning }]}>Chat CS</Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={[styles.cancelBtn, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}
+                          onPress={() => handleCancelTransaction(item)}
+                        >
+                          <Text style={[styles.cancelBtnText, { color: colors.danger }]}>Batalkan</Text>
+                        </Pressable>
+                      </>
+                    )}
+
+                    {/* Processing Actions */}
+                    {isProcessing && (
+                      <>
+                        {primaryImei ? (
+                          <Pressable
+                            style={[styles.actionOutlineBtn, { borderColor: colors.border }]}
+                            onPress={() => router.push({ pathname: '/(screens)/cek-garansi', params: { imei: primaryImei } })}
+                          >
+                            <Search size={13} color={colors.text} style={{ marginRight: 4 }} />
+                            <Text style={[styles.actionOutlineText, { color: colors.text }]}>Lacak IMEI</Text>
+                          </Pressable>
+                        ) : null}
+
+                        <Pressable
+                          style={[styles.actionOutlineBtn, { borderColor: 'rgba(59, 130, 246, 0.4)' }]}
+                          onPress={() => router.push('/(screens)/tickets')}
+                        >
+                          <MessageCircle size={13} color="#3b82f6" style={{ marginRight: 4 }} />
+                          <Text style={[styles.actionOutlineText, { color: '#3b82f6' }]}>Chat CS</Text>
+                        </Pressable>
+                      </>
+                    )}
+
+                    {/* Completed Actions: Nota + WA + Lacak Garansi + Beli Lagi */}
+                    {isSuccess && (
+                      <>
+                        <Pressable
+                          style={[styles.invoiceBtn, { backgroundColor: colors.surfaceElevated }]}
+                          onPress={() => {
+                            setSelectedInvoice({
+                              id: String(item.id),
+                              service: serviceTitle,
+                              packageName: serviceTitle,
+                              imei: item.imei,
+                              targetPhone: item.phone || item.targetPhone || '-',
+                              amount: amountNum,
+                              status: 'completed',
+                              createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+                              paymentMethod: item.payment_method || item.paymentMethod || 'RyPay Balance',
+                            });
+                          }}
+                        >
+                          <FileText size={13} color={colors.primary} style={{ marginRight: 4 }} />
+                          <Text style={[styles.invoiceBtnText, { color: colors.primary }]}>Nota</Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={[styles.waQuickBtn, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}
+                          onPress={() => handleShareWhatsApp(item)}
+                        >
+                          <MessageCircle size={13} color={colors.success} style={{ marginRight: 4 }} />
+                          <Text style={[styles.waQuickBtnText, { color: colors.success }]}>WA</Text>
+                        </Pressable>
+
+                        {primaryImei ? (
+                          <Pressable
+                            style={[styles.actionOutlineBtn, { borderColor: colors.border }]}
+                            onPress={() => router.push({ pathname: '/(screens)/cek-garansi', params: { imei: primaryImei } })}
+                          >
+                            <ShieldCheck size={13} color={colors.text} style={{ marginRight: 4 }} />
+                            <Text style={[styles.actionOutlineText, { color: colors.text }]}>Garansi</Text>
+                          </Pressable>
+                        ) : null}
+
+                        <Pressable
+                          style={[styles.buyAgainBtn, { backgroundColor: colors.primary }]}
+                          onPress={() => router.push('/(screens)/add-roamer')}
+                        >
+                          <Text style={styles.buyAgainText}>Beli Lagi</Text>
+                        </Pressable>
+                      </>
+                    )}
+
+                    {/* Canceled Actions: Tanya CS + Order Ulang */}
+                    {isCanceled && (
+                      <>
+                        <Pressable
+                          style={[styles.actionOutlineBtn, { borderColor: colors.border }]}
+                          onPress={() => router.push('/(screens)/tickets')}
+                        >
+                          <MessageCircle size={13} color={colors.text} style={{ marginRight: 4 }} />
+                          <Text style={[styles.actionOutlineText, { color: colors.text }]}>Tanya CS</Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={[styles.buyAgainBtn, { backgroundColor: colors.primary }]}
+                          onPress={() => router.push('/(screens)/add-roamer')}
+                        >
+                          <Text style={styles.buyAgainText}>Order Ulang</Text>
+                        </Pressable>
+                      </>
                     )}
                   </View>
                 </View>
@@ -458,6 +657,21 @@ export default function HistoryScreen() {
           visible={!!selectedInvoice}
           invoice={selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
+        />
+      )}
+
+      {/* Instant QRIS Payment Resume Modal */}
+      {resumePayment && (
+        <InstantQrisModal
+          isOpen={!!resumePayment}
+          amount={resumePayment.amount}
+          orderTitle={resumePayment.title}
+          onClose={() => setResumePayment(null)}
+          onSuccess={() => {
+            setResumePayment(null);
+            fetchTransactions();
+            Alert.alert('Sukses', 'Pembayaran berhasil dikonfirmasi! Pesanan Anda segera diproses.');
+          }}
         />
       )}
     </SafeAreaView>
@@ -575,6 +789,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 2,
   },
+  ceirBox: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  ceirHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  ceirTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    flex: 1,
+  },
+  ceirStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  ceirStatusText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  ceirRowsCount: {
+    fontSize: 10,
+    marginTop: 4,
+  },
+  noteBox: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  noteLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  noteText: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -595,16 +853,52 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.04)',
+    justifyContent: 'flex-end',
+  },
+  payNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  payNowBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  buyAgainBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  buyAgainText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  actionOutlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  actionOutlineText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   invoiceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 8,
   },
