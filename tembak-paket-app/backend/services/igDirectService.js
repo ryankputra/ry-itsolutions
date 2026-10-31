@@ -1469,10 +1469,10 @@ async function generateRiveraUpdateGraphic(parsedData) {
     const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : "LIVE SERVER UPDATE";
     const badgeTextColorTop = isFullClose ? "#be123c" : "#15803d";
     
-    // Sesuai permintaan user: ganti judul panjang menjadi READY
+    // Sesuai permintaan user: ganti judul panjang menjadi READY dengan warna hitam & tipografi elegan
     const mainTitle = isFullClose ? "CLOSED" : "READY";
     const mainSubTitle = isFullClose ? "ORDERAN KLOTER DITUTUP" : "SLOT &amp; JALUR ON HARI INI";
-    const mainTitleColor = isFullClose ? "#e11d48" : "#059669";
+    const mainTitleColor = isFullClose ? "#e11d48" : "#0f172a"; // Warna hitam untuk READY
     const mainSubTitleColor = isFullClose ? "#be123c" : theme.primaryColor;
 
     // Bersihkan emoji dari note agar tidak menghasilkan missing glyph / kotak silang di server Linux
@@ -1503,18 +1503,18 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <!-- Logo Seal RY (y=245, bebas tabrakan dengan stiker musik di atasnya) -->
             <g transform="translate(485, 245)">
                 <circle cx="55" cy="55" r="50" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5" filter="url(#cardShadow)"/>
-                <text x="55" y="66" font-family="Arial, -apple-system, sans-serif" font-size="32" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
+                <text x="55" y="66" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="32" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
             </g>
 
             <!-- Pill Badge -->
             <rect x="340" y="370" width="400" height="42" rx="21" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
             <circle cx="368" cy="391" r="6.5" fill="${isFullClose ? '#e11d48' : '#16a34a'}"/>
-            <text x="548" y="399" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
+            <text x="548" y="399" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="18" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
 
-            <!-- Main Headline: READY (Besar & Elegan, tidak terpotong) -->
-            <text x="540" y="475" font-family="Arial, -apple-system, sans-serif" font-size="80" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="4">${mainTitle}</text>
-            <text x="540" y="522" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle">${mainSubTitle}</text>
-            <text x="540" y="562" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
+            <!-- Main Headline: READY (Hitam, tipografi modern & tegas, tidak terpotong) -->
+            <text x="540" y="475" font-family="'Plus Jakarta Sans', 'Montserrat', 'Inter', -apple-system, sans-serif" font-size="82" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="6">${mainTitle}</text>
+            <text x="540" y="522" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="28" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle" letter-spacing="1">${mainSubTitle}</text>
+            <text x="540" y="562" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="21" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
 
             <!-- Dynamic Service Cards -->
             <g filter="url(#cardShadow)">
@@ -1524,21 +1524,21 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <!-- Slogan Guarantee Card (Bebas emoji rusak) -->
             <g transform="translate(80, 1100)" filter="url(#cardShadow)">
                 <rect width="920" height="88" rx="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="2"/>
-                <text x="460" y="54" font-family="Arial, -apple-system, sans-serif" font-size="24" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${cleanNote}</text>
+                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="24" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${cleanNote}</text>
             </g>
 
             <!-- Footer Info Card -->
             <g transform="translate(80, 1215)" filter="url(#cardShadow)">
                 <rect width="920" height="200" rx="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-                <text x="460" y="52" font-family="Arial, -apple-system, sans-serif" font-size="25" font-weight="bold" fill="#0f172a" text-anchor="middle">Pemesanan &amp; Antrean Via Web / WhatsApp</text>
+                <text x="460" y="52" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="25" font-weight="bold" fill="#0f172a" text-anchor="middle">Pemesanan &amp; Antrean Via Web / WhatsApp</text>
                 
                 <g transform="translate(310, 104)">
                     <circle cx="0" cy="0" r="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2.5"/>
                     <ellipse cx="0" cy="0" rx="6" ry="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2"/>
                     <line x1="-14" y1="0" x2="14" y2="0" stroke="${theme.primaryColor}" stroke-width="2"/>
                 </g>
-                <text x="340" y="113" font-family="Arial, -apple-system, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
-                <text x="460" y="160" font-family="Arial, -apple-system, sans-serif" font-size="20" fill="#64748b" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
+                <text x="340" y="113" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
+                <text x="460" y="160" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="20" fill="#64748b" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
             </g>
         </svg>
     `;
@@ -1553,19 +1553,21 @@ async function publishRiveraStory(parsedData, options = {}) {
     const buffer = await generateRiveraUpdateGraphic(parsedData);
     const dateWIB = new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const timestampWIB = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
+    const track = getRandomTrack();
 
     const results = { instagram: null, whatsapp: null };
 
-    // 1. Publikasikan ke Instagram Story
+    // Pastikan video MP4 berlagu nyata di-render terlebih dahulu agar WA Story SELALU BERMUSIK 100%!
+    let videoData = null;
     try {
-        results.instagram = await publishToStory(buffer, null, { isFullScreen: true, hasMusicSticker: false });
-    } catch (igErr) {
-        console.error('[publishRiveraStory] Gagal publish IG Story 3:', igErr.message);
-        results.instagramError = igErr.message;
+        console.log(`[publishRiveraStory] Menyiapkan Video Story dengan musik [${track.title} - ${track.artist}]...`);
+        videoData = await generateStoryVideo(buffer, track);
+    } catch (vErr) {
+        console.warn('[publishRiveraStory] Gagal generateStoryVideo:', vErr.message);
     }
 
     if (!options.igOnly) {
-        // 2. Publikasikan ke WhatsApp Story
+        // 1. Publikasikan ke WhatsApp Story (Prioritas utama: Video berlagu nyata)
         try {
             const { publishWhatsAppStory } = require('./waBot');
             if (typeof publishWhatsAppStory === 'function') {
@@ -1588,8 +1590,9 @@ async function publishRiveraStory(parsedData, options = {}) {
                       `⏰ Update: ${timestampWIB} WIB\n\n` +
                       `🌐 Order via Web: https://ry-itsolutionts.web.id`;
 
-                const mediaToSend = results.instagram?.videoBuffer || buffer;
-                const isVid = Boolean(results.instagram?.videoBuffer);
+                const mediaToSend = videoData?.videoBuffer || buffer;
+                const isVid = Boolean(videoData?.videoBuffer);
+                console.log(`[publishRiveraStory] Mengirim ke WhatsApp Story (isVideo: ${isVid}, size: ${mediaToSend.length} bytes)...`);
                 results.whatsapp = await publishWhatsAppStory(mediaToSend, caption, isVid);
             }
         } catch (waErr) {
@@ -1598,7 +1601,15 @@ async function publishRiveraStory(parsedData, options = {}) {
         }
     }
 
-    return { ...results, buffer, videoBuffer: results.instagram?.videoBuffer || null };
+    // 2. Publikasikan ke Instagram Story
+    try {
+        results.instagram = await publishToStory(buffer, track, { isFullScreen: true, hasMusicSticker: false });
+    } catch (igErr) {
+        console.error('[publishRiveraStory] Gagal publish IG Story 3:', igErr.message);
+        results.instagramError = igErr.message;
+    }
+
+    return { ...results, buffer, videoBuffer: videoData?.videoBuffer || null };
 }
 
 module.exports = {
