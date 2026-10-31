@@ -716,16 +716,29 @@ router.post('/admin/ceirgo-custom-names', isAuthenticated, isAdmin, async (req, 
 
 // 10. CeirGO Deposit & Providers
 const DEFAULT_FALLBACK_PROVIDERS = [
-    { id: 'qris', code: 'qris', name: 'QRIS Realtime 24 Jam', min: 10000, fee: 0, type: 'qris' },
-    { id: 'bca', code: 'bca', name: 'Transfer Bank BCA', min: 50000, fee: 0, type: 'bank' },
-    { id: 'mandiri', code: 'mandiri', name: 'Transfer Bank Mandiri', min: 50000, fee: 0, type: 'bank' }
+    { id: 'gopay', code: 'gopay', name: 'QRIS Realtime 24 Jam', display_name: 'QRIS Realtime 24 Jam', min: 10000, fee: 0, type: 'qris', status: 'active' },
+    { id: 'bank_bca', code: 'bank_bca', name: 'Transfer Bank BCA', display_name: 'Transfer Bank BCA', min: 50000, fee: 0, type: 'bank', status: 'maintenance' },
+    { id: 'bank_jago', code: 'bank_jago', name: 'Bank Jago', display_name: 'Bank Jago', min: 50000, fee: 0, type: 'bank', status: 'inactive' }
 ];
 
 router.get('/admin/ceirgo-deposit-providers', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const resp = await ceirgoClient.getDepositProviders();
-        if (resp.status && Array.isArray(resp.data)) {
-            return res.json({ status: true, data: resp.data });
+        const rawItems = resp.data?.items || (Array.isArray(resp.data) ? resp.data : null);
+        if (resp.status && Array.isArray(rawItems) && rawItems.length > 0) {
+            const formatted = rawItems
+                .filter(p => !p.status || p.status === 'active')
+                .map(p => ({
+                    id: p.code,
+                    code: p.code,
+                    name: (p.code === 'gopay' || p.channel === 'qris') ? 'QRIS Realtime 24 Jam' : (p.display_name || p.name),
+                    display_name: (p.code === 'gopay' || p.channel === 'qris') ? 'QRIS Realtime 24 Jam' : (p.display_name || p.name),
+                    status: p.status || 'active',
+                    channel: p.channel || 'qris',
+                    icon_url: p.icon_url,
+                    min: p.rule?.min_deposit ? Number(p.rule.min_deposit) : 10000
+                }));
+            return res.json({ status: true, data: formatted.length > 0 ? formatted : DEFAULT_FALLBACK_PROVIDERS });
         }
         res.json({ status: true, data: DEFAULT_FALLBACK_PROVIDERS, fallback: true });
     } catch (e) {

@@ -266,6 +266,9 @@ export default function AdminSettingsPage() {
       .then((d) => {
         if (d?.status && Array.isArray(d.data)) {
           setCeirgoDepositProviders(d.data);
+          if (d.data.length > 0) {
+            setCeirgoDepositProviderCode((prev) => prev || d.data[0].code);
+          }
         }
       })
       .catch(() => {});
@@ -661,7 +664,16 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Button size="sm" className="text-xs h-8" onClick={() => setShowCeirgoTopUp(true)}>
+                  <Button
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => {
+                      if (ceirgoDepositProviders.length > 0 && !ceirgoDepositProviderCode) {
+                        setCeirgoDepositProviderCode(ceirgoDepositProviders[0].code);
+                      }
+                      setShowCeirgoTopUp(true);
+                    }}
+                  >
                     Isi Saldo
                   </Button>
                 </div>

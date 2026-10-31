@@ -242,11 +242,15 @@ async function getDepositProviderDetail(providerCode) {
  * Returns: amounts.total_pay, qr_string, qr_url, expires_at
  */
 async function createDeposit({ amount, provider_code, providerCode }) {
-    const code = provider_code || providerCode;
+    let code = provider_code || providerCode;
     const numAmount = Number(amount);
 
     if (isNaN(numAmount) || numAmount <= 0) {
         throw new Error("Nominal deposit tidak valid.");
+    }
+    // Auto-map alias: CeirGO uses 'gopay' for its dynamic QRIS channel
+    if (code && (code.toLowerCase() === 'qris' || code.toLowerCase() === 'qr')) {
+        code = 'gopay';
     }
     if (!code) {
         throw new Error("Kode provider deposit diperlukan.");
