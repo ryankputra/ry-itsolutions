@@ -33,7 +33,7 @@ const {
     downloadMediaMessage
 } = require("@whiskeysockets/baileys");
 const { censorScreenshot } = require("./censorService");
-const { publishToStory, publishToFeed, publishOpenStory, publishRiveraStory, parseRiveraMessage, saveSessionFromCookie, getUniqueTracks } = require("./igDirectService");
+const { publishToStory, publishToFeed, publishOpenStory, publishRiveraStory, parseRiveraMessage, saveSessionFromCookie, getUniqueTracks, getRandomTrack } = require("./igDirectService");
 const { getDJTracksStatusSummary, rotateAndRefreshDJTracks } = require("./tiktokDJService");
 
 // Cache nama grup WhatsApp: remoteJid -> subject
@@ -66,9 +66,7 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
 
         for (const phone of adminPhones) {
             try {
-                if (sock) {
-                    await sock.sendMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
-                }
+                await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
             } catch (e) {
                 console.warn(`[RiveraListener] Gagal kirim alert ke ${phone}:`, e.message);
             }
@@ -96,9 +94,7 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
 
         for (const phone of adminPhones) {
             try {
-                if (sock) {
-                    await sock.sendMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
-                }
+                await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
             } catch {}
         }
         return;
@@ -126,9 +122,7 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
 
     for (const phone of adminPhones) {
         try {
-            if (sock) {
-                await sock.sendMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: adminNotice });
-            }
+            await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: adminNotice });
         } catch {}
     }
 }
@@ -2547,6 +2541,51 @@ async function notifyAdminStoryOpen(postResult) {
     }
 }
 
+/**
+ * Publikasikan Testimoni Screenshot Langsung ke Instagram Story & WhatsApp Story + Notifikasi Admin
+ */
+async function publishDirectTestimonialStory(imageBufferOrPath, customTrack = null, customCaption = "") {
+    let buf = imageBufferOrPath;
+    if (typeof imageBufferOrPath === 'string') {
+        buf = fs.readFileSync(imageBufferOrPath);
+    }
+    const track = customTrack || getRandomTrack();
+
+    console.log(`[WABot] 🚀 Mempublikasikan Story Testimoni Screenshot ke IG Story & WA Story...`);
+
+    // 1. Publikasikan ke Instagram Story (Video berlagu / Foto fallback)
+    const igRes = await publishToStory(buf, track, { isFullScreen: false });
+
+    // 2. Publikasikan ke WhatsApp Story
+    let waRes = null;
+    try {
+        const mediaToSend = igRes?.videoBuffer || buf;
+        const isVid = Boolean(igRes?.videoBuffer);
+        const caption = customCaption || `⭐ *TESTIMONI PELANGGAN RESMI RY-ITSOLUTIONS*\n\nTerima kasih atas kepercayaannya! Sinyal aktif & bergaransi penuh.\n🌐 https://ry-itsolutionts.web.id`;
+        waRes = await publishWhatsAppStory(mediaToSend, caption, isVid);
+    } catch (waErr) {
+        console.warn('[publishDirectTestimonialStory] Warning posting WA Story:', waErr.message);
+    }
+
+    // 3. Notifikasi ke WhatsApp Admin
+    const adminPhones = await getAdminPhoneNumbers();
+    const timeWIB = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+    const adminNotice = `📢 *STORY TESTIMONI BERHASIL TERBIT!*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🎵 *Lagu:* ${track.title} (${track.artist})\n` +
+        `⏰ *Waktu Terbit:* ${timeWIB} WIB\n` +
+        `📸 *Media:* Tayang di Instagram Story (@unlocksinyalsolo) & WhatsApp Story Bot.\n` +
+        `✨ *Desain:* Full Canvas Edge-to-Edge (Soft White & Blue Elegan).` + BOT_FOOTER;
+
+    for (const phone of adminPhones) {
+        try {
+            await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: adminNotice });
+        } catch (e) {}
+    }
+
+    return { success: true, instagram: igRes, whatsapp: waRes };
+}
+
 
 /**
  * Helper khusus mengirim pesan media (gambar) balasan ke admin
@@ -3589,5 +3628,6 @@ module.exports = {
     getStoredMessage,
     normalizeProtoMessage,
     storeMessage,
-    handleRiveraGroupMessage
+    handleRiveraGroupMessage,
+    publishDirectTestimonialStory
 };

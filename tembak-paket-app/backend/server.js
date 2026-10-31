@@ -317,6 +317,40 @@ app.post('/api/internal/resend-customer-status', async (req, res) => {
     }
 });
 
+// Internal (localhost-only): trigger eksekusi pesan Rivera ke Story IG & WA + notifikasi WA admin
+app.post('/api/internal/trigger-rivera', async (req, res) => {
+    try {
+        const ip = req.ip || req.socket?.remoteAddress || "";
+        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
+        }
+        const { message, senderName, groupName } = req.body || {};
+        const text = message || `3B SF SLOW DONE MALEM SENT SAMPE SORE 🔥\n\n3B SF FAST UNDER 15 MENIT ON ‼️\n\n1B DIGIPOS ON TURUN HARGA‼️\n\nSEMUA BERGARANSI TANPA ADA DRAMA 🎭\n\n@all`;
+        await waBot.handleRiveraGroupMessage(text, senderName || "Rivera Group", groupName || "3B & REKBER by RIVERA");
+        res.json({ status: true, message: "Pesan Rivera berhasil diproses dan dikirim ke Story IG & WA serta WA Admin." });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// Internal (localhost-only): trigger eksekusi posting Testimoni SS ke Story IG & WA + notifikasi WA admin
+app.post('/api/internal/trigger-testimoni', async (req, res) => {
+    try {
+        const ip = req.ip || req.socket?.remoteAddress || "";
+        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
+        }
+        const defaultSsPath = fs.existsSync(path.join(__dirname, 'public', 'sample_testimoni.png'))
+            ? path.join(__dirname, 'public', 'sample_testimoni.png')
+            : path.join(__dirname, 'sessions', 'sample_testimoni.png');
+        const ssPath = imagePath || defaultSsPath;
+        const result = await waBot.publishDirectTestimonialStory(ssPath, null, caption);
+        res.json({ status: true, message: "Story Testimoni berhasil dipublikasikan ke IG & WA.", data: result });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // 9. Initialize Cron Schedulers
 initSchedulers();
 

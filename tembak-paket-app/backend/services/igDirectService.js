@@ -1528,6 +1528,7 @@ module.exports = {
     publishRiveraStory,
     saveSessionFromCookie,
     getUniqueTracks,
+    getRandomTrack,
     getActiveDJTracks,
     getSoftDailyTheme,
     SOFT_BLUE_THEMES,
