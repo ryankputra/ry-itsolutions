@@ -1473,13 +1473,23 @@ ${rawText}`;
                                 const isCloseAll = parsed.type === "FULL_CLOSE";
                                 const syncd = syncRiveraDailyServices(parsed.services || [], isCloseAll);
                                 parsed.services = syncd;
-                                const hasAnyReady = syncd.some(s => s.status === "READY");
-                                const hasAnyClosed = syncd.some(s => s.status !== "READY");
-                                if (syncd.length > 0 && !hasAnyReady) {
+
+                                const fastServices = syncd.filter(s => !s.name.toUpperCase().includes("SLOW"));
+                                const hasAnyFastReady = fastServices.some(s => s.status === "READY");
+                                const hasAnyFastClosed = fastServices.some(s => s.status !== "READY");
+                                const isAllFastClosed = isCloseAll || (fastServices.length > 0 && !hasAnyFastReady);
+
+                                if (isAllFastClosed) {
                                     parsed.type = "FULL_CLOSE";
                                     parsed.title = "CLOSED";
                                     parsed.badge = "ORDERAN KLOTER CLOSED";
-                                } else if (hasAnyClosed && hasAnyReady) {
+                                    // Munculkan closed tanpa informasi 3B Slow karena 3B Slow buka 24 jam
+                                    parsed.services = syncd.filter(s => !s.name.toUpperCase().includes("SLOW"));
+                                    if (parsed.services.length === 0) {
+                                        parsed.services = [{ name: "3B SF FAST", status: "CLOSED", desc: "Kloter Ditutup Sementara" }];
+                                    }
+                                    parsed.note = "3B Slow Tetap Buka 24 Jam • Sampai Jumpa di Kloter Berikutnya";
+                                } else if (hasAnyFastClosed && hasAnyFastReady) {
                                     parsed.type = "PARTIAL_CLOSE";
                                     parsed.title = "UPDATE SLOT";
                                     parsed.badge = "UPDATE STATUS LAYANAN";
@@ -1554,22 +1564,33 @@ ${rawText}`;
     // Sinkronkan status dengan catatan layanan aktif hari ini (Daily State)
     const synchronizedServices = syncRiveraDailyServices(services, isCloseAll);
 
-    const hasAnyReady = synchronizedServices.some(s => s.status === "READY");
-    const hasAnyClosed = synchronizedServices.some(s => s.status !== "READY");
-    const isReallyAllClosed = isCloseAll || (synchronizedServices.length > 0 && !hasAnyReady);
+    // Evaluasi layanan Fast (tanpa Slow) untuk menentukan apakah kloter Fast ditutup
+    const fastServices = synchronizedServices.filter(s => !s.name.toUpperCase().includes("SLOW"));
+    const hasAnyFastReady = fastServices.some(s => s.status === "READY");
+    const hasAnyFastClosed = fastServices.some(s => s.status !== "READY");
+    const isReallyAllClosed = isCloseAll || (fastServices.length > 0 && !hasAnyFastReady);
 
     let finalType = "SLOT_UPDATE";
     let finalTitle = "READY";
     let finalBadge = "LIVE SERVER UPDATE";
+    let finalServices = synchronizedServices;
+    let finalNote = "Semua Bergaransi Tanpa Drama";
 
     if (isReallyAllClosed) {
         finalType = "FULL_CLOSE";
         finalTitle = "CLOSED";
         finalBadge = "ORDERAN KLOTER CLOSED";
-    } else if (hasAnyClosed && hasAnyReady) {
+        // Closed order ditampilkan tanpa 3 Bulan Slow karena 3B Slow buka 24 jam
+        finalServices = synchronizedServices.filter(s => !s.name.toUpperCase().includes("SLOW"));
+        if (finalServices.length === 0) {
+            finalServices = [{ name: "3B SF FAST", status: "CLOSED", desc: "Kloter Ditutup Sementara" }];
+        }
+        finalNote = "3B Slow Tetap Buka 24 Jam • Sampai Jumpa di Kloter Berikutnya";
+    } else if (hasAnyFastClosed && hasAnyFastReady) {
         finalType = "PARTIAL_CLOSE";
         finalTitle = "UPDATE SLOT";
         finalBadge = "UPDATE STATUS LAYANAN";
+        finalNote = "Sebagian Jalur Tutup • Jalur Lain Ready";
     } else {
         finalType = "SLOT_UPDATE";
         finalTitle = "READY";
@@ -1580,8 +1601,8 @@ ${rawText}`;
         type: finalType,
         title: finalTitle,
         badge: finalBadge,
-        services: synchronizedServices,
-        note: (hasAnyClosed && hasAnyReady) ? "Sebagian Jalur Tutup • Jalur Lain Ready" : "Semua Bergaransi Tanpa Drama"
+        services: finalServices,
+        note: finalNote
     };
 }
 
@@ -1684,12 +1705,19 @@ async function generateRiveraUpdateGraphic(parsedData) {
     const isDone = parsedData.type === "DONE_NOTIFICATION";
     const isCloseListSlow = parsedData.type === "CLOSE_LIST_SLOW";
 
-    const services = Array.isArray(parsedData.services) && parsedData.services.length > 0
+    const rawServices = Array.isArray(parsedData.services) && parsedData.services.length > 0
         ? parsedData.services
         : [
-            { name: "3B SF SLOW", status: isDone ? "DONE" : (isFullClose ? "CLOSED" : "READY"), desc: isDone ? "Antrean Kloter Selesai Diproses" : (isFullClose ? "Ditutup Sementara" : "Done Malam • Sent s/d Sore") },
             { name: "3B SF FAST", status: isDone ? "DONE" : (isFullClose ? "CLOSED" : "READY"), desc: isDone ? "Antrean Fast Selesai Diproses" : (isFullClose ? "Ditutup Sementara" : "Proses Cepat Under 15 Menit") }
         ];
+
+    let services = rawServices;
+    if (isFullClose) {
+        services = rawServices.filter(s => !s.name.toUpperCase().includes("SLOW"));
+        if (services.length === 0) {
+            services = [{ name: "3B SF FAST", status: "CLOSED", desc: "Kloter Ditutup Sementara" }];
+        }
+    }
 
     const cardsSvg = services.map((s, idx) => {
         const yPos = 595 + (idx * 155);
@@ -1762,7 +1790,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
     let mainTitleFontSize = 76;
     let mainTitleLetterSpacing = 6;
     let mainTitleColor = "#0f172a";
-    let mainSubTitle = "SLOT &amp; JALUR ON HARI INI";
+    let mainSubTitle = "SLOT & JALUR ON HARI INI";
     let mainSubTitleColor = theme.primaryColor;
 
     if (isCloseListSlow) {
@@ -1833,7 +1861,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
         noteCardBorder = "#86efac";
         noteTextColor = "#15803d";
     } else if (isFullClose) {
-        displayNote = "Orderan Kloter Ditutup • Sampai Jumpa di Kloter Berikutnya";
+        displayNote = parsedData.note || "3B Slow Tetap Buka 24 Jam • Sampai Jumpa di Kloter Berikutnya";
         noteCardBg = "#fff1f2";
         noteCardBorder = "#fda4af";
         noteTextColor = "#e11d48";
@@ -1874,11 +1902,11 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <!-- Pill Badge (y=350, lega dan terpisah jelas dari Headline) -->
             <rect x="325" y="350" width="430" height="40" rx="20" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
             <circle cx="352" cy="370" r="6" fill="${dotColorTop}"/>
-            <text x="548" y="376" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="16" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
+            <text x="548" y="376" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="16" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${escapeXml(badgeTextTop)}</text>
 
             <!-- Main Headline (y=462, lega tanpa tabrakan dengan badge di atasnya) -->
-            <text x="540" y="462" font-family="'Plus Jakarta Sans', 'Montserrat', 'Inter', -apple-system, sans-serif" font-size="${mainTitleFontSize}" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="${mainTitleLetterSpacing}">${mainTitle}</text>
-            <text x="540" y="508" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="25" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle" letter-spacing="1">${mainSubTitle}</text>
+            <text x="540" y="462" font-family="'Plus Jakarta Sans', 'Montserrat', 'Inter', -apple-system, sans-serif" font-size="${mainTitleFontSize}" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="${mainTitleLetterSpacing}">${escapeXml(mainTitle)}</text>
+            <text x="540" y="508" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="25" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle" letter-spacing="1">${escapeXml(mainSubTitle)}</text>
             <text x="540" y="544" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="20" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
 
             <!-- Dynamic Service Cards -->
@@ -1889,7 +1917,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <!-- Slogan Guarantee Card (Bebas emoji rusak, tema warna dinamis & anti overflow) -->
             <g transform="translate(80, 1100)" filter="url(#cardShadow)">
                 <rect width="920" height="88" rx="22" fill="${noteCardBg}" stroke="${noteCardBorder}" stroke-width="2"/>
-                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="23" font-weight="900" fill="${noteTextColor}" text-anchor="middle">${displayNote}</text>
+                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="23" font-weight="900" fill="${noteTextColor}" text-anchor="middle">${escapeXml(displayNote)}</text>
             </g>
 
             <!-- Footer Info Card -->
