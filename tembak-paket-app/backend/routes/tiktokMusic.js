@@ -60,27 +60,33 @@ router.get('/stream', async (req, res) => {
     const localPath = path.join(AUDIO_DIR, localFilename);
     if (fs.existsSync(localPath)) {
         const stat = fs.statSync(localPath);
-        const range = req.headers.range;
-        if (range) {
-            const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-            const chunksize = (end - start) + 1;
-            const file = fs.createReadStream(localPath, { start, end });
-            res.writeHead(206, {
-                'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': 'audio/mpeg',
-            });
-            return file.pipe(res);
+        // BUG FIX: Hanya layani file lokal jika ukurannya >= 1MB (lagu full durasi 3-5 menit).
+        // File berukuran ~470KB adalah cuplikan iTunes preview 29 detik yang harus dialihkan ke full YouTube audio.
+        if (stat.size >= 1000000) {
+            const range = req.headers.range;
+            if (range) {
+                const parts = range.replace(/bytes=/, "").split("-");
+                const start = parseInt(parts[0], 10);
+                const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+                const chunksize = (end - start) + 1;
+                const file = fs.createReadStream(localPath, { start, end });
+                res.writeHead(206, {
+                    'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': 'audio/mpeg',
+                });
+                return file.pipe(res);
+            } else {
+                res.writeHead(200, {
+                    'Content-Length': stat.size,
+                    'Content-Type': 'audio/mpeg',
+                    'Accept-Ranges': 'bytes'
+                });
+                return fs.createReadStream(localPath).pipe(res);
+            }
         } else {
-            res.writeHead(200, {
-                'Content-Length': stat.size,
-                'Content-Type': 'audio/mpeg',
-                'Accept-Ranges': 'bytes'
-            });
-            return fs.createReadStream(localPath).pipe(res);
+            console.warn(`[Stream] File lokal ${localFilename} terdeteksi sebagai preview/cuplikan pendek (${stat.size} bytes). Mengalihkan ke YouTube audio full via yt-dlp...`);
         }
     }
     // 2. Ekstraksi audio stream YouTube via yt-dlp (Mendukung ID YouTube langsung maupun pencarian judul lagu)

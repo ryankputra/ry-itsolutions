@@ -621,7 +621,8 @@ class TikTokMusicService {
                             category: catInfo.category,
                             categoryLabel: catInfo.categoryLabel,
                             durationSec: Math.round((r.trackTimeMillis || 210000) / 1000),
-                            audioUrl: r.previewUrl || "",
+                            previewUrl: r.previewUrl || "",
+                            audioUrl: "", // Cuplikan iTunes preview (29s) disimpan di previewUrl; audioUrl kosong agar di-stream full via /api/music/stream
                             streamsCount: streamsCount,
                             tiktokUsage: streamsCount,
                             tags: ["#tophits", "#rytoneindo", `#${item.meta.query.toLowerCase().replace(/[^a-z0-9]/g, "")}`],
@@ -664,7 +665,8 @@ class TikTokMusicService {
                             category: catInfo.category,
                             categoryLabel: catInfo.categoryLabel,
                             durationSec: variedDuration,
-                            audioUrl: audioUrl,
+                            previewUrl: audioUrl,
+                            audioUrl: "", // Preview disimpan di previewUrl; audioUrl dibiarkan kosong agar di-stream full oleh /api/music/stream
                             streamsCount: streamsCount,
                             tiktokUsage: streamsCount,
                             tags: ["#tophits", isIndo ? "#rytoneindo" : "#rytoneglobal", `#${catInfo.category}`],
