@@ -340,6 +340,7 @@ app.post('/api/internal/trigger-testimoni', async (req, res) => {
         if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
             return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
         }
+        const { imagePath, caption } = req.body || {};
         const defaultSsPath = fs.existsSync(path.join(__dirname, 'public', 'sample_testimoni.png'))
             ? path.join(__dirname, 'public', 'sample_testimoni.png')
             : path.join(__dirname, 'sessions', 'sample_testimoni.png');
