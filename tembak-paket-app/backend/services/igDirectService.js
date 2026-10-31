@@ -161,62 +161,268 @@ function escapeXml(str) {
         .replace(/'/g, '&apos;');
 }
 
+const SOFT_BLUE_THEMES = [
+    {
+        dayIndex: 0,
+        dayName: 'Minggu',
+        themeName: 'Clean Azure',
+        badgeText: 'SUNDAY EDITION • RESMI',
+        bgGradient: { from: '#f8fafc', mid: '#f0f7ff', to: '#e0f2fe' },
+        ambientLight1: 'rgba(2, 132, 199, 0.08)',
+        ambientLight2: 'rgba(56, 189, 248, 0.06)',
+        primaryColor: '#0284c7',
+        secondaryColor: '#0369a1',
+        accentBadgeBg: '#e0f2fe',
+        accentBadgeBorder: '#bae6fd',
+        accentBadgeText: '#0369a1',
+        cardBg: '#ffffff',
+        cardBorder: '#cbd5e1'
+    },
+    {
+        dayIndex: 1,
+        dayName: 'Senin',
+        themeName: 'Royal Cobalt',
+        badgeText: 'CYBER EDITION • SENIN',
+        bgGradient: { from: '#ffffff', mid: '#f4f8fe', to: '#e8f1fc' },
+        ambientLight1: 'rgba(37, 99, 235, 0.08)',
+        ambientLight2: 'rgba(96, 165, 250, 0.06)',
+        primaryColor: '#2563eb',
+        secondaryColor: '#1d4ed8',
+        accentBadgeBg: '#eff6ff',
+        accentBadgeBorder: '#bfdbfe',
+        accentBadgeText: '#1d4ed8',
+        cardBg: '#ffffff',
+        cardBorder: '#cbd5e1'
+    },
+    {
+        dayIndex: 2,
+        dayName: 'Selasa',
+        themeName: 'Sapphire Fintech',
+        badgeText: 'SAPPHIRE PRO • SELASA',
+        bgGradient: { from: '#f8fafc', mid: '#eff6ff', to: '#dbeafe' },
+        ambientLight1: 'rgba(29, 78, 216, 0.08)',
+        ambientLight2: 'rgba(59, 130, 246, 0.06)',
+        primaryColor: '#1d4ed8',
+        secondaryColor: '#2563eb',
+        accentBadgeBg: '#e0f2fe',
+        accentBadgeBorder: '#93c5fd',
+        accentBadgeText: '#1e40af',
+        cardBg: '#ffffff',
+        cardBorder: '#cbd5e1'
+    },
+    {
+        dayIndex: 3,
+        dayName: 'Rabu',
+        themeName: 'Ice Ocean',
+        badgeText: 'VERIFIED SHIELD • RABU',
+        bgGradient: { from: '#ffffff', mid: '#f0fdfa', to: '#e0f2fe' },
+        ambientLight1: 'rgba(14, 165, 233, 0.08)',
+        ambientLight2: 'rgba(6, 182, 212, 0.06)',
+        primaryColor: '#0284c7',
+        secondaryColor: '#0891b2',
+        accentBadgeBg: '#e0f2fe',
+        accentBadgeBorder: '#bae6fd',
+        accentBadgeText: '#0369a1',
+        cardBg: '#ffffff',
+        cardBorder: '#cbd5e1'
+    },
+    {
+        dayIndex: 4,
+        dayName: 'Kamis',
+        themeName: 'Navy Minimalist',
+        badgeText: 'VIP EXCLUSIVE • KAMIS',
+        bgGradient: { from: '#f8fafc', mid: '#f1f5f9', to: '#e2e8f0' },
+        ambientLight1: 'rgba(30, 58, 138, 0.08)',
+        ambientLight2: 'rgba(59, 130, 246, 0.06)',
+        primaryColor: '#1e3a8a',
+        secondaryColor: '#2563eb',
+        accentBadgeBg: '#eff6ff',
+        accentBadgeBorder: '#cbd5e1',
+        accentBadgeText: '#1e3a8a',
+        cardBg: '#ffffff',
+        cardBorder: '#cbd5e1'
+    },
+    {
+        dayIndex: 5,
+        dayName: 'Jumat',
+        themeName: 'Pearl Cerulean',
+        badgeText: 'GOLDEN STANDARD • JUMAT',
+        bgGradient: { from: '#ffffff', mid: '#f0f9ff', to: '#e0f2fe' },
+        ambientLight1: 'rgba(2, 132, 199, 0.09)',
+        ambientLight2: 'rgba(37, 99, 235, 0.06)',
+        primaryColor: '#0284c7',
+        secondaryColor: '#1d4ed8',
+        accentBadgeBg: '#e0f2fe',
+        accentBadgeBorder: '#bae6fd',
+        accentBadgeText: '#0369a1',
+        cardBg: '#ffffff',
+        cardBorder: '#cbd5e1'
+    },
+    {
+        dayIndex: 6,
+        dayName: 'Sabtu',
+        themeName: 'Electric Ice',
+        badgeText: 'WEEKEND EXPRESS • SABTU',
+        bgGradient: { from: '#ffffff', mid: '#f4f8fe', to: '#dbeafe' },
+        ambientLight1: 'rgba(37, 99, 235, 0.09)',
+        ambientLight2: 'rgba(14, 165, 233, 0.07)',
+        primaryColor: '#2563eb',
+        secondaryColor: '#0284c7',
+        accentBadgeBg: '#eff6ff',
+        accentBadgeBorder: '#bfdbfe',
+        accentBadgeText: '#1d4ed8',
+        cardBg: '#ffffff',
+        cardBorder: '#cbd5e1'
+    }
+];
+
+function getSoftDailyTheme(dayIndex = new Date().getDay()) {
+    return SOFT_BLUE_THEMES[dayIndex % 7];
+}
+
 /**
- * Format gambar Story (1080x1920) dengan Ambient Background Blur & Visual Music Sticker
+ * Format gambar Story (1080x1920) dengan Soft White & Blue Theme, Vektor Presisi, & Visual Music Sticker
  */
-async function prepareImageForStory(imageBuffer, trackInfo = null) {
+async function prepareImageForStory(imageBuffer, trackInfo = null, options = {}) {
     const targetW = 1080;
     const targetH = 1920;
     const track = trackInfo || getRandomTrack();
     const safeTitle = escapeXml(track.title);
     const safeArtist = escapeXml(track.artist);
+    const theme = getSoftDailyTheme();
 
-    // 1. Buat latar belakang gelap blur dari gambar bukti
-    const blurredBg = await sharp(imageBuffer)
-        .resize(targetW, targetH, { fit: 'cover' })
-        .blur(45)
-        .modulate({ brightness: 0.35 })
-        .toBuffer();
+    const meta = await sharp(imageBuffer).metadata();
 
-    // 2. Resize gambar bukti di tengah
-    const foreground = await sharp(imageBuffer)
-        .resize({ width: 920, height: 1480, fit: 'inside' })
-        .toBuffer();
+    // 1. Jika gambar sudah berukuran 1080x1920 (Banner Penuh SVG Open / Disclaimer / Rivera) atau eksplisit full screen:
+    if ((meta.width === targetW && meta.height === targetH) || options.isFullScreen) {
+        if (options.hasMusicSticker) {
+            // Sudah memiliki music sticker langsung di kanvas
+            return await sharp(imageBuffer).jpeg({ quality: 95 }).toBuffer();
+        }
 
-    // 3. Stiker Visual Pemutar Musik (Spotify/IG Music Style) di bagian atas/bawah
-    const musicStickerSvg = `
-        <svg width="${targetW}" height="${targetH}">
-            <!-- Music Player Banner -->
-            <g transform="translate(180, 110)">
-                <rect width="720" height="74" rx="37" fill="#090d16" fill-opacity="0.92" stroke="#38bdf8" stroke-width="1.8" />
-                
-                <!-- Music Icon -->
-                <circle cx="44" cy="37" r="22" fill="#0f172a" stroke="#06b6d4" stroke-width="1.5"/>
-                <text x="44" y="44" font-family="Arial, sans-serif" font-size="20" fill="#38bdf8" text-anchor="middle">🎵</text>
-                
-                <!-- Track Title & Artist -->
-                <text x="82" y="34" font-family="Arial, sans-serif" font-size="21" font-weight="bold" fill="#ffffff">${safeTitle}</text>
-                <text x="82" y="56" font-family="Arial, sans-serif" font-size="16" fill="#94a3b8">${safeArtist}</text>
-                
-                <!-- Equalizer Wave Bars -->
-                <g transform="translate(620, 22)">
-                    <rect x="0" y="10" width="4" height="20" rx="2" fill="#38bdf8" />
-                    <rect x="8" y="4" width="4" height="26" rx="2" fill="#818cf8" />
-                    <rect x="16" y="14" width="4" height="16" rx="2" fill="#38bdf8" />
-                    <rect x="24" y="2" width="4" height="28" rx="2" fill="#06b6d4" />
-                    <rect x="32" y="8" width="4" height="22" rx="2" fill="#818cf8" />
-                    <rect x="40" y="16" width="4" height="14" rx="2" fill="#38bdf8" />
+        // Overlay music sticker saja di safe zone y=185 tanpa mengubah ukuran atau memperkecil gambar dasar
+        const musicBarSvg = `
+        <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="musicShadow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.08"/>
+                </filter>
+            </defs>
+            <g transform="translate(150, 185)" filter="url(#musicShadow)">
+                <rect width="780" height="74" rx="37" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="1.8" />
+                <circle cx="44" cy="37" r="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="1.5"/>
+                <path d="M41 45V31l8-2v11" fill="none" stroke="${theme.primaryColor}" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="39" cy="44" r="3" fill="${theme.primaryColor}"/>
+                <circle cx="47" cy="42" r="3" fill="${theme.primaryColor}"/>
+                <text x="82" y="34" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="bold" fill="#0f172a">${safeTitle.slice(0, 32)}</text>
+                <text x="82" y="56" font-family="Arial, -apple-system, sans-serif" font-size="16" fill="#64748b">${safeArtist.slice(0, 36)}</text>
+                <g transform="translate(680, 22)">
+                    <rect x="0" y="10" width="4" height="20" rx="2" fill="${theme.primaryColor}" />
+                    <rect x="8" y="4" width="4" height="26" rx="2" fill="${theme.secondaryColor}" />
+                    <rect x="16" y="14" width="4" height="16" rx="2" fill="${theme.primaryColor}" />
+                    <rect x="24" y="2" width="4" height="28" rx="2" fill="${theme.secondaryColor}" />
+                    <rect x="32" y="8" width="4" height="22" rx="2" fill="${theme.primaryColor}" />
+                    <rect x="40" y="16" width="4" height="14" rx="2" fill="${theme.secondaryColor}" />
                 </g>
             </g>
         </svg>
+        `;
+        return await sharp(imageBuffer)
+            .composite([{ input: Buffer.from(musicBarSvg), top: 0, left: 0 }])
+            .jpeg({ quality: 95 })
+            .toBuffer();
+    }
+
+    // 2. Mode Screenshot Testimoni Pelanggan:
+    // Gunakan kanvas Soft White & Blue 100% Full Canvas Edge-to-Edge (Bukan Dark Blur / AI Slop!)
+    const bgSvg = `
+    <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="softBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${theme.bgGradient.from}"/>
+                <stop offset="50%" stop-color="${theme.bgGradient.mid}"/>
+                <stop offset="100%" stop-color="${theme.bgGradient.to}"/>
+            </linearGradient>
+            <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="90"/>
+            </filter>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#softBg)"/>
+        <circle cx="540" cy="380" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
+        <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
+    </svg>
     `;
 
-    return await sharp(blurredBg)
+    // Pastikan ukuran screenshot muat 100% tanpa terpotong dalam safe zone (y: 280 s/d 1630)
+    const maxContentW = 960;
+    const maxContentH = 1360;
+
+    const resizedScreenshot = await sharp(imageBuffer)
+        .resize(maxContentW, maxContentH, { fit: 'inside' })
+        .toBuffer();
+
+    const resizedMeta = await sharp(resizedScreenshot).metadata();
+
+    // Mask rounded corners 24px agar rapi dan modern
+    const roundedCornersSvg = Buffer.from(`
+        <svg width="${resizedMeta.width}" height="${resizedMeta.height}">
+            <rect x="0" y="0" width="${resizedMeta.width}" height="${resizedMeta.height}" rx="24" fill="#ffffff"/>
+        </svg>
+    `);
+
+    const framedScreenshot = await sharp(resizedScreenshot)
+        .composite([{ input: roundedCornersSvg, blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+
+    const cardX = Math.round((targetW - resizedMeta.width) / 2);
+    const cardY = Math.round(290 + (maxContentH - resizedMeta.height) / 2);
+
+    const overlaySvg = `
+    <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="10" stdDeviation="20" flood-color="#0f172a" flood-opacity="0.08"/>
+            </filter>
+        </defs>
+
+        <!-- Music Player Bar (Safe Zone y=185) -->
+        <g transform="translate(150, 185)" filter="url(#cardShadow)">
+            <rect width="780" height="74" rx="37" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="1.8" />
+            <circle cx="44" cy="37" r="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="1.5"/>
+            <path d="M41 45V31l8-2v11" fill="none" stroke="${theme.primaryColor}" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="39" cy="44" r="3" fill="${theme.primaryColor}"/>
+            <circle cx="47" cy="42" r="3" fill="${theme.primaryColor}"/>
+            <text x="82" y="34" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="bold" fill="#0f172a">${safeTitle.slice(0, 32)}</text>
+            <text x="82" y="56" font-family="Arial, -apple-system, sans-serif" font-size="16" fill="#64748b">${safeArtist.slice(0, 36)}</text>
+            <g transform="translate(680, 22)">
+                <rect x="0" y="10" width="4" height="20" rx="2" fill="${theme.primaryColor}" />
+                <rect x="8" y="4" width="4" height="26" rx="2" fill="${theme.secondaryColor}" />
+                <rect x="16" y="14" width="4" height="16" rx="2" fill="${theme.primaryColor}" />
+                <rect x="24" y="2" width="4" height="28" rx="2" fill="${theme.secondaryColor}" />
+                <rect x="32" y="8" width="4" height="22" rx="2" fill="${theme.primaryColor}" />
+                <rect x="40" y="16" width="4" height="14" rx="2" fill="${theme.secondaryColor}" />
+            </g>
+        </g>
+
+        <!-- Bingkai Luar & Bayangan Halus Screenshot -->
+        <rect x="${cardX - 4}" y="${cardY - 4}" width="${resizedMeta.width + 8}" height="${resizedMeta.height + 8}" rx="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#cardShadow)"/>
+
+        <!-- Top Verified Badge -->
+        <g transform="translate(340, ${Math.max(265, cardY - 24)})">
+            <rect width="400" height="42" rx="21" fill="${theme.accentBadgeBg}" stroke="${theme.accentBadgeBorder}" stroke-width="1.6"/>
+            <circle cx="30" cy="21" r="6" fill="${theme.primaryColor}"/>
+            <text x="200" y="28" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${theme.accentBadgeText}" text-anchor="middle">BUKTI TESTIMONI RESMI • RY</text>
+        </g>
+    </svg>
+    `;
+
+    return await sharp(Buffer.from(bgSvg))
         .composite([
-            { input: foreground, gravity: 'center' },
-            { input: Buffer.from(musicStickerSvg), top: 0, left: 0 }
+            { input: Buffer.from(overlaySvg), top: 0, left: 0 },
+            { input: framedScreenshot, top: cardY, left: cardX }
         ])
-        .jpeg({ quality: 92 })
+        .jpeg({ quality: 95 })
         .toBuffer();
 }
 
@@ -402,10 +608,10 @@ async function generateFeedVideo(formattedImageBuffer, track) {
 /**
  * Publikasikan konten ke Instagram Story (Video bersuara lagu atau Foto fallback)
  */
-async function publishToStory(imageBuffer, customTrack = null) {
+async function publishToStory(imageBuffer, customTrack = null, options = {}) {
     const { sessionId, dsUserId } = getSessionCredentials();
     const track = customTrack || getRandomTrack();
-    const formattedBuffer = await prepareImageForStory(imageBuffer, track);
+    const formattedBuffer = await prepareImageForStory(imageBuffer, track, options);
 
     const csrf = await fetchCsrfToken(sessionId, dsUserId);
     const uploadId = Date.now().toString();
@@ -722,148 +928,224 @@ async function publishToFeed(imageBuffer, caption = '', customTrack = null) {
     };
 }
 
-/**
- * Buat dan Publikasikan Banner "OPEN TODAY" ke Story
- */
-async function publishOpenStory() {
+function generateSoftOpenSvg(theme, timestampWIB, dateWIB) {
     const targetW = 1080;
     const targetH = 1920;
+
+    return `
+    <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="softOpenBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${theme.bgGradient.from}"/>
+                <stop offset="50%" stop-color="${theme.bgGradient.mid}"/>
+                <stop offset="100%" stop-color="${theme.bgGradient.to}"/>
+            </linearGradient>
+            <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="90"/>
+            </filter>
+            <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.04"/>
+            </filter>
+        </defs>
+
+        <!-- 100% Full Canvas Edge-to-Edge Background -->
+        <rect width="100%" height="100%" fill="url(#softOpenBg)"/>
+
+        <!-- Subtle Ambient Light -->
+        <circle cx="540" cy="380" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
+        <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
+
+        <!-- Top Branding Logo (y=220) -->
+        <g transform="translate(470, 220)">
+            <circle cx="70" cy="70" r="62" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="3" filter="url(#cardShadow)"/>
+            <text x="70" y="83" font-family="Arial, -apple-system, sans-serif" font-size="38" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
+        </g>
+
+        <!-- Status Pill Badge -->
+        <rect x="365" y="380" width="350" height="46" rx="23" fill="#dcfce7" stroke="#86efac" stroke-width="1.8"/>
+        <circle cx="395" cy="403" r="7" fill="#16a34a"/>
+        <text x="545" y="411" font-family="Arial, -apple-system, sans-serif" font-size="20" font-weight="bold" fill="#15803d" text-anchor="middle">ONLINE &amp; READY</text>
+
+        <!-- Main Headlines -->
+        <text x="540" y="500" font-family="Arial, -apple-system, sans-serif" font-size="74" font-weight="900" fill="#0f172a" text-anchor="middle" letter-spacing="1">WE ARE OPEN!</text>
+        <text x="540" y="555" font-family="Arial, -apple-system, sans-serif" font-size="32" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${theme.badgeText}</text>
+        <text x="540" y="600" font-family="Arial, -apple-system, sans-serif" font-size="24" font-weight="500" fill="#64748b" text-anchor="middle">${dateWIB} • Jam Operasional Aktif</text>
+
+        <!-- Priority Services Card (y=645, height=520) -->
+        <g transform="translate(70, 645)" filter="url(#cardShadow)">
+            <rect width="940" height="520" rx="30" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+            
+            <text x="470" y="62" font-family="Arial, -apple-system, sans-serif" font-size="30" font-weight="bold" fill="#0f172a" text-anchor="middle">LAYANAN PRIORITAS HARI INI</text>
+            <line x1="60" y1="92" x2="880" y2="92" stroke="#e2e8f0" stroke-width="1.5"/>
+
+            <!-- Item 1: Add Roamer -->
+            <rect x="50" y="125" width="56" height="56" rx="14" fill="#eff6ff"/>
+            <text x="78" y="162" font-family="Arial, sans-serif" font-size="28" fill="${theme.primaryColor}" text-anchor="middle">⚡</text>
+            <text x="130" y="150" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#0f172a">Layanan Add Roamer (Unlock Sinyal)</text>
+            <text x="130" y="184" font-family="Arial, -apple-system, sans-serif" font-size="21" fill="#475569">Paket Resmi Durasi 1 Bulan &amp; 3 Bulan All Operator</text>
+            <text x="130" y="214" font-family="Arial, -apple-system, sans-serif" font-size="20" font-weight="bold" fill="${theme.primaryColor}">Mendukung: Telkomsel, Indosat, XL, Tri, SF</text>
+
+            <!-- Item 2: Cek CEIR & Garansi -->
+            <rect x="50" y="260" width="56" height="56" rx="14" fill="#f0fdf4"/>
+            <text x="78" y="297" font-family="Arial, sans-serif" font-size="28" fill="#16a34a" text-anchor="middle">🔍</text>
+            <text x="130" y="285" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#0f172a">Cek Status CEIR &amp; Klaim Garansi</text>
+            <text x="130" y="320" font-family="Arial, -apple-system, sans-serif" font-size="21" fill="#475569">Diagnostik legalitas database Bea Cukai &amp; Kemenperin terpercaya</text>
+
+            <!-- Item 3: Transaksi Digital -->
+            <rect x="50" y="380" width="56" height="56" rx="14" fill="#eff6ff"/>
+            <text x="78" y="417" font-family="Arial, sans-serif" font-size="28" fill="${theme.secondaryColor}" text-anchor="middle">🛡️</text>
+            <text x="130" y="405" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#0f172a">Transaksi Aman, Transparan &amp; Bergaransi</text>
+            <text x="130" y="440" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="bold" fill="#059669">Tercatat otomatis ke dalam sistem nota digital web resmi</text>
+        </g>
+
+        <!-- Contact & Web Portal Card (y=1200, height=270) -->
+        <g transform="translate(70, 1200)" filter="url(#cardShadow)">
+            <rect width="940" height="270" rx="28" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2"/>
+            <text x="470" y="62" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#0f172a" text-anchor="middle">Fast Response via WhatsApp &amp; Web</text>
+            
+            <g transform="translate(320, 122)">
+                <circle cx="0" cy="0" r="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+                <ellipse cx="0" cy="0" rx="6" ry="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2"/>
+                <line x1="-14" y1="0" x2="14" y2="0" stroke="${theme.primaryColor}" stroke-width="2"/>
+            </g>
+            <text x="350" y="131" font-family="Arial, -apple-system, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
+
+            <rect x="270" y="175" width="400" height="48" rx="24" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.2"/>
+            <text x="470" y="206" font-family="Arial, -apple-system, sans-serif" font-size="22" font-weight="bold" fill="${theme.primaryColor}" text-anchor="middle">Buka Mulai: ${timestampWIB} WIB</text>
+        </g>
+    </svg>
+    `;
+}
+
+function generateSoftDisclaimerSvg(theme, musicTrack) {
+    const targetW = 1080;
+    const targetH = 1920;
+    const track = musicTrack || getRandomTrack();
+    const safeTitle = escapeXml(track.title);
+    const safeArtist = escapeXml(track.artist);
+
+    return `
+    <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="softDisclaimerBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${theme.bgGradient.from}"/>
+                <stop offset="50%" stop-color="${theme.bgGradient.mid}"/>
+                <stop offset="100%" stop-color="${theme.bgGradient.to}"/>
+            </linearGradient>
+            <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="90"/>
+            </filter>
+            <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.04"/>
+            </filter>
+        </defs>
+
+        <!-- 100% Full Canvas Edge-to-Edge Background -->
+        <rect width="100%" height="100%" fill="url(#softDisclaimerBg)"/>
+
+        <!-- Subtle Ambient Light -->
+        <circle cx="540" cy="400" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
+        <circle cx="540" cy="1250" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
+
+        <!-- 1. Music Player Bar (In Safe Zone y=185) -->
+        <g transform="translate(150, 185)" filter="url(#cardShadow)">
+            <rect width="780" height="74" rx="37" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="1.8" />
+            <circle cx="44" cy="37" r="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="1.5"/>
+            <!-- Music Vector Icon -->
+            <path d="M41 45V31l8-2v11" fill="none" stroke="${theme.primaryColor}" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="39" cy="44" r="3" fill="${theme.primaryColor}"/>
+            <circle cx="47" cy="42" r="3" fill="${theme.primaryColor}"/>
+            <text x="82" y="34" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="bold" fill="#0f172a">${safeTitle.slice(0, 32)}</text>
+            <text x="82" y="56" font-family="Arial, -apple-system, sans-serif" font-size="16" fill="#64748b">${safeArtist.slice(0, 36)}</text>
+            <g transform="translate(680, 22)">
+                <rect x="0" y="10" width="4" height="20" rx="2" fill="${theme.primaryColor}" />
+                <rect x="8" y="4" width="4" height="26" rx="2" fill="${theme.secondaryColor}" />
+                <rect x="16" y="14" width="4" height="16" rx="2" fill="${theme.primaryColor}" />
+                <rect x="24" y="2" width="4" height="28" rx="2" fill="${theme.secondaryColor}" />
+                <rect x="32" y="8" width="4" height="22" rx="2" fill="${theme.primaryColor}" />
+                <rect x="40" y="16" width="4" height="14" rx="2" fill="${theme.secondaryColor}" />
+            </g>
+        </g>
+
+        <!-- 2. Header Branding & RY Emblem -->
+        <g transform="translate(480, 285)">
+            <circle cx="60" cy="60" r="54" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="3" filter="url(#cardShadow)"/>
+            <text x="60" y="72" font-family="Arial, -apple-system, sans-serif" font-size="34" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
+        </g>
+
+        <!-- Pill Badge -->
+        <rect x="330" y="425" width="420" height="42" rx="21" fill="${theme.accentBadgeBg}" stroke="${theme.accentBadgeBorder}" stroke-width="1.6"/>
+        <circle cx="355" cy="446" r="6" fill="${theme.primaryColor}"/>
+        <text x="545" y="454" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${theme.accentBadgeText}" text-anchor="middle">EDUKASI &amp; TRANSPARANSI • RESMI</text>
+
+        <!-- Main Title -->
+        <text x="540" y="535" font-family="Arial, -apple-system, sans-serif" font-size="58" font-weight="900" fill="#0f172a" text-anchor="middle" letter-spacing="1">DISCLAIMER</text>
+        <text x="540" y="590" font-family="Arial, -apple-system, sans-serif" font-size="38" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle" letter-spacing="1">LAYANAN ADD ROAMER</text>
+        <text x="540" y="632" font-family="Arial, -apple-system, sans-serif" font-size="22" font-weight="500" fill="#64748b" text-anchor="middle">Wajib Dibaca Demi Keamanan &amp; Kenyamanan Bersama</text>
+
+        <!-- 3. Card 1: Alert Tidak Ada Permanen (Clean Soft Rose) -->
+        <g transform="translate(70, 665)" filter="url(#cardShadow)">
+            <rect width="940" height="305" rx="26" fill="#fff1f2" stroke="#f43f5e" stroke-width="2"/>
+            <rect x="30" y="24" width="48" height="48" rx="12" fill="#ffe4e6"/>
+            <text x="54" y="56" font-family="Arial, sans-serif" font-size="26" text-anchor="middle" fill="#e11d48" font-weight="bold">✕</text>
+            <text x="96" y="57" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#9f1239">TIDAK ADA ADD ROAMER PERMANEN</text>
+            <line x1="30" y1="88" x2="910" y2="88" stroke="#fecdd3" stroke-width="1.2"/>
+
+            <text x="35" y="132" font-family="Arial, -apple-system, sans-serif" font-size="22" fill="#4c0519">• Waspada penipuan oknum yang menjanjikan unblock permanen via Add Roamer.</text>
+            <text x="35" y="174" font-family="Arial, -apple-system, sans-serif" font-size="22" fill="#4c0519">• Secara teknis arsitektur operator seluler, Add Roamer bersifat berjangka.</text>
+            <text x="35" y="216" font-family="Arial, -apple-system, sans-serif" font-size="22" font-weight="bold" fill="#be123c">• Tidak ada bypass Add Roamer yang bisa aktif seumur hidup.</text>
+            <text x="35" y="258" font-family="Arial, -apple-system, sans-serif" font-size="21" fill="#881337">  (Patuhi aturan resmi agar IMEI &amp; perangkat Anda selalu aman terlindungi).</text>
+        </g>
+
+        <!-- 4. Card 2: Durasi Resmi Yang Tersedia (Clean Soft Emerald) -->
+        <g transform="translate(70, 995)" filter="url(#cardShadow)">
+            <rect width="940" height="360" rx="26" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+            <rect x="30" y="24" width="48" height="48" rx="12" fill="#dcfce7"/>
+            <text x="54" y="56" font-family="Arial, sans-serif" font-size="26" text-anchor="middle" fill="#059669" font-weight="bold">✓</text>
+            <text x="96" y="57" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#065f46">HANYA TERSEDIA OPSI 1 BULAN &amp; 3 BULAN</text>
+            <line x1="30" y1="88" x2="910" y2="88" stroke="#bbf7d0" stroke-width="1.2"/>
+
+            <text x="35" y="132" font-family="Arial, -apple-system, sans-serif" font-size="22" fill="#064e3b">• Ry-ITSolutions hanya melayani paket resmi aktivasi 1 Bulan &amp; 3 Bulan.</text>
+            <text x="35" y="174" font-family="Arial, -apple-system, sans-serif" font-size="22" fill="#064e3b">• Mendukung All Operator Indonesia: Telkomsel, Indosat, XL, Tri, SF.</text>
+            <text x="35" y="216" font-family="Arial, -apple-system, sans-serif" font-size="22" fill="#064e3b">• Seluruh pengerjaan bergaransi penuh sesuai masa aktif yang dipilih.</text>
+            <text x="35" y="258" font-family="Arial, -apple-system, sans-serif" font-size="22" font-weight="bold" fill="#047857">• Transaksi 100% transparan, aman &amp; tercatat otomatis</text>
+            <text x="52" y="294" font-family="Arial, -apple-system, sans-serif" font-size="22" font-weight="bold" fill="#065f46">  ke dalam nota invoice digital resmi.</text>
+        </g>
+
+        <!-- 5. Card 3: Footer Kontak Resmi & Web (Clean Soft White-Blue) -->
+        <g transform="translate(70, 1380)" filter="url(#cardShadow)">
+            <rect width="940" height="200" rx="24" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2"/>
+            <text x="470" y="54" font-family="Arial, -apple-system, sans-serif" font-size="26" font-weight="bold" fill="#0f172a" text-anchor="middle">Konsultasi Resmi &amp; Cek IMEI</text>
+            
+            <!-- Clean Vector Globe -->
+            <g transform="translate(320, 104)">
+                <circle cx="0" cy="0" r="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+                <ellipse cx="0" cy="0" rx="6" ry="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2"/>
+                <line x1="-14" y1="0" x2="14" y2="0" stroke="${theme.primaryColor}" stroke-width="2"/>
+            </g>
+            <text x="350" y="113" font-family="Arial, -apple-system, sans-serif" font-size="32" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
+            <text x="470" y="156" font-family="Arial, -apple-system, sans-serif" font-size="20" fill="#64748b" text-anchor="middle">Ry-ITSolutions • Solusi Digital &amp; Jaringan Terpercaya</text>
+        </g>
+    </svg>
+    `;
+}
+
+/**
+ * Buat dan Publikasikan Banner "OPEN TODAY" & "DISCLAIMER" ke Story
+ */
+async function publishOpenStory(options = {}) {
+    const theme = getSoftDailyTheme();
     const timestampWIB = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
     const dateWIB = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const openTrack = getRandomTrack();
+    const disclaimerTrack = getRandomTrack();
 
-    const openSvg = `
-        <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#090d16"/>
-                    <stop offset="50%" stop-color="#0f172a"/>
-                    <stop offset="100%" stop-color="#1e1b4b"/>
-                </linearGradient>
-                <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#38bdf8"/>
-                    <stop offset="100%" stop-color="#818cf8"/>
-                </linearGradient>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#bgGrad)"/>
-            
-            <!-- Ornamen Cahaya Ambient -->
-            <circle cx="540" cy="400" r="300" fill="#38bdf8" fill-opacity="0.12" filter="blur(60px)"/>
-            <circle cx="540" cy="1100" r="350" fill="#6366f1" fill-opacity="0.12" filter="blur(80px)"/>
-
-            <!-- Badge Logo -->
-            <g transform="translate(440, 320)">
-                <circle cx="100" cy="100" r="85" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
-                <circle cx="100" cy="100" r="70" fill="url(#neonGrad)" fill-opacity="0.2"/>
-                <text x="100" y="112" font-family="Arial, sans-serif" font-size="44" font-weight="900" fill="#38bdf8" text-anchor="middle">RY</text>
-            </g>
-
-            <!-- Teks Status -->
-            <rect x="390" y="550" width="300" height="48" rx="24" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2"/>
-            <circle cx="420" cy="574" r="8" fill="#10b981"/>
-            <text x="440" y="582" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#34d399">ONLINE &amp; READY</text>
-
-            <text x="540" y="690" font-family="Arial, sans-serif" font-size="76" font-weight="900" fill="#ffffff" text-anchor="middle">WE ARE OPEN!</text>
-            <text x="540" y="750" font-family="Arial, sans-serif" font-size="32" font-weight="500" fill="#94a3b8" text-anchor="middle">${dateWIB}</text>
-
-            <!-- Card Layanan -->
-            <g transform="translate(140, 840)">
-                <rect width="800" height="370" rx="32" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="2"/>
-                
-                <text x="400" y="65" font-family="Arial, sans-serif" font-size="34" font-weight="bold" fill="#f8fafc" text-anchor="middle">LAYANAN PRIORITAS HARI INI</text>
-                <line x1="80" y1="95" x2="720" y2="95" stroke="#334155" stroke-width="2"/>
-
-                <text x="100" y="165" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#38bdf8">⚡ Layanan Add Roamer (Unlock Sinyal)</text>
-                <text x="100" y="205" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Pilihan aktivasi 1 Bulan &amp; 3 Bulan All Operator</text>
-
-                <text x="100" y="275" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#34d399">🔍 Cek Status CEIR &amp; Garansi</text>
-                <text x="100" y="315" font-family="Arial, sans-serif" font-size="24" fill="#94a3b8">Diagnostik legalitas Kemenperin &amp; Bea Cukai</text>
-            </g>
-
-            <!-- Footer Kontak -->
-            <g transform="translate(140, 1280)">
-                <rect width="800" height="240" rx="28" fill="#1e293b" fill-opacity="0.6" stroke="#475569" stroke-width="1.5"/>
-                <text x="400" y="70" font-family="Arial, sans-serif" font-size="34" font-weight="bold" fill="#ffffff" text-anchor="middle">Fast Response via WhatsApp &amp; Web</text>
-                
-                <text x="400" y="130" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#38bdf8" text-anchor="middle">🌐 ry-itsolutionts.web.id</text>
-                <text x="400" y="180" font-family="Arial, sans-serif" font-size="26" fill="#cbd5e1" text-anchor="middle">Buka mulai: ${timestampWIB} WIB</text>
-            </g>
-        </svg>
-    `;
-
-    // SVG Story Lanjutan (Story 2): Disclaimer Add Roamer (Anti AI Slop - Vektor Presisi Sharp)
-    const disclaimerSvg = `
-        <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="disclaimerBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#070a12"/>
-                    <stop offset="50%" stop-color="#0f172a"/>
-                    <stop offset="100%" stop-color="#1c1917"/>
-                </linearGradient>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#disclaimerBg)"/>
-
-            <!-- Ambient Lights -->
-            <circle cx="540" cy="350" r="280" fill="#f59e0b" fill-opacity="0.12" filter="blur(60px)"/>
-            <circle cx="540" cy="1150" r="320" fill="#38bdf8" fill-opacity="0.10" filter="blur(70px)"/>
-
-            <!-- Logo Badge -->
-            <g transform="translate(450, 240)">
-                <circle cx="90" cy="90" r="75" fill="#0f172a" stroke="#f59e0b" stroke-width="3"/>
-                <text x="90" y="102" font-family="Arial, sans-serif" font-size="40" font-weight="900" fill="#f59e0b" text-anchor="middle">RY</text>
-            </g>
-
-            <!-- Tag -->
-            <rect x="350" y="440" width="380" height="46" rx="23" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="1.5"/>
-            <circle cx="380" cy="463" r="7" fill="#f59e0b"/>
-            <text x="400" y="471" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#fbbf24">EDUKASI &amp; TRANSPARANSI</text>
-
-            <!-- Header Titles -->
-            <text x="540" y="555" font-family="Arial, sans-serif" font-size="64" font-weight="900" fill="#ffffff" text-anchor="middle">DISCLAIMER</text>
-            <text x="540" y="620" font-family="Arial, sans-serif" font-size="46" font-weight="900" fill="#f59e0b" text-anchor="middle">LAYANAN ADD ROAMER</text>
-            <text x="540" y="668" font-family="Arial, sans-serif" font-size="24" font-weight="500" fill="#94a3b8" text-anchor="middle">Wajib Dibaca Demi Keamanan &amp; Kenyamanan Bersama</text>
-
-            <!-- Card 1: Alert Tidak Ada Permanen -->
-            <g transform="translate(120, 730)">
-                <rect width="840" height="260" rx="28" fill="#18131b" fill-opacity="0.9" stroke="#ef4444" stroke-opacity="0.8" stroke-width="2"/>
-                <rect x="30" y="25" width="48" height="48" rx="12" fill="#ef4444" fill-opacity="0.2"/>
-                <text x="54" y="57" font-family="Arial, sans-serif" font-size="26" text-anchor="middle" fill="#ef4444">✕</text>
-                
-                <text x="95" y="57" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#fca5a5">TIDAK ADA ADD ROAMER PERMANEN</text>
-                <line x1="30" y1="90" x2="810" y2="90" stroke="#334155" stroke-width="1"/>
-
-                <text x="35" y="135" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Waspada penipuan yang menjanjikan unblock permanen via Add Roamer.</text>
-                <text x="35" y="178" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Secara teknis jaringan operator seluler, Add Roamer bersifat berjangka.</text>
-                <text x="35" y="221" font-family="Arial, sans-serif" font-size="24" fill="#f87171">• Tidak ada bypass Add Roamer yang bisa aktif seumur hidup.</text>
-            </g>
-
-            <!-- Card 2: Durasi Resmi Yang Tersedia -->
-            <g transform="translate(120, 1030)">
-                <rect width="840" height="300" rx="28" fill="#0c1f1a" fill-opacity="0.9" stroke="#10b981" stroke-opacity="0.8" stroke-width="2"/>
-                <rect x="30" y="25" width="48" height="48" rx="12" fill="#10b981" fill-opacity="0.2"/>
-                <text x="54" y="57" font-family="Arial, sans-serif" font-size="26" text-anchor="middle" fill="#10b981">✓</text>
-
-                <text x="95" y="57" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#6ee7b7">HANYA TERSEDIA 1 BULAN &amp; 3 BULAN</text>
-                <line x1="30" y1="90" x2="810" y2="90" stroke="#334155" stroke-width="1"/>
-
-                <text x="35" y="135" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Ry-ITSolutions hanya melayani paket resmi 1 Bulan &amp; 3 Bulan.</text>
-                <text x="35" y="178" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Mendukung All Operator Indonesia (Telkomsel, Indosat, XL, Tri, SF).</text>
-                <text x="35" y="221" font-family="Arial, sans-serif" font-size="24" fill="#cbd5e1">• Seluruh pengerjaan bergaransi penuh sesuai masa aktif yang dipilih.</text>
-                <text x="35" y="264" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#34d399">• Transaksi transparan, aman, dan tercatat otomatis dalam nota digital.</text>
-            </g>
-
-            <!-- Card 3: Footer Kontak & Web -->
-            <g transform="translate(120, 1370)">
-                <rect width="840" height="210" rx="26" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1.5"/>
-                <text x="420" y="60" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">Konsultasi &amp; Cek IMEI Resmi</text>
-                <text x="420" y="115" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#38bdf8" text-anchor="middle">🌐 ry-itsolutionts.web.id</text>
-                <text x="420" y="165" font-family="Arial, sans-serif" font-size="22" fill="#94a3b8" text-anchor="middle">Ry-ITSolutions • Solusi Digital &amp; Jaringan Terpercaya</text>
-            </g>
-        </svg>
-    `;
+    const openSvg = generateSoftOpenSvg(theme, timestampWIB, dateWIB);
+    const disclaimerSvg = generateSoftDisclaimerSvg(theme, disclaimerTrack);
 
     const [openBuffer, disclaimerBuffer] = await Promise.all([
-        sharp(Buffer.from(openSvg)).jpeg({ quality: 94 }).toBuffer(),
-        sharp(Buffer.from(disclaimerSvg)).jpeg({ quality: 94 }).toBuffer()
+        sharp(Buffer.from(openSvg)).jpeg({ quality: 95 }).toBuffer(),
+        sharp(Buffer.from(disclaimerSvg)).jpeg({ quality: 95 }).toBuffer()
     ]);
 
     const results = {
@@ -871,58 +1153,62 @@ async function publishOpenStory() {
         disclaimerStory: { instagram: null, whatsapp: null }
     };
 
-    // 1. Publikasi Story 1: "WE ARE OPEN!" ke Instagram & WhatsApp
+    // 1. Publikasi Story 1: "WE ARE OPEN!"
     try {
-        results.openStory.instagram = await publishToStory(openBuffer);
+        results.openStory.instagram = await publishToStory(openBuffer, openTrack, { isFullScreen: true, hasMusicSticker: false });
     } catch (igErr) {
         console.error('[publishOpenStory] Gagal publish IG Story 1 (Open):', igErr.message);
         results.openStory.instagramError = igErr.message;
     }
 
-    try {
-        const { publishWhatsAppStory } = require('./waBot');
-        if (typeof publishWhatsAppStory === 'function') {
-            const captionStory1 = `📢 *Ry-ITSolutions BUKA HARI INI!*\n\n` +
-                `⚡ Layanan Add Roamer (1 Bulan & 3 Bulan)\n` +
-                `🔍 Cek Status CEIR & Garansi\n\n` +
-                `🗓️ ${dateWIB}\n` +
-                `⏰ Buka: ${timestampWIB} WIB\n\n` +
-                `🌐 https://ry-itsolutionts.web.id`;
-            const mediaToSend1 = results.openStory.instagram?.videoBuffer || openBuffer;
-            const isVid1 = Boolean(results.openStory.instagram?.videoBuffer);
-            results.openStory.whatsapp = await publishWhatsAppStory(mediaToSend1, captionStory1, isVid1);
+    if (!options.igOnly) {
+        try {
+            const { publishWhatsAppStory } = require('./waBot');
+            if (typeof publishWhatsAppStory === 'function') {
+                const captionStory1 = `📢 *Ry-ITSolutions BUKA HARI INI!*\n\n` +
+                    `⚡ Layanan Add Roamer (1 Bulan & 3 Bulan)\n` +
+                    `🔍 Cek Status CEIR & Garansi\n\n` +
+                    `🗓️ ${dateWIB}\n` +
+                    `⏰ Buka: ${timestampWIB} WIB\n\n` +
+                    `🌐 https://ry-itsolutionts.web.id`;
+                const mediaToSend1 = results.openStory.instagram?.videoBuffer || openBuffer;
+                const isVid1 = Boolean(results.openStory.instagram?.videoBuffer);
+                results.openStory.whatsapp = await publishWhatsAppStory(mediaToSend1, captionStory1, isVid1);
+            }
+        } catch (waErr) {
+            console.warn('[publishOpenStory] Warning saat posting WA Story 1 (Open):', waErr.message);
+            results.openStory.whatsappError = waErr.message;
         }
-    } catch (waErr) {
-        console.warn('[publishOpenStory] Warning saat posting WA Story 1 (Open):', waErr.message);
-        results.openStory.whatsappError = waErr.message;
     }
 
     // Jeda 2 detik sebelum mempublikasikan Story 2 (Disclaimer)
     await new Promise(r => setTimeout(r, 2000));
 
-    // 2. Publikasi Story 2: "DISCLAIMER ADD ROAMER" ke Instagram & WhatsApp
+    // 2. Publikasi Story 2: "DISCLAIMER ADD ROAMER"
     try {
-        results.disclaimerStory.instagram = await publishToStory(disclaimerBuffer);
+        results.disclaimerStory.instagram = await publishToStory(disclaimerBuffer, disclaimerTrack, { isFullScreen: true, hasMusicSticker: true });
     } catch (igErr2) {
         console.error('[publishOpenStory] Gagal publish IG Story 2 (Disclaimer):', igErr2.message);
         results.disclaimerStory.instagramError = igErr2.message;
     }
 
-    try {
-        const { publishWhatsAppStory } = require('./waBot');
-        if (typeof publishWhatsAppStory === 'function') {
-            const captionStory2 = `⚠️ *DISCLAIMER RESMI ADD ROAMER*\n\n` +
-                `❌ *Tidak ada Add Roamer yang permanen.* Waspada penipuan!\n` +
-                `✅ *Hanya tersedia opsi 1 Bulan & 3 Bulan* (All Operator).\n\n` +
-                `🛡️ Garansi penuh & nota transaksi digital resmi.\n` +
-                `🌐 https://ry-itsolutionts.web.id`;
-            const mediaToSend2 = results.disclaimerStory.instagram?.videoBuffer || disclaimerBuffer;
-            const isVid2 = Boolean(results.disclaimerStory.instagram?.videoBuffer);
-            results.disclaimerStory.whatsapp = await publishWhatsAppStory(mediaToSend2, captionStory2, isVid2);
+    if (!options.igOnly) {
+        try {
+            const { publishWhatsAppStory } = require('./waBot');
+            if (typeof publishWhatsAppStory === 'function') {
+                const captionStory2 = `⚠️ *DISCLAIMER RESMI ADD ROAMER*\n\n` +
+                    `❌ *Tidak ada Add Roamer yang permanen.* Waspada penipuan!\n` +
+                    `✅ *Hanya tersedia opsi 1 Bulan & 3 Bulan* (All Operator).\n\n` +
+                    `🛡️ Garansi penuh & nota transaksi digital resmi.\n` +
+                    `🌐 https://ry-itsolutionts.web.id`;
+                const mediaToSend2 = results.disclaimerStory.instagram?.videoBuffer || disclaimerBuffer;
+                const isVid2 = Boolean(results.disclaimerStory.instagram?.videoBuffer);
+                results.disclaimerStory.whatsapp = await publishWhatsAppStory(mediaToSend2, captionStory2, isVid2);
+            }
+        } catch (waErr2) {
+            console.warn('[publishOpenStory] Warning saat posting WA Story 2 (Disclaimer):', waErr2.message);
+            results.disclaimerStory.whatsappError = waErr2.message;
         }
-    } catch (waErr2) {
-        console.warn('[publishOpenStory] Warning saat posting WA Story 2 (Disclaimer):', waErr2.message);
-        results.disclaimerStory.whatsappError = waErr2.message;
     }
 
     const anySuccess = results.openStory.instagram || results.openStory.whatsapp ||
@@ -1073,6 +1359,7 @@ ${rawText}`;
 async function generateRiveraUpdateGraphic(parsedData) {
     const targetW = 1080;
     const targetH = 1920;
+    const theme = getSoftDailyTheme();
     const dateWIB = new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const timestampWIB = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
 
@@ -1086,97 +1373,110 @@ async function generateRiveraUpdateGraphic(parsedData) {
         ];
 
     const cardsSvg = services.map((s, idx) => {
-        const yPos = 780 + (idx * 165);
+        const yPos = 730 + (idx * 165);
         const isReady = s.status === "READY";
-        const badgeColor = isReady ? "#10b981" : "#ef4444";
-        const badgeBg = isReady ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)";
+        const badgeColor = isReady ? "#059669" : "#e11d48";
+        const badgeBg = isReady ? "#dcfce7" : "#ffe4e6";
+        const badgeBorder = isReady ? "#86efac" : "#fca5a5";
         const badgeText = isReady ? "READY" : (s.status === "FULL_SLOT" ? "FULL SLOT" : "CLOSED");
-        const textColor = isReady ? "#34d399" : "#fca5a5";
+        const cardBg = isReady ? "#ffffff" : "#fff1f2";
+        const cardBorder = isReady ? "#cbd5e1" : "#fecdd3";
+        const cleanName = s.name.replace(/smartfren/gi, 'SF');
+        const cleanDesc = s.desc.replace(/smartfren/gi, 'SF');
 
         return `
-            <g transform="translate(100, ${yPos})">
-                <rect width="880" height="145" rx="26" fill="#0f172a" fill-opacity="0.9" stroke="${isReady ? '#334155' : '#ef4444'}" stroke-opacity="${isReady ? '1' : '0.6'}" stroke-width="2"/>
-                <text x="40" y="62" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#ffffff">${s.name.replace(/smartfren/gi, 'SF')}</text>
-                <text x="40" y="105" font-family="Arial, sans-serif" font-size="22" font-weight="500" fill="#94a3b8">${s.desc.replace(/smartfren/gi, 'SF')}</text>
+            <g transform="translate(80, ${yPos})">
+                <rect width="920" height="145" rx="24" fill="${cardBg}" stroke="${cardBorder}" stroke-width="2"/>
+                <text x="40" y="62" font-family="Arial, -apple-system, sans-serif" font-size="32" font-weight="900" fill="#0f172a">${cleanName}</text>
+                <text x="40" y="105" font-family="Arial, -apple-system, sans-serif" font-size="22" font-weight="500" fill="#475569">${cleanDesc}</text>
                 
                 <!-- Status Pill -->
-                <rect x="680" y="42" width="160" height="48" rx="24" fill="${badgeBg}" stroke="${badgeColor}" stroke-width="2"/>
-                <circle cx="705" cy="66" r="6" fill="${badgeColor}"/>
-                <text x="765" y="74" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="${textColor}" text-anchor="middle">${badgeText}</text>
+                <rect x="710" y="42" width="170" height="48" rx="24" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.6"/>
+                <circle cx="735" cy="66" r="6" fill="${badgeColor}"/>
+                <text x="800" y="73" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${badgeText}</text>
             </g>
         `;
     }).join("\n");
 
-    const badgeBgTop = isFullClose ? "rgba(239, 68, 68, 0.18)" : "rgba(16, 185, 129, 0.18)";
-    const badgeStrokeTop = isFullClose ? "#ef4444" : "#10b981";
+    const badgeBgTop = isFullClose ? "#ffe4e6" : "#dcfce7";
+    const badgeStrokeTop = isFullClose ? "#fca5a5" : "#86efac";
     const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : (parsedData.badge || "LIVE SERVER &amp; SLOT UPDATE");
-    const badgeTextColorTop = isFullClose ? "#fca5a5" : "#34d399";
+    const badgeTextColorTop = isFullClose ? "#be123c" : "#15803d";
     const mainTitle = isFullClose ? "ORDERAN KLOTER HARI INI" : "STATUS KLOTER &amp; SLOT";
     const mainSubTitle = isFullClose ? "DITUTUP SEMENTARA" : "HARI INI";
-    const mainSubTitleColor = isFullClose ? "#ef4444" : "#38bdf8";
+    const mainSubTitleColor = isFullClose ? "#e11d48" : theme.primaryColor;
 
     const svg = `
         <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
             <defs>
-                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#070c18"/>
-                    <stop offset="40%" stop-color="#0f172a"/>
-                    <stop offset="100%" stop-color="#181326"/>
+                <linearGradient id="softRiveraBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="${theme.bgGradient.from}"/>
+                    <stop offset="50%" stop-color="${theme.bgGradient.mid}"/>
+                    <stop offset="100%" stop-color="${theme.bgGradient.to}"/>
                 </linearGradient>
-                <linearGradient id="cyanNeon" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#38bdf8"/>
-                    <stop offset="100%" stop-color="#818cf8"/>
-                </linearGradient>
+                <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="90"/>
+                </filter>
+                <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.04"/>
+                </filter>
             </defs>
-            <rect width="100%" height="100%" fill="url(#bgGrad)"/>
+            <rect width="100%" height="100%" fill="url(#softRiveraBg)"/>
 
             <!-- Ambient Glow Accents -->
-            <circle cx="540" cy="360" r="320" fill="${isFullClose ? '#ef4444' : '#38bdf8'}" fill-opacity="0.12" filter="blur(70px)"/>
-            <circle cx="540" cy="1200" r="350" fill="#6366f1" fill-opacity="0.10" filter="blur(80px)"/>
+            <circle cx="540" cy="380" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
+            <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
 
-            <!-- Logo Seal -->
-            <g transform="translate(450, 220)">
-                <circle cx="90" cy="90" r="80" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
-                <circle cx="90" cy="90" r="66" fill="url(#cyanNeon)" fill-opacity="0.15"/>
-                <text x="90" y="102" font-family="Arial, sans-serif" font-size="42" font-weight="900" fill="#38bdf8" text-anchor="middle">RY</text>
+            <!-- Logo Seal (y=210) -->
+            <g transform="translate(470, 210)">
+                <circle cx="70" cy="70" r="62" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="3" filter="url(#cardShadow)"/>
+                <text x="70" y="83" font-family="Arial, -apple-system, sans-serif" font-size="38" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
             </g>
 
             <!-- Pill Badge -->
-            <rect x="300" y="440" width="480" height="46" rx="23" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
-            <circle cx="330" cy="463" r="7" fill="${badgeStrokeTop}"/>
-            <text x="545" y="471" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
+            <rect x="310" y="365" width="460" height="46" rx="23" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
+            <circle cx="340" cy="388" r="7" fill="${isFullClose ? '#e11d48' : '#16a34a'}"/>
+            <text x="545" y="396" font-family="Arial, -apple-system, sans-serif" font-size="20" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
 
             <!-- Main Headline -->
-            <text x="540" y="565" font-family="Arial, sans-serif" font-size="60" font-weight="900" fill="#ffffff" text-anchor="middle">${mainTitle}</text>
-            <text x="540" y="625" font-family="Arial, sans-serif" font-size="42" font-weight="900" fill="${mainSubTitleColor}" text-anchor="middle">${mainSubTitle}</text>
-            <text x="540" y="675" font-family="Arial, sans-serif" font-size="24" font-weight="500" fill="#94a3b8" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
+            <text x="540" y="480" font-family="Arial, -apple-system, sans-serif" font-size="64" font-weight="900" fill="#0f172a" text-anchor="middle">${mainTitle}</text>
+            <text x="540" y="535" font-family="Arial, -apple-system, sans-serif" font-size="36" font-weight="900" fill="${mainSubTitleColor}" text-anchor="middle">${mainSubTitle}</text>
+            <text x="540" y="580" font-family="Arial, -apple-system, sans-serif" font-size="24" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
 
-            <!-- Dynamic Cards -->
-            ${cardsSvg}
+            <!-- Dynamic Service Cards -->
+            <g filter="url(#cardShadow)">
+                ${cardsSvg}
+            </g>
 
             <!-- Slogan Guarantee Card -->
-            <g transform="translate(100, 1340)">
-                <rect width="880" height="110" rx="24" fill="#1e1b4b" fill-opacity="0.7" stroke="#6366f1" stroke-width="2"/>
-                <text x="440" y="67" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="#c7d2fe" text-anchor="middle">${parsedData.note || 'SEMUA BERGARANSI TANPA ADA DRAMA 🎭'}</text>
+            <g transform="translate(80, 1260)" filter="url(#cardShadow)">
+                <rect width="920" height="100" rx="24" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="2"/>
+                <text x="460" y="62" font-family="Arial, -apple-system, sans-serif" font-size="26" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${parsedData.note || 'SEMUA BERGARANSI TANPA ADA DRAMA 🎭'}</text>
             </g>
 
             <!-- Footer Info Card -->
-            <g transform="translate(100, 1490)">
-                <rect width="880" height="230" rx="26" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="1.5"/>
-                <text x="440" y="65" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">Pemesanan &amp; Antrean Via Web / WhatsApp</text>
-                <text x="440" y="125" font-family="Arial, sans-serif" font-size="34" font-weight="bold" fill="#38bdf8" text-anchor="middle">🌐 ry-itsolutionts.web.id</text>
-                <text x="440" y="175" font-family="Arial, sans-serif" font-size="22" fill="#94a3b8" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
+            <g transform="translate(80, 1390)" filter="url(#cardShadow)">
+                <rect width="920" height="210" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                <text x="460" y="56" font-family="Arial, -apple-system, sans-serif" font-size="26" font-weight="bold" fill="#0f172a" text-anchor="middle">Pemesanan &amp; Antrean Via Web / WhatsApp</text>
+                
+                <g transform="translate(310, 108)">
+                    <circle cx="0" cy="0" r="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+                    <ellipse cx="0" cy="0" rx="6" ry="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2"/>
+                    <line x1="-14" y1="0" x2="14" y2="0" stroke="${theme.primaryColor}" stroke-width="2"/>
+                </g>
+                <text x="340" y="117" font-family="Arial, -apple-system, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
+                <text x="460" y="165" font-family="Arial, -apple-system, sans-serif" font-size="21" fill="#64748b" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
             </g>
         </svg>
     `;
 
-    return await sharp(Buffer.from(svg)).jpeg({ quality: 94 }).toBuffer();
+    return await sharp(Buffer.from(svg)).jpeg({ quality: 95 }).toBuffer();
 }
 
 /**
  * Publikasikan Story 3 (Live Status / Update Slot Rivera) ke Instagram & WhatsApp
  */
-async function publishRiveraStory(parsedData) {
+async function publishRiveraStory(parsedData, options = {}) {
     const buffer = await generateRiveraUpdateGraphic(parsedData);
     const dateWIB = new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const timestampWIB = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
@@ -1185,40 +1485,42 @@ async function publishRiveraStory(parsedData) {
 
     // 1. Publikasikan ke Instagram Story
     try {
-        results.instagram = await publishToStory(buffer);
+        results.instagram = await publishToStory(buffer, null, { isFullScreen: true, hasMusicSticker: false });
     } catch (igErr) {
         console.error('[publishRiveraStory] Gagal publish IG Story 3:', igErr.message);
         results.instagramError = igErr.message;
     }
 
-    // 2. Publikasikan ke WhatsApp Story
-    try {
-        const { publishWhatsAppStory } = require('./waBot');
-        if (typeof publishWhatsAppStory === 'function') {
-            const isFullClose = parsedData.type === "FULL_CLOSE";
-            const servicesText = (parsedData.services || [])
-                .map(s => `${s.status === 'READY' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : 'Full Slot / Closed'} (${s.desc})`)
-                .join('\n');
+    if (!options.igOnly) {
+        // 2. Publikasikan ke WhatsApp Story
+        try {
+            const { publishWhatsAppStory } = require('./waBot');
+            if (typeof publishWhatsAppStory === 'function') {
+                const isFullClose = parsedData.type === "FULL_CLOSE";
+                const servicesText = (parsedData.services || [])
+                    .map(s => `${s.status === 'READY' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : 'Full Slot / Closed'} (${s.desc})`)
+                    .join('\n');
 
-            const caption = isFullClose
-                ? `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
-                  `Antrean kloter saat ini sedang diproses.\n` +
-                  `Terima kasih dan nantikan pembukaan kloter berikutnya!\n\n` +
-                  `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
-                  `🌐 https://ry-itsolutionts.web.id`
-                : `⚡ *LIVE STATUS & SLOT UPDATE HARI INI!*\n\n` +
-                  `${servicesText}\n\n` +
-                  `🛡️ *${parsedData.note || 'Semua Bergaransi Tanpa Drama 🎭'}*\n` +
-                  `⏰ Update: ${timestampWIB} WIB\n\n` +
-                  `🌐 Order via Web: https://ry-itsolutionts.web.id`;
+                const caption = isFullClose
+                    ? `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
+                      `Antrean kloter saat ini sedang diproses.\n` +
+                      `Terima kasih dan nantikan pembukaan kloter berikutnya!\n\n` +
+                      `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
+                      `🌐 https://ry-itsolutionts.web.id`
+                    : `⚡ *LIVE STATUS & SLOT UPDATE HARI INI!*\n\n` +
+                      `${servicesText}\n\n` +
+                      `🛡️ *${parsedData.note || 'Semua Bergaransi Tanpa Drama 🎭'}*\n` +
+                      `⏰ Update: ${timestampWIB} WIB\n\n` +
+                      `🌐 Order via Web: https://ry-itsolutionts.web.id`;
 
-            const mediaToSend = results.instagram?.videoBuffer || buffer;
-            const isVid = Boolean(results.instagram?.videoBuffer);
-            results.whatsapp = await publishWhatsAppStory(mediaToSend, caption, isVid);
+                const mediaToSend = results.instagram?.videoBuffer || buffer;
+                const isVid = Boolean(results.instagram?.videoBuffer);
+                results.whatsapp = await publishWhatsAppStory(mediaToSend, caption, isVid);
+            }
+        } catch (waErr) {
+            console.warn('[publishRiveraStory] Warning saat posting WA Story 3:', waErr.message);
+            results.whatsappError = waErr.message;
         }
-    } catch (waErr) {
-        console.warn('[publishRiveraStory] Warning saat posting WA Story 3:', waErr.message);
-        results.whatsappError = waErr.message;
     }
 
     return { ...results, buffer, videoBuffer: results.instagram?.videoBuffer || null };
@@ -1233,6 +1535,11 @@ module.exports = {
     publishRiveraStory,
     saveSessionFromCookie,
     getUniqueTracks,
-    getActiveDJTracks
+    getActiveDJTracks,
+    getSoftDailyTheme,
+    SOFT_BLUE_THEMES,
+    generateSoftOpenSvg,
+    generateSoftDisclaimerSvg
 };
+
 

@@ -1895,6 +1895,18 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         return;
     }
 
+    // Command Khusus: Auto Story Open Toko Khusus Instagram (#openig / .openig)
+    if (rawCleanText === "#openig" || rawCleanText === ".openig") {
+        await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan banner Soft White-Blue & mempublikasikan Story ke Instagram (@unlocksinyalsolo) saja...*");
+        try {
+            await publishOpenStory({ igOnly: true });
+            await replyWhatsApp(replyJid, "✅ *BERHASIL!*\n\nStory 'WE ARE OPEN' dan 'DISCLAIMER ADD ROAMER' (Tema Soft White-Blue Elegan) telah berhasil terbit di *Instagram Story* (@unlocksinyalsolo)! 🎉" + BOT_FOOTER);
+        } catch (errOpen) {
+            await replyWhatsApp(replyJid, `❌ *Gagal posting Story Open IG:* ${errOpen.message}` + BOT_FOOTER);
+        }
+        return;
+    }
+
     // Command Khusus: Simulasi / Trigger Manual Story Rivera Group (#rivera [pesan])
     if (rawCleanText.startsWith("#rivera") || rawCleanText.startsWith(".rivera")) {
         const customMsg = rawCleanText.replace(/^([#.]rivera)/i, "").trim();
