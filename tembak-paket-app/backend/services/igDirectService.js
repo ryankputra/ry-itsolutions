@@ -1682,6 +1682,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
     const isFullClose = parsedData.type === "FULL_CLOSE";
     const isPartialClose = parsedData.type === "PARTIAL_CLOSE";
     const isDone = parsedData.type === "DONE_NOTIFICATION";
+    const isCloseListSlow = parsedData.type === "CLOSE_LIST_SLOW";
 
     const services = Array.isArray(parsedData.services) && parsedData.services.length > 0
         ? parsedData.services
@@ -1692,8 +1693,10 @@ async function generateRiveraUpdateGraphic(parsedData) {
 
     const cardsSvg = services.map((s, idx) => {
         const yPos = 595 + (idx * 155);
+        const isCardDoneTonight = s.status === "DONE_TONIGHT";
+        const isCardNextBatch = s.status === "NEXT_BATCH";
         const isCardDone = s.status === "DONE" || isDone;
-        const isCardReady = s.status === "READY" && !isCardDone;
+        const isCardReady = s.status === "READY" && !isCardDone && !isCardDoneTonight && !isCardNextBatch;
 
         let badgeColor = "#059669";
         let badgeBg = "#dcfce7";
@@ -1702,7 +1705,21 @@ async function generateRiveraUpdateGraphic(parsedData) {
         let cardBg = "#ffffff";
         let cardBorder = "#cbd5e1";
 
-        if (isCardDone) {
+        if (isCardDoneTonight) {
+            badgeColor = "#059669";
+            badgeBg = "#dcfce7";
+            badgeBorder = "#86efac";
+            badgeText = "DONE MALAM INI";
+            cardBg = "#f0fdf4";
+            cardBorder = "#bbf7d0";
+        } else if (isCardNextBatch) {
+            badgeColor = "#2563eb";
+            badgeBg = "#eff6ff";
+            badgeBorder = "#bfdbfe";
+            badgeText = "KLOTER BESOK";
+            cardBg = "#ffffff";
+            cardBorder = "#cbd5e1";
+        } else if (isCardDone) {
             badgeColor = "#059669";
             badgeBg = "#dcfce7";
             badgeBorder = "#86efac";
@@ -1724,18 +1741,18 @@ async function generateRiveraUpdateGraphic(parsedData) {
         return `
             <g transform="translate(80, ${yPos})">
                 <rect width="920" height="135" rx="24" fill="${cardBg}" stroke="${cardBorder}" stroke-width="2"/>
-                <text x="40" y="58" font-family="Arial, -apple-system, sans-serif" font-size="30" font-weight="900" fill="#0f172a">${cleanName}</text>
+                <text x="40" y="58" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="900" fill="#0f172a">${cleanName}</text>
                 <text x="40" y="98" font-family="Arial, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#475569">${cleanDesc}</text>
                 
                 <!-- Status Pill -->
-                <rect x="710" y="44" width="170" height="46" rx="23" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.6"/>
-                <circle cx="735" cy="67" r="6" fill="${badgeColor}"/>
-                <text x="800" y="74" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${badgeText}</text>
+                <rect x="690" y="44" width="190" height="46" rx="23" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.6"/>
+                <circle cx="715" cy="67" r="6" fill="${badgeColor}"/>
+                <text x="785" y="74" font-family="Arial, -apple-system, sans-serif" font-size="16" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${badgeText}</text>
             </g>
         `;
     }).join("\n");
 
-    // 4 Tampilan Desain Berbeda: ALL READY vs PARTIAL CLOSE vs FULL CLOSE vs DONE
+    // 5 Tampilan Desain Berbeda: ALL READY vs PARTIAL CLOSE vs FULL CLOSE vs DONE vs CLOSE_LIST_SLOW
     let badgeBgTop = "#dcfce7";
     let badgeStrokeTop = "#86efac";
     let badgeTextTop = "LIVE SERVER UPDATE";
@@ -1748,7 +1765,20 @@ async function generateRiveraUpdateGraphic(parsedData) {
     let mainSubTitle = "SLOT &amp; JALUR ON HARI INI";
     let mainSubTitleColor = theme.primaryColor;
 
-    if (isDone) {
+    if (isCloseListSlow) {
+        badgeBgTop = "#eff6ff";
+        badgeStrokeTop = "#bfdbfe";
+        badgeTextTop = "CUT-OFF KLOTER HARI INI";
+        badgeTextColorTop = "#1e3a8a";
+        dotColorTop = "#2563eb";
+        mainTitle = "CLOSE LIST 3B SLOW";
+        mainTitleFontSize = 52;
+        mainTitleLetterSpacing = 3;
+        mainTitleColor = "#1e3a8a";
+        const cutoffLabel = parsedData.cutoffTime ? `${parsedData.cutoffTime} WIB` : "14.00 WIB";
+        mainSubTitle = `ORDER SEBELUM ${cutoffLabel} SELESAI MALAM INI`;
+        mainSubTitleColor = "#2563eb";
+    } else if (isDone) {
         badgeBgTop = "#d1fae5";
         badgeStrokeTop = "#6ee7b7";
         badgeTextTop = "BATCH COMPLETED • SELESAI";
@@ -1792,7 +1822,12 @@ async function generateRiveraUpdateGraphic(parsedData) {
     let noteCardBorder = theme.primaryColor;
     let noteTextColor = theme.primaryColor;
 
-    if (isDone) {
+    if (isCloseListSlow) {
+        displayNote = "Pemesanan Web & WhatsApp Buka 24 Jam • Antrean Otomatis";
+        noteCardBg = "#eff6ff";
+        noteCardBorder = "#3b82f6";
+        noteTextColor = "#1d4ed8";
+    } else if (isDone) {
         displayNote = "3B SF Slow Selesai Diproses • Cek Status Resmi di Web";
         noteCardBg = "#f0fdf4";
         noteCardBorder = "#86efac";
@@ -1907,8 +1942,17 @@ async function publishRiveraStory(parsedData, options = {}) {
                     .map(s => `${s.status === 'READY' || s.status === 'DONE' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : (s.status === 'DONE' ? 'Done / Selesai' : 'Full Slot / Closed')} (${s.desc})`)
                     .join('\n');
 
+                const isCloseListSlow = parsedData.type === "CLOSE_LIST_SLOW";
                 let caption = '';
-                if (isDone) {
+                if (isCloseListSlow) {
+                    const cutoffLabel = parsedData.cutoffTime ? `${parsedData.cutoffTime} WIB` : "14.00 WIB";
+                    caption = `⏳ *INFO SERVER RIVERA: CLOSE LIST 3B SF SLOW (KLOTER HARI INI)!*\n\n` +
+                      `• Orderan yang masuk *sebelum ${cutoffLabel}* sedang diproses server dan estimasi *DONE malam ini*.\n` +
+                      `• Pemesanan via Web & WhatsApp *tetap buka 24 jam*. Orderan yang masuk *setelah ${cutoffLabel}* otomatis diproses pada *kloter esok hari*.\n\n` +
+                      `🛡️ *Pemesanan Web & WhatsApp Tetap Buka 24 Jam Tanpa Drama*\n` +
+                      `🗓️ ${dateWIB} (${timestampWIB} WIB)\n\n` +
+                      `🌐 Order via Web: https://ry-itsolutionts.web.id`;
+                } else if (isDone) {
                     caption = `✅ *INFO SERVER RIVERA: ANTREAN SELESAI DIPROSES (DONE 3B SLOW)!*\n\n` +
                       `Pesanan 3B SF Slow kloter saat ini telah selesai diproses oleh server.\n` +
                       `Silakan periksa status sinyal & verifikasi garansi digital Anda di web.\n\n` +
@@ -1950,6 +1994,24 @@ async function publishRiveraStory(parsedData, options = {}) {
     return { ...results, buffer, videoBuffer: videoData?.videoBuffer || null };
 }
 
+/**
+ * Publikasikan Story Khusus Close List 3B Slow (Pukul 14.00 WIB atau Jam Rivera)
+ */
+async function publishCloseListSlowStory(cutoffTime = '14:00', options = {}) {
+    const parsedData = {
+        type: "CLOSE_LIST_SLOW",
+        title: "CLOSE LIST 3B SLOW",
+        badge: "CUT-OFF KLOTER HARI INI",
+        cutoffTime: cutoffTime,
+        services: [
+            { name: `3B SF SLOW (< ${cutoffTime} WIB)`, status: "DONE_TONIGHT", desc: "Masuk antrean hari ini • Selesai malam ini" },
+            { name: `3B SF SLOW (> ${cutoffTime} WIB)`, status: "NEXT_BATCH", desc: "Pemesanan tetap dibuka • Diproses kloter besok" }
+        ],
+        note: "Pemesanan Web & WhatsApp Buka 24 Jam • Antrean Otomatis"
+    };
+    return await publishRiveraStory(parsedData, options);
+}
+
 module.exports = {
     publishToStory,
     publishToFeed,
@@ -1958,6 +2020,7 @@ module.exports = {
     generateRiveraUpdateGraphic,
     generateStoryVideo,
     publishRiveraStory,
+    publishCloseListSlowStory,
     deleteInstagramStory,
     saveSessionFromCookie,
     getUniqueTracks,

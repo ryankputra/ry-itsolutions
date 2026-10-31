@@ -583,6 +583,166 @@ export default function AdminImeiPage() {
             </div>
           </Card>
 
+          {/* Otomasi Sinkronisasi Real-Time Rivera */}
+          <Card glass className="p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-hairline pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-emerald-500" />
+                  Otomasi Sinkronisasi Real-Time Rivera
+                </h3>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Buka/tutup otomatis paket Fast & 1B via info grup WhatsApp Rivera.
+                </p>
+              </div>
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                pricing.rivera_auto_sync_status !== "false"
+                  ? "bg-emerald-500/10 text-emerald-600 border border-emerald-300"
+                  : "bg-gray-100 text-gray-500 border border-gray-200"
+              }`}>
+                {pricing.rivera_auto_sync_status !== "false" ? "Real-Time Aktif" : "Mode Jam Statis"}
+              </span>
+            </div>
+
+            {/* Toggle Utama Realtime Sync */}
+            <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-canvas border border-hairline">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-ink block">
+                  Aktifkan Sinkronisasi Real-Time
+                </span>
+                <p className="text-[11px] text-ink-muted leading-relaxed">
+                  Jika aktif, paket 3B Fast & 1B buka/tutup dinamis mengikuti chat grup Rivera. Jika nonaktif, mengikuti jam default statis di web.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const current = pricing.rivera_auto_sync_status !== "false";
+                  const updated = {
+                    ...pricing,
+                    rivera_auto_sync_status: current ? "false" : "true"
+                  };
+                  setPricing(updated);
+                  autoSavePricing(updated, true);
+                }}
+                className={`relative w-11 h-6 shrink-0 rounded-full transition-all ${
+                  pricing.rivera_auto_sync_status !== "false" ? "bg-emerald-500" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                    pricing.rivera_auto_sync_status !== "false" ? "translate-x-5" : ""
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Parameter Otomasi: Batas Malam & Cut-off Slow */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-1.5 shadow-xs">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-xs font-bold text-ink">Batas Pengaman Malam</span>
+                </div>
+                <p className="text-[10px] text-ink-muted leading-tight">
+                  Tutup otomatis paket Fast jika Rivera lupa info close (Default: 22.00 WIB).
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    type="number"
+                    min="18"
+                    max="24"
+                    placeholder="22"
+                    value={pricing.rivera_night_cutoff_hour || "22"}
+                    onChange={(e) => {
+                      const updated = { ...pricing, rivera_night_cutoff_hour: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                  <span className="text-xs font-bold text-ink-muted shrink-0">WIB</span>
+                </div>
+              </div>
+
+              <div className="bg-canvas border border-hairline p-3 rounded-xl space-y-1.5 shadow-xs">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-xs font-bold text-ink">Cut-off Close List 3B Slow</span>
+                </div>
+                <p className="text-[10px] text-ink-muted leading-tight">
+                  Jadwal auto-story & cut-off antrean kloter hari ini (Default: 14:00 WIB).
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    type="text"
+                    placeholder="14:00"
+                    value={pricing.rivera_slow_cutoff_time || "14:00"}
+                    onChange={(e) => {
+                      const updated = { ...pricing, rivera_slow_cutoff_time: e.target.value };
+                      setPricing(updated);
+                      autoSavePricing(updated);
+                    }}
+                  />
+                  <span className="text-xs font-bold text-ink-muted shrink-0">WIB</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Live Server Rivera Saat Ini */}
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-hairline space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-ink flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Status Live Rivera Saat Ini di Database:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...pricing,
+                      rivera_fast_realtime_status: "auto",
+                      rivera_1b_realtime_status: "auto"
+                    };
+                    setPricing(updated);
+                    autoSavePricing(updated, true);
+                    Swal.fire({ title: "Direset", text: "Status real-time kembali ke mode Auto.", timer: 1200, showConfirmButton: false });
+                  }}
+                  className="text-[10px] font-bold text-primary hover:underline"
+                >
+                  Reset ke Auto
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-canvas border border-hairline">
+                  <span className="text-ink-muted font-medium">3B SF Fast:</span>
+                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                    pricing.rivera_fast_realtime_status === "open"
+                      ? "bg-emerald-500/10 text-emerald-600"
+                      : pricing.rivera_fast_realtime_status === "closed"
+                      ? "bg-rose-500/10 text-rose-600"
+                      : "bg-blue-500/10 text-blue-600"
+                  }`}>
+                    {(pricing.rivera_fast_realtime_status || "auto").toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-lg bg-canvas border border-hairline">
+                  <span className="text-ink-muted font-medium">1B Digipos:</span>
+                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                    pricing.rivera_1b_realtime_status === "open"
+                      ? "bg-emerald-500/10 text-emerald-600"
+                      : pricing.rivera_1b_realtime_status === "closed"
+                      ? "bg-rose-500/10 text-rose-600"
+                      : "bg-blue-500/10 text-blue-600"
+                  }`}>
+                    {(pricing.rivera_1b_realtime_status || "auto").toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           {/* Daftar Paket Durasi IMEI */}
           <Card glass className="p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-hairline pb-3">

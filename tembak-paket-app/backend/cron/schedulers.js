@@ -402,6 +402,93 @@ function initSchedulers() {
             console.error('[Scheduler][IGStoryOpen] Error:', e.message);
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
+    // 7. Auto-post Story Close List 3B Slow (Default 14.00 WIB atau jam dinamis Rivera)
+    cron.schedule('* * * * *', async () => {
+        try {
+            const enabledRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_close_list_story_enabled'");
+            const isEnabled = (enabledRow?.value ?? 'true') === 'true';
+            if (!isEnabled) return;
+
+            const cutoffRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_slow_cutoff_time'");
+            const scheduledTime = (cutoffRow?.value || '14:00').replace('.', ':');
+
+            const now = new Date();
+            const nowTimeWIB = now.toLocaleTimeString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }).replace('.', ':');
+
+            const todayDateWIB = now.toLocaleDateString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+
+            if (nowTimeWIB === scheduledTime) {
+                const lastRunRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_close_list_last_run'");
+                if (lastRunRow?.value === todayDateWIB) {
+                    return; // Sudah terbit hari ini
+                }
+
+                console.log(`[Scheduler][RiveraCloseListSlow] ⏳ Menjalankan Story Close List 3B Slow (${scheduledTime} WIB) pada ${todayDateWIB}...`);
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_close_list_last_run', ?)", [todayDateWIB]);
+
+                const { publishCloseListSlowStory } = require('../services/igDirectService');
+                await publishCloseListSlowStory(scheduledTime);
+
+                console.log('[Scheduler][RiveraCloseListSlow] ✅ Story Close List 3B Slow berhasil diposting otomatis ke Instagram & WA Story');
+
+                // Notifikasi ke WhatsApp Admin
+                try {
+                    const waBot = require('../services/waBot');
+                    const adminPhones = await waBot.getAdminPhoneNumbers();
+                    const adminNotice = `📢 *STORY CLOSE LIST 3B SLOW OTOMATIS TERBIT!*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                        `⏰ *Waktu Cut-Off:* ${scheduledTime} WIB\n` +
+                        `ℹ️ Order sebelum jam tersebut masuk antrean malam ini.\n` +
+                        `🌐 Pemesanan via Web & WhatsApp tetap buka 24 jam.\n` +
+                        `📸 Tayang di Instagram Story & WhatsApp Story Bot.`;
+                    for (const phone of adminPhones) {
+                        await waBot.sendAndStoreMessage(`${waBot.cleanPhone(phone)}@s.whatsapp.net`, { text: adminNotice });
+                    }
+                } catch (errNotify) {
+                    console.error('[Scheduler][RiveraCloseListSlow] Gagal notifikasi WA admin:', errNotify.message);
+                }
+            }
+        } catch (e) {
+            console.error('[Scheduler][RiveraCloseListSlow] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
+    // 8. Batas Pengaman Malam Rivera (Fail-safe Night Cutoff Pukul 22.00 WIB)
+    // Jika Rivera lupa menginfokan tutup di grup, paket Fast & 1B otomatis diset CLOSED di web
+    cron.schedule('0 22 * * *', async () => {
+        try {
+            console.log('[Scheduler][RiveraNightCutoff] 🌙 Menjalankan batas pengaman malam (22.00 WIB): Menutup paket Fast & 1B otomatis...');
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'closed')");
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'closed')");
+            console.log('[Scheduler][RiveraNightCutoff] ✅ Status Fast & 1B di database berhasil diset CLOSED.');
+        } catch (e) {
+            console.error('[Scheduler][RiveraNightCutoff] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
+
+    // 9. Reset Harian Status Rivera ke Mode 'auto' (Pukul 00.00 WIB Tengah Malam)
+    // Mengembalikan status real-time Fast & 1B ke mode normal 'auto' untuk hari yang baru
+    cron.schedule('0 0 * * *', async () => {
+        try {
+            console.log('[Scheduler][RiveraMidnightReset] 🔄 Mereset status real-time Rivera ke mode auto untuk hari baru...');
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'auto')");
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'auto')");
+            console.log('[Scheduler][RiveraMidnightReset] ✅ Status Fast & 1B di database berhasil direset ke AUTO.');
+        } catch (e) {
+            console.error('[Scheduler][RiveraMidnightReset] Error:', e.message);
+        }
+    }, { scheduled: true, timezone: 'Asia/Jakarta' });
 }
 
 module.exports = {

@@ -226,6 +226,18 @@ router.get('/imei-packages', async (req, res) => {
             ? "SELECT * FROM imei_packages ORDER BY price ASC"
             : "SELECT * FROM imei_packages WHERE isVisible = 1 OR isVisible IS NULL ORDER BY price ASC";
         const rows = await dbAll(query);
+
+        // Pengaturan real-time status dari grup Rivera
+        const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('rivera_auto_sync_status', 'rivera_night_cutoff_hour', 'rivera_fast_realtime_status', 'rivera_1b_realtime_status')");
+        const settingsMap = (settingsRows || []).reduce((acc, r) => ({ ...acc, [r.key]: r.value }), {});
+        const isAutoSync = settingsMap.rivera_auto_sync_status !== 'false'; // default aktif
+        const nightCutoff = parseInt(settingsMap.rivera_night_cutoff_hour || '22', 10);
+        const fastRealtime = settingsMap.rivera_fast_realtime_status || 'auto';
+        const oneBRealtime = settingsMap.rivera_1b_realtime_status || 'auto';
+
+        const wibHour = getWibNow().getHours();
+        const isNightCutoffPassed = wibHour >= nightCutoff || wibHour < 9; // Jam 22.00 - 09.00 malam tutup fail-safe
+
         const data = (rows || []).map(r => {
             let allowed_speeds = ['fast', 'semi', 'slow'];
             if (r.allowed_speeds) {
@@ -241,18 +253,55 @@ router.get('/imei-packages', async (req, res) => {
                     if (parsed && typeof parsed === 'object') speed_prices = parsed;
                 } catch (e) {}
             }
+
+            const openH = r.open_hour === undefined || r.open_hour === null ? null : Number(r.open_hour);
+            const closeH = r.close_hour === undefined || r.close_hour === null ? null : Number(r.close_hour);
+            const defaultOpen = isWithinOpenHours(openH, closeH);
+
+            let isOpenNow = defaultOpen;
+
+            // Jika sinkronisasi real-time Rivera diaktifkan:
+            if (isAutoSync) {
+                const durLower = (r.duration || '').toLowerCase();
+                const isSlowOnly = durLower.includes('slow') && !durLower.includes('fast');
+                const isFast = durLower.includes('fast') && durLower.includes('3');
+                const is1B = durLower.includes('1') && durLower.includes('bulan');
+
+                if (isSlowOnly) {
+                    // 3B Slow selalu menerima order 24 jam via web & WA
+                    isOpenNow = true;
+                } else if (isFast) {
+                    if (isNightCutoffPassed) {
+                        isOpenNow = false; // Batas pengaman malam pukul 22.00 WIB
+                    } else if (fastRealtime === 'closed') {
+                        isOpenNow = false;
+                    } else if (fastRealtime === 'open') {
+                        isOpenNow = true;
+                    } else {
+                        isOpenNow = defaultOpen;
+                    }
+                } else if (is1B) {
+                    if (isNightCutoffPassed) {
+                        isOpenNow = false; // Batas pengaman malam pukul 22.00 WIB
+                    } else if (oneBRealtime === 'closed') {
+                        isOpenNow = false;
+                    } else if (oneBRealtime === 'open') {
+                        isOpenNow = true;
+                    } else {
+                        isOpenNow = defaultOpen;
+                    }
+                }
+            }
+
             return {
                 ...r,
                 isVisible: r.isVisible === undefined || r.isVisible === null ? 1 : Number(r.isVisible),
                 allowed_speeds,
                 speed_prices,
-                open_hour: r.open_hour === undefined || r.open_hour === null ? null : Number(r.open_hour),
-                close_hour: r.close_hour === undefined || r.close_hour === null ? null : Number(r.close_hour),
-                // ponytail: NULL jam = buka 24 jam; flag ini dipakai UI untuk disable kartu + tombol beli
-                is_open_now: isWithinOpenHours(
-                    r.open_hour === undefined || r.open_hour === null ? null : Number(r.open_hour),
-                    r.close_hour === undefined || r.close_hour === null ? null : Number(r.close_hour)
-                )
+                open_hour: openH,
+                close_hour: closeH,
+                is_open_now: isOpenNow,
+                realtime_sync_enabled: isAutoSync
             };
         });
         res.json({ status: true, data, packages: data });
@@ -328,12 +377,18 @@ router.get(['/manual-services-pricing', '/manual-services/pricing'], async (req,
             imei_speed_fast_range: '1-3 Jam',
             imei_speed_semi_range: '1-12 Jam',
             imei_speed_slow_range: 'Max kirim jam 14:00, selesai jam 00:00 WIB',
-            imei_auto_processing: 'false'
+            imei_auto_processing: 'false',
+            rivera_auto_sync_status: 'true',
+            rivera_night_cutoff_hour: '22',
+            rivera_slow_cutoff_time: '14:00',
+            rivera_slow_cutoff_hour: '14',
+            rivera_fast_realtime_status: 'auto',
+            rivera_1b_realtime_status: 'auto'
         };
         for (const [key, value] of Object.entries(defaults)) {
             await dbRun("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
         }
-        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'imei_speed_fast_maintenance_until', 'imei_speed_semi_maintenance_until', 'imei_speed_slow_maintenance_until', 'imei_auto_processing')");
+        const rows = await dbAll("SELECT key, value FROM settings WHERE key IN ('price_ceir_history', 'price_ceir_register', 'imei_speed_fast', 'imei_speed_semi', 'imei_speed_slow', 'imei_speed_fast_status', 'imei_speed_semi_status', 'imei_speed_slow_status', 'imei_speed_fast_range', 'imei_speed_semi_range', 'imei_speed_slow_range', 'imei_speed_fast_maintenance_until', 'imei_speed_semi_maintenance_until', 'imei_speed_slow_maintenance_until', 'imei_auto_processing', 'rivera_auto_sync_status', 'rivera_night_cutoff_hour', 'rivera_slow_cutoff_time', 'rivera_slow_cutoff_hour', 'rivera_fast_realtime_status', 'rivera_1b_realtime_status')");
         const pricing = rows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
         for (const [key, value] of Object.entries(defaults)) {
             if (!(key in pricing)) pricing[key] = value;

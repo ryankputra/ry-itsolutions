@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const { calculateTransactionWarranty } = require("../utils/warrantyHelper");
+const { dbGet, dbRun, dbAll } = require("../config/db");
 
 function ensureDirExists(dir) {
     if (!fs.existsSync(dir)) {
@@ -80,6 +81,47 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
     if (!parsed || parsed.type === "IRRELEVANT") {
         console.log('[RiveraListener] Pesan diabaikan karena obrolan umum.');
         return;
+    }
+
+    // 2b. Sinkronisasi status real-time layanan ke database website (3B Fast & 1B Digipos)
+    try {
+        const autoSyncRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_auto_sync_status'");
+        const isAutoSync = !autoSyncRow || autoSyncRow.value !== 'false';
+
+        if (isAutoSync && parsed) {
+            if (parsed.type === "FULL_CLOSE") {
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'closed')");
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'closed')");
+                console.log("[RiveraSync] Auto-Sync Web: Semua layanan Fast & 1B diset CLOSED.");
+            } else if (parsed.type === "SLOT_UPDATE" || parsed.type === "PARTIAL_CLOSE") {
+                if (Array.isArray(parsed.services)) {
+                    for (const s of parsed.services) {
+                        const sName = (s.name || '').toUpperCase();
+                        const isReady = s.status === 'READY';
+                        if (sName.includes('FAST')) {
+                            const newStatus = isReady ? 'open' : 'closed';
+                            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', ?)", [newStatus]);
+                            console.log(`[RiveraSync] Auto-Sync Web: 3B SF Fast diset ${newStatus.toUpperCase()}.`);
+                        }
+                        if (sName.includes('1B') || sName.includes('DIGIPOS')) {
+                            const newStatus = isReady ? 'open' : 'closed';
+                            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', ?)", [newStatus]);
+                            console.log(`[RiveraSync] Auto-Sync Web: 1B Digipos diset ${newStatus.toUpperCase()}.`);
+                        }
+                    }
+                }
+            }
+
+            // Deteksi jam cut-off jika Rivera menginfokan di grup (misal: "cut off jam 15.00" atau "close list jam 14.30")
+            const cutoffMatch = messageText.match(/(?:cut\s*off|close\s*list|list\s*sampai)\s*(?:jam\s*)?(\d{1,2})[.:](\d{2})/i);
+            if (cutoffMatch) {
+                const detectedCutoff = `${cutoffMatch[1].padStart(2, '0')}:${cutoffMatch[2]}`;
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_slow_cutoff_time', ?)", [detectedCutoff]);
+                console.log(`[RiveraSync] Auto-Sync Web: Jam Cut-off 3B Slow terdeteksi & diperbarui ke ${detectedCutoff} WIB.`);
+            }
+        }
+    } catch (syncErr) {
+        console.warn("[RiveraSync] Gagal update real-time status ke DB:", syncErr.message);
     }
 
     if (parsed.type === "DONE_NOTIFICATION") {
@@ -240,7 +282,6 @@ const pino = require("pino");
 const QRCode = require("qrcode");
 const { exec } = require("child_process");
 const NodeCache = require("node-cache");
-const { dbGet, dbRun, dbAll } = require("../config/db");
 const { sseSend, sseBroadcast } = require("../middleware/auth");
 
 // E2E Signal ratchet retry cache & message store to prevent 'Menunggu pesan ini / Waiting for this message'
