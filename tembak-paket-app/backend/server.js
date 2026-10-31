@@ -352,6 +352,23 @@ app.post('/api/internal/trigger-testimoni', async (req, res) => {
     }
 });
 
+// Internal (localhost-only): hapus story di Instagram via private API
+app.post('/api/internal/delete-story', async (req, res) => {
+    try {
+        const ip = req.ip || req.socket?.remoteAddress || "";
+        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
+        }
+        const { mediaId } = req.body || {};
+        if (!mediaId) return res.status(400).json({ status: false, message: "mediaId is required" });
+        const igDirectService = require('./services/igDirectService');
+        const result = await igDirectService.deleteInstagramStory(mediaId);
+        res.json({ status: true, data: result });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // 9. Initialize Cron Schedulers
 initSchedulers();
 

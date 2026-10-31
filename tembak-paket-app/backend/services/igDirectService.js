@@ -300,7 +300,7 @@ async function prepareImageForStory(imageBuffer, trackInfo = null, options = {})
             return await sharp(imageBuffer).jpeg({ quality: 95 }).toBuffer();
         }
 
-        // Overlay music sticker saja di safe zone y=185 tanpa mengubah ukuran atau memperkecil gambar dasar
+        // Overlay music sticker saja di safe zone y=150 tanpa mengubah ukuran atau memperkecil gambar dasar
         const musicBarSvg = `
         <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -308,21 +308,21 @@ async function prepareImageForStory(imageBuffer, trackInfo = null, options = {})
                     <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.08"/>
                 </filter>
             </defs>
-            <g transform="translate(150, 185)" filter="url(#musicShadow)">
-                <rect width="780" height="74" rx="37" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="1.8" />
-                <circle cx="44" cy="37" r="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="1.5"/>
-                <path d="M41 45V31l8-2v11" fill="none" stroke="${theme.primaryColor}" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="39" cy="44" r="3" fill="${theme.primaryColor}"/>
-                <circle cx="47" cy="42" r="3" fill="${theme.primaryColor}"/>
-                <text x="82" y="34" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="bold" fill="#0f172a">${safeTitle.slice(0, 32)}</text>
-                <text x="82" y="56" font-family="Arial, -apple-system, sans-serif" font-size="16" fill="#64748b">${safeArtist.slice(0, 36)}</text>
-                <g transform="translate(680, 22)">
-                    <rect x="0" y="10" width="4" height="20" rx="2" fill="${theme.primaryColor}" />
-                    <rect x="8" y="4" width="4" height="26" rx="2" fill="${theme.secondaryColor}" />
-                    <rect x="16" y="14" width="4" height="16" rx="2" fill="${theme.primaryColor}" />
-                    <rect x="24" y="2" width="4" height="28" rx="2" fill="${theme.secondaryColor}" />
-                    <rect x="32" y="8" width="4" height="22" rx="2" fill="${theme.primaryColor}" />
-                    <rect x="40" y="16" width="4" height="14" rx="2" fill="${theme.secondaryColor}" />
+            <g transform="translate(150, 150)" filter="url(#musicShadow)">
+                <rect width="780" height="66" rx="33" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="1.8" />
+                <circle cx="38" cy="33" r="19" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="1.5"/>
+                <path d="M35 40V27l8-2v11" fill="none" stroke="${theme.primaryColor}" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="33" cy="39" r="2.8" fill="${theme.primaryColor}"/>
+                <circle cx="41" cy="37" r="2.8" fill="${theme.primaryColor}"/>
+                <text x="74" y="30" font-family="Arial, -apple-system, sans-serif" font-size="19" font-weight="bold" fill="#0f172a">${safeTitle.slice(0, 32)}</text>
+                <text x="74" y="50" font-family="Arial, -apple-system, sans-serif" font-size="15" fill="#64748b">${safeArtist.slice(0, 36)}</text>
+                <g transform="translate(680, 18)">
+                    <rect x="0" y="10" width="4" height="18" rx="2" fill="${theme.primaryColor}" />
+                    <rect x="8" y="4" width="4" height="24" rx="2" fill="${theme.secondaryColor}" />
+                    <rect x="16" y="14" width="4" height="14" rx="2" fill="${theme.primaryColor}" />
+                    <rect x="24" y="2" width="4" height="26" rx="2" fill="${theme.secondaryColor}" />
+                    <rect x="32" y="8" width="4" height="20" rx="2" fill="${theme.primaryColor}" />
+                    <rect x="40" y="16" width="4" height="12" rx="2" fill="${theme.secondaryColor}" />
                 </g>
             </g>
         </svg>
@@ -754,6 +754,59 @@ async function publishToStory(imageBuffer, customTrack = null, options = {}) {
             imageBuffer: formattedBuffer,
             track
         };
+    }
+}
+
+/**
+ * Hapus Story / Media di Instagram via Private API
+ */
+async function deleteInstagramStory(mediaId) {
+    try {
+        const { sessionId, dsUserId } = getSessionCredentials();
+        if (!sessionId || !dsUserId) {
+            console.warn('[IGDirect] Tidak ada credentials Instagram untuk menghapus story.');
+            return { success: false, message: 'Tidak ada session Instagram.' };
+        }
+        const csrf = await fetchCsrfToken(sessionId, dsUserId);
+        const cleanMediaId = String(mediaId).split('_')[0];
+
+        const endpoints = [
+            `https://www.instagram.com/api/v1/media/${cleanMediaId}/delete/?media_type=VIDEO`,
+            `https://www.instagram.com/api/v1/media/${cleanMediaId}/delete/?media_type=PHOTO`,
+            `https://i.instagram.com/api/v1/media/${cleanMediaId}/delete/`
+        ];
+
+        for (const url of endpoints) {
+            try {
+                const body = new URLSearchParams({
+                    media_id: cleanMediaId,
+                    _csrftoken: csrf,
+                    _uid: dsUserId
+                }).toString();
+
+                const res = await axios.post(url, body, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                        'X-IG-App-ID': '936619743392459',
+                        'X-CSRFToken': csrf,
+                        'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    httpsAgent: ipv4Agent
+                });
+
+                if (res.data?.did_delete || res.data?.status === 'ok') {
+                    console.log(`[IGDirect] ✅ Berhasil menghapus story IG (Media ID: ${cleanMediaId})`);
+                    return { success: true, data: res.data };
+                }
+            } catch (err) {
+                console.warn(`[IGDirect] Percobaan hapus di ${url}:`, err.response?.data?.message || err.message);
+            }
+        }
+        return { success: false, message: 'Instagram menolak request hapus media.' };
+    } catch (e) {
+        console.error('[IGDirect] Error deleteInstagramStory:', e.message);
+        return { success: false, message: e.message };
     }
 }
 
@@ -1256,12 +1309,12 @@ ATURAN WAJIB (SANGAT KETAT):
 5. Output HANYA JSON murni tanpa blok markdown/backticks:
 {
   "type": "SLOT_UPDATE",
-  "title": "STATUS KLOTER & SLOT HARI INI",
+  "title": "READY",
   "badge": "LIVE UPDATE",
   "services": [
     { "name": "3B SF SLOW", "status": "READY", "desc": "Done Malam • Sent s/d Sore" }
   ],
-  "note": "Semua Bergaransi Tanpa Drama 🎭"
+  "note": "Semua Bergaransi Tanpa Drama"
 }
 
 Pesan:
@@ -1298,13 +1351,14 @@ ${rawText}`;
         console.warn('[parseRiveraMessage] Gemini parsing fallback:', e.message);
     }
 
-    // 3. Fallback Heuristik Lokal (Zero failure risk)
+    // 3. Fallback Heuristik Lokal Lengkap (Zero failure risk)
     const upper = rawText.toUpperCase();
-    const isCloseAll = /(CLOSE\s*ALL|OFF\s*SEMUA|TUTUP\s*SEMUA|FULL\s*SEMUA)/i.test(upper);
+    const isCloseAll = /(CLOSE\s*ALL|OFF\s*SEMUA|TUTUP\s*SEMUA|FULL\s*SEMUA|STOP\s*ORDER|KLOTER\s*CLOSED|SEMUA\s*OFF)/i.test(upper);
     const services = [];
 
-    if (upper.includes("3B SF SLOW") || upper.includes("SLOW")) {
-        const isClosed = /(SLOW.*(OFF|FULL|TUTUP|CLOSE)|(OFF|FULL|TUTUP|CLOSE).*SLOW)/i.test(upper);
+    // Deteksi SLOW (ON vs CLOSED)
+    if (upper.includes("3B SF SLOW") || upper.includes("SLOW") || upper.includes("3B SLOW")) {
+        const isClosed = /(SLOW.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*SLOW)/i.test(upper);
         services.push({
             name: "3B SF SLOW",
             status: isClosed ? "FULL_SLOT" : "READY",
@@ -1312,21 +1366,33 @@ ${rawText}`;
         });
     }
 
-    if (upper.includes("3B SF FAST") || upper.includes("FAST")) {
-        const isClosed = /(FAST.*(OFF|FULL|TUTUP|CLOSE)|(OFF|FULL|TUTUP|CLOSE).*FAST)/i.test(upper);
+    // Deteksi FAST (ON vs CLOSED)
+    if (upper.includes("3B SF FAST") || upper.includes("FAST") || upper.includes("3B FAST")) {
+        const isClosed = /(FAST.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*FAST)/i.test(upper);
         services.push({
             name: "3B SF FAST",
             status: isClosed ? "FULL_SLOT" : "READY",
-            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Proses Cepat (Under 15 Menit)"
+            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Proses Cepat Under 15 Menit"
         });
     }
 
+    // Deteksi 1B / DIGIPOS
     if (upper.includes("1B") || upper.includes("DIGIPOS")) {
-        const isClosed = /(DIGIPOS.*(OFF|FULL|TUTUP|CLOSE)|(OFF|FULL|TUTUP|CLOSE).*DIGIPOS)/i.test(upper);
+        const isClosed = /(DIGIPOS.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*DIGIPOS|1B.*(OFF|FULL|TUTUP|CLOSE)|(OFF|FULL|TUTUP|CLOSE).*1B)/i.test(upper);
         services.push({
             name: "1B DIGIPOS",
             status: isClosed ? "FULL_SLOT" : "READY",
             desc: isClosed ? "Full Slot / Ditutup Sementara" : "Ready Jalur Khusus Promo"
+        });
+    }
+
+    // Jika ada kata umum 3B tanpa sebut fast/slow, tapi ada indikasi open
+    if (services.length === 0 && (upper.includes("3B") || upper.includes("KLOTER") || upper.includes("SLOT"))) {
+        const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP)/i.test(upper);
+        services.push({
+            name: "3B SF",
+            status: isClosed ? "FULL_SLOT" : "READY",
+            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Slot Tersedia Hari Ini"
         });
     }
 
@@ -1339,10 +1405,10 @@ ${rawText}`;
 
     return {
         type: allClosed ? "FULL_CLOSE" : (anyClosed ? "PARTIAL_CLOSE" : "SLOT_UPDATE"),
-        title: allClosed ? "ORDERAN KLOTER HARI INI DITUTUP" : "STATUS KLOTER & SLOT HARI INI",
+        title: allClosed ? "CLOSED" : "READY",
         badge: allClosed ? "CLOSED" : (anyClosed ? "UPDATE SLOT" : "LIVE UPDATE"),
         services,
-        note: upper.includes("DRAMA") ? "Semua Bergaransi Tanpa Drama 🎭" : "Pengerjaan Bergaransi Penuh Sesuai Antrean"
+        note: "Semua Bergaransi Tanpa Drama"
     };
 }
 
@@ -1361,12 +1427,12 @@ async function generateRiveraUpdateGraphic(parsedData) {
         ? parsedData.services
         : [
             { name: "3B SF SLOW", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Done Malam • Sent s/d Sore" },
-            { name: "3B SF FAST", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Proses Cepat (Under 15 Menit)" },
+            { name: "3B SF FAST", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Proses Cepat Under 15 Menit" },
             { name: "1B DIGIPOS", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Ready Jalur Khusus Promo" }
         ];
 
     const cardsSvg = services.map((s, idx) => {
-        const yPos = 730 + (idx * 165);
+        const yPos = 615 + (idx * 155);
         const isReady = s.status === "READY";
         const badgeColor = isReady ? "#059669" : "#e11d48";
         const badgeBg = isReady ? "#dcfce7" : "#ffe4e6";
@@ -1374,30 +1440,37 @@ async function generateRiveraUpdateGraphic(parsedData) {
         const badgeText = isReady ? "READY" : (s.status === "FULL_SLOT" ? "FULL SLOT" : "CLOSED");
         const cardBg = isReady ? "#ffffff" : "#fff1f2";
         const cardBorder = isReady ? "#cbd5e1" : "#fecdd3";
-        const cleanName = escapeXml(s.name ? s.name.replace(/smartfren/gi, 'SF') : '');
-        const cleanDesc = escapeXml(s.desc ? s.desc.replace(/smartfren/gi, 'SF') : '');
+        const cleanName = escapeXml(s.name ? s.name.replace(/smartfren/gi, 'SF').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '') : '');
+        const cleanDesc = escapeXml(s.desc ? s.desc.replace(/smartfren/gi, 'SF').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '') : '');
 
         return `
             <g transform="translate(80, ${yPos})">
-                <rect width="920" height="145" rx="24" fill="${cardBg}" stroke="${cardBorder}" stroke-width="2"/>
-                <text x="40" y="62" font-family="Arial, -apple-system, sans-serif" font-size="32" font-weight="900" fill="#0f172a">${cleanName}</text>
-                <text x="40" y="105" font-family="Arial, -apple-system, sans-serif" font-size="22" font-weight="500" fill="#475569">${cleanDesc}</text>
+                <rect width="920" height="135" rx="24" fill="${cardBg}" stroke="${cardBorder}" stroke-width="2"/>
+                <text x="40" y="58" font-family="Arial, -apple-system, sans-serif" font-size="30" font-weight="900" fill="#0f172a">${cleanName}</text>
+                <text x="40" y="98" font-family="Arial, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#475569">${cleanDesc}</text>
                 
                 <!-- Status Pill -->
-                <rect x="710" y="42" width="170" height="48" rx="24" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.6"/>
-                <circle cx="735" cy="66" r="6" fill="${badgeColor}"/>
-                <text x="800" y="73" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${badgeText}</text>
+                <rect x="710" y="44" width="170" height="46" rx="23" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.6"/>
+                <circle cx="735" cy="67" r="6" fill="${badgeColor}"/>
+                <text x="800" y="74" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${badgeText}</text>
             </g>
         `;
     }).join("\n");
 
     const badgeBgTop = isFullClose ? "#ffe4e6" : "#dcfce7";
     const badgeStrokeTop = isFullClose ? "#fca5a5" : "#86efac";
-    const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : escapeXml(parsedData.badge || "LIVE SERVER & SLOT UPDATE");
+    const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : "LIVE SERVER UPDATE";
     const badgeTextColorTop = isFullClose ? "#be123c" : "#15803d";
-    const mainTitle = isFullClose ? "ORDERAN KLOTER HARI INI" : escapeXml(parsedData.title || "STATUS KLOTER & SLOT");
-    const mainSubTitle = isFullClose ? "DITUTUP SEMENTARA" : "HARI INI";
-    const mainSubTitleColor = isFullClose ? "#e11d48" : theme.primaryColor;
+    
+    // Sesuai permintaan user: ganti judul panjang menjadi READY
+    const mainTitle = isFullClose ? "CLOSED" : "READY";
+    const mainSubTitle = isFullClose ? "ORDERAN KLOTER DITUTUP" : "SLOT &amp; JALUR ON HARI INI";
+    const mainTitleColor = isFullClose ? "#e11d48" : "#059669";
+    const mainSubTitleColor = isFullClose ? "#be123c" : theme.primaryColor;
+
+    // Bersihkan emoji dari note agar tidak menghasilkan missing glyph / kotak silang di server Linux
+    const rawNote = parsedData.note || 'Semua Bergaransi Tanpa Drama';
+    const cleanNote = escapeXml(rawNote.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '').trim() || 'Semua Bergaransi Tanpa Drama');
 
     const svg = `
         <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
@@ -1420,45 +1493,45 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <circle cx="540" cy="380" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
             <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
 
-            <!-- Logo Seal (y=210) -->
-            <g transform="translate(470, 210)">
-                <circle cx="70" cy="70" r="62" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="3" filter="url(#cardShadow)"/>
-                <text x="70" y="83" font-family="Arial, -apple-system, sans-serif" font-size="38" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
+            <!-- Logo Seal RY (y=245, bebas tabrakan dengan stiker musik di atasnya) -->
+            <g transform="translate(485, 245)">
+                <circle cx="55" cy="55" r="50" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5" filter="url(#cardShadow)"/>
+                <text x="55" y="66" font-family="Arial, -apple-system, sans-serif" font-size="32" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
             </g>
 
             <!-- Pill Badge -->
-            <rect x="310" y="365" width="460" height="46" rx="23" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
-            <circle cx="340" cy="388" r="7" fill="${isFullClose ? '#e11d48' : '#16a34a'}"/>
-            <text x="545" y="396" font-family="Arial, -apple-system, sans-serif" font-size="20" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
+            <rect x="340" y="370" width="400" height="42" rx="21" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
+            <circle cx="368" cy="391" r="6.5" fill="${isFullClose ? '#e11d48' : '#16a34a'}"/>
+            <text x="548" y="399" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
 
-            <!-- Main Headline -->
-            <text x="540" y="480" font-family="Arial, -apple-system, sans-serif" font-size="64" font-weight="900" fill="#0f172a" text-anchor="middle">${mainTitle}</text>
-            <text x="540" y="535" font-family="Arial, -apple-system, sans-serif" font-size="36" font-weight="900" fill="${mainSubTitleColor}" text-anchor="middle">${mainSubTitle}</text>
-            <text x="540" y="580" font-family="Arial, -apple-system, sans-serif" font-size="24" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
+            <!-- Main Headline: READY (Besar & Elegan, tidak terpotong) -->
+            <text x="540" y="475" font-family="Arial, -apple-system, sans-serif" font-size="80" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="4">${mainTitle}</text>
+            <text x="540" y="522" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle">${mainSubTitle}</text>
+            <text x="540" y="562" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
 
             <!-- Dynamic Service Cards -->
             <g filter="url(#cardShadow)">
                 ${cardsSvg}
             </g>
 
-            <!-- Slogan Guarantee Card -->
-            <g transform="translate(80, 1260)" filter="url(#cardShadow)">
-                <rect width="920" height="100" rx="24" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="2"/>
-                <text x="460" y="62" font-family="Arial, -apple-system, sans-serif" font-size="26" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${escapeXml(parsedData.note || 'SEMUA BERGARANSI TANPA ADA DRAMA 🎭')}</text>
+            <!-- Slogan Guarantee Card (Bebas emoji rusak) -->
+            <g transform="translate(80, 1100)" filter="url(#cardShadow)">
+                <rect width="920" height="88" rx="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="2"/>
+                <text x="460" y="54" font-family="Arial, -apple-system, sans-serif" font-size="24" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${cleanNote}</text>
             </g>
 
             <!-- Footer Info Card -->
-            <g transform="translate(80, 1390)" filter="url(#cardShadow)">
-                <rect width="920" height="210" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-                <text x="460" y="56" font-family="Arial, -apple-system, sans-serif" font-size="26" font-weight="bold" fill="#0f172a" text-anchor="middle">Pemesanan &amp; Antrean Via Web / WhatsApp</text>
+            <g transform="translate(80, 1215)" filter="url(#cardShadow)">
+                <rect width="920" height="200" rx="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                <text x="460" y="52" font-family="Arial, -apple-system, sans-serif" font-size="25" font-weight="bold" fill="#0f172a" text-anchor="middle">Pemesanan &amp; Antrean Via Web / WhatsApp</text>
                 
-                <g transform="translate(310, 108)">
+                <g transform="translate(310, 104)">
                     <circle cx="0" cy="0" r="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2.5"/>
                     <ellipse cx="0" cy="0" rx="6" ry="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2"/>
                     <line x1="-14" y1="0" x2="14" y2="0" stroke="${theme.primaryColor}" stroke-width="2"/>
                 </g>
-                <text x="340" y="117" font-family="Arial, -apple-system, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
-                <text x="460" y="165" font-family="Arial, -apple-system, sans-serif" font-size="21" fill="#64748b" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
+                <text x="340" y="113" font-family="Arial, -apple-system, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
+                <text x="460" y="160" font-family="Arial, -apple-system, sans-serif" font-size="20" fill="#64748b" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
             </g>
         </svg>
     `;
@@ -1494,6 +1567,8 @@ async function publishRiveraStory(parsedData, options = {}) {
                     .map(s => `${s.status === 'READY' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : 'Full Slot / Closed'} (${s.desc})`)
                     .join('\n');
 
+                const cleanNote = (parsedData.note || 'Semua Bergaransi Tanpa Drama').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '').trim();
+
                 const caption = isFullClose
                     ? `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
                       `Antrean kloter saat ini sedang diproses.\n` +
@@ -1502,7 +1577,7 @@ async function publishRiveraStory(parsedData, options = {}) {
                       `🌐 https://ry-itsolutionts.web.id`
                     : `⚡ *LIVE STATUS & SLOT UPDATE HARI INI!*\n\n` +
                       `${servicesText}\n\n` +
-                      `🛡️ *${parsedData.note || 'Semua Bergaransi Tanpa Drama 🎭'}*\n` +
+                      `🛡️ *${cleanNote}*\n` +
                       `⏰ Update: ${timestampWIB} WIB\n\n` +
                       `🌐 Order via Web: https://ry-itsolutionts.web.id`;
 
@@ -1526,6 +1601,7 @@ module.exports = {
     parseRiveraMessage,
     generateRiveraUpdateGraphic,
     publishRiveraStory,
+    deleteInstagramStory,
     saveSessionFromCookie,
     getUniqueTracks,
     getRandomTrack,
