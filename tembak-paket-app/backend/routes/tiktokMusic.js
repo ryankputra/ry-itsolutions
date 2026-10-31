@@ -114,17 +114,45 @@ router.get('/stream', async (req, res) => {
             return res.status(404).json({ success: false, message: "Audio stream tidak ditemukan." });
         }
 
-        // Proxy audio stream dari GoogleVideo langsung ke client
-        const clientReq = (streamUrl.startsWith('https') ? https : http).get(streamUrl, (upstreamRes) => {
+        // Proxy audio stream dari GoogleVideo langsung ke client dengan dukungan Range & User-Agent
+        const upstreamHeaders = {
+            'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+        };
+        if (req.headers.range) {
+            upstreamHeaders['Range'] = req.headers.range;
+        }
+
+        const clientReq = (streamUrl.startsWith('https') ? https : http).get(streamUrl, { headers: upstreamHeaders }, (upstreamRes) => {
+            if (upstreamRes.statusCode === 403 || upstreamRes.statusCode === 410) {
+                streamUrlCache.delete(rawId);
+                streamUrlCache.delete(`${rawId}_time`);
+                const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
+                if (fs.existsSync(fallbackFile) && !res.headersSent) {
+                    return fs.createReadStream(fallbackFile).pipe(res);
+                }
+            }
+
             const rawType = upstreamRes.headers['content-type'] || 'audio/mp4';
             const contentType = rawType.includes('webm') ? 'audio/webm' : (rawType.includes('mp4') || rawType.includes('m4a') ? 'audio/mp4' : 'audio/mpeg');
-            res.writeHead(upstreamRes.statusCode || 200, {
+            const resHeaders = {
                 'Content-Type': contentType,
-                'Content-Length': upstreamRes.headers['content-length'],
                 'Accept-Ranges': 'bytes',
                 'Cache-Control': 'public, max-age=3600'
-            });
-            upstreamRes.pipe(res);
+            };
+            if (upstreamRes.headers['content-length']) {
+                resHeaders['Content-Length'] = upstreamRes.headers['content-length'];
+            }
+            if (upstreamRes.headers['content-range']) {
+                resHeaders['Content-Range'] = upstreamRes.headers['content-range'];
+            }
+
+            res.writeHead(upstreamRes.statusCode || 200, resHeaders);
+            if (req.method !== 'HEAD') {
+                upstreamRes.pipe(res);
+            } else {
+                res.end();
+            }
         });
 
         clientReq.on('error', (err) => {

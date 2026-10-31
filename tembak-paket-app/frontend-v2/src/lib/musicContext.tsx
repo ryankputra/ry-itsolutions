@@ -250,15 +250,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
   const isYtReadyRef = useRef<boolean>(false);
-  const currentPlaybackEngineRef = useRef<"youtube" | "html5">("youtube");
+  const currentPlaybackEngineRef = useRef<"youtube" | "html5">("html5");
   const handleNextTrackRef = useRef<() => void>(() => {});
+  const handlePrevTrackRef = useRef<() => void>(() => {});
   const shuffleQueueRef = useRef<number[]>([]);
   const playedHistoryRef = useRef<number[]>([]);
-  const isReturningFromBackgroundRef = useRef<boolean>(false);
 
   const currentTrack = tracks[currentTrackIndex] || DEFAULT_TRACKS[0];
 
-  // Initialize YouTube IFrame API once on client
+  // Initialize YouTube IFrame API once on client (Muted companion player for video view)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -291,34 +291,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
               onReady: () => {
                 isYtReadyRef.current = true;
                 try {
-                  ytPlayerRef.current.setVolume((volume || 0.85) * 100);
+                  ytPlayerRef.current.mute();
+                  ytPlayerRef.current.setVolume(0);
                 } catch {}
-              },
-              onStateChange: (event: any) => {
-                // 1 = PLAYING, 2 = PAUSED, 0 = ENDED, 3 = BUFFERING
-                if (event.data === 1) {
-                  setIsPlaying(true);
-                  setIsBuffering(false);
-                  // If background HTML5 audio was playing, pause it once YouTube starts playing
-                  if (audioRef.current && !audioRef.current.paused) {
-                    audioRef.current.pause();
-                  }
-                  isReturningFromBackgroundRef.current = false;
-                } else if (event.data === 2) {
-                  // If background HTML5 audio is actively playing, don't let browser's autoplay block pause the music!
-                  if (audioRef.current && !audioRef.current.paused) {
-                    return;
-                  }
-                  if (isReturningFromBackgroundRef.current.valueOf()) {
-                    return;
-                  }
-                  setIsPlaying(false);
-                } else if (event.data === 0) {
-                  // Track finished playing naturally -> trigger up-to-date nextTrack
-                  handleNextTrackRef.current();
-                } else if (event.data === 3) {
-                  setIsBuffering(true);
-                }
               },
             },
           });
@@ -333,29 +308,6 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     } else {
       (window as any).onYouTubeIframeAPIReady = initPlayer;
     }
-  }, []);
-
-  // Poll YouTube player time every 250ms for smooth scrubber sync
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (currentPlaybackEngineRef.current === "youtube" && ytPlayerRef.current) {
-        try {
-          if (typeof ytPlayerRef.current.getCurrentTime === "function") {
-            const curr = ytPlayerRef.current.getCurrentTime();
-            if (typeof curr === "number" && !isNaN(curr)) {
-              setCurrentTime(curr);
-            }
-          }
-          if (typeof ytPlayerRef.current.getDuration === "function") {
-            const dur = ytPlayerRef.current.getDuration();
-            if (typeof dur === "number" && dur > 0) {
-              setDuration(dur);
-            }
-          }
-        } catch {}
-      }
-    }, 250);
-    return () => clearInterval(interval);
   }, []);
 
   // Load tracks from server API or localStorage
@@ -385,6 +337,19 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  // Helper to resolve clean audio stream URL
+  const getAudioStreamUrl = useCallback((track: Track) => {
+    if (
+      track.audioUrl &&
+      (track.audioUrl.endsWith(".mp3") ||
+        track.audioUrl.startsWith("/audio/") ||
+        (track.audioUrl.startsWith("http") && !track.audioUrl.includes("youtube.com")))
+    ) {
+      return track.audioUrl;
+    }
+    return `/api/music/stream?id=${encodeURIComponent(track.youtubeId || `${track.title} ${track.artist}`)}`;
+  }, []);
+
   // Update MediaSession metadata for lock screen & notifications
   useEffect(() => {
     if (typeof window !== "undefined" && "mediaSession" in navigator && currentTrack) {
@@ -399,69 +364,76 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: currentTrack.title,
         artist: currentTrack.artist,
-        album: "RyTone Hits (Full Version)",
+        album: "RyTone Hits",
         artwork: artworks,
       });
 
       navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
 
+      // Explicit Play Action Handler
       navigator.mediaSession.setActionHandler("play", () => {
-        togglePlayPause();
+        const audio = audioRef.current;
+        if (audio) {
+          audio.play().then(() => {
+            setIsPlaying(true);
+            navigator.mediaSession.playbackState = "playing";
+            if (ytPlayerRef.current?.playVideo) {
+              try {
+                ytPlayerRef.current.mute();
+                ytPlayerRef.current.seekTo(audio.currentTime, true);
+                ytPlayerRef.current.playVideo();
+              } catch {}
+            }
+          }).catch(console.error);
+        }
       });
+
+      // Explicit Pause Action Handler
       navigator.mediaSession.setActionHandler("pause", () => {
-        togglePlayPause();
+        const audio = audioRef.current;
+        if (audio) {
+          audio.pause();
+          setIsPlaying(false);
+          navigator.mediaSession.playbackState = "paused";
+          if (ytPlayerRef.current?.pauseVideo) {
+            try { ytPlayerRef.current.pauseVideo(); } catch {}
+          }
+        }
       });
-      navigator.mediaSession.setActionHandler("nexttrack", () => handleNextTrack());
-      navigator.mediaSession.setActionHandler("previoustrack", () => handlePrevTrack());
+
+      navigator.mediaSession.setActionHandler("nexttrack", () => {
+        handleNextTrackRef.current();
+      });
+
+      navigator.mediaSession.setActionHandler("previoustrack", () => {
+        handlePrevTrackRef.current();
+      });
+
       navigator.mediaSession.setActionHandler("seekto", (details) => {
-        if (details.seekTime !== undefined) {
-          seek(details.seekTime);
+        if (details.seekTime !== undefined && audioRef.current) {
+          audioRef.current.currentTime = details.seekTime;
+          setCurrentTime(details.seekTime);
+          if (ytPlayerRef.current?.seekTo) {
+            try { ytPlayerRef.current.seekTo(details.seekTime, true); } catch {}
+          }
         }
       });
     }
   }, [currentTrack, isPlaying]);
 
-  // Mobile background audio resilience: seamless switch to native HTML5 stream when tab is hidden / phone locked
+  // Tab visibility sync: when returning to web, smoothly re-align YouTube companion video without stopping audio
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const handleVisibilityChange = () => {
-      // Pada perangkat iOS (iPhone/iPad), audio HTML5 sudah aktif langsung sejak awal sentuhan,
-      // sehingga tidak boleh diinterupsi oleh visibilitychange agar tidak diblokir iOS WebKit.
-      if (isIOSDevice()) return;
-
-      if (document.hidden) {
-        // App di-minimize atau layar HP dikunci (Android/Desktop):
-        if (isPlaying && currentTrack) {
-          const currentSec = ytPlayerRef.current?.getCurrentTime ? ytPlayerRef.current.getCurrentTime() : currentTime;
-          const streamUrl = (currentTrack.audioUrl && currentTrack.audioUrl.endsWith('.mp3'))
-            ? currentTrack.audioUrl
-            : `/api/music/stream?id=${encodeURIComponent(currentTrack.youtubeId || (currentTrack.title + " " + currentTrack.artist))}`;
-          if (audioRef.current) {
-            if (!audioRef.current.src || !audioRef.current.src.includes(streamUrl)) {
-              audioRef.current.src = streamUrl;
-            }
-            audioRef.current.currentTime = currentSec || 0;
-            audioRef.current.play().catch(() => {});
-          }
-        }
-      } else {
-        // App dibuka kembali ke foreground:
-        isReturningFromBackgroundRef.current = true;
-        setTimeout(() => {
-          isReturningFromBackgroundRef.current = false;
-        }, 2500);
-
-        // PENTING: JANGAN pause audioRef! Biarkan lagu tetap mengalir tanpa jeda
-        if (audioRef.current && !audioRef.current.paused) {
-          const resumeSec = audioRef.current.currentTime;
-          // Sinkronkan video YouTube di background jika browser mengizinkan
-          if (ytPlayerRef.current?.seekTo && isPlaying) {
-            ytPlayerRef.current.seekTo(resumeSec, true);
-            try {
-              ytPlayerRef.current.playVideo();
-            } catch {}
-          }
+      if (!document.hidden) {
+        // App reopened: sync YouTube companion video silently if audio is playing
+        if (audioRef.current && !audioRef.current.paused && ytPlayerRef.current?.seekTo) {
+          try {
+            ytPlayerRef.current.mute();
+            ytPlayerRef.current.seekTo(audioRef.current.currentTime, true);
+            ytPlayerRef.current.playVideo();
+          } catch {}
         }
       }
     };
@@ -470,9 +442,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isPlaying, currentTrack, currentTime]);
+  }, []);
 
-  // Handle Play Track (100% Full Length via YouTube or HTML5 audio stream)
+  // Handle Play Track (100% Native HTML5 audio stream with lock screen & background resilience)
   const playTrack = useCallback(
     (indexOrId: number | string) => {
       let index: number;
@@ -500,23 +472,29 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(true);
       setDuration(targetTrack.durationSec || 200);
 
-      // Pre-warm background HTML5 audio stream for instant zero-gap background playback
-      const fullStreamUrl = (targetTrack.audioUrl && targetTrack.audioUrl.endsWith('.mp3'))
-        ? targetTrack.audioUrl
-        : `/api/music/stream?id=${encodeURIComponent(targetTrack.youtubeId || (targetTrack.title + " " + targetTrack.artist))}`;
+      const streamUrl = getAudioStreamUrl(targetTrack);
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = streamUrl;
+        audio.playbackRate = playbackSpeed;
+        audio.play().then(() => {
+          setIsPlaying(true);
+          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+            navigator.mediaSession.playbackState = "playing";
+          }
+        }).catch((err) => {
+          console.warn("[HTML5 Audio Play Error]:", err);
+        });
+      }
 
-      const isIOS = isIOSDevice();
-
-      // Di iOS, gunakan HTML5 Native Stream dari awal agar audio bisa terus berputar saat keluar Safari / kunci layar!
-      if (targetTrack.youtubeId && !isIOS) {
-        currentPlaybackEngineRef.current = "youtube";
-        if (audioRef.current && !audioRef.current.paused) {
-          audioRef.current.pause();
-        }
-
+      // Sync companion YouTube video if youtubeId exists
+      if (targetTrack.youtubeId) {
         const loadVideo = () => {
           if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === "function") {
             try {
+              ytPlayerRef.current.mute();
               ytPlayerRef.current.loadVideoById(targetTrack.youtubeId);
               ytPlayerRef.current.playVideo();
               if (playbackSpeed !== 1 && typeof ytPlayerRef.current.setPlaybackRate === "function") {
@@ -526,89 +504,59 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
               console.warn("[YT Player] Play error:", err);
             }
           } else {
-            setTimeout(loadVideo, 200);
+            setTimeout(loadVideo, 250);
           }
         };
         loadVideo();
       } else {
-        // iOS or HTML5 Native Stream (Full audio stream dari server dengan background play & lock screen support)
-        currentPlaybackEngineRef.current = "html5";
-        if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === "function") {
-          try { ytPlayerRef.current.pauseVideo(); } catch {}
-        }
-        const audio = audioRef.current;
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.src = fullStreamUrl;
-          audio.playbackRate = playbackSpeed;
-          audio.play().then(() => {
-            setIsPlaying(true);
-            if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-              navigator.mediaSession.playbackState = "playing";
-            }
-          }).catch((err) => {
-            console.warn("[HTML5 Audio Play Error]:", err);
-          });
+        if (ytPlayerRef.current?.stopVideo) {
+          try { ytPlayerRef.current.stopVideo(); } catch {}
         }
       }
     },
-    [tracks, currentTrackIndex, playbackSpeed]
+    [tracks, currentTrackIndex, playbackSpeed, getAudioStreamUrl]
   );
 
   const togglePlayPause = useCallback(() => {
     setPlayerVisible(true);
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    if (currentPlaybackEngineRef.current === "youtube" && ytPlayerRef.current) {
-      try {
-        const state = ytPlayerRef.current.getPlayerState ? ytPlayerRef.current.getPlayerState() : -1;
-        if (state === 1) {
-          ytPlayerRef.current.pauseVideo();
-          if (audioRef.current) audioRef.current.pause();
-          setIsPlaying(false);
-          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-            navigator.mediaSession.playbackState = "paused";
-          }
-        } else {
-          setIsResuming(true);
-          setTimeout(() => setIsResuming(false), 1200);
-          ytPlayerRef.current.playVideo();
-          setIsPlaying(true);
-          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-            navigator.mediaSession.playbackState = "playing";
-          }
-        }
-      } catch {
-        setIsPlaying((prev) => !prev);
+    if (!audio.paused) {
+      audio.pause();
+      setIsPlaying(false);
+      if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+        navigator.mediaSession.playbackState = "paused";
+      }
+      if (ytPlayerRef.current?.pauseVideo) {
+        try { ytPlayerRef.current.pauseVideo(); } catch {}
       }
     } else {
-      const audio = audioRef.current;
-      if (!audio) return;
-      if (!audio.paused) {
-        audio.pause();
-        setIsPlaying(false);
-        if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-          navigator.mediaSession.playbackState = "paused";
-        }
-      } else {
-        setIsResuming(true);
-        setTimeout(() => setIsResuming(false), 1200);
-        const fullStreamUrl = (currentTrack.audioUrl && currentTrack.audioUrl.endsWith('.mp3'))
-          ? currentTrack.audioUrl
-          : `/api/music/stream?id=${encodeURIComponent(currentTrack.youtubeId || (currentTrack.title + " " + currentTrack.artist))}`;
-        if (!audio.src || audio.src === "" || (!audio.src.includes(fullStreamUrl) && !audio.src.includes(currentTrack.audioUrl || ""))) {
-          audio.src = fullStreamUrl;
-          audio.playbackRate = playbackSpeed;
-        }
-        audio.play().then(() => {
-          setIsPlaying(true);
-          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-            navigator.mediaSession.playbackState = "playing";
-          }
-        }).catch(() => {});
+      setIsResuming(true);
+      setTimeout(() => setIsResuming(false), 1000);
+
+      const targetSrc = getAudioStreamUrl(currentTrack);
+      if (!audio.src || (!audio.src.includes(targetSrc) && !audio.src.includes(currentTrack.audioUrl || ""))) {
+        audio.src = targetSrc;
       }
+      audio.playbackRate = playbackSpeed;
+      audio.play().then(() => {
+        setIsPlaying(true);
+        if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "playing";
+        }
+        if (ytPlayerRef.current?.playVideo) {
+          try {
+            ytPlayerRef.current.mute();
+            ytPlayerRef.current.seekTo(audio.currentTime, true);
+            ytPlayerRef.current.playVideo();
+          } catch {}
+        }
+      }).catch((err) => {
+        console.warn("[HTML5 Audio Play Error]:", err);
+      });
     }
-  }, [currentTrack, playbackSpeed]);
+  }, [currentTrack, playbackSpeed, getAudioStreamUrl]);
 
   // Helper to generate a Fisher-Yates randomized queue of track indices
   const generateShuffledQueue = useCallback((trackList: Track[], currentIdx: number): number[] => {
@@ -629,12 +577,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   const seek = useCallback((seconds: number) => {
     setCurrentTime(seconds);
-    if (currentPlaybackEngineRef.current === "youtube" && ytPlayerRef.current) {
+    if (audioRef.current) {
+      audioRef.current.currentTime = seconds;
+    }
+    if (ytPlayerRef.current?.seekTo) {
       try {
         ytPlayerRef.current.seekTo(seconds, true);
       } catch {}
-    } else if (audioRef.current) {
-      audioRef.current.currentTime = seconds;
     }
   }, []);
 
@@ -644,14 +593,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     // 1. If Loop / Repeat is ON: Repeat current track from start
     if (isLoop) {
       seek(0);
-      if (currentPlaybackEngineRef.current === "youtube" && ytPlayerRef.current?.seekTo) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+      if (ytPlayerRef.current?.seekTo) {
         try {
           ytPlayerRef.current.seekTo(0, true);
           ytPlayerRef.current.playVideo();
         } catch {}
-      } else if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
       }
       setIsPlaying(true);
       return;
@@ -681,23 +631,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isLoop, isShuffle, currentTrackIndex, tracks, generateShuffledQueue, seek, playTrack]);
 
-  // Synchronize handleNextTrackRef with every render to eliminate stale closure in YouTube API
+  // Synchronize handleNextTrackRef with every render to eliminate stale closures
   useEffect(() => {
     handleNextTrackRef.current = handleNextTrack;
   }, [handleNextTrack]);
-
-  // Handle ended event for HTML5 audio
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const onEnded = () => {
-      handleNextTrackRef.current();
-    };
-    audio.addEventListener("ended", onEnded);
-    return () => {
-      audio.removeEventListener("ended", onEnded);
-    };
-  }, []);
 
   const handlePrevTrack = useCallback(() => {
     if (!tracks || tracks.length === 0) return;
@@ -717,14 +654,14 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTime, isShuffle, currentTrackIndex, tracks, seek, playTrack]);
 
+  // Synchronize handlePrevTrackRef with every render to eliminate stale closures
+  useEffect(() => {
+    handlePrevTrackRef.current = handlePrevTrack;
+  }, [handlePrevTrack]);
+
   const setVolume = useCallback((val: number) => {
     const clamped = Math.max(0, Math.min(1, val));
     setVolumeState(clamped);
-    if (ytPlayerRef.current && typeof ytPlayerRef.current.setVolume === "function") {
-      try {
-        ytPlayerRef.current.setVolume(clamped * 100);
-      } catch {}
-    }
     if (audioRef.current) {
       audioRef.current.volume = clamped;
     }
@@ -766,13 +703,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     setPlaybackSpeed((prevSpeed) => {
       const idx = speeds.indexOf(prevSpeed);
       const next = speeds[(idx + 1) % speeds.length];
-      if (currentPlaybackEngineRef.current === "youtube" && ytPlayerRef.current?.setPlaybackRate) {
+      if (audioRef.current) {
+        audioRef.current.playbackRate = next;
+      }
+      if (ytPlayerRef.current?.setPlaybackRate) {
         try {
           ytPlayerRef.current.setPlaybackRate(next);
         } catch {}
-      }
-      if (audioRef.current) {
-        audioRef.current.playbackRate = next;
       }
       return next;
     });
@@ -898,29 +835,56 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         }
       `}</style>
 
-      {/* 1. Global Persistent Audio Element (Fallback for local .mp3) */}
+      {/* 1. Global Persistent Native HTML5 Audio Engine */}
       <audio
         ref={audioRef}
         loop={isLoop}
-        preload="metadata"
+        preload="auto"
+        playsInline
         onTimeUpdate={() => {
-          if (currentPlaybackEngineRef.current === "html5" && audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime);
+          if (audioRef.current) {
+            const curr = audioRef.current.currentTime;
+            setCurrentTime(curr);
+            if (typeof navigator !== "undefined" && "mediaSession" in navigator && "setPositionState" in navigator.mediaSession) {
+              const dur = audioRef.current.duration;
+              if (dur > 0 && !isNaN(dur)) {
+                try {
+                  navigator.mediaSession.setPositionState({
+                    duration: dur,
+                    playbackRate: audioRef.current.playbackRate || 1,
+                    position: curr,
+                  });
+                } catch {}
+              }
+            }
           }
         }}
         onLoadedMetadata={() => {
-          if (currentPlaybackEngineRef.current === "html5" && audioRef.current) {
-            setDuration(audioRef.current.duration || currentTrack.durationSec || 200);
+          if (audioRef.current) {
+            const dur = audioRef.current.duration;
+            if (dur > 0 && !isNaN(dur)) {
+              setDuration(dur);
+            }
           }
         }}
-        onPlay={() => setIsPlaying(true)}
+        onPlay={() => {
+          setIsPlaying(true);
+          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+            navigator.mediaSession.playbackState = "playing";
+          }
+        }}
         onPause={() => {
-          if (currentPlaybackEngineRef.current === "html5" && audioRef.current?.paused) {
+          if (audioRef.current?.paused) {
             setIsPlaying(false);
+            if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+              navigator.mediaSession.playbackState = "paused";
+            }
           }
         }}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
         onEnded={() => {
-          if (!isLoop) handleNextTrack();
+          if (!isLoop) handleNextTrackRef.current();
         }}
       />
 
