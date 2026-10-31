@@ -886,6 +886,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         onEnded={() => {
           if (!isLoop) handleNextTrackRef.current();
         }}
+        onError={(e) => {
+          console.warn("[RyTone Audio Element Error]:", e);
+          setIsBuffering(false);
+          setTimeout(() => {
+            if (tracks.length > 1) {
+              handleNextTrackRef.current();
+            }
+          }, 1500);
+        }}
       />
 
       {/* 2. Persistent YouTube Audio/Video Engine */}

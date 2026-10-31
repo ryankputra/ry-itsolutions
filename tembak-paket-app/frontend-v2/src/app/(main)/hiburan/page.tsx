@@ -80,6 +80,8 @@ export default function RyToneMusicPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [toast, setToast] = useState<{ message: string; type: "success" | "loading" | "info" } | null>(null);
+  const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
+  const [scrubValue, setScrubValue] = useState<number>(0);
 
   // Synchronize slot position for seamless video playback positioning
   useEffect(() => {
@@ -389,12 +391,27 @@ export default function RyToneMusicPage() {
                   type="range"
                   min={0}
                   max={duration || currentTrack.durationSec || 200}
-                  value={currentTime}
-                  onChange={(e) => seek(Number(e.target.value))}
+                  step={0.5}
+                  value={isScrubbing ? scrubValue : currentTime}
+                  onMouseDown={() => setIsScrubbing(true)}
+                  onTouchStart={() => setIsScrubbing(true)}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setScrubValue(val);
+                    if (!isScrubbing) seek(val);
+                  }}
+                  onMouseUp={() => {
+                    seek(scrubValue);
+                    setIsScrubbing(false);
+                  }}
+                  onTouchEnd={() => {
+                    seek(scrubValue);
+                    setIsScrubbing(false);
+                  }}
                   className="w-full h-1.5 bg-black/10 dark:bg-white/15 rounded-lg appearance-none cursor-pointer accent-[#1ed760]"
                 />
                 <div className="flex justify-between text-[11px] font-mono text-ink-muted dark:text-zinc-400">
-                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(isScrubbing ? scrubValue : currentTime)}</span>
                   <span>{formatTime(duration || currentTrack.durationSec || 200)}</span>
                 </div>
               </div>

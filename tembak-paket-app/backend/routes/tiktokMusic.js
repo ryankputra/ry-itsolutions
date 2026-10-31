@@ -178,10 +178,10 @@ router.get('/stream', async (req, res) => {
 });
 
 /**
- * POST /api/music/refresh or /api/tiktok-music/refresh
+ * POST /api/music/refresh, /api/music/sync, /api/tiktok-music/refresh, /api/tiktok-music/sync
  * Endpoint sinkronisasi manual tangga lagu Top Hits RyTone (Admin/User)
  */
-router.post('/refresh', async (req, res) => {
+router.post(['/refresh', '/sync'], async (req, res) => {
     try {
         const syncResult = await tiktokMusicService.syncTrendingMusic();
         res.json(syncResult);
@@ -191,7 +191,7 @@ router.post('/refresh', async (req, res) => {
     }
 });
 
-router.get('/refresh', async (req, res) => {
+router.get(['/refresh', '/sync'], async (req, res) => {
     try {
         const syncResult = await tiktokMusicService.syncTrendingMusic();
         res.json(syncResult);
