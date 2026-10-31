@@ -1705,8 +1705,13 @@ async function generateRiveraUpdateGraphic(parsedData) {
     const mainSubTitleColor = isFullClose ? "#be123c" : (isPartialClose ? "#d97706" : theme.primaryColor);
 
     // Bersihkan emoji dari note agar tidak menghasilkan missing glyph / kotak silang di server Linux
-    const rawNote = parsedData.note || (isPartialClose ? 'Sebagian Jalur Tutup • Jalur Lain Ready' : 'Semua Bergaransi Tanpa Drama');
-    const cleanNote = escapeXml(rawNote.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '').trim() || 'Semua Bergaransi Tanpa Drama');
+    const rawNote = parsedData.note || (isFullClose ? 'Orderan Ditutup Sementara • Buka Kembali Kloter Berikutnya' : (isPartialClose ? 'Sebagian Jalur Tutup • Jalur Lain Ready' : 'Semua Bergaransi Tanpa Drama'));
+    const cleanNote = escapeXml(rawNote.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '').trim() || (isFullClose ? 'Orderan Ditutup Sementara • Buka Kembali Kloter Berikutnya' : 'Semua Bergaransi Tanpa Drama'));
+    const displayNote = cleanNote.length > 70 ? cleanNote.slice(0, 67) + '...' : cleanNote;
+    const noteFontSize = displayNote.length > 55 ? 18 : (displayNote.length > 35 ? 21 : 24);
+    const noteCardBg = isFullClose ? '#fff1f2' : (isPartialClose ? '#fffbeb' : '#eff6ff');
+    const noteCardBorder = isFullClose ? '#fda4af' : (isPartialClose ? '#fde68a' : theme.primaryColor);
+    const noteTextColor = isFullClose ? '#e11d48' : (isPartialClose ? '#b45309' : theme.primaryColor);
 
     const svg = `
         <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
@@ -1750,10 +1755,10 @@ async function generateRiveraUpdateGraphic(parsedData) {
                 ${cardsSvg}
             </g>
 
-            <!-- Slogan Guarantee Card (Bebas emoji rusak) -->
+            <!-- Slogan Guarantee Card (Bebas emoji rusak, tema warna dinamis & anti overflow) -->
             <g transform="translate(80, 1100)" filter="url(#cardShadow)">
-                <rect width="920" height="88" rx="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="2"/>
-                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="24" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${cleanNote}</text>
+                <rect width="920" height="88" rx="22" fill="${noteCardBg}" stroke="${noteCardBorder}" stroke-width="2"/>
+                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${noteFontSize}" font-weight="900" fill="${noteTextColor}" text-anchor="middle">${displayNote}</text>
             </g>
 
             <!-- Footer Info Card -->
