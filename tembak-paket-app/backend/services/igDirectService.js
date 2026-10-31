@@ -353,9 +353,9 @@ async function prepareImageForStory(imageBuffer, trackInfo = null, options = {})
     </svg>
     `;
 
-    // Pastikan ukuran screenshot muat 100% tanpa terpotong dalam safe zone (y: 280 s/d 1630)
-    const maxContentW = 960;
-    const maxContentH = 1360;
+    // Pastikan ukuran screenshot muat LEBIH FULL (lebar 1020px, sisa margin 30px samping) & safe zone (y: 145 s/d 1680)
+    const maxContentW = 1020;
+    const maxContentH = 1450;
 
     const resizedScreenshot = await sharp(imageBuffer)
         .resize(maxContentW, maxContentH, { fit: 'inside' })
@@ -363,10 +363,10 @@ async function prepareImageForStory(imageBuffer, trackInfo = null, options = {})
 
     const resizedMeta = await sharp(resizedScreenshot).metadata();
 
-    // Mask rounded corners 24px agar rapi dan modern
+    // Mask rounded corners 20px agar presisi, rapi dan modern
     const roundedCornersSvg = Buffer.from(`
         <svg width="${resizedMeta.width}" height="${resizedMeta.height}">
-            <rect x="0" y="0" width="${resizedMeta.width}" height="${resizedMeta.height}" rx="24" fill="#ffffff"/>
+            <rect x="0" y="0" width="${resizedMeta.width}" height="${resizedMeta.height}" rx="20" fill="#ffffff"/>
         </svg>
     `);
 
@@ -376,44 +376,37 @@ async function prepareImageForStory(imageBuffer, trackInfo = null, options = {})
         .toBuffer();
 
     const cardX = Math.round((targetW - resizedMeta.width) / 2);
-    const cardY = Math.round(290 + (maxContentH - resizedMeta.height) / 2);
+    const cardY = Math.round(225 + (maxContentH - resizedMeta.height) / 2);
 
     const overlaySvg = `
     <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
-                <feDropShadow dx="0" dy="10" stdDeviation="20" flood-color="#0f172a" flood-opacity="0.08"/>
+                <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.08"/>
             </filter>
         </defs>
 
-        <!-- Music Player Bar (Safe Zone y=185) -->
-        <g transform="translate(150, 185)" filter="url(#cardShadow)">
-            <rect width="780" height="74" rx="37" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="1.8" />
-            <circle cx="44" cy="37" r="22" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="1.5"/>
-            <path d="M41 45V31l8-2v11" fill="none" stroke="${theme.primaryColor}" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="39" cy="44" r="3" fill="${theme.primaryColor}"/>
-            <circle cx="47" cy="42" r="3" fill="${theme.primaryColor}"/>
-            <text x="82" y="34" font-family="Arial, -apple-system, sans-serif" font-size="21" font-weight="bold" fill="#0f172a">${safeTitle.slice(0, 32)}</text>
-            <text x="82" y="56" font-family="Arial, -apple-system, sans-serif" font-size="16" fill="#64748b">${safeArtist.slice(0, 36)}</text>
-            <g transform="translate(680, 22)">
-                <rect x="0" y="10" width="4" height="20" rx="2" fill="${theme.primaryColor}" />
-                <rect x="8" y="4" width="4" height="26" rx="2" fill="${theme.secondaryColor}" />
-                <rect x="16" y="14" width="4" height="16" rx="2" fill="${theme.primaryColor}" />
-                <rect x="24" y="2" width="4" height="28" rx="2" fill="${theme.secondaryColor}" />
-                <rect x="32" y="8" width="4" height="22" rx="2" fill="${theme.primaryColor}" />
-                <rect x="40" y="16" width="4" height="14" rx="2" fill="${theme.secondaryColor}" />
+        <!-- Music Player Bar (Safe Zone y=145, height=66) -->
+        <g transform="translate(140, 145)" filter="url(#cardShadow)">
+            <rect width="800" height="66" rx="33" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="1.8" />
+            <circle cx="40" cy="33" r="20" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="1.5"/>
+            <path d="M37 40V27l8-2v11" fill="none" stroke="${theme.primaryColor}" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="35" cy="39" r="2.8" fill="${theme.primaryColor}"/>
+            <circle cx="43" cy="37" r="2.8" fill="${theme.primaryColor}"/>
+            <text x="74" y="30" font-family="Arial, -apple-system, sans-serif" font-size="19" font-weight="bold" fill="#0f172a">${safeTitle.slice(0, 32)}</text>
+            <text x="74" y="50" font-family="Arial, -apple-system, sans-serif" font-size="15" fill="#64748b">${safeArtist.slice(0, 36)}</text>
+            <g transform="translate(700, 18)">
+                <rect x="0" y="10" width="4" height="18" rx="2" fill="${theme.primaryColor}" />
+                <rect x="8" y="4" width="4" height="24" rx="2" fill="${theme.secondaryColor}" />
+                <rect x="16" y="14" width="4" height="14" rx="2" fill="${theme.primaryColor}" />
+                <rect x="24" y="2" width="4" height="26" rx="2" fill="${theme.secondaryColor}" />
+                <rect x="32" y="8" width="4" height="20" rx="2" fill="${theme.primaryColor}" />
+                <rect x="40" y="16" width="4" height="12" rx="2" fill="${theme.secondaryColor}" />
             </g>
         </g>
 
         <!-- Bingkai Luar & Bayangan Halus Screenshot -->
-        <rect x="${cardX - 4}" y="${cardY - 4}" width="${resizedMeta.width + 8}" height="${resizedMeta.height + 8}" rx="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#cardShadow)"/>
-
-        <!-- Top Verified Badge -->
-        <g transform="translate(340, ${Math.max(265, cardY - 24)})">
-            <rect width="400" height="42" rx="21" fill="${theme.accentBadgeBg}" stroke="${theme.accentBadgeBorder}" stroke-width="1.6"/>
-            <circle cx="30" cy="21" r="6" fill="${theme.primaryColor}"/>
-            <text x="200" y="28" font-family="Arial, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="${theme.accentBadgeText}" text-anchor="middle">BUKTI TESTIMONI RESMI • RY</text>
-        </g>
+        <rect x="${cardX - 3}" y="${cardY - 3}" width="${resizedMeta.width + 6}" height="${resizedMeta.height + 6}" rx="23" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8" filter="url(#cardShadow)"/>
     </svg>
     `;
 
@@ -1381,8 +1374,8 @@ async function generateRiveraUpdateGraphic(parsedData) {
         const badgeText = isReady ? "READY" : (s.status === "FULL_SLOT" ? "FULL SLOT" : "CLOSED");
         const cardBg = isReady ? "#ffffff" : "#fff1f2";
         const cardBorder = isReady ? "#cbd5e1" : "#fecdd3";
-        const cleanName = s.name.replace(/smartfren/gi, 'SF');
-        const cleanDesc = s.desc.replace(/smartfren/gi, 'SF');
+        const cleanName = escapeXml(s.name ? s.name.replace(/smartfren/gi, 'SF') : '');
+        const cleanDesc = escapeXml(s.desc ? s.desc.replace(/smartfren/gi, 'SF') : '');
 
         return `
             <g transform="translate(80, ${yPos})">
@@ -1400,9 +1393,9 @@ async function generateRiveraUpdateGraphic(parsedData) {
 
     const badgeBgTop = isFullClose ? "#ffe4e6" : "#dcfce7";
     const badgeStrokeTop = isFullClose ? "#fca5a5" : "#86efac";
-    const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : (parsedData.badge || "LIVE SERVER &amp; SLOT UPDATE");
+    const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : escapeXml(parsedData.badge || "LIVE SERVER & SLOT UPDATE");
     const badgeTextColorTop = isFullClose ? "#be123c" : "#15803d";
-    const mainTitle = isFullClose ? "ORDERAN KLOTER HARI INI" : "STATUS KLOTER &amp; SLOT";
+    const mainTitle = isFullClose ? "ORDERAN KLOTER HARI INI" : escapeXml(parsedData.title || "STATUS KLOTER & SLOT");
     const mainSubTitle = isFullClose ? "DITUTUP SEMENTARA" : "HARI INI";
     const mainSubTitleColor = isFullClose ? "#e11d48" : theme.primaryColor;
 
@@ -1451,7 +1444,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <!-- Slogan Guarantee Card -->
             <g transform="translate(80, 1260)" filter="url(#cardShadow)">
                 <rect width="920" height="100" rx="24" fill="#eff6ff" stroke="${theme.primaryColor}" stroke-width="2"/>
-                <text x="460" y="62" font-family="Arial, -apple-system, sans-serif" font-size="26" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${parsedData.note || 'SEMUA BERGARANSI TANPA ADA DRAMA 🎭'}</text>
+                <text x="460" y="62" font-family="Arial, -apple-system, sans-serif" font-size="26" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">${escapeXml(parsedData.note || 'SEMUA BERGARANSI TANPA ADA DRAMA 🎭')}</text>
             </g>
 
             <!-- Footer Info Card -->
