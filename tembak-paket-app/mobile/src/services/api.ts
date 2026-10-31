@@ -10,25 +10,13 @@ import { ApiResponse, User } from '../types';
  * - iOS Simulator / Web: http://localhost:3001/api
  */
 export const getApiBaseUrl = (): string => {
-  // If explicitly specified in .env, honor it
+  // 1. If explicitly specified in .env, honor it
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
   }
 
-  // Default to live production server to ensure immediate out-of-the-box sync
-  const PROD_API_URL = 'https://ry-itsolutionts.web.id/api';
-
-  // Toggle this flag if targeting local dev backend
-  const USE_LOCAL_BACKEND = false;
-
-  if (USE_LOCAL_BACKEND) {
-    if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:3001/api';
-    }
-    return 'http://localhost:3001/api';
-  }
-
-  return PROD_API_URL;
+  // 2. Default to active STB Backend for 100% real database & API parity on Expo Go
+  return 'http://192.168.0.203:3001/api';
 };
 
 /**

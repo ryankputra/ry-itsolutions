@@ -36,6 +36,7 @@ import { storage, STORAGE_KEYS } from '../../utils/storage';
 import { CartItem } from '../../types';
 import { apiClient } from '../../services/api';
 import { Colors } from '../../theme/colors';
+import { InstantQrisModal } from '../../components/ui/InstantQrisModal';
 
 interface CouponItem {
   id: string;
@@ -68,7 +69,8 @@ export default function CartScreen() {
 
   // Coins & Payment states
   const [useCoins, setUseCoins] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'balance' | 'qris'>('balance');
+  const [paymentMethod, setPaymentMethod] = useState<'balance' | 'qris'>('qris');
+  const [showInstantQris, setShowInstantQris] = useState(false);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -224,8 +226,8 @@ export default function CartScreen() {
       return;
     }
 
-    if (paymentMethod === 'qris') {
-      router.push('/(screens)/topup' as any);
+    if (paymentMethod === 'qris' || (user?.balance || 0) < grandTotal) {
+      setShowInstantQris(true);
       return;
     }
 
@@ -317,6 +319,16 @@ export default function CartScreen() {
         },
       ]
     );
+  };
+
+  const handleQrisSuccess = async () => {
+    setShowInstantQris(false);
+    try {
+      await refreshUser();
+      const remaining = cart.filter((item) => !selectedItems.includes(item.id));
+      await saveCart(remaining);
+      router.push('/(tabs)/history' as any);
+    } catch {}
   };
 
   return (
@@ -742,6 +754,15 @@ export default function CartScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Direct Dynamic QRIS Payment Modal */}
+      <InstantQrisModal
+        isOpen={showInstantQris}
+        onClose={() => setShowInstantQris(false)}
+        amount={grandTotal}
+        orderTitle={`Checkout ${activeCartItems.length} Layanan`}
+        onSuccess={handleQrisSuccess}
+      />
     </SafeAreaView>
   );
 }
