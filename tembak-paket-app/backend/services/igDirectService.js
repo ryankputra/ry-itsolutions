@@ -1861,7 +1861,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
         noteCardBorder = "#86efac";
         noteTextColor = "#15803d";
     } else if (isFullClose) {
-        displayNote = parsedData.note || "3B Slow Tetap Buka 24 Jam • Sampai Jumpa di Kloter Berikutnya";
+        displayNote = parsedData.note || "Pemesanan Web & WhatsApp Tetap Buka • Sampai Jumpa di Kloter Berikutnya";
         noteCardBg = "#fff1f2";
         noteCardBorder = "#fda4af";
         noteTextColor = "#e11d48";

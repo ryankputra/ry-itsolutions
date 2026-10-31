@@ -17,4 +17,7 @@ tembak-paket-app/backend/backups/*
 *.zip
 *.traineddata
 .DS_Store
+.env
+.env.*
+node_modules/
 
