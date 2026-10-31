@@ -132,23 +132,30 @@ async function saveSessionFromCookie(sessionId, customUsername) {
  * Dapatkan CSRF Token segar dari instagram.com
  */
 async function fetchCsrfToken(sessionId, dsUserId) {
-    const res = await axios.get('https://www.instagram.com/', {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}`
-        },
-        httpsAgent: ipv4Agent
-    });
+    try {
+        const res = await axios.get('https://www.instagram.com/', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}`
+            },
+            httpsAgent: ipv4Agent,
+            maxRedirects: 3,
+            validateStatus: () => true
+        });
 
-    let csrf = '';
-    const cookies = res.headers['set-cookie'] || [];
-    for (const c of cookies) {
-        if (c.includes('csrftoken=')) {
-            csrf = c.split('csrftoken=')[1].split(';')[0];
-            break;
+        let csrf = '';
+        const cookies = res.headers['set-cookie'] || [];
+        for (const c of cookies) {
+            if (c.includes('csrftoken=')) {
+                csrf = c.split('csrftoken=')[1].split(';')[0];
+                break;
+            }
         }
+        return csrf || 'SKgFS6EFz6dpdUJJTBrQBGf5tHIUGVDG';
+    } catch (e) {
+        console.warn('[IGDirect] fetchCsrfToken warning, using fallback token:', e.message);
+        return 'SKgFS6EFz6dpdUJJTBrQBGf5tHIUGVDG';
     }
-    return csrf || 'SKgFS6EFz6dpdUJJTBrQBGf5tHIUGVDG';
 }
 
 function escapeXml(str) {
