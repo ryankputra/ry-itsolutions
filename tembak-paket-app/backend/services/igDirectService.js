@@ -128,6 +128,47 @@ async function saveSessionFromCookie(sessionId, customUsername) {
     };
 }
 
+let lastAlertTime = 0;
+function triggerIgSessionExpiredAlert(reason = 'login_required') {
+    const now = Date.now();
+    if (now - lastAlertTime < 30 * 60 * 1000) {
+        return;
+    }
+    lastAlertTime = now;
+
+    console.warn(`[IGDirect] ⚠️ Sesi Instagram terdeteksi kedaluwarsa (${reason}). Memicu notifikasi ke WhatsApp Admin...`);
+    try {
+        const { notifyAdminIgSessionExpired } = require('./waBot');
+        if (typeof notifyAdminIgSessionExpired === 'function') {
+            notifyAdminIgSessionExpired(reason);
+        }
+    } catch (e) {
+        console.warn('[IGDirect] Gagal memicu notifyAdminIgSessionExpired:', e.message);
+    }
+}
+
+function checkAndNotifyIfSessionExpired(err) {
+    if (!err) return;
+    const msg = (err?.response?.data?.message || err?.message || '').toLowerCase();
+    const status = err?.response?.status;
+    const dataStr = typeof err?.response?.data === 'string' ? err.response.data.toLowerCase() : '';
+
+    const isExpired =
+        msg.includes('login_required') ||
+        msg.includes('checkpoint_required') ||
+        msg.includes('feedback_required') ||
+        status === 401 ||
+        status === 403 ||
+        dataStr.includes('login_required') ||
+        dataStr.includes('/accounts/login') ||
+        err?.code === 'ERR_TOO_MANY_REDIRECTS';
+
+    if (isExpired) {
+        const detail = err?.response?.data?.message || (status ? `HTTP ${status}` : (err.message || 'login_required'));
+        triggerIgSessionExpiredAlert(detail);
+    }
+}
+
 /**
  * Dapatkan CSRF Token segar dari instagram.com
  */
@@ -143,8 +184,14 @@ async function fetchCsrfToken(sessionId, dsUserId) {
             validateStatus: () => true
         });
 
-        let csrf = '';
         const cookies = res.headers['set-cookie'] || [];
+        const isSessionDeleted = cookies.some(c => c.includes('sessionid=deleted') || c.includes('sessionid=""'));
+        if (isSessionDeleted) {
+            console.warn('[IGDirect] ⚠️ Cookie sessionid Instagram kedaluwarsa / dihapus oleh Instagram!');
+            triggerIgSessionExpiredAlert('sessionid=deleted (Cookie kedaluwarsa)');
+        }
+
+        let csrf = '';
         for (const c of cookies) {
             if (c.includes('csrftoken=')) {
                 csrf = c.split('csrftoken=')[1].split(';')[0];
@@ -622,142 +669,161 @@ async function publishToStory(imageBuffer, customTrack = null, options = {}) {
     // Render video MP4 15 detik bersuara lagu nyata (Option B)
     const videoData = await generateStoryVideo(formattedBuffer, track);
 
-    if (videoData && videoData.videoBuffer) {
-        console.log(`[IGDirect] Mengunggah Story Video (MP4 bersuara musik nyata, size: ${videoData.videoBuffer.length} bytes)...`);
+    try {
+        if (!sessionId) {
+            triggerIgSessionExpiredAlert('Sesi Instagram kosong');
+            throw new Error('Sesi Instagram belum dikonfigurasi.');
+        }
 
-        // 1. Upload file binary video ke rupload_igvideo (720x1280)
-        await axios.post(`https://www.instagram.com/rupload_igvideo/${entityName}`, videoData.videoBuffer, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'X-IG-App-ID': '936619743392459',
-                'X-CSRFToken': csrf,
-                'X-Instagram-Rupload-Params': JSON.stringify({
-                    media_type: 2,
-                    upload_id: uploadId,
-                    upload_media_height: 1280,
-                    upload_media_width: 720,
-                    upload_media_duration_ms: videoData.durationMs
-                }),
-                'X-Entity-Name': entityName,
-                'X-Entity-Length': videoData.videoBuffer.length,
-                'X-Entity-Type': 'video/mp4',
-                'Offset': 0,
-                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
-                'Content-Type': 'video/mp4',
-                'Content-Length': videoData.videoBuffer.length
-            },
-            httpsAgent: ipv4Agent
-        });
+        if (videoData && videoData.videoBuffer) {
+            console.log(`[IGDirect] Mengunggah Story Video (MP4 bersuara musik nyata, size: ${videoData.videoBuffer.length} bytes)...`);
 
-        // 2. Upload cover photo ke rupload_igphoto (wajib 720x1280 cocok dengan video)
-        const coverBuffer = await sharp(formattedBuffer)
-            .resize(720, 1280, { fit: 'fill' })
-            .jpeg({ quality: 90 })
-            .toBuffer();
+            // 1. Upload file binary video ke rupload_igvideo (720x1280)
+            await axios.post(`https://www.instagram.com/rupload_igvideo/${entityName}`, videoData.videoBuffer, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'X-Instagram-Rupload-Params': JSON.stringify({
+                        media_type: 2,
+                        upload_id: uploadId,
+                        upload_media_height: 1280,
+                        upload_media_width: 720,
+                        upload_media_duration_ms: videoData.durationMs
+                    }),
+                    'X-Entity-Name': entityName,
+                    'X-Entity-Length': videoData.videoBuffer.length,
+                    'X-Entity-Type': 'video/mp4',
+                    'Offset': 0,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'video/mp4',
+                    'Content-Length': videoData.videoBuffer.length
+                },
+                httpsAgent: ipv4Agent
+            });
 
-        await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, coverBuffer, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'X-IG-App-ID': '936619743392459',
-                'X-CSRFToken': csrf,
-                'X-Instagram-Rupload-Params': JSON.stringify({
-                    media_type: 2,
-                    upload_id: uploadId,
-                    upload_media_height: 1280,
-                    upload_media_width: 720
-                }),
-                'X-Entity-Name': entityName,
-                'X-Entity-Length': coverBuffer.length,
-                'X-Entity-Type': 'image/jpeg',
-                'Offset': 0,
-                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
-                'Content-Type': 'image/jpeg',
-                'Content-Length': coverBuffer.length
-            },
-            httpsAgent: ipv4Agent
-        });
+            // 2. Upload cover photo ke rupload_igphoto (wajib 720x1280 cocok dengan video)
+            const coverBuffer = await sharp(formattedBuffer)
+                .resize(720, 1280, { fit: 'fill' })
+                .jpeg({ quality: 90 })
+                .toBuffer();
 
-        // Jeda 2.5 detik agar transcode server Instagram siap
-        await new Promise(r => setTimeout(r, 2500));
+            await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, coverBuffer, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'X-Instagram-Rupload-Params': JSON.stringify({
+                        media_type: 2,
+                        upload_id: uploadId,
+                        upload_media_height: 1280,
+                        upload_media_width: 720
+                    }),
+                    'X-Entity-Name': entityName,
+                    'X-Entity-Length': coverBuffer.length,
+                    'X-Entity-Type': 'image/jpeg',
+                    'Offset': 0,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'image/jpeg',
+                    'Content-Length': coverBuffer.length
+                },
+                httpsAgent: ipv4Agent
+            });
 
-        // 3. Konfigurasi penerbitan video ke Story
-        const body = new URLSearchParams({
-            upload_id: uploadId,
-            source_type: '4',
-            configure_mode: '1',
-            video_result: ''
-        }).toString();
+            // Jeda 2.5 detik agar transcode server Instagram siap
+            await new Promise(r => setTimeout(r, 2500));
 
-        const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure_to_story/?video=1', body, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'X-IG-App-ID': '936619743392459',
-                'X-CSRFToken': csrf,
-                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            httpsAgent: ipv4Agent
-        });
+            // 3. Konfigurasi penerbitan video ke Story
+            const body = new URLSearchParams({
+                upload_id: uploadId,
+                source_type: '4',
+                configure_mode: '1',
+                video_result: ''
+            }).toString();
 
-        const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
-        console.log(`[IGDirect] ✅ Berhasil terbit di Instagram Story (Video dengan Musik [${track.title}])! Media ID:`, publishedMediaId);
+            const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure_to_story/?video=1', body, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                httpsAgent: ipv4Agent
+            });
+
+            const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
+            console.log(`[IGDirect] ✅ Berhasil terbit di Instagram Story (Video dengan Musik [${track.title}])! Media ID:`, publishedMediaId);
+            return {
+                success: true,
+                mediaId: publishedMediaId,
+                isVideo: true,
+                videoBuffer: videoData.videoBuffer,
+                imageBuffer: formattedBuffer,
+                track
+            };
+        } else {
+            // Fallback Foto Statis jika ffmpeg tidak tersedia
+            console.log(`[IGDirect] Mengunggah konten ke Instagram Story (Mode Foto)...`);
+            await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, formattedBuffer, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'X-Instagram-Rupload-Params': JSON.stringify({
+                        media_type: 1,
+                        upload_id: uploadId,
+                        upload_media_height: 1920,
+                        upload_media_width: 1080
+                    }),
+                    'X-Entity-Name': entityName,
+                    'X-Entity-Length': formattedBuffer.length,
+                    'X-Entity-Type': 'image/jpeg',
+                    'Offset': 0,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'image/jpeg',
+                    'Content-Length': formattedBuffer.length
+                },
+                httpsAgent: ipv4Agent
+            });
+
+            const body = new URLSearchParams({
+                upload_id: uploadId,
+                source_type: '4',
+                configure_mode: '1'
+            }).toString();
+
+            const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure_to_story/', body, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'X-IG-App-ID': '936619743392459',
+                    'X-CSRFToken': csrf,
+                    'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                httpsAgent: ipv4Agent
+            });
+
+            const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
+            console.log('[IGDirect] ✅ Berhasil terbit di Instagram Story (Foto)! Media ID:', publishedMediaId);
+            return {
+                success: true,
+                mediaId: publishedMediaId,
+                isVideo: false,
+                videoBuffer: null,
+                imageBuffer: formattedBuffer,
+                track
+            };
+        }
+    } catch (err) {
+        checkAndNotifyIfSessionExpired(err);
+        console.error('[IGDirect] ❌ Gagal menerbitkan Instagram Story:', err.response?.data || err.message);
         return {
-            success: true,
-            mediaId: publishedMediaId,
-            isVideo: true,
-            videoBuffer: videoData.videoBuffer,
-            imageBuffer: formattedBuffer,
-            track
-        };
-    } else {
-        // Fallback Foto Statis jika ffmpeg tidak tersedia
-        console.log(`[IGDirect] Mengunggah konten ke Instagram Story (Mode Foto)...`);
-        await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, formattedBuffer, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'X-IG-App-ID': '936619743392459',
-                'X-CSRFToken': csrf,
-                'X-Instagram-Rupload-Params': JSON.stringify({
-                    media_type: 1,
-                    upload_id: uploadId,
-                    upload_media_height: 1920,
-                    upload_media_width: 1080
-                }),
-                'X-Entity-Name': entityName,
-                'X-Entity-Length': formattedBuffer.length,
-                'X-Entity-Type': 'image/jpeg',
-                'Offset': 0,
-                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
-                'Content-Type': 'image/jpeg',
-                'Content-Length': formattedBuffer.length
-            },
-            httpsAgent: ipv4Agent
-        });
-
-        const body = new URLSearchParams({
-            upload_id: uploadId,
-            source_type: '4',
-            configure_mode: '1'
-        }).toString();
-
-        const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure_to_story/', body, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'X-IG-App-ID': '936619743392459',
-                'X-CSRFToken': csrf,
-                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            httpsAgent: ipv4Agent
-        });
-
-        const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
-        console.log('[IGDirect] ✅ Berhasil terbit di Instagram Story (Foto)! Media ID:', publishedMediaId);
-        return {
-            success: true,
-            mediaId: publishedMediaId,
-            isVideo: false,
-            videoBuffer: null,
+            success: false,
+            error: err.response?.data?.message || err.message,
+            mediaId: null,
+            isVideo: Boolean(videoData?.videoBuffer),
+            videoBuffer: videoData?.videoBuffer || null,
             imageBuffer: formattedBuffer,
             track
         };
@@ -930,55 +996,67 @@ async function publishToFeed(imageBuffer, caption = '', customTrack = null) {
         }
     }
 
-    // Fallback Foto Statis ke Feed
-    console.log(`[IGDirect] Mengunggah konten ke Instagram Feed (Mode Foto)...`);
-    await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, formattedBuffer, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'X-IG-App-ID': '936619743392459',
-            'X-CSRFToken': csrf,
-            'X-Instagram-Rupload-Params': JSON.stringify({
-                media_type: 1,
-                upload_id: uploadId,
-                upload_media_height: 1350,
-                upload_media_width: 1080
-            }),
-            'X-Entity-Name': entityName,
-            'X-Entity-Length': formattedBuffer.length,
-            'X-Entity-Type': 'image/jpeg',
-            'Offset': 0,
-            'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
-            'Content-Type': 'image/jpeg',
-            'Content-Length': formattedBuffer.length
-        },
-        httpsAgent: ipv4Agent
-    });
+    try {
+        // Fallback Foto Statis ke Feed
+        console.log(`[IGDirect] Mengunggah konten ke Instagram Feed (Mode Foto)...`);
+        await axios.post(`https://www.instagram.com/rupload_igphoto/${entityName}`, formattedBuffer, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-CSRFToken': csrf,
+                'X-Instagram-Rupload-Params': JSON.stringify({
+                    media_type: 1,
+                    upload_id: uploadId,
+                    upload_media_height: 1350,
+                    upload_media_width: 1080
+                }),
+                'X-Entity-Name': entityName,
+                'X-Entity-Length': formattedBuffer.length,
+                'X-Entity-Type': 'image/jpeg',
+                'Offset': 0,
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                'Content-Type': 'image/jpeg',
+                'Content-Length': formattedBuffer.length
+            },
+            httpsAgent: ipv4Agent
+        });
 
-    const body = new URLSearchParams({
-        upload_id: uploadId,
-        caption: fullCaption,
-        source_type: '4'
-    }).toString();
+        const body = new URLSearchParams({
+            upload_id: uploadId,
+            caption: fullCaption,
+            source_type: '4'
+        }).toString();
 
-    const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure/', body, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'X-IG-App-ID': '936619743392459',
-            'X-CSRFToken': csrf,
-            'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        httpsAgent: ipv4Agent
-    });
+        const configRes = await axios.post('https://www.instagram.com/api/v1/media/configure/', body, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'X-IG-App-ID': '936619743392459',
+                'X-CSRFToken': csrf,
+                'Cookie': `sessionid=${sessionId}; ds_user_id=${dsUserId}; csrftoken=${csrf}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            httpsAgent: ipv4Agent
+        });
 
-    const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
-    console.log('[IGDirect] ✅ Berhasil terbit di Instagram Feed (Foto)! Media ID:', publishedMediaId);
-    return {
-        success: true,
-        mediaId: publishedMediaId,
-        isVideo: false,
-        track
-    };
+        const publishedMediaId = configRes.data?.media?.id || configRes.data?.media?.pk || uploadId;
+        console.log('[IGDirect] ✅ Berhasil terbit di Instagram Feed (Foto)! Media ID:', publishedMediaId);
+        return {
+            success: true,
+            mediaId: publishedMediaId,
+            isVideo: false,
+            track
+        };
+    } catch (err) {
+        checkAndNotifyIfSessionExpired(err);
+        console.error('[IGDirect] ❌ Gagal menerbitkan Instagram Feed:', err.response?.data || err.message);
+        return {
+            success: false,
+            error: err.response?.data?.message || err.message,
+            mediaId: null,
+            isVideo: false,
+            track
+        };
+    }
 }
 
 function generateSoftOpenSvg(theme, timestampWIB, dateWIB) {

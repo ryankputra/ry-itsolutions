@@ -1241,6 +1241,15 @@ async function initWABot(forceNew = false) {
                 if (msgId && botSentMsgIds.has(msgId)) continue;
                 if (isMsgDuplicate(msgId)) continue;
 
+                // Abaikan pesan riwayat lama saat reconnect / sync Baileys (lebih dari 90 detik yang lalu)
+                const msgTimestamp = msg.messageTimestamp ? Number(msg.messageTimestamp) : 0;
+                if (msgTimestamp > 0) {
+                    const msgAgeSeconds = Math.floor(Date.now() / 1000) - msgTimestamp;
+                    if (msgAgeSeconds > 90) {
+                        continue;
+                    }
+                }
+
                 const remoteJid = msg.key.remoteJid;
 
                 // --- SPECIAL LISTENER: GRUP "3B & REKBER by RIVERA" (RIVERA GROUP) ---
@@ -1753,13 +1762,16 @@ async function notifyCustomerOnStatusChange(trxOrId, newStatus, customNote = '')
 async function handleAdminCommand(replyJid, text, rawMsg = null) {
     const rawCleanText = text.trim().toLowerCase();
 
-    // Command Khusus: Simpan / Bind Session ID Instagram (.igsession <sessionid>)
-    if (rawCleanText.startsWith(".igsession") || rawCleanText.startsWith("#igsession") || rawCleanText.startsWith("igsession")) {
-        const sessionArg = text.trim().replace(/^(\.igsession|#igsession|igsession)\s*/i, '').trim();
+    // Command Khusus: Simpan / Bind Session ID Instagram (.setigsession <sessionid> / .igsession <sessionid>)
+    if (
+        rawCleanText.startsWith(".setigsession") || rawCleanText.startsWith("#setigsession") || rawCleanText.startsWith("setigsession") ||
+        rawCleanText.startsWith(".igsession") || rawCleanText.startsWith("#igsession") || rawCleanText.startsWith("igsession")
+    ) {
+        const sessionArg = text.trim().replace(/^(\.setigsession|#setigsession|setigsession|\.igsession|#igsession|igsession)\s*/i, '').trim();
         if (!sessionArg) {
             await replyWhatsApp(replyJid, 
-                "ℹ️ *CARA BIND SESI INSTAGRAM:*\n\n" +
-                "Ketik: *.igsession <sessionid_anda>*\n\n" +
+                "ℹ️ *CARA BIND / PERBARUI SESI INSTAGRAM:*\n\n" +
+                "Ketik: *.setigsession <sessionid_anda>*\n\n" +
                 "_Tips: Buka instagram.com di browser -> Inspect/F12 -> Application -> Cookies -> salin nilai 'sessionid'._" + BOT_FOOTER
             );
             return;
@@ -2554,7 +2566,12 @@ async function publishDirectTestimonialStory(imageBufferOrPath, customTrack = nu
     console.log(`[WABot] 🚀 Mempublikasikan Story Testimoni Screenshot ke IG Story & WA Story...`);
 
     // 1. Publikasikan ke Instagram Story (Video berlagu / Foto fallback)
-    const igRes = await publishToStory(buf, track, { isFullScreen: false });
+    let igRes = null;
+    try {
+        igRes = await publishToStory(buf, track, { isFullScreen: false });
+    } catch (igErr) {
+        console.error('[publishDirectTestimonialStory] Warning posting IG Story:', igErr.message);
+    }
 
     // 2. Publikasikan ke WhatsApp Story
     let waRes = null;
@@ -2586,6 +2603,40 @@ async function publishDirectTestimonialStory(imageBufferOrPath, customTrack = nu
     return { success: true, instagram: igRes, whatsapp: waRes };
 }
 
+let lastIgExpiredAlertTime = 0;
+/**
+ * Notifikasi Admin WhatsApp jika Sesi Instagram @unlocksinyalsolo Kedaluwarsa
+ */
+async function notifyAdminIgSessionExpired(detail = "login_required") {
+    const now = Date.now();
+    if (now - lastIgExpiredAlertTime < 30 * 60 * 1000) {
+        // Cooldown 30 menit agar tidak spam
+        return;
+    }
+    lastIgExpiredAlertTime = now;
+
+    console.warn(`[WABot] ⚠️ Sesi Instagram @unlocksinyalsolo kedaluwarsa (${detail})! Mengirim peringatan ke WA Admin...`);
+    const adminPhones = await getAdminPhoneNumbers();
+    const timeWIB = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+
+    const alertMsg = `⚠️ *PERINGATAN: SESI INSTAGRAM KEDALUWARSA!*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `👤 *Akun:* @unlocksinyalsolo\n` +
+        `⏰ *Waktu:* ${timeWIB} WIB\n` +
+        `❌ *Status:* ${detail || 'login_required (Sesi Logout)'}\n` +
+        `ℹ️ *Dampak:* Posting otomatis ke Instagram Story/Feed tertunda sementara.\n\n` +
+        `🔑 *Cara Memperbarui Sesi Cepat:*\n` +
+        `Ambil nilai cookie *sessionid* baru dari browser, lalu kirim ke chat bot ini:\n` +
+        `👉 *.setigsession <sessionid_baru>*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `✅ _Story WhatsApp tetap berjalan normal & bersuara musik._` + BOT_FOOTER;
+
+    for (const phone of adminPhones) {
+        try {
+            await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
+        } catch (e) {}
+    }
+}
 
 /**
  * Helper khusus mengirim pesan media (gambar) balasan ke admin
@@ -3629,5 +3680,6 @@ module.exports = {
     normalizeProtoMessage,
     storeMessage,
     handleRiveraGroupMessage,
-    publishDirectTestimonialStory
+    publishDirectTestimonialStory,
+    notifyAdminIgSessionExpired
 };
