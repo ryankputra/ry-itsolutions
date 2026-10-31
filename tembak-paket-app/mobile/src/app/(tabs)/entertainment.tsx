@@ -239,6 +239,38 @@ export default function EntertainmentScreen() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // 1. Fetch live RyTone catalog from STB Backend on mount
+  useEffect(() => {
+    async function loadLiveCatalog() {
+      try {
+        const res = await apiClient.get('/music');
+        const rawTracks = res.data?.data?.tracks || res.data?.tracks;
+        if (Array.isArray(rawTracks) && rawTracks.length > 0) {
+          const mapped: Track[] = rawTracks.map((t: any, idx: number) => ({
+            id: t.id || `track-${idx + 1}`,
+            title: t.title,
+            artist: t.artist,
+            category: t.category || 'indo',
+            categoryLabel: t.categoryLabel || 'Top Hits',
+            durationSec: t.durationSec || 200,
+            durationFormatted: formatSeconds(t.durationSec || 200),
+            audioUrl: t.audioUrl,
+            streamsCount: t.streamsCount || '10M+ streams',
+            rank: t.rank || idx + 1,
+            tags: t.tags || ['#rytone'],
+            coverImage: t.coverImage || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
+            accentColor: t.accentColor || '#1ed760',
+          }));
+          setTracks(mapped);
+          setLastSyncTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+        }
+      } catch (err) {
+        console.warn('[Entertainment] Failed fetching live tracks:', err);
+      }
+    }
+    loadLiveCatalog();
+  }, []);
+
   const handleTogglePlay = () => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
     setIsPlaying(!isPlaying);
@@ -276,7 +308,7 @@ export default function EntertainmentScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await Share.share({
-        message: `Dengarkan lagu hits "${track.title}" oleh ${track.artist} di Ry-IT Solutions Spotify Player!`,
+        message: `Dengarkan lagu hits "${track.title}" oleh ${track.artist} di RyTone Player!`,
       });
     } catch (e) {}
   };
@@ -286,15 +318,31 @@ export default function EntertainmentScreen() {
     setIsSyncing(true);
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const res = await apiClient.get('/music/chart').catch(() => null);
-      if (res?.data?.status && Array.isArray(res.data.data)) {
-        setTracks(res.data.data);
+      const res = await apiClient.get('/music');
+      const rawTracks = res.data?.data?.tracks || res.data?.tracks;
+      if (Array.isArray(rawTracks) && rawTracks.length > 0) {
+        const mapped: Track[] = rawTracks.map((t: any, idx: number) => ({
+          id: t.id || `track-${idx + 1}`,
+          title: t.title,
+          artist: t.artist,
+          category: t.category || 'indo',
+          categoryLabel: t.categoryLabel || 'Top Hits',
+          durationSec: t.durationSec || 200,
+          durationFormatted: formatSeconds(t.durationSec || 200),
+          audioUrl: t.audioUrl,
+          streamsCount: t.streamsCount || '10M+ streams',
+          rank: t.rank || idx + 1,
+          tags: t.tags || ['#rytone'],
+          coverImage: t.coverImage || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
+          accentColor: t.accentColor || '#1ed760',
+        }));
+        setTracks(mapped);
       }
       setLastSyncTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-      Alert.alert('Tersinkronisasi', 'Daftar lagu Spotify berhasil diperbarui ke chart terbaru.');
+      Alert.alert('Tersinkronisasi', 'Daftar lagu RyTone Top Hits berhasil diperbarui langsung dari backend server.');
     } catch (e) {
-      Alert.alert('Info', 'Katalog lagu Spotify aktif dan versi mutakhir.');
+      Alert.alert('Info', 'Katalog lagu RyTone aktif dan tersinkron.');
     } finally {
       setIsSyncing(false);
     }
