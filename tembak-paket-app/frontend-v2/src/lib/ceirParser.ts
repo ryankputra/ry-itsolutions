@@ -163,8 +163,7 @@ export function parseCeirResponse(rawInput: any, defaultDate?: string, apiRespon
         No: 1,
         Tanggal: currentDate,
         Action: "SUCCESS",
-        Note: formatCeirNote(parsedObj),
-        IMEI: imeiFound
+        Note: formatCeirNote(parsedObj)
       });
     } else {
       let itemsSource = parsedObj.result || parsedObj.history || parsedObj.data?.history || parsedObj.data?.result || parsedObj.data || parsedObj;
