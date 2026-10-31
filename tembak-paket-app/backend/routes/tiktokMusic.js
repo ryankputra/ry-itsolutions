@@ -95,7 +95,7 @@ router.get('/stream', async (req, res) => {
             const { stdout } = await execFileAsync(YTDLP_BIN, [
                 '--js-runtimes', 'node:/usr/bin/node',
                 '-g',
-                '-f', 'bestaudio',
+                '-f', 'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio',
                 queryTarget
             ], { timeout: 18000 });
 
@@ -116,8 +116,10 @@ router.get('/stream', async (req, res) => {
 
         // Proxy audio stream dari GoogleVideo langsung ke client
         const clientReq = (streamUrl.startsWith('https') ? https : http).get(streamUrl, (upstreamRes) => {
+            const rawType = upstreamRes.headers['content-type'] || 'audio/mp4';
+            const contentType = rawType.includes('webm') ? 'audio/webm' : (rawType.includes('mp4') || rawType.includes('m4a') ? 'audio/mp4' : 'audio/mpeg');
             res.writeHead(upstreamRes.statusCode || 200, {
-                'Content-Type': upstreamRes.headers['content-type'] || 'audio/webm',
+                'Content-Type': contentType,
                 'Content-Length': upstreamRes.headers['content-length'],
                 'Accept-Ranges': 'bytes',
                 'Cache-Control': 'public, max-age=3600'

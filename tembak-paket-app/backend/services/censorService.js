@@ -337,18 +337,21 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 }
             }
 
-            // C. NOMOR IMEI, NOMOR HP & NO REKENING
+            // C. NOMOR IMEI, MEID, NOMOR HP & NO REKENING
             const digitsOnly = lineText.replace(/\D/g, '');
             const hasImeiWord = /\bimei\d?\b/i.test(lineText) || lowerLine.startsWith('imei');
-            const isImeiCandidate = hasImeiWord || (digitsOnly.length >= 14 && digitsOnly.length <= 17 && (digitsOnly.startsWith('35') || digitsOnly.startsWith('86') || digitsOnly.startsWith('01') || digitsOnly.startsWith('99') || hasImeiWord));
+            const hasMeidWord = /\bmeid\b/i.test(lineText) || lowerLine.startsWith('meid');
+            const isImeiCandidate = hasImeiWord || hasMeidWord || 
+                (digitsOnly.length >= 14 && digitsOnly.length <= 17 && (digitsOnly.startsWith('35') || digitsOnly.startsWith('86') || digitsOnly.startsWith('01') || digitsOnly.startsWith('99') || hasImeiWord)) ||
+                (hasMeidWord && digitsOnly.length >= 10);
             const isPhoneCandidate = /^(?:\+?62|08)[\d\s-]{8,16}/.test(lineText);
             const isBankCandidate = /\b\d{9,16}\b/.test(lineText) || (digitsOnly.length >= 10 && digitsOnly.length <= 16);
 
             if (isImeiCandidate) {
-                // Sensor label "IMEI / IMEI1 / IMEI2" dan seluruh angka IMEI pada baris ini
+                // Sensor label "IMEI / IMEI1 / IMEI2 / MEID" dan seluruh angka IMEI/MEID pada baris ini
                 const imeiWords = words.filter(w => {
                     const wClean = normalizeText(w.text).toLowerCase();
-                    return /\bimei\d?\b/i.test(wClean) || /\d+/.test(wClean);
+                    return /\b(imei\d?|meid)\b/i.test(wClean) || /\d+/.test(wClean);
                 });
                 if (imeiWords.length > 0) {
                     const firstW = mapBbox(imeiWords[0].bbox, scaleX, scaleY);
@@ -364,7 +367,7 @@ async function censorScreenshot(imageBuffer, options = {}) {
                             x1: Math.min(imgWidth, maxX1 + 4),
                             y1: Math.min(imgHeight, Math.max(...allY1) + 2)
                         });
-                        detectedTypes.add('Nomor IMEI & Label Lengkap');
+                        detectedTypes.add('Nomor IMEI/MEID & Label Lengkap');
                     }
                 }
             } else if (isPhoneCandidate || isBankCandidate) {
@@ -537,6 +540,52 @@ async function censorScreenshot(imageBuffer, options = {}) {
                         });
                         detectedTypes.add('Data Rekening Tujuan BCA');
                     }
+                }
+            }
+
+            // P. SENSOR NOMINAL HARGA CHAT / ANGKA SINGKATAN (contoh: 130K, 20k, 50rb, 130ribu, hemat 20k, 130.000)
+            for (let wi = 0; wi < words.length; wi++) {
+                const w = words[wi];
+                if (!w || !w.bbox) continue;
+                const wClean = normalizeText(w.text).trim();
+                const stripped = wClean.replace(/^[^\w]+|[^\w]+$/g, '');
+
+                // 1. Pola kata tunggal: 130k, 130K, 20k, 50rb, 130ribu, 1jt, rp20k, 130.000
+                const isSingleWordPrice = 
+                    /^(?:rp|idr)?\s*\d+([.,]\d+)?\s*(k|rb|ribu|jt|juta)$/i.test(stripped) ||
+                    /^\d{1,4}[kK]$/.test(stripped) ||
+                    /^(?:rp|idr)\.?\s*\d+/i.test(stripped) ||
+                    /^\d{2,3}\.000$/.test(stripped);
+
+                // 2. Pasangan 2 kata: kata pertama angka ("20", "130"), kata kedua satuan ("k", "rb", "ribu", "jt")
+                const nextW = wi + 1 < words.length ? words[wi + 1] : null;
+                const nextClean = nextW ? normalizeText(nextW.text).trim().toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '') : '';
+                const isPairPrice = /^\d+([.,]\d+)?$/.test(stripped) && /^(?:k|rb|ribu|jt|juta)$/i.test(nextClean);
+
+                if (isSingleWordPrice) {
+                    const mW = mapBbox(w.bbox, scaleX, scaleY);
+                    if (mW) {
+                        rawBoxes.push({
+                            x0: Math.max(0, mW.x0 - 4),
+                            y0: Math.max(0, mW.y0 - 3),
+                            x1: Math.min(imgWidth, mW.x1 + 6),
+                            y1: Math.min(imgHeight, mW.y1 + 3)
+                        });
+                        detectedTypes.add('Nominal Harga Chat (Singkatan K/Rb/Angka)');
+                    }
+                } else if (isPairPrice && nextW) {
+                    const mW1 = mapBbox(w.bbox, scaleX, scaleY);
+                    const mW2 = mapBbox(nextW.bbox, scaleX, scaleY);
+                    if (mW1 && mW2) {
+                        rawBoxes.push({
+                            x0: Math.max(0, Math.min(mW1.x0, mW2.x0) - 4),
+                            y0: Math.max(0, Math.min(mW1.y0, mW2.y0) - 3),
+                            x1: Math.min(imgWidth, Math.max(mW1.x1, mW2.x1) + 6),
+                            y1: Math.min(imgHeight, Math.max(mW1.y1, mW2.y1) + 3)
+                        });
+                        detectedTypes.add('Nominal Harga Chat (Pasangan Angka + Satuan)');
+                    }
+                    wi++; // lewati kata berikutnya karena sudah disensor bersama
                 }
             }
         }

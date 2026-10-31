@@ -29,34 +29,34 @@ function getAddRoamerLogoUri() {
     return '';
 }
 
-// Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG (dengan offset reff/drop bass)
+// Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG (dengan offset reff/drop bass aman)
 const TRENDING_TRACKS = [
     { title: 'DJ Alay Gaya Kaya Artis (Viral TikTok Remix)', artist: 'DJ Desa', filename: 'djalay.mp3', reffSec: 18 },
     { title: 'Stecu Stecu (Jedag Jedug TikTok Remix)', artist: 'Faris Adam', filename: 'stecustecu.mp3', reffSec: 15 },
     { title: 'Tabrak Tabrak Masuk (Remix TikTok Full Bass)', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3', reffSec: 20 },
-    { title: 'Malam Pagi (Remix Jedag Jedug TikTok)', artist: 'Saixse ft. MK', filename: 'malampagi.mp3', reffSec: 25 },
+    { title: 'Malam Pagi (Remix Jedag Jedug TikTok)', artist: 'Saixse ft. MK', filename: 'malampagi.mp3', reffSec: 20 },
     { title: 'Cikini Ke Gondangdia (DJ Koplo Remix TikTok)', artist: 'Duo Anggrek Remix', filename: 'cikini.mp3', reffSec: 16 },
-    { title: 'Karna Su Sayang (DJ Remix TikTok Viral)', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3', reffSec: 22 },
-    { title: 'Sial (DJ Speed Up Jedag Jedug TikTok)', artist: 'Mahalini Remix', filename: 'sial.mp3', reffSec: 30 },
-    { title: 'Garam & Madu (DJ Remix TikTok Bass)', artist: 'Tenxi & Asmara', filename: 'garammadu.mp3', reffSec: 18 },
+    { title: 'Karna Su Sayang (DJ Remix TikTok Viral)', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3', reffSec: 20 },
+    { title: 'Sial (DJ Speed Up Jedag Jedug TikTok)', artist: 'Mahalini Remix', filename: 'sial.mp3', reffSec: 20 },
+    { title: 'Garam & Madu (DJ Remix TikTok Bass)', artist: 'Tenxi & Asmara', filename: 'garammadu.mp3', reffSec: 10 },
     { title: 'Cupid (Speed Up Twin Ver TikTok Remix)', artist: 'FIFTY FIFTY', filename: 'cupid.mp3', reffSec: 15 },
-    { title: 'Sigar (DJ Jedag Jedug Koplo TikTok)', artist: 'Denny Caknan Remix', filename: 'sigar.mp3', reffSec: 28 },
-    { title: 'Cundamani (DJ Slow Bass Remix TikTok)', artist: 'Denny Caknan Remix', filename: 'cundamani.mp3', reffSec: 25 },
-    { title: 'Wirang (DJ Remix Full Bass TikTok)', artist: 'Denny Caknan Remix', filename: 'wirang.mp3', reffSec: 20 },
-    { title: 'APT. (DJ TikTok Viral Remix)', artist: 'ROSÉ & Bruno Mars', filename: 'apt.mp3', reffSec: 12 },
-    { title: 'Die With A Smile (DJ Slow TikTok Remix)', artist: 'Lady Gaga & Bruno Mars', filename: 'diewithasmile.mp3', reffSec: 42 },
-    { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3', reffSec: 24 },
-    { title: 'Lantas (DJ Remix TikTok Viral)', artist: 'Juicy Luicy', filename: 'lantas.mp3', reffSec: 22 },
-    { title: 'Bohongi Hati (DJ Remix Full Bass)', artist: 'Mahalini Remix', filename: 'bohongihati.mp3', reffSec: 25 },
-    { title: 'Gala Bunga Matahari (DJ TikTok Remix)', artist: 'Sal Priadi Remix', filename: 'galabungamatahari.mp3', reffSec: 30 },
-    { title: 'Jiwa Yang Bersedih (DJ Slow Bass)', artist: 'Ghea Indrawari Remix', filename: 'jiwayangbersedih.mp3', reffSec: 28 },
-    { title: 'Mati-matian (DJ Remix Jedag Jedug)', artist: 'Mahalini Remix', filename: 'matimatian.mp3', reffSec: 20 },
-    { title: 'Penjaga Hati (DJ Viral TikTok Remix)', artist: 'Nadhif Basalamah', filename: 'penjagahati.mp3', reffSec: 25 },
-    { title: 'Satu Bulan (DJ Remix Koplo Bass)', artist: 'Bernadya Remix', filename: 'satubulan.mp3', reffSec: 22 },
-    { title: 'Semua Aku Dirayakan (DJ Remix)', artist: 'Nadin Amizah Remix', filename: 'semuaakudirayakan.mp3', reffSec: 25 },
-    { title: 'Tak Segampang Itu (DJ Remix TikTok)', artist: 'Anggi Marito Remix', filename: 'taksegampangitu.mp3', reffSec: 26 },
-    { title: 'Tampar (DJ Full Bass Remix TikTok)', artist: 'Juicy Luicy Remix', filename: 'tampar.mp3', reffSec: 20 },
-    { title: 'Untungnya Hidup Tetap Berjalan (DJ Remix)', artist: 'Bernadya Remix', filename: 'untungnya.mp3', reffSec: 24 }
+    { title: 'Sigar (DJ Jedag Jedug Koplo TikTok)', artist: 'Denny Caknan Remix', filename: 'sigar.mp3', reffSec: 10 },
+    { title: 'Cundamani (DJ Slow Bass Remix TikTok)', artist: 'Denny Caknan Remix', filename: 'cundamani.mp3', reffSec: 10 },
+    { title: 'Wirang (DJ Remix Full Bass TikTok)', artist: 'Denny Caknan Remix', filename: 'wirang.mp3', reffSec: 10 },
+    { title: 'APT. (DJ TikTok Viral Remix)', artist: 'ROSÉ & Bruno Mars', filename: 'apt.mp3', reffSec: 10 },
+    { title: 'Die With A Smile (DJ Slow TikTok Remix)', artist: 'Lady Gaga & Bruno Mars', filename: 'diewithasmile.mp3', reffSec: 10 },
+    { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3', reffSec: 20 },
+    { title: 'Lantas (DJ Remix TikTok Viral)', artist: 'Juicy Luicy', filename: 'lantas.mp3', reffSec: 10 },
+    { title: 'Bohongi Hati (DJ Remix Full Bass)', artist: 'Mahalini Remix', filename: 'bohongihati.mp3', reffSec: 20 },
+    { title: 'Gala Bunga Matahari (DJ TikTok Remix)', artist: 'Sal Priadi Remix', filename: 'galabungamatahari.mp3', reffSec: 20 },
+    { title: 'Jiwa Yang Bersedih (DJ Slow Bass)', artist: 'Ghea Indrawari Remix', filename: 'jiwayangbersedih.mp3', reffSec: 10 },
+    { title: 'Mati-matian (DJ Remix Jedag Jedug)', artist: 'Mahalini Remix', filename: 'matimatian.mp3', reffSec: 10 },
+    { title: 'Penjaga Hati (DJ Viral TikTok Remix)', artist: 'Nadhif Basalamah', filename: 'penjagahati.mp3', reffSec: 10 },
+    { title: 'Satu Bulan (DJ Remix Koplo Bass)', artist: 'Bernadya Remix', filename: 'satubulan.mp3', reffSec: 10 },
+    { title: 'Semua Aku Dirayakan (DJ Remix)', artist: 'Nadin Amizah Remix', filename: 'semuaakudirayakan.mp3', reffSec: 10 },
+    { title: 'Tak Segampang Itu (DJ Remix TikTok)', artist: 'Anggi Marito Remix', filename: 'taksegampangitu.mp3', reffSec: 10 },
+    { title: 'Tampar (DJ Full Bass Remix TikTok)', artist: 'Juicy Luicy Remix', filename: 'tampar.mp3', reffSec: 10 },
+    { title: 'Untungnya Hidup Tetap Berjalan (DJ Remix)', artist: 'Bernadya Remix', filename: 'untungnya.mp3', reffSec: 10 }
 ];
 
 const { getRandomDJTrack, getUniqueDJTracks, getActiveDJTracks } = require('./tiktokDJService');
@@ -553,15 +553,17 @@ async function generateStoryVideo(formattedImageBuffer, track) {
 
         fs.writeFileSync(tempImg, scaledImgBuffer);
 
-        const startSec = track?.reffSec || 18;
+        const rawStartSec = track?.reffSec || 10;
+        const startSec = Math.max(0, Math.min(rawStartSec, 14));
 
-        // Encode video 15 detik dengan libx264 ultrafast + aac stereo 44.1kHz
-        // Menggunakan -ss SEBELUM -i audioPath untuk langsung lompat ke reff/drop bass jedag-jedug
+        // Encode video tepat 15 detik dengan libx264 ultrafast + aac stereo 44.1kHz
+        // -stream_loop -1 menjamin musik TIDAK PERNAH terputus di tengah jalan meskipun file sampel pendek
         await execFileAsync(FFMPEG_BIN, [
             '-y',
             '-loop', '1',
             '-i', tempImg,
             '-ss', String(startSec),
+            '-stream_loop', '-1',
             '-i', audioPath,
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
@@ -627,13 +629,15 @@ async function generateFeedVideo(formattedImageBuffer, track) {
 
         fs.writeFileSync(tempImg, scaledImgBuffer);
 
-        const startSec = track?.reffSec || 18;
+        const rawStartSec = track?.reffSec || 10;
+        const startSec = Math.max(0, Math.min(rawStartSec, 14));
 
         await execFileAsync(FFMPEG_BIN, [
             '-y',
             '-loop', '1',
             '-i', tempImg,
             '-ss', String(startSec),
+            '-stream_loop', '-1',
             '-i', audioPath,
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
@@ -1439,6 +1443,27 @@ ${rawText}`;
                                     if (s.desc) s.desc = s.desc.replace(/smartfren/gi, 'SF').replace(/rp\s*\d+[\d.,]*/gi, '').trim();
                                 });
                             }
+                            if (parsed.type === "SLOT_UPDATE" || parsed.type === "PARTIAL_CLOSE" || parsed.type === "FULL_CLOSE") {
+                                const isCloseAll = parsed.type === "FULL_CLOSE";
+                                const syncd = syncRiveraDailyServices(parsed.services || [], isCloseAll);
+                                parsed.services = syncd;
+                                const hasAnyReady = syncd.some(s => s.status === "READY");
+                                const hasAnyClosed = syncd.some(s => s.status !== "READY");
+                                if (syncd.length > 0 && !hasAnyReady) {
+                                    parsed.type = "FULL_CLOSE";
+                                    parsed.title = "CLOSED";
+                                    parsed.badge = "ORDERAN KLOTER CLOSED";
+                                } else if (hasAnyClosed && hasAnyReady) {
+                                    parsed.type = "PARTIAL_CLOSE";
+                                    parsed.title = "UPDATE SLOT";
+                                    parsed.badge = "UPDATE STATUS LAYANAN";
+                                    parsed.note = "Sebagian Jalur Tutup • Jalur Lain Ready";
+                                } else {
+                                    parsed.type = "SLOT_UPDATE";
+                                    parsed.title = "READY";
+                                    parsed.badge = "LIVE SERVER UPDATE";
+                                }
+                            }
                             return parsed;
                         }
                     }
@@ -1461,7 +1486,7 @@ ${rawText}`;
         const isClosed = /(SLOW.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*SLOW)/i.test(upper);
         services.push({
             name: "3B SF SLOW",
-            status: isClosed ? "FULL_SLOT" : "READY",
+            status: isClosed ? "CLOSED" : "READY",
             desc: isClosed ? "Full Slot / Ditutup Sementara" : "Done Malam • Sent s/d Sore"
         });
     }
@@ -1471,7 +1496,7 @@ ${rawText}`;
         const isClosed = /(FAST.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*FAST)/i.test(upper);
         services.push({
             name: "3B SF FAST",
-            status: isClosed ? "FULL_SLOT" : "READY",
+            status: isClosed ? "CLOSED" : "READY",
             desc: isClosed ? "Full Slot / Ditutup Sementara" : "Proses Cepat Under 15 Menit"
         });
     }
@@ -1481,7 +1506,7 @@ ${rawText}`;
         const isClosed = /(DIGIPOS.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*DIGIPOS|1B.*(OFF|FULL|TUTUP|CLOSE)|(OFF|FULL|TUTUP|CLOSE).*1B)/i.test(upper);
         services.push({
             name: "1B DIGIPOS",
-            status: isClosed ? "FULL_SLOT" : "READY",
+            status: isClosed ? "CLOSED" : "READY",
             desc: isClosed ? "Full Slot / Ditutup Sementara" : "Ready Jalur Khusus Promo"
         });
     }
@@ -1491,25 +1516,131 @@ ${rawText}`;
         const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP)/i.test(upper);
         services.push({
             name: "3B SF",
-            status: isClosed ? "FULL_SLOT" : "READY",
+            status: isClosed ? "CLOSED" : "READY",
             desc: isClosed ? "Full Slot / Ditutup Sementara" : "Slot Tersedia Hari Ini"
         });
     }
 
-    if (services.length === 0) {
+    if (services.length === 0 && !isCloseAll) {
         return { type: "IRRELEVANT" };
     }
 
-    const allClosed = isCloseAll || services.every(s => s.status !== "READY");
-    const anyClosed = services.some(s => s.status !== "READY");
+    // Sinkronkan status dengan catatan layanan aktif hari ini (Daily State)
+    const synchronizedServices = syncRiveraDailyServices(services, isCloseAll);
+
+    const hasAnyReady = synchronizedServices.some(s => s.status === "READY");
+    const hasAnyClosed = synchronizedServices.some(s => s.status !== "READY");
+    const isReallyAllClosed = isCloseAll || (synchronizedServices.length > 0 && !hasAnyReady);
+
+    let finalType = "SLOT_UPDATE";
+    let finalTitle = "READY";
+    let finalBadge = "LIVE SERVER UPDATE";
+
+    if (isReallyAllClosed) {
+        finalType = "FULL_CLOSE";
+        finalTitle = "CLOSED";
+        finalBadge = "ORDERAN KLOTER CLOSED";
+    } else if (hasAnyClosed && hasAnyReady) {
+        finalType = "PARTIAL_CLOSE";
+        finalTitle = "UPDATE SLOT";
+        finalBadge = "UPDATE STATUS LAYANAN";
+    } else {
+        finalType = "SLOT_UPDATE";
+        finalTitle = "READY";
+        finalBadge = "LIVE SERVER UPDATE";
+    }
 
     return {
-        type: allClosed ? "FULL_CLOSE" : (anyClosed ? "PARTIAL_CLOSE" : "SLOT_UPDATE"),
-        title: allClosed ? "CLOSED" : "READY",
-        badge: allClosed ? "CLOSED" : (anyClosed ? "UPDATE SLOT" : "LIVE UPDATE"),
-        services,
-        note: "Semua Bergaransi Tanpa Drama"
+        type: finalType,
+        title: finalTitle,
+        badge: finalBadge,
+        services: synchronizedServices,
+        note: (hasAnyClosed && hasAnyReady) ? "Sebagian Jalur Tutup • Jalur Lain Ready" : "Semua Bergaransi Tanpa Drama"
     };
+}
+
+const RIVERA_STATUS_FILE = path.resolve(__dirname, '../data/rivera_daily_status.json');
+
+function getTodayWIBDate() {
+    return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+}
+
+function loadRiveraDailyServices() {
+    try {
+        if (fs.existsSync(RIVERA_STATUS_FILE)) {
+            const raw = JSON.parse(fs.readFileSync(RIVERA_STATUS_FILE, 'utf-8'));
+            if (raw && raw.date === getTodayWIBDate() && Array.isArray(raw.services)) {
+                return raw.services;
+            }
+        }
+    } catch {}
+    return [];
+}
+
+function saveRiveraDailyServices(services) {
+    try {
+        const dir = path.dirname(RIVERA_STATUS_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(RIVERA_STATUS_FILE, JSON.stringify({
+            date: getTodayWIBDate(),
+            updatedAt: Date.now(),
+            services
+        }, null, 2));
+    } catch (e) {
+        console.warn('[RiveraStatus] Gagal simpan status harian:', e.message);
+    }
+}
+
+/**
+ * Sinkronisasi layanan Rivera berdasarkan riwayat hari berjalan:
+ * - Layanan yang open (READY) ditambahkan ke daftar aktif hari ini.
+ * - Layanan yang close diperbarui statusnya JIKA memang pernah open hari ini.
+ * - Jika close all, semua layanan hari ini ditandai CLOSED.
+ */
+function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
+    let currentServices = loadRiveraDailyServices();
+
+    if (isFullClose) {
+        if (currentServices.length > 0) {
+            currentServices = currentServices.map(s => ({
+                ...s,
+                status: "CLOSED",
+                desc: "Ditutup Sementara"
+            }));
+        } else {
+            currentServices = [
+                { name: "3B SF SLOW", status: "CLOSED", desc: "Ditutup Sementara" },
+                { name: "3B SF FAST", status: "CLOSED", desc: "Ditutup Sementara" }
+            ];
+        }
+        saveRiveraDailyServices(currentServices);
+        return currentServices;
+    }
+
+    if (!Array.isArray(incomingServices) || incomingServices.length === 0) {
+        return currentServices;
+    }
+
+    const norm = (n) => String(n || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    for (const inc of incomingServices) {
+        const incNorm = norm(inc.name);
+        const existingIdx = currentServices.findIndex(s => norm(s.name) === incNorm);
+
+        if (existingIdx !== -1) {
+            currentServices[existingIdx].status = inc.status;
+            if (inc.desc) currentServices[existingIdx].desc = inc.desc;
+        } else {
+            // Sesuai aturan: hanya tambahkan jika statusnya READY (pernah dibuka hari ini)
+            // Jika belum ada rekaman sama sekali hari ini, catat sebagai referensi awal
+            if (inc.status === "READY" || currentServices.length === 0) {
+                currentServices.push(inc);
+            }
+        }
+    }
+
+    saveRiveraDailyServices(currentServices);
+    return currentServices;
 }
 
 /**
@@ -1523,12 +1654,13 @@ async function generateRiveraUpdateGraphic(parsedData) {
     const timestampWIB = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
 
     const isFullClose = parsedData.type === "FULL_CLOSE";
+    const isPartialClose = parsedData.type === "PARTIAL_CLOSE";
+
     const services = Array.isArray(parsedData.services) && parsedData.services.length > 0
         ? parsedData.services
         : [
             { name: "3B SF SLOW", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Done Malam • Sent s/d Sore" },
-            { name: "3B SF FAST", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Proses Cepat Under 15 Menit" },
-            { name: "1B DIGIPOS", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Ready Jalur Khusus Promo" }
+            { name: "3B SF FAST", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Proses Cepat Under 15 Menit" }
         ];
 
     const cardsSvg = services.map((s, idx) => {
@@ -1557,19 +1689,23 @@ async function generateRiveraUpdateGraphic(parsedData) {
         `;
     }).join("\n");
 
-    const badgeBgTop = isFullClose ? "#ffe4e6" : "#dcfce7";
-    const badgeStrokeTop = isFullClose ? "#fca5a5" : "#86efac";
-    const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : "LIVE SERVER UPDATE";
-    const badgeTextColorTop = isFullClose ? "#be123c" : "#15803d";
+    // 3 Tampilan Desain Berbeda: ALL READY vs PARTIAL CLOSE vs FULL CLOSE
+    const badgeBgTop = isFullClose ? "#ffe4e6" : (isPartialClose ? "#fef3c7" : "#dcfce7");
+    const badgeStrokeTop = isFullClose ? "#fca5a5" : (isPartialClose ? "#fcd34d" : "#86efac");
+    const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : (isPartialClose ? "UPDATE STATUS LAYANAN" : "LIVE SERVER UPDATE");
+    const badgeTextColorTop = isFullClose ? "#be123c" : (isPartialClose ? "#b45309" : "#15803d");
+    const dotColorTop = isFullClose ? "#e11d48" : (isPartialClose ? "#f59e0b" : "#16a34a");
     
-    // Sesuai permintaan user: ganti judul panjang menjadi READY dengan warna hitam & tipografi elegan
-    const mainTitle = isFullClose ? "CLOSED" : "READY";
-    const mainSubTitle = isFullClose ? "ORDERAN KLOTER DITUTUP" : "SLOT &amp; JALUR ON HARI INI";
-    const mainTitleColor = isFullClose ? "#e11d48" : "#0f172a"; // Warna hitam untuk READY
-    const mainSubTitleColor = isFullClose ? "#be123c" : theme.primaryColor;
+    // Headline: jika ada yang close, jangan gunakan READY! Gunakan UPDATE SLOT
+    const mainTitle = isFullClose ? "CLOSED" : (isPartialClose ? "UPDATE SLOT" : "READY");
+    const mainSubTitle = isFullClose 
+        ? "ORDERAN KLOTER DITUTUP" 
+        : (isPartialClose ? "SEBAGIAN TUTUP • JALUR LAIN TETAP READY" : "SLOT &amp; JALUR ON HARI INI");
+    const mainTitleColor = isFullClose ? "#e11d48" : "#0f172a";
+    const mainSubTitleColor = isFullClose ? "#be123c" : (isPartialClose ? "#d97706" : theme.primaryColor);
 
     // Bersihkan emoji dari note agar tidak menghasilkan missing glyph / kotak silang di server Linux
-    const rawNote = parsedData.note || 'Semua Bergaransi Tanpa Drama';
+    const rawNote = parsedData.note || (isPartialClose ? 'Sebagian Jalur Tutup • Jalur Lain Ready' : 'Semua Bergaransi Tanpa Drama');
     const cleanNote = escapeXml(rawNote.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '').trim() || 'Semua Bergaransi Tanpa Drama');
 
     const svg = `
@@ -1600,11 +1736,11 @@ async function generateRiveraUpdateGraphic(parsedData) {
             </g>
 
             <!-- Pill Badge -->
-            <rect x="340" y="370" width="400" height="42" rx="21" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
-            <circle cx="368" cy="391" r="6.5" fill="${isFullClose ? '#e11d48' : '#16a34a'}"/>
+            <rect x="320" y="370" width="440" height="42" rx="21" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
+            <circle cx="348" cy="391" r="6.5" fill="${dotColorTop}"/>
             <text x="548" y="399" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="18" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
 
-            <!-- Main Headline: READY (Hitam, tipografi modern & tegas, tidak terpotong) -->
+            <!-- Main Headline: READY vs UPDATE SLOT vs CLOSED -->
             <text x="540" y="475" font-family="'Plus Jakarta Sans', 'Montserrat', 'Inter', -apple-system, sans-serif" font-size="82" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="6">${mainTitle}</text>
             <text x="540" y="522" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="28" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle" letter-spacing="1">${mainSubTitle}</text>
             <text x="540" y="562" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="21" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
@@ -1711,6 +1847,7 @@ module.exports = {
     publishOpenStory,
     parseRiveraMessage,
     generateRiveraUpdateGraphic,
+    generateStoryVideo,
     publishRiveraStory,
     deleteInstagramStory,
     saveSessionFromCookie,

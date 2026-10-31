@@ -1443,11 +1443,11 @@ async function processAdminImageBatch(remoteJid) {
         `🎶 *Setiap foto disematkan musik viral berbeda:*\n` +
         trackLines + `\n\n` +
         `🎯 *Target Akun:* *@unlocksinyalsolo*\n\n` +
-        `Silakan balas angka untuk mempublikasikan:\n` +
-        `1️⃣ Balas *1* ➔ Post ke *Instagram Story* (Video 15s bersuara musik nyata 🔊, terbit terpisah)\n` +
-        `2️⃣ Balas *2* ➔ Post ke *Instagram Feed* (masing-masing terbit sendiri terpisah)\n` +
-        `3️⃣ Balas *3* ➔ Post ke *Story & Feed*\n` +
-        `0️⃣ Balas *0* ➔ Batalkan\n` +
+        `Silakan balas huruf untuk mempublikasikan:\n` +
+        `• Balas *p* ➔ Post ke *Instagram Story* (Video 15s bersuara musik nyata 🔊, terbit terpisah)\n` +
+        `• Balas *l* ➔ Post ke *Instagram Feed* (masing-masing terbit sendiri terpisah)\n` +
+        `• Balas *m* ➔ Post ke *Story & Feed*\n` +
+        `• Balas *c* ➔ Batalkan\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
         `_Sesi konfirmasi berlaku selama 15 menit._` +
         BOT_FOOTER;
@@ -1992,7 +1992,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
     if (pendingTesti && (Date.now() - pendingTesti.timestamp < 15 * 60 * 1000)) {
         const items = pendingTesti.items || (pendingTesti.buffer ? [pendingTesti] : []);
         if (items.length > 0) {
-            if (rawCleanText === "1" || rawCleanText === ".1") {
+            if (rawCleanText === "p" || rawCleanText === ".p" || rawCleanText === "1" || rawCleanText === ".1") {
                 await replyWhatsApp(replyJid, `⏳ *Sedang merender video 15 detik & mempublikasikan ${items.length} postingan ke Instagram Story (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
                 try {
                     for (let i = 0; i < items.length; i++) {
@@ -2008,7 +2008,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
                     await replyWhatsApp(replyJid, `❌ *Gagal posting ke Story:* ${errStory.message}` + BOT_FOOTER);
                 }
                 return;
-            } else if (rawCleanText === "2" || rawCleanText === ".2") {
+            } else if (rawCleanText === "l" || rawCleanText === ".l" || rawCleanText === "2" || rawCleanText === ".2") {
                 await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Feed satu per satu (@unlocksinyalsolo)...*\nMohon tunggu sebentar.`);
                 try {
                     for (let i = 0; i < items.length; i++) {
@@ -2024,7 +2024,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
                     await replyWhatsApp(replyJid, `❌ *Gagal posting ke Feed:* ${errFeed.message}` + BOT_FOOTER);
                 }
                 return;
-            } else if (rawCleanText === "3" || rawCleanText === ".3") {
+            } else if (rawCleanText === "m" || rawCleanText === ".m" || rawCleanText === "3" || rawCleanText === ".3") {
                 await replyWhatsApp(replyJid, `⏳ *Sedang mempublikasikan ${items.length} postingan ke Instagram Story & Feed (@unlocksinyalsolo)...*`);
                 try {
                     for (let i = 0; i < items.length; i++) {
@@ -2042,7 +2042,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
                     await replyWhatsApp(replyJid, `❌ *Gagal posting:* ${errBoth.message}` + BOT_FOOTER);
                 }
                 return;
-            } else if (rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
+            } else if (rawCleanText === "c" || rawCleanText === ".c" || rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
                 deletePendingTestimonial(replyJid);
                 await replyWhatsApp(replyJid, "🚫 *Publikasi testimoni ke Instagram telah dibatalkan.*" + BOT_FOOTER);
                 return;
@@ -2050,8 +2050,8 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         }
     }
 
-    // 0 / batal: Jika tidak ada sesi testimoni aktif, batalkan / informasikan dengan jelas
-    if (rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
+    // c / 0 / batal: Jika tidak ada sesi testimoni aktif, batalkan / informasikan dengan jelas
+    if (rawCleanText === "c" || rawCleanText === ".c" || rawCleanText === "0" || rawCleanText === ".0" || rawCleanText === "batal") {
         deletePendingTestimonial(replyJid);
         await replyWhatsApp(replyJid, "ℹ️ *Tidak ada antrean atau sesi publikasi foto testimoni yang sedang aktif.*" + BOT_FOOTER);
         return;
@@ -2061,14 +2061,14 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
     const hasQuotedOrder = Boolean(rawMsg?.message?.extendedTextMessage?.contextInfo?.quotedMessage);
     const parts = text.trim().split(/\s+/);
 
-    // Jika admin hanya mengetik 1, 2, atau 3 tanpa ID order dan bukan reply notifikasi pesanan
-    if ((rawCleanText === "1" || rawCleanText === "2" || rawCleanText === "3") && parts.length === 1 && !hasQuotedOrder) {
+    // Jika admin hanya mengetik p, l, m, atau 1, 2, 3 tanpa ID order dan bukan reply notifikasi pesanan
+    if ((rawCleanText === "p" || rawCleanText === "l" || rawCleanText === "m" || rawCleanText === "1" || rawCleanText === "2" || rawCleanText === "3") && parts.length === 1 && !hasQuotedOrder) {
         await replyWhatsApp(replyJid, 
             `ℹ️ *Tidak ada sesi konfirmasi foto testimoni yang aktif.*\n\n` +
             `Jika ingin memproses pesanan, gunakan format:\n` +
-            `• *1 <ID_ORDER>* ➔ Proses pesanan\n` +
-            `• *2 <ID_ORDER> [CATATAN]* ➔ Selesaikan pesanan\n` +
-            `• *3 <ID_ORDER> [ALASAN]* ➔ Batalkan pesanan\n\n` +
+            `• *p <ID_ORDER>* (atau 1) ➔ Proses pesanan\n` +
+            `• *l <ID_ORDER> [CATATAN]* (atau 2) ➔ Selesaikan pesanan\n` +
+            `• *m <ID_ORDER> [ALASAN]* (atau 3) ➔ Batalkan pesanan\n\n` +
             `_Atau balas (quote reply) langsung pesan notifikasi pesanan tersebut._` + BOT_FOOTER
         );
         return;
@@ -2078,14 +2078,14 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
     let notesArg = parts.slice(2).join(" ");
 
     // 1. Normalize quick shortcuts:
-    // 1 / .1 / p / .p / proses -> .proses
-    // 2 / .2 / s / .s / sukses -> .sukses
-    // 3 / .3 / g / .g / gagal  -> .gagal
-    if (command === "1" || command === ".1" || command === "p" || command === ".p" || command === "proses") {
+    // p / .p / 1 / .1 / proses -> .proses
+    // l / .l / 2 / .2 / s / .s / sukses -> .sukses
+    // m / .m / 3 / .3 / g / .g / gagal  -> .gagal
+    if (command === "p" || command === ".p" || command === "1" || command === ".1" || command === "proses") {
         command = ".proses";
-    } else if (command === "2" || command === ".2" || command === "s" || command === ".s" || command === "sukses") {
+    } else if (command === "l" || command === ".l" || command === "2" || command === ".2" || command === "s" || command === ".s" || command === "sukses") {
         command = ".sukses";
-    } else if (command === "3" || command === ".3" || command === "g" || command === ".g" || command === "gagal") {
+    } else if (command === "m" || command === ".m" || command === "3" || command === ".3" || command === "g" || command === ".g" || command === "gagal") {
         command = ".gagal";
     } else if (command === "status" || command === "cek") {
         command = ".status";
