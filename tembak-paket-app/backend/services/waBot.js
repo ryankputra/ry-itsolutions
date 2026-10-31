@@ -84,32 +84,34 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
 
     if (parsed.type === "DONE_NOTIFICATION") {
         const adminPhones = await getAdminPhoneNumbers();
-        const alertMsg = `🔔 *INFO SERVER RIVERA (ANTREAN SELESAI)!*\n` +
+        const alertMsg = `🔔 *INFO SERVER RIVERA: ANTREAN SELESAI (DONE 3B SLOW)!*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `💬 *Isi Pesan:* "${messageText}"\n` +
             `👥 *Pengirim:* ${senderName || 'Rivera Group'}\n` +
             `⏰ *Waktu:* ${timestampWIB} WIB\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `ℹ️ _Batch pesanan pelanggan kemungkinan sudah selesai diproses server._` + BOT_FOOTER;
+            `ℹ️ _Story pengumuman Done telah diproses dan dipublikasikan ke IG & WA Story._` + BOT_FOOTER;
 
         for (const phone of adminPhones) {
             try {
                 await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertMsg });
             } catch {}
         }
-        return;
     }
 
-    // 3. Terbitkan Story 3 (Live Status / Update Slot) ke IG dan WA Story
-    console.log(`[RiveraListener] 🚀 Mempublikasikan Story 3 (${parsed.type}) ke Instagram & WA Story...`);
+    // 3. Terbitkan Story (Live Status / Update Slot / Done) ke IG dan WA Story
+    console.log(`[RiveraListener] 🚀 Mempublikasikan Story (${parsed.type}) ke Instagram & WA Story...`);
     await publishRiveraStory(parsed);
 
     // 4. Kirim notifikasi ringkasan ke Admin WhatsApp
     const adminPhones = await getAdminPhoneNumbers();
     const isFullClose = parsed.type === "FULL_CLOSE";
-    const statusLabel = isFullClose ? "🔴 ORDERAN KLOTER CLOSED" : (parsed.type === "PARTIAL_CLOSE" ? "🟡 UPDATE SLOT (PARTIAL)" : "🟢 SLOT UPDATE (OPEN)");
+    const isDone = parsed.type === "DONE_NOTIFICATION";
+    const statusLabel = isFullClose 
+        ? "🔴 ORDERAN KLOTER CLOSED" 
+        : (isDone ? "✅ ANTREAN SELESAI / DONE 3B SLOW" : (parsed.type === "PARTIAL_CLOSE" ? "🟡 UPDATE SLOT (PARTIAL)" : "🟢 SLOT UPDATE (OPEN)"));
 
-    const summaryServices = (parsed.services || []).map(s => `• ${s.status === 'READY' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : 'Closed'} (${s.desc})`).join('\n');
+    const summaryServices = (parsed.services || []).map(s => `• ${s.status === 'READY' || s.status === 'DONE' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : (s.status === 'DONE' ? 'Done / Selesai' : 'Closed')} (${s.desc})`).join('\n');
 
     const adminNotice = `📢 *STORY UPDATE SERVER RIVERA BERHASIL TERBIT!*\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +

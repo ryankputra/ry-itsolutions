@@ -1377,13 +1377,39 @@ async function publishOpenStory(options = {}) {
 async function parseRiveraMessage(rawText) {
     if (!rawText || typeof rawText !== 'string') return null;
 
-    // 1. Deteksi Cepat untuk Pesan Penyelesaian Antrean (DONE ALL)
-    if (/(\bdone\s*all\b|\bslow\s*3b\s*done\b|\bfast\s*done\b|\bselesai\s*semua\b)/i.test(rawText)) {
+    // 1. Deteksi Cepat untuk Pesan Penyelesaian Antrean (DONE / DONE SLOW 3B / DONE ALL)
+    if (/(\bdone\s*all\b|\b(done|selesai)\s*(slow|3b|fast)\b|\b(slow|3b|fast)\s*(done|selesai)\b|\b(3b|slow)\s*done\b|\bselesai\s*semua\b)/i.test(rawText)) {
+        const upper = rawText.toUpperCase();
+        const isFast = upper.includes("FAST");
+        const isSlow = upper.includes("SLOW") || upper.includes("3B") || !isFast;
+
+        let doneTitle = "DONE 3B SLOW";
+        let services = [];
+
+        if (isSlow && !isFast) {
+            doneTitle = "DONE 3B SLOW";
+            services = [
+                { name: "3B SF SLOW", status: "DONE", desc: "Antrean Kloter Ini Sudah Selesai Diproses" }
+            ];
+        } else if (isFast && !isSlow) {
+            doneTitle = "DONE 3B FAST";
+            services = [
+                { name: "3B SF FAST", status: "DONE", desc: "Antrean Fast Sudah Selesai Diproses" }
+            ];
+        } else {
+            doneTitle = "DONE ALL";
+            services = [
+                { name: "3B SF SLOW", status: "DONE", desc: "Antrean Selesai Diproses" },
+                { name: "3B SF FAST", status: "DONE", desc: "Antrean Selesai Diproses" }
+            ];
+        }
+
         return {
             type: "DONE_NOTIFICATION",
-            title: "PESANAN SELESAI / DONE ALL",
-            services: [],
-            note: rawText.trim()
+            title: doneTitle,
+            badge: "BATCH COMPLETED • SELESAI",
+            services: services,
+            note: "3B SF Slow Selesai Diproses • Cek Status Resmi di Web"
         };
     }
 
@@ -1655,23 +1681,43 @@ async function generateRiveraUpdateGraphic(parsedData) {
 
     const isFullClose = parsedData.type === "FULL_CLOSE";
     const isPartialClose = parsedData.type === "PARTIAL_CLOSE";
+    const isDone = parsedData.type === "DONE_NOTIFICATION";
 
     const services = Array.isArray(parsedData.services) && parsedData.services.length > 0
         ? parsedData.services
         : [
-            { name: "3B SF SLOW", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Done Malam • Sent s/d Sore" },
-            { name: "3B SF FAST", status: isFullClose ? "CLOSED" : "READY", desc: isFullClose ? "Ditutup Sementara" : "Proses Cepat Under 15 Menit" }
+            { name: "3B SF SLOW", status: isDone ? "DONE" : (isFullClose ? "CLOSED" : "READY"), desc: isDone ? "Antrean Kloter Selesai Diproses" : (isFullClose ? "Ditutup Sementara" : "Done Malam • Sent s/d Sore") },
+            { name: "3B SF FAST", status: isDone ? "DONE" : (isFullClose ? "CLOSED" : "READY"), desc: isDone ? "Antrean Fast Selesai Diproses" : (isFullClose ? "Ditutup Sementara" : "Proses Cepat Under 15 Menit") }
         ];
 
     const cardsSvg = services.map((s, idx) => {
-        const yPos = 615 + (idx * 155);
-        const isReady = s.status === "READY";
-        const badgeColor = isReady ? "#059669" : "#e11d48";
-        const badgeBg = isReady ? "#dcfce7" : "#ffe4e6";
-        const badgeBorder = isReady ? "#86efac" : "#fca5a5";
-        const badgeText = isReady ? "READY" : (s.status === "FULL_SLOT" ? "FULL SLOT" : "CLOSED");
-        const cardBg = isReady ? "#ffffff" : "#fff1f2";
-        const cardBorder = isReady ? "#cbd5e1" : "#fecdd3";
+        const yPos = 595 + (idx * 155);
+        const isCardDone = s.status === "DONE" || isDone;
+        const isCardReady = s.status === "READY" && !isCardDone;
+
+        let badgeColor = "#059669";
+        let badgeBg = "#dcfce7";
+        let badgeBorder = "#86efac";
+        let badgeText = "READY";
+        let cardBg = "#ffffff";
+        let cardBorder = "#cbd5e1";
+
+        if (isCardDone) {
+            badgeColor = "#059669";
+            badgeBg = "#dcfce7";
+            badgeBorder = "#86efac";
+            badgeText = "SELESAI";
+            cardBg = "#f0fdf4";
+            cardBorder = "#bbf7d0";
+        } else if (!isCardReady) {
+            badgeColor = "#e11d48";
+            badgeBg = "#ffe4e6";
+            badgeBorder = "#fca5a5";
+            badgeText = s.status === "FULL_SLOT" ? "FULL SLOT" : "CLOSED";
+            cardBg = "#fff1f2";
+            cardBorder = "#fecdd3";
+        }
+
         const cleanName = escapeXml(s.name ? s.name.replace(/smartfren/gi, 'SF').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '') : '');
         const cleanDesc = escapeXml(s.desc ? s.desc.replace(/smartfren/gi, 'SF').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '') : '');
 
@@ -1689,29 +1735,79 @@ async function generateRiveraUpdateGraphic(parsedData) {
         `;
     }).join("\n");
 
-    // 3 Tampilan Desain Berbeda: ALL READY vs PARTIAL CLOSE vs FULL CLOSE
-    const badgeBgTop = isFullClose ? "#ffe4e6" : (isPartialClose ? "#fef3c7" : "#dcfce7");
-    const badgeStrokeTop = isFullClose ? "#fca5a5" : (isPartialClose ? "#fcd34d" : "#86efac");
-    const badgeTextTop = isFullClose ? "ORDERAN KLOTER CLOSED" : (isPartialClose ? "UPDATE STATUS LAYANAN" : "LIVE SERVER UPDATE");
-    const badgeTextColorTop = isFullClose ? "#be123c" : (isPartialClose ? "#b45309" : "#15803d");
-    const dotColorTop = isFullClose ? "#e11d48" : (isPartialClose ? "#f59e0b" : "#16a34a");
-    
-    // Headline: jika ada yang close, jangan gunakan READY! Gunakan UPDATE SLOT
-    const mainTitle = isFullClose ? "CLOSED" : (isPartialClose ? "UPDATE SLOT" : "READY");
-    const mainSubTitle = isFullClose 
-        ? "ORDERAN KLOTER DITUTUP" 
-        : (isPartialClose ? "SEBAGIAN TUTUP • JALUR LAIN TETAP READY" : "SLOT &amp; JALUR ON HARI INI");
-    const mainTitleColor = isFullClose ? "#e11d48" : "#0f172a";
-    const mainSubTitleColor = isFullClose ? "#be123c" : (isPartialClose ? "#d97706" : theme.primaryColor);
+    // 4 Tampilan Desain Berbeda: ALL READY vs PARTIAL CLOSE vs FULL CLOSE vs DONE
+    let badgeBgTop = "#dcfce7";
+    let badgeStrokeTop = "#86efac";
+    let badgeTextTop = "LIVE SERVER UPDATE";
+    let badgeTextColorTop = "#15803d";
+    let dotColorTop = "#16a34a";
+    let mainTitle = "READY";
+    let mainTitleFontSize = 76;
+    let mainTitleLetterSpacing = 6;
+    let mainTitleColor = "#0f172a";
+    let mainSubTitle = "SLOT &amp; JALUR ON HARI INI";
+    let mainSubTitleColor = theme.primaryColor;
 
-    // Bersihkan emoji dari note agar tidak menghasilkan missing glyph / kotak silang di server Linux
-    const rawNote = parsedData.note || (isFullClose ? 'Orderan Ditutup Sementara • Buka Kembali Kloter Berikutnya' : (isPartialClose ? 'Sebagian Jalur Tutup • Jalur Lain Ready' : 'Semua Bergaransi Tanpa Drama'));
-    const cleanNote = escapeXml(rawNote.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '').trim() || (isFullClose ? 'Orderan Ditutup Sementara • Buka Kembali Kloter Berikutnya' : 'Semua Bergaransi Tanpa Drama'));
-    const displayNote = cleanNote.length > 70 ? cleanNote.slice(0, 67) + '...' : cleanNote;
-    const noteFontSize = displayNote.length > 55 ? 18 : (displayNote.length > 35 ? 21 : 24);
-    const noteCardBg = isFullClose ? '#fff1f2' : (isPartialClose ? '#fffbeb' : '#eff6ff');
-    const noteCardBorder = isFullClose ? '#fda4af' : (isPartialClose ? '#fde68a' : theme.primaryColor);
-    const noteTextColor = isFullClose ? '#e11d48' : (isPartialClose ? '#b45309' : theme.primaryColor);
+    if (isDone) {
+        badgeBgTop = "#d1fae5";
+        badgeStrokeTop = "#6ee7b7";
+        badgeTextTop = "BATCH COMPLETED • SELESAI";
+        badgeTextColorTop = "#047857";
+        dotColorTop = "#059669";
+        mainTitle = parsedData.title || "DONE 3B SLOW";
+        mainTitleFontSize = 56;
+        mainTitleLetterSpacing = 3;
+        mainTitleColor = "#047857";
+        mainSubTitle = "ANTREAN BERHASIL SELESAI DIPROSES";
+        mainSubTitleColor = "#059669";
+    } else if (isFullClose) {
+        badgeBgTop = "#ffe4e6";
+        badgeStrokeTop = "#fca5a5";
+        badgeTextTop = "ORDERAN KLOTER CLOSED";
+        badgeTextColorTop = "#be123c";
+        dotColorTop = "#e11d48";
+        mainTitle = "CLOSED";
+        mainTitleFontSize = 68;
+        mainTitleLetterSpacing = 5;
+        mainTitleColor = "#e11d48";
+        mainSubTitle = "ORDERAN KLOTER DITUTUP";
+        mainSubTitleColor = "#be123c";
+    } else if (isPartialClose) {
+        badgeBgTop = "#fef3c7";
+        badgeStrokeTop = "#fcd34d";
+        badgeTextTop = "UPDATE STATUS LAYANAN";
+        badgeTextColorTop = "#b45309";
+        dotColorTop = "#f59e0b";
+        mainTitle = "UPDATE SLOT";
+        mainTitleFontSize = 58;
+        mainTitleLetterSpacing = 3;
+        mainTitleColor = "#0f172a";
+        mainSubTitle = "SEBAGIAN TUTUP • JALUR LAIN TETAP READY";
+        mainSubTitleColor = "#d97706";
+    }
+
+    // Catatan slogan rapi & profesional (tidak menggunakan teks mentah chat berantakan)
+    let displayNote = "Semua Bergaransi Tanpa Drama";
+    let noteCardBg = "#eff6ff";
+    let noteCardBorder = theme.primaryColor;
+    let noteTextColor = theme.primaryColor;
+
+    if (isDone) {
+        displayNote = "3B SF Slow Selesai Diproses • Cek Status Resmi di Web";
+        noteCardBg = "#f0fdf4";
+        noteCardBorder = "#86efac";
+        noteTextColor = "#15803d";
+    } else if (isFullClose) {
+        displayNote = "Orderan Kloter Ditutup • Sampai Jumpa di Kloter Berikutnya";
+        noteCardBg = "#fff1f2";
+        noteCardBorder = "#fda4af";
+        noteTextColor = "#e11d48";
+    } else if (isPartialClose) {
+        displayNote = "Sebagian Jalur Tutup • Jalur Lain Tetap Ready";
+        noteCardBg = "#fffbeb";
+        noteCardBorder = "#fde68a";
+        noteTextColor = "#b45309";
+    }
 
     const svg = `
         <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
@@ -1734,21 +1830,21 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <circle cx="540" cy="380" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
             <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
 
-            <!-- Logo Seal ADD ROAMER ALL PROVIDER (y=236, bebas tabrakan dengan stiker musik) -->
-            <g transform="translate(482, 236)" filter="url(#cardShadow)">
-                <rect width="116" height="116" rx="26" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5"/>
-                <image href="${getAddRoamerLogoUri()}" x="6" y="6" width="104" height="104" preserveAspectRatio="xMidYMid meet"/>
+            <!-- Logo Seal ADD ROAMER ALL PROVIDER (y=224, proporsional dan rapi) -->
+            <g transform="translate(485, 224)" filter="url(#cardShadow)">
+                <rect width="110" height="110" rx="24" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+                <image href="${getAddRoamerLogoUri()}" x="5" y="5" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>
             </g>
 
-            <!-- Pill Badge -->
-            <rect x="320" y="370" width="440" height="42" rx="21" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
-            <circle cx="348" cy="391" r="6.5" fill="${dotColorTop}"/>
-            <text x="548" y="399" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="18" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
+            <!-- Pill Badge (y=350, lega dan terpisah jelas dari Headline) -->
+            <rect x="325" y="350" width="430" height="40" rx="20" fill="${badgeBgTop}" stroke="${badgeStrokeTop}" stroke-width="1.8"/>
+            <circle cx="352" cy="370" r="6" fill="${dotColorTop}"/>
+            <text x="548" y="376" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="16" font-weight="bold" fill="${badgeTextColorTop}" text-anchor="middle">${badgeTextTop}</text>
 
-            <!-- Main Headline: READY vs UPDATE SLOT vs CLOSED -->
-            <text x="540" y="475" font-family="'Plus Jakarta Sans', 'Montserrat', 'Inter', -apple-system, sans-serif" font-size="82" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="6">${mainTitle}</text>
-            <text x="540" y="522" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="28" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle" letter-spacing="1">${mainSubTitle}</text>
-            <text x="540" y="562" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="21" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
+            <!-- Main Headline (y=462, lega tanpa tabrakan dengan badge di atasnya) -->
+            <text x="540" y="462" font-family="'Plus Jakarta Sans', 'Montserrat', 'Inter', -apple-system, sans-serif" font-size="${mainTitleFontSize}" font-weight="900" fill="${mainTitleColor}" text-anchor="middle" letter-spacing="${mainTitleLetterSpacing}">${mainTitle}</text>
+            <text x="540" y="508" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="25" font-weight="800" fill="${mainSubTitleColor}" text-anchor="middle" letter-spacing="1">${mainSubTitle}</text>
+            <text x="540" y="544" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="20" font-weight="500" fill="#64748b" text-anchor="middle">Update Pukul ${timestampWIB} WIB • ${dateWIB}</text>
 
             <!-- Dynamic Service Cards -->
             <g filter="url(#cardShadow)">
@@ -1758,7 +1854,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <!-- Slogan Guarantee Card (Bebas emoji rusak, tema warna dinamis & anti overflow) -->
             <g transform="translate(80, 1100)" filter="url(#cardShadow)">
                 <rect width="920" height="88" rx="22" fill="${noteCardBg}" stroke="${noteCardBorder}" stroke-width="2"/>
-                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${noteFontSize}" font-weight="900" fill="${noteTextColor}" text-anchor="middle">${displayNote}</text>
+                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="23" font-weight="900" fill="${noteTextColor}" text-anchor="middle">${displayNote}</text>
             </g>
 
             <!-- Footer Info Card -->
@@ -1806,23 +1902,31 @@ async function publishRiveraStory(parsedData, options = {}) {
             const { publishWhatsAppStory } = require('./waBot');
             if (typeof publishWhatsAppStory === 'function') {
                 const isFullClose = parsedData.type === "FULL_CLOSE";
+                const isDone = parsedData.type === "DONE_NOTIFICATION";
                 const servicesText = (parsedData.services || [])
-                    .map(s => `${s.status === 'READY' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : 'Full Slot / Closed'} (${s.desc})`)
+                    .map(s => `${s.status === 'READY' || s.status === 'DONE' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : (s.status === 'DONE' ? 'Done / Selesai' : 'Full Slot / Closed')} (${s.desc})`)
                     .join('\n');
 
-                const cleanNote = (parsedData.note || 'Semua Bergaransi Tanpa Drama').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '').trim();
-
-                const caption = isFullClose
-                    ? `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
+                let caption = '';
+                if (isDone) {
+                    caption = `✅ *INFO SERVER RIVERA: ANTREAN SELESAI DIPROSES (DONE 3B SLOW)!*\n\n` +
+                      `Pesanan 3B SF Slow kloter saat ini telah selesai diproses oleh server.\n` +
+                      `Silakan periksa status sinyal & verifikasi garansi digital Anda di web.\n\n` +
+                      `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
+                      `🌐 Cek Status: https://ry-itsolutionts.web.id`;
+                } else if (isFullClose) {
+                    caption = `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
                       `Antrean kloter saat ini sedang diproses.\n` +
                       `Terima kasih dan nantikan pembukaan kloter berikutnya!\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
-                      `🌐 https://ry-itsolutionts.web.id`
-                    : `⚡ *LIVE STATUS & SLOT UPDATE HARI INI!*\n\n` +
+                      `🌐 https://ry-itsolutionts.web.id`;
+                } else {
+                    caption = `⚡ *LIVE STATUS &amp; SLOT UPDATE HARI INI!*\n\n` +
                       `${servicesText}\n\n` +
-                      `🛡️ *${cleanNote}*\n` +
+                      `🛡️ *Semua Bergaransi Tanpa Drama*\n` +
                       `⏰ Update: ${timestampWIB} WIB\n\n` +
                       `🌐 Order via Web: https://ry-itsolutionts.web.id`;
+                }
 
                 const mediaToSend = videoData?.videoBuffer || buffer;
                 const isVid = Boolean(videoData?.videoBuffer);
