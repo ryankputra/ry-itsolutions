@@ -764,7 +764,8 @@ function HistoryContent() {
                           });
                         });
                       } else {
-                        let action = getField(r, "action", "status", "aksi", "result") || "CEIR Selesai";
+                        let action = getField(r, "action", "status", "aksi", "result") || (trx.status ? trx.status.toUpperCase() : "SUCCESS");
+                        if (action === "CEIR SELESAI" || action === "CEIR Selesai") action = "SUCCESS";
                         let date = getField(r, "tanggal", "date", "checked_at", "created_at") || (trx.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "");
                         let note = formatCeirNote(rawNoteText);
 
