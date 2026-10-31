@@ -385,7 +385,8 @@ export function InvoiceModal({ isOpen, onClose, data }: InvoiceModalProps) {
   // Helper to parse CEIR result details from Ceirgo API
   const parseCeirDetails = () => {
     const apiRaw = data.apiResponse || data.api_response || data.adminNote || "";
-    const parsed = parseCeirResponse(apiRaw, formatDate(data.createdAt), data.apiResponse || data.api_response);
+    const fullDateStr = data.createdAt ? new Date(data.createdAt).toLocaleString('id-ID') : formatDate(data.createdAt);
+    const parsed = parseCeirResponse(apiRaw, fullDateStr, data.apiResponse || data.api_response);
     return {
       status: parsed.status,
       gateway: "Central CEIR Database & IMEI Verification Gateway",

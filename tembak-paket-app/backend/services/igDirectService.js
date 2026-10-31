@@ -13,6 +13,21 @@ const SESSION_FILE = path.join(__dirname, '..', 'sessions', 'ig_session.json');
 const AUDIO_DIR = path.resolve(__dirname, '..', '..', 'frontend-v2', 'public', 'audio', 'tiktok');
 
 const FFMPEG_BIN = process.env.FFMPEG_PATH || (fs.existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg');
+const LOGO_PATH = path.join(__dirname, '..', 'assets', 'add_roamer_logo.png');
+let cachedLogoDataUri = null;
+function getAddRoamerLogoUri() {
+    if (cachedLogoDataUri) return cachedLogoDataUri;
+    try {
+        if (fs.existsSync(LOGO_PATH)) {
+            const buf = fs.readFileSync(LOGO_PATH);
+            cachedLogoDataUri = 'data:image/png;base64,' + buf.toString('base64');
+            return cachedLogoDataUri;
+        }
+    } catch (e) {
+        console.warn('[IGDirect] Gagal membaca add_roamer_logo.png:', e.message);
+    }
+    return '';
+}
 
 // Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG (dengan offset reff/drop bass)
 const TRENDING_TRACKS = [
@@ -1087,9 +1102,9 @@ function generateSoftOpenSvg(theme, timestampWIB, dateWIB) {
         <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
 
         <!-- Top Branding Logo (y=220) -->
-        <g transform="translate(470, 220)">
-            <circle cx="70" cy="70" r="62" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="3" filter="url(#cardShadow)"/>
-            <text x="70" y="83" font-family="Arial, -apple-system, sans-serif" font-size="38" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
+        <g transform="translate(475, 220)" filter="url(#cardShadow)">
+            <rect width="130" height="130" rx="28" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+            <image href="${getAddRoamerLogoUri()}" x="8" y="8" width="114" height="114" preserveAspectRatio="xMidYMid meet"/>
         </g>
 
         <!-- Status Pill Badge -->
@@ -1198,10 +1213,10 @@ function generateSoftDisclaimerSvg(theme, musicTrack) {
             </g>
         </g>
 
-        <!-- 2. Header Branding & RY Emblem -->
-        <g transform="translate(480, 285)">
-            <circle cx="60" cy="60" r="54" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="3" filter="url(#cardShadow)"/>
-            <text x="60" y="72" font-family="Arial, -apple-system, sans-serif" font-size="34" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
+        <!-- 2. Header Branding & ADD ROAMER Emblem -->
+        <g transform="translate(480, 285)" filter="url(#cardShadow)">
+            <rect width="120" height="120" rx="26" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+            <image href="${getAddRoamerLogoUri()}" x="6" y="6" width="108" height="108" preserveAspectRatio="xMidYMid meet"/>
         </g>
 
         <!-- Pill Badge -->
@@ -1578,10 +1593,10 @@ async function generateRiveraUpdateGraphic(parsedData) {
             <circle cx="540" cy="380" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
             <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
 
-            <!-- Logo Seal RY (y=245, bebas tabrakan dengan stiker musik di atasnya) -->
-            <g transform="translate(485, 245)">
-                <circle cx="55" cy="55" r="50" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5" filter="url(#cardShadow)"/>
-                <text x="55" y="66" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="32" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">RY</text>
+            <!-- Logo Seal ADD ROAMER ALL PROVIDER (y=236, bebas tabrakan dengan stiker musik) -->
+            <g transform="translate(482, 236)" filter="url(#cardShadow)">
+                <rect width="116" height="116" rx="26" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+                <image href="${getAddRoamerLogoUri()}" x="6" y="6" width="104" height="104" preserveAspectRatio="xMidYMid meet"/>
             </g>
 
             <!-- Pill Badge -->

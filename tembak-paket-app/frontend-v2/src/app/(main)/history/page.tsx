@@ -2,7 +2,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL, safeJson } from "@/lib/api";
-import { parseCeirResponse } from "@/lib/ceirParser";
+import { parseCeirResponse, formatCeirNote } from "@/lib/ceirParser";
 import { InvoiceModal } from "@/components/ui/InvoiceModal";
 import Link from "next/link";
 import Swal from "@/lib/sweetalert";
@@ -760,13 +760,13 @@ function HistoryContent() {
                           tableRows.push({
                             date: eventDate,
                             action: eventAction,
-                            note: eventNote !== "----" ? eventNote : "-"
+                            note: eventNote !== "----" ? formatCeirNote(eventNote) : "-"
                           });
                         });
                       } else {
                         let action = getField(r, "action", "status", "aksi", "result") || "CEIR Selesai";
                         let date = getField(r, "tanggal", "date", "checked_at", "created_at") || (trx.createdAt ? new Date(trx.createdAt).toLocaleString("id-ID") : "");
-                        let note = rawNoteText;
+                        let note = formatCeirNote(rawNoteText);
 
                         if (action === "----" && (!note || note === "----")) {
                           action = "Pengecekan Server";
@@ -776,7 +776,7 @@ function HistoryContent() {
                         tableRows.push({
                           date,
                           action,
-                          note: note && note !== "----" ? note : "-"
+                          note: note && note !== "----" ? formatCeirNote(note) : "-"
                         });
                       }
                     });

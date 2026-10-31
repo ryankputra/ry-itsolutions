@@ -5,6 +5,47 @@
 
 export type CeirLogRow = Record<string, any>;
 
+/**
+ * Format teks atau objek CEIR agar berpenampilan rapi dan manusiawi (bukan mentahan JSON {"ROAMER": ["..."]})
+ */
+export function formatCeirNote(raw: any): string {
+  if (raw === undefined || raw === null || raw === "" || raw === "-") return "-";
+
+  if (typeof raw === "object") {
+    if (raw.ROAMER || raw.roamer) {
+      const list = Array.isArray(raw.ROAMER || raw.roamer) ? (raw.ROAMER || raw.roamer) : [raw.ROAMER || raw.roamer];
+      return `Layanan Roamer Aktif • IMEI: ${list.join(", ")}`;
+    }
+    if (Array.isArray(raw)) {
+      return raw.map(formatCeirNote).filter(Boolean).join(", ");
+    }
+    const entries = Object.entries(raw)
+      .filter(([k]) => !['status', 'success', 'code', 'statuscode', 'id', '_id'].includes(k.toLowerCase()))
+      .map(([k, v]) => `${k.toUpperCase()}: ${Array.isArray(v) ? v.join(", ") : (typeof v === 'object' ? formatCeirNote(v) : v)}`);
+    return entries.length > 0 ? entries.join(" • ") : JSON.stringify(raw);
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return formatCeirNote(parsed);
+      } catch {}
+    }
+    if (/\{.*roamer.*\}/i.test(trimmed)) {
+      return trimmed
+        .replace(/\{"ROAMER":\s*\["(\d+)"\]\}/gi, 'Layanan Roamer Aktif • IMEI: $1')
+        .replace(/\{"ROAMER":\s*\[(.*?)\]\}/gi, 'Layanan Roamer Aktif • IMEI: $1')
+        .replace(/["{}\[\]]/g, '')
+        .replace(/ROAMER:\s*/gi, 'Layanan Roamer Aktif • IMEI: ');
+    }
+    return trimmed;
+  }
+
+  return String(raw);
+}
+
 export interface ParsedCeirResult {
   title: string;
   status: string;
@@ -112,23 +153,37 @@ export function parseCeirResponse(rawInput: any, defaultDate?: string, apiRespon
   if (parsedObj) {
     if (parsedObj.imei || parsedObj.IMEI) detectedImei = parsedObj.imei || parsedObj.IMEI;
 
-    let itemsSource = parsedObj.result || parsedObj.history || parsedObj.data?.history || parsedObj.data?.result || parsedObj.data || parsedObj;
-
-    if (Array.isArray(itemsSource)) {
-      itemsSource.forEach((item: any) => {
-        if (!item) return;
-        if (item.imei || item.IMEI) detectedImei = item.imei || item.IMEI;
-        if (Array.isArray(item.history)) {
-          rawItems.push(...item.history);
-        } else if (typeof item === "object" && item !== null) {
-          rawItems.push(item);
-        }
+    // Khusus format respons Roamer: {"ROAMER": ["353246107591333"]}
+    if (parsedObj.ROAMER || parsedObj.roamer) {
+      const list = Array.isArray(parsedObj.ROAMER || parsedObj.roamer) ? (parsedObj.ROAMER || parsedObj.roamer) : [parsedObj.ROAMER || parsedObj.roamer];
+      const imeiFound = list[0] || detectedImei || "-";
+      detectedImei = imeiFound;
+      rawItems.push({
+        No: 1,
+        Tanggal: currentDate,
+        Action: "CEIR SELESAI",
+        Note: `Layanan Roamer Aktif • IMEI: ${imeiFound}`,
+        IMEI: imeiFound
       });
-    } else if (typeof itemsSource === "object" && itemsSource !== null) {
-      if (Array.isArray(itemsSource.history)) {
-        rawItems.push(...itemsSource.history);
-      } else {
-        rawItems.push(itemsSource);
+    } else {
+      let itemsSource = parsedObj.result || parsedObj.history || parsedObj.data?.history || parsedObj.data?.result || parsedObj.data || parsedObj;
+
+      if (Array.isArray(itemsSource)) {
+        itemsSource.forEach((item: any) => {
+          if (!item) return;
+          if (item.imei || item.IMEI) detectedImei = item.imei || item.IMEI;
+          if (Array.isArray(item.history)) {
+            rawItems.push(...item.history);
+          } else if (typeof item === "object" && item !== null) {
+            rawItems.push(item);
+          }
+        });
+      } else if (typeof itemsSource === "object" && itemsSource !== null) {
+        if (Array.isArray(itemsSource.history)) {
+          rawItems.push(...itemsSource.history);
+        } else {
+          rawItems.push(itemsSource);
+        }
       }
     }
   }
@@ -235,8 +290,23 @@ export function parseCeirResponse(rawInput: any, defaultDate?: string, apiRespon
     columns.forEach(col => {
       // search case-insensitive key match in item
       let foundKey = Object.keys(item).find(k => k.toLowerCase() === col.toLowerCase());
-      const val = foundKey ? item[foundKey] : item[col];
-      row[col] = val !== undefined && val !== null ? (typeof val === 'object' ? JSON.stringify(val) : val) : (col.toLowerCase() === 'no' ? idx + 1 : "-");
+      let val = foundKey ? item[foundKey] : item[col];
+
+      if (val === undefined || val === null || val === "" || val === "-") {
+        const cLower = col.toLowerCase();
+        if (cLower === "no") val = idx + 1;
+        else if (cLower === "tanggal" || cLower === "date") val = currentDate;
+        else if (cLower === "action" || cLower === "status" || cLower === "aksi") val = "CEIR SELESAI";
+        else if (cLower === "note" || cLower === "keterangan") {
+          val = formatCeirNote(targetInput) || "Terverifikasi di database CEIR";
+        } else {
+          val = "-";
+        }
+      } else if (col.toLowerCase() === "note" || col.toLowerCase() === "keterangan") {
+        val = formatCeirNote(val);
+      }
+
+      row[col] = typeof val === "object" ? formatCeirNote(val) : val;
     });
     return row;
   });
