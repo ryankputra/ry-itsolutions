@@ -1375,10 +1375,15 @@ async function publishOpenStory(options = {}) {
  * Parser Pesan Rivera Group menggunakan Gemini 3.5 Flash dengan Fallback Heuristik Lokal
  */
 async function parseRiveraMessage(rawText) {
-    if (!rawText || typeof rawText !== 'string') return null;
+    // 0. Cek apakah ada indikasi intake / pesanan dibuka (OPEN / ON / READY / SENT SAMPE / DONE MALEM)
+    // Jika ada kata seperti "ON", "OPEN", "READY", "SENT SAMPE SORE", "DONE MALEM SENT SAMPE SORE", ini BUKAN DONE_NOTIFICATION, melainkan SLOT_UPDATE!
+    const upperText = rawText.toUpperCase();
+    const hasOpenKeywords = /\b(ON|OPEN|READY)\b|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE))/i.test(rawText);
 
-    // 1. Deteksi Cepat untuk Pesan Penyelesaian Antrean (DONE / DONE SLOW 3B / DONE ALL)
-    if (/(\bdone\s*all\b|\b(done|selesai)\s*(slow|3b|fast)\b|\b(slow|3b|fast)\s*(done|selesai)\b|\b(3b|slow)\s*done\b|\bselesai\s*semua\b)/i.test(rawText)) {
+    // 1. Deteksi Cepat untuk Pesan Penyelesaian Antrean (HANYA JIKA TIDAK ADA KATA BUKA/INTAKE/ETA)
+    const isStrictDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\b(done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b|\bslow\s*(?:3b\s*)?done\s*all\b|\bfast\s*done\s*all\b|\bkloter\s*(?:ini\s*)?(?:sudah\s*)?done\b)/i.test(rawText);
+
+    if (isStrictDoneAll) {
         const upper = rawText.toUpperCase();
         const isFast = upper.includes("FAST");
         const isSlow = upper.includes("SLOW") || upper.includes("3B") || !isFast;
@@ -1427,10 +1432,10 @@ ATURAN WAJIB (SANGAT KETAT):
 1. DILARANG KERAS menyebutkan nama "Smartfren". Gunakan SELALU istilah "SF" (contoh: "3B SF Slow", "3B SF Fast").
 2. DILARANG KERAS menyertakan nominal harga, angka rupiah (Rp/k/rb/ribu). Hapus total semua info harga!
 3. Tentukan type pesan:
-   - "SLOT_UPDATE": jika ada layanan yang buka/on/ready.
+   - "SLOT_UPDATE": jika ada layanan yang buka/on/ready (termasuk "DONE MALEM SENT SAMPE SORE", "ON", "READY", "OPEN", "SENT SAMPAI SORE"). PENTING: "DONE MALEM SENT SAMPE SORE" artinya layanan BUKA/READY dengan pengerjaan selesai malam nanti, JANGAN DIANGGAP DONE_NOTIFICATION!
    - "PARTIAL_CLOSE": jika salah satu layanan full/off sementara layanan lain masih open.
    - "FULL_CLOSE": jika semua layanan ditutup/off/selesai.
-   - "DONE_NOTIFICATION": jika berisi pengumuman done all/selesai.
+   - "DONE_NOTIFICATION": HANYA jika berisi pengumuman antrean pesanan kloter ini sudah selesai semua (contoh: "DONE ALL", "SLOW 3B DONE ALL"). Jika ada kata "ON", "OPEN", atau "SENT", DILARANG menggunakan DONE_NOTIFICATION!
    - "IRRELEVANT": jika hanya obrolan umum tanpa info status layanan.
 4. Ekstrak daftar layanan (services):
    - "name": nama layanan (contoh: "3B SF SLOW", "3B SF FAST", "1B DIGIPOS").
@@ -1979,25 +1984,25 @@ async function publishRiveraStory(parsedData, options = {}) {
                       `• Pemesanan via Web & WhatsApp *tetap buka 24 jam*. Orderan yang masuk *setelah ${cutoffLabel}* otomatis diproses pada *kloter esok hari*.\n\n` +
                       `🛡️ *Pemesanan Web & WhatsApp Tetap Buka 24 Jam Tanpa Drama*\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n\n` +
-                      `🌐 Order via Web: https://ry-itsolutionts.web.id`;
+                      `🌐 Order via Web: https://ry-itsolutions.web.id`;
                 } else if (isDone) {
                     caption = `✅ *INFO SERVER RIVERA: ANTREAN SELESAI DIPROSES (DONE 3B SLOW)!*\n\n` +
                       `Pesanan 3B SF Slow kloter saat ini telah selesai diproses oleh server.\n` +
                       `Silakan periksa status sinyal & verifikasi garansi digital Anda di web.\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
-                      `🌐 Cek Status: https://ry-itsolutionts.web.id`;
+                      `🌐 Cek Status: https://ry-itsolutions.web.id`;
                 } else if (isFullClose) {
                     caption = `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
                       `Antrean kloter saat ini sedang diproses.\n` +
                       `Terima kasih dan nantikan pembukaan kloter berikutnya!\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
-                      `🌐 https://ry-itsolutionts.web.id`;
+                      `🌐 https://ry-itsolutions.web.id`;
                 } else {
                     caption = `⚡ *LIVE STATUS &amp; SLOT UPDATE HARI INI!*\n\n` +
                       `${servicesText}\n\n` +
                       `🛡️ *Semua Bergaransi Tanpa Drama*\n` +
                       `⏰ Update: ${timestampWIB} WIB\n\n` +
-                      `🌐 Order via Web: https://ry-itsolutionts.web.id`;
+                      `🌐 Order via Web: https://ry-itsolutions.web.id`;
                 }
 
                 const mediaToSend = videoData?.videoBuffer || buffer;

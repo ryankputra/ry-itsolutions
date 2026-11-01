@@ -52,8 +52,12 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
     const timestampWIB = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
     const dateWIB = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+    // 0. Cek apakah ada indikasi intake / pesanan dibuka (OPEN / ON / READY / SENT SAMPE / DONE MALEM)
+    const hasOpenKeywords = /\b(ON|OPEN|READY)\b|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE))/i.test(messageText);
+
     // 1. Cek apakah ini pengumuman penyelesaian (DONE ALL)
-    if (/(\bdone\s*all\b|\bslow\s*3b\s*done\b|\bfast\s*done\b|\bselesai\s*semua\b)/i.test(messageText)) {
+    const isStrictDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\bslow\s*3b\s*done\s*all\b|\bfast\s*done\s*all\b|\b(?:done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b)/i.test(messageText);
+    if (isStrictDoneAll) {
         console.log('[RiveraListener] 🔔 Terdeteksi pengumuman DONE ALL. Mengirimkan notifikasi ke Admin...');
         const adminPhones = await getAdminPhoneNumbers();
         const alertMsg = `🔔 *INFO SERVER RIVERA (ANTREAN SELESAI)!*\n` +
@@ -1325,7 +1329,8 @@ async function initWABot(forceNew = false) {
                         // 3. Pre-filter Kata Kunci Wajib (Paket + Status)
                         const hasPackageKeyword = /(3B|1B|SF|DIGIPOS|SLOW|FAST|ROAMER)/i.test(messageText);
                         const hasStatusKeyword = /(ON|OFF|DONE|READY|FULL|CLOSE|OPEN|SLOT|SENT|TURUN|HARGA|BERGARANSI|KLOTER)/i.test(messageText);
-                        const isDoneAll = /(\bdone\s*all\b|\bslow\s*3b\s*done\b|\bfast\s*done\b|\bselesai\s*semua\b)/i.test(messageText);
+                        const hasOpenKeywords = /\b(ON|OPEN|READY)\b|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE))/i.test(messageText);
+                        const isDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\bslow\s*3b\s*done\s*all\b|\bfast\s*done\s*all\b|\b(?:done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b)/i.test(messageText);
 
                         if (messageText && (isRiveraSender || hasPackageKeyword || isDoneAll)) {
                             let groupName = groupSubjectCache.get(remoteJid);
