@@ -58,7 +58,7 @@ interface ImeiPackage {
 }
 
 const SPEED_OPTIONS_CONFIG = [
-  { id: 'slow', label: 'Reguler (Slow)', key: 'imei_speed_slow', defaultRange: 'Max kirim 14:00 WIB, selesai max 00:00 WIB' },
+  { id: 'slow', label: 'Reguler (Slow)', key: 'imei_speed_slow', defaultRange: 'Max kirim 15:00 WIB, selesai max 00:00 WIB' },
   { id: 'semi', label: 'Semi Express', key: 'imei_speed_semi', defaultRange: '2 - 6 Jam Proses Kerja' },
   { id: 'fast', label: 'Super Express', key: 'imei_speed_fast', defaultRange: '30 Menit - 2 Jam Super Cepat' },
 ];

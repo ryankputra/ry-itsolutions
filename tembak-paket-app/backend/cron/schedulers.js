@@ -403,7 +403,7 @@ function initSchedulers() {
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
-    // 7. Auto-post Story Close List 3B Slow (Default 14.00 WIB atau jam dinamis Rivera)
+    // 7. Auto-post Story Close List 3B Slow (Default 15.00 WIB atau jam dinamis Rivera)
     cron.schedule('* * * * *', async () => {
         try {
             const enabledRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_close_list_story_enabled'");
@@ -411,7 +411,7 @@ function initSchedulers() {
             if (!isEnabled) return;
 
             const cutoffRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_slow_cutoff_time'");
-            const scheduledTime = (cutoffRow?.value || '14:00').replace('.', ':');
+            const scheduledTime = (cutoffRow?.value || '15:00').replace('.', ':');
 
             const now = new Date();
             const nowTimeWIB = now.toLocaleTimeString('id-ID', {

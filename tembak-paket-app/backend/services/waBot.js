@@ -2731,7 +2731,7 @@ async function notifyNewOrder(orderData) {
         const adminPhones = await getAdminPhoneNumbers(paymentMethod);
 
         // Fetch dynamic speed settings if available
-        let speedRangeText = "Max kirim jam 14:00, selesai max jam 00:00 WIB";
+        let speedRangeText = "Max kirim jam 15:00, selesai max jam 00:00 WIB";
         try {
             const optKey = (speedOption || "slow").toLowerCase();
             const sRow = await dbGet("SELECT value FROM settings WHERE key = ?", [`imei_speed_${optKey}_range`]);

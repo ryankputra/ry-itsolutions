@@ -1871,7 +1871,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
         mainTitleFontSize = 52;
         mainTitleLetterSpacing = 3;
         mainTitleColor = "#1e3a8a";
-        const cutoffLabel = parsedData.cutoffTime ? `${parsedData.cutoffTime} WIB` : "14.00 WIB";
+        const cutoffLabel = parsedData.cutoffTime ? `${parsedData.cutoffTime} WIB` : "15.00 WIB";
         mainSubTitle = `ORDER SEBELUM ${cutoffLabel} SELESAI MALAM INI`;
         mainSubTitleColor = "#2563eb";
     } else if (isDone) {
@@ -2041,7 +2041,7 @@ async function publishRiveraStory(parsedData, options = {}) {
                 const isCloseListSlow = parsedData.type === "CLOSE_LIST_SLOW";
                 let caption = '';
                 if (isCloseListSlow) {
-                    const cutoffLabel = parsedData.cutoffTime ? `${parsedData.cutoffTime} WIB` : "14.00 WIB";
+                    const cutoffLabel = parsedData.cutoffTime ? `${parsedData.cutoffTime} WIB` : "15.00 WIB";
                     caption = `⏳ *INFO SERVER RIVERA: CLOSE LIST 3B SF SLOW (KLOTER HARI INI)!*\n\n` +
                       `• Orderan yang masuk *sebelum ${cutoffLabel}* sedang diproses server dan estimasi *DONE malam ini*.\n` +
                       `• Pemesanan via Web & WhatsApp *tetap buka 24 jam*. Orderan yang masuk *setelah ${cutoffLabel}* otomatis diproses pada *kloter esok hari*.\n\n` +
@@ -2091,9 +2091,9 @@ async function publishRiveraStory(parsedData, options = {}) {
 }
 
 /**
- * Publikasikan Story Khusus Close List 3B Slow (Pukul 14.00 WIB atau Jam Rivera)
+ * Publikasikan Story Khusus Close List 3B Slow (Pukul 15.00 WIB atau Jam Rivera)
  */
-async function publishCloseListSlowStory(cutoffTime = '14:00', options = {}) {
+async function publishCloseListSlowStory(cutoffTime = '15:00', options = {}) {
     const parsedData = {
         type: "CLOSE_LIST_SLOW",
         title: "CLOSE LIST 3B SLOW",

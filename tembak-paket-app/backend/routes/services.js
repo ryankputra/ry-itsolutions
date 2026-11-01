@@ -128,7 +128,7 @@ router.get('/ai/knowledge', async (req, res) => {
             speeds: {
                 fast: { status: settingsMap['imei_speed_fast_status'] || 'hidden', range: settingsMap['imei_speed_fast_range'] || 'menitan' },
                 semi: { status: settingsMap['imei_speed_semi_status'] || 'hidden', range: settingsMap['imei_speed_semi_range'] || '1-12 Jam' },
-                slow: { status: settingsMap['imei_speed_slow_status'] || 'active', range: settingsMap['imei_speed_slow_range'] || 'Max kirim 14:00 WIB, selesai max 00:00 WIB' }
+                slow: { status: settingsMap['imei_speed_slow_status'] || 'active', range: settingsMap['imei_speed_slow_range'] || 'Max kirim 15:00 WIB, selesai max 00:00 WIB' }
             },
             cs: {
                 admin1: '088706611370',
@@ -376,12 +376,12 @@ router.get(['/manual-services-pricing', '/manual-services/pricing'], async (req,
             imei_speed_slow_status: 'visible',
             imei_speed_fast_range: '1-3 Jam',
             imei_speed_semi_range: '1-12 Jam',
-            imei_speed_slow_range: 'Max kirim jam 14:00, selesai jam 00:00 WIB',
+            imei_speed_slow_range: 'Max kirim jam 15:00, selesai jam 00:00 WIB',
             imei_auto_processing: 'false',
             rivera_auto_sync_status: 'true',
             rivera_night_cutoff_hour: '22',
-            rivera_slow_cutoff_time: '14:00',
-            rivera_slow_cutoff_hour: '14',
+            rivera_slow_cutoff_time: '15:00',
+            rivera_slow_cutoff_hour: '15',
             rivera_fast_realtime_status: 'auto',
             rivera_1b_realtime_status: 'auto'
         };
@@ -499,7 +499,7 @@ router.get('/public/check-warranty', async (req, res) => {
         const speedRangeMap = {
             fast: '1-3 Jam',
             semi: '1-12 Jam',
-            slow: 'Max kirim jam 14:00, selesai max jam 00:00 WIB'
+            slow: 'Max kirim jam 15:00, selesai max jam 00:00 WIB'
         };
         speedRanges.forEach(r => {
             const m = r.key.match(/^imei_speed_(.*)_range$/);
@@ -1173,7 +1173,7 @@ Anda BISA dan BERSEDIA menjawab pertanyaan apa pun:
 ${userContextText}
 
 DATA LAYANAN TERKINI RY-ITSOLUTIONS:
-- Add Roamer: ${imeiListStr} (Garansi 3 Bulan penuh, all operator, kirim sblm 14:00 WIB selesai maks 00:00 WIB).
+- Add Roamer: ${imeiListStr} (Garansi 3 Bulan penuh, all operator, kirim sblm 15:00 WIB selesai maks 00:00 WIB).
 - Gateway GoPay & QRIS SaaS: Aktivasi Rp 35.000 (30 hari), perpanjang Rp 10.000/bln, fee 0%, direct settlement, webhook 0.2s.
 - Top Up Saldo RyPay: Min Rp 10.000, 0% admin fee, dynamic QRIS otomatis 24 jam.
 - Kupon Promo: ${couponListStr}

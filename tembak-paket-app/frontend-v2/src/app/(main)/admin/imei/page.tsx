@@ -670,13 +670,13 @@ export default function AdminImeiPage() {
                   <span className="text-xs font-bold text-ink">Cut-off Close List 3B Slow</span>
                 </div>
                 <p className="text-[10px] text-ink-muted leading-tight">
-                  Jadwal auto-story & cut-off antrean kloter hari ini (Default: 14:00 WIB).
+                  Jadwal auto-story & cut-off antrean kloter hari ini (Default: 15:00 WIB).
                 </p>
                 <div className="flex items-center gap-2 pt-1">
                   <Input
                     type="text"
-                    placeholder="14:00"
-                    value={pricing.rivera_slow_cutoff_time || "14:00"}
+                    placeholder="15:00"
+                    value={pricing.rivera_slow_cutoff_time || "15:00"}
                     onChange={(e) => {
                       const updated = { ...pricing, rivera_slow_cutoff_time: e.target.value };
                       setPricing(updated);

@@ -338,7 +338,7 @@ router.get('/admin/manual-orders', isAuthenticated, isAdmin, async (req, res) =>
         const speedRangeMap = {
             fast: '1-3 Jam',
             semi: '1-12 Jam',
-            slow: 'Max kirim jam 14:00, selesai max jam 00:00 WIB'
+            slow: 'Max kirim jam 15:00, selesai max jam 00:00 WIB'
         };
         speedRanges.forEach(r => {
             const m = r.key.match(/^imei_speed_(.*)_range$/);

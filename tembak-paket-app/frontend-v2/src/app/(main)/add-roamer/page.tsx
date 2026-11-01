@@ -583,8 +583,11 @@ function UnblockImeiContent() {
     return ['fast', 'semi', 'slow'];
   })();
 
-  // Check current WIB (Asia/Jakarta) time cutoff (14:00 WIB)
-  const isPast14Wib = (() => {
+  // Check current WIB (Asia/Jakarta) time cutoff (Default: 15:00 WIB or dynamic from settings)
+  const cutoffTimeStr = (speedPricing?.rivera_slow_cutoff_time || '15:00').replace('.', ':');
+  const [cutoffH, cutoffM] = cutoffTimeStr.split(':').map((n: string) => parseInt(n, 10) || 0);
+
+  const isPastCutoffWib = (() => {
     try {
       const parts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Asia/Jakarta',
@@ -594,21 +597,21 @@ function UnblockImeiContent() {
       }).formatToParts(new Date());
       const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
       const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
-      return hour > 14 || (hour === 14 && minute > 0);
+      return hour > cutoffH || (hour === cutoffH && minute >= cutoffM);
     } catch (e) {
       const d = new Date();
       const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
       const wib = new Date(utc + (3600000 * 7));
       const hour = wib.getHours();
       const minute = wib.getMinutes();
-      return hour > 14 || (hour === 14 && minute > 0);
+      return hour > cutoffH || (hour === cutoffH && minute >= cutoffM);
     }
   })();
 
   const speedOptions = [
     { id: 'fast', key: 'imei_speed_fast', label: 'Fast', defaultRange: '' },
     { id: 'semi', key: 'imei_speed_semi', label: 'Semi Fast', defaultRange: '' },
-    { id: 'slow', key: 'imei_speed_slow', label: 'Slow', defaultRange: 'Max kirim 14:00 WIB, selesai max 00:00 WIB' }
+    { id: 'slow', key: 'imei_speed_slow', label: 'Slow', defaultRange: `Max kirim ${cutoffTimeStr} WIB, selesai max 00:00 WIB` }
   ]
     .filter(opt => {
       if (!allowedSpeedsForPkg.includes(opt.id)) return false;
@@ -623,8 +626,8 @@ function UnblockImeiContent() {
         : ((speedPricing && parseInt(speedPricing[opt.key])) || 0);
 
       const rawRange = (speedPricing && speedPricing[`${opt.key}_range`]) || opt.defaultRange;
-      const formattedRange = opt.id === 'slow' && (!rawRange || rawRange.includes('Max kirim jam 14:00'))
-        ? 'Max kirim 14:00 WIB, selesai max 00:00 WIB'
+      const formattedRange = opt.id === 'slow' && (!rawRange || rawRange.includes('14:00') || rawRange.includes('Max kirim'))
+        ? `Max kirim ${cutoffTimeStr} WIB, selesai max 00:00 WIB`
         : rawRange;
 
       // Status maintenance: tampil tapi tidak bisa dipilih
@@ -1047,10 +1050,10 @@ function UnblockImeiContent() {
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-ink">Pilih Kecepatan Proses Server</label>
-                  {selectedSpeed === 'slow' && isPast14Wib && (
+                  {selectedSpeed === 'slow' && isPastCutoffWib && (
                     <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-300/50 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                      <span>Lewat 14:00 WIB (Kirim Besok)</span>
+                      <span>Lewat {cutoffTimeStr} WIB (Kirim Besok)</span>
                     </span>
                   )}
                 </div>
@@ -1122,23 +1125,23 @@ function UnblockImeiContent() {
                       : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200"
                   }`}>
                     <div className="font-bold flex items-center gap-1.5 text-xs">
-                      <svg className={`w-4 h-4 shrink-0 ${isPast14Wib ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 shrink-0 ${isPastCutoffWib ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                       </svg>
                       <span>
-                        {isPast14Wib 
-                          ? "Disclaimer Jadwal Pengiriman Server (Lewat Pukul 14:00 WIB):" 
+                        {isPastCutoffWib 
+                          ? `Disclaimer Jadwal Pengiriman Server (Lewat Pukul ${cutoffTimeStr} WIB):` 
                           : "Informasi Detail Ketentuan Jadwal Pengiriman Server:"}
                       </span>
                     </div>
                     <p className="text-[11px] leading-relaxed opacity-90 pl-5.5">
-                      {isPast14Wib ? (
+                      {isPastCutoffWib ? (
                         <>
-                          <strong className="font-semibold text-amber-950 dark:text-amber-100">Batas cut-off pengiriman hari ini (14:00 WIB) telah terlewati.</strong> Pesanan Anda tetap dapat dibuat sekarang dan akan diikutsertakan pada jadwal pengiriman batch server besok pagi (estimasi selesai max 00:00 WIB hari berikutnya).
+                          <strong className="font-semibold text-amber-950 dark:text-amber-100">Batas cut-off pengiriman hari ini ({cutoffTimeStr} WIB) telah terlewati.</strong> Pesanan Anda tetap dapat dibuat sekarang dan akan diikutsertakan pada jadwal pengiriman batch server besok pagi (estimasi selesai max 00:00 WIB hari berikutnya).
                         </>
                       ) : (
                         <>
-                          Pemesanan sebelum pukul <strong className="font-semibold text-blue-950 dark:text-blue-100">14:00 WIB</strong> akan langsung dikirim ke server pada batch hari ini dengan target estimasi penyelesaian paling lambat pukul <strong className="font-semibold text-blue-950 dark:text-blue-100">00:00 WIB malam ini</strong>.
+                          Pemesanan sebelum pukul <strong className="font-semibold text-blue-950 dark:text-blue-100">{cutoffTimeStr} WIB</strong> akan langsung dikirim ke server pada batch hari ini dengan target estimasi penyelesaian paling lambat pukul <strong className="font-semibold text-blue-950 dark:text-blue-100">00:00 WIB malam ini</strong>.
                         </>
                       )}
                     </p>
