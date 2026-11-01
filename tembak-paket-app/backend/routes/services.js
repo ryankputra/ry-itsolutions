@@ -8,7 +8,7 @@ const express = require('express');
 const router = express.Router();
 const { dbGet, dbAll, dbRun } = require('../config/db');
 const { logUserActivity } = require('../utils/activityLogger');
-const { isAuthenticated } = require('../middleware/auth');
+const { isAuthenticated, isAdmin } = require('../middleware/auth');
 const { getEffectiveMaintenanceStatus } = require('./auth');
 
 const APP_START_TIME = Date.now();
@@ -1316,8 +1316,13 @@ PANDUAN MENJAWAB:
     }
 });
 
-// Trigger/Re-sync Rivera Story via active Baileys instance inside PM2 backend
-router.post('/rivera/sync-story', async (req, res) => {
+// Trigger/Re-sync Rivera Story via active Baileys instance inside PM2 backend (Admin or Localhost only)
+router.post('/rivera/sync-story', (req, res, next) => {
+    const clientIp = req.ip || req.connection?.remoteAddress || '';
+    const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('127.0.0.1');
+    if (isLocal) return next();
+    return isAdmin(req, res, next);
+}, async (req, res) => {
     try {
         const { handleRiveraGroupMessage } = require('../services/waBot');
         const messageText = req.body.message || `3B SF SLOW DONE MALEM SENT SAMPE SORE 🔥\n\n3B SF FAST UNDER 15 MENIT ON ‼️\n\n1B DIGIPOS / INBOUND ON ‼️\n\nSEMUA BERGARANSI TANPA ADA DRAMA 🎭`;
