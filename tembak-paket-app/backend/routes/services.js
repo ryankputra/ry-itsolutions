@@ -1316,6 +1316,23 @@ PANDUAN MENJAWAB:
     }
 });
 
+// Trigger/Re-sync Rivera Story via active Baileys instance inside PM2 backend
+router.post('/rivera/sync-story', async (req, res) => {
+    try {
+        const { handleRiveraGroupMessage } = require('../services/waBot');
+        const messageText = req.body.message || `3B SF SLOW DONE MALEM SENT SAMPE SORE 🔥\n\n3B SF FAST UNDER 15 MENIT ON ‼️\n\n1B DIGIPOS / INBOUND ON ‼️\n\nSEMUA BERGARANSI TANPA ADA DRAMA 🎭`;
+        const sender = req.body.sender || "Rivera Group";
+        const group = req.body.group || "3B & REKBER by RIVERA";
+
+        await handleRiveraGroupMessage(messageText, sender, group);
+        return res.json({ status: true, message: "Rivera story sync successfully triggered." });
+    } catch (err) {
+        console.error("Error triggering rivera story:", err);
+        return res.status(500).json({ status: false, error: err.message });
+    }
+});
+
 module.exports = router;
 module.exports.getImeiServiceSettings = getImeiServiceSettings;
+
 
