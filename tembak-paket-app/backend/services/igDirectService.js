@@ -1998,7 +1998,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
                     <ellipse cx="0" cy="0" rx="6" ry="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2"/>
                     <line x1="-14" y1="0" x2="14" y2="0" stroke="${theme.primaryColor}" stroke-width="2"/>
                 </g>
-                <text x="340" y="113" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutions.web.id</text>
+                <text x="340" y="113" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
                 <text x="460" y="160" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="20" fill="#64748b" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
             </g>
         </svg>
@@ -2047,25 +2047,25 @@ async function publishRiveraStory(parsedData, options = {}) {
                       `• Pemesanan via Web & WhatsApp *tetap buka 24 jam*. Orderan yang masuk *setelah ${cutoffLabel}* otomatis diproses pada *kloter esok hari*.\n\n` +
                       `🛡️ *Pemesanan Web & WhatsApp Tetap Buka 24 Jam Tanpa Drama*\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n\n` +
-                      `🌐 Order via Web: https://ry-itsolutions.web.id`;
+                      `🌐 Order via Web: https://ry-itsolutionts.web.id`;
                 } else if (isDone) {
                     caption = `✅ *INFO SERVER RIVERA: ANTREAN SELESAI DIPROSES (DONE 3B SLOW)!*\n\n` +
                       `Pesanan 3B SF Slow kloter saat ini telah selesai diproses oleh server.\n` +
                       `Silakan periksa status sinyal & verifikasi garansi digital Anda di web.\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
-                      `🌐 Cek Status: https://ry-itsolutions.web.id`;
+                      `🌐 Cek Status: https://ry-itsolutionts.web.id`;
                 } else if (isFullClose) {
                     caption = `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
                       `Antrean kloter saat ini sedang diproses.\n` +
                       `Terima kasih dan nantikan pembukaan kloter berikutnya!\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
-                      `🌐 https://ry-itsolutions.web.id`;
+                      `🌐 https://ry-itsolutionts.web.id`;
                 } else {
                     caption = `⚡ *LIVE STATUS &amp; SLOT UPDATE HARI INI!*\n\n` +
                       `${servicesText}\n\n` +
                       `🛡️ *Semua Bergaransi Tanpa Drama*\n` +
                       `⏰ Update: ${timestampWIB} WIB\n\n` +
-                      `🌐 Order via Web: https://ry-itsolutions.web.id`;
+                      `🌐 Order via Web: https://ry-itsolutionts.web.id`;
                 }
 
                 const mediaToSend = videoData?.videoBuffer || buffer;
