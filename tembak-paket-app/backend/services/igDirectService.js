@@ -1543,12 +1543,12 @@ ${rawText}`;
     }
 
     // Deteksi 1B / DIGIPOS
-    if (upper.includes("1B") || upper.includes("DIGIPOS")) {
+    if (upper.includes("1B") || upper.includes("DIGIPOS") || upper.includes("INBOUND")) {
         const isClosed = /(DIGIPOS.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*DIGIPOS|1B.*(OFF|FULL|TUTUP|CLOSE)|(OFF|FULL|TUTUP|CLOSE).*1B)/i.test(upper);
         services.push({
-            name: "1B DIGIPOS",
+            name: "1B DIGIPOS / INBOUND",
             status: isClosed ? "CLOSED" : "READY",
-            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Ready Jalur Khusus Promo"
+            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Inbound • On"
         });
     }
 
@@ -1644,13 +1644,44 @@ function saveRiveraDailyServices(services) {
 }
 
 /**
+ * Standardisasi nama layanan Rivera secara canonical agar tidak terjadi duplikasi entri
+ */
+function getCanonicalServiceName(name) {
+    const raw = String(name || '').toUpperCase().trim();
+    if (raw.includes("SLOW")) {
+        return "3B SF SLOW";
+    }
+    if (raw.includes("FAST")) {
+        return "3B SF FAST";
+    }
+    if (raw.includes("DIGIPOS") || raw.includes("INBOUND") || raw.includes("1B")) {
+        return "1B DIGIPOS / INBOUND";
+    }
+    return String(name || '').trim().replace(/smartfren/gi, 'SF');
+}
+
+/**
  * Sinkronisasi layanan Rivera berdasarkan riwayat hari berjalan:
  * - Layanan yang open (READY) ditambahkan ke daftar aktif hari ini.
  * - Layanan yang close diperbarui statusnya JIKA memang pernah open hari ini.
  * - Jika close all, semua layanan hari ini ditandai CLOSED.
  */
 function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
-    let currentServices = loadRiveraDailyServices();
+    const rawCurrent = loadRiveraDailyServices();
+
+    // Pastikan deduplikasi canonical pada currentServices
+    const dedupeMap = new Map();
+    for (const s of rawCurrent) {
+        const canonical = getCanonicalServiceName(s.name);
+        if (!dedupeMap.has(canonical)) {
+            dedupeMap.set(canonical, { ...s, name: canonical });
+        } else {
+            const existing = dedupeMap.get(canonical);
+            if (s.status === 'READY') existing.status = 'READY';
+            if (s.desc) existing.desc = s.desc;
+        }
+    }
+    let currentServices = Array.from(dedupeMap.values());
 
     if (isFullClose) {
         if (currentServices.length > 0) {
@@ -1662,7 +1693,8 @@ function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
         } else {
             currentServices = [
                 { name: "3B SF SLOW", status: "CLOSED", desc: "Ditutup Sementara" },
-                { name: "3B SF FAST", status: "CLOSED", desc: "Ditutup Sementara" }
+                { name: "3B SF FAST", status: "CLOSED", desc: "Ditutup Sementara" },
+                { name: "1B DIGIPOS / INBOUND", status: "CLOSED", desc: "Ditutup Sementara" }
             ];
         }
         saveRiveraDailyServices(currentServices);
@@ -1673,20 +1705,20 @@ function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
         return currentServices;
     }
 
-    const norm = (n) => String(n || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-
     for (const inc of incomingServices) {
-        const incNorm = norm(inc.name);
-        const existingIdx = currentServices.findIndex(s => norm(s.name) === incNorm);
+        const canonicalName = getCanonicalServiceName(inc.name);
+        const existingIdx = currentServices.findIndex(s => getCanonicalServiceName(s.name) === canonicalName);
 
         if (existingIdx !== -1) {
+            currentServices[existingIdx].name = canonicalName;
             currentServices[existingIdx].status = inc.status;
             if (inc.desc) currentServices[existingIdx].desc = inc.desc;
         } else {
-            // Sesuai aturan: hanya tambahkan jika statusnya READY (pernah dibuka hari ini)
-            // Jika belum ada rekaman sama sekali hari ini, catat sebagai referensi awal
             if (inc.status === "READY" || currentServices.length === 0) {
-                currentServices.push(inc);
+                currentServices.push({
+                    ...inc,
+                    name: canonicalName
+                });
             }
         }
     }
@@ -1716,16 +1748,34 @@ async function generateRiveraUpdateGraphic(parsedData) {
             { name: "3B SF FAST", status: isDone ? "DONE" : (isFullClose ? "CLOSED" : "READY"), desc: isDone ? "Antrean Fast Selesai Diproses" : (isFullClose ? "Ditutup Sementara" : "Proses Cepat Under 15 Menit") }
         ];
 
-    let services = rawServices;
+    // Canonical deduplication on services before rendering
+    const dedupeMap = new Map();
+    for (const s of rawServices) {
+        const canonical = getCanonicalServiceName(s.name);
+        if (!dedupeMap.has(canonical)) {
+            dedupeMap.set(canonical, { ...s, name: canonical });
+        } else {
+            const existing = dedupeMap.get(canonical);
+            if (s.status === 'READY') existing.status = 'READY';
+            if (s.desc) existing.desc = s.desc;
+        }
+    }
+    let services = Array.from(dedupeMap.values());
+
     if (isFullClose) {
-        services = rawServices.filter(s => !s.name.toUpperCase().includes("SLOW"));
+        services = services.filter(s => !s.name.toUpperCase().includes("SLOW"));
         if (services.length === 0) {
             services = [{ name: "3B SF FAST", status: "CLOSED", desc: "Kloter Ditutup Sementara" }];
         }
     }
 
+    const numCards = services.length;
+    const cardH = numCards > 3 ? 120 : 135;
+    const cardStep = numCards > 3 ? 135 : 155;
+    const startCardsY = 595;
+
     const cardsSvg = services.map((s, idx) => {
-        const yPos = 595 + (idx * 155);
+        const yPos = startCardsY + (idx * cardStep);
         const isCardDoneTonight = s.status === "DONE_TONIGHT";
         const isCardNextBatch = s.status === "NEXT_BATCH";
         const isCardDone = s.status === "DONE" || isDone;
@@ -1770,20 +1820,33 @@ async function generateRiveraUpdateGraphic(parsedData) {
 
         const cleanName = escapeXml(s.name ? s.name.replace(/smartfren/gi, 'SF').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '') : '');
         const cleanDesc = escapeXml(s.desc ? s.desc.replace(/smartfren/gi, 'SF').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '') : '');
+        const pillY = numCards > 3 ? 37 : 44;
+        const textTitleY = numCards > 3 ? 52 : 58;
+        const textDescY = numCards > 3 ? 88 : 98;
+        const titleFontSize = numCards > 3 ? 26 : 28;
+        const descFontSize = numCards > 3 ? 18 : 20;
 
         return `
             <g transform="translate(80, ${yPos})">
-                <rect width="920" height="135" rx="24" fill="${cardBg}" stroke="${cardBorder}" stroke-width="2"/>
-                <text x="40" y="58" font-family="Arial, -apple-system, sans-serif" font-size="28" font-weight="900" fill="#0f172a">${cleanName}</text>
-                <text x="40" y="98" font-family="Arial, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#475569">${cleanDesc}</text>
+                <rect width="920" height="${cardH}" rx="24" fill="${cardBg}" stroke="${cardBorder}" stroke-width="2"/>
+                <text x="40" y="${textTitleY}" font-family="Arial, -apple-system, sans-serif" font-size="${titleFontSize}" font-weight="900" fill="#0f172a">${cleanName}</text>
+                <text x="40" y="${textDescY}" font-family="Arial, -apple-system, sans-serif" font-size="${descFontSize}" font-weight="500" fill="#475569">${cleanDesc}</text>
                 
                 <!-- Status Pill -->
-                <rect x="690" y="44" width="190" height="46" rx="23" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.6"/>
-                <circle cx="715" cy="67" r="6" fill="${badgeColor}"/>
-                <text x="785" y="74" font-family="Arial, -apple-system, sans-serif" font-size="16" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${badgeText}</text>
+                <rect x="690" y="${pillY}" width="190" height="46" rx="23" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.6"/>
+                <circle cx="715" cy="${pillY + 23}" r="6" fill="${badgeColor}"/>
+                <text x="785" y="${pillY + 30}" font-family="Arial, -apple-system, sans-serif" font-size="16" font-weight="bold" fill="${badgeColor}" text-anchor="middle">${badgeText}</text>
             </g>
         `;
     }).join("\n");
+
+    // Dynamic positioning for slogan card and footer info card so they never collide
+    const lastCardBottom = startCardsY + (numCards * cardStep) - (cardStep - cardH);
+    const noteY = Math.max(lastCardBottom + 25, 1075);
+    const noteH = numCards > 3 ? 80 : 88;
+    const noteTextY = numCards > 3 ? 49 : 54;
+    const footerY = noteY + noteH + 25;
+    const footerH = numCards > 3 ? 190 : 200;
 
     // 5 Tampilan Desain Berbeda: ALL READY vs PARTIAL CLOSE vs FULL CLOSE vs DONE vs CLOSE_LIST_SLOW
     let badgeBgTop = "#dcfce7";
@@ -1920,14 +1983,14 @@ async function generateRiveraUpdateGraphic(parsedData) {
             </g>
 
             <!-- Slogan Guarantee Card (Bebas emoji rusak, tema warna dinamis & anti overflow) -->
-            <g transform="translate(80, 1100)" filter="url(#cardShadow)">
-                <rect width="920" height="88" rx="22" fill="${noteCardBg}" stroke="${noteCardBorder}" stroke-width="2"/>
-                <text x="460" y="54" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="23" font-weight="900" fill="${noteTextColor}" text-anchor="middle">${escapeXml(displayNote)}</text>
+            <g transform="translate(80, ${noteY})" filter="url(#cardShadow)">
+                <rect width="920" height="${noteH}" rx="22" fill="${noteCardBg}" stroke="${noteCardBorder}" stroke-width="2"/>
+                <text x="460" y="${noteTextY}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="23" font-weight="900" fill="${noteTextColor}" text-anchor="middle">${escapeXml(displayNote)}</text>
             </g>
 
             <!-- Footer Info Card -->
-            <g transform="translate(80, 1215)" filter="url(#cardShadow)">
-                <rect width="920" height="200" rx="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+            <g transform="translate(80, ${footerY})" filter="url(#cardShadow)">
+                <rect width="920" height="${footerH}" rx="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
                 <text x="460" y="52" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="25" font-weight="bold" fill="#0f172a" text-anchor="middle">Pemesanan &amp; Antrean Via Web / WhatsApp</text>
                 
                 <g transform="translate(310, 104)">
@@ -1935,7 +1998,7 @@ async function generateRiveraUpdateGraphic(parsedData) {
                     <ellipse cx="0" cy="0" rx="6" ry="14" fill="none" stroke="${theme.primaryColor}" stroke-width="2"/>
                     <line x1="-14" y1="0" x2="14" y2="0" stroke="${theme.primaryColor}" stroke-width="2"/>
                 </g>
-                <text x="340" y="113" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutionts.web.id</text>
+                <text x="340" y="113" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="34" font-weight="bold" fill="${theme.primaryColor}">ry-itsolutions.web.id</text>
                 <text x="460" y="160" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="20" fill="#64748b" text-anchor="middle">Slot terbatas per kloter • Pengerjaan otomatis sesuai antrean</text>
             </g>
         </svg>
