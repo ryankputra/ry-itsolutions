@@ -46,6 +46,105 @@ const PENDING_TESTI_DIR = path.join(__dirname, "..", "sessions", "pending_testi"
 ensureDirExists(PENDING_TESTI_DIR);
 
 /**
+ * Otomatis menyelesaikan pesanan Add Roamer 3B Slow di web saat Rivera mengumumkan DONE ALL
+ * Menjalankan seluruh alur penyelesaian selayaknya admin mengubah secara manual:
+ * 1. Menghitung masa garansi digital
+ * 2. Update status transaksi menjadi 'success'
+ * 3. Kirim event SSE real-time ke web pengguna
+ * 4. Proses komisi referral jika ada
+ * 5. Kirim notifikasi WhatsApp ke pelanggan (invoice sukses & sinyal aktif)
+ */
+async function autoCompleteSlowOrders(triggerText = '') {
+    try {
+        const { calculateTransactionWarranty } = require("../utils/warrantyHelper");
+        const { sseSend, sseBroadcast } = require("../middleware/auth");
+
+        const upper = (triggerText || '').toUpperCase();
+        const isFastOnly = upper.includes("FAST") && !upper.includes("SLOW") && !upper.includes("ALL");
+
+        let targetCondition = `
+            (
+                speed_option = 'slow' 
+                OR packageName LIKE '%Slow%' 
+                OR packageName LIKE '%3 Bulan Slow%'
+                OR (service_type = 'imei' AND (speed_option IS NULL OR speed_option = '' OR speed_option = 'slow') AND packageName NOT LIKE '%Fast%')
+            )
+        `;
+
+        if (isFastOnly) {
+            targetCondition = `
+                (
+                    speed_option = 'fast' 
+                    OR packageName LIKE '%Fast%'
+                )
+            `;
+        }
+
+        const pendingOrders = await dbAll(`
+            SELECT * FROM transactions 
+            WHERE status IN ('processing', 'in_queue') 
+              AND ${targetCondition}
+            ORDER BY createdAt ASC
+        `);
+
+        if (!Array.isArray(pendingOrders) || pendingOrders.length === 0) {
+            console.log('[autoCompleteSlowOrders] Tidak ada transaksi yang sedang diproses untuk filter ini.');
+            return { completedCount: 0, orders: [] };
+        }
+
+        const nowIso = new Date().toISOString();
+        const completedList = [];
+
+        for (const trx of pendingOrders) {
+            try {
+                const warranty = calculateTransactionWarranty(trx);
+                const finalNote = warranty?.defaultSuccessNote || "Sinyal aktif normal. Pesanan telah berhasil diselesaikan oleh server.";
+
+                // 1. Update status transaksi ke success di database
+                await dbRun(
+                    "UPDATE transactions SET status = 'success', admin_note = ?, updatedAt = ? WHERE id = ?",
+                    [finalNote, nowIso, trx.id]
+                );
+
+                // 2. Real-time instant notification via SSE ke browser pengguna
+                if (trx.userId) {
+                    sseSend(trx.userId, 'transaction_status', { id: trx.id, status: 'success', message: finalNote });
+                    sseSend(trx.userId, 'transaction_update', { id: trx.id, status: 'success', note: finalNote });
+                }
+                if (typeof sseBroadcast === 'function') {
+                    sseBroadcast('transaction_status', { id: trx.id, status: 'success', message: finalNote });
+                }
+
+                // 3. Proses referral reward jika ada
+                try {
+                    const { processReferralReward } = require('./referralService');
+                    if (typeof processReferralReward === 'function') {
+                        processReferralReward(trx.id).catch(e => console.error('[Referral Reward Error]', e.message));
+                    }
+                } catch (e) {}
+
+                // 4. Kirim notifikasi WhatsApp ke nomor pengguna/pelanggan
+                try {
+                    await notifyCustomerOnStatusChange({ ...trx, updatedAt: nowIso }, 'success', finalNote);
+                } catch (notifErr) {
+                    console.error(`[autoCompleteSlowOrders] Gagal kirim notif ke customer ${trx.targetPhone}:`, notifErr.message);
+                }
+
+                completedList.push({ id: trx.id, user: trx.userName, phone: trx.targetPhone, imei: trx.imei, note: finalNote });
+            } catch (itemErr) {
+                console.error(`[autoCompleteSlowOrders] Error completing trx ${trx.id}:`, itemErr.message);
+            }
+        }
+
+        console.log(`[autoCompleteSlowOrders] Berhasil menyelesaikan ${completedList.length} transaksi secara otomatis.`);
+        return { completedCount: completedList.length, orders: completedList };
+    } catch (e) {
+        console.error('[autoCompleteSlowOrders] Error:', e.message);
+        return { completedCount: 0, orders: [], error: e.message };
+    }
+}
+
+/**
  * Handler Khusus untuk Pesan dari Grup "3B & REKBER by RIVERA" (Rivera Group)
  */
 async function handleRiveraGroupMessage(messageText, senderName, groupName) {
@@ -58,16 +157,30 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
     // 1. Cek apakah ini pengumuman penyelesaian (DONE ALL)
     const isStrictDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\bslow\s*3b\s*done\s*all\b|\bfast\s*done\s*all\b|\b(?:done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b)/i.test(messageText);
     if (isStrictDoneAll) {
-        console.log('[RiveraListener] 🔔 Terdeteksi pengumuman DONE ALL. Mengirimkan notifikasi ke Admin...');
+        console.log('[RiveraListener] 🔔 Terdeteksi pengumuman DONE ALL. Menyelesaikan pesanan web 3B Slow & Mengirimkan notifikasi ke Admin...');
+        
+        // Selesaikan otomatis transaksi 3B Slow yang sedang diproses di web
+        const autoDoneResult = await autoCompleteSlowOrders(messageText);
+
         const adminPhones = await getAdminPhoneNumbers();
-        const alertMsg = `🔔 *INFO SERVER PUSAT (ANTREAN SELESAI)!*\n` +
+        let autoDoneSummary = "";
+        if (autoDoneResult.completedCount > 0) {
+            autoDoneSummary = `\n\n⚡ *AUTO-COMPLETED TRANSAKSI WEB (${autoDoneResult.completedCount} Pesanan):*\n` +
+                autoDoneResult.orders.map(o => `• \`${o.id}\` - ${o.user || 'User'} (${o.imei || '-'})`).join('\n') +
+                `\n_Status otomatis diubah ke SUCCESS & notifikasi WhatsApp telah dikirim ke masing-masing pengguna._`;
+        } else {
+            autoDoneSummary = `\n\nℹ️ _Tidak ada pesanan 3B Slow yang sedang berstatus 'processing' di web saat ini._`;
+        }
+
+        const alertMsg = `🔔 *INFO SERVER PUSAT: ANTREAN SELESAI (DONE 3B SLOW)!*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `💬 *Isi Pesan:* "${messageText}"\n` +
             `👥 *Pengirim:* ${senderName || 'Server Pusat'}\n` +
             `🏷️ *Grup:* ${groupName || '3B & REKBER'}\n` +
             `⏰ *Waktu:* ${timestampWIB} WIB (${dateWIB})\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `ℹ️ _Batch pesanan pelanggan kemungkinan sudah selesai diproses server. Silakan cek status transaksi antrean dan infokan ke pelanggan terkait._` + BOT_FOOTER;
+            `━━━━━━━━━━━━━━━━━━━━━━` +
+            autoDoneSummary +
+            `\n\nℹ️ _Catatan: Kontrol manual via web admin & command bot tetap aktif seperti biasa jika dibutuhkan._` + BOT_FOOTER;
 
         for (const phone of adminPhones) {
             try {
@@ -76,6 +189,26 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
                 console.warn(`[RiveraListener] Gagal kirim alert ke ${phone}:`, e.message);
             }
         }
+
+        // Terbitkan juga Story DONE ke Instagram & WhatsApp Story!
+        try {
+            const { publishRiveraStory } = require('./igDirectService');
+            if (typeof publishRiveraStory === 'function') {
+                const doneParsed = {
+                    type: "DONE_NOTIFICATION",
+                    title: "DONE 3B SLOW",
+                    badge: "BATCH COMPLETED • SELESAI",
+                    services: [
+                        { name: "3B SF SLOW", status: "DONE", desc: "Antrean Kloter Ini Sudah Selesai Diproses" }
+                    ],
+                    note: "3B SF Slow Selesai Diproses • Cek Status Resmi di Web"
+                };
+                await publishRiveraStory(doneParsed);
+            }
+        } catch (storyErr) {
+            console.warn('[RiveraListener] Gagal terbitkan story DONE:', storyErr.message);
+        }
+
         return;
     }
 
@@ -203,10 +336,12 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
             // Cek apakah cocok dengan paket yang sudah terdaftar
             const isMatched = registeredPkgs.some(p => {
                 const pUpper = (p.duration || '').toUpperCase();
+                const pClean = pUpper.replace(/\s+/g, '');
+                const sClean = sUpper.replace(/\s+/g, '');
                 if (pUpper.includes("EXE") && sUpper.includes("EXE")) return true;
                 if (pUpper.includes("SLOW") && sUpper.includes("SLOW")) return true;
-                if (pUpper.includes("FAST") && sUpper.includes("FAST") && !pUpper.includes("EXE") && !sUpper.includes("EXE")) return true;
-                if ((pUpper.includes("1B") || pUpper.includes("DIGIPOS")) && (sUpper.includes("1B") || sUpper.includes("DIGIPOS"))) return true;
+                if (pUpper.includes("FAST") && sUpper.includes("FAST") && !pUpper.includes("EXE") && !sUpper.includes("EXE") && !pClean.includes("1B") && !sClean.includes("1B")) return true;
+                if ((pClean.includes("1B") || pClean.includes("DIGIPOS") || pUpper.includes("1 BULAN")) && (sClean.includes("1B") || sClean.includes("DIGIPOS") || sUpper.includes("1 BULAN"))) return true;
                 return false;
             });
 
@@ -280,6 +415,15 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
     const adminPhones = await getAdminPhoneNumbers();
     const isFullClose = parsed.type === "FULL_CLOSE";
     const isDone = parsed.type === "DONE_NOTIFICATION";
+    let autoDoneSummary = "";
+    if (isDone) {
+        const autoDoneResult = await autoCompleteSlowOrders(messageText);
+        if (autoDoneResult.completedCount > 0) {
+            autoDoneSummary = `\n\n⚡ *AUTO-COMPLETED TRANSAKSI WEB (${autoDoneResult.completedCount} Pesanan):*\n` +
+                autoDoneResult.orders.map(o => `• \`${o.id}\` - ${o.user || 'User'} (${o.imei || '-'})`).join('\n') +
+                `\n_Status otomatis diubah ke SUCCESS & notifikasi WhatsApp telah dikirim ke masing-masing pengguna._`;
+        }
+    }
     const statusLabel = isFullClose 
         ? "🔴 ORDERAN KLOTER CLOSED" 
         : (isDone ? "✅ ANTREAN SELESAI / DONE 3B SLOW" : (parsed.type === "PARTIAL_CLOSE" ? "🟡 UPDATE SLOT (PARTIAL)" : "🟢 SLOT UPDATE (OPEN)"));
@@ -291,8 +435,9 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
         `💬 *Pesan Asli Server:*\n_"${messageText}"_\n\n` +
         `📊 *Status:* ${statusLabel}\n` +
         `${summaryServices}\n\n` +
-        `🛡️ *Catatan:* ${parsed.note || 'Semua Bergaransi Tanpa Drama 🎭'}\n` +
-        `⏰ *Waktu Terbit:* ${timestampWIB} WIB\n` +
+        `🛡️ *Catatan:* ${parsed.note || 'Semua Bergaransi Tanpa Drama 🎭'}` +
+        autoDoneSummary +
+        `\n⏰ *Waktu Terbit:* ${timestampWIB} WIB\n` +
         `📸 *Media:* Tayang di Instagram Story (@unlocksinyalsolo) & WhatsApp Story Bot.` + BOT_FOOTER;
 
     for (const phone of adminPhones) {

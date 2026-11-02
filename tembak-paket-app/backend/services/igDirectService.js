@@ -29,34 +29,34 @@ function getAddRoamerLogoUri() {
     return '';
 }
 
-// Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG (dengan offset reff/drop bass aman)
+// Katalog lagu khusus viral TikTok & TikTok Remix untuk Story Video & Feed IG (dengan offset reff/drop bass terverifikasi)
 const TRENDING_TRACKS = [
-    { title: 'DJ Alay Gaya Kaya Artis (Viral TikTok Remix)', artist: 'DJ Desa', filename: 'djalay.mp3', reffSec: 18 },
+    { title: 'DJ Alay Gaya Kaya Artis (Viral TikTok Remix)', artist: 'DJ Desa', filename: 'djalay.mp3', reffSec: 40 },
     { title: 'Stecu Stecu (Jedag Jedug TikTok Remix)', artist: 'Faris Adam', filename: 'stecustecu.mp3', reffSec: 15 },
-    { title: 'Tabrak Tabrak Masuk (Remix TikTok Full Bass)', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3', reffSec: 20 },
-    { title: 'Malam Pagi (Remix Jedag Jedug TikTok)', artist: 'Saixse ft. MK', filename: 'malampagi.mp3', reffSec: 20 },
-    { title: 'Cikini Ke Gondangdia (DJ Koplo Remix TikTok)', artist: 'Duo Anggrek Remix', filename: 'cikini.mp3', reffSec: 16 },
-    { title: 'Karna Su Sayang (DJ Remix TikTok Viral)', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3', reffSec: 20 },
-    { title: 'Sial (DJ Speed Up Jedag Jedug TikTok)', artist: 'Mahalini Remix', filename: 'sial.mp3', reffSec: 20 },
-    { title: 'Garam & Madu (DJ Remix TikTok Bass)', artist: 'Tenxi & Asmara', filename: 'garammadu.mp3', reffSec: 10 },
-    { title: 'Cupid (Speed Up Twin Ver TikTok Remix)', artist: 'FIFTY FIFTY', filename: 'cupid.mp3', reffSec: 15 },
-    { title: 'Sigar (DJ Jedag Jedug Koplo TikTok)', artist: 'Denny Caknan Remix', filename: 'sigar.mp3', reffSec: 10 },
-    { title: 'Cundamani (DJ Slow Bass Remix TikTok)', artist: 'Denny Caknan Remix', filename: 'cundamani.mp3', reffSec: 10 },
-    { title: 'Wirang (DJ Remix Full Bass TikTok)', artist: 'Denny Caknan Remix', filename: 'wirang.mp3', reffSec: 10 },
-    { title: 'APT. (DJ TikTok Viral Remix)', artist: 'ROSÉ & Bruno Mars', filename: 'apt.mp3', reffSec: 10 },
-    { title: 'Die With A Smile (DJ Slow TikTok Remix)', artist: 'Lady Gaga & Bruno Mars', filename: 'diewithasmile.mp3', reffSec: 10 },
-    { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3', reffSec: 20 },
-    { title: 'Lantas (DJ Remix TikTok Viral)', artist: 'Juicy Luicy', filename: 'lantas.mp3', reffSec: 10 },
-    { title: 'Bohongi Hati (DJ Remix Full Bass)', artist: 'Mahalini Remix', filename: 'bohongihati.mp3', reffSec: 20 },
-    { title: 'Gala Bunga Matahari (DJ TikTok Remix)', artist: 'Sal Priadi Remix', filename: 'galabungamatahari.mp3', reffSec: 20 },
-    { title: 'Jiwa Yang Bersedih (DJ Slow Bass)', artist: 'Ghea Indrawari Remix', filename: 'jiwayangbersedih.mp3', reffSec: 10 },
-    { title: 'Mati-matian (DJ Remix Jedag Jedug)', artist: 'Mahalini Remix', filename: 'matimatian.mp3', reffSec: 10 },
-    { title: 'Penjaga Hati (DJ Viral TikTok Remix)', artist: 'Nadhif Basalamah', filename: 'penjagahati.mp3', reffSec: 10 },
-    { title: 'Satu Bulan (DJ Remix Koplo Bass)', artist: 'Bernadya Remix', filename: 'satubulan.mp3', reffSec: 10 },
-    { title: 'Semua Aku Dirayakan (DJ Remix)', artist: 'Nadin Amizah Remix', filename: 'semuaakudirayakan.mp3', reffSec: 10 },
-    { title: 'Tak Segampang Itu (DJ Remix TikTok)', artist: 'Anggi Marito Remix', filename: 'taksegampangitu.mp3', reffSec: 10 },
-    { title: 'Tampar (DJ Full Bass Remix TikTok)', artist: 'Juicy Luicy Remix', filename: 'tampar.mp3', reffSec: 10 },
-    { title: 'Untungnya Hidup Tetap Berjalan (DJ Remix)', artist: 'Bernadya Remix', filename: 'untungnya.mp3', reffSec: 10 }
+    { title: 'Tabrak Tabrak Masuk (Remix TikTok Full Bass)', artist: 'Richard Jersey', filename: 'tabraktabrak.mp3', reffSec: 25 },
+    { title: 'Malam Pagi (Remix Jedag Jedug TikTok)', artist: 'Saixse ft. MK', filename: 'malampagi.mp3', reffSec: 30 },
+    { title: 'Cikini Ke Gondangdia (DJ Koplo Remix TikTok)', artist: 'Duo Anggrek Remix', filename: 'cikini.mp3', reffSec: 28 },
+    { title: 'Karna Su Sayang (DJ Remix TikTok Viral)', artist: 'Near feat. Dian Sorowea', filename: 'karnasusayang.mp3', reffSec: 32 },
+    { title: 'Sial (DJ Speed Up Jedag Jedug TikTok)', artist: 'Mahalini Remix', filename: 'sial.mp3', reffSec: 68 },
+    { title: 'Garam & Madu (DJ Remix TikTok Bass)', artist: 'Tenxi & Asmara', filename: 'garammadu.mp3', reffSec: 0 },
+    { title: 'Cupid (Speed Up Twin Ver TikTok Remix)', artist: 'FIFTY FIFTY', filename: 'cupid.mp3', reffSec: 42 },
+    { title: 'Sigar (DJ Jedag Jedug Koplo TikTok)', artist: 'Denny Caknan Remix', filename: 'sigar.mp3', reffSec: 0 },
+    { title: 'Cundamani (DJ Slow Bass Remix TikTok)', artist: 'Denny Caknan Remix', filename: 'cundamani.mp3', reffSec: 0 },
+    { title: 'Wirang (DJ Remix Full Bass TikTok)', artist: 'Denny Caknan Remix', filename: 'wirang.mp3', reffSec: 0 },
+    { title: 'APT. (DJ TikTok Viral Remix)', artist: 'ROSÉ & Bruno Mars', filename: 'apt.mp3', reffSec: 0 },
+    { title: 'Die With A Smile (DJ Slow TikTok Remix)', artist: 'Lady Gaga & Bruno Mars', filename: 'diewithasmile.mp3', reffSec: 0 },
+    { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3', reffSec: 55 },
+    { title: 'Lantas (DJ Remix TikTok Viral)', artist: 'Juicy Luicy', filename: 'lantas.mp3', reffSec: 0 },
+    { title: 'Bohongi Hati (DJ Remix Full Bass)', artist: 'Mahalini Remix', filename: 'bohongihati.mp3', reffSec: 40 },
+    { title: 'Gala Bunga Matahari (DJ TikTok Remix)', artist: 'Sal Priadi Remix', filename: 'galabungamatahari.mp3', reffSec: 55 },
+    { title: 'Jiwa Yang Bersedih (DJ Slow Bass)', artist: 'Ghea Indrawari Remix', filename: 'jiwayangbersedih.mp3', reffSec: 0 },
+    { title: 'Mati-matian (DJ Remix Jedag Jedug)', artist: 'Mahalini Remix', filename: 'matimatian.mp3', reffSec: 0 },
+    { title: 'Penjaga Hati (DJ Viral TikTok Remix)', artist: 'Nadhif Basalamah', filename: 'penjagahati.mp3', reffSec: 0 },
+    { title: 'Satu Bulan (DJ Remix Koplo Bass)', artist: 'Bernadya Remix', filename: 'satubulan.mp3', reffSec: 0 },
+    { title: 'Semua Aku Dirayakan (DJ Remix)', artist: 'Nadin Amizah Remix', filename: 'semuaakudirayakan.mp3', reffSec: 0 },
+    { title: 'Tak Segampang Itu (DJ Remix TikTok)', artist: 'Anggi Marito Remix', filename: 'taksegampangitu.mp3', reffSec: 0 },
+    { title: 'Tampar (DJ Full Bass Remix TikTok)', artist: 'Juicy Luicy Remix', filename: 'tampar.mp3', reffSec: 0 },
+    { title: 'Untungnya Hidup Tetap Berjalan (DJ Remix)', artist: 'Bernadya Remix', filename: 'untungnya.mp3', reffSec: 0 }
 ];
 
 const { getRandomDJTrack, getUniqueDJTracks, getActiveDJTracks } = require('./tiktokDJService');
@@ -553,8 +553,10 @@ async function generateStoryVideo(formattedImageBuffer, track) {
 
         fs.writeFileSync(tempImg, scaledImgBuffer);
 
-        const rawStartSec = track?.reffSec || 10;
-        const startSec = Math.max(0, Math.min(rawStartSec, 14));
+        // Ambil detik mulai tepat dari reff / drop bass lagu tanpa batasan clamp keliru
+        const startSec = (typeof track?.reffSec === 'number' && !isNaN(track.reffSec)) 
+            ? Math.max(0, track.reffSec) 
+            : 0;
 
         // Encode video tepat 15 detik dengan libx264 ultrafast + aac stereo 44.1kHz
         // -stream_loop -1 menjamin musik TIDAK PERNAH terputus di tengah jalan meskipun file sampel pendek
@@ -629,8 +631,10 @@ async function generateFeedVideo(formattedImageBuffer, track) {
 
         fs.writeFileSync(tempImg, scaledImgBuffer);
 
-        const rawStartSec = track?.reffSec || 10;
-        const startSec = Math.max(0, Math.min(rawStartSec, 14));
+        // Ambil detik mulai tepat dari reff / drop bass lagu tanpa batasan clamp keliru
+        const startSec = (typeof track?.reffSec === 'number' && !isNaN(track.reffSec)) 
+            ? Math.max(0, track.reffSec) 
+            : 0;
 
         await execFileAsync(FFMPEG_BIN, [
             '-y',
@@ -1809,14 +1813,15 @@ function getCanonicalServiceName(name) {
     if (raw.includes("EXE") || (raw.includes("3B") && (raw.includes("IND") || raw.includes("INB")))) {
         return "3B IND EXE";
     }
+    // CEK 1B / DIGIPOS / INBOUND TERLEBIH DAHULU SEBELUM FAST!
+    if (raw.includes("1B") || raw.includes("DIGIPOS") || raw.includes("INBOUND")) {
+        return "1B DIGIPOS / INBOUND";
+    }
     if (raw.includes("SLOW")) {
         return "3B SF SLOW";
     }
-    if (raw.includes("FAST")) {
+    if (raw.includes("FAST") || raw.includes("SF")) {
         return "3B SF FAST";
-    }
-    if (raw.includes("DIGIPOS") || raw.includes("INBOUND") || raw.includes("1B")) {
-        return "1B DIGIPOS / INBOUND";
     }
     return String(name || '').trim().replace(/smartfren/gi, 'SF').replace(/indosat/gi, 'IND').replace(/rivera/gi, '');
 }
@@ -1844,6 +1849,27 @@ function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
     }
     let currentServices = Array.from(dedupeMap.values());
 
+    // 1. Masukkan / perbarui incomingServices terlebih dahulu
+    if (Array.isArray(incomingServices) && incomingServices.length > 0) {
+        for (const inc of incomingServices) {
+            const canonicalName = getCanonicalServiceName(inc.name);
+            const existingIdx = currentServices.findIndex(s => getCanonicalServiceName(s.name) === canonicalName);
+
+            if (existingIdx !== -1) {
+                currentServices[existingIdx].name = canonicalName;
+                currentServices[existingIdx].status = inc.status;
+                if (inc.desc) currentServices[existingIdx].desc = inc.desc;
+            } else {
+                currentServices.push({
+                    name: canonicalName,
+                    status: inc.status,
+                    desc: inc.desc || (inc.status === 'READY' ? 'Slot Tersedia Hari Ini' : 'Full Slot / Ditutup Sementara')
+                });
+            }
+        }
+    }
+
+    // 2. Jika Full Close, tandai semua layanan aktif hari ini (selain Slow) sebagai CLOSED
     if (isFullClose) {
         if (currentServices.length > 0) {
             currentServices = currentServices.map(s => {
@@ -1861,28 +1887,6 @@ function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
                 { name: "3B SF FAST", status: "CLOSED", desc: "Ditutup Sementara" },
                 { name: "1B DIGIPOS / INBOUND", status: "CLOSED", desc: "Ditutup Sementara" }
             ];
-        }
-        saveRiveraDailyServices(currentServices);
-        return currentServices;
-    }
-
-    if (!Array.isArray(incomingServices) || incomingServices.length === 0) {
-        return currentServices;
-    }
-
-    for (const inc of incomingServices) {
-        const canonicalName = getCanonicalServiceName(inc.name);
-        const existingIdx = currentServices.findIndex(s => getCanonicalServiceName(s.name) === canonicalName);
-
-        if (existingIdx !== -1) {
-            currentServices[existingIdx].name = canonicalName;
-            currentServices[existingIdx].status = inc.status;
-            if (inc.desc) currentServices[existingIdx].desc = inc.desc;
-        } else {
-            currentServices.push({
-                ...inc,
-                name: canonicalName
-            });
         }
     }
 
@@ -2226,6 +2230,7 @@ async function publishRiveraStory(parsedData, options = {}) {
                       `🌐 Cek Status: https://ry-itsolutionts.web.id`;
                 } else if (isFullClose) {
                     caption = `🔴 *UPDATE SERVER PUSAT: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
+                      (servicesText ? `${servicesText}\n\n` : '') +
                       `Antrean kloter saat ini sedang diproses.\n` +
                       `Pemesanan 3B Slow tetap buka 24 jam via web & WhatsApp.\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
@@ -2258,12 +2263,25 @@ async function publishRiveraStory(parsedData, options = {}) {
         }
     }
 
-    // 2. Publikasikan ke Instagram Story
-    try {
-        results.instagram = await publishToStory(buffer, track, { isFullScreen: true, hasMusicSticker: false });
-    } catch (igErr) {
-        console.error('[publishRiveraStory] Gagal publish IG Story 3:', igErr.message);
-        results.instagramError = igErr.message;
+    // 2. Publikasikan ke Instagram Story (dengan retry hingga 3x jika transient error / network glitch)
+    let igAttempts = 0;
+    while (igAttempts < 3) {
+        try {
+            igAttempts++;
+            results.instagram = await publishToStory(buffer, track, { isFullScreen: true, hasMusicSticker: false });
+            if (results.instagram && results.instagram.success) {
+                results.instagramError = null;
+                break;
+            } else {
+                throw new Error(results.instagram?.error || 'Gagal menerbitkan Instagram Story');
+            }
+        } catch (igErr) {
+            console.error(`[publishRiveraStory] Gagal publish IG Story (Percobaan ${igAttempts}/3):`, igErr.message);
+            results.instagramError = igErr.message;
+            if (igAttempts < 3) {
+                await new Promise(r => setTimeout(r, 2500));
+            }
+        }
     }
 
     return { ...results, buffer, videoBuffer: videoData?.videoBuffer || null };
@@ -2306,7 +2324,9 @@ module.exports = {
     generateSoftOpenSvg,
     generateSoftDisclaimerSvg,
     generateNewServiceSvg,
-    publishNewServiceStory
+    publishNewServiceStory,
+    getCanonicalServiceName,
+    syncRiveraDailyServices
 };
 
 

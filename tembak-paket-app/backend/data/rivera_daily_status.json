@@ -1,11 +1,11 @@
 {
   "date": "2026-11-02",
-  "updatedAt": 1793615467893,
+  "updatedAt": 1793625911730,
   "services": [
     {
       "name": "3B SF FAST",
-      "status": "READY",
-      "desc": "Proses Cepat Under 15 Menit"
+      "status": "CLOSED",
+      "desc": "Full Slot / Ditutup Sementara"
     },
     {
       "name": "3B SF SLOW",
@@ -14,6 +14,11 @@
     },
     {
       "name": "3B IND EXE",
+      "status": "READY",
+      "desc": "Ready • Proses Cepat"
+    },
+    {
+      "name": "1B DIGIPOS / INBOUND",
       "status": "CLOSED",
       "desc": "Full Slot / Ditutup Sementara"
     }
