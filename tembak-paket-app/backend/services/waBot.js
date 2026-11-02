@@ -34,7 +34,7 @@ const {
     downloadMediaMessage
 } = require("@whiskeysockets/baileys");
 const { censorScreenshot } = require("./censorService");
-const { publishToStory, publishToFeed, publishOpenStory, publishRiveraStory, parseRiveraMessage, saveSessionFromCookie, getUniqueTracks, getRandomTrack } = require("./igDirectService");
+const { publishToStory, publishToFeed, publishOpenStory, publishRiveraStory, publishNewServiceStory, parseRiveraMessage, saveSessionFromCookie, getUniqueTracks, getRandomTrack } = require("./igDirectService");
 const { getDJTracksStatusSummary, rotateAndRefreshDJTracks } = require("./tiktokDJService");
 
 // Cache nama grup WhatsApp: remoteJid -> subject
@@ -185,6 +185,88 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
         } catch (earlyOpenErr) {
             console.error('[RiveraListener] Error saat pengecekan auto-open story lebih awal:', earlyOpenErr.message);
         }
+    }
+
+    // 2d. Deteksi Menu / Layanan Baru Rivera yang Belum Terdaftar di Web:
+    // Jika ada layanan yang belum ada di tabel imei_packages, tahan (JANGAN posting story & JANGAN tampilkan di web)
+    // dan kirim alert notifikasi ke WhatsApp Admin untuk konfirmasi harga jual & nama produk.
+    const registeredPkgs = await dbAll("SELECT id, duration, allowed_speeds FROM imei_packages");
+    const newPendingServices = [];
+    const knownServices = [];
+
+    if (Array.isArray(parsed.services)) {
+        for (const s of parsed.services) {
+            const sUpper = (s.name || '').toUpperCase();
+            // Cek apakah cocok dengan paket yang sudah terdaftar
+            const isMatched = registeredPkgs.some(p => {
+                const pUpper = (p.duration || '').toUpperCase();
+                if (pUpper.includes("EXE") && sUpper.includes("EXE")) return true;
+                if (pUpper.includes("SLOW") && sUpper.includes("SLOW")) return true;
+                if (pUpper.includes("FAST") && sUpper.includes("FAST") && !pUpper.includes("EXE") && !sUpper.includes("EXE")) return true;
+                if ((pUpper.includes("1B") || pUpper.includes("DIGIPOS")) && (sUpper.includes("1B") || sUpper.includes("DIGIPOS"))) return true;
+                return false;
+            });
+
+            if (isMatched) {
+                knownServices.push(s);
+            } else if (s.status === 'READY') {
+                newPendingServices.push(s);
+            }
+        }
+    }
+
+    // Jika ada layanan baru yang terdeteksi:
+    if (newPendingServices.length > 0) {
+        for (const newSvc of newPendingServices) {
+            // Gunakan nama asli dengan 'IND' jika ada (aturan: jika penyebutan IND ya IND saja)
+            let svcName = newSvc.name || '3B IND EXE';
+            if (svcName.toUpperCase().includes('INDOSAT')) {
+                svcName = svcName.replace(/INDOSAT/gi, 'IND');
+            }
+
+            const pendingKey = `pending_new_service_${svcName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+                pendingKey,
+                JSON.stringify({
+                    name: svcName,
+                    rawMessage: messageText,
+                    detectedAt: new Date().toISOString()
+                })
+            ]);
+
+            const adminPhones = await getAdminPhoneNumbers();
+            const alertNewMenu = `🚨 *MENU BARU TERDETEKSI DARI SERVER RIVERA!*\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `💬 *Pesan Asli Rivera:*\n_"${messageText}"_\n\n` +
+                `📦 *Layanan Terdeteksi:* *${svcName}*\n` +
+                `ℹ️ *Status:* Menunggu Konfirmasi & Harga Jual dari Admin\n` +
+                `🔒 *Proteksi:* Belum tayang di Web & Belum terbit di Story.\n\n` +
+                `👉 *Cara Cepat Mengaktifkan (Balas pesan ini):*\n` +
+                `*#tambahpaket ${svcName} | [Harga Jual] | [Kecepatan]*\n\n` +
+                `*Contoh:*\n` +
+                `#tambahpaket ${svcName} | 175000 | fast\n\n` +
+                `_Pilihan Kecepatan: fast, slow, atau semi_\n` +
+                `🌐 *Atau atur via Web Admin:*\n` +
+                `https://ry-itsolutionts.web.id/admin/packages\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━` + BOT_FOOTER;
+
+            for (const phone of adminPhones) {
+                try {
+                    await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: alertNewMenu });
+                } catch (errAlert) {
+                    console.error("[RiveraListener] Gagal kirim notif menu baru ke admin:", errAlert.message);
+                }
+            }
+        }
+    }
+
+    // Hanya terbitkan layanan yang SUDAH terkonfirmasi ke Story biasa
+    parsed.services = knownServices;
+
+    // Jika semua layanan adalah menu baru yang masih pending konfirmasi, tahan story biasa sampai admin konfirmasi
+    if (parsed.services.length === 0 && newPendingServices.length > 0) {
+        console.log('[RiveraListener] ⏸️ Semua layanan yang terdeteksi adalah menu baru (Pending Konfirmasi Admin). Story reguler ditahan sampai admin konfirmasi.');
+        return;
     }
 
     // 3. Terbitkan Story (Live Status / Update Slot / Done) ke IG dan WA Story
@@ -1369,8 +1451,8 @@ async function initWABot(forceNew = false) {
                         );
 
                         // 3. Pre-filter Kata Kunci Wajib (Paket + Status)
-                        const hasPackageKeyword = /(3B|1B|SF|DIGIPOS|SLOW|FAST|ROAMER)/i.test(messageText);
-                        const hasStatusKeyword = /(ON|OFF|DONE|READY|FULL|CLOSE|OPEN|SLOT|SENT|TURUN|HARGA|BERGARANSI|KLOTER)/i.test(messageText);
+                        const hasPackageKeyword = /(3B|1B|SF|DIGIPOS|SLOW|FAST|ROAMER|EXE|IND|INB)/i.test(messageText);
+                        const hasStatusKeyword = /(ON|OFF|DONE|READY|FULL|CLOSE|OPEN|SLOT|SENT|TURUN|HARGA|BERGARANSI|KLOTER|MURAH|GAS|ORDER|TEST|EXEC)/i.test(messageText);
                         const hasOpenKeywords = /\b(ON|OPEN|READY)\b|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE))/i.test(messageText);
                         const isDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\bslow\s*3b\s*done\s*all\b|\bfast\s*done\s*all\b|\b(?:done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b)/i.test(messageText);
 
@@ -1589,7 +1671,7 @@ async function processAdminImageBatch(remoteJid) {
                 const isCommand = (
                     messageText.startsWith(".") ||
                     messageText.startsWith("#") ||
-                    /^(0|1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|open|igsession|setopen|jadwalopen|startopen|stopopen)\b/i.test(messageText)
+                    /^(0|1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|open|igsession|setopen|jadwalopen|startopen|stopopen|tambahpaket)\b/i.test(messageText)
                 );
                 if (!isCommand) continue;
 
@@ -2014,6 +2096,101 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nStory 3 (Live Status & Slot Update) berhasil diproses dan dikirim ke Instagram Story & WhatsApp Story!` + BOT_FOOTER);
         } catch (rErr) {
             await replyWhatsApp(replyJid, `❌ *Gagal memproses Story Rivera:* ${rErr.message}` + BOT_FOOTER);
+        }
+        return;
+    }
+
+    // Command Khusus: Konfirmasi & Tambah Menu / Paket Baru dari Rivera (#tambahpaket [Nama] | [Harga] | [Kecepatan])
+    if (rawCleanText.startsWith("#tambahpaket") || rawCleanText.startsWith(".tambahpaket") || rawCleanText.startsWith("tambahpaket")) {
+        const args = text.trim().replace(/^([#.]?tambahpaket)\s*/i, '').trim();
+        if (!args || !args.includes('|')) {
+            await replyWhatsApp(replyJid,
+                `ℹ️ *CARA KONFIRMASI & AKTIFKAN PAKET BARU:*\n\n` +
+                `Ketik:\n` +
+                `*#tambahpaket [Nama Produk] | [Harga Jual] | [Kecepatan]*\n\n` +
+                `*Contoh:*\n` +
+                `• *#tambahpaket 3B IND EXE | 175000 | fast*\n` +
+                `• *#tambahpaket 3 Bulan IND EXE | 180000 | semi*\n\n` +
+                `_Pilihan kecepatan: fast, slow, atau semi_\n` +
+                `_Setelah dikonfirmasi, paket otomatis tampil di web /add-roamer dan Story New Release (tanpa harga) akan diterbitkan ke IG & WA._` + BOT_FOOTER
+            );
+            return;
+        }
+
+        const parts = args.split('|').map(p => p.trim());
+        let rawName = parts[0] || '3B IND EXE';
+        // Enforce rule: Jika penyebutan IND ya IND saja, jangan diubah ke Indosat
+        let productName = rawName.replace(/indosat/gi, 'IND').replace(/\binb\b/gi, 'IND').trim();
+        if (!productName) productName = '3B IND EXE';
+
+        const priceRaw = (parts[1] || '').replace(/[^0-9]/g, '');
+        const price = parseInt(priceRaw, 10);
+        if (isNaN(price) || price < 5000) {
+            await replyWhatsApp(replyJid,
+                `❌ *HARGA JUAL TIDAK VALID!*\n\n` +
+                `Format nominal harga harus berupa angka rupiah (minimal Rp5.000).\n` +
+                `Contoh: *#tambahpaket ${productName} | 175000 | fast*` + BOT_FOOTER
+            );
+            return;
+        }
+
+        let speed = (parts[2] || 'fast').toLowerCase();
+        if (!['fast', 'slow', 'semi'].includes(speed)) {
+            speed = 'fast';
+        }
+
+        const allowedSpeeds = [speed];
+        const speedPrices = { [speed]: price };
+        const id = `imei_${Date.now()}`;
+
+        await replyWhatsApp(replyJid, `⏳ *Menyimpan paket ${productName} ke database & menyiapkan Story New Release...*`);
+
+        try {
+            // Cek apakah paket sudah pernah ada
+            const existing = await dbGet("SELECT id FROM imei_packages WHERE UPPER(duration) = UPPER(?)", [productName]);
+            if (existing) {
+                await dbRun(
+                    "UPDATE imei_packages SET price = ?, isVisible = 1, allowed_speeds = ?, speed_prices = ? WHERE id = ?",
+                    [price, JSON.stringify(allowedSpeeds), JSON.stringify(speedPrices), existing.id]
+                );
+            } else {
+                await dbRun(
+                    "INSERT INTO imei_packages (id, duration, price, isVisible, allowed_speeds, speed_prices, open_hour, close_hour) VALUES (?, ?, ?, 1, ?, ?, NULL, NULL)",
+                    [id, productName, price, JSON.stringify(allowedSpeeds), JSON.stringify(speedPrices)]
+                );
+            }
+
+            // Bersihkan flag pending
+            await dbRun("DELETE FROM settings WHERE key LIKE 'pending_new_service_%'");
+
+            // Terbitkan Story New Release (Instagram & WhatsApp Story - 100% Bebas Harga)
+            let storyRes = null;
+            try {
+                storyRes = await publishNewServiceStory(productName, speed);
+            } catch (storyErr) {
+                console.error('[WABot] Gagal menerbitkan New Service Story:', storyErr.message);
+            }
+
+            const priceFormatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+            const igStatus = storyRes?.instagram ? '🟢 Terbit' : (storyRes?.instagramError ? `🔴 Gagal (${storyRes.instagramError})` : '⚪ Lewati');
+            const waStatus = storyRes?.whatsapp ? '🟢 Terbit' : (storyRes?.whatsappError ? `🔴 Gagal (${storyRes.whatsappError})` : '⚪ Lewati');
+
+            await replyWhatsApp(replyJid,
+                `✅ *PAKET BARU BERHASIL DIAKTIFKAN & DITERBITKAN!*\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `📦 *Nama Produk:* *${productName}*\n` +
+                `💰 *Harga Jual Web:* *${priceFormatted}*\n` +
+                `⚡ *Kecepatan Server:* *${speed.toUpperCase()}*\n` +
+                `🌐 *Status Web (/add-roamer):* *🟢 Aktif & Ditampilkan*\n\n` +
+                `📢 *Publikasi Story (Tanpa Harga):*\n` +
+                `• Instagram Story: ${igStatus}\n` +
+                `• WhatsApp Story: ${waStatus}\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `_Pelanggan sekarang sudah bisa memilih paket ini langsung dari website._` + BOT_FOOTER
+            );
+        } catch (dbErr) {
+            console.error('[WABot] Error tambah paket:', dbErr.message);
+            await replyWhatsApp(replyJid, `❌ *Gagal mengaktifkan paket:* ${dbErr.message}` + BOT_FOOTER);
         }
         return;
     }

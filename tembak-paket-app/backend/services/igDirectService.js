@@ -1371,6 +1371,129 @@ async function publishOpenStory(options = {}) {
     return results;
 }
 
+function generateNewServiceSvg(theme, serviceName, speed, timestampWIB, dateWIB) {
+    const targetW = 1080;
+    const targetH = 1920;
+    const speedLabel = (speed || 'fast').toUpperCase();
+
+    return `
+    <svg width="${targetW}" height="${targetH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="newServiceBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${theme.bgGradient.from}"/>
+                <stop offset="50%" stop-color="${theme.bgGradient.mid}"/>
+                <stop offset="100%" stop-color="${theme.bgGradient.to}"/>
+            </linearGradient>
+            <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="90"/>
+            </filter>
+            <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.04"/>
+            </filter>
+        </defs>
+
+        <!-- 100% Full Canvas Edge-to-Edge Background -->
+        <rect width="100%" height="100%" fill="url(#newServiceBg)"/>
+
+        <!-- Ambient Lights -->
+        <circle cx="540" cy="380" r="380" fill="${theme.ambientLight1}" filter="url(#softGlow)"/>
+        <circle cx="540" cy="1200" r="420" fill="${theme.ambientLight2}" filter="url(#softGlow)"/>
+
+        <!-- Top Branding Logo (y=220) -->
+        <g transform="translate(475, 220)" filter="url(#cardShadow)">
+            <rect width="130" height="130" rx="28" fill="#ffffff" stroke="${theme.primaryColor}" stroke-width="2.5"/>
+            <image href="${getAddRoamerLogoUri()}" x="8" y="8" width="114" height="114" preserveAspectRatio="xMidYMid meet"/>
+        </g>
+
+        <!-- Status Pill Badge -->
+        <rect x="345" y="380" width="390" height="46" rx="23" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.8"/>
+        <circle cx="375" cy="403" r="7" fill="${theme.primaryColor}"/>
+        <text x="550" y="411" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="19" font-weight="bold" fill="${theme.primaryColor}" text-anchor="middle">NEW SERVICE RELEASE</text>
+
+        <!-- Main Headlines -->
+        <text x="540" y="500" font-family="'Plus Jakarta Sans', Arial, -apple-system, sans-serif" font-size="70" font-weight="900" fill="#0f172a" text-anchor="middle" letter-spacing="1">MENU BARU HADIR!</text>
+        <text x="540" y="560" font-family="'Plus Jakarta Sans', Arial, -apple-system, sans-serif" font-size="38" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle" letter-spacing="1.5">${escapeXml(serviceName)}</text>
+        <text x="540" y="605" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="23" font-weight="500" fill="#64748b" text-anchor="middle">Resmi Dibuka • ${dateWIB}</text>
+
+        <!-- Highlight Card (y=650, height=530) -->
+        <g transform="translate(70, 650)" filter="url(#cardShadow)">
+            <rect width="940" height="530" rx="30" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+            
+            <text x="470" y="64" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="28" font-weight="bold" fill="#0f172a" text-anchor="middle">DETAIL LAYANAN TERBARU</text>
+            <line x1="60" y1="96" x2="880" y2="96" stroke="#e2e8f0" stroke-width="1.5"/>
+
+            <!-- Item 1: Nama Layanan & Garansi -->
+            <rect x="50" y="130" width="60" height="60" rx="16" fill="#eff6ff"/>
+            <text x="80" y="170" font-family="Arial, sans-serif" font-size="30" fill="${theme.primaryColor}" text-anchor="middle">⚡</text>
+            <text x="135" y="156" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="29" font-weight="bold" fill="#0f172a">${escapeXml(serviceName)}</text>
+            <text x="135" y="192" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="22" fill="#475569">Jalur Khusus Prioritas Resmi &amp; 100% Bergaransi Sinyal</text>
+
+            <!-- Item 2: Kecepatan Proses -->
+            <rect x="50" y="260" width="60" height="60" rx="16" fill="#f0fdf4"/>
+            <text x="80" y="300" font-family="Arial, sans-serif" font-size="30" fill="#16a34a" text-anchor="middle">🚀</text>
+            <text x="135" y="286" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="28" font-weight="bold" fill="#0f172a">Mode Pengerjaan: Server ${speedLabel}</text>
+            <text x="135" y="322" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="22" fill="#475569">Langsung diantrekan ke server kloter aktif tanpa jeda lama</text>
+
+            <!-- Item 3: Transparan Tanpa Drama -->
+            <rect x="50" y="390" width="60" height="60" rx="16" fill="#fef3c7"/>
+            <text x="80" y="430" font-family="Arial, sans-serif" font-size="30" fill="#d97706" text-anchor="middle">🛡️</text>
+            <text x="135" y="416" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="28" font-weight="bold" fill="#0f172a">All Operator &amp; Transparan</text>
+            <text x="135" y="452" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="22" fill="#059669">Nota &amp; kartu garansi digital otomatis tersimpan di web</text>
+        </g>
+
+        <!-- Footer Card -->
+        <g transform="translate(70, 1220)" filter="url(#cardShadow)">
+            <rect width="940" height="210" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+            <text x="470" y="56" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="26" font-weight="bold" fill="#0f172a" text-anchor="middle">Pemesanan &amp; Cek Layanan Via Website / WA</text>
+            <text x="470" y="116" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="36" font-weight="900" fill="${theme.primaryColor}" text-anchor="middle">ry-itsolutionts.web.id</text>
+            <text x="470" y="166" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="21" fill="#64748b" text-anchor="middle">Pengerjaan otomatis bergaransi resmi • Slot terbatas!</text>
+        </g>
+    </svg>
+    `;
+}
+
+async function publishNewServiceStory(serviceName, speed = "fast") {
+    const theme = getTodayTheme();
+    const dateWIB = new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const timestampWIB = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
+    const track = getRandomTrack();
+
+    const svg = generateNewServiceSvg(theme, serviceName, speed, timestampWIB, dateWIB);
+    const buffer = await sharp(Buffer.from(svg)).jpeg({ quality: 95 }).toBuffer();
+
+    const results = { instagram: null, whatsapp: null };
+
+    // 1. Instagram Story
+    try {
+        results.instagram = await publishToStory(buffer, track, { isFullScreen: true, hasMusicSticker: true });
+    } catch (igErr) {
+        console.error('[publishNewServiceStory] Gagal publish IG Story:', igErr.message);
+        results.instagramError = igErr.message;
+    }
+
+    // 2. WhatsApp Story (STRICTLY NO PRICING MENTIONED)
+    try {
+        const { publishWhatsAppStory } = require('./waBot');
+        if (typeof publishWhatsAppStory === 'function') {
+            const caption = `🔥 *NEW RELEASE: ${serviceName}!*\n\n` +
+                `Layanan baru *${serviceName}* kini resmi tersedia di Ry-ITSolutions!\n` +
+                `• Kecepatan Proses: *${speed.toUpperCase()}*\n` +
+                `• Aktivasi sinyal all operator & 100% bergaransi resmi\n\n` +
+                `🛡️ *Semua Bergaransi Tanpa Drama*\n` +
+                `🗓️ ${dateWIB} (${timestampWIB} WIB)\n\n` +
+                `🌐 Cek & Order Sekarang: https://ry-itsolutionts.web.id/add-roamer`;
+            const mediaToSend = results.instagram?.videoBuffer || buffer;
+            const isVid = Boolean(results.instagram?.videoBuffer);
+            results.whatsapp = await publishWhatsAppStory(mediaToSend, caption, isVid);
+        }
+    } catch (waErr) {
+        console.warn('[publishNewServiceStory] Gagal publish WA Story:', waErr.message);
+        results.whatsappError = waErr.message;
+    }
+
+    return results;
+}
+
 /**
  * Parser Pesan Rivera Group menggunakan Gemini 3.5 Flash dengan Fallback Heuristik Lokal
  */
@@ -1429,7 +1552,7 @@ async function parseRiveraMessage(rawText) {
 Tugasmu adalah menganalisis pesan update status/slot berikut dan mengonversinya menjadi data JSON terstruktur.
 
 ATURAN WAJIB (SANGAT KETAT):
-1. DILARANG KERAS menyebutkan nama "Smartfren". Gunakan SELALU istilah "SF" (contoh: "3B SF Slow", "3B SF Fast").
+1. DILARANG KERAS menyebutkan nama "Smartfren". Gunakan SELALU istilah "SF" (contoh: "3B SF Slow", "3B SF Fast"). Jika ada penyebutan "IND", pertahankan tetap "IND" (DILARANG KERAS mengubah menjadi Indosat).
 2. DILARANG KERAS menyertakan nominal harga, angka rupiah (Rp/k/rb/ribu). Hapus total semua info harga!
 3. Tentukan type pesan:
    - "SLOT_UPDATE": jika ada layanan yang buka/on/ready (termasuk "DONE MALEM SENT SAMPE SORE", "ON", "READY", "OPEN", "SENT SAMPAI SORE"). PENTING: "DONE MALEM SENT SAMPE SORE" artinya layanan BUKA/READY dengan pengerjaan selesai malam nanti, JANGAN DIANGGAP DONE_NOTIFICATION!
@@ -1438,7 +1561,7 @@ ATURAN WAJIB (SANGAT KETAT):
    - "DONE_NOTIFICATION": HANYA jika berisi pengumuman antrean pesanan kloter ini sudah selesai semua (contoh: "DONE ALL", "SLOW 3B DONE ALL"). Jika ada kata "ON", "OPEN", atau "SENT", DILARANG menggunakan DONE_NOTIFICATION!
    - "IRRELEVANT": jika hanya obrolan umum tanpa info status layanan.
 4. Ekstrak daftar layanan (services):
-   - "name": nama layanan (contoh: "3B SF SLOW", "3B SF FAST", "1B DIGIPOS").
+   - "name": nama layanan (contoh: "3B SF SLOW", "3B SF FAST", "1B DIGIPOS", "3B IND EXE").
    - "status": "READY" atau "FULL_SLOT" atau "CLOSED".
    - "desc": deskripsi singkat status/waktu pengerjaan tanpa harga (contoh: "Done Malam • Sent s/d Sore", "Proses Cepat < 15 Menit", "Ready Jalur Khusus Promo").
 5. Output HANYA JSON murni tanpa blok markdown/backticks:
@@ -1552,6 +1675,16 @@ ${rawText}`;
         });
     }
 
+    // Deteksi 3B IND EXE / INB EXE
+    if (upper.includes("EXE") || (upper.includes("3B") && (upper.includes("IND") || upper.includes("INB")))) {
+        const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)/i.test(upper);
+        services.push({
+            name: "3B IND EXE",
+            status: isClosed ? "CLOSED" : "READY",
+            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Jalur Khusus 3B IND EXE • Ready"
+        });
+    }
+
     // Jika ada kata umum 3B tanpa sebut fast/slow, tapi ada indikasi open
     if (services.length === 0 && (upper.includes("3B") || upper.includes("KLOTER") || upper.includes("SLOT"))) {
         const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP)/i.test(upper);
@@ -1648,6 +1781,9 @@ function saveRiveraDailyServices(services) {
  */
 function getCanonicalServiceName(name) {
     const raw = String(name || '').toUpperCase().trim();
+    if (raw.includes("EXE") || (raw.includes("3B") && (raw.includes("IND") || raw.includes("INB")))) {
+        return "3B IND EXE";
+    }
     if (raw.includes("SLOW")) {
         return "3B SF SLOW";
     }
@@ -1657,7 +1793,7 @@ function getCanonicalServiceName(name) {
     if (raw.includes("DIGIPOS") || raw.includes("INBOUND") || raw.includes("1B")) {
         return "1B DIGIPOS / INBOUND";
     }
-    return String(name || '').trim().replace(/smartfren/gi, 'SF');
+    return String(name || '').trim().replace(/smartfren/gi, 'SF').replace(/indosat/gi, 'IND');
 }
 
 /**
@@ -2125,7 +2261,9 @@ module.exports = {
     getSoftDailyTheme,
     SOFT_BLUE_THEMES,
     generateSoftOpenSvg,
-    generateSoftDisclaimerSvg
+    generateSoftDisclaimerSvg,
+    generateNewServiceSvg,
+    publishNewServiceStory
 };
 
 
