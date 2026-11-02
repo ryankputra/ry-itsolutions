@@ -60,11 +60,11 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
     if (isStrictDoneAll) {
         console.log('[RiveraListener] 🔔 Terdeteksi pengumuman DONE ALL. Mengirimkan notifikasi ke Admin...');
         const adminPhones = await getAdminPhoneNumbers();
-        const alertMsg = `🔔 *INFO SERVER RIVERA (ANTREAN SELESAI)!*\n` +
+        const alertMsg = `🔔 *INFO SERVER PUSAT (ANTREAN SELESAI)!*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `💬 *Isi Pesan:* "${messageText}"\n` +
-            `👥 *Pengirim:* ${senderName || 'Rivera Group'}\n` +
-            `🏷️ *Grup:* ${groupName || '3B & REKBER by RIVERA'}\n` +
+            `👥 *Pengirim:* ${senderName || 'Server Pusat'}\n` +
+            `🏷️ *Grup:* ${groupName || '3B & REKBER'}\n` +
             `⏰ *Waktu:* ${timestampWIB} WIB (${dateWIB})\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `ℹ️ _Batch pesanan pelanggan kemungkinan sudah selesai diproses server. Silakan cek status transaksi antrean dan infokan ke pelanggan terkait._` + BOT_FOOTER;
@@ -87,36 +87,39 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
         return;
     }
 
-    // 2b. Sinkronisasi status real-time layanan ke database website (3B Fast & 1B Digipos)
+    // 2b. Sinkronisasi status real-time layanan ke database website (3B Fast, 1B Digipos, & 3B IND EXE)
     try {
         const autoSyncRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_auto_sync_status'");
         const isAutoSync = !autoSyncRow || autoSyncRow.value !== 'false';
 
         if (isAutoSync && parsed) {
-            if (parsed.type === "FULL_CLOSE") {
+            if (Array.isArray(parsed.services)) {
+                for (const s of parsed.services) {
+                    const sName = (s.name || '').toUpperCase();
+                    const isReady = s.status === 'READY';
+                    if (sName.includes('FAST') && !sName.includes('EXE') && !sName.includes('IND')) {
+                        const newStatus = isReady ? 'open' : 'closed';
+                        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', ?)", [newStatus]);
+                        console.log(`[RiveraSync] Auto-Sync Web: 3B SF Fast diset ${newStatus.toUpperCase()}.`);
+                    }
+                    if (sName.includes('1B') || sName.includes('DIGIPOS')) {
+                        const newStatus = isReady ? 'open' : 'closed';
+                        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', ?)", [newStatus]);
+                        console.log(`[RiveraSync] Auto-Sync Web: 1B Digipos diset ${newStatus.toUpperCase()}.`);
+                    }
+                    if (sName.includes('EXE') || sName.includes('IND')) {
+                        const newStatus = isReady ? 'open' : 'closed';
+                        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_exe_realtime_status', ?)", [newStatus]);
+                        console.log(`[RiveraSync] Auto-Sync Web: 3B IND EXE diset ${newStatus.toUpperCase()}.`);
+                    }
+                }
+            } else if (parsed.type === "FULL_CLOSE") {
                 await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'closed')");
                 await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'closed')");
                 console.log("[RiveraSync] Auto-Sync Web: Semua layanan Fast & 1B diset CLOSED.");
-            } else if (parsed.type === "SLOT_UPDATE" || parsed.type === "PARTIAL_CLOSE") {
-                if (Array.isArray(parsed.services)) {
-                    for (const s of parsed.services) {
-                        const sName = (s.name || '').toUpperCase();
-                        const isReady = s.status === 'READY';
-                        if (sName.includes('FAST')) {
-                            const newStatus = isReady ? 'open' : 'closed';
-                            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', ?)", [newStatus]);
-                            console.log(`[RiveraSync] Auto-Sync Web: 3B SF Fast diset ${newStatus.toUpperCase()}.`);
-                        }
-                        if (sName.includes('1B') || sName.includes('DIGIPOS')) {
-                            const newStatus = isReady ? 'open' : 'closed';
-                            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', ?)", [newStatus]);
-                            console.log(`[RiveraSync] Auto-Sync Web: 1B Digipos diset ${newStatus.toUpperCase()}.`);
-                        }
-                    }
-                }
             }
 
-            // Deteksi jam cut-off jika Rivera menginfokan di grup (misal: "cut off jam 15.00" atau "close list jam 14.30")
+            // Deteksi jam cut-off jika provider menginfokan di grup (misal: "cut off jam 15.00" atau "close list jam 14.30")
             const cutoffMatch = messageText.match(/(?:cut\s*off|close\s*list|list\s*sampai)\s*(?:jam\s*)?(\d{1,2})[.:](\d{2})/i);
             if (cutoffMatch) {
                 const detectedCutoff = `${cutoffMatch[1].padStart(2, '0')}:${cutoffMatch[2]}`;
@@ -130,10 +133,10 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
 
     if (parsed.type === "DONE_NOTIFICATION") {
         const adminPhones = await getAdminPhoneNumbers();
-        const alertMsg = `🔔 *INFO SERVER RIVERA: ANTREAN SELESAI (DONE 3B SLOW)!*\n` +
+        const alertMsg = `🔔 *INFO SERVER PUSAT: ANTREAN SELESAI (DONE 3B SLOW)!*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `💬 *Isi Pesan:* "${messageText}"\n` +
-            `👥 *Pengirim:* ${senderName || 'Rivera Group'}\n` +
+            `👥 *Pengirim:* ${senderName || 'Server Pusat'}\n` +
             `⏰ *Waktu:* ${timestampWIB} WIB\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `ℹ️ _Story pengumuman Done telah diproses dan dipublikasikan ke IG & WA Story._` + BOT_FOOTER;
@@ -235,9 +238,9 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
             ]);
 
             const adminPhones = await getAdminPhoneNumbers();
-            const alertNewMenu = `🚨 *MENU BARU TERDETEKSI DARI SERVER RIVERA!*\n` +
+            const alertNewMenu = `🚨 *MENU BARU TERDETEKSI DARI SERVER PUSAT!*\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `💬 *Pesan Asli Rivera:*\n_"${messageText}"_\n\n` +
+                `💬 *Pesan Asli Server:*\n_"${messageText}"_\n\n` +
                 `📦 *Layanan Terdeteksi:* *${svcName}*\n` +
                 `ℹ️ *Status:* Menunggu Konfirmasi & Harga Jual dari Admin\n` +
                 `🔒 *Proteksi:* Belum tayang di Web & Belum terbit di Story.\n\n` +
@@ -283,9 +286,9 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
 
     const summaryServices = (parsed.services || []).map(s => `• ${s.status === 'READY' || s.status === 'DONE' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : (s.status === 'DONE' ? 'Done / Selesai' : 'Closed')} (${s.desc})`).join('\n');
 
-    const adminNotice = `📢 *STORY UPDATE SERVER RIVERA BERHASIL TERBIT!*\n` +
+    const adminNotice = `📢 *STORY UPDATE SERVER PUSAT BERHASIL TERBIT!*\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `💬 *Pesan Asli Rivera:*\n_"${messageText}"_\n\n` +
+        `💬 *Pesan Asli Server:*\n_"${messageText}"_\n\n` +
         `📊 *Status:* ${statusLabel}\n` +
         `${summaryServices}\n\n` +
         `🛡️ *Catatan:* ${parsed.note || 'Semua Bergaransi Tanpa Drama 🎭'}\n` +
@@ -2086,17 +2089,17 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         return;
     }
 
-    // Command Khusus: Simulasi / Trigger Manual Story Rivera Group (#rivera [pesan])
-    if (rawCleanText.startsWith("#rivera") || rawCleanText.startsWith(".rivera")) {
-        const customMsg = rawCleanText.replace(/^([#.]rivera)/i, "").trim();
+    // Command Khusus: Simulasi / Trigger Manual Story Status Server (#updatestatus / #rivera [pesan])
+    if (rawCleanText.startsWith("#rivera") || rawCleanText.startsWith(".rivera") || rawCleanText.startsWith("#updatestatus") || rawCleanText.startsWith(".updatestatus")) {
+        const customMsg = rawCleanText.replace(/^([#.](?:rivera|updatestatus))/i, "").trim();
         const testText = customMsg || `3B SF SLOW DONE MALEM SENT SAMPE SORE 🔥\n\n3B SF FAST UNDER 15 MENIT ON ‼️\n\n1B DIGIPOS ON TURUN HARGA‼️\n\nSEMUA BERGARANSI TANPA ADA DRAMA 🎭`;
 
-        await replyWhatsApp(replyJid, `⏳ *Sedang menganalisa pesan Rivera & memproses Story 3...*\n_"${testText}"_`);
+        await replyWhatsApp(replyJid, `⏳ *Sedang menganalisa pesan & memproses Story Live Status...*\n_"${testText}"_`);
         try {
-            await handleRiveraGroupMessage(testText, "Rivera Group (Manual/Simulasi)", "3B & REKBER by RIVERA");
-            await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nStory 3 (Live Status & Slot Update) berhasil diproses dan dikirim ke Instagram Story & WhatsApp Story!` + BOT_FOOTER);
+            await handleRiveraGroupMessage(testText, "Server Pusat (Manual/Simulasi)", "Server Update");
+            await replyWhatsApp(replyJid, `✅ *BERHASIL!*\n\nStory Live Status & Slot Update berhasil diproses dan dikirim ke Instagram Story & WhatsApp Story!` + BOT_FOOTER);
         } catch (rErr) {
-            await replyWhatsApp(replyJid, `❌ *Gagal memproses Story Rivera:* ${rErr.message}` + BOT_FOOTER);
+            await replyWhatsApp(replyJid, `❌ *Gagal memproses Story Update Status:* ${rErr.message}` + BOT_FOOTER);
         }
         return;
     }

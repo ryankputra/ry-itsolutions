@@ -899,12 +899,13 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                 let pkg = targetPkgId ? await dbGet("SELECT * FROM imei_packages WHERE id = ?", [targetPkgId]) : null;
                 if (pkg) {
                     // Cek sinkronisasi real-time Rivera & jam operasional per-paket (WIB)
-                    const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('rivera_auto_sync_status', 'rivera_night_cutoff_hour', 'rivera_fast_realtime_status', 'rivera_1b_realtime_status')");
+                    const settingsRows = await dbAll("SELECT key, value FROM settings WHERE key IN ('rivera_auto_sync_status', 'rivera_night_cutoff_hour', 'rivera_fast_realtime_status', 'rivera_1b_realtime_status', 'rivera_exe_realtime_status')");
                     const settingsMap = (settingsRows || []).reduce((acc, r) => ({ ...acc, [r.key]: r.value }), {});
                     const isAutoSync = settingsMap.rivera_auto_sync_status !== 'false';
                     const nightCutoff = parseInt(settingsMap.rivera_night_cutoff_hour || '22', 10);
                     const fastRealtime = settingsMap.rivera_fast_realtime_status || 'auto';
                     const oneBRealtime = settingsMap.rivera_1b_realtime_status || 'auto';
+                    const exeRealtime = settingsMap.rivera_exe_realtime_status || 'auto';
 
                     const wibHour = (new Date(Date.now() + 7 * 3600000)).getUTCHours();
                     const isNightCutoffPassed = wibHour >= nightCutoff || wibHour < 9;
@@ -918,11 +919,31 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                     if (isAutoSync) {
                         const durLower = (pkg.duration || '').toLowerCase();
                         const isSlowOnly = durLower.includes('slow') && !durLower.includes('fast');
-                        const isFast = durLower.includes('fast') && durLower.includes('3');
+                        const isExe = durLower.includes('exe') || durLower.includes('ind');
+                        const isFast = !isExe && durLower.includes('fast') && durLower.includes('3');
                         const is1B = durLower.includes('1') && durLower.includes('bulan');
 
                         if (isSlowOnly) {
                             // 3B Slow selalu menerima order 24 jam via web & WA
+                        } else if (isExe) {
+                            if (isNightCutoffPassed) {
+                                return res.status(400).json({
+                                    status: false,
+                                    message: `Paket ${pkg.duration || ''} sedang tutup (Batas pengaman malam pukul 22.00 WIB).`
+                                });
+                            } else if (exeRealtime === 'closed') {
+                                return res.status(400).json({
+                                    status: false,
+                                    message: `Paket ${pkg.duration || ''} sedang tutup / full slot dari server saat ini.`
+                                });
+                            } else if (exeRealtime === 'open') {
+                                // Dibuka real-time oleh server
+                            } else if (!inDefaultHours) {
+                                return res.status(400).json({
+                                    status: false,
+                                    message: `Paket ${pkg.duration || ''} sedang tutup. Buka jam ${String(oh).padStart(2, '0')}:00 WIB.`
+                                });
+                            }
                         } else if (isFast) {
                             if (isNightCutoffPassed) {
                                 return res.status(400).json({
@@ -935,7 +956,7 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
                                     message: `Paket ${pkg.duration || ''} sedang tutup / full slot dari server saat ini.`
                                 });
                             } else if (fastRealtime === 'open') {
-                                // Dibuka real-time oleh server Rivera
+                                // Dibuka real-time oleh server
                             } else if (!inDefaultHours) {
                                 return res.status(400).json({
                                     status: false,

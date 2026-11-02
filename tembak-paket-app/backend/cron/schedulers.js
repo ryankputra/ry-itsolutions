@@ -465,26 +465,28 @@ function initSchedulers() {
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
     // 8. Batas Pengaman Malam Rivera (Fail-safe Night Cutoff Pukul 22.00 WIB)
-    // Jika Rivera lupa menginfokan tutup di grup, paket Fast & 1B otomatis diset CLOSED di web
+    // Jika Rivera lupa menginfokan tutup di grup, paket Fast, 1B & EXE otomatis diset CLOSED di web
     cron.schedule('0 22 * * *', async () => {
         try {
-            console.log('[Scheduler][RiveraNightCutoff] 🌙 Menjalankan batas pengaman malam (22.00 WIB): Menutup paket Fast & 1B otomatis...');
+            console.log('[Scheduler][RiveraNightCutoff] 🌙 Menjalankan batas pengaman malam (22.00 WIB): Menutup paket Fast, 1B & EXE otomatis...');
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'closed')");
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'closed')");
-            console.log('[Scheduler][RiveraNightCutoff] ✅ Status Fast & 1B di database berhasil diset CLOSED.');
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_exe_realtime_status', 'closed')");
+            console.log('[Scheduler][RiveraNightCutoff] ✅ Status Fast, 1B & EXE di database berhasil diset CLOSED.');
         } catch (e) {
             console.error('[Scheduler][RiveraNightCutoff] Error:', e.message);
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
     // 9. Reset Harian Status Rivera ke Mode 'auto' (Pukul 00.00 WIB Tengah Malam)
-    // Mengembalikan status real-time Fast & 1B ke mode normal 'auto' untuk hari yang baru
+    // Mengembalikan status real-time Fast, 1B & EXE ke mode normal 'auto' untuk hari yang baru
     cron.schedule('0 0 * * *', async () => {
         try {
             console.log('[Scheduler][RiveraMidnightReset] 🔄 Mereset status real-time Rivera ke mode auto untuk hari baru...');
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'auto')");
             await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'auto')");
-            console.log('[Scheduler][RiveraMidnightReset] ✅ Status Fast & 1B di database berhasil direset ke AUTO.');
+            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_exe_realtime_status', 'auto')");
+            console.log('[Scheduler][RiveraMidnightReset] ✅ Status Fast, 1B & EXE di database berhasil direset ke AUTO.');
         } catch (e) {
             console.error('[Scheduler][RiveraMidnightReset] Error:', e.message);
         }

@@ -2145,6 +2145,47 @@ router.post(['/admin/baileys/test', '/admin/wabot/test', '/admin/whatsapp/test']
     }
 });
 
+router.post(['/admin/story/trigger-update', '/story/trigger-update'], (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
+    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
+        return next();
+    }
+    return isAuthenticated(req, res, () => isAdmin(req, res, next));
+}, async (req, res) => {
+    try {
+        const { publishRiveraStory } = require('../services/igDirectService');
+        const customPayload = req.body?.payload;
+        const messageText = req.body?.messageText;
+        if (messageText) {
+            const { handleRiveraGroupMessage } = require('../services/waBot');
+            const result = await handleRiveraGroupMessage(messageText, "Server Pusat", "Server Update");
+            return res.json({ status: true, message: 'Story & status updated via message text', result });
+        }
+        const payload = customPayload || {
+            type: 'PARTIAL_CLOSE',
+            title: 'UPDATE SLOT',
+            badge: 'UPDATE STATUS LAYANAN',
+            services: [
+                { name: '3B SF FAST', status: 'READY', desc: 'Proses Cepat Under 15 Menit' },
+                { name: '3B SF SLOW', status: 'READY', desc: 'Done Malam • Sent s/d Sore' },
+                { name: '3B IND EXE', status: 'CLOSED', desc: 'Full Slot / Ditutup Sementara' }
+            ],
+            note: '3B SF Fast & Slow Ready • Jalur EXE Ditutup Sementara'
+        };
+        const result = await publishRiveraStory(payload);
+        return res.json({
+            status: true,
+            message: 'Story updated and published successfully',
+            result: {
+                instagram: result.instagram,
+                whatsapp: result.whatsapp
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ status: false, message: err.message });
+    }
+});
+
 router.post(['/admin/baileys/test-suite', '/admin/wabot/test-suite', '/admin/whatsapp/test-suite'], (req, res, next) => {
     const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
     if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {

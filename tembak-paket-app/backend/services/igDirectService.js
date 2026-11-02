@@ -1548,37 +1548,41 @@ async function parseRiveraMessage(rawText) {
         const geminiApiKey = row?.value || process.env.GEMINI_API_KEY;
 
         if (geminiApiKey) {
-            const prompt = `Kamu adalah AI parser pesan server provider sinyal/roamer Rivera Group.
+            const prompt = `Kamu adalah AI parser pesan server provider sinyal/roamer.
 Tugasmu adalah menganalisis pesan update status/slot berikut dan mengonversinya menjadi data JSON terstruktur.
 
 ATURAN WAJIB (SANGAT KETAT):
-1. DILARANG KERAS menyebutkan nama "Smartfren". Gunakan SELALU istilah "SF" (contoh: "3B SF Slow", "3B SF Fast"). Jika ada penyebutan "IND", pertahankan tetap "IND" (DILARANG KERAS mengubah menjadi Indosat).
-2. DILARANG KERAS menyertakan nominal harga, angka rupiah (Rp/k/rb/ribu). Hapus total semua info harga!
-3. Tentukan type pesan:
-   - "SLOT_UPDATE": jika ada layanan yang buka/on/ready (termasuk "DONE MALEM SENT SAMPE SORE", "ON", "READY", "OPEN", "SENT SAMPAI SORE"). PENTING: "DONE MALEM SENT SAMPE SORE" artinya layanan BUKA/READY dengan pengerjaan selesai malam nanti, JANGAN DIANGGAP DONE_NOTIFICATION!
-   - "PARTIAL_CLOSE": jika salah satu layanan full/off sementara layanan lain masih open.
-   - "FULL_CLOSE": jika semua layanan ditutup/off/selesai.
-   - "DONE_NOTIFICATION": HANYA jika berisi pengumuman antrean pesanan kloter ini sudah selesai semua (contoh: "DONE ALL", "SLOW 3B DONE ALL"). Jika ada kata "ON", "OPEN", atau "SENT", DILARANG menggunakan DONE_NOTIFICATION!
+1. DILARANG KERAS menyebutkan nama atau kata "Rivera" dalam nama layanan, deskripsi, atau catatan.
+2. DILARANG KERAS menyebutkan nama "Smartfren". Gunakan SELALU istilah "SF" (contoh: "3B SF Slow", "3B SF Fast"). Jika ada penyebutan "IND" atau "EXE", gunakan "3B IND EXE" (DILARANG KERAS mengubah menjadi Indosat).
+3. Jika pesan menyebutkan "EXE CLOSE" atau "EXE OFF" atau "EXE AKUN MODAR", HANYA layanan "3B IND EXE" yang berstatus "CLOSED". Layanan 3B SF Fast dan Slow TIDAK BOLEH ditutup dan tipe pesan HARUS "PARTIAL_CLOSE", BUKAN "FULL_CLOSE"!
+4. DILARANG KERAS menyertakan nominal harga, angka rupiah (Rp/k/rb/ribu). Hapus total semua info harga!
+5. Tentukan type pesan:
+   - "SLOT_UPDATE": jika ada layanan yang buka/on/ready (termasuk "DONE MALEM SENT SAMPE SORE", "ON", "READY", "OPEN", "SENT SAMPAI SORE").
+   - "PARTIAL_CLOSE": jika salah satu layanan full/off sementara layanan lain masih open (misal EXE close, tapi SF Fast/Slow ready).
+   - "FULL_CLOSE": HANYA jika SEMUA layanan ditutup/off/selesai secara eksplisit (seperti "CLOSE ALL", "OFF SEMUA").
+   - "DONE_NOTIFICATION": HANYA jika berisi pengumuman antrean pesanan kloter ini sudah selesai semua (contoh: "DONE ALL", "SLOW 3B DONE ALL").
    - "IRRELEVANT": jika hanya obrolan umum tanpa info status layanan.
-4. Ekstrak daftar layanan (services):
+6. Ekstrak daftar layanan (services):
    - "name": nama layanan (contoh: "3B SF SLOW", "3B SF FAST", "1B DIGIPOS", "3B IND EXE").
    - "status": "READY" atau "FULL_SLOT" atau "CLOSED".
-   - "desc": deskripsi singkat status/waktu pengerjaan tanpa harga (contoh: "Done Malam • Sent s/d Sore", "Proses Cepat < 15 Menit", "Ready Jalur Khusus Promo").
-5. Output HANYA JSON murni tanpa blok markdown/backticks:
+   - "desc": deskripsi singkat status/waktu pengerjaan tanpa harga.
+7. Output HANYA JSON murni tanpa blok markdown/backticks:
 {
-  "type": "SLOT_UPDATE",
-  "title": "READY",
-  "badge": "LIVE UPDATE",
+  "type": "PARTIAL_CLOSE",
+  "title": "UPDATE SLOT",
+  "badge": "UPDATE STATUS LAYANAN",
   "services": [
-    { "name": "3B SF SLOW", "status": "READY", "desc": "Done Malam • Sent s/d Sore" }
+    { "name": "3B SF FAST", "status": "READY", "desc": "Proses Cepat Under 15 Menit" },
+    { "name": "3B SF SLOW", "status": "READY", "desc": "Done Malam • Sent s/d Sore" },
+    { "name": "3B IND EXE", "status": "CLOSED", "desc": "Full Slot / Ditutup Sementara" }
   ],
-  "note": "Semua Bergaransi Tanpa Drama"
+  "note": "3B SF Fast & Slow Ready • Jalur EXE Ditutup Sementara"
 }
 
 Pesan:
 ${rawText}`;
 
-            for (const model of ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]) {
+            for (const model of ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-flash-latest"]) {
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
                         method: "POST",
@@ -1593,8 +1597,8 @@ ${rawText}`;
                         if (parsed && parsed.type) {
                             if (Array.isArray(parsed.services)) {
                                 parsed.services.forEach(s => {
-                                    if (s.name) s.name = s.name.replace(/smartfren/gi, 'SF').trim();
-                                    if (s.desc) s.desc = s.desc.replace(/smartfren/gi, 'SF').replace(/rp\s*\d+[\d.,]*/gi, '').trim();
+                                    if (s.name) s.name = s.name.replace(/smartfren/gi, 'SF').replace(/rivera/gi, '').trim();
+                                    if (s.desc) s.desc = s.desc.replace(/smartfren/gi, 'SF').replace(/rivera/gi, '').replace(/rp\s*\d+[\d.,]*/gi, '').trim();
                                 });
                             }
                             if (parsed.type === "SLOT_UPDATE" || parsed.type === "PARTIAL_CLOSE" || parsed.type === "FULL_CLOSE") {
@@ -1642,7 +1646,8 @@ ${rawText}`;
 
     // 3. Fallback Heuristik Lokal Lengkap (Zero failure risk)
     const upper = rawText.toUpperCase();
-    const isCloseAll = /(CLOSE\s*ALL|OFF\s*SEMUA|TUTUP\s*SEMUA|FULL\s*SEMUA|STOP\s*ORDER|KLOTER\s*CLOSED|SEMUA\s*OFF)/i.test(upper);
+    const isCloseAll = /(CLOSE\s*ALL|OFF\s*SEMUA|TUTUP\s*SEMUA|FULL\s*SEMUA|STOP\s*ORDER|KLOTER\s*CLOSED|SEMUA\s*OFF)/i.test(upper) && !upper.includes("EXE");
+    const isExeOnlyClose = upper.includes("EXE") && /(OFF|FULL|TUTUP|CLOSE|STOP|MODAR)/i.test(upper) && !/(FAST|SF.*CLOSE|SLOW.*CLOSE)/i.test(upper);
     const services = [];
 
     // Deteksi SLOW (ON vs CLOSED)
@@ -1677,12 +1682,30 @@ ${rawText}`;
 
     // Deteksi 3B IND EXE / INB EXE
     if (upper.includes("EXE") || (upper.includes("3B") && (upper.includes("IND") || upper.includes("INB")))) {
-        const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)/i.test(upper);
+        const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP|PENDING|MODAR)/i.test(upper);
         services.push({
             name: "3B IND EXE",
             status: isClosed ? "CLOSED" : "READY",
             desc: isClosed ? "Full Slot / Ditutup Sementara" : "Jalur Khusus 3B IND EXE • Ready"
         });
+    }
+
+    // Jika yang close HANYA EXE, pastikan 3B SF FAST dan 3B SF SLOW tetap terdaftar sebagai READY
+    if (isExeOnlyClose) {
+        if (!services.some(s => s.name === "3B SF FAST")) {
+            services.unshift({
+                name: "3B SF FAST",
+                status: "READY",
+                desc: "Proses Cepat Under 15 Menit"
+            });
+        }
+        if (!services.some(s => s.name === "3B SF SLOW")) {
+            services.push({
+                name: "3B SF SLOW",
+                status: "READY",
+                desc: "Done Malam • Sent s/d Sore"
+            });
+        }
     }
 
     // Jika ada kata umum 3B tanpa sebut fast/slow, tapi ada indikasi open
@@ -1706,7 +1729,7 @@ ${rawText}`;
     const fastServices = synchronizedServices.filter(s => !s.name.toUpperCase().includes("SLOW"));
     const hasAnyFastReady = fastServices.some(s => s.status === "READY");
     const hasAnyFastClosed = fastServices.some(s => s.status !== "READY");
-    const isReallyAllClosed = isCloseAll || (fastServices.length > 0 && !hasAnyFastReady);
+    const isReallyAllClosed = !isExeOnlyClose && (isCloseAll || (fastServices.length > 0 && !hasAnyFastReady));
 
     let finalType = "SLOT_UPDATE";
     let finalTitle = "READY";
@@ -1724,11 +1747,13 @@ ${rawText}`;
             finalServices = [{ name: "3B SF FAST", status: "CLOSED", desc: "Kloter Ditutup Sementara" }];
         }
         finalNote = "3B Slow Tetap Buka 24 Jam • Sampai Jumpa di Kloter Berikutnya";
-    } else if (hasAnyFastClosed && hasAnyFastReady) {
+    } else if (isExeOnlyClose || (hasAnyFastClosed && hasAnyFastReady)) {
         finalType = "PARTIAL_CLOSE";
         finalTitle = "UPDATE SLOT";
         finalBadge = "UPDATE STATUS LAYANAN";
-        finalNote = "Sebagian Jalur Tutup • Jalur Lain Ready";
+        finalNote = isExeOnlyClose 
+            ? "3B SF Fast & Slow Ready • Jalur EXE Ditutup Sementara"
+            : "Sebagian Jalur Tutup • Jalur Lain Ready";
     } else {
         finalType = "SLOT_UPDATE";
         finalTitle = "READY";
@@ -1793,14 +1818,14 @@ function getCanonicalServiceName(name) {
     if (raw.includes("DIGIPOS") || raw.includes("INBOUND") || raw.includes("1B")) {
         return "1B DIGIPOS / INBOUND";
     }
-    return String(name || '').trim().replace(/smartfren/gi, 'SF').replace(/indosat/gi, 'IND');
+    return String(name || '').trim().replace(/smartfren/gi, 'SF').replace(/indosat/gi, 'IND').replace(/rivera/gi, '');
 }
 
 /**
  * Sinkronisasi layanan Rivera berdasarkan riwayat hari berjalan:
  * - Layanan yang open (READY) ditambahkan ke daftar aktif hari ini.
  * - Layanan yang close diperbarui statusnya JIKA memang pernah open hari ini.
- * - Jika close all, semua layanan hari ini ditandai CLOSED.
+ * - Jika close all, semua layanan hari ini ditandai CLOSED kecuali 3B Slow yang buka 24 jam.
  */
 function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
     const rawCurrent = loadRiveraDailyServices();
@@ -1821,14 +1846,18 @@ function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
 
     if (isFullClose) {
         if (currentServices.length > 0) {
-            currentServices = currentServices.map(s => ({
-                ...s,
-                status: "CLOSED",
-                desc: "Ditutup Sementara"
-            }));
+            currentServices = currentServices.map(s => {
+                // 3B SF Slow buka 24 jam, tidak pernah ditutup
+                if (s.name.includes("SLOW")) return s;
+                return {
+                    ...s,
+                    status: "CLOSED",
+                    desc: "Ditutup Sementara"
+                };
+            });
         } else {
             currentServices = [
-                { name: "3B SF SLOW", status: "CLOSED", desc: "Ditutup Sementara" },
+                { name: "3B SF SLOW", status: "READY", desc: "Done Malam • Sent s/d Sore" },
                 { name: "3B SF FAST", status: "CLOSED", desc: "Ditutup Sementara" },
                 { name: "1B DIGIPOS / INBOUND", status: "CLOSED", desc: "Ditutup Sementara" }
             ];
@@ -1850,12 +1879,10 @@ function syncRiveraDailyServices(incomingServices = [], isFullClose = false) {
             currentServices[existingIdx].status = inc.status;
             if (inc.desc) currentServices[existingIdx].desc = inc.desc;
         } else {
-            if (inc.status === "READY" || currentServices.length === 0) {
-                currentServices.push({
-                    ...inc,
-                    name: canonicalName
-                });
-            }
+            currentServices.push({
+                ...inc,
+                name: canonicalName
+            });
         }
     }
 
@@ -2171,38 +2198,54 @@ async function publishRiveraStory(parsedData, options = {}) {
                 const isFullClose = parsedData.type === "FULL_CLOSE";
                 const isDone = parsedData.type === "DONE_NOTIFICATION";
                 const servicesText = (parsedData.services || [])
-                    .map(s => `${s.status === 'READY' || s.status === 'DONE' ? '🟢' : '🔴'} *${s.name}*: ${s.status === 'READY' ? 'Ready' : (s.status === 'DONE' ? 'Done / Selesai' : 'Full Slot / Closed')} (${s.desc})`)
+                    .map(s => {
+                        const cleanName = (s.name || '').replace(/rivera/gi, '').trim();
+                        const cleanDesc = (s.desc || '').replace(/rivera/gi, '').trim();
+                        const isOk = s.status === 'READY' || s.status === 'DONE';
+                        const statusLabel = s.status === 'READY' ? 'Ready' : (s.status === 'DONE' ? 'Done / Selesai' : 'Full Slot / Closed');
+                        return `${isOk ? '🟢' : '🔴'} *${cleanName}*: ${statusLabel}${cleanDesc ? ` (${cleanDesc})` : ''}`;
+                    })
                     .join('\n');
 
                 const isCloseListSlow = parsedData.type === "CLOSE_LIST_SLOW";
+                const isPartialClose = parsedData.type === "PARTIAL_CLOSE";
                 let caption = '';
                 if (isCloseListSlow) {
                     const cutoffLabel = parsedData.cutoffTime ? `${parsedData.cutoffTime} WIB` : "15.00 WIB";
-                    caption = `⏳ *INFO SERVER RIVERA: CLOSE LIST 3B SF SLOW (KLOTER HARI INI)!*\n\n` +
+                    caption = `⏳ *INFO SERVER PUSAT: CLOSE LIST 3B SF SLOW (KLOTER HARI INI)!*\n\n` +
                       `• Orderan yang masuk *sebelum ${cutoffLabel}* sedang diproses server dan estimasi *DONE malam ini*.\n` +
                       `• Pemesanan via Web & WhatsApp *tetap buka 24 jam*. Orderan yang masuk *setelah ${cutoffLabel}* otomatis diproses pada *kloter esok hari*.\n\n` +
                       `🛡️ *Pemesanan Web & WhatsApp Tetap Buka 24 Jam Tanpa Drama*\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n\n` +
                       `🌐 Order via Web: https://ry-itsolutionts.web.id`;
                 } else if (isDone) {
-                    caption = `✅ *INFO SERVER RIVERA: ANTREAN SELESAI DIPROSES (DONE 3B SLOW)!*\n\n` +
+                    caption = `✅ *INFO SERVER PUSAT: ANTREAN SELESAI DIPROSES (DONE 3B SLOW)!*\n\n` +
                       `Pesanan 3B SF Slow kloter saat ini telah selesai diproses oleh server.\n` +
                       `Silakan periksa status sinyal & verifikasi garansi digital Anda di web.\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
                       `🌐 Cek Status: https://ry-itsolutionts.web.id`;
                 } else if (isFullClose) {
-                    caption = `🔴 *UPDATE SERVER RIVERA: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
+                    caption = `🔴 *UPDATE SERVER PUSAT: ORDERAN KLOTER HARI INI DITUTUP!*\n\n` +
                       `Antrean kloter saat ini sedang diproses.\n` +
-                      `Terima kasih dan nantikan pembukaan kloter berikutnya!\n\n` +
+                      `Pemesanan 3B Slow tetap buka 24 jam via web & WhatsApp.\n\n` +
                       `🗓️ ${dateWIB} (${timestampWIB} WIB)\n` +
                       `🌐 https://ry-itsolutionts.web.id`;
+                } else if (isPartialClose) {
+                    caption = `⚡ *UPDATE STATUS & SLOT LAYANAN HARI INI!*\n\n` +
+                      `${servicesText}\n\n` +
+                      `🛡️ *Pemesanan Web & WhatsApp Tetap Buka 24 Jam*\n` +
+                      `⏰ Update: ${timestampWIB} WIB • ${dateWIB}\n\n` +
+                      `🌐 Order via Web: https://ry-itsolutionts.web.id`;
                 } else {
-                    caption = `⚡ *LIVE STATUS &amp; SLOT UPDATE HARI INI!*\n\n` +
+                    caption = `⚡ *LIVE STATUS & SLOT UPDATE HARI INI!*\n\n` +
                       `${servicesText}\n\n` +
                       `🛡️ *Semua Bergaransi Tanpa Drama*\n` +
-                      `⏰ Update: ${timestampWIB} WIB\n\n` +
+                      `⏰ Update: ${timestampWIB} WIB • ${dateWIB}\n\n` +
                       `🌐 Order via Web: https://ry-itsolutionts.web.id`;
                 }
+
+                // Pengaman ganda: Dilarang keras ada kata "Rivera" di story maupun caption WhatsApp
+                caption = caption.replace(/rivera/gi, 'SERVER PUSAT').replace(/&amp;/g, '&');
 
                 const mediaToSend = videoData?.videoBuffer || buffer;
                 const isVid = Boolean(videoData?.videoBuffer);
