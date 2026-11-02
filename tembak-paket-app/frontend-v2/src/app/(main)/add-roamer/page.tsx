@@ -1120,7 +1120,7 @@ function UnblockImeiContent() {
                 {/* Disclaimer Box for Cutoff */}
                 {selectedSpeed === 'slow' && (
                   <div className={`p-3 rounded-2xl border text-xs space-y-1 transition-all ${
-                    isPast14Wib 
+                    isPastCutoffWib 
                       ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-2xs" 
                       : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200"
                   }`}>

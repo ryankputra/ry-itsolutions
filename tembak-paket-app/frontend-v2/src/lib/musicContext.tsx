@@ -339,16 +339,20 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   // Helper to resolve clean audio stream URL (Full Song Streaming for RyTone)
   const getAudioStreamUrl = useCallback((track: Track) => {
+    if (!track) return "/api/music/stream?id=8Ebqe2Dbzls";
+
     // 1. Deteksi apakah audioUrl adalah preview iTunes (29s), file lokal backsound story IG/WA (30s), atau link YouTube mentah:
     // RyTone adalah layanan streaming musik murni (bukan pemutar backsound story).
     // Selalu route ke /api/music/stream untuk streaming audio utuh (3-5 menit) dari YouTube
     const isRestrictedOrPreview =
       !track.audioUrl ||
+      track.audioUrl.length === 0 ||
       track.audioUrl.includes("itunes.apple.com") ||
       track.audioUrl.includes("AudioPreview") ||
       track.audioUrl.includes("preview") ||
       track.audioUrl.includes("/audio/tiktok/") ||
-      track.audioUrl.includes("youtube.com");
+      track.audioUrl.includes("youtube.com") ||
+      track.audioUrl.endsWith(".mp3");
 
     if (isRestrictedOrPreview) {
       return `/api/music/stream?id=${encodeURIComponent(track.youtubeId || `${track.title} ${track.artist}`)}`;
@@ -544,7 +548,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => setIsResuming(false), 1000);
 
       const targetSrc = getAudioStreamUrl(currentTrack);
-      if (!audio.src || (!audio.src.includes(targetSrc) && !audio.src.includes(currentTrack.audioUrl || ""))) {
+      if (!audio.src || !audio.src.includes(targetSrc)) {
         audio.src = targetSrc;
       }
       audio.playbackRate = playbackSpeed;

@@ -15,6 +15,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "indo",
         categoryLabel: "Pop & R&B Indo",
         filename: "komang.mp3",
+        youtubeId: "fKRtnMYMW08",
         streamsCount: "48.2M streams",
         tags: ["#tophits", "#rytoneindo", "#komang", "#akustik"],
         coverGradient: "from-rose-500 via-pink-600 to-amber-500",
@@ -27,6 +28,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "sial.mp3",
+        youtubeId: "s96-y-j2_0A",
         streamsCount: "41.6M streams",
         tags: ["#mahalinisial", "#speedup", "#galauvibes"],
         coverGradient: "from-purple-600 via-pink-500 to-indigo-600",
@@ -39,6 +41,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "cikini.mp3",
+        youtubeId: "uG0p1kC_5i0",
         streamsCount: "38.9M streams",
         tags: ["#cikinikegondangdia", "#djindonesia", "#remix"],
         coverGradient: "from-amber-500 via-red-500 to-rose-600",
@@ -51,6 +54,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "malampagi.mp3",
+        youtubeId: "_2h4x0k9k5A",
         streamsCount: "29.4M streams",
         tags: ["#malampagi", "#soundviral", "#hiphop"],
         coverGradient: "from-cyan-500 via-blue-600 to-indigo-600",
@@ -63,6 +67,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "indo",
         categoryLabel: "Pop & R&B Indo",
         filename: "nadinamizah.mp3",
+        youtubeId: "4vBfH_k401M",
         streamsCount: "35.1M streams",
         tags: ["#nadinamizah", "#rayuanperempuangila", "#chill"],
         coverGradient: "from-teal-500 via-emerald-600 to-cyan-500",
@@ -75,6 +80,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "indo",
         categoryLabel: "Pop & R&B Indo",
         filename: "galabungamatahari.mp3",
+        youtubeId: "8y7n-ZkYfI8",
         streamsCount: "44.7M streams",
         tags: ["#galabungamatahari", "#salpriadi", "#indieindo"],
         coverGradient: "from-yellow-400 via-amber-500 to-orange-500",
@@ -87,6 +93,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "global",
         categoryLabel: "Top Hits Global",
         filename: "cupid.mp3",
+        youtubeId: "Qc7_zRjH808",
         streamsCount: "52.3M streams",
         tags: ["#cupid", "#fiftyfifty", "#globalsound"],
         coverGradient: "from-teal-400 via-cyan-500 to-blue-500",
@@ -99,6 +106,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "stecustecu.mp3",
+        youtubeId: "x6_2Qp1n0k4",
         streamsCount: "21.8M streams",
         tags: ["#stecustecu", "#fullbass", "#remix"],
         coverGradient: "from-violet-600 via-purple-700 to-pink-600",
@@ -111,6 +119,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "bohongihati.mp3",
+        youtubeId: "9Y4_K9l8s2A",
         streamsCount: "27.5M streams",
         tags: ["#bohongihati", "#gheaindrawari", "#popindo"],
         coverGradient: "from-pink-500 via-rose-500 to-amber-500",
@@ -123,6 +132,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "tabraktabrak.mp3",
+        youtubeId: "v1_X8y90a4A",
         streamsCount: "23.6M streams",
         tags: ["#tabraktabrakmasuk", "#remixindo", "#bassboost"],
         coverGradient: "from-red-500 via-rose-600 to-amber-600",
@@ -135,6 +145,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "djalay.mp3",
+        youtubeId: "w6_Y2o1s9l8",
         streamsCount: "19.8M streams",
         tags: ["#djalay", "#remix2026", "#dance"],
         coverGradient: "from-fuchsia-600 via-pink-600 to-rose-500",
@@ -147,6 +158,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "indo",
         categoryLabel: "Pop & R&B Indo",
         filename: "karnasusayang.mp3",
+        youtubeId: "3-gR1Wp-p-k",
         streamsCount: "33.2M streams",
         tags: ["#karnasusayang", "#nostalgia", "#akustik"],
         coverGradient: "from-emerald-500 via-teal-600 to-blue-600",
@@ -159,6 +171,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "satubulan.mp3",
+        youtubeId: "7Jm2Il2U-c0",
         streamsCount: "58.4M streams",
         tags: ["#satubulan", "#bernadya", "#galau"],
         coverGradient: "from-purple-600 via-indigo-600 to-blue-700",
@@ -171,6 +184,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "untungnya.mp3",
+        youtubeId: "HB8vftGxsIc",
         streamsCount: "47.1M streams",
         tags: ["#untungnya", "#bernadya", "#chill"],
         coverGradient: "from-teal-500 via-emerald-600 to-cyan-600",
@@ -183,6 +197,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "penjagahati.mp3",
+        youtubeId: "jia3fhBQ8qI",
         streamsCount: "63.8M streams",
         tags: ["#penjagahati", "#nadhifbasalamah", "#akustik"],
         coverGradient: "from-rose-500 via-pink-600 to-amber-500",
@@ -195,6 +210,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "taksegampangitu.mp3",
+        youtubeId: "6NsiA6GFAbU",
         streamsCount: "51.2M streams",
         tags: ["#taksegampangitu", "#anggimarito", "#galau"],
         coverGradient: "from-blue-600 via-indigo-700 to-purple-800",
@@ -207,6 +223,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "jiwayangbersedih.mp3",
+        youtubeId: "t9VWICGOD90",
         streamsCount: "69.4M streams",
         tags: ["#jiwayangbersedih", "#gheaindrawari", "#healing"],
         coverGradient: "from-amber-500 via-orange-600 to-rose-600",
@@ -219,6 +236,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "matimatian.mp3",
+        youtubeId: "LAOxuo6pkdo",
         streamsCount: "42.7M streams",
         tags: ["#matimatian", "#mahalini", "#galauvibes"],
         coverGradient: "from-red-600 via-rose-600 to-pink-600",
@@ -231,6 +249,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "lantas.mp3",
+        youtubeId: "ba-XAIskH_g",
         streamsCount: "55.3M streams",
         tags: ["#lantas", "#juicyluicy", "#popindo"],
         coverGradient: "from-cyan-500 via-blue-600 to-indigo-600",
@@ -243,6 +262,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "galau",
         categoryLabel: "Lagu Galau",
         filename: "tampar.mp3",
+        youtubeId: "qmgA_WejI8w",
         streamsCount: "39.8M streams",
         tags: ["#tampar", "#juicyluicy", "#vibes"],
         coverGradient: "from-yellow-500 via-amber-600 to-red-600",
@@ -255,6 +275,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "indo",
         categoryLabel: "Pop & R&B Indo",
         filename: "semuaakudirayakan.mp3",
+        youtubeId: "_V4nS1fG2hA",
         streamsCount: "48.9M streams",
         tags: ["#semuaakudirayakan", "#nadinamizah", "#romantic"],
         coverGradient: "from-pink-400 via-rose-500 to-amber-500",
@@ -267,6 +288,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "global",
         categoryLabel: "Top Hits Global",
         filename: "apt.mp3",
+        youtubeId: "8Ebqe2Dbzls",
         streamsCount: "145.2M streams",
         tags: ["#apt", "#rosé", "#brunomars", "#viral"],
         coverGradient: "from-rose-500 via-red-600 to-pink-500",
@@ -279,6 +301,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "global",
         categoryLabel: "Top Hits Global",
         filename: "diewithasmile.mp3",
+        youtubeId: "kPa7bsKwL-c",
         streamsCount: "162.5M streams",
         tags: ["#diewithasmile", "#ladygaga", "#brunomars"],
         coverGradient: "from-blue-600 via-indigo-600 to-purple-700",
@@ -291,6 +314,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "sigar.mp3",
+        youtubeId: "s525A0Bc3z4",
         streamsCount: "37.6M streams",
         tags: ["#sigar", "#dennycaknan", "#koplo"],
         coverGradient: "from-emerald-500 via-teal-600 to-cyan-700",
@@ -303,6 +327,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "cundamani.mp3",
+        youtubeId: "X5u1eu2Sqts",
         streamsCount: "44.1M streams",
         tags: ["#cundamani", "#dennycaknan", "#jawa"],
         coverGradient: "from-amber-400 via-yellow-500 to-orange-600",
@@ -315,6 +340,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "wirang.mp3",
+        youtubeId: "78Y0SxVVxP4",
         streamsCount: "40.9M streams",
         tags: ["#wirang", "#dennycaknan", "#koplogalau"],
         coverGradient: "from-violet-600 via-purple-700 to-indigo-800",
@@ -327,6 +353,7 @@ const LOCAL_HIT_REGISTRY = [
         category: "dance",
         categoryLabel: "Koplo & EDM",
         filename: "garammadu.mp3",
+        youtubeId: "6o6eK-gVl34",
         streamsCount: "25.3M streams",
         tags: ["#garammadu", "#tenxi", "#asmara", "#tiktokviral"],
         coverGradient: "from-fuchsia-500 via-pink-600 to-amber-500",
@@ -398,14 +425,16 @@ class TikTokMusicService {
     }
 
     /**
-     * Verify that a local audio file exists and has size > 100KB
+     * Verify that a local audio file exists and has size >= 1MB (Full Track)
+     * Files < 1MB are 29s Instagram story preview clips and should not be used for RyTone full streaming
      */
     verifyTrackAudio(filename) {
         try {
+            if (!filename) return false;
             const filePath = path.join(AUDIO_DIR, filename);
             if (!fs.existsSync(filePath)) return false;
             const stats = fs.statSync(filePath);
-            return stats.size > 100000;
+            return stats.size >= 1000000;
         } catch {
             return false;
         }
@@ -702,22 +731,27 @@ class TikTokMusicService {
      * Synchronous fallback catalog builder
      */
     buildAndSaveCatalogSync() {
-        const combinedTracks = LOCAL_HIT_REGISTRY.map((item, idx) => ({
-            id: item.id,
-            title: item.title,
-            artist: item.artist,
-            category: item.category,
-            categoryLabel: item.categoryLabel,
-            durationSec: 240,
-            audioUrl: `/audio/tiktok/${item.filename}`,
-            streamsCount: item.streamsCount,
-            tiktokUsage: item.streamsCount,
-            rank: idx + 1,
-            tags: item.tags,
-            coverGradient: item.coverGradient,
-            accentColor: item.accentColor,
-            verifiedOriginal: true
-        }));
+        const combinedTracks = LOCAL_HIT_REGISTRY.map((item, idx) => {
+            const isFull = this.verifyTrackAudio(item.filename);
+            return {
+                id: item.id,
+                title: item.title,
+                artist: item.artist,
+                category: item.category,
+                categoryLabel: item.categoryLabel,
+                durationSec: 240,
+                youtubeId: item.youtubeId,
+                audioUrl: isFull ? `/audio/tiktok/${item.filename}` : "",
+                previewUrl: !isFull && item.filename ? `/audio/tiktok/${item.filename}` : undefined,
+                streamsCount: item.streamsCount,
+                tiktokUsage: item.streamsCount,
+                rank: idx + 1,
+                tags: item.tags,
+                coverGradient: item.coverGradient,
+                accentColor: item.accentColor,
+                verifiedOriginal: true
+            };
+        });
 
         const data = {
             lastUpdated: new Date().toISOString(),
@@ -803,8 +837,17 @@ class TikTokMusicService {
             // Ensure all 27 local hit registry tracks are in the catalog with correct local audioUrl
             for (const [k, item] of localMap.entries()) {
                 const existing = existingMap.get(k);
+                const isFull = this.verifyTrackAudio(item.filename);
+                const localAudio = isFull ? `/audio/tiktok/${item.filename}` : "";
+
                 if (existing) {
-                    existing.audioUrl = `/audio/tiktok/${item.filename}`;
+                    existing.audioUrl = localAudio;
+                    if (!isFull && item.filename) {
+                        existing.previewUrl = `/audio/tiktok/${item.filename}`;
+                    }
+                    if (item.youtubeId && !existing.youtubeId) {
+                        existing.youtubeId = item.youtubeId;
+                    }
                     existing.category = item.category;
                     existing.categoryLabel = item.categoryLabel;
                     existing.verifiedOriginal = true;
@@ -816,7 +859,9 @@ class TikTokMusicService {
                         category: item.category,
                         categoryLabel: item.categoryLabel,
                         durationSec: 240,
-                        audioUrl: `/audio/tiktok/${item.filename}`,
+                        youtubeId: item.youtubeId,
+                        audioUrl: localAudio,
+                        previewUrl: !isFull && item.filename ? `/audio/tiktok/${item.filename}` : undefined,
                         streamsCount: item.streamsCount,
                         tiktokUsage: item.streamsCount,
                         tags: item.tags,

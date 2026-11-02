@@ -7,6 +7,8 @@
   "/download/apk/route": "/download/apk",
   "/icon.svg/route": "/icon.svg",
   "/qr/[id]/route": "/qr/[id]",
+  "/create-qris/route": "/create-qris",
+  "/check-payment/route": "/check-payment",
   "/(auth)/login/page": "/login",
   "/(auth)/register/page": "/register",
   "/page": "/",
@@ -17,6 +19,7 @@
   "/(main)/cart/page": "/cart",
   "/(main)/cek-ceir/page": "/cek-ceir",
   "/(main)/cek-garansi/page": "/cek-garansi",
+  "/(main)/dashboard-3d/page": "/dashboard-3d",
   "/(main)/dashboard/page": "/dashboard",
   "/(main)/games/page": "/games",
   "/(main)/gateway/page": "/gateway",
@@ -46,7 +49,5 @@
   "/(main)/admin/users/page": "/admin/users",
   "/(main)/admin/vouchers/page": "/admin/vouchers",
   "/(main)/admin/whatsapp/page": "/admin/whatsapp",
-  "/create-qris/route": "/create-qris",
-  "/check-payment/route": "/check-payment",
   "/(main)/hiburan/page": "/hiburan"
 }

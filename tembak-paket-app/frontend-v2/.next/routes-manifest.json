@@ -282,6 +282,12 @@
       "namedRegex": "^/dashboard(?:/)?$"
     },
     {
+      "page": "/dashboard-3d",
+      "regex": "^/dashboard\\-3d(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard\\-3d(?:/)?$"
+    },
+    {
       "page": "/download/apk",
       "regex": "^/download/apk(?:/)?$",
       "routeKeys": {},

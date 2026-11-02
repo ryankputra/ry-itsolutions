@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-10-29T19:19:13.590Z",
+  "lastUpdated": "2026-11-01T18:06:53.595Z",
   "version": "3.5.0",
   "totalTracks": 348,
   "autoUpdateEnabled": true,
@@ -13,7 +13,7 @@
       "categoryLabel": "Top Hits Global",
       "durationSec": 173,
       "youtubeId": "8Ebqe2Dbzls",
-      "audioUrl": "/audio/tiktok/apt.mp3",
+      "audioUrl": "",
       "streamsCount": "145.2M streams",
       "tiktokUsage": "145.2M streams",
       "rank": 1,
@@ -26,7 +26,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/2d/14/66/2d14661b-345b-d0f3-4e86-56ef626e68aa/075679629203.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/apt.mp3"
     },
     {
       "id": "track-2",
@@ -36,7 +37,7 @@
       "categoryLabel": "Top Hits Global",
       "durationSec": 251,
       "youtubeId": "kPa7bsKwL-c",
-      "audioUrl": "/audio/tiktok/diewithasmile.mp3",
+      "audioUrl": "",
       "streamsCount": "162.5M streams",
       "tiktokUsage": "162.5M streams",
       "rank": 2,
@@ -48,7 +49,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/11/ae/f2/11aef294-f57c-bab9-c9fc-529162984e62/24UMGIM85348.rgb.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/diewithasmile.mp3"
     },
     {
       "id": "track-3",
@@ -458,7 +460,7 @@
       "categoryLabel": "Lagu Galau",
       "durationSec": 200,
       "youtubeId": "7Jm2Il2U-c0",
-      "audioUrl": "/audio/tiktok/satubulan.mp3",
+      "audioUrl": "",
       "streamsCount": "81.3M streams",
       "tiktokUsage": "81.3M streams",
       "rank": 22,
@@ -469,7 +471,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Video126/v4/b3/7f/04/b37f04d1-8ead-36df-0e8f-37be5828b625/23UM1IM02870.crop.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/satubulan.mp3"
     },
     {
       "id": "track-23",
@@ -521,7 +524,7 @@
       "categoryLabel": "Lagu Galau",
       "durationSec": 218,
       "youtubeId": "HB8vftGxsIc",
-      "audioUrl": "/audio/tiktok/untungnya.mp3",
+      "audioUrl": "",
       "streamsCount": "66.2M streams",
       "tiktokUsage": "66.2M streams",
       "rank": 25,
@@ -532,7 +535,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Video211/v4/d8/ae/26/d8ae26d4-ee51-c14b-f198-1dba7ede97c4/24UMGIM57857.crop.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/untungnya.mp3"
     },
     {
       "id": "track-26",
@@ -755,7 +759,7 @@
       "categoryLabel": "Lagu Galau",
       "durationSec": 224,
       "youtubeId": "ba-XAIskH_g",
-      "audioUrl": "/audio/tiktok/lantas.mp3",
+      "audioUrl": "",
       "streamsCount": "75.8M streams",
       "tiktokUsage": "75.8M streams",
       "rank": 36,
@@ -766,7 +770,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/11/1d/3b/111d3be7-b957-98bf-69b8-49fedbfd74bc/192641542428_Cover.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/lantas.mp3"
     },
     {
       "id": "track-37",
@@ -776,7 +781,7 @@
       "categoryLabel": "Lagu Galau",
       "durationSec": 229,
       "youtubeId": "qmgA_WejI8w",
-      "audioUrl": "/audio/tiktok/tampar.mp3",
+      "audioUrl": "",
       "streamsCount": "68.2M streams",
       "tiktokUsage": "68.2M streams",
       "rank": 37,
@@ -787,7 +792,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/c1/97/e2/c197e2d2-a9f4-fd0f-f670-de2f88f96879/192641986017_Cover.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/tampar.mp3"
     },
     {
       "id": "track-38",
@@ -860,7 +866,7 @@
       "categoryLabel": "Koplo & EDM",
       "durationSec": 285,
       "youtubeId": "s525A0Bc3z4",
-      "audioUrl": "/audio/tiktok/sigar.mp3",
+      "audioUrl": "",
       "streamsCount": "66.5M streams",
       "tiktokUsage": "66.5M streams",
       "rank": 41,
@@ -871,7 +877,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/68/33/7a/68337ac5-981a-de0d-8999-a3505f05642f/cover.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/sigar.mp3"
     },
     {
       "id": "track-42",
@@ -881,7 +888,7 @@
       "categoryLabel": "Koplo & EDM",
       "durationSec": 251,
       "youtubeId": "X5u1eu2Sqts",
-      "audioUrl": "/audio/tiktok/cundamani.mp3",
+      "audioUrl": "",
       "streamsCount": "72.8M streams",
       "tiktokUsage": "72.8M streams",
       "rank": 42,
@@ -892,7 +899,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/7a/21/33/7a2133d9-71be-9d87-b515-3f96712e4e78/cover.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/cundamani.mp3"
     },
     {
       "id": "track-43",
@@ -902,7 +910,7 @@
       "categoryLabel": "Koplo & EDM",
       "durationSec": 278,
       "youtubeId": "78Y0SxVVxP4",
-      "audioUrl": "/audio/tiktok/wirang.mp3",
+      "audioUrl": "",
       "streamsCount": "68.9M streams",
       "tiktokUsage": "68.9M streams",
       "rank": 43,
@@ -913,7 +921,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/94/85/49/948549ac-f567-4d7b-a084-dff87d473b22/cover.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/wirang.mp3"
     },
     {
       "id": "track-44",
@@ -1070,7 +1079,7 @@
       "categoryLabel": "Lagu Galau",
       "durationSec": 251,
       "youtubeId": "LAOxuo6pkdo",
-      "audioUrl": "/audio/tiktok/matimatian.mp3",
+      "audioUrl": "",
       "streamsCount": "58.7M streams",
       "tiktokUsage": "58.7M streams",
       "rank": 51,
@@ -1081,7 +1090,8 @@
       "coverImage": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/e6/91/eb/e691eb58-7ae3-cb1b-0a5f-839ad3a010e0/cover.jpg/400x400bb.jpg",
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
-      "verifiedOriginal": true
+      "verifiedOriginal": true,
+      "previewUrl": "/audio/tiktok/matimatian.mp3"
     },
     {
       "id": "track-52",
@@ -1771,7 +1781,7 @@
       "category": "galau",
       "categoryLabel": "Lagu Galau",
       "durationSec": 231,
-      "audioUrl": "/audio/tiktok/taksegampangitu.mp3",
+      "audioUrl": "",
       "streamsCount": "20.0M streams",
       "tiktokUsage": "20.0M streams",
       "tags": [
@@ -1783,7 +1793,9 @@
       "coverGradient": "from-rose-500 via-pink-600 to-red-500",
       "accentColor": "#1ed760",
       "verifiedOriginal": true,
-      "rank": 82
+      "rank": 82,
+      "previewUrl": "/audio/tiktok/taksegampangitu.mp3",
+      "youtubeId": "6NsiA6GFAbU"
     },
     {
       "id": "track-1789730044",
@@ -1924,7 +1936,7 @@
       "category": "galau",
       "categoryLabel": "Lagu Galau",
       "durationSec": 278,
-      "audioUrl": "/audio/tiktok/jiwayangbersedih.mp3",
+      "audioUrl": "",
       "streamsCount": "53.3M streams",
       "tiktokUsage": "53.3M streams",
       "tags": [
@@ -1936,7 +1948,9 @@
       "coverGradient": "from-indigo-600 via-purple-600 to-pink-500",
       "accentColor": "#1ed760",
       "verifiedOriginal": true,
-      "rank": 89
+      "rank": 89,
+      "previewUrl": "/audio/tiktok/jiwayangbersedih.mp3",
+      "youtubeId": "t9VWICGOD90"
     },
     {
       "id": "track-1802693060",
@@ -2077,7 +2091,7 @@
       "category": "galau",
       "categoryLabel": "Lagu Galau",
       "durationSec": 260,
-      "audioUrl": "/audio/tiktok/penjagahati.mp3",
+      "audioUrl": "",
       "streamsCount": "52.3M streams",
       "tiktokUsage": "52.3M streams",
       "tags": [
@@ -2089,7 +2103,9 @@
       "coverGradient": "from-emerald-500 via-green-600 to-teal-700",
       "accentColor": "#1ed760",
       "verifiedOriginal": true,
-      "rank": 96
+      "rank": 96,
+      "previewUrl": "/audio/tiktok/penjagahati.mp3",
+      "youtubeId": "jia3fhBQ8qI"
     },
     {
       "id": "track-1832516372",

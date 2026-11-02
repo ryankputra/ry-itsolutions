@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-01",
+  "updatedAt": 1793513536995,
+  "services": [
+    {
+      "name": "3B SF SLOW",
+      "status": "READY",
+      "desc": "Done Malam • Sent s/d Sore"
+    },
+    {
+      "name": "3B SF FAST",
+      "status": "READY",
+      "desc": "Under 15 Menit"
+    },
+    {
+      "name": "1B DIGIPOS / INBOUND",
+      "status": "READY",
+      "desc": "On"
+    }
+  ]
+}

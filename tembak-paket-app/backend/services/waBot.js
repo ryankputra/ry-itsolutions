@@ -145,6 +145,48 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
         }
     }
 
+    // 2c. Pemicu Otomatis Story Open & Disclaimer:
+    // Jika Rivera menginfokan jalur READY/ON lebih awal (misal sebelum jadwal 10:00 WIB),
+    // maka Story "We Are Open" & "Disclaimer" wajib diterbitkan TERLEBIH DAHULU sebelum Story Ready Rivera.
+    const hasReadyService = parsed.type === "SLOT_UPDATE" || (Array.isArray(parsed.services) && parsed.services.some(s => s.status === 'READY'));
+    if (hasReadyService) {
+        try {
+            const openEnabledRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_enabled'");
+            const isOpenEnabled = (openEnabledRow?.value ?? 'true') === 'true';
+
+            if (isOpenEnabled) {
+                const now = new Date();
+                const todayDateWIB = now.toLocaleDateString('id-ID', {
+                    timeZone: 'Asia/Jakarta',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+
+                const lastRunRow = await dbGet("SELECT value FROM settings WHERE key = 'ig_open_story_last_run'");
+                if (lastRunRow?.value !== todayDateWIB) {
+                    console.log(`[RiveraListener] 🌟 Terdeteksi jalur READY dari Rivera sebelum Story Open hari ini (${todayDateWIB}) terbit. Menerbitkan Story 'WE ARE OPEN' & 'DISCLAIMER' duluan...`);
+
+                    // Tandai tanggal hari ini agar tidak dipanggil ulang oleh scheduler jam 10:00 atau pesan berikutnya
+                    await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('ig_open_story_last_run', ?)", [todayDateWIB]);
+
+                    try {
+                        const openRes = await publishOpenStory();
+                        console.log('[RiveraListener] ✅ Story Open & Disclaimer berhasil diterbitkan duluan oleh pemicu Rivera.');
+                        await notifyAdminStoryOpen(openRes);
+                    } catch (openErr) {
+                        console.error('[RiveraListener] Gagal menerbitkan Story Open lebih awal:', openErr.message);
+                    }
+
+                    // Beri jeda 4 detik agar urutan publikasi story rapi di IG & WA (Open -> Disclaimer -> Rivera Ready)
+                    await new Promise(resolve => setTimeout(resolve, 4000));
+                }
+            }
+        } catch (earlyOpenErr) {
+            console.error('[RiveraListener] Error saat pengecekan auto-open story lebih awal:', earlyOpenErr.message);
+        }
+    }
+
     // 3. Terbitkan Story (Live Status / Update Slot / Done) ke IG dan WA Story
     console.log(`[RiveraListener] 🚀 Mempublikasikan Story (${parsed.type}) ke Instagram & WA Story...`);
     await publishRiveraStory(parsed);

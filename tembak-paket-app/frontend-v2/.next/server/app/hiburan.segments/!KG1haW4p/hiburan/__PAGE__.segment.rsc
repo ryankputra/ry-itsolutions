@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
 2:I[61304,[],"ClientPageRoot"]
-3:I[69570,["7058","static/chunks/7058-3ebe62c7184d3680.js","785","static/chunks/785-28cd5fa6725b3880.js","411","static/chunks/app/(main)/hiburan/page-cb54de00f3fc83d5.js"],"default"]
+3:I[69570,["7058","static/chunks/7058-3ebe62c7184d3680.js","785","static/chunks/785-3acd622b831c2dc2.js","411","static/chunks/app/(main)/hiburan/page-cb54de00f3fc83d5.js"],"default"]
 6:I[90484,[],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"6BzedTb4fkFFdpXfNNj3t"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"hD6vw8hJhBCPOVtww1V2M"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

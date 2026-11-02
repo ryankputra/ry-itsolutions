@@ -87,6 +87,9 @@ router.get('/stream', async (req, res) => {
             }
         } else {
             console.warn(`[Stream] File lokal ${localFilename} terdeteksi sebagai preview/cuplikan pendek (${stat.size} bytes). Mengalihkan ke YouTube audio full via yt-dlp...`);
+            if (rawId.endsWith('.mp3')) {
+                rawId = rawId.slice(0, -4);
+            }
         }
     }
     // 2. Ekstraksi audio stream YouTube via yt-dlp (Mendukung ID YouTube langsung maupun pencarian judul lagu)
@@ -120,7 +123,7 @@ router.get('/stream', async (req, res) => {
             return res.status(404).json({ success: false, message: "Audio stream tidak ditemukan." });
         }
 
-        // Proxy audio stream dari GoogleVideo langsung ke client dengan dukungan Range & User-Agent
+        // Proxy audio stream dari GoogleVideo langsung ke client dengan dukungan Range & User-Agent & Redirects
         const upstreamHeaders = {
             'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': '*/*',
@@ -129,48 +132,70 @@ router.get('/stream', async (req, res) => {
             upstreamHeaders['Range'] = req.headers.range;
         }
 
-        const clientReq = (streamUrl.startsWith('https') ? https : http).get(streamUrl, { headers: upstreamHeaders }, (upstreamRes) => {
-            if (upstreamRes.statusCode === 403 || upstreamRes.statusCode === 410) {
-                streamUrlCache.delete(rawId);
-                streamUrlCache.delete(`${rawId}_time`);
+        const fetchStream = (targetUrl, redirectCount = 0) => {
+            if (redirectCount > 4) {
                 const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
                 if (fs.existsSync(fallbackFile) && !res.headersSent) {
                     return fs.createReadStream(fallbackFile).pipe(res);
                 }
+                return res.status(502).json({ success: false, message: "Terlalu banyak redirect dari upstream audio." });
             }
 
-            const rawType = upstreamRes.headers['content-type'] || 'audio/mp4';
-            const contentType = rawType.includes('webm') ? 'audio/webm' : (rawType.includes('mp4') || rawType.includes('m4a') ? 'audio/mp4' : 'audio/mpeg');
-            const resHeaders = {
-                'Content-Type': contentType,
-                'Accept-Ranges': 'bytes',
-                'Cache-Control': 'public, max-age=3600'
-            };
-            if (upstreamRes.headers['content-length']) {
-                resHeaders['Content-Length'] = upstreamRes.headers['content-length'];
-            }
-            if (upstreamRes.headers['content-range']) {
-                resHeaders['Content-Range'] = upstreamRes.headers['content-range'];
-            }
+            const clientReq = (targetUrl.startsWith('https') ? https : http).get(targetUrl, { headers: upstreamHeaders }, (upstreamRes) => {
+                // Jika upstream redirect (301, 302, 307, 308), ikuti lokasi baru
+                if ([301, 302, 307, 308].includes(upstreamRes.statusCode) && upstreamRes.headers.location) {
+                    let nextUrl = upstreamRes.headers.location;
+                    if (!nextUrl.startsWith('http')) {
+                        const parsed = new URL(targetUrl);
+                        nextUrl = new URL(nextUrl, parsed.origin).href;
+                    }
+                    return fetchStream(nextUrl, redirectCount + 1);
+                }
 
-            res.writeHead(upstreamRes.statusCode || 200, resHeaders);
-            if (req.method !== 'HEAD') {
-                upstreamRes.pipe(res);
-            } else {
-                res.end();
-            }
-        });
+                if (upstreamRes.statusCode === 403 || upstreamRes.statusCode === 410) {
+                    streamUrlCache.delete(rawId);
+                    streamUrlCache.delete(`${rawId}_time`);
+                    const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
+                    if (fs.existsSync(fallbackFile) && !res.headersSent) {
+                        return fs.createReadStream(fallbackFile).pipe(res);
+                    }
+                }
 
-        clientReq.on('error', (err) => {
-            console.warn('[Route: /api/music/stream] Proxy error:', err.message);
-            if (!res.headersSent) {
-                res.status(502).json({ success: false, message: "Gagal mem-proxy audio stream." });
-            }
-        });
+                const rawType = upstreamRes.headers['content-type'] || 'audio/mp4';
+                const contentType = rawType.includes('webm') ? 'audio/webm' : (rawType.includes('mp4') || rawType.includes('m4a') ? 'audio/mp4' : 'audio/mpeg');
+                const resHeaders = {
+                    'Content-Type': contentType,
+                    'Accept-Ranges': 'bytes',
+                    'Cache-Control': 'public, max-age=3600'
+                };
+                if (upstreamRes.headers['content-length']) {
+                    resHeaders['Content-Length'] = upstreamRes.headers['content-length'];
+                }
+                if (upstreamRes.headers['content-range']) {
+                    resHeaders['Content-Range'] = upstreamRes.headers['content-range'];
+                }
 
-        req.on('close', () => {
-            clientReq.destroy();
-        });
+                res.writeHead(upstreamRes.statusCode || 200, resHeaders);
+                if (req.method !== 'HEAD') {
+                    upstreamRes.pipe(res);
+                } else {
+                    res.end();
+                }
+            });
+
+            clientReq.on('error', (err) => {
+                console.warn('[Route: /api/music/stream] Proxy error:', err.message);
+                if (!res.headersSent) {
+                    res.status(502).json({ success: false, message: "Gagal mem-proxy audio stream." });
+                }
+            });
+
+            req.on('close', () => {
+                clientReq.destroy();
+            });
+        };
+
+        fetchStream(streamUrl);
     } catch (err) {
         console.error('[Route: /api/music/stream] Extract error:', err.message);
         const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
