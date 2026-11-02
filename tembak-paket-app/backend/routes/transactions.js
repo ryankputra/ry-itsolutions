@@ -1870,8 +1870,8 @@ router.post('/topup/request-qris', isAuthenticated, async (req, res) => {
                 req
             });
             await dbRun(
-                "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', new Date().toISOString(), qrisImg]
+                "INSERT INTO topups (id, userId, userName, baseAmount, uniqueAmount, status, createdAt, qrisBase64Image, gopayTrxId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [topUpId, userId, user.name, baseAmount, baseAmount, 'pending', new Date().toISOString(), qrisImg, gopayData.trx_id || '']
             );
 
             checkGopayPaymentStatus(topUpId, baseAmount, gopayData.trx_id, new Date().toISOString());
@@ -2008,12 +2008,12 @@ router.get('/topup/latest-status', isAuthenticated, async (req, res) => {
                         return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
                     }
                 } catch (e) {}
-            } else if (topUp.gopayTrxId) {
+            } else if (topUp.id.startsWith('TU-GP-') || topUp.gopayTrxId) {
                 try {
                     const URL = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
                     const API_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
                     const response = await axios.get(`${URL}/check-payment`, {
-                        params: { amount: topUp.baseAmount, trx_id: topUp.gopayTrxId, api_key: API_KEY, start_time: topUp.createdAt },
+                        params: { amount: topUp.baseAmount, trx_id: topUp.gopayTrxId || undefined, api_key: API_KEY, start_time: topUp.createdAt },
                         timeout: 10000
                     });
                     if (response.data?.success && response.data.paid) {
@@ -2104,12 +2104,12 @@ router.get('/topup/status/:topUpId', isAuthenticated, async (req, res) => {
                         return res.status(200).json({ status: true, transactionStatus: updatedTopUp.status, topUp: updatedTopUp, balance: userRow?.balance });
                     }
                 } catch (e) {}
-            } else if (topUp.gopayTrxId) {
+            } else if (topUp.id.startsWith('TU-GP-') || topUp.gopayTrxId) {
                 try {
                     const URL = process.env.GOPAY_GATEWAY_URL || 'http://localhost:3002';
                     const API_KEY = process.env.GOPAY_GATEWAY_API_KEY || 'ryy-gopay-secret-key-2026';
                     const response = await axios.get(`${URL}/check-payment`, {
-                        params: { amount: topUp.baseAmount, trx_id: topUp.gopayTrxId, api_key: API_KEY, start_time: topUp.createdAt },
+                        params: { amount: topUp.baseAmount, trx_id: topUp.gopayTrxId || undefined, api_key: API_KEY, start_time: topUp.createdAt },
                         timeout: 10000
                     });
                     if (response.data?.success && response.data.paid) {
