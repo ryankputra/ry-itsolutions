@@ -352,6 +352,22 @@ app.post('/api/internal/trigger-testimoni', async (req, res) => {
     }
 });
 
+// Internal (localhost-only): trigger publish new service story ke IG & WA
+app.post('/api/internal/trigger-new-service-story', async (req, res) => {
+    try {
+        const ip = req.ip || req.socket?.remoteAddress || "";
+        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
+        }
+        const { serviceName, speed } = req.body || {};
+        const igDirectService = require('./services/igDirectService');
+        const result = await igDirectService.publishNewServiceStory(serviceName || '3B IND', speed || 'fast');
+        res.json({ status: true, message: "New Service Story berhasil dipublikasikan.", data: result });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
 // Internal (localhost-only): hapus story di Instagram via private API
 app.post('/api/internal/delete-story', async (req, res) => {
     try {

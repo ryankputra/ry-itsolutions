@@ -293,7 +293,16 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 cardLeft = Math.min(cardLeft, mapped.x0);
             }
         }
-        cardRight = Math.min(cardRight, Math.floor(imgWidth * 0.68));
+        const isDanaReceipt = lines.some(l => {
+            const low = normalizeText(l.text).toLowerCase();
+            return low.includes('dana') || low.includes('saldo dana') || low.includes('kirim uang');
+        });
+
+        if (!isDanaReceipt) {
+            cardRight = Math.min(cardRight, Math.floor(imgWidth * 0.68));
+        } else {
+            cardRight = Math.floor(imgWidth * 0.95);
+        }
         const safeCardRight = cardRight;
 
         let seaBankHeaderLine = null;
@@ -309,14 +318,14 @@ async function censorScreenshot(imageBuffer, options = {}) {
             const mappedLine = mapBbox(line.bbox, scaleX, scaleY);
             const words = line.words || [];
 
-            // A. WhatsApp Top Navigation Bar Contact Header
-            if (isMobileAspect && line.bbox && line.bbox.y0 >= headerTopLimit && line.bbox.y1 <= headerBottomLimit) {
-                if (!systemStatusRegex.test(lineText) && lineText.length >= 2) {
-                    const clampedY1 = Math.min(imgHeight, mappedLine.y1 + 2, Math.floor(imgHeight * 0.092));
+            // A. WhatsApp Top Navigation Bar Contact Header (Mendukung iPhone Dynamic Island & Poni Lebar)
+            if (isMobileAspect && mappedLine && mappedLine.y0 >= Math.floor(imgHeight * 0.02) && mappedLine.y1 <= Math.floor(imgHeight * 0.135)) {
+                if (!systemStatusRegex.test(lineText) && lineText.length >= 2 && !/^(wa|whatsapp)$/i.test(lineText)) {
+                    const clampedY1 = Math.min(imgHeight, mappedLine.y1 + 4, Math.floor(imgHeight * 0.138));
                     rawBoxes.push({
-                        x0: Math.floor(imgWidth * 0.12),
-                        y0: Math.max(0, mappedLine.y0 - 2),
-                        x1: Math.floor(imgWidth * 0.70),
+                        x0: Math.floor(imgWidth * 0.10),
+                        y0: Math.max(0, mappedLine.y0 - 4),
+                        x1: Math.floor(imgWidth * 0.76),
                         y1: clampedY1
                     });
                     detectedTypes.add('WhatsApp Header Contact');
@@ -324,16 +333,16 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 }
             }
 
-            // B. WhatsApp Quoted Reply Header (misal "Yoshua cust imei")
-            if (lowerLine.includes('cust') && !/\d{5,}/.test(lineText) && mappedLine && mappedLine.y0 < imgHeight * 0.60) {
-                if (words.length >= 1 && words.length <= 5 && !lowerLine.includes('oke kak') && !lowerLine.includes('done')) {
+            // B. WhatsApp Quoted Reply & Customer Name anywhere in chat
+            if ((lowerLine.includes('cust') || lowerLine.includes('customer')) && !/\d{10,}/.test(lineText)) {
+                if (words.length >= 1 && words.length <= 6 && !lowerLine.includes('oke kak') && !lowerLine.includes('done')) {
                     rawBoxes.push({
                         x0: Math.max(0, mappedLine.x0 - 4),
                         y0: Math.max(0, mappedLine.y0 - 2),
                         x1: Math.min(imgWidth, mappedLine.x1 + 6),
                         y1: Math.min(imgHeight, mappedLine.y1 + 2)
                     });
-                    detectedTypes.add('WhatsApp Reply Quote');
+                    detectedTypes.add('Customer Name / WhatsApp Quote');
                 }
             }
 
@@ -343,15 +352,16 @@ async function censorScreenshot(imageBuffer, options = {}) {
             const hasMeidWord = /\bmeid\b/i.test(lineText) || lowerLine.startsWith('meid');
             const isImeiCandidate = hasImeiWord || hasMeidWord || 
                 (digitsOnly.length >= 14 && digitsOnly.length <= 17 && (digitsOnly.startsWith('35') || digitsOnly.startsWith('86') || digitsOnly.startsWith('01') || digitsOnly.startsWith('99') || hasImeiWord)) ||
-                (hasMeidWord && digitsOnly.length >= 10);
+                (lowerLine.includes('eid') && digitsOnly.length >= 20) ||
+                (digitsOnly.length >= 20 && digitsOnly.startsWith('89'));
             const isPhoneCandidate = /^(?:\+?62|08)[\d\s-]{8,16}/.test(lineText);
             const isBankCandidate = /\b\d{9,16}\b/.test(lineText) || (digitsOnly.length >= 10 && digitsOnly.length <= 16);
 
             if (isImeiCandidate) {
-                // Sensor label "IMEI / IMEI1 / IMEI2 / MEID" dan seluruh angka IMEI/MEID pada baris ini
+                // Sensor label "IMEI / IMEI1 / IMEI2 / MEID / EID" dan seluruh angka serta BATANG BARCODE 1D di atasnya
                 const imeiWords = words.filter(w => {
                     const wClean = normalizeText(w.text).toLowerCase();
-                    return /\b(imei\d?|meid)\b/i.test(wClean) || /\d+/.test(wClean);
+                    return /\b(imei\d?|meid|eid)\b/i.test(wClean) || /\d+/.test(wClean);
                 });
                 if (imeiWords.length > 0) {
                     const firstW = mapBbox(imeiWords[0].bbox, scaleX, scaleY);
@@ -361,13 +371,21 @@ async function censorScreenshot(imageBuffer, options = {}) {
                         const allY1 = imeiWords.map(w => mapBbox(w.bbox, scaleX, scaleY)?.y1).filter(v => v !== undefined);
                         const minX0 = Math.min(...imeiWords.map(w => mapBbox(w.bbox, scaleX, scaleY)?.x0 || 99999));
                         const maxX1 = Math.max(...imeiWords.map(w => mapBbox(w.bbox, scaleX, scaleY)?.x1 || 0));
+                        const textY0 = Math.min(...allY0);
+                        const textY1 = Math.max(...allY1);
+                        const textHeight = Math.max(20, textY1 - textY0);
+
+                        // EXPAND KE ATAS UNTUK MENUTUP BATANG BARCODE 1D:
+                        // Barcode 1D (Code 128 / Code 39) selalu berada tepat di atas baris teks angka IMEI/EID
+                        const barcodeTop = Math.max(0, textY0 - Math.round(textHeight * 3.8));
+
                         rawBoxes.push({
-                            x0: Math.max(0, minX0 - 4),
-                            y0: Math.max(0, Math.min(...allY0) - 2),
-                            x1: Math.min(imgWidth, maxX1 + 4),
-                            y1: Math.min(imgHeight, Math.max(...allY1) + 2)
+                            x0: Math.max(0, minX0 - 10),
+                            y0: barcodeTop,
+                            x1: Math.min(imgWidth, maxX1 + 10),
+                            y1: Math.min(imgHeight, textY1 + 4)
                         });
-                        detectedTypes.add('Nomor IMEI/MEID & Label Lengkap');
+                        detectedTypes.add('Barcode & Nomor IMEI/EID Lengkap');
                     }
                 }
             } else if (isPhoneCandidate || isBankCandidate) {

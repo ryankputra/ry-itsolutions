@@ -1453,7 +1453,7 @@ function generateNewServiceSvg(theme, serviceName, speed, timestampWIB, dateWIB)
 }
 
 async function publishNewServiceStory(serviceName, speed = "fast") {
-    const theme = getTodayTheme();
+    const theme = getSoftDailyTheme();
     const dateWIB = new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const timestampWIB = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
     const track = getRandomTrack();

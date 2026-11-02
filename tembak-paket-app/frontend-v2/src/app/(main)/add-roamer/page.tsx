@@ -508,6 +508,10 @@ function UnblockImeiContent() {
       formData.append("couponCode", appliedCoupon.code);
       formData.append("coupon_code", appliedCoupon.code);
     }
+    if (useCoins) {
+      formData.append("use_coins", "true");
+      formData.append("useCoins", "true");
+    }
 
     const finalPhone = targetPhone || user?.phone || user?.verifiedPhone || "";
     if (finalPhone) {

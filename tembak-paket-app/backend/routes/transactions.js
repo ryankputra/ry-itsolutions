@@ -1095,19 +1095,27 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
 
             let coinsDiscount = 0;
             let coinsToDeduct = 0;
-            const useCoins = req.body.use_coins === 'true' || req.body.use_coins === true;
-            if (useCoins) {
-                const userObj = await dbGet("SELECT coins FROM users WHERE id = ?", [req.session.userId]);
-                const userCoins = userObj?.coins || 0;
-                const priceAfterCoupon = Math.max(0, totalPrice - discountAmount);
-                if (priceAfterCoupon >= 50000 && userCoins > 0) {
-                    const maxCoinByPercent = Math.floor(priceAfterCoupon * 0.02);
-                    const maxCoinHardCap = 5000;
-                    const maxCoinDeductible = Math.min(maxCoinByPercent, maxCoinHardCap);
-                    coinsToDeduct = Math.min(userCoins, maxCoinDeductible, priceAfterCoupon);
-                    if (coinsToDeduct > 0) {
-                        coinsDiscount = coinsToDeduct;
-                    }
+            const useCoinsParam = req.body.use_coins === 'true' || req.body.use_coins === true || req.body.useCoins === 'true' || req.body.useCoins === true;
+            const userObj = await dbGet("SELECT coins, balance FROM users WHERE id = ?", [req.session.userId]);
+            const userCoins = userObj?.coins || 0;
+            const priceAfterCoupon = Math.max(0, totalPrice - discountAmount);
+
+            // Terapkan koin jika use_coins aktif, ATAU sebagai fallback otomatis jika saldo akun pas dengan harga diskon koin
+            const shouldApplyCoins = useCoinsParam || (
+                userCoins > 0 && 
+                priceAfterCoupon >= 50000 && 
+                !((req.body.payment_method || req.body.paymentMethod) === 'qris') && 
+                userObj?.balance < priceAfterCoupon && 
+                userObj?.balance >= (priceAfterCoupon - Math.min(userCoins, Math.floor(priceAfterCoupon * 0.02), 5000))
+            );
+
+            if (shouldApplyCoins && priceAfterCoupon >= 50000 && userCoins > 0) {
+                const maxCoinByPercent = Math.floor(priceAfterCoupon * 0.02);
+                const maxCoinHardCap = 5000;
+                const maxCoinDeductible = Math.min(maxCoinByPercent, maxCoinHardCap);
+                coinsToDeduct = Math.min(userCoins, maxCoinDeductible, priceAfterCoupon);
+                if (coinsToDeduct > 0) {
+                    coinsDiscount = coinsToDeduct;
                 }
             }
 
