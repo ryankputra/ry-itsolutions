@@ -1330,9 +1330,26 @@ router.post('/rivera/sync-story', (req, res, next) => {
         const group = req.body.group || "3B & REKBER by RIVERA";
 
         await handleRiveraGroupMessage(messageText, sender, group);
-        return res.json({ status: true, message: "Rivera story sync successfully triggered." });
     } catch (err) {
         console.error("Error triggering rivera story:", err);
+        return res.status(500).json({ status: false, error: err.message });
+    }
+});
+
+// Trigger/Re-send pending testimonial to WhatsApp Admin (Admin or Localhost only)
+router.post('/testi/resend', (req, res, next) => {
+    const clientIp = req.ip || req.connection?.remoteAddress || '';
+    const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('127.0.0.1');
+    if (isLocal) return next();
+    return isAdmin(req, res, next);
+}, async (req, res) => {
+    try {
+        const { resendPendingTestimonial } = require('../services/waBot');
+        const targetJid = req.body.jid || "160485848686703@lid";
+        const success = await resendPendingTestimonial(targetJid);
+        return res.json({ status: success, message: success ? "Berhasil mengirim ulang foto testimoni sempurna ke WhatsApp Admin." : "Tidak ada pending testimoni untuk JID tersebut." });
+    } catch (err) {
+        console.error("Error resending testi:", err);
         return res.status(500).json({ status: false, error: err.message });
     }
 });

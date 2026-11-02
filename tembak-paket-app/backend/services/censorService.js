@@ -129,14 +129,17 @@ async function detectBarcodesWithZXing(grayBuffer, width, height, scaleX = 1, sc
 function mergeBoundingBoxes(boxes, imgW, imgH, padX = 8, padY = 6) {
     if (!boxes || boxes.length === 0) return [];
 
+    // STRICT STATUS BAR PROTECTION: NEVER allow any censor above 5.2% image height (Clock, Wifi, Battery, Signal)
+    const statusBarCutoff = Math.floor(imgH * 0.052);
     const validBoxes = boxes
-        .filter(b => b && b.x1 > b.x0 && b.y1 > b.y0)
+        .filter(b => b && b.x1 > b.x0 && b.y1 > b.y0 && b.y1 > statusBarCutoff)
         .map(b => ({
             x0: Math.max(0, Math.floor(b.x0)),
-            y0: Math.max(0, Math.floor(b.y0)),
+            y0: Math.max(statusBarCutoff, Math.floor(b.y0)),
             x1: Math.min(imgW, Math.ceil(b.x1)),
             y1: Math.min(imgH, Math.ceil(b.y1))
-        }));
+        }))
+        .filter(b => b.y1 > b.y0);
 
     if (validBoxes.length === 0) return [];
 
@@ -251,6 +254,65 @@ async function censorScreenshot(imageBuffer, options = {}) {
             }
         } catch (_) {}
 
+        // 1B. DETEKSI BATANG BARCODE 1D MENGGUNAKAN POLA RASTER TRANSISI VERTIKAL
+        try {
+            const raw = rawGrayObj.data;
+            const w = rawGrayObj.info.width;
+            const h = rawGrayObj.info.height;
+            const rowBarcode = new Array(h).fill(false);
+            const rowX0 = new Array(h).fill(w);
+            const rowX1 = new Array(h).fill(0);
+
+            for (let y = Math.floor(h * 0.08); y < Math.floor(h * 0.92); y += 2) {
+                let diffs = 0;
+                let minX = w, maxX = 0;
+                for (let x = 20; x < w - 20; x++) {
+                    if (Math.abs(raw[y * w + x] - raw[y * w + x - 1]) > 32) {
+                        diffs++;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                    }
+                }
+                if (diffs >= 135 && (maxX - minX) > 140) {
+                    rowBarcode[y] = true;
+                    rowBarcode[y + 1] = true;
+                    rowX0[y] = minX;
+                    rowX1[y] = maxX;
+                    rowX0[y + 1] = minX;
+                    rowX1[y + 1] = maxX;
+                }
+            }
+
+            let startY = -1;
+            let bMinX = w, bMaxX = 0;
+            for (let y = 0; y < h; y++) {
+                if (rowBarcode[y]) {
+                    if (startY === -1) {
+                        startY = y;
+                        bMinX = rowX0[y];
+                        bMaxX = rowX1[y];
+                    } else {
+                        bMinX = Math.min(bMinX, rowX0[y]);
+                        bMaxX = Math.max(bMaxX, rowX1[y]);
+                    }
+                } else {
+                    if (startY !== -1) {
+                        if (y - startY >= 14) {
+                            rawBoxes.push({
+                                x0: Math.max(0, Math.round(bMinX * scaleX) - 8),
+                                y0: Math.max(0, Math.round(startY * scaleY) - 4),
+                                x1: Math.min(imgWidth, Math.round(bMaxX * scaleX) + 8),
+                                y1: Math.min(imgHeight, Math.round(y * scaleY) + 4),
+                                type: '1D Barcode Pattern'
+                            });
+                            detectedTypes.add('Batang Barcode 1D');
+                        }
+                        startY = -1;
+                    }
+                }
+            }
+        } catch (_) {}
+
         // 2. OCR EKSTRAKSI TEKS (TESSERACT) DENGAN PENGATURAN MUTEX
         let ocrData = null;
         try {
@@ -275,9 +337,8 @@ async function censorScreenshot(imageBuffer, options = {}) {
 
         // 3. ANALISIS STRUKTUR KARTU & BOUNDS
         const isMobileAspect = imgHeight > imgWidth;
-        const headerTopLimit = isMobileAspect ? (imgHeight / scaleY) * 0.025 : 0;
-        const headerBottomLimit = isMobileAspect ? (imgHeight / scaleY) * 0.090 : 0;
         const systemStatusRegex = /^(online|daring|terakhir dilihat|last seen|mengetik|typing|ketuk di sini|info kontak|\d{1,2}[:\.]\d{2}|\d{1,3}%)$/i;
+        const statusBarLimit = Math.floor(imgHeight * 0.052);
 
         let cardLeft = Math.floor(imgWidth * 0.06);
         let cardRight = Math.floor(imgWidth * 0.67);
@@ -318,15 +379,15 @@ async function censorScreenshot(imageBuffer, options = {}) {
             const mappedLine = mapBbox(line.bbox, scaleX, scaleY);
             const words = line.words || [];
 
-            // A. WhatsApp Top Navigation Bar Contact Header (Mendukung iPhone Dynamic Island & Poni Lebar)
-            if (isMobileAspect && mappedLine && mappedLine.y0 >= Math.floor(imgHeight * 0.02) && mappedLine.y1 <= Math.floor(imgHeight * 0.135)) {
+            // A. WhatsApp Top Navigation Bar Contact Header
+            // PERLINDUNGAN STATUS BAR KETAT: Jam, Wifi, Sinyal, Baterai TIDAK BOLEH KESENSOR (y < statusBarLimit)
+            if (isMobileAspect && mappedLine && mappedLine.y0 >= statusBarLimit && mappedLine.y1 <= Math.floor(imgHeight * 0.125)) {
                 if (!systemStatusRegex.test(lineText) && lineText.length >= 2 && !/^(wa|whatsapp)$/i.test(lineText)) {
-                    const clampedY1 = Math.min(imgHeight, mappedLine.y1 + 4, Math.floor(imgHeight * 0.138));
                     rawBoxes.push({
-                        x0: Math.floor(imgWidth * 0.10),
-                        y0: Math.max(0, mappedLine.y0 - 4),
-                        x1: Math.floor(imgWidth * 0.76),
-                        y1: clampedY1
+                        x0: Math.floor(imgWidth * 0.19), // Menjaga tombol back '< 158' / '< 160' tetap utuh & rapi
+                        y0: Math.max(Math.floor(imgHeight * 0.055), mappedLine.y0 - 2),
+                        x1: Math.floor(imgWidth * 0.74), // Menjaga ikon telepon & video call tetap utuh
+                        y1: Math.min(Math.floor(imgHeight * 0.115), mappedLine.y1 + 4)
                     });
                     detectedTypes.add('WhatsApp Header Contact');
                     continue;
@@ -444,10 +505,47 @@ async function censorScreenshot(imageBuffer, options = {}) {
                 senderLine = { mapped: mappedLine, lineText, words };
             }
 
-            // H. Kartu IMEI Header
-            if (/bagikan\s*pengenal|memindai\s*kode\s*bar/i.test(lineText) || (lowerLine.includes('imei') && lowerLine.includes('perangkat'))) {
+            // H. Kartu IMEI Header & Modal Bagikan Pengenal Perangkat
+            if (/bagikan\s*pengenal|memindai\s*kode\s*bar/i.test(lineText)) {
+                // Modal iOS Bagikan Pengenal Perangkat: sensor kedua kartu barcode & nomor perangkatnya
+                rawBoxes.push({
+                    x0: Math.floor(imgWidth * 0.075),
+                    y0: Math.floor(imgHeight * 0.334),
+                    x1: Math.floor(imgWidth * 0.635),
+                    y1: Math.floor(imgHeight * 0.400)
+                });
+                rawBoxes.push({
+                    x0: Math.floor(imgWidth * 0.075),
+                    y0: Math.floor(imgHeight * 0.448),
+                    x1: Math.floor(imgWidth * 0.635),
+                    y1: Math.floor(imgHeight * 0.523)
+                });
+                detectedTypes.add('Kartu Barcode & IMEI Pengenal Perangkat');
+            } else if (lowerLine.includes('imei') && lowerLine.includes('perangkat')) {
                 if (!imeiHeaderLine || mappedLine.y1 > imeiHeaderLine.y1) {
                     imeiHeaderLine = mappedLine;
+                }
+            }
+
+            // DANA Receipt: Sensor Penerima & Nominal tanpa merusak label "Total Bayar"
+            if (isDanaReceipt) {
+                if (/kirim\s*uang/i.test(lineText)) {
+                    rawBoxes.push({
+                        x0: Math.floor(imgWidth * 0.08),
+                        y0: mappedLine.y1 + 2,
+                        x1: Math.floor(imgWidth * 0.65),
+                        y1: mappedLine.y1 + Math.round(imgHeight * 0.026)
+                    });
+                    detectedTypes.add('Penerima DANA');
+                }
+                if (/total\s*ba/i.test(lineText)) {
+                    rawBoxes.push({
+                        x0: Math.floor(imgWidth * 0.32), // menjaga tulisan "Total Bayar" tetap utuh
+                        y0: Math.max(0, mappedLine.y0 - 2),
+                        x1: Math.floor(imgWidth * 0.68),
+                        y1: Math.min(imgHeight, mappedLine.y1 + 2)
+                    });
+                    detectedTypes.add('Nominal Total Bayar DANA');
                 }
             }
 
@@ -644,26 +742,25 @@ async function censorScreenshot(imageBuffer, options = {}) {
             detectedTypes.add('No. Rekening SeaBank Aloysia');
         }
 
-        // R. KARTU IMEI: TUTUP LENGKAP NOMOR IMEI 1, IMEI 2 & SEMUA GARIS BARCODE HINGGA DASAR KARTU
+        // R. KARTU IMEI STICKER: TUTUP LENGKAP NOMOR IMEI 1, IMEI 2 & SEMUA GARIS BARCODE
         if (imeiHeaderLine) {
             let lastImeiLineY = imeiHeaderLine.y1 + Math.round(imgHeight * 0.15);
             for (const line of lines) {
                 const text = normalizeText(line.text).toLowerCase();
                 const mapped = mapBbox(line.bbox, scaleX, scaleY);
-                if (mapped && mapped.y0 > imeiHeaderLine.y1 && (text.includes('imei') || /\b\d{10,15}\b/.test(text) || text.includes('wii') || text.includes('||') || mapped.y0 < imeiHeaderLine.y1 + Math.round(imgHeight * 0.32))) {
-                    if (mapped.y0 < imgHeight * 0.92) {
+                if (mapped && mapped.y0 > imeiHeaderLine.y1 && (text.includes('imei') || /\b\d{10,15}\b/.test(text))) {
+                    if (mapped.y0 < imgHeight * 0.70) {
                         lastImeiLineY = Math.max(lastImeiLineY, mapped.y1);
                     }
                 }
             }
 
-            const imeiBottom = Math.min(lastImeiLineY + Math.round(imgHeight * 0.065), Math.floor(imgHeight * 0.915));
+            const imeiBottom = Math.min(lastImeiLineY + Math.round(imgHeight * 0.04), Math.floor(imgHeight * 0.70));
 
-            // Gunakan lebar compact: 8% sampai 61.5% lebar layar agar selalu di dalam kartu putih (zero-leak)
             rawBoxes.push({
                 x0: Math.floor(imgWidth * 0.08),
                 y0: Math.floor(imeiHeaderLine.y1 + 10),
-                x1: Math.floor(imgWidth * 0.615),
+                x1: Math.floor(imgWidth * 0.65),
                 y1: Math.floor(imeiBottom)
             });
             detectedTypes.add('Barcode & IMEI Lengkap');

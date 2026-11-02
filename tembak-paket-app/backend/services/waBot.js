@@ -1627,6 +1627,7 @@ async function processAdminImageBatch(remoteJid) {
     await replyWhatsApp(remoteJid, reviewPrompt);
 }
 
+
                 // 1. ADMIN IMAGE HANDLING: Testimoni auto-censor & publish IG
                 if (msg.message?.imageMessage) {
                     // NEVER process outgoing image messages sent by the bot
@@ -2927,6 +2928,82 @@ async function sendAdminMediaReply(jid, mediaPayload) {
 }
 
 /**
+ * Mengirimkan ulang hasil sensor testimoni ke admin WhatsApp (untuk revisi/konfirmasi ulang)
+ */
+async function resendPendingTestimonial(remoteJid) {
+    const cleanJid = String(remoteJid).replace(/[^a-zA-Z0-9]/g, "_");
+    const metaPath = path.join(PENDING_TESTI_DIR, `${cleanJid}.json`);
+    if (!fs.existsSync(metaPath)) return false;
+
+    let raw = null;
+    try {
+        raw = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+    } catch (_) { return false; }
+
+    const restoredItems = (raw.items || []).map(itm => {
+        let buf = null;
+        if (itm.bufPath && fs.existsSync(itm.bufPath)) {
+            buf = fs.readFileSync(itm.bufPath);
+        }
+        return {
+            buffer: buf,
+            boxesCount: itm.boxesCount,
+            detectedTypes: itm.detectedTypes,
+            caption: itm.caption,
+            track: itm.track
+        };
+    }).filter(i => i.buffer);
+
+    if (restoredItems.length === 0) return false;
+
+    // Perpanjang timestamp sesi konfirmasi 15 menit lagi
+    raw.timestamp = Date.now();
+    fs.writeFileSync(metaPath, JSON.stringify(raw));
+    pendingTestimonials.set(remoteJid, {
+        items: restoredItems,
+        timestamp: raw.timestamp
+    });
+
+    for (let i = 0; i < restoredItems.length; i++) {
+        const itm = restoredItems[i];
+        await sendAdminMediaReply(remoteJid, {
+            image: itm.buffer,
+            caption: `📸 *HASIL BLUR FOTO ${i + 1}/${restoredItems.length} (REVISI SENSOR SEMPURNA)*\n🎵 *Musik:* ${itm.track.title} - ${itm.track.artist}\n🔒 *Area Blur:* ${itm.boxesCount} area aman disensor\n⏱️ *Status Bar & Jam:* 100% Utuh & Terbaca Jelas`
+        });
+        if (i < restoredItems.length - 1) {
+            await new Promise(r => setTimeout(r, 600));
+        }
+    }
+
+    const trackLines = restoredItems.map((itm, idx) => 
+        `• Foto ${idx + 1}: 🎵 *${itm.track.title}* (${itm.track.artist})`
+    ).join("\n");
+
+    const reviewPrompt = 
+        `📸 *SELESAI MENYENSOR ${restoredItems.length} FOTO TESTIMONI (REVISI SEMPURNA)*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `✨ *Pembaruan Sensor:*\n` +
+        `• Jam status bar (12.20 & 12.23) 100% utuh tidak terpotong\n` +
+        `• Seluruh batang barcode 1D (IMEI 1, IMEI 2, EID) tertutup rapat\n` +
+        `• Nama kontak WhatsApp & balon chat tersensor rapi\n` +
+        `• Label "Total Bayar" struk DANA tetap utuh & nominal aman\n\n` +
+        `🎶 *Musik Disematkan:*\n` +
+        trackLines + `\n\n` +
+        `🎯 *Target Akun:* *@unlocksinyalsolo*\n\n` +
+        `Silakan balas huruf untuk mempublikasikan:\n` +
+        `• Balas *p* ➔ Post ke *Instagram Story* (Video 15s bersuara musik nyata 🔊, terbit terpisah)\n` +
+        `• Balas *l* ➔ Post ke *Instagram Feed* (masing-masing terbit sendiri terpisah)\n` +
+        `• Balas *m* ➔ Post ke *Story & Feed*\n` +
+        `• Balas *c* ➔ Batalkan\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `_Sesi konfirmasi diperpanjang 15 menit._` +
+        BOT_FOOTER;
+
+    await replyWhatsApp(remoteJid, reviewPrompt);
+    return true;
+}
+
+/**
  * Send New Order Notification to Admin with Embedded Command Guides
  * @param {Object} orderData
  */
@@ -3948,5 +4025,6 @@ module.exports = {
     storeMessage,
     handleRiveraGroupMessage,
     publishDirectTestimonialStory,
-    notifyAdminIgSessionExpired
+    notifyAdminIgSessionExpired,
+    resendPendingTestimonial
 };
