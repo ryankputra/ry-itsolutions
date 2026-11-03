@@ -2249,6 +2249,19 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         return;
     }
 
+    // Command Khusus: Uji Coba Story WA dengan Tag Admin (#teststory / #ujistory)
+    if (rawCleanText === "#teststory" || rawCleanText === ".teststory" || rawCleanText === "#ujistory" || rawCleanText === ".ujistory") {
+        await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan gambar & menguji posting Story WhatsApp dengan Tag ke 2 nomor admin...*");
+        try {
+            const { publishOpenStory } = require('./igDirectService');
+            await publishOpenStory();
+            await replyWhatsApp(replyJid, "✅ *UJI COBA BERHASIL!*\n\nStory WhatsApp telah diposting dengan tag/mention ke kedua nomor admin (085156692166 & 088706611370). Silakan periksa tab Pembaruan / Status di WhatsApp Anda untuk melihat tombol Repost! 🙌" + BOT_FOOTER);
+        } catch (testErr) {
+            await replyWhatsApp(replyJid, `❌ *Gagal uji coba story:* ${testErr.message}` + BOT_FOOTER);
+        }
+        return;
+    }
+
     // Command Khusus: Konfirmasi & Tambah Menu / Paket Baru dari Rivera (#tambahpaket [Nama] | [Harga] | [Kecepatan])
     if (rawCleanText.startsWith("#tambahpaket") || rawCleanText.startsWith(".tambahpaket") || rawCleanText.startsWith("tambahpaket")) {
         const args = text.trim().replace(/^([#.]?tambahpaket)\s*/i, '').trim();
@@ -2907,19 +2920,41 @@ async function publishWhatsAppStory(mediaBuffer, caption = "", isVideoExplicit =
             }
         });
 
-        // Pastikan kedua nomor admin resmi selalu disertakan
-        statusJidSet.add("6285156692166@s.whatsapp.net");
-        statusJidSet.add("6288706611370@s.whatsapp.net");
+        // 2 NOMOR ADMIN RESMI YANG DITAG (MENTION) AGAR MUNCUL TOMBOL REPOST:
+        // Admin 1: 085156692166 (GoPay / QRIS / Primary)
+        // Admin 2: 088706611370 (ShopeePay / CS / Primary)
+        const adminMentions = [
+            "6285156692166@s.whatsapp.net",
+            "6288706611370@s.whatsapp.net"
+        ];
+
+        // Pastikan kedua nomor admin resmi selalu disertakan di daftar penerima status
+        adminMentions.forEach(jid => statusJidSet.add(jid));
 
         const statusJidList = Array.from(statusJidSet);
 
         const isVideo = isVideoExplicit || (mediaBuffer && mediaBuffer.length > 8 && mediaBuffer.toString('utf8', 4, 8) === 'ftyp');
 
-        logWABot(`[WABot Story] Mengunggah Story WhatsApp (${isVideo ? 'Video MP4 bersuara musik' : 'Foto JPEG'}) ke status@broadcast (${statusJidList.length} kontak)...`, "info");
+        logWABot(`[WABot Story] Mengunggah Story WhatsApp (${isVideo ? 'Video MP4 bersuara musik' : 'Foto JPEG'}) ke status@broadcast (${statusJidList.length} kontak, tagged ${adminMentions.length} admin)...`, "info");
 
         const messagePayload = isVideo
-            ? { video: mediaBuffer, mimetype: "video/mp4", caption: caption || "" }
-            : { image: mediaBuffer, caption: caption || "" };
+            ? { 
+                video: mediaBuffer, 
+                mimetype: "video/mp4", 
+                caption: caption || "",
+                mentions: adminMentions,
+                contextInfo: {
+                    mentionedJid: adminMentions
+                }
+              }
+            : { 
+                image: mediaBuffer, 
+                caption: caption || "",
+                mentions: adminMentions,
+                contextInfo: {
+                    mentionedJid: adminMentions
+                }
+              };
 
         const sent = await sock.sendMessage("status@broadcast", messagePayload, {
             statusJidList: statusJidList
@@ -2929,8 +2964,24 @@ async function publishWhatsAppStory(mediaBuffer, caption = "", isVideoExplicit =
             botSentMsgIds.add(sent.key.id);
         }
 
+        // Kirimkan notifikasi ke kedua nomor admin bahwa Story telah terbit dan mereka ditandai (tagged)
+        for (const adminJid of adminMentions) {
+            try {
+                await sendAndStoreMessage(adminJid, {
+                    text: `📢 *STORY WHATSAPP TERBARU TELAH TERBIT!*\n` +
+                          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `Nomor WhatsApp Anda telah ditandai (*tagged / mention*) dalam Story ini.\n` +
+                          `Silakan buka tab *Pembaruan / Status* di WhatsApp Anda untuk membagikan ulang (*Repost*) ke status Anda! 🙌\n` +
+                          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `_ID Story: ${sent?.key?.id || '-'}_`
+                });
+            } catch (notifErr) {
+                console.warn(`[WABot Story] Gagal kirim notif mention ke ${adminJid}:`, notifErr.message);
+            }
+        }
+
         logWABot(`✅ Story WhatsApp Bot berhasil diposting ke status@broadcast! ID: ${sent?.key?.id || "-"}`, "info");
-        return { status: true, id: sent?.key?.id, isVideo };
+        return { status: true, id: sent?.key?.id, isVideo, taggedAdmins: adminMentions };
     } catch (err) {
         logWABot(`❌ Gagal posting Story WhatsApp: ${err.message}`, "error");
         console.error("[WABot Story] Gagal publish story WA:", err);
