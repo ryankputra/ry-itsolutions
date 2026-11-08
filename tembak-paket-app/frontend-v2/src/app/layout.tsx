@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { NavigationProgressBar } from "@/components/ui/NavigationProgressBar";
 import { PushNotificationBanner } from "@/components/ui/PushNotificationBanner";
 import { UpdateNotifier } from "@/components/ui/UpdateNotifier";
+import { AntiScreenshotGuard } from "@/components/ui/AntiScreenshotGuard";
 import { Suspense } from "react";
 import Script from "next/script";
 import "./globals.css";
@@ -73,6 +74,7 @@ export default function RootLayout({
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
           <DynamicThemeProvider>
             <AppProvider>
+              <AntiScreenshotGuard />
               {children}
               <PushNotificationBanner />
               <UpdateNotifier />

@@ -18,6 +18,12 @@ Dokumen ini berisi panduan standar operasional (SOP) untuk melakukan build di la
 > **PENTING: Jangan lakukan build Next.js di dalam STB!**
 > Resource RAM/CPU STB terbatas. Build frontend **wajib selalu dijalankan di laptop/mesin lokal**, kemudian folder build (`.next`) di-commit dan di-push ke Git agar STB hanya perlu melakukan *pull* dan *restart PM2*.
 
+> [!CAUTION]
+> **DATABASE PRODUKSI TIDAK BOLEH DIGANTI.**
+> `tembak-paket-app/backend/database.sqlite`, `.env`, `sessions/` (WhatsApp/IG/GoPay), dan file di `backend/backups/` adalah data produksi. Semua file ini **wajib** berada di `.gitignore` dan tidak boleh di-commit. Saat sinkronisasi (`git reset --hard`), pastikan file tersebut tetap **untracked/ignored** sehingga tidak tersentuh.
+>
+> File data yang **masih terlacak Git** (`backend/public/tracks.json`, `frontend-v2/public/audio/tiktok/tracks.json`, `backend/data/*.json`) akan ditimpa oleh `git reset --hard`. **Wajib backup + restore** seperti pada Langkah 4 di bawah. Jangan pernah menyalin database dari laptop/repo ke STB.
+
 ---
 
 ## 🛠️ Langkah-Langkah Deployment
@@ -69,13 +75,30 @@ Jika Anda sedang membuka sesi SSH/terminal di STB:
 # 1. Masuk ke direktori proyek di STB
 cd /www/wwwroot/ry-itsolutions
 
-# 2. Ambil perubahan terbaru dan timpa file lokal STB dengan origin/main
+# 2. BACKUP data produksi yang terlacak Git (WAJIB sebelum reset)
+TS=$(date +%Y%m%d-%H%M%S); BK=/root/deploy-backup-$TS; mkdir -p "$BK/files"
+for p in tembak-paket-app/backend/public/tracks.json \
+         tembak-paket-app/frontend-v2/public/audio/tiktok/tracks.json \
+         tembak-paket-app/backend/data/rivera_daily_status.json \
+         tembak-paket-app/backend/data/tiktok_dj_tracks.json; do
+  mkdir -p "$BK/files/${p%/*}"; cp -p "$p" "$BK/files/$p"
+done
+git status --porcelain > "$BK/status.txt"; git diff origin/main > "$BK/full-diff.patch" 2>/dev/null || true
+
+# 3. Ambil perubahan terbaru dan timpa file lokal STB dengan origin/main
 git fetch --all
 git reset --hard origin/main
 
-# 3. Restart seluruh proses PM2
+# 4. Kembalikan data produksi yang tadi di-backup
+cp -a "$BK/files/." ./
+
+# 5. Restart seluruh proses PM2
 pm2 restart all
 ```
+
+> [!WARNING]
+> Jangan pernah menjalankan `git clean -xd` di STB: perintah itu menghapus file **ignored**, termasuk `database.sqlite`, `.env`, dan sesi WhatsApp/GoPay.
+> Jika `git reset --hard` gagal karena "Untracked working tree file ... would be overwritten", pindahkan file yang disebut ke folder backup (jangan dihapus permanen), lalu ulangi reset.
 
 ---
 
