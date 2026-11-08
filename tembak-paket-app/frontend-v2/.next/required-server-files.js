@@ -19,7 +19,7 @@ self.__SERVER_FILES_MANIFEST={
       "jsx",
       "js"
     ],
-    "poweredByHeader": true,
+    "poweredByHeader": false,
     "compress": true,
     "images": {
       "deviceSizes": [

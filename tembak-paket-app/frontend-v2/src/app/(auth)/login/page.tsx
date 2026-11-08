@@ -280,7 +280,8 @@ export default function LoginPage() {
             <label className="text-xs font-semibold text-slate-700 dark:text-neutral-300">Email</label>
             <input
               type="email"
-              autoComplete="username email"
+              name="email"
+              autoComplete="email"
               placeholder="nama@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -303,6 +304,7 @@ export default function LoginPage() {
             </div>
             <div className="relative">
               <input
+                name="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 placeholder="••••••••"
@@ -314,7 +316,8 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-neutral-300 transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-neutral-300 transition-colors"
+                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                 title={showPassword ? "Sembunyikan password" : "Lihat password"}
               >
                 {showPassword ? (
@@ -534,7 +537,8 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setForgotShowPass(!forgotShowPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                      aria-label={forgotShowPass ? "Sembunyikan password" : "Tampilkan password"}
                       title={forgotShowPass ? "Sembunyikan password" : "Lihat password"}
                     >
                       {forgotShowPass ? (

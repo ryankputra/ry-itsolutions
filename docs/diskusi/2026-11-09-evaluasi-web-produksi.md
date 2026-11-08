@@ -2,10 +2,11 @@
 
 - **Tanggal:** 2026-11-09
 - **Pemilik:** tech-lead
-- **Status:** Verifikasi
+- **Status:** Implementasi
 - **Prioritas:** Tinggi
 - **Target:** `https://ry-itsolutionts.web.id` (produksi STB)
 - **Versi terpasang:** commit `27d3039e8`, BUILD_ID `z9TRxC6vAYqGG-9pBKf4I`
+- **Sedang dikerjakan:** Sprint 2 (AdSense, form semantik, landmark `<main>`, branded 404, security headers)
 
 ## Konteks
 

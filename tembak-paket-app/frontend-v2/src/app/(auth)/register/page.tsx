@@ -286,6 +286,8 @@ function RegisterForm() {
               <label className="text-xs font-semibold text-slate-700 dark:text-neutral-300">Nama Lengkap</label>
               <input
                 type="text"
+                name="name"
+                autoComplete="name"
                 placeholder="Nama Anda"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -299,6 +301,8 @@ function RegisterForm() {
               <label className="text-xs font-semibold text-slate-700 dark:text-neutral-300">Email Aktif</label>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
                 placeholder="nama@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -314,6 +318,8 @@ function RegisterForm() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
+                  name="password"
+                  autoComplete="new-password"
                   placeholder="Minimal 6 karakter"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -324,7 +330,9 @@ function RegisterForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-neutral-300 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-neutral-300 transition-colors"
+                  aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                  title={showPassword ? "Sembunyikan password" : "Lihat password"}
                 >
                   {showPassword ? (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
