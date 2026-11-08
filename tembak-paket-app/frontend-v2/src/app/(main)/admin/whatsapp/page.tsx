@@ -405,7 +405,7 @@ export default function AdminWhatsAppChatPage() {
                 <div className="p-12 text-center text-xs text-slate-500 bg-white/60 dark:bg-slate-900/60 rounded-2xl border border-hairline max-w-sm mx-auto my-8">
                   <MessageSquare className="w-8 h-8 text-emerald-600 mx-auto mb-2 opacity-80" />
                   <p className="font-bold text-slate-700 dark:text-slate-200">Belum Ada Pesan</p>
-                  <p className="text-[11px] mt-1 text-slate-500">Tulis pesan Anda di bawah untuk mulai berkirim WhatsApp dengan nomor ini.</p>
+                  <p className="text-[11px] mt-1 text-slate-500 dark:text-slate-400">Tulis pesan Anda di bawah untuk mulai berkirim WhatsApp dengan nomor ini.</p>
                 </div>
               ) : (
                 messages.map((m, idx) => {

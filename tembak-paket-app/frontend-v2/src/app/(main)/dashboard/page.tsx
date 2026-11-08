@@ -636,7 +636,7 @@ export default function DashboardPage() {
               <div className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 group-hover:shadow-[0_4px_16px_rgba(0,113,227,0.2)] transition-all ${item.iconBg}`}>
                 {item.icon}
                 {(item as any).badge && (
-                  <span className="absolute -top-1.5 -right-1 px-1.5 py-0.2 bg-[#1D1D1F] text-white font-semibold text-[7px] rounded-full uppercase tracking-wider shadow-xs border border-white/40">
+                  <span className="absolute -top-1.5 -right-1 px-1.5 py-0.2 bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-semibold text-[7px] rounded-full uppercase tracking-wider shadow-xs border border-white/40 dark:border-black/20">
                     {(item as any).badge}
                   </span>
                 )}
@@ -1109,9 +1109,9 @@ export default function DashboardPage() {
                 <div className="text-right">
                   <p className="font-semibold text-xs text-gray-900 dark:text-white">Rp {(trx.amount || trx.price || trx.totalAmount || trx.originalPrice || trx.baseAmount || 0).toLocaleString('id-ID')}</p>
                   <span className={`inline-block mt-0.5 px-2 py-0.5 text-[9px] font-medium rounded ${
-                    trx.status === 'success' || trx.status === 'completed' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200/60' :
-                    trx.status === 'failed' || trx.status === 'canceled' ? 'bg-red-50 text-red-700 border border-red-200/50' :
-                    'bg-amber-50 text-amber-700 border border-amber-200/50'
+                    trx.status === 'success' || trx.status === 'completed' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200/60 dark:border-gray-700' :
+                    trx.status === 'failed' || trx.status === 'canceled' ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200/50 dark:border-red-900/50' :
+                    'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/50'
                   }`}>
                     {trx.status === 'completed' ? 'success' : trx.status}
                   </span>

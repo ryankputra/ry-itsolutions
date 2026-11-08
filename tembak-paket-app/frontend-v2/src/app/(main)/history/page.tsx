@@ -343,35 +343,35 @@ function HistoryContent() {
 
       return {
         label,
-        textColor: "text-emerald-600 font-bold",
-        badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        textColor: "text-emerald-600 dark:text-emerald-400 font-bold",
+        badgeBg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
       };
     }
     if (s === "processing" || s === "in_progress") {
       return {
         label: "Sedang Diproses Server",
-        textColor: "text-blue-600 font-bold",
-        badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
+        textColor: "text-blue-600 dark:text-blue-400 font-bold",
+        badgeBg: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
       };
     }
     if (s === "in_queue" || s === "waiting" || s === "waiting_admin") {
       return {
         label: "Menunggu Konfirmasi Admin",
-        textColor: "text-amber-600 font-bold",
-        badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
+        textColor: "text-amber-600 dark:text-amber-400 font-bold",
+        badgeBg: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
       };
     }
     if (s === "pending" || s === "unpaid") {
       return {
         label: "Belum Bayar",
-        textColor: "text-orange-600 font-bold",
-        badgeBg: "bg-orange-50 text-orange-700 border-orange-200",
+        textColor: "text-orange-600 dark:text-orange-400 font-bold",
+        badgeBg: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
       };
     }
     return {
       label: "Dibatalkan (Pengembalian)",
-      textColor: "text-rose-600 font-bold",
-      badgeBg: "bg-rose-50 text-rose-700 border-rose-200",
+      textColor: "text-rose-600 dark:text-rose-400 font-bold",
+      badgeBg: "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800",
     };
   };
 
@@ -568,7 +568,7 @@ function HistoryContent() {
 
                 {/* Product / Service Item Row */}
                 <div className="flex items-start gap-3">
-                  <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                  <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center shrink-0">
                     {renderServiceSvg(trx.service_type || trx.serviceType, trx.package_name || trx.packageName)}
                   </div>
 
@@ -585,7 +585,7 @@ function HistoryContent() {
                         )}
                         {/* Duration cleanup: Automated vs Manual IMEI */}
                         {(trx.service_type === 'ceir' || trx.service_type === 'barcode' || trx.packageId?.startsWith('cek_') || trx.packageId?.startsWith('create_')) ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80">
                             <svg className="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
                             </svg>
@@ -912,7 +912,7 @@ function HistoryContent() {
                         <button
                           type="button"
                           onClick={() => handleCancelTransaction(trx)}
-                          className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors"
+                          className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold transition-colors"
                           title="Batalkan dan kembalikan dana ke saldo akun"
                         >
                           Batalkan & Pengembalian
@@ -970,7 +970,7 @@ function HistoryContent() {
                         <button
                           type="button"
                           onClick={() => handleQuickShareWhatsApp(trx)}
-                          className="px-3 py-1.5 rounded-xl border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-xs font-bold transition-colors flex items-center gap-1.5"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />

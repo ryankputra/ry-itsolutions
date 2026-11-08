@@ -207,7 +207,7 @@ export function ManualRoamerCard({
         </div>
 
         {imeis.length === 0 ? (
-          <p className="text-xs text-slate-500 italic">Belum ada nomor IMEI yang dimasukkan.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 italic">Belum ada nomor IMEI yang dimasukkan.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {imeis.map((im: string, iIdx: number) => (

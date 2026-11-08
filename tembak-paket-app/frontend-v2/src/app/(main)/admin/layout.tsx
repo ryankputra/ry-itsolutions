@@ -234,7 +234,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               className="w-full h-11 pl-3.5 pr-10 rounded-xl bg-parchment/80 border border-hairline text-xs font-bold text-ink focus:outline-none focus:border-primary appearance-none transition-all cursor-pointer"
             >
               {adminNavItems.map((item) => (
-                <option key={item.href} value={item.href}>
+                <option key={item.href} value={item.href} className="bg-canvas text-ink">
                   {item.label}
                 </option>
               ))}

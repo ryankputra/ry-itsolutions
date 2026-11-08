@@ -88,7 +88,7 @@ export function OrderActionModal({
       <div className="space-y-1">
         <label className="text-xs font-bold text-ink">Status Pengerjaan</label>
         <select
-          className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-bold outline-none focus:ring-1 focus:ring-primary"
+          className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-bold text-ink outline-none focus:ring-1 focus:ring-primary"
           value={actionData.status || "pending"}
           onChange={(e) =>
             setActionData((prev) => (prev ? { ...prev, status: e.target.value } : null))

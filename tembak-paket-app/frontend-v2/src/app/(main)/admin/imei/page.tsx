@@ -32,9 +32,9 @@ const SPEED_TIERS = [
 // Urutan siklus status: aktif -> maintenance -> hidden -> aktif
 const SPEED_STATUS_CYCLE = ["active", "maintenance", "hidden"] as const;
 const SPEED_STATUS_META: Record<string, { label: string; className: string }> = {
-  active: { label: "Aktif", className: "bg-emerald-500/10 text-emerald-700 border border-emerald-300" },
-  maintenance: { label: "Maintenance", className: "bg-amber-500/10 text-amber-700 border border-amber-300" },
-  hidden: { label: "Hidden", className: "bg-slate-100 text-slate-500 border border-slate-200" },
+  active: { label: "Aktif", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800" },
+  maintenance: { label: "Maintenance", className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800" },
+  hidden: { label: "Hidden", className: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700" },
 };
 
 export default function AdminImeiPage() {
@@ -597,8 +597,8 @@ export default function AdminImeiPage() {
               </div>
               <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                 pricing.rivera_auto_sync_status !== "false"
-                  ? "bg-emerald-500/10 text-emerald-600 border border-emerald-300"
-                  : "bg-gray-100 text-gray-500 border border-gray-200"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800"
+                  : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700"
               }`}>
                 {pricing.rivera_auto_sync_status !== "false" ? "Real-Time Aktif" : "Mode Jam Statis"}
               </span>
@@ -819,8 +819,8 @@ export default function AdminImeiPage() {
                             onClick={() => handleToggleImeiPkg(pkg)}
                             className={`px-2 py-0.5 text-[10px] font-bold rounded-full transition-all ${
                               isVisible
-                                ? "bg-emerald-500/10 text-emerald-700 border border-emerald-300"
-                                : "bg-slate-100 text-slate-500 border border-slate-200"
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                             }`}
                           >
                             {isVisible ? "Aktif" : "Hidden"}

@@ -24,20 +24,37 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+// Allowed image MIME types and extensions for security (VULN-04 Hardening)
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+const imageFileFilter = (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mime = file.mimetype.toLowerCase();
+
+    if (ALLOWED_IMAGE_EXTS.includes(ext) && ALLOWED_IMAGE_MIMES.includes(mime)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Hanya file gambar dengan format .jpg, .jpeg, .png, atau .webp yang diperbolehkan.'));
+    }
+};
+
 // Avatar Storage Configuration
 const avatarStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(__dirname, '..', 'public', 'uploads', 'avatars'));
     },
     filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname) || '.jpg';
+        const rawExt = path.extname(file.originalname).toLowerCase();
+        const ext = ALLOWED_IMAGE_EXTS.includes(rawExt) ? rawExt : '.jpg';
         const uid = req.session?.userId || 'user';
         cb(null, `avatar_${uid}_${Date.now()}${ext}`);
     }
 });
 const avatarUpload = multer({
     storage: avatarStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: imageFileFilter
 });
 
 // Helper for effective maintenance
@@ -334,8 +351,8 @@ router.post('/auth/register-verify-otp', async (req, res) => {
         await dbRun('DELETE FROM email_verifications WHERE email = ? AND type = ?', [validEmail, 'register']);
 
         req.session.userId = newUserId;
-        logUserActivity({ userId: newUserId, userName: validName, userEmail: validEmail, action: 'REGISTER', description: 'Pendaftaran akun baru berhasil', req });
-        updatePresence({ id: newUserId, name: validName, email: validEmail, role: 'user' }, req, '/');
+        logUserActivity({ userId: newUserId, userName: data.name, userEmail: validEmail, action: 'REGISTER', description: 'Pendaftaran akun baru berhasil', req });
+        updatePresence({ id: newUserId, name: data.name, email: validEmail, role: 'user' }, req, '/');
 
         sendTelegramNotification(
             `<b>──────────────────────</b>\n` +

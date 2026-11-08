@@ -287,7 +287,7 @@ export default function AdminVouchersPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-ink/80">Tipe Visibilitas</label>
                   <select
-                    className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs text-ink font-medium outline-none focus:ring-1 focus:ring-primary"
                     value={newCoupon.is_public}
                     onChange={(e) => setNewCoupon({ ...newCoupon, is_public: e.target.value })}
                   >
@@ -302,7 +302,7 @@ export default function AdminVouchersPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-ink/80">Tipe Potongan</label>
                   <select
-                    className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs text-ink font-medium outline-none focus:ring-1 focus:ring-primary"
                     value={newCoupon.discount_type}
                     onChange={(e) => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
                   >

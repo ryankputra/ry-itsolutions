@@ -48,9 +48,8 @@ const globalRateLimiter = rateLimit({
         message: 'Terlalu banyak permintaan dari IP Anda. Silakan coba kembali dalam 1 menit.'
     },
     skip: (req) => {
-        // Skip for local test suites or internal loopback
-        if (req.headers['x-internal-test-key'] === 'ry-internal-test-pass') return true;
-        if (req.ip === '127.0.0.1' && req.headers['x-skip-rate-limit'] === 'true') return true;
+        // Only skip during automated testing in test environment
+        if (process.env.NODE_ENV === 'test') return true;
         return false;
     }
 });
@@ -66,7 +65,8 @@ const sensitiveRateLimiter = rateLimit({
         message: 'Batas percobaan terlampaui (Anti-Brute Force). Silakan tunggu 1 menit.'
     },
     skip: (req) => {
-        if (req.headers['x-internal-test-key'] === 'ry-internal-test-pass') return true;
+        // Only skip during automated testing in test environment
+        if (process.env.NODE_ENV === 'test') return true;
         return false;
     }
 });

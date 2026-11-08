@@ -143,7 +143,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <p className="text-xs text-[#86868B] truncate">
+            <p className="text-xs text-ink-muted truncate">
               {user?.email || "Belum ada email terdaftar"}
             </p>
 
@@ -441,7 +441,7 @@ export default function ProfilePage() {
       <div className="rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.05] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden divide-y divide-black/[0.05] dark:divide-white/[0.06]">
         <div className="p-3.5 bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.05] dark:border-white/[0.06]">
           <h3 className="font-bold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">Fitur &amp; Layanan Tambahan</h3>
-          <p className="text-[11px] text-[#86868B]">Aplikasi official, payment gateway, referral dan panduan sistem</p>
+          <p className="text-[11px] text-ink-muted">Aplikasi official, payment gateway, referral dan panduan sistem</p>
         </div>
 
         {/* Program Referral Reseller */}
@@ -462,10 +462,10 @@ export default function ProfilePage() {
                   Komisi Saldo
                 </span>
               </div>
-              <p className="text-[11px] text-[#86868B]">Ajak teman dan dapatkan komisi saldo otomatis</p>
+              <p className="text-[11px] text-ink-muted">Ajak teman dan dapatkan komisi saldo otomatis</p>
             </div>
           </div>
-          <svg className="w-4 h-4 text-[#86868B]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </div>
@@ -489,10 +489,10 @@ export default function ProfilePage() {
                   Rp 10rb/bln
                 </span>
               </div>
-              <p className="text-[11px] text-[#86868B]">Terima pembayaran QRIS otomatis di website / bot Anda</p>
+              <p className="text-[11px] text-ink-muted">Terima pembayaran QRIS otomatis di website / bot Anda</p>
             </div>
           </div>
-          <svg className="w-4 h-4 text-[#86868B]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </div>
@@ -513,7 +513,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">Panduan Interaktif Aplikasi</span>
-              <p className="text-[11px] text-[#86868B]">Tur panduan fitur utama dengan suara AI</p>
+              <p className="text-[11px] text-ink-muted">Tur panduan fitur utama dengan suara AI</p>
             </div>
           </div>
           <span className="px-3 py-1 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[10px] uppercase tracking-wider">
@@ -631,7 +631,7 @@ export default function ProfilePage() {
             className="flex items-center justify-between p-2.5 rounded-xl hover:bg-parchment font-bold text-ink transition-colors"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a.75.75 0 01-.85-.929l.643-2.176C3.89 16.574 3 14.394 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
                 </svg>
@@ -648,7 +648,7 @@ export default function ProfilePage() {
             className="flex items-center justify-between p-2.5 rounded-xl hover:bg-parchment font-bold text-ink transition-colors"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -663,10 +663,10 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-rose-50 text-rose-600 font-bold transition-colors text-left"
+            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 font-bold transition-colors text-left"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                 </svg>

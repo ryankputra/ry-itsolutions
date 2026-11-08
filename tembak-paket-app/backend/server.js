@@ -207,13 +207,7 @@ app.post('/api/admin/whatsapp/logout', isAuthenticated, isAdmin, async (req, res
     const ok = await waBot.logoutWABot();
     res.json({ status: ok, message: ok ? "WhatsApp Bot berhasil logout dan sesi dihapus." : "Gagal logout WhatsApp." });
 });
-app.post('/api/admin/whatsapp/pairing-code', (req, res, next) => {
-    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
-    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
-        return next();
-    }
-    return isAuthenticated(req, res, () => isAdmin(req, res, next));
-}, async (req, res) => {
+app.post('/api/admin/whatsapp/pairing-code', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const phone = req.body?.phone || req.body?.phoneNumber || '6287767287284';
         const result = await waBot.requestPairingCode(phone);
@@ -226,13 +220,7 @@ app.post('/api/admin/whatsapp/pairing-code', (req, res, next) => {
         res.status(500).json({ status: false, success: false, message: err.message });
     }
 });
-app.post('/api/admin/whatsapp/test', (req, res, next) => {
-    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
-    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
-        return next();
-    }
-    return isAuthenticated(req, res, () => isAdmin(req, res, next));
-}, async (req, res) => {
+app.post('/api/admin/whatsapp/test', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const results = await waBot.testAdminNotification(req.body?.message);
         res.json({ status: true, message: "Pesan uji coba telah dikirim ke nomor admin.", data: results });
@@ -242,13 +230,7 @@ app.post('/api/admin/whatsapp/test', (req, res, next) => {
 });
 
 // Test Notifikasi Pembayaran Berhasil (WA Admin & Bot Telegram)
-app.post('/api/admin/payment-notification/test', (req, res, next) => {
-    const ip = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || "";
-    if (req.headers["x-internal-key"] === "tembak_internal_wa_2026" || ip.includes("127.0.0.1") || ip.includes("::1") || ip.includes("localhost")) {
-        return next();
-    }
-    return isAuthenticated(req, res, () => isAdmin(req, res, next));
-}, async (req, res) => {
+app.post('/api/admin/payment-notification/test', isAuthenticated, isAdmin, async (req, res) => {
     try {
         const { advancePaymentCounter, getPaymentGatewaySelection } = require('./services/paymentRouter');
         const advRes = await advancePaymentCounter(dbGet, dbRun).catch(() => ({ nextGateway: 'gopay' }));
@@ -270,14 +252,10 @@ app.post('/api/admin/payment-notification/test', (req, res, next) => {
 });
 
 
-// Internal (localhost-only): kirim reminder ulasan ke user yang sudah beli IMEI
-// sukses tapi belum mengulas. Dipakai oleh script admin/cron.
-app.post('/api/internal/review-reminder', async (req, res) => {
+// Internal / Admin: kirim reminder ulasan ke user yang sudah beli IMEI
+// Dipakai oleh admin panel atau script admin yang terautentikasi
+app.post('/api/internal/review-reminder', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const ip = req.ip || req.socket?.remoteAddress || "";
-        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
-            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
-        }
         const { phone, message } = req.body || {};
         if (!phone || !message) {
             return res.status(400).json({ status: false, message: "phone dan message wajib diisi." });
@@ -289,13 +267,9 @@ app.post('/api/internal/review-reminder', async (req, res) => {
     }
 });
 
-// Internal (localhost-only): kirim ulang notifikasi status transaksi ke WhatsApp pelanggan
-app.post('/api/internal/resend-customer-status', async (req, res) => {
+// Internal / Admin: kirim ulang notifikasi status transaksi ke WhatsApp pelanggan
+app.post('/api/internal/resend-customer-status', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const ip = req.ip || req.socket?.remoteAddress || "";
-        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
-            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
-        }
         const { trxId, status, note, forceFresh } = req.body || {};
         if (!trxId) {
             return res.status(400).json({ status: false, message: "trxId wajib diisi." });
@@ -317,13 +291,9 @@ app.post('/api/internal/resend-customer-status', async (req, res) => {
     }
 });
 
-// Internal (localhost-only): trigger eksekusi pesan Rivera ke Story IG & WA + notifikasi WA admin
-app.post('/api/internal/trigger-rivera', async (req, res) => {
+// Internal / Admin: trigger eksekusi pesan Rivera ke Story IG & WA + notifikasi WA admin
+app.post('/api/internal/trigger-rivera', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const ip = req.ip || req.socket?.remoteAddress || "";
-        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
-            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
-        }
         const { message, senderName, groupName } = req.body || {};
         const text = message || `3B SF SLOW DONE MALEM SENT SAMPE SORE 🔥\n\n3B SF FAST UNDER 15 MENIT ON ‼️\n\n1B DIGIPOS ON TURUN HARGA‼️\n\nSEMUA BERGARANSI TANPA ADA DRAMA 🎭\n\n@all`;
         await waBot.handleRiveraGroupMessage(text, senderName || "Rivera Group", groupName || "3B & REKBER by RIVERA");
@@ -333,13 +303,9 @@ app.post('/api/internal/trigger-rivera', async (req, res) => {
     }
 });
 
-// Internal (localhost-only): trigger eksekusi posting Testimoni SS ke Story IG & WA + notifikasi WA admin
-app.post('/api/internal/trigger-testimoni', async (req, res) => {
+// Internal / Admin: trigger eksekusi posting Testimoni SS ke Story IG & WA + notifikasi WA admin
+app.post('/api/internal/trigger-testimoni', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const ip = req.ip || req.socket?.remoteAddress || "";
-        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
-            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
-        }
         const { imagePath, caption } = req.body || {};
         const defaultSsPath = fs.existsSync(path.join(__dirname, 'public', 'sample_testimoni.png'))
             ? path.join(__dirname, 'public', 'sample_testimoni.png')
@@ -352,13 +318,9 @@ app.post('/api/internal/trigger-testimoni', async (req, res) => {
     }
 });
 
-// Internal (localhost-only): trigger publish new service story ke IG & WA
-app.post('/api/internal/trigger-new-service-story', async (req, res) => {
+// Internal / Admin: trigger publish new service story ke IG & WA
+app.post('/api/internal/trigger-new-service-story', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const ip = req.ip || req.socket?.remoteAddress || "";
-        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
-            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
-        }
         const { serviceName, speed } = req.body || {};
         const igDirectService = require('./services/igDirectService');
         const result = await igDirectService.publishNewServiceStory(serviceName || '3B IND', speed || 'fast');
@@ -368,13 +330,9 @@ app.post('/api/internal/trigger-new-service-story', async (req, res) => {
     }
 });
 
-// Internal (localhost-only): hapus story di Instagram via private API
-app.post('/api/internal/delete-story', async (req, res) => {
+// Internal / Admin: hapus story di Instagram via private API
+app.post('/api/internal/delete-story', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const ip = req.ip || req.socket?.remoteAddress || "";
-        if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
-            return res.status(403).json({ status: false, message: "Akses internal hanya dari localhost." });
-        }
         const { mediaId } = req.body || {};
         if (!mediaId) return res.status(400).json({ status: false, message: "mediaId is required" });
         const igDirectService = require('./services/igDirectService');

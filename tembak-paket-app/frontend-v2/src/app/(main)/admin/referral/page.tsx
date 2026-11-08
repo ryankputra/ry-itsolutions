@@ -112,7 +112,7 @@ export default function AdminReferralPage() {
             <div className="space-y-1">
               <label className="text-xs font-bold text-ink/80">Tipe Komisi Upline</label>
               <select
-                className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary font-medium"
+                className="w-full h-10 rounded-lg border border-hairline px-3 bg-canvas text-xs text-ink outline-none focus:ring-1 focus:ring-primary font-medium"
                 value={refSettings.referral_commission_type || "fixed"}
                 onChange={(e) =>
                   setRefSettings({ ...refSettings, referral_commission_type: e.target.value })

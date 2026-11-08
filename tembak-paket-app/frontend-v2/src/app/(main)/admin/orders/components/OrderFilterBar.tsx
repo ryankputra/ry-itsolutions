@@ -33,7 +33,7 @@ export function OrderFilterBar({
           placeholder="Cari berdasarkan IMEI, Order ID, nama pelanggan, atau nomor HP..."
           value={searchOrder}
           onChange={(e) => setSearchOrder(e.target.value)}
-          className="w-full h-10 pl-9 pr-4 rounded-xl border border-hairline bg-canvas text-xs focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+          className="w-full h-10 pl-9 pr-4 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:outline-none focus:ring-1 focus:ring-primary font-medium"
         />
       </div>
 
@@ -41,7 +41,7 @@ export function OrderFilterBar({
         <select
           value={orderStatusFilter}
           onChange={(e) => setOrderStatusFilter(e.target.value)}
-          className="h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary"
+          className="h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs font-bold text-ink focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <option value="all">Semua Status</option>
           <option value="pending">Pending</option>

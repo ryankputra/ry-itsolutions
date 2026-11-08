@@ -281,34 +281,34 @@ export function EcommerceHeader() {
       {/* ============================================================ */}
       <div className="hidden lg:block bg-canvas/95 backdrop-blur-md border-b border-hairline">
         {/* 1. Top Sub-Bar */}
-        <div className="bg-gray-50/90 dark:bg-slate-950/80 border-b border-gray-200/60 dark:border-gray-800/60 text-gray-500 text-[11px] py-1 px-4 sm:px-6 lg:px-8">
+        <div className="bg-gray-50/90 dark:bg-slate-950/80 border-b border-gray-200/60 dark:border-gray-800/60 text-gray-500 dark:text-gray-400 text-[11px] py-1 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 Server Aktif 24 Jam • QRIS Otomatis
               </span>
-              <span className="text-slate-500">|</span>
-              <span className="text-slate-300">
+              <span className="text-slate-400 dark:text-slate-600">|</span>
+              <span className="text-slate-600 dark:text-slate-300">
                 Garansi Resmi &amp; Terverifikasi
               </span>
             </div>
 
-            <div className="flex items-center gap-4 text-slate-300">
+            <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400">
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event("open_app_tour"))}
-                className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1 cursor-pointer"
+                className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium flex items-center gap-1 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>Panduan Aplikasi</span>
               </button>
-              <Link href="/cek-garansi" className="hover:text-white transition-colors">
+              <Link href="/cek-garansi" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Lacak Pesanan
               </Link>
-              <Link href="/tickets" className="hover:text-white transition-colors">
+              <Link href="/tickets" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Pusat Bantuan
               </Link>
               {user?.role === "admin" && (
@@ -356,7 +356,7 @@ export function EcommerceHeader() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setShowSearchDropdown(true)}
                   placeholder="Cari layanan, ketik IMEI, atau cek garansi..."
-                  className="w-full h-9 pl-3.5 pr-10 rounded-lg bg-gray-50/80 hover:bg-gray-50 border border-gray-200/80 focus:border-gray-400 focus:bg-white focus:ring-1 focus:ring-gray-300 text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                  className="w-full h-9 pl-3.5 pr-10 rounded-lg bg-gray-50/80 hover:bg-gray-50 dark:bg-slate-900/90 dark:hover:bg-slate-900 border border-gray-200/80 dark:border-slate-800 focus:border-gray-400 dark:focus:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-gray-300 dark:focus:ring-slate-700 text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
                 />
                 <button
                   type="submit"
@@ -404,11 +404,11 @@ export function EcommerceHeader() {
 
             <Link
               href="/games"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100/80 border border-gray-200/80 text-gray-700 text-xs transition-all group"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-900 hover:bg-gray-100/80 dark:hover:bg-slate-800 border border-gray-200/80 dark:border-slate-800 text-gray-700 dark:text-gray-300 text-xs transition-all group"
             >
               <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9h-5v6h5"/><path d="M12 7v10"/></svg>
               <div>
-                <span className="text-[9px] text-gray-400 font-medium block leading-tight">RyPoints</span>
+                <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium block leading-tight">RyPoints</span>
                 <span className="text-xs font-semibold text-gray-900 dark:text-white">
                   {(user?.coins || 0).toLocaleString("id-ID")}
                 </span>
@@ -417,13 +417,13 @@ export function EcommerceHeader() {
 
             <Link
               href="/topup"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100/80 border border-gray-200/80 text-gray-700 text-xs transition-all group"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-900 hover:bg-gray-100/80 dark:hover:bg-slate-800 border border-gray-200/80 dark:border-slate-800 text-gray-700 dark:text-gray-300 text-xs transition-all group"
             >
-              <svg className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-900" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
               </svg>
               <div className="text-left">
-                <span className="text-[9px] text-gray-400 font-medium block leading-tight">Saldo</span>
+                <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium block leading-tight">Saldo</span>
                 <span className="text-xs font-semibold text-gray-900 dark:text-white">
                   Rp {(user?.balance || 0).toLocaleString("id-ID")}
                 </span>
@@ -530,7 +530,7 @@ export function EcommerceHeader() {
                         <ThemeToggle variant="full" />
                       </div>
 
-                      <button onClick={handleLogout} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 font-semibold text-left">
+                      <button onClick={handleLogout} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-semibold text-left">
                         <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                         </svg>

@@ -178,7 +178,7 @@ export default function AdminReviewsPage() {
               <select
                 value={dummyReviewForm.productId}
                 onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, productId: e.target.value })}
-                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs focus:border-primary outline-none"
+                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:border-primary outline-none"
               >
                 <option value="unblock-imei">unblock-imei (Layanan IMEI & Sinyal)</option>
                 <option value="paket-telkomsel">paket-telkomsel (Paket Data Telkomsel)</option>
@@ -195,7 +195,7 @@ export default function AdminReviewsPage() {
               <select
                 value={dummyReviewForm.variation}
                 onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, variation: e.target.value })}
-                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs focus:border-primary outline-none"
+                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:border-primary outline-none"
               >
                 <option value="GARANSI 1 BULAN (MASA AKTIF SINYAL)">Garansi 1 Bulan</option>
                 <option value="GARANSI 3 BULAN (MASA AKTIF SINYAL)">Garansi 3 Bulan</option>
@@ -211,7 +211,7 @@ export default function AdminReviewsPage() {
               <select
                 value={dummyReviewForm.rating}
                 onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, rating: Number(e.target.value) })}
-                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs focus:border-primary outline-none font-bold"
+                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:border-primary outline-none font-bold"
               >
                 <option value={5}>5 Bintang (Sempurna)</option>
                 <option value={4}>4 Bintang (Sangat Baik)</option>
@@ -224,7 +224,7 @@ export default function AdminReviewsPage() {
               <select
                 value={dummyReviewForm.userRole}
                 onChange={(e) => setDummyReviewForm({ ...dummyReviewForm, userRole: e.target.value })}
-                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs focus:border-primary outline-none"
+                className="w-full h-10 px-3 rounded-xl border border-hairline bg-canvas text-xs text-ink focus:border-primary outline-none"
               >
                 <option value="Pembeli Terverifikasi">Pembeli Terverifikasi</option>
                 <option value="Member VIP Reseller">Member VIP Reseller</option>

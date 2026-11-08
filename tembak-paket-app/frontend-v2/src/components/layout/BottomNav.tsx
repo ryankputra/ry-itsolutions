@@ -57,7 +57,7 @@ export function BottomNav() {
               className={`flex flex-col items-center justify-center py-1.5 px-3 transition-colors duration-150 relative touch-manipulation select-none ${
                 isActive
                   ? "text-primary font-bold"
-                  : "text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] font-medium"
+                  : "text-[#86868B] dark:text-[#a1a1a6] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] font-medium"
               }`}
             >
               {/* Icon */}

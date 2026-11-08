@@ -208,7 +208,18 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
     const trxId = `TRX_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
     // Deduct User Balance atomically
-    await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [finalPrice, userId]);
+    const updateResult = await dbRun(
+        "UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?",
+        [finalPrice, userId, finalPrice]
+    );
+
+    if (!updateResult || updateResult.changes === 0) {
+        return res.status(400).json({
+            status: false,
+            message: "Saldo tidak mencukupi atau transaksi sedang diproses bersamaan."
+        });
+    }
+
     const updatedUser = await dbGet("SELECT balance FROM users WHERE id = ?", [userId]);
 
     // Record Coupon usage if applied

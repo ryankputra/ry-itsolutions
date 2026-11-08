@@ -32,20 +32,37 @@ const QRIS_NOBU_STATIS_STRING = process.env.QRIS_NOBU_STATIS_STRING || process.e
 const QRIS_GOPAY_STATIS_STRING = process.env.QRIS_GOPAY_STATIS_STRING || DEFAULT_QRIS_GOPAY;
 const QRIS_STATIS_STRING = QRIS_NOBU_STATIS_STRING;
 
+// Allowed image MIME types and extensions for security (VULN-04 Hardening)
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+const imageFileFilter = (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mime = file.mimetype.toLowerCase();
+
+    if (ALLOWED_IMAGE_EXTS.includes(ext) && ALLOWED_IMAGE_MIMES.includes(mime)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Hanya file gambar dengan format .jpg, .jpeg, .png, atau .webp yang diperbolehkan.'));
+    }
+};
+
 // Setup Multer for Manual Orders
 const manualOrderStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(__dirname, '..', 'public', 'uploads', 'manual_orders'));
     },
     filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname) || '.jpg';
+        const rawExt = path.extname(file.originalname).toLowerCase();
+        const ext = ALLOWED_IMAGE_EXTS.includes(rawExt) ? rawExt : '.jpg';
         const uid = req.session?.userId || 'usr';
         cb(null, `manual_${uid}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}${ext}`);
     }
 });
 const manualOrderUpload = multer({
     storage: manualOrderStorage,
-    limits: { fileSize: 10 * 1024 * 1024 }
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: imageFileFilter
 }).fields([
     { name: 'image', maxCount: 5 },
     { name: 'screenshot', maxCount: 5 },
@@ -797,7 +814,17 @@ router.post(['/purchase', '/purchase/non-otp'], isAuthenticated, async (req, res
             return res.status(402).json({ status: false, message: `Saldo Anda (Rp ${user.balance.toLocaleString()}) tidak cukup untuk membayar biaya Rp ${effectiveFee.toLocaleString()}.` });
         }
 
-        await dbRun('UPDATE users SET balance = balance - ? WHERE id = ?', [effectiveFee, user.id]);
+        const deductResult = await dbRun(
+            'UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?',
+            [effectiveFee, user.id, effectiveFee]
+        );
+
+        if (!deductResult || deductResult.changes === 0) {
+            return res.status(402).json({
+                status: false,
+                message: "Saldo tidak mencukupi atau transaksi sedang diproses bersamaan."
+            });
+        }
 
         const adminBalance = await getKmspAdminBalance();
         const packagePrice = pkg.original_price || 0;
@@ -1149,7 +1176,16 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             }
 
             if (!isQrisPayment) {
-                await dbRun("UPDATE users SET balance = balance - ? WHERE id = ?", [finalPriceToPay, req.session.userId]);
+                const deductRes = await dbRun(
+                    "UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?",
+                    [finalPriceToPay, req.session.userId, finalPriceToPay]
+                );
+                if (!deductRes || deductRes.changes === 0) {
+                    return res.status(402).json({
+                        status: false,
+                        message: "Saldo tidak mencukupi atau transaksi sedang diproses bersamaan."
+                    });
+                }
             }
 
             if (coinsToDeduct > 0 && !isQrisPayment) {

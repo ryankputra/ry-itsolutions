@@ -836,7 +836,7 @@ export default function AdminSettingsPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-ink">Pilih Metode Pembayaran</label>
                   <select
-                    className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-10 rounded-xl border border-hairline px-3 bg-canvas text-xs text-ink outline-none focus:ring-1 focus:ring-primary"
                     value={ceirgoDepositProviderCode}
                     onChange={(e) => setCeirgoDepositProviderCode(e.target.value)}
                   >

@@ -291,7 +291,7 @@ export default function AdminUsersPage() {
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
                   <select
-                    className="h-8 px-2.5 rounded-lg border border-hairline bg-canvas text-xs font-semibold focus:outline-none focus:border-primary cursor-pointer"
+                    className="h-8 px-2.5 rounded-lg border border-hairline bg-canvas text-xs font-semibold text-ink focus:outline-none focus:border-primary cursor-pointer"
                     value={u.role || "user"}
                     onChange={async (e) => {
                       try {
