@@ -2,16 +2,19 @@
 
 - **Tanggal:** 2026-11-09
 - **Pemilik:** tech-lead
-- **Status:** Diskusi & Implementasi Sprint 3 (Micro-Interactions, Shimmer Skeleton, Card Hover)
+- **Status:** Selesai (Sprint 2 & Sprint 3 Terverifikasi)
 - **Prioritas:** Tinggi
 - **Target:** `https://ry-itsolutionts.web.id` (produksi STB)
-- **Versi terpasang:** commit `707032a25`, BUILD_ID `qnoe2o_o-LD7ACsiHs2Vi`
-- **Selesai di Sprint 2:** Security headers (SAMEORIGIN, nosniff, strict-origin), remove X-Powered-By, AdSense clean script, auth `<main>` landmark, custom branded 404, validasi login sukses akun `ayusiawanryan@gmail.com`.
-- **Sprint 3 (Permintaan User):**
-  1. Micro-interaction tombol: tombol mengecil saat ditekan (`active:scale-[0.96]`), subtle glow saat disentuh.
-  2. Card hover: kartu terangkat halus (`hover:-translate-y-1 hover:shadow-lg`).
-  3. Skeleton Shimmer: hilangkan teks "Loading..." / "Memuat...", gantikan dengan skeleton animasi shimmer berkilau.
-  4. Real Browser Testing: Pengujian visual dan interaksi langsung di browser in-app sebelum rilis.
+- **Versi terpasang:** commit `365f29339`, BUILD_ID `o6lgKiet_lWTT90FrBOdj`
+- **Selesai di Sprint 2 & 3:**
+  1. **Security Headers**: `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, penghapusan `X-Powered-By`.
+  2. **AdSense Optimization**: Penghapusan warning `data-nscript` via clean `<script async>`.
+  3. **Aksesibilitas & Semantik**: Tag `<main>` pembungkus auth layout, atribut `name`, `autoComplete`, dan `aria-label` tombol toggle password dengan touch target 32px.
+  4. **Branded 404**: Halaman 404 kustom berbahasa Indonesia lengkap dengan logo dan tombol kembali ke beranda.
+  5. **Micro-Interaction Tombol**: Tombol mengecil saat ditekan (`active:scale-[0.96] translateY(0.5px)`) dan memiliki efek glow (`btn-press`, `btn-glow`).
+  6. **Card Hover**: Kartu terangkat halus saat disentuh kursor (`hover:-translate-y-1 hover:shadow-lg`, transisi cubic-bezier 220ms).
+  7. **Skeleton Shimmer**: Penggantian seluruh teks loading telanjang dengan komponen `Skeleton`, `SkeletonCard`, dan `SkeletonText` beranimasi gelombang kilau (`shimmerWave`).
+  8. **Login Testing**: Verifikasi login akun `ayusiawanryan@gmail.com` berhasil diarahkan ke dashboard pengguna (Admin mode).
 
 ---
 
