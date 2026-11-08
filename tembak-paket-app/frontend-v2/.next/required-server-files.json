@@ -103,7 +103,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/Users/ryankptr/ry-itsolutions/",
+    "outputFileTracingRoot": "C:\\Users\\Ryan\\Documents\\ry-itsolutions",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -303,7 +303,7 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.ts",
     "turbopack": {
-      "root": "/Users/ryankptr/ry-itsolutions/"
+      "root": "C:\\Users\\Ryan\\Documents\\ry-itsolutions"
     },
     "distDirRoot": ".next",
     "_originalRewrites": {
@@ -348,28 +348,28 @@
       }
     ]
   },
-  "appDir": "/Users/ryankptr/ry-itsolutions/tembak-paket-app/frontend-v2",
-  "relativeAppDir": "tembak-paket-app/frontend-v2",
+  "appDir": "C:\\Users\\Ryan\\Documents\\ry-itsolutions\\tembak-paket-app\\frontend-v2",
+  "relativeAppDir": "tembak-paket-app\\frontend-v2",
   "files": [
-    ".next/package.json",
-    ".next/routes-manifest.json",
-    ".next/server/pages-manifest.json",
-    ".next/build-manifest.json",
-    ".next/prerender-manifest.json",
-    ".next/server/functions-config-manifest.json",
-    ".next/server/middleware-manifest.json",
-    ".next/server/middleware-build-manifest.js",
-    ".next/server/middleware-react-loadable-manifest.js",
-    ".next/react-loadable-manifest.json",
-    ".next/server/app-paths-manifest.json",
-    ".next/app-path-routes-manifest.json",
-    ".next/server/server-reference-manifest.js",
-    ".next/server/server-reference-manifest.json",
-    ".next/server/prefetch-hints.json",
-    ".next/BUILD_ID",
-    ".next/server/next-font-manifest.js",
-    ".next/server/next-font-manifest.json",
-    ".next/required-server-files.json"
+    ".next\\package.json",
+    ".next\\routes-manifest.json",
+    ".next\\server\\pages-manifest.json",
+    ".next\\build-manifest.json",
+    ".next\\prerender-manifest.json",
+    ".next\\server\\functions-config-manifest.json",
+    ".next\\server\\middleware-manifest.json",
+    ".next\\server\\middleware-build-manifest.js",
+    ".next\\server\\middleware-react-loadable-manifest.js",
+    ".next\\react-loadable-manifest.json",
+    ".next\\server\\app-paths-manifest.json",
+    ".next\\app-path-routes-manifest.json",
+    ".next\\server\\server-reference-manifest.js",
+    ".next\\server\\server-reference-manifest.json",
+    ".next\\server\\prefetch-hints.json",
+    ".next\\BUILD_ID",
+    ".next\\server\\next-font-manifest.js",
+    ".next\\server\\next-font-manifest.json",
+    ".next\\required-server-files.json"
   ],
   "ignore": []
 }

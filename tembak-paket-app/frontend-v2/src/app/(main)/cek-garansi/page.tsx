@@ -217,15 +217,15 @@ function CekGaransiContent() {
                   </svg>
                 </div>
                 <div>
-                  <span className="font-black text-slate-900 block">
+                  <span className="font-black text-slate-900 dark:text-white block">
                     {imeiAnalysis.brand} {imeiAnalysis.model}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono">
+                  <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                     TAC Prefix: {searchImei.substring(0, 8)}
                   </span>
                 </div>
               </div>
-              <span className={imeiAnalysis.isValidLuhn ? "text-emerald-700 font-bold bg-emerald-100/80 px-2.5 py-0.5 rounded" : "text-amber-700 font-bold bg-amber-100 px-2.5 py-0.5 rounded"}>
+              <span className={imeiAnalysis.isValidLuhn ? "text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100/80 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded" : "text-amber-700 dark:text-amber-400 font-bold bg-amber-100 dark:bg-amber-950/50 px-2.5 py-0.5 rounded"}>
                 {imeiAnalysis.isValidLuhn ? "Luhn Valid" : "Cek Ulang Digit"}
               </span>
             </div>
@@ -339,23 +339,23 @@ function CekGaransiContent() {
               </div>
             ) : (
               // Cek CEIR (Non-Warranty Service)
-              <div className="p-5 rounded-2xl border bg-gradient-to-r from-blue-500/10 via-slate-500/5 to-transparent border-blue-200 text-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="p-5 rounded-2xl border bg-gradient-to-r from-blue-500/10 via-slate-500/5 to-transparent border-blue-200 dark:border-blue-900/40 text-slate-900 dark:text-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 text-center sm:text-left">
-                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-black/5 flex items-center justify-center text-primary shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-neutral-800 shadow-sm border border-black/5 dark:border-white/10 flex items-center justify-center text-primary shrink-0">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                     </svg>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 justify-center sm:justify-start">
-                      <h3 className="font-black text-base text-slate-900">Layanan Cek Status &amp; Riwayat CEIR</h3>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Non-Garansi</span>
+                      <h3 className="font-black text-base text-slate-900 dark:text-white">Layanan Cek Status &amp; Riwayat CEIR</h3>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-neutral-800 text-slate-700 dark:text-neutral-300">Non-Garansi</span>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
                       Layanan ini adalah pengecekan database status pendaftaran IMEI pada server CEIR (bukan aktivasi/unblock sinyal).
                     </p>
                     {result.adminNote && (
-                      <p className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block">
+                      <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 inline-block">
                         Hasil CEIR: {result.adminNote}
                       </p>
                     )}

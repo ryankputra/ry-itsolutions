@@ -1037,7 +1037,7 @@ function UnblockImeiContent() {
                         </div>
 
                         {/* Guarantee tag */}
-                        <div className="pt-1.5 border-t border-hairline/60 flex items-center gap-1 text-[9px] text-emerald-700 font-medium">
+                        <div className="pt-1.5 border-t border-hairline/60 flex items-center gap-1 text-[9px] text-emerald-700 dark:text-emerald-400 font-medium">
                           <svg className="w-3 h-3 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                           </svg>
@@ -1096,10 +1096,7 @@ function UnblockImeiContent() {
                       ) : (
                         <>
                           {opt.rangeText && (
-                            <div
-                              className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2"
-                              style={{ color: '#d97706' }}
-                            >
+                            <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mt-0.5 leading-tight line-clamp-2">
                               {opt.rangeText}
                             </div>
                           )}
@@ -1162,18 +1159,18 @@ function UnblockImeiContent() {
               </label>
 
               {appliedCoupon ? (
-                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs shadow-2xs">
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/60 text-xs shadow-2xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-sm shrink-0">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-bold text-emerald-950 text-xs">
+                      <p className="font-bold text-emerald-950 dark:text-emerald-100 text-xs">
                         Voucher <span className="font-mono">{appliedCoupon.code}</span> Terpasang
                       </p>
-                      <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold mt-0.5">
                         Potongan Diskon: -Rp {discountAmount.toLocaleString("id-ID")}
                       </p>
                     </div>
@@ -1189,7 +1186,7 @@ function UnblockImeiContent() {
                     <button
                       type="button"
                       onClick={handleRemoveCoupon}
-                      className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2.5 py-1 bg-rose-50 rounded-xl border border-rose-200/60 transition-colors"
+                      className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-800 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200/60 dark:border-rose-800/40 transition-colors"
                     >
                       Hapus
                     </button>
@@ -1308,13 +1305,13 @@ function UnblockImeiContent() {
                 </div>
               </div>
               {appliedCoupon && (
-                <div className="flex justify-between text-emerald-700 font-semibold">
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-semibold">
                   <span>Diskon Kupon ({appliedCoupon.code})</span>
                   <span>- Rp {discountAmount.toLocaleString("id-ID")}</span>
                 </div>
               )}
               {useCoins && coinsDiscount > 0 && (
-                <div className="flex justify-between text-amber-700 font-semibold">
+                <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
                   <span>Potongan RyPoints ({coinsDiscount.toLocaleString("id-ID")} Koin)</span>
                   <span>- Rp {coinsDiscount.toLocaleString("id-ID")}</span>
                 </div>
@@ -1338,7 +1335,7 @@ function UnblockImeiContent() {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
                       <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
                       </svg>
@@ -1347,7 +1344,7 @@ function UnblockImeiContent() {
                       <h5 className="font-extrabold text-xs text-ink flex items-center gap-1.5">
                         <svg className="w-3.5 h-3.5 text-amber-500 inline mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg> Direct QRIS Otomatis
                       </h5>
-                      <p className="text-[10px] text-emerald-700 font-bold">Semua Bank &amp; E-Wallet (Realtime 24 Jam)</p>
+                      <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">Semua Bank &amp; E-Wallet (Realtime 24 Jam)</p>
                     </div>
                   </div>
                   <input type="radio" checked={paymentMethod === "qris"} onChange={() => {}} className="text-primary" />
@@ -1411,14 +1408,14 @@ function UnblockImeiContent() {
             </div>
           </form>
         ) : (
-          <div className="p-8 text-center space-y-3 bg-rose-50/50">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+          <div className="p-8 text-center space-y-3 bg-rose-50/50 dark:bg-rose-950/20">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto shadow-inner">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
               </svg>
             </div>
-            <h3 className="font-black text-rose-700 text-lg">Server IMEI Sedang Tutup</h3>
-            <p className="text-sm text-rose-600 font-semibold max-w-md mx-auto leading-relaxed">
+            <h3 className="font-black text-rose-700 dark:text-rose-300 text-lg">Server IMEI Sedang Tutup</h3>
+            <p className="text-sm text-rose-600 dark:text-rose-400 font-semibold max-w-md mx-auto leading-relaxed">
               {serviceStatus.note || "Layanan Add Roamer sedang tidak menerima pesanan baru. Silakan pantau terus notifikasi dari kami ya!"}
             </p>
           </div>

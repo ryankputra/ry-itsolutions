@@ -204,6 +204,7 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
                     note: "3B SF Slow Selesai Diproses • Cek Status Resmi di Web"
                 };
                 await publishRiveraStory(doneParsed);
+                await notifyAddRoamerGroup("DONE_ALL", { text: messageText });
             }
         } catch (storyErr) {
             console.warn('[RiveraListener] Gagal terbitkan story DONE:', storyErr.message);
@@ -410,6 +411,7 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
     // 3. Terbitkan Story (Live Status / Update Slot / Done) ke IG dan WA Story
     console.log(`[RiveraListener] 🚀 Mempublikasikan Story (${parsed.type}) ke Instagram & WA Story...`);
     await publishRiveraStory(parsed);
+    await notifyAddRoamerGroup(isDone ? "DONE_ALL" : "SLOT_UPDATE", { parsed, text: messageText });
 
     // 4. Kirim notifikasi ringkasan ke Admin WhatsApp
     const adminPhones = await getAdminPhoneNumbers();
@@ -3015,8 +3017,160 @@ async function notifyAdminStoryOpen(postResult) {
                 await sendAndStoreMessage(`${phone}@s.whatsapp.net`, { text: msg });
             } catch (e) {}
         }
+        await notifyAddRoamerGroup("OPEN");
     } catch (err) {
         console.error('[WABot] Gagal mengirim notifikasi story open ke admin:', err.message);
+    }
+}
+
+let cachedAddRoamerGroupJid = null;
+let lastAddRoamerGroupMsg = "";
+let lastAddRoamerGroupTime = 0;
+
+function isAddRoamerGroupName(subject) {
+    if (!subject) return false;
+    const s = subject.toLowerCase().replace(/\s+/g, ' ');
+    const hasAddRoamer = s.includes("add roamer") || s.includes("addroamer");
+    const hasProvider = s.includes("privider") || s.includes("provider") || s.includes("all");
+    return hasAddRoamer && hasProvider;
+}
+
+async function getAddRoamerGroupJid() {
+    if (cachedAddRoamerGroupJid) return cachedAddRoamerGroupJid;
+
+    try {
+        const row = await dbGet("SELECT value FROM settings WHERE key = 'target_group_add_roamer_jid'");
+        if (row?.value && row.value.includes("@g.us")) {
+            cachedAddRoamerGroupJid = row.value;
+            return cachedAddRoamerGroupJid;
+        }
+    } catch {}
+
+    for (const [jid, subject] of groupSubjectCache.entries()) {
+        if (isAddRoamerGroupName(subject)) {
+            cachedAddRoamerGroupJid = jid;
+            try {
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('target_group_add_roamer_jid', ?)", [jid]);
+            } catch {}
+            return cachedAddRoamerGroupJid;
+        }
+    }
+
+    if (sock && typeof sock.groupFetchAllParticipating === "function") {
+        try {
+            const groups = await sock.groupFetchAllParticipating();
+            for (const [jid, meta] of Object.entries(groups)) {
+                const subject = meta?.subject || "";
+                groupSubjectCache.set(jid, subject);
+                if (isAddRoamerGroupName(subject)) {
+                    cachedAddRoamerGroupJid = jid;
+                    console.log(`[AddRoamerGroup] Grup target ditemukan: "${subject}" (${jid})`);
+                    try {
+                        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('target_group_add_roamer_jid', ?)", [jid]);
+                    } catch {}
+                    return cachedAddRoamerGroupJid;
+                }
+            }
+        } catch (gErr) {
+            console.warn("[AddRoamerGroup] Warning groupFetchAllParticipating:", gErr.message);
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Notifikasi teks santai & natural (non-bot) ke grup WhatsApp "Add Roamer all privider" setiap ada Story
+ */
+async function notifyAddRoamerGroup(type, data = {}) {
+    try {
+        const targetJid = await getAddRoamerGroupJid();
+        if (!targetJid) {
+            console.log("[AddRoamerGroup] Grup target 'Add Roamer all privider' belum terdeteksi di akun bot.");
+            return;
+        }
+
+        const dualOrderFooter = 
+            "Bisa langsung order via web atau santai japri admin ya:\n" +
+            "🌐 https://ry-itsolutionts.web.id/add-roamer\n" +
+            "📲 Admin 1: 0877-6728-7284\n" +
+            "📲 Admin 2: 0887-0661-1370";
+
+        let msgText = "";
+
+        if (type === "DONE_ALL") {
+            msgText = "Kabar baik guys, semua antrean kloter ini sudah DONE ALL ya.\n\n" +
+                "Bagi yang tadi kirim IMEI, coba restart HP atau aktifkan mode pesawat sebentar lalu cek sinyalnya.\n\n" +
+                "Yang mau lanjut order kloter berikutnya:\n" +
+                dualOrderFooter;
+        } else if (type === "SLOT_UPDATE") {
+            const parsed = data.parsed || {};
+            const services = Array.isArray(parsed.services) ? parsed.services : [];
+            const activeServices = services.filter(s => s.status === "READY");
+            const closedServices = services.filter(s => s.status === "CLOSED" || s.status === "FULL_SLOT");
+
+            if (parsed.type === "FULL_CLOSE" || (activeServices.length === 0 && closedServices.length > 0)) {
+                msgText = "Update slot bentar ya guys:\n\n" +
+                    "• Jalur Fast sementara FULL / CLOSE\n" +
+                    "• 3B SF Slow tetep ON dan buka terus\n\n" +
+                    "Yang mau antre 3B Slow:\n" +
+                    dualOrderFooter;
+            } else if (activeServices.length > 0) {
+                const lines = activeServices.map(s => {
+                    const sName = s.name || "";
+                    let desc = "";
+                    if (sName.includes("FAST")) desc = " (proses kilat under 15 mnt)";
+                    else if (sName.includes("SLOW")) desc = " (done malem, list s/d sore)";
+                    else if (sName.includes("DIGIPOS") || sName.includes("1B")) desc = " (on)";
+                    return `• ${sName} ON${desc}`;
+                });
+
+                let closedNote = "";
+                if (closedServices.length > 0) {
+                    const closedNames = closedServices.map(s => s.name).join(", ");
+                    closedNote = `\n(${closedNames} sementara close/full slot)\n`;
+                }
+
+                msgText = "Info update jalur ya guys:\n\n" +
+                    lines.join("\n") + "\n" +
+                    closedNote +
+                    "\nBagi yang mau order:\n" +
+                    dualOrderFooter;
+            } else {
+                return;
+            }
+        } else if (type === "OPEN") {
+            msgText = "Pagi semua, open order Add Roamer ya hari ini:\n\n" +
+                "• 3B SF Fast & Slow ON\n" +
+                "• 1B Digipos ON\n\n" +
+                dualOrderFooter;
+        } else if (type === "CLOSE_LIST") {
+            msgText = "Reminder ya guys, list 3B Slow kloter hari ini mau di cut-off sore ini.\n\n" +
+                "Yang masih ada data segera submit biar ikut kloter malam ini:\n" +
+                dualOrderFooter;
+        } else if (type === "TESTIMONIAL") {
+            msgText = "Testi fresh hari ini, sinyal sudah ON aktif normal kembali ya.\n\n" +
+                "Yang mau proses Add Roamer all provider bisa langsung gas:\n" +
+                dualOrderFooter;
+        }
+
+        if (!msgText) return;
+
+        // Anti-spam: hindari pengiriman berulang pesan yang sama dalam waktu singkat (<45 detik)
+        const now = Date.now();
+        if (msgText === lastAddRoamerGroupMsg && (now - lastAddRoamerGroupTime) < 45000) {
+            console.log("[AddRoamerGroup] Pesan serupa dalam <45s dilewati.");
+            return;
+        }
+
+        lastAddRoamerGroupMsg = msgText;
+        lastAddRoamerGroupTime = now;
+
+        console.log(`[AddRoamerGroup] Mengirim notifikasi update ke grup (${targetJid}):\n${msgText}`);
+        await sendAndStoreMessage(targetJid, { text: msgText });
+        console.log(`[AddRoamerGroup] ✅ Notifikasi berhasil terkirim ke grup Add Roamer.`);
+    } catch (err) {
+        console.warn(`[AddRoamerGroup] Gagal kirim notifikasi ke grup:`, err.message);
     }
 }
 
@@ -3066,6 +3220,8 @@ async function publishDirectTestimonialStory(imageBufferOrPath, customTrack = nu
             await sendAndStoreMessage(`${cleanPhone(phone)}@s.whatsapp.net`, { text: adminNotice });
         } catch (e) {}
     }
+
+    await notifyAddRoamerGroup("TESTIMONIAL");
 
     return { success: true, instagram: igRes, whatsapp: waRes };
 }
@@ -4225,5 +4381,7 @@ module.exports = {
     handleRiveraGroupMessage,
     publishDirectTestimonialStory,
     notifyAdminIgSessionExpired,
-    resendPendingTestimonial
+    resendPendingTestimonial,
+    notifyAddRoamerGroup,
+    cleanPhone
 };

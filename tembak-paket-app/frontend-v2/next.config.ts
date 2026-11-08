@@ -3,6 +3,8 @@ import withPWAInit from "@ducanh2912/next-pwa";
 
 import path from "path";
 
+const rootDir = path.resolve(process.cwd(), process.cwd().endsWith('frontend-v2') ? '../..' : '.');
+
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
@@ -11,7 +13,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   // Explicitly specify workspace root to avoid inference warning and path mismatch
-  outputFileTracingRoot: path.join(__dirname, "../../"),
+  outputFileTracingRoot: rootDir,
 
   // Optimasi Khusus Perangkat Low-Resource (Armbian STB / VPS RAM 1GB-2GB)
   typescript: {

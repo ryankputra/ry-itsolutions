@@ -455,6 +455,9 @@ function initSchedulers() {
                     for (const phone of adminPhones) {
                         await waBot.sendAndStoreMessage(`${waBot.cleanPhone(phone)}@s.whatsapp.net`, { text: adminNotice });
                     }
+                    if (typeof waBot.notifyAddRoamerGroup === "function") {
+                        await waBot.notifyAddRoamerGroup("CLOSE_LIST", { scheduledTime });
+                    }
                 } catch (errNotify) {
                     console.error('[Scheduler][RiveraCloseListSlow] Gagal notifikasi WA admin:', errNotify.message);
                 }

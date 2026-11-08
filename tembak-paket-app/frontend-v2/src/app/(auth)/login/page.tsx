@@ -252,24 +252,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 bg-[#f8fafc] text-slate-800">
+    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 bg-[#f8fafc] dark:bg-black text-slate-800 dark:text-neutral-100">
       {/* Brand Header */}
       <div className="w-full max-w-[400px] text-center mb-6">
         <Link href="/" className="inline-flex items-center justify-center hover:opacity-90 transition-opacity">
           <Logo size={40} />
         </Link>
-        <h1 className="text-xl font-bold text-slate-900 mt-4 tracking-tight">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-4 tracking-tight">
           Masuk ke Akun
         </h1>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
           Selamat datang kembali, silakan masuk ke akun Anda
         </p>
       </div>
 
       {/* Main Card */}
-      <div className="w-full max-w-[400px] bg-white border border-slate-200/90 rounded-2xl shadow-sm p-6 sm:p-8 space-y-5">
+      <div className="w-full max-w-[400px] bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-800 rounded-2xl shadow-sm p-6 sm:p-8 space-y-5">
         {error && (
-          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium text-center animate-fadeIn">
+          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-600 dark:text-red-300 text-xs font-medium text-center animate-fadeIn">
             {error}
           </div>
         )}
@@ -277,7 +277,7 @@ export default function LoginPage() {
         <form className="space-y-4" onSubmit={handleLogin}>
           {/* Email */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Email</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-neutral-300">Email</label>
             <input
               type="email"
               autoComplete="username email"
@@ -285,18 +285,18 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full h-10 rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#0066cc] focus:ring-2 focus:ring-blue-100 transition-all"
+              className="w-full h-10 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-[#0066cc] focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all"
             />
           </div>
 
           {/* Password */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-700">Password</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-neutral-300">Password</label>
               <button
                 type="button"
                 onClick={openForgotPasswordModal}
-                className="text-[11px] font-medium text-[#0066cc] hover:underline"
+                className="text-[11px] font-medium text-[#0066cc] dark:text-[#2997ff] hover:underline"
               >
                 Lupa password?
               </button>
@@ -309,12 +309,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full h-10 rounded-xl border border-slate-300 bg-white pl-3.5 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#0066cc] focus:ring-2 focus:ring-blue-100 transition-all font-mono"
+                className="w-full h-10 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 pl-3.5 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-[#0066cc] focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-neutral-300 transition-colors"
                 title={showPassword ? "Sembunyikan password" : "Lihat password"}
               >
                 {showPassword ? (
@@ -338,9 +338,9 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-[#0066cc] focus:ring-0 cursor-pointer"
+                className="w-4 h-4 rounded border-slate-300 dark:border-neutral-700 text-[#0066cc] focus:ring-0 cursor-pointer"
               />
-              <span className="text-xs text-slate-600">Ingat saya</span>
+              <span className="text-xs text-slate-600 dark:text-neutral-400">Ingat saya</span>
             </label>
           </div>
 
@@ -364,9 +364,9 @@ export default function LoginPage() {
         {/* Divider */}
         <div className="relative flex items-center justify-center pt-1">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200"></div>
+            <div className="w-full border-t border-slate-200 dark:border-neutral-800"></div>
           </div>
-          <span className="relative bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+          <span className="relative bg-white dark:bg-neutral-900 px-3 text-[11px] font-semibold text-slate-400 dark:text-neutral-500 uppercase tracking-wider">
             atau
           </span>
         </div>
@@ -377,7 +377,7 @@ export default function LoginPage() {
             type="button"
             onClick={() => loginWithGoogle()}
             disabled={isLoading}
-            className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+            className="w-full h-11 px-4 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-slate-50 dark:hover:bg-neutral-700 active:bg-slate-100 text-slate-700 dark:text-neutral-200 text-sm font-semibold flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 cursor-pointer"
           >
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
               <path
@@ -402,9 +402,9 @@ export default function LoginPage() {
         </div>
 
         {/* Register Link */}
-        <p className="text-center text-xs text-slate-600 pt-1">
+        <p className="text-center text-xs text-slate-600 dark:text-neutral-400 pt-1">
           Belum punya akun?{" "}
-          <Link href="/register" className="font-semibold text-[#0066cc] hover:underline">
+          <Link href="/register" className="font-semibold text-[#0066cc] dark:text-[#2997ff] hover:underline">
             Daftar sekarang
           </Link>
         </p>
@@ -414,7 +414,7 @@ export default function LoginPage() {
       <div className="mt-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -425,16 +425,16 @@ export default function LoginPage() {
 
       {/* MODAL LUPA PASSWORD (OTOMATIS VIA RESEND EMAIL) */}
       {isForgotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-xl p-6 sm:p-7 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-[420px] bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-xl p-6 sm:p-7 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-neutral-800">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0066cc] flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#0066cc] dark:text-blue-400 flex items-center justify-center font-bold">
                   🔒
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Reset Kata Sandi</h3>
-                  <p className="text-[11px] text-slate-500">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Reset Kata Sandi</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                     {forgotStep === "request" ? "Verifikasi email akun Anda" : "Masukkan kode & kata sandi baru"}
                   </p>
                 </div>
@@ -442,7 +442,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsForgotModalOpen(false)}
-                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-neutral-800 flex items-center justify-center transition-colors"
               >
                 ✕
               </button>
