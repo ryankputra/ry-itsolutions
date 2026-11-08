@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
 2:I[61304,[],"ClientPageRoot"]
-3:I[71618,["8320","static/chunks/41ade5dc-716d85a2757e44a6.js","1822","static/chunks/1822-7f23c8567c34582f.js","1494","static/chunks/app/(main)/beli-paket/page-c82ea12ccf3d9413.js"],"default"]
+3:I[71618,["8320","static/chunks/41ade5dc-716d85a2757e44a6.js","1822","static/chunks/1822-7f23c8567c34582f.js","1494","static/chunks/app/(main)/beli-paket/page-07622c61fd361052.js"],"default"]
 6:I[90484,[],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"qnoe2o_o-LD7ACsiHs2Vi"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"o6lgKiet_lWTT90FrBOdj"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

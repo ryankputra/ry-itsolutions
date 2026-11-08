@@ -278,7 +278,7 @@ export default function LandingPage() {
                   <div className="pt-1">
                     <Link
                       href={`/add-roamer${testImei.length >= 8 ? `?imei=${testImei}` : ""}`}
-                      className="w-full py-3.5 bg-primary text-white hover:opacity-95 font-bold text-xs uppercase tracking-wider text-center block rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.01] active:scale-98 transition-all"
+                      className="w-full py-3.5 bg-primary text-white font-bold text-xs uppercase tracking-wider text-center block rounded-xl shadow-lg shadow-primary/25 btn-press btn-glow cursor-pointer"
                     >
                       Proses Unblock Perangkat Ini &gt;
                     </Link>
@@ -304,7 +304,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           
           {/* Card 1 */}
-          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-primary/60 hover:shadow-xl transition-all duration-300 space-y-6 flex flex-col justify-between group hover:-translate-y-1">
+          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-primary/60 card-hover space-y-6 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
@@ -320,7 +320,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 2 */}
-          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-blue-500/60 hover:shadow-xl transition-all duration-300 space-y-6 flex flex-col justify-between group hover:-translate-y-1">
+          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-blue-500/60 card-hover space-y-6 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z"/></svg>
@@ -336,7 +336,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 3 */}
-          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-emerald-500/60 hover:shadow-xl transition-all duration-300 space-y-6 flex flex-col justify-between group hover:-translate-y-1">
+          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-emerald-500/60 card-hover space-y-6 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
@@ -352,7 +352,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 4 */}
-          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-indigo-500/60 hover:shadow-xl transition-all duration-300 space-y-6 flex flex-col justify-between group hover:-translate-y-1">
+          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-indigo-500/60 card-hover space-y-6 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 flex items-center justify-center font-bold group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
@@ -368,7 +368,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 5 */}
-          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-amber-500/60 hover:shadow-xl transition-all duration-300 space-y-6 flex flex-col justify-between group hover:-translate-y-1">
+          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-amber-500/60 card-hover space-y-6 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center font-bold group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
@@ -384,7 +384,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 6 */}
-          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-purple-500/60 hover:shadow-xl transition-all duration-300 space-y-6 flex flex-col justify-between group hover:-translate-y-1">
+          <div className="p-8 rounded-3xl bg-parchment border border-hairline hover:border-purple-500/60 card-hover space-y-6 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-600 flex items-center justify-center font-bold group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.516 0c.85.493 1.508 1.333 1.508 2.316V18"/></svg>
@@ -414,7 +414,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
             
             {/* Tier 1 */}
-            <div className="p-8 sm:p-10 rounded-3xl bg-parchment border border-hairline space-y-8 flex flex-col justify-between shadow-xl">
+            <div className="p-8 sm:p-10 rounded-3xl bg-parchment border border-hairline space-y-8 flex flex-col justify-between shadow-xl card-hover">
               <div className="space-y-5">
                 <span className="text-xs font-mono text-indigo-600 font-bold uppercase tracking-wider">CEIR Database</span>
                 <h3 className="text-2xl font-bold text-ink">Cek Riwayat IMEI</h3>
@@ -434,7 +434,7 @@ export default function LandingPage() {
               </div>
               <Link
                 href="/cek-ceir"
-                className="w-full py-4 bg-canvas border border-hairline hover:bg-parchment font-bold text-xs uppercase tracking-wider text-center text-ink block rounded-2xl transition-all shadow-sm"
+                className="w-full py-4 bg-canvas border border-hairline hover:bg-parchment font-bold text-xs uppercase tracking-wider text-center text-ink block rounded-2xl btn-press shadow-sm"
               >
                 Pilih Cek CEIR
               </Link>
@@ -445,7 +445,7 @@ export default function LandingPage() {
               imeiPackages.map((pkg, idx) => (
                 <div
                   key={pkg.id || idx}
-                  className="p-8 sm:p-10 rounded-3xl bg-gradient-to-b from-parchment via-parchment to-primary/5 border-2 border-primary space-y-8 flex flex-col justify-between relative shadow-2xl"
+                  className="p-8 sm:p-10 rounded-3xl bg-gradient-to-b from-parchment via-parchment to-primary/5 border-2 border-primary space-y-8 flex flex-col justify-between relative shadow-2xl card-hover"
                 >
                   <div className="absolute -top-3 left-8 px-4 py-1 bg-primary text-white font-mono text-[11px] uppercase font-bold tracking-wider rounded-full shadow-md">
                     Rekomendasi Utama
@@ -470,14 +470,14 @@ export default function LandingPage() {
                   </div>
                   <Link
                     href="/add-roamer"
-                    className="w-full py-4 bg-primary text-white hover:opacity-95 font-bold text-xs uppercase tracking-wider text-center block rounded-2xl shadow-lg shadow-primary/30 transition-all hover:scale-[1.02]"
+                    className="w-full py-4 bg-primary text-white font-bold text-xs uppercase tracking-wider text-center block rounded-2xl shadow-lg shadow-primary/30 btn-press btn-glow"
                   >
                     Proses Add Roamer &gt;
                   </Link>
                 </div>
               ))
             ) : (
-              <div className="p-8 sm:p-10 rounded-3xl bg-parchment border-2 border-primary space-y-8 flex flex-col justify-between shadow-2xl">
+              <div className="p-8 sm:p-10 rounded-3xl bg-parchment border-2 border-primary space-y-8 flex flex-col justify-between shadow-2xl card-hover">
                 <div className="space-y-5">
                   <span className="text-xs font-mono text-primary font-bold uppercase">Add Roamer</span>
                   <h3 className="text-2xl font-bold text-ink">Aktivasi Sinyal All Operator</h3>
@@ -487,7 +487,7 @@ export default function LandingPage() {
                 </div>
                 <Link
                   href="/add-roamer"
-                  className="w-full py-4 bg-primary text-white font-bold text-xs uppercase tracking-wider text-center block rounded-2xl"
+                  className="w-full py-4 bg-primary text-white font-bold text-xs uppercase tracking-wider text-center block rounded-2xl btn-press btn-glow"
                 >
                   Buka Dashboard Add Roamer
                 </Link>
@@ -495,7 +495,7 @@ export default function LandingPage() {
             )}
 
             {/* Tier 3 */}
-            <div className="p-8 sm:p-10 rounded-3xl bg-parchment border border-hairline space-y-8 flex flex-col justify-between shadow-xl">
+            <div className="p-8 sm:p-10 rounded-3xl bg-parchment border border-hairline space-y-8 flex flex-col justify-between shadow-xl card-hover">
               <div className="space-y-5">
                 <span className="text-xs font-mono text-blue-600 font-bold uppercase tracking-wider">Payment Gateway</span>
                 <h3 className="text-2xl font-bold text-ink">Gateway QRIS GoPay</h3>

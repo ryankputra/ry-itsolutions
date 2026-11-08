@@ -106,6 +106,83 @@
   animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Luxury Skeleton Shimmer Animation */
+@keyframes shimmerWave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  animation: shimmerWave 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.dark .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 100%
+  );
+}
+
+/* Micro-Interaction: Card Hover Lift */
+.card-hover {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease;
+  will-change: transform, box-shadow;
+}
+
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -8px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* Micro-Interaction: Button Animation (Tactile Shrink + Subtle Glow) */
+.btn-press {
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.15s ease,
+              filter 0.15s ease;
+  will-change: transform;
+}
+
+.btn-press:active {
+  transform: scale(0.96) translateY(0.5px);
+}
+
+.btn-glow:hover {
+  box-shadow: 0 4px 20px -2px rgba(0, 113, 227, 0.38);
+}
+
+.dark .btn-glow:hover {
+  box-shadow: 0 4px 24px -2px rgba(41, 151, 255, 0.45);
+}
+
 .glow-gradient {
   background: radial-gradient(circle at 50% 0%, rgba(0, 113, 227, 0.12) 0%, transparent 60%);
 }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { QrCode, Key, Shield, RotateCw, Check, AlertTriangle, ArrowLeft, RefreshCw, MessageSquare, ExternalLink, UserCheck, Calendar } from "lucide-react";
 import Swal from "sweetalert2";
 import Link from "next/link";
@@ -202,7 +203,11 @@ export default function AdminGatewayKeysPage() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs text-ink-muted">Memuat data klien gateway...</div>
+          <div className="py-6 space-y-3">
+            <Skeleton variant="rounded" height={36} className="w-full" />
+            <Skeleton variant="rounded" height={36} className="w-full" />
+            <Skeleton variant="rounded" height={36} className="w-full" />
+          </div>
         ) : keys.length === 0 ? (
           <div className="py-12 text-center text-xs text-ink-muted">Belum ada klien yang menyewa API Key Gateway.</div>
         ) : (

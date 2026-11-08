@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import Swal from "@/lib/sweetalert";
 import { safeJson } from "@/lib/api";
 
@@ -55,11 +56,16 @@ export default function ReferralPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto py-8">
-        <Card glass className="p-12 text-center text-ink-muted">
-          <div className="w-8 h-8 mx-auto mb-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-semibold">Memuat data referral Anda...</p>
-        </Card>
+      <div className="space-y-6 max-w-4xl mx-auto py-4">
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={28} className="w-1/3" />
+          <Skeleton variant="rounded" height={14} className="w-2/3" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       </div>
     );
   }

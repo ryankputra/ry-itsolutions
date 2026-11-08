@@ -317,7 +317,7 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 1. FLOATING WALLET STRIP (Linear/Apple Minimalist)          */}
       {/* ============================================================ */}
-      <div data-tour="wallet-card" className="rounded-3xl bg-parchment border border-hairline shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-4 sm:p-5 transition-all">
+      <div data-tour="wallet-card" className="rounded-3xl bg-parchment border border-hairline shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-4 sm:p-5 card-hover transition-all">
         {/* MOBILE VIEW (< sm): Clean, Modern Fintech Split Layout */}
         <div className="block sm:hidden space-y-3.5">
           {/* Top Row: RyPay (Spacious & Never Wraps) + Direct Top Up Button */}
@@ -363,7 +363,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => router.push("/topup")}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs btn-press btn-glow shrink-0 cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -517,9 +517,9 @@ export default function DashboardPage() {
           {/* Section 4: Instant Top Up Button */}
           <div
             onClick={() => router.push("/topup")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
+            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group btn-press"
           >
-            <div className="w-9 h-9 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xs transition-all active:scale-95">
+            <div className="w-9 h-9 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xs btn-glow transition-all">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
@@ -535,7 +535,7 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       {/* 2. 6-COLUMN FEATURE SERVICE GRID (Clean & Professional)     */}
       {/* ============================================================ */}
-      <div className="bg-parchment border border-hairline rounded-3xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)]">
+      <div className="bg-parchment border border-hairline rounded-3xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.03)] card-hover">
         <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 sm:gap-2 text-center">
           {[
             {
@@ -631,9 +631,9 @@ export default function DashboardPage() {
               type="button"
               data-tour={item.tourKey}
               onClick={item.onClick || (() => router.push(item.href!))}
-              className="flex flex-col items-center justify-start group p-0.5 focus:outline-none"
+              className="flex flex-col items-center justify-start group p-0.5 focus:outline-none btn-press"
             >
-              <div className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform ${item.iconBg}`}>
+              <div className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 group-hover:shadow-[0_4px_16px_rgba(0,113,227,0.2)] transition-all ${item.iconBg}`}>
                 {item.icon}
                 {(item as any).badge && (
                   <span className="absolute -top-1.5 -right-1 px-1.5 py-0.2 bg-[#1D1D1F] text-white font-semibold text-[7px] rounded-full uppercase tracking-wider shadow-xs border border-white/40">

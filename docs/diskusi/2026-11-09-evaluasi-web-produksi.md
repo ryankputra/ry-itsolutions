@@ -2,11 +2,63 @@
 
 - **Tanggal:** 2026-11-09
 - **Pemilik:** tech-lead
-- **Status:** Implementasi
+- **Status:** Diskusi & Implementasi Sprint 3 (Micro-Interactions, Shimmer Skeleton, Card Hover)
 - **Prioritas:** Tinggi
 - **Target:** `https://ry-itsolutionts.web.id` (produksi STB)
-- **Versi terpasang:** commit `27d3039e8`, BUILD_ID `z9TRxC6vAYqGG-9pBKf4I`
-- **Sedang dikerjakan:** Sprint 2 (AdSense, form semantik, landmark `<main>`, branded 404, security headers)
+- **Versi terpasang:** commit `707032a25`, BUILD_ID `qnoe2o_o-LD7ACsiHs2Vi`
+- **Selesai di Sprint 2:** Security headers (SAMEORIGIN, nosniff, strict-origin), remove X-Powered-By, AdSense clean script, auth `<main>` landmark, custom branded 404, validasi login sukses akun `ayusiawanryan@gmail.com`.
+- **Sprint 3 (Permintaan User):**
+  1. Micro-interaction tombol: tombol mengecil saat ditekan (`active:scale-[0.96]`), subtle glow saat disentuh.
+  2. Card hover: kartu terangkat halus (`hover:-translate-y-1 hover:shadow-lg`).
+  3. Skeleton Shimmer: hilangkan teks "Loading..." / "Memuat...", gantikan dengan skeleton animasi shimmer berkilau.
+  4. Real Browser Testing: Pengujian visual dan interaksi langsung di browser in-app sebelum rilis.
+
+---
+
+## 💬 Diskusi Kolaborasi Tim Antigravity (Sprint 3)
+
+### 1. `tech-lead`
+> "User meminta peningkatan kualitas UX front-end:
+> - **Button micro-interaction**: tombol harus tactile, mengecil sedikit saat ditekan (`active:scale-[0.96]`) dan memiliki glow halus.
+> - **Card hover**: kartu terangkat halus saat kursor melintas (`hover:-translate-y-1 hover:shadow-lg`).
+> - **Skeleton shimmer**: hilangkan semua teks plain loading ('Loading...', 'Memuat...'), gantikan dengan skeleton shimmer UI.
+> - **Transparansi komunikasi**: User ingin melihat bagaimana kita antar agent berkomunikasi dan saling memverifikasi.
+>
+> Rencana eksekusi:
+> - UI/UX Designer merancang token dan spesifikasi CSS micro-interaction.
+> - Frontend Dev mengimplementasikan utilitas di `globals.css`, komponen `Button.tsx`, `Card.tsx`, serta membuat komponen baru `Skeleton.tsx`.
+> - QA Engineer menguji interaksi hover, click scale, dan visual shimmer di browser in-app.
+> - Release Engineer mengeksekusi gate STB via SOP `DEPLOY_STB.md`."
+
+### 2. `ui-ux-designer`
+> "Spesifikasi desain interaksi:
+> 1. **Button Animation**:
+>    - `active:scale-[0.96]`: memberi haptic feedback visual bahwa tombol benar-benar terpencet.
+>    - `transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1)`.
+>    - Glow effect pada primary button: `hover:shadow-[0_4px_20px_rgba(0,113,227,0.35)]`.
+> 2. **Card Hover Lift**:
+>    - `hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(0,0,0,0.4)] transition-all duration-200 ease-out`.
+> 3. **Skeleton Shimmer**:
+>    - Gunakan gradien linier bergerak: `linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%)` melintasi latar `bg-slate-200 dark:bg-zinc-800` dengan durasi 1.6s infinite.
+>    - Ini jauh lebih profesional dan mewah daripada sekadar teks 'Loading...'."
+
+### 3. `frontend-developer`
+> "Siap. Saya akan:
+> 1. Menambahkan keyframe `@keyframes shimmer` dan utilitas `.card-hover`, `.btn-interactive`, `.shimmer-pulse` di `globals.css`.
+> 2. Memperbarui `Button.tsx` agar memiliki `active:scale-[0.96]` dan glow shadow.
+> 3. Memperbarui `Card.tsx` dengan varian `hoverable`.
+> 4. Membuat `components/ui/Skeleton.tsx` yang fleksibel (`Skeleton`, `SkeletonCard`, `SkeletonText`, `SkeletonButton`).
+> 5. Menerapkan di kartu dan tombol dashboard/landing page."
+
+### 4. `qa-engineer`
+> "Kriteria penerimaan QA:
+> - [ ] Hovering mouse di kartu wallet / shortcut / produk memicu translasi Y -4px dan shadow naik halus.
+> - [ ] Menekan tombol memicu scale down 0.96 tanpa delay atau jank.
+> - [ ] Tidak ada teks telanjang 'Loading...' atau 'Memuat...' di alur utama data yang lambat.
+> - [ ] Validasi build bersih di laptop tanpa error TypeScript/Webpack.
+> - [ ] Verifikasi browser in-app: screenshot dan snapshot accessibility."
+
+---
 
 ## Konteks
 
