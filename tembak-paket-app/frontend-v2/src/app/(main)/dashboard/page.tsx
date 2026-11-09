@@ -557,7 +557,7 @@ export default function DashboardPage() {
               name: "Add Roamer",
               href: "/add-roamer",
               tourKey: "service-unblock",
-              glassStyle: "bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-sky-400/5 dark:from-blue-500/30 dark:via-blue-600/15 dark:to-cyan-400/10 border border-blue-400/40 dark:border-blue-400/30 text-blue-600 dark:text-blue-400 shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(0,113,227,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(0,113,227,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(0,113,227,0.45)] group-hover:border-blue-400/60",
+              glassStyle: "bg-blue-500/10 hover:bg-blue-500/15 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 border border-white/60 dark:border-white/20 text-blue-600 dark:text-blue-400 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(0,113,227,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(0,113,227,0.35)] backdrop-blur-xl",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -568,7 +568,7 @@ export default function DashboardPage() {
               name: "Layanan CEIR",
               href: "/cek-ceir",
               tourKey: "service-ceir",
-              glassStyle: "bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-teal-400/5 dark:from-emerald-500/30 dark:via-emerald-600/15 dark:to-teal-400/10 border border-emerald-400/40 dark:border-emerald-400/30 text-emerald-600 dark:text-[#30D158] shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(52,199,89,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(52,199,89,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(52,199,89,0.45)] group-hover:border-emerald-400/60",
+              glassStyle: "bg-emerald-500/10 hover:bg-emerald-500/15 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-white/60 dark:border-white/20 text-emerald-600 dark:text-[#30D158] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(52,199,89,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(52,199,89,0.35)] backdrop-blur-xl",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -579,7 +579,7 @@ export default function DashboardPage() {
               name: "Cek Garansi",
               href: "/cek-garansi",
               tourKey: "service-garansi",
-              glassStyle: "bg-gradient-to-br from-indigo-500/20 via-indigo-500/10 to-purple-400/5 dark:from-indigo-500/30 dark:via-indigo-600/15 dark:to-purple-400/10 border border-indigo-400/40 dark:border-indigo-400/30 text-indigo-600 dark:text-[#5E5CE6] shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(88,86,214,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(88,86,214,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(88,86,214,0.45)] group-hover:border-indigo-400/60",
+              glassStyle: "bg-indigo-500/10 hover:bg-indigo-500/15 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border border-white/60 dark:border-white/20 text-indigo-600 dark:text-[#5E5CE6] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(88,86,214,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(88,86,214,0.35)] backdrop-blur-xl",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -590,7 +590,7 @@ export default function DashboardPage() {
               name: "Voucher",
               href: "/vouchers",
               tourKey: "service-voucher",
-              glassStyle: "bg-gradient-to-br from-rose-500/20 via-pink-500/10 to-rose-400/5 dark:from-rose-500/30 dark:via-pink-600/15 dark:to-rose-400/10 border border-rose-400/40 dark:border-rose-400/30 text-rose-600 dark:text-[#FF375F] shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(255,45,85,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(255,45,85,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(255,45,85,0.45)] group-hover:border-rose-400/60",
+              glassStyle: "bg-rose-500/10 hover:bg-rose-500/15 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 border border-white/60 dark:border-white/20 text-rose-600 dark:text-[#FF375F] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(255,45,85,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(255,45,85,0.35)] backdrop-blur-xl",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
@@ -601,7 +601,7 @@ export default function DashboardPage() {
               name: "Game Koin",
               href: "/games",
               tourKey: "service-games",
-              glassStyle: "bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-yellow-400/5 dark:from-amber-500/30 dark:via-orange-600/15 dark:to-yellow-400/10 border border-amber-400/40 dark:border-amber-400/30 text-amber-600 dark:text-[#FF9F0A] shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(255,149,0,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(255,149,0,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(255,149,0,0.45)] group-hover:border-amber-400/60",
+              glassStyle: "bg-amber-500/10 hover:bg-amber-500/15 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border border-white/60 dark:border-white/20 text-amber-600 dark:text-[#FF9F0A] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(255,149,0,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(255,149,0,0.35)] backdrop-blur-xl",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 016.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m0 0a6 6 0 017.38-5.84v4.8m-7.38 1.04a14.98 14.98 0 00-6.16 12.12A14.98 14.98 0 0014.369 15.59m-5.96-5.96a14.926 14.926 0 015.841-2.58" />
@@ -613,7 +613,7 @@ export default function DashboardPage() {
               badge: "Unoff",
               href: "/gateway",
               tourKey: "service-gateway",
-              glassStyle: "bg-gradient-to-br from-cyan-500/20 via-teal-500/10 to-sky-400/5 dark:from-cyan-500/30 dark:via-teal-600/15 dark:to-sky-400/10 border border-cyan-400/40 dark:border-cyan-400/30 text-cyan-600 dark:text-[#64D2FF] shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(48,176,199,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(48,176,199,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(48,176,199,0.45)] group-hover:border-cyan-400/60",
+              glassStyle: "bg-cyan-500/10 hover:bg-cyan-500/15 dark:bg-cyan-500/15 dark:hover:bg-cyan-500/25 border border-white/60 dark:border-white/20 text-cyan-600 dark:text-[#64D2FF] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(48,176,199,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(48,176,199,0.35)] backdrop-blur-xl",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
@@ -626,14 +626,14 @@ export default function DashboardPage() {
               badge: "RyTone",
               href: "/hiburan",
               tourKey: "service-hiburan",
-              glassStyle: "bg-gradient-to-br from-emerald-500/20 via-[#1ed760]/10 to-teal-400/5 dark:from-emerald-500/30 dark:via-[#1ed760]/20 dark:to-teal-400/10 border border-emerald-400/40 dark:border-[#1ed760]/40 text-emerald-500 dark:text-[#1ed760] shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(30,215,96,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(30,215,96,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(30,215,96,0.45)] group-hover:border-[#1ed760]/60",
+              glassStyle: "bg-emerald-500/10 hover:bg-emerald-500/15 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-white/60 dark:border-white/20 text-emerald-500 dark:text-[#1ed760] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(30,215,96,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(30,215,96,0.35)] backdrop-blur-xl",
               icon: <RyToneIcon className="w-5 h-5 sm:w-6 sm:h-6" />,
             },
             {
               name: "Panduan",
               onClick: () => window.dispatchEvent(new Event("open_app_tour")),
               tourKey: "service-panduan",
-              glassStyle: "bg-gradient-to-br from-purple-500/20 via-fuchsia-500/10 to-indigo-400/5 dark:from-purple-500/30 dark:via-fuchsia-600/15 dark:to-indigo-400/10 border border-purple-400/40 dark:border-purple-400/30 text-purple-600 dark:text-[#BF5AF2] shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_20px_-4px_rgba(175,82,222,0.3)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_8px_20px_-4px_rgba(175,82,222,0.45)] group-hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.65),0_10px_25px_-2px_rgba(175,82,222,0.45)] group-hover:border-purple-400/60",
+              glassStyle: "bg-purple-500/10 hover:bg-purple-500/15 dark:bg-purple-500/15 dark:hover:bg-purple-500/25 border border-white/60 dark:border-white/20 text-purple-600 dark:text-[#BF5AF2] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.7),0_8px_24px_-4px_rgba(175,82,222,0.2)] dark:shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_8px_24px_-4px_rgba(175,82,222,0.35)] backdrop-blur-xl",
               icon: (
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -89,81 +89,45 @@ export function AntiScreenshotGuard() {
       }
     };
 
-    // 1. Deteksi Tombol Pintasan Keyboard & Hardware Button (Mobile & Desktop)
+    // 1. Deteksi Tombol Pintasan Keyboard & Hardware Button (Desktop & Mobile)
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCmdOrCtrl = e.ctrlKey || e.metaKey;
-
-      // A. HARDWARE SCREENSHOT DI HP ANDROID (Power + Volume Down)
-      // Tombol Volume Down di browser Android mengirimkan key 'AudioVolumeDown', 'VolumeDown', keyCode 174 / 25
-      if (
-        e.key === "AudioVolumeDown" ||
-        e.key === "VolumeDown" ||
-        e.code === "VolumeDown" ||
-        e.keyCode === 174 ||
-        e.keyCode === 25 ||
-        e.which === 174 ||
-        e.which === 25
-      ) {
-        activateShieldSync(3500);
-        return;
-      }
-
-      // Volume Up juga dideteksi (beberapa merk HP menggunakan Power + Volume Up)
-      if (
-        e.key === "AudioVolumeUp" ||
-        e.key === "VolumeUp" ||
-        e.code === "VolumeUp" ||
-        e.keyCode === 175 ||
-        e.keyCode === 24 ||
-        e.which === 175 ||
-        e.which === 24
-      ) {
-        activateShieldSync(3500);
-        return;
-      }
 
       // B. PrintScreen (Desktop / Laptop)
       if (e.key === "PrintScreen" || e.code === "PrintScreen") {
         e.preventDefault();
-        activateShieldSync();
+        activateShieldSync(2500);
         return;
       }
 
       // C. Windows + Shift + S atau Cmd + Shift + 3/4/5 (Snipping Tool & Mac Screenshot)
       if ((isCmdOrCtrl || e.key === "Meta") && e.shiftKey && (e.key === "s" || e.key === "S" || e.code === "KeyS")) {
         e.preventDefault();
-        activateShieldSync();
+        activateShieldSync(2500);
         return;
       }
 
       // D. Tombol Windows (Meta) atau Alt + PrintScreen
-      if (e.key === "Meta" || (e.altKey && (e.key === "PrintScreen" || e.code === "PrintScreen"))) {
-        activateShieldSync();
+      if (e.altKey && (e.key === "PrintScreen" || e.code === "PrintScreen")) {
+        activateShieldSync(2500);
         return;
       }
 
       // E. Ctrl + P / Cmd + P (Print PDF)
       if (isCmdOrCtrl && (e.key === "p" || e.key === "P" || e.code === "KeyP")) {
         e.preventDefault();
-        activateShieldSync();
+        activateShieldSync(2000);
         return;
       }
 
-      // F. Ctrl + S / Cmd + S (Save Webpage)
-      if (isCmdOrCtrl && (e.key === "s" || e.key === "S" || e.code === "KeyS")) {
-        e.preventDefault();
-        activateShieldSync();
-        return;
-      }
-
-      // G. F12 atau Ctrl + Shift + I / J / C (DevTools Inspect)
+      // F. F12 atau Ctrl + Shift + I / J / C (DevTools Inspect)
       if (
         e.key === "F12" ||
         (isCmdOrCtrl && e.shiftKey && ["i", "I", "j", "J", "c", "C"].includes(e.key)) ||
         (isCmdOrCtrl && (e.key === "u" || e.key === "U"))
       ) {
         e.preventDefault();
-        activateShieldSync();
+        activateShieldSync(2000);
         return;
       }
     };
@@ -179,32 +143,16 @@ export function AntiScreenshotGuard() {
       }
     };
 
-    // 2. Deteksi Kehilangan Fokus Window (Snipping Tool, Screen Recorder, Multi-tasking, Alt-Tab)
-    const handleBlur = () => {
-      activateShieldSync();
-    };
-
-    const handleFocus = () => {
-      // Jeda pengaman 250ms saat kembali fokus agar proses tangkapan layar selesai dulu
-      setTimeout(() => {
-        deactivateShieldSync();
-      }, 250);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        activateShieldSync();
-      } else {
-        setTimeout(() => {
-          deactivateShieldSync();
-        }, 250);
-      }
-    };
+    // Catatan: window 'blur' dan document 'visibilitychange' TIDAK boleh mengaktifkan layar blokir hitam!
+    // Event blur & visibilitychange terpicu otomatis setiap kali user switch tab, keyboard HP muncul,
+    // minimize browser, membuka dropdown sistem, atau popup share. Ini yang menyebabkan notifikasi muncul sendiri.
+    // Deteksi screenshot difokuskan pada: Pintasan Keyboard (PrtScr, Cmd+Shift+S/3/4), DevTools,
+    // dan proteksi watermark privasi identitas akun.
 
     // 3. Deteksi Gesture Screenshot Mobile (Swipe Down 3 Jari di Xiaomi/Oppo/Realme/Vivo)
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches && e.touches.length >= 3) {
-        activateShieldSync(3000);
+        activateShieldSync(2000);
       }
     };
 
@@ -219,9 +167,6 @@ export function AntiScreenshotGuard() {
 
     window.addEventListener("keydown", handleKeyDown, { capture: true, passive: false });
     window.addEventListener("keyup", handleKeyUp, { capture: true, passive: true });
-    window.addEventListener("blur", handleBlur, { capture: true });
-    window.addEventListener("focus", handleFocus, { capture: true });
-    document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("dragstart", handleDragStart);
@@ -230,9 +175,6 @@ export function AntiScreenshotGuard() {
       deactivateShieldSync();
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
       window.removeEventListener("keyup", handleKeyUp, { capture: true });
-      window.removeEventListener("blur", handleBlur, { capture: true });
-      window.removeEventListener("focus", handleFocus, { capture: true });
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("touchstart", handleTouchStart);
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("dragstart", handleDragStart);

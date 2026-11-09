@@ -171,11 +171,8 @@ router.get('/stream', async (req, res) => {
         };
 
         if (!streamUrl || !streamUrl.startsWith('http')) {
-            const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
-            if (fs.existsSync(fallbackFile)) {
-                return streamLocalFile(fallbackFile);
-            }
-            return res.status(404).json({ success: false, message: "Audio stream tidak ditemukan." });
+            console.warn(`[Route: /api/music/stream] Could not resolve streamUrl for query: ${rawId}`);
+            return res.status(404).json({ success: false, message: `Audio stream tidak ditemukan untuk: ${rawId}` });
         }
 
         // Proxy audio stream dari GoogleVideo langsung ke client dengan dukungan Range & User-Agent & Redirects
@@ -189,10 +186,6 @@ router.get('/stream', async (req, res) => {
 
         const fetchStream = (targetUrl, redirectCount = 0) => {
             if (redirectCount > 4) {
-                const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
-                if (fs.existsSync(fallbackFile) && !res.headersSent) {
-                    return fs.createReadStream(fallbackFile).pipe(res);
-                }
                 return res.status(502).json({ success: false, message: "Terlalu banyak redirect dari upstream audio." });
             }
 
@@ -210,10 +203,7 @@ router.get('/stream', async (req, res) => {
                 if (upstreamRes.statusCode === 403 || upstreamRes.statusCode === 410) {
                     streamUrlCache.delete(rawId);
                     streamUrlCache.delete(`${rawId}_time`);
-                    const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
-                    if (fs.existsSync(fallbackFile) && !res.headersSent) {
-                        return fs.createReadStream(fallbackFile).pipe(res);
-                    }
+                    return res.status(upstreamRes.statusCode).json({ success: false, message: "Link stream upstream kadaluarsa atau dilarang." });
                 }
 
                 const rawType = upstreamRes.headers['content-type'] || 'audio/mp4';
@@ -253,34 +243,8 @@ router.get('/stream', async (req, res) => {
         fetchStream(streamUrl);
     } catch (err) {
         console.error('[Route: /api/music/stream] Extract error:', err.message);
-        const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
-        if (fs.existsSync(fallbackFile) && !res.headersSent) {
-            const stat = fs.statSync(fallbackFile);
-            const range = req.headers.range;
-            if (range) {
-                const parts = range.replace(/bytes=/, "").split("-");
-                const start = parseInt(parts[0], 10);
-                const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-                const chunksize = (end - start) + 1;
-                const file = fs.createReadStream(fallbackFile, { start, end });
-                res.writeHead(206, {
-                    'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-                    'Accept-Ranges': 'bytes',
-                    'Content-Length': chunksize,
-                    'Content-Type': 'audio/mpeg',
-                });
-                return file.pipe(res);
-            } else {
-                res.writeHead(200, {
-                    'Content-Length': stat.size,
-                    'Content-Type': 'audio/mpeg',
-                    'Accept-Ranges': 'bytes'
-                });
-                return fs.createReadStream(fallbackFile).pipe(res);
-            }
-        }
         if (!res.headersSent) {
-            res.status(500).json({ success: false, message: "Gagal mengekstrak audio." });
+            res.status(500).json({ success: false, message: `Gagal mengekstrak audio: ${err.message}` });
         }
     }
 });
