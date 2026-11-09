@@ -210,10 +210,31 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const FULL_LOCAL_AUDIO_FILES = new Set([
+    'bohongihati.mp3',
+    'cikini.mp3',
+    'cupid.mp3',
+    'djalay.mp3',
+    'galabungamatahari.mp3',
+    'karnasusayang.mp3',
+    'komang.mp3',
+    'malampagi.mp3',
+    'nadinamizah.mp3',
+    'sial.mp3',
+    'stecustecu.mp3',
+    'tabraktabrak.mp3',
+  ]);
+
+  const isFullLocalAudio = (url?: string): boolean => {
+    if (!url) return false;
+    const filename = url.split('/').pop()?.toLowerCase();
+    return filename ? FULL_LOCAL_AUDIO_FILES.has(filename) : false;
+  };
+
   /**
    * Mengembalikan URL audio stream penuh (Paritas dengan Web & RyTone Desktop)
-   * Jika previewUrl merupakan cuplikan iTunes (30s), stream dialihkan ke backend (/api/music/stream?id=...)
-   * atau file lokal audio penuh agar lagu berputar full-duration (3-5 menit).
+   * Jika previewUrl merupakan cuplikan iTunes (30s) atau file lokal sample pendek (apt.mp3, diewithasmile.mp3),
+   * stream dialihkan ke backend (/api/music/stream?id=...) agar lagu berputar full-duration (3-5 menit).
    */
   const getAudioStreamUrl = (track: Track): string => {
     const baseUrl = getApiBaseUrl();
@@ -224,7 +245,8 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
       track.audioUrl &&
       !isItunesPreview(track.audioUrl) &&
       !track.audioUrl.includes('youtube.com') &&
-      !track.audioUrl.includes('youtu.be')
+      !track.audioUrl.includes('youtu.be') &&
+      (!track.audioUrl.startsWith('/') || isFullLocalAudio(track.audioUrl))
     ) {
       if (track.audioUrl.startsWith('http')) {
         return track.audioUrl;
@@ -234,8 +256,13 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // 2. Jika previewUrl merupakan file audio lokal server (/audio/tiktok/...) berdurasi penuh
-    if (track.previewUrl && track.previewUrl.startsWith('/') && !isItunesPreview(track.previewUrl)) {
+    // 2. Jika previewUrl merupakan file audio lokal server (/audio/tiktok/...) berdurasi penuh (> 1MB)
+    if (
+      track.previewUrl &&
+      track.previewUrl.startsWith('/') &&
+      !isItunesPreview(track.previewUrl) &&
+      isFullLocalAudio(track.previewUrl)
+    ) {
       return `${rootOrigin}${track.previewUrl}`;
     }
 
@@ -244,7 +271,7 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
       return track.previewUrl;
     }
 
-    // 4. Paritas Web: Cuplikan iTunes preview (30s) atau default diarahkan ke backend /api/music/stream
+    // 4. Paritas Web: Cuplikan iTunes preview (30s) atau file lokal sample pendek diarahkan ke backend /api/music/stream
     // agar backend mengekstrak audio full durasi utuh (3-5 menit).
     const identifier = track.youtubeId || `${track.title} ${track.artist}`;
     return `${baseUrl}/music/stream?id=${encodeURIComponent(identifier)}`;

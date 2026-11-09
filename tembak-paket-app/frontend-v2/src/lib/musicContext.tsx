@@ -23,6 +23,27 @@ export interface Track {
   verifiedOriginal?: boolean;
 }
 
+export const FULL_LOCAL_AUDIO_FILES = new Set([
+  "bohongihati.mp3",
+  "cikini.mp3",
+  "cupid.mp3",
+  "djalay.mp3",
+  "galabungamatahari.mp3",
+  "karnasusayang.mp3",
+  "komang.mp3",
+  "malampagi.mp3",
+  "nadinamizah.mp3",
+  "sial.mp3",
+  "stecustecu.mp3",
+  "tabraktabrak.mp3"
+]);
+
+export const isFullLocalAudio = (url?: string): boolean => {
+  if (!url) return false;
+  const filename = url.split("/").pop()?.toLowerCase();
+  return filename ? FULL_LOCAL_AUDIO_FILES.has(filename) : false;
+};
+
 export const isItunesPreview = (url?: string): boolean => {
   if (!url) return false;
   const lower = url.toLowerCase();
@@ -405,22 +426,24 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const getAudioStreamUrl = useCallback((track: Track) => {
     if (!track) return "/api/music/stream?id=8Ebqe2Dbzls";
 
-    // 1. Jika track memiliki audioUrl valid (bukan link watch YouTube dan bukan cuplikan iTunes preview)
+    // 1. Jika track memiliki audioUrl valid (bukan link watch YouTube, bukan cuplikan iTunes, dan bukan file lokal sample 30s)
     if (
       track.audioUrl &&
       (track.audioUrl.startsWith("http") || track.audioUrl.startsWith("/")) &&
       !track.audioUrl.includes("youtube.com") &&
       !track.audioUrl.includes("youtu.be") &&
-      !isItunesPreview(track.audioUrl)
+      !isItunesPreview(track.audioUrl) &&
+      (!track.audioUrl.startsWith("/") || isFullLocalAudio(track.audioUrl))
     ) {
       return track.audioUrl;
     }
 
-    // 2. Jika previewUrl merupakan file audio lokal full (/audio/tiktok/*.mp3 atau /audio/...)
+    // 2. Jika previewUrl merupakan file audio lokal full (> 1MB / 3-4 menit)
     if (
       track.previewUrl &&
       track.previewUrl.startsWith("/") &&
-      !isItunesPreview(track.previewUrl)
+      !isItunesPreview(track.previewUrl) &&
+      isFullLocalAudio(track.previewUrl)
     ) {
       return track.previewUrl;
     }
@@ -434,8 +457,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       return track.previewUrl;
     }
 
-    // 4. Jika track berasal dari pencarian live / feed online (yang previewUrl-nya berupa cuplikan iTunes apple.com),
-    // atau jika audioUrl kosong / watch YouTube, arahkan audio streaming ke endpoint backend full duration
+    // 4. Jika track berasal dari pencarian live / feed online (cuplikan iTunes) ATAU file lokal sample pendek (apt.mp3, diewithasmile.mp3, dll),
+    // alihkan audio streaming ke endpoint backend /api/music/stream agar diputar full duration
     const identifier = track.youtubeId || `${track.title} ${track.artist}`;
     return `/api/music/stream?id=${encodeURIComponent(identifier)}`;
   }, []);

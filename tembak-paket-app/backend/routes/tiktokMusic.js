@@ -112,7 +112,7 @@ const streamUrlCache = new Map();
  * Streaming audio murni untuk pemutaran di latar belakang (background audio mobile saat layar mati/keluar web)
  */
 router.get('/stream', async (req, res) => {
-    const rawId = (req.query.id || req.query.youtubeId || "").trim();
+    let rawId = (req.query.id || req.query.youtubeId || "").trim();
     if (!rawId) {
         return res.status(400).json({ success: false, message: "Parameter id lagu diperlukan." });
     }

@@ -1658,20 +1658,29 @@ async function initWABot(forceNew = false) {
                 ];
 
                 // STRICT ADMIN CHECK:
-                // Only authorized if message was sent from the bot's own account (fromMe)
-                // OR the sender's phone / LID is explicitly in the admin list.
-                const isSenderAdmin = Boolean(
-                    msg.key.fromMe ||
-                    KNOWN_ADMIN_LIDS.includes(rawSenderDigits) ||
+                // Check if the chat counterpart (remoteJid) is an authorized admin
+                const isRemoteAdmin = Boolean(
                     KNOWN_ADMIN_LIDS.includes(rawRemoteDigits) ||
-                    (cleanSenderPhone && cleanAdminList.includes(cleanSenderPhone)) ||
                     (cleanRemotePhone && cleanAdminList.includes(cleanRemotePhone)) ||
                     (remoteJid && cleanAdminList.some(admin => remoteJid.includes(admin))) ||
                     (remoteJid && KNOWN_ADMIN_LIDS.some(lid => remoteJid.includes(lid)))
                 );
 
-                // IF SENDER IS NOT AN ADMIN:
-                // SILENTLY IGNORE! NO REPLY, NO COMMANDS, NO MESSAGES WHATSOEVER!
+                // Check if sender is an authorized admin
+                const isSenderAdmin = Boolean(
+                    isRemoteAdmin ||
+                    KNOWN_ADMIN_LIDS.includes(rawSenderDigits) ||
+                    (cleanSenderPhone && cleanAdminList.includes(cleanSenderPhone))
+                );
+
+                // ATURAN MUTLAK BOT WHATSAPP:
+                // 1. Jika pesan dikirim oleh nomor bot sendiri (fromMe: true) ke room chat pelanggan biasa (bukan room admin),
+                //    JANGAN PERNAH merespons / mengeksekusi perintah apapun ke pelanggan!
+                if (msg.key.fromMe && !isRemoteAdmin) {
+                    continue;
+                }
+
+                // 2. Jika pengirim bukan admin terdaftar, abaikan secara diam-diam (silent ignore).
                 if (!isSenderAdmin) {
                     // Do not respond to regular users under any circumstances
                     continue;
@@ -1818,11 +1827,12 @@ async function processAdminImageBatch(remoteJid) {
 
                 if (!messageText) continue;
 
-                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses, open, igsession, setopen, jadwalopen)
+                // Check if message is a command or quick shortcut (e.g. .proses, 1, 2, 3, p, s, g, proses, igsession, setopen, jadwalopen)
+                // Note: Kata polos "open" TIDAK diperbolehkan sebagai command agar tidak terpicu oleh obrolan umum; gunakan "#open" atau ".open".
                 const isCommand = (
                     messageText.startsWith(".") ||
                     messageText.startsWith("#") ||
-                    /^(0|1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|open|igsession|setopen|jadwalopen|startopen|stopopen|tambahpaket)\b/i.test(messageText)
+                    /^(0|1|2|3|p|s|g|proses|sukses|gagal|status|bantuan|help|menu|igsession|setopen|jadwalopen|startopen|stopopen|tambahpaket)\b/i.test(messageText)
                 );
                 if (!isCommand) continue;
 
@@ -2212,8 +2222,8 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
         return;
     }
 
-    // Command Khusus: Auto Story Open Toko (#open / .open / open)
-    if (rawCleanText === "#open" || rawCleanText === ".open" || rawCleanText === "open") {
+    // Command Khusus: Auto Story Open Toko (#open / .open) - Wajib menggunakan awalan prefix agar tidak terpicu kata biasa
+    if (rawCleanText === "#open" || rawCleanText === ".open") {
         await replyWhatsApp(replyJid, "⏳ *Sedang menyiapkan banner & mempublikasikan Story 'Ry-ITSolutions BUKA HARI INI' ke Instagram (@unlocksinyalsolo) & WhatsApp Story Bot...*");
         try {
             await publishOpenStory();
