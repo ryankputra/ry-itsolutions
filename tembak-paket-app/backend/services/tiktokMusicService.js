@@ -401,6 +401,13 @@ class TikTokMusicService {
                 const raw = fs.readFileSync(TRACKS_FILE, 'utf8');
                 const parsed = JSON.parse(raw);
                 if (parsed && Array.isArray(parsed.tracks) && parsed.tracks.length > 0) {
+                    parsed.tracks = parsed.tracks.map(t => {
+                        if (!t.streamUrl || t.streamUrl.includes('youtube.com') || t.streamUrl.includes('youtu.be')) {
+                            const isLocalFull = t.audioUrl && (t.audioUrl.startsWith('/audio/') || t.audioUrl.startsWith('http')) && !t.audioUrl.includes('apple.com') && !t.audioUrl.includes('itunes') && !t.audioUrl.includes('youtube.com') && !t.audioUrl.includes('youtu.be');
+                            t.streamUrl = isLocalFull ? t.audioUrl : `/api/music/stream?id=${encodeURIComponent(t.youtubeId || (t.title + ' ' + t.artist))}`;
+                        }
+                        return t;
+                    });
                     this.cache = parsed;
                     return this.cache;
                 }
@@ -609,6 +616,7 @@ class TikTokMusicService {
                     durationSec: durationSec,
                     previewUrl: r.previewUrl || "",
                     audioUrl: "", // Cuplikan preview ada di previewUrl; audio full ditangani oleh /api/music/stream jika diputar
+                    streamUrl: `/api/music/stream?id=${encodeURIComponent(r.trackName + ' ' + r.artistName)}`,
                     coverImage: coverImage,
                     coverGradient: SPOTIFY_GRADIENTS[results.length % SPOTIFY_GRADIENTS.length],
                     accentColor: "#1ed760",
@@ -713,6 +721,7 @@ class TikTokMusicService {
                             durationSec: Math.round((r.trackTimeMillis || 210000) / 1000),
                             previewUrl: r.previewUrl || "",
                             audioUrl: "", // Cuplikan iTunes preview (29s) disimpan di previewUrl; audioUrl kosong agar di-stream full via /api/music/stream
+                            streamUrl: `/api/music/stream?id=${encodeURIComponent(r.trackName + ' ' + r.artistName)}`,
                             streamsCount: streamsCount,
                             tiktokUsage: streamsCount,
                             tags: ["#tophits", "#rytoneindo", `#${item.meta.query.toLowerCase().replace(/[^a-z0-9]/g, "")}`],
@@ -757,6 +766,7 @@ class TikTokMusicService {
                             durationSec: variedDuration,
                             previewUrl: audioUrl,
                             audioUrl: "", // Preview disimpan di previewUrl; audioUrl dibiarkan kosong agar di-stream full oleh /api/music/stream
+                            streamUrl: `/api/music/stream?id=${encodeURIComponent(title + ' ' + artist)}`,
                             streamsCount: streamsCount,
                             tiktokUsage: streamsCount,
                             tags: ["#tophits", isIndo ? "#rytoneindo" : "#rytoneglobal", `#${catInfo.category}`],
@@ -804,6 +814,7 @@ class TikTokMusicService {
                 youtubeId: item.youtubeId,
                 audioUrl: isFull ? `/audio/tiktok/${item.filename}` : "",
                 previewUrl: !isFull && item.filename ? `/audio/tiktok/${item.filename}` : undefined,
+                streamUrl: isFull ? `/audio/tiktok/${item.filename}` : `/api/music/stream?id=${encodeURIComponent(item.youtubeId || item.title + ' ' + item.artist)}`,
                 streamsCount: item.streamsCount,
                 tiktokUsage: item.streamsCount,
                 rank: idx + 1,
@@ -923,6 +934,7 @@ class TikTokMusicService {
                         youtubeId: item.youtubeId,
                         audioUrl: localAudio,
                         previewUrl: !isFull && item.filename ? `/audio/tiktok/${item.filename}` : undefined,
+                        streamUrl: isFull ? localAudio : `/api/music/stream?id=${encodeURIComponent(item.youtubeId || item.title + ' ' + item.artist)}`,
                         streamsCount: item.streamsCount,
                         tiktokUsage: item.streamsCount,
                         tags: item.tags,

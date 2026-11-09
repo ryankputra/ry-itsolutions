@@ -3,10 +3,10 @@ const router = express.Router();
 const tiktokMusicService = require('../services/tiktokMusicService');
 
 /**
- * GET /api/tiktok-music
- * Public endpoint to fetch active trending TikTok music catalog
+ * GET /api/music/feed or /api/music or /api/tiktok-music/feed or /api/tiktok-music
+ * Public endpoint to fetch active trending TikTok/RyTone music catalog
  */
-router.get('/', (req, res) => {
+router.get(['/', '/feed'], (req, res) => {
     try {
         res.set({
             'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -177,10 +177,37 @@ router.get('/stream', async (req, res) => {
             }
         }
 
+        // Helper untuk stream file lokal dengan dukungan HTTP Range (206 Partial Content)
+        const streamLocalFile = (filePath) => {
+            const stat = fs.statSync(filePath);
+            const range = req.headers.range;
+            if (range) {
+                const parts = range.replace(/bytes=/, "").split("-");
+                const start = parseInt(parts[0], 10);
+                const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+                const chunksize = (end - start) + 1;
+                const file = fs.createReadStream(filePath, { start, end });
+                res.writeHead(206, {
+                    'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': 'audio/mpeg',
+                });
+                return file.pipe(res);
+            } else {
+                res.writeHead(200, {
+                    'Content-Length': stat.size,
+                    'Content-Type': 'audio/mpeg',
+                    'Accept-Ranges': 'bytes'
+                });
+                return fs.createReadStream(filePath).pipe(res);
+            }
+        };
+
         if (!streamUrl || !streamUrl.startsWith('http')) {
             const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
             if (fs.existsSync(fallbackFile)) {
-                return fs.createReadStream(fallbackFile).pipe(res);
+                return streamLocalFile(fallbackFile);
             }
             return res.status(404).json({ success: false, message: "Audio stream tidak ditemukan." });
         }
@@ -262,7 +289,29 @@ router.get('/stream', async (req, res) => {
         console.error('[Route: /api/music/stream] Extract error:', err.message);
         const fallbackFile = path.join(AUDIO_DIR, 'djalay.mp3');
         if (fs.existsSync(fallbackFile) && !res.headersSent) {
-            return fs.createReadStream(fallbackFile).pipe(res);
+            const stat = fs.statSync(fallbackFile);
+            const range = req.headers.range;
+            if (range) {
+                const parts = range.replace(/bytes=/, "").split("-");
+                const start = parseInt(parts[0], 10);
+                const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+                const chunksize = (end - start) + 1;
+                const file = fs.createReadStream(fallbackFile, { start, end });
+                res.writeHead(206, {
+                    'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': 'audio/mpeg',
+                });
+                return file.pipe(res);
+            } else {
+                res.writeHead(200, {
+                    'Content-Length': stat.size,
+                    'Content-Type': 'audio/mpeg',
+                    'Accept-Ranges': 'bytes'
+                });
+                return fs.createReadStream(fallbackFile).pipe(res);
+            }
         }
         if (!res.headersSent) {
             res.status(500).json({ success: false, message: "Gagal mengekstrak audio." });

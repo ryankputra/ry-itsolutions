@@ -117,6 +117,7 @@ interface MusicContextType {
   closeFullPlayer: () => void;
   syncTracks: () => Promise<void>;
   searchServerTracks: (q: string) => Promise<Track[]>;
+  getAudioStreamUrl: (track: Track) => string;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -198,17 +199,58 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
     syncTracks();
   }, []);
 
-  const getPlayableAudioUrl = (track: Track): string => {
+  const isItunesPreview = (url?: string): boolean => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return (
+      lower.includes('itunes.apple.com') ||
+      lower.includes('itunes-assets') ||
+      lower.includes('audio-ssl.itunes.apple.com') ||
+      lower.includes('mzstatic.com')
+    );
+  };
+
+  /**
+   * Mengembalikan URL audio stream penuh (Paritas dengan Web & RyTone Desktop)
+   * Jika previewUrl merupakan cuplikan iTunes (30s), stream dialihkan ke backend (/api/music/stream?id=...)
+   * atau file lokal audio penuh agar lagu berputar full-duration (3-5 menit).
+   */
+  const getAudioStreamUrl = (track: Track): string => {
     const baseUrl = getApiBaseUrl();
-    if (track.previewUrl && track.previewUrl.startsWith('http')) {
+    const rootOrigin = baseUrl.replace(/\/api\/?$/, '');
+
+    // 1. Jika ada audioUrl penuh dan BUKAN cuplikan iTunes serta bukan link watch YouTube
+    if (
+      track.audioUrl &&
+      !isItunesPreview(track.audioUrl) &&
+      !track.audioUrl.includes('youtube.com') &&
+      !track.audioUrl.includes('youtu.be')
+    ) {
+      if (track.audioUrl.startsWith('http')) {
+        return track.audioUrl;
+      }
+      if (track.audioUrl.startsWith('/')) {
+        return `${rootOrigin}${track.audioUrl}`;
+      }
+    }
+
+    // 2. Jika previewUrl merupakan file audio lokal server (/audio/tiktok/...) berdurasi penuh
+    if (track.previewUrl && track.previewUrl.startsWith('/') && !isItunesPreview(track.previewUrl)) {
+      return `${rootOrigin}${track.previewUrl}`;
+    }
+
+    // 3. Jika previewUrl valid HTTP dan BUKAN cuplikan iTunes (misal mp3 external full)
+    if (track.previewUrl && track.previewUrl.startsWith('http') && !isItunesPreview(track.previewUrl)) {
       return track.previewUrl;
     }
-    if (track.audioUrl && track.audioUrl.startsWith('http')) {
-      return track.audioUrl;
-    }
+
+    // 4. Paritas Web: Cuplikan iTunes preview (30s) atau default diarahkan ke backend /api/music/stream
+    // agar backend mengekstrak audio full durasi utuh (3-5 menit).
     const identifier = track.youtubeId || `${track.title} ${track.artist}`;
     return `${baseUrl}/music/stream?id=${encodeURIComponent(identifier)}`;
   };
+
+  const getPlayableAudioUrl = getAudioStreamUrl;
 
   const playTrack = async (index: number) => {
     try {
@@ -233,31 +275,68 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
         soundRef.current = null;
       }
 
-      const streamUrl = getPlayableAudioUrl(targetTrack);
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: streamUrl },
-        {
-          shouldPlay: true,
-          rate: playbackSpeed,
-          shouldCorrectPitch: true,
-          progressUpdateIntervalMillis: 500,
-        },
-        (status) => {
-          if (!status.isLoaded) return;
-          setCurrentTimeSec(Math.floor((status.positionMillis || 0) / 1000));
-          if (status.durationMillis) {
-            setDurationSec(Math.floor(status.durationMillis / 1000));
-          }
-          if (status.didJustFinish) {
-            nextTrack();
-          }
-        }
-      );
+      const streamUrl = getAudioStreamUrl(targetTrack);
+      let soundInstance: Audio.Sound | null = null;
 
-      soundRef.current = sound;
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: streamUrl },
+          {
+            shouldPlay: true,
+            rate: playbackSpeed,
+            shouldCorrectPitch: true,
+            progressUpdateIntervalMillis: 500,
+          },
+          (status) => {
+            if (!status.isLoaded) return;
+            setCurrentTimeSec(Math.floor((status.positionMillis || 0) / 1000));
+            if (status.durationMillis) {
+              setDurationSec(Math.floor(status.durationMillis / 1000));
+            }
+            if (status.didJustFinish) {
+              nextTrack();
+            }
+          }
+        );
+        soundInstance = sound;
+      } catch (streamErr) {
+        console.warn('[MusicContext] Backend full stream failed, attempting fallback preview audio:', streamErr);
+        const fallbackUrl = targetTrack.previewUrl?.startsWith('http')
+          ? targetTrack.previewUrl
+          : targetTrack.previewUrl?.startsWith('/')
+          ? `${getApiBaseUrl().replace(/\/api\/?$/, '')}${targetTrack.previewUrl}`
+          : null;
+
+        if (fallbackUrl && fallbackUrl !== streamUrl) {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: fallbackUrl },
+            {
+              shouldPlay: true,
+              rate: playbackSpeed,
+              shouldCorrectPitch: true,
+              progressUpdateIntervalMillis: 500,
+            },
+            (status) => {
+              if (!status.isLoaded) return;
+              setCurrentTimeSec(Math.floor((status.positionMillis || 0) / 1000));
+              if (status.durationMillis) {
+                setDurationSec(Math.floor(status.durationMillis / 1000));
+              }
+              if (status.didJustFinish) {
+                nextTrack();
+              }
+            }
+          );
+          soundInstance = sound;
+        } else {
+          throw streamErr;
+        }
+      }
+
+      soundRef.current = soundInstance;
       setIsPlaying(true);
     } catch (err) {
-      console.warn('[MusicContext] Audio stream playback failed:', err);
+      console.warn('[MusicContext] Audio stream playback failed completely:', err);
       setIsPlaying(false);
     } finally {
       setIsAudioLoading(false);
@@ -402,6 +481,7 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
         closeFullPlayer,
         syncTracks,
         searchServerTracks,
+        getAudioStreamUrl,
       }}
     >
       {children}
