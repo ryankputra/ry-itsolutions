@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -49,7 +50,7 @@ export interface CouponItem {
 export default function VouchersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
   const params = useLocalSearchParams<{ code?: string; claim?: string }>();
 
   const [inputCode, setInputCode] = useState('');

@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -40,7 +41,7 @@ import { InvoiceModal, InvoiceData } from '../../components/ui/InvoiceModal';
 export default function CekGaransiScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
   const params = useLocalSearchParams<{ imei?: string; action?: string }>();
 
   const [serialOrImei, setSerialOrImei] = useState(params.imei || '');

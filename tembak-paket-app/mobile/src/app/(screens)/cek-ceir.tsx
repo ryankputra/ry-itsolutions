@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -63,7 +64,7 @@ export default function CekCeirScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, updateUserBalance } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   // Catalog states
   const [ceirgoPricing, setCeirgoPricing] = useState<any>({});

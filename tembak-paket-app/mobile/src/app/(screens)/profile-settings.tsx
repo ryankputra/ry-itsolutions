@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -39,7 +40,7 @@ export default function ProfileSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
   const params = useLocalSearchParams<{ tab?: string }>();
 
   const initialTab = (params.tab as TabType) || 'profile';

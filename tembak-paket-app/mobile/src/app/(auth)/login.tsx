@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -45,7 +46,7 @@ export default function LoginScreen() {
   const [forgotTimer, setForgotTimer] = useState(60);
   const [canResendForgot, setCanResendForgot] = useState(false);
 
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     async function loadSavedEmail() {

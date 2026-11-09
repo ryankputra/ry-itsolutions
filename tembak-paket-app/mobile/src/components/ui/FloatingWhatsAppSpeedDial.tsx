@@ -11,9 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageCircle, Users, Headphones, X, ExternalLink } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useColorScheme } from 'react-native';
-import { Colors } from '../../theme/colors';
 import { useMusic } from '../../context/MusicContext';
+import { useAppTheme } from '../../context/ThemeContext';
 
 const WA_ADMIN_1 = '6288706611370';
 const WA_ADMIN_2 = '6287767287284';
@@ -22,9 +21,8 @@ const WA_GROUP_URL = 'https://chat.whatsapp.com/E0AO1IoMfHK0gqTvFgNQNl';
 export function FloatingWhatsAppSpeedDial() {
   const [isOpen, setIsOpen] = useState(false);
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme !== 'light';
-  const colors = isDark ? Colors.dark : Colors.light;
+  const { theme, colors } = useAppTheme();
+  const isDark = theme === 'dark';
   const { currentTrack } = useMusic();
 
   const handleOpenLink = async (url: string) => {

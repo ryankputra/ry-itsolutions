@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -64,7 +65,7 @@ export default function GamesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, updateUserBalance } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   // Active game tab
   const [activeTab, setActiveTab] = useState<GameTab>('wheel');

@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -27,7 +28,7 @@ import { Colors } from '../../theme/colors';
 
 export default function GatewayScreen() {
   const router = useRouter();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [loading, setLoading] = useState(true);
   const [apiKey, setApiKey] = useState<string>('');

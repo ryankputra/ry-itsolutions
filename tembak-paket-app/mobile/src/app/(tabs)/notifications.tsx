@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,7 +31,7 @@ interface NotificationItem {
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [activeTab, setActiveTab] = useState<'all' | 'order' | 'promo' | 'system'>('all');
   const [refreshing, setRefreshing] = useState(false);

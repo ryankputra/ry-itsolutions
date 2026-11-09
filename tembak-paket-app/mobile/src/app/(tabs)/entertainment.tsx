@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
@@ -46,7 +47,7 @@ const CATEGORIES = [
 
 export default function EntertainmentScreen() {
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const {
     tracks,

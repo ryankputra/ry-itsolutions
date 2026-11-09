@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useRef, useEffect } from 'react';
 import {
   Modal,
@@ -35,7 +36,7 @@ export function DraggableBottomSheet({
   maxHeight = SCREEN_HEIGHT * 0.8,
 }: DraggableBottomSheetProps) {
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const panY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 

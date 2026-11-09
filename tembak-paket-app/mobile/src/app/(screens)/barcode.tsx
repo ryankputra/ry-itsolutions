@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -53,7 +54,7 @@ const DEFAULT_BARCODE_SERVICES: BarcodeProduct[] = [
 export default function BarcodeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
   const { user, updateUserBalance } = useAuth();
 
   const [imei1, setImei1] = useState('358912345678901');

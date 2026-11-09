@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -20,7 +21,7 @@ import { Colors } from '../../theme/colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   // Step state: 'form' | 'otp'
   const [step, setStep] = useState<'form' | 'otp'>('form');

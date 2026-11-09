@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React from 'react';
 import {
   Modal,
@@ -56,7 +57,7 @@ export interface InvoiceModalProps {
 }
 
 export function InvoiceModal({ isOpen, visible, onClose, data, invoice }: InvoiceModalProps) {
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
   const isModalOpen = isOpen !== undefined ? isOpen : !!visible;
   const targetData = data || invoice;
 

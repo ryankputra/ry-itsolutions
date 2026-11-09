@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React from 'react';
 import {
   View,
@@ -15,7 +16,7 @@ import { Colors } from '../../theme/colors';
 
 export function FloatingMiniPlayer() {
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
   const {
     currentTrack,
     isPlaying,

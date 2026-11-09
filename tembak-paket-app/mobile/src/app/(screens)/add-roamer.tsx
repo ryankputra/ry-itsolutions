@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -71,7 +72,7 @@ export default function AddRoamerScreen() {
   const searchParams = useLocalSearchParams<{ imei?: string; q?: string }>();
   const insets = useSafeAreaInsets();
   const { user, updateUserBalance } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   // Wizard state: 1 = IMEI & HP, 2 = Paket & Kecepatan, 3 = Konfirmasi & Bayar
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);

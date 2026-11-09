@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -46,7 +47,7 @@ const SPEED_STATUS_CYCLE = ['active', 'maintenance', 'hidden'] as const;
 export default function AdminImeiScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'service' | 'packages' | 'ceir'>('service');

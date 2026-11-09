@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -59,7 +60,7 @@ interface Message {
 export default function AdminWhatsAppScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);

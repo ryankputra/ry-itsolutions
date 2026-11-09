@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState } from 'react';
 import {
   View,
@@ -16,7 +17,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function VideosScreen() {
   const router = useRouter();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [liked, setLiked] = useState(false);

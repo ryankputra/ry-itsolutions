@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -49,7 +50,7 @@ import { Colors } from '../../theme/colors';
 export default function AdminSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   // Active section tab
   const [activeTab, setActiveTab] = useState<'wa' | 'payment' | 'providers' | 'system'>('wa');

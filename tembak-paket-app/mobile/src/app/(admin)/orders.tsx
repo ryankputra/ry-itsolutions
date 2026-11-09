@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -39,7 +40,7 @@ import { Colors } from '../../theme/colors';
 export default function AdminOrdersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   // Sub-tabs: manual (Add Roamer) vs automated (Cek Log CEIR)
   const [orderSubTab, setOrderSubTab] = useState<'manual' | 'automated'>('manual');

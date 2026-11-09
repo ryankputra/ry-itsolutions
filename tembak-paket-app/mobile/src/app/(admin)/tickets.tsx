@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -33,7 +34,7 @@ import { Colors } from '../../theme/colors';
 export default function AdminTicketsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [adminTickets, setAdminTickets] = useState<any[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(true);

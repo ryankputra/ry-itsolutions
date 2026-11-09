@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import {
   Modal,
@@ -32,7 +33,7 @@ export function InstantQrisModal({
   orderTitle = 'Pembayaran Direct QRIS',
   onSuccess,
 }: InstantQrisModalProps) {
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
   const [loading, setLoading] = useState(false);
   const [qrisData, setQrisData] = useState<{
     qris_image: string;

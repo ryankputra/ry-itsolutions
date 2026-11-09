@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -34,7 +35,7 @@ import { Colors } from '../../theme/colors';
 export default function AdminUsersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

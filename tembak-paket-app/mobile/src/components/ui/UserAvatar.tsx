@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { User as UserIcon } from 'lucide-react-native';
-import { Colors } from '../../theme/colors';
-import { useColorScheme } from 'react-native';
+import { useAppTheme } from '../../context/ThemeContext';
 
 interface UserAvatarProps {
   uri?: string | null;
@@ -24,9 +23,8 @@ export function UserAvatar({
   iconFallback = false,
 }: UserAvatarProps) {
   const [hasError, setHasError] = useState(false);
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme !== 'light';
-  const colors = isDark ? Colors.dark : Colors.light;
+  const { theme, colors } = useAppTheme();
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     setHasError(false);

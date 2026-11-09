@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -47,7 +48,7 @@ export default function TopupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshUser, updateUserBalance } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [selectedAmount, setSelectedAmount] = useState<number>(100000);
   const [customAmount, setCustomAmount] = useState<string>('');

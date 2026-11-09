@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -35,7 +36,7 @@ export default function ReferralScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [loading, setLoading] = useState(true);
   const [referralData, setReferralData] = useState<any>(null);

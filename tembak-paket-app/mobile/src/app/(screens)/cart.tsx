@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -53,7 +54,7 @@ export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, updateUserBalance, refreshUser } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);

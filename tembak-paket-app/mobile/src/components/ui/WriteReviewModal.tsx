@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState } from 'react';
 import {
   Modal,
@@ -29,7 +30,7 @@ export function WriteReviewModal({
   packageName = 'Aktivasi IMEI All Operator',
   onSuccess,
 }: WriteReviewModalProps) {
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');

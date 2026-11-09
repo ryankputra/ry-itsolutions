@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -22,7 +23,7 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, updateUserBalance } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [pkg, setPkg] = useState<any>(null);
   const [loading, setLoading] = useState(true);

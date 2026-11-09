@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -35,7 +36,7 @@ import { Colors } from '../../theme/colors';
 export default function AdminVouchersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [coupons, setCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

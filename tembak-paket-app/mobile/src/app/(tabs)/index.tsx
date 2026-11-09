@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
@@ -45,6 +46,7 @@ import { apiClient } from '../../services/api';
 import { Colors } from '../../theme/colors';
 import { analyzeImei, ImeiAnalysis } from '../../utils/imeiHelper';
 import { InvoiceModal, InvoiceData } from '../../components/ui/InvoiceModal';
+import { LiquidGlassView, LiquidGlassIconBox } from '../../components/ui/LiquidGlassView';
 
 const { width } = Dimensions.get('window');
 
@@ -138,7 +140,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, refreshUser } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [refreshing, setRefreshing] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
@@ -351,9 +353,13 @@ export default function DashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* ============================================================ */}
-        {/* 1. FLOATING WALLET STRIP (Apple/Fintech Minimalist)           */}
+        {/* 1. FLOATING WALLET STRIP (Liquid Glass iOS Styling)           */}
         {/* ============================================================ */}
-        <View style={[styles.walletCard, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+        <LiquidGlassView
+          variant="card"
+          intensity="medium"
+          style={styles.walletCard}
+        >
           {/* Top Row: RyPay Balance + Top Up Button */}
           <View style={styles.walletTopRow}>
             <Pressable
@@ -446,12 +452,16 @@ export default function DashboardScreen() {
               <Text style={[styles.walletActionLink, { color: colors.primary }]}>Promo →</Text>
             </Pressable>
           </View>
-        </View>
+        </LiquidGlassView>
 
         {/* ============================================================ */}
-        {/* 2. 8-GRID FEATURE SERVICE (1:1 Web Parity)                    */}
+        {/* 2. 8-GRID FEATURE SERVICE (Liquid Glass iOS Styling)          */}
         {/* ============================================================ */}
-        <View style={[styles.gridCard, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+        <LiquidGlassView
+          variant="card"
+          intensity="medium"
+          style={styles.gridCard}
+        >
           <View style={styles.gridRow}>
             {serviceGrid.map((item) => {
               const IconComp = item.icon;
@@ -464,14 +474,18 @@ export default function DashboardScreen() {
                   }}
                   style={styles.gridItem}
                 >
-                  <View style={[styles.gridIconBox, { backgroundColor: item.iconBg }]}>
+                  <LiquidGlassIconBox
+                    tintColor={item.iconBg}
+                    accentColor={item.iconColor}
+                    style={styles.gridIconBox}
+                  >
                     <IconComp size={22} color={item.iconColor} strokeWidth={2} />
                     {item.badge && (
                       <View style={[styles.gridBadge, { backgroundColor: colors.surfaceTile }]}>
                         <Text style={styles.gridBadgeText}>{item.badge}</Text>
                       </View>
                     )}
-                  </View>
+                  </LiquidGlassIconBox>
                   <Text style={[styles.gridItemLabel, { color: colors.ink }]} numberOfLines={1}>
                     {item.name}
                   </Text>
@@ -479,7 +493,7 @@ export default function DashboardScreen() {
               );
             })}
           </View>
-        </View>
+        </LiquidGlassView>
 
         {/* ============================================================ */}
         {/* 3. HERO PROMO DEALS BANNER SLIDER                           */}

@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../context/ThemeContext';
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
@@ -42,7 +43,7 @@ const PROVIDERS = [
 export default function BeliPaketScreen() {
   const router = useRouter();
   const { user, updateUserBalance } = useAuth();
-  const colors = Colors.dark;
+  const { colors } = useAppTheme();
 
   const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
