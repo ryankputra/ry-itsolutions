@@ -288,6 +288,16 @@ export default function AddRoamerScreen() {
 
   // Step Validation
   const validateStep1 = () => {
+    if (!selectedPkgId) {
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      Alert.alert('Paket Belum Dipilih', 'Silakan pilih salah satu paket masa aktif roamer Anda.');
+      return false;
+    }
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    return true;
+  };
+
+  const validateStep2 = () => {
     if (parsedImeis.length === 0) {
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       Alert.alert('IMEI Belum Diisi', 'Masukkan minimal satu nomor IMEI (15 digit angka).');
@@ -309,16 +319,6 @@ export default function AddRoamerScreen() {
       return false;
     }
     try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-    return true;
-  };
-
-  const validateStep2 = () => {
-    if (!selectedPkgId) {
-      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
-      Alert.alert('Paket Belum Dipilih', 'Silakan pilih paket masa aktif roamer Anda.');
-      return false;
-    }
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
     return true;
   };
 
@@ -524,7 +524,7 @@ export default function AddRoamerScreen() {
             </Text>
           </View>
           <Text style={[styles.stepLabel, { color: currentStep === 1 ? colors.primary : colors.inkMuted }]}>
-            Data IMEI & HP
+            Pilih Paket
           </Text>
         </View>
 
@@ -550,7 +550,7 @@ export default function AddRoamerScreen() {
             </Text>
           </View>
           <Text style={[styles.stepLabel, { color: currentStep === 2 ? colors.primary : colors.inkMuted }]}>
-            Pilih Paket
+            Data IMEI & HP
           </Text>
         </View>
 
@@ -586,136 +586,8 @@ export default function AddRoamerScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* STEP 1: Input & Validasi Nomor HP + IMEI */}
+        {/* STEP 1: Pilih Paket Roaming Dinamis, Kecepatan, dan Diskon */}
         {currentStep === 1 && (
-          <View>
-            {/* Wholesale Banner */}
-            <View style={styles.wholesaleBanner}>
-              <View style={styles.wholesaleIconWrap}>
-                <Tag size={18} color="#10b981" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.wholesaleTitle}>Promo Diskon Multi-IMEI Otomatis</Text>
-                <Text style={styles.wholesaleDesc}>
-                  Daftarkan 2 IMEI atau lebih (Dual SIM), otomatis dapat harga grosir spesial mulai dari Rp 160.000 / IMEI.
-                </Text>
-              </View>
-            </View>
-
-            {/* Input IMEI Box */}
-            <View style={styles.sectionWrap}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={[styles.fieldLabel, { color: colors.ink }]}>Nomor IMEI Target (15 Digit)</Text>
-                {imei.trim().length > 0 && (
-                  <View style={[styles.badgeValid, { backgroundColor: validImeiCount > 0 ? 'rgba(30, 215, 96, 0.12)' : 'rgba(255, 69, 58, 0.12)' }]}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: validImeiCount > 0 ? colors.primary : '#ff453a' }}>
-                      {validImeiCount} / {imeiCount} Valid Luhn
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={[styles.textInputWrap, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
-                <TextInput
-                  style={[styles.textInputArea, { color: colors.ink }]}
-                  placeholder="Masukkan 15 digit IMEI (Bisa banyak sekaligus, pisahkan dengan enter atau spasi)"
-                  placeholderTextColor={colors.inkMuted}
-                  multiline
-                  numberOfLines={3}
-                  value={imei}
-                  onChangeText={(val) => setImei(val.replace(/[^0-9,\n\r ]/g, ''))}
-                />
-              </View>
-              <Text style={{ fontSize: 11, color: colors.inkMuted, marginTop: 4 }}>
-                💡 Masukkan IMEI 1 & IMEI 2 di baris terpisah untuk aktivasi Dual SIM.
-              </Text>
-            </View>
-
-            {/* WhatsApp Notification Input */}
-            <View style={[styles.sectionCard, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Smartphone size={16} color="#10b981" />
-                  <Text style={[styles.fieldLabel, { color: colors.ink }]}>WhatsApp Penerima Nota</Text>
-                </View>
-                <View style={[styles.badgeValid, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#10b981' }}>Auto Kirim Nota</Text>
-                </View>
-              </View>
-              <TextInput
-                style={[styles.phoneInput, { backgroundColor: colors.canvas, borderColor: colors.hairline, color: colors.ink }]}
-                placeholder="Contoh: 081234567890"
-                placeholderTextColor={colors.inkMuted}
-                keyboardType="phone-pad"
-                value={targetPhone}
-                onChangeText={(val) => setTargetPhone(val.replace(/[^0-9+]/g, ''))}
-              />
-            </View>
-
-            {/* Upload Dokumen Bukti */}
-            <View style={styles.uploadRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 6 }]}>
-                  Screenshot *#06# <Text style={{ color: '#ff453a' }}>*</Text>
-                </Text>
-                <Pressable
-                  style={[styles.uploadBox, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}
-                  onPress={() => handlePickImage('screenshot')}
-                >
-                  {screenshotUri ? (
-                    <Image source={{ uri: screenshotUri }} style={styles.uploadedThumb} />
-                  ) : (
-                    <View style={{ alignItems: 'center', gap: 4 }}>
-                      <Camera size={20} color={colors.primary} />
-                      <Text style={{ fontSize: 11, color: colors.inkMuted, fontWeight: '600' }}>Pilih Foto</Text>
-                    </View>
-                  )}
-                </Pressable>
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 6 }]}>
-                  Cek CEIR <Text style={{ fontSize: 11, color: colors.inkMuted }}>(Opsional)</Text>
-                </Text>
-                <Pressable
-                  style={[styles.uploadBox, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}
-                  onPress={() => handlePickImage('ceir')}
-                >
-                  {ceirUri ? (
-                    <Image source={{ uri: ceirUri }} style={styles.uploadedThumb} />
-                  ) : (
-                    <View style={{ alignItems: 'center', gap: 4 }}>
-                      <ImageIcon size={20} color={colors.inkMuted} />
-                      <Text style={{ fontSize: 11, color: colors.inkMuted, fontWeight: '600' }}>Pilih Foto</Text>
-                    </View>
-                  )}
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Ketentuan Layanan Accordion */}
-            <View style={styles.ketentuanCard}>
-              <Pressable
-                style={styles.ketentuanHeader}
-                onPress={() => setKetentuanOpen(!ketentuanOpen)}
-              >
-                <AlertTriangle size={16} color="#d97706" style={{ marginRight: 8 }} />
-                <Text style={styles.ketentuanTitle}>Syarat & Ketentuan Layanan</Text>
-                {ketentuanOpen ? <ChevronUp size={16} color="#d97706" /> : <ChevronDown size={16} color="#d97706" />}
-              </Pressable>
-              {ketentuanOpen && (
-                <View style={styles.ketentuanList}>
-                  <Text style={styles.ketentuanItem}>1. Khusus untuk HP Inter (Internasional).</Text>
-                  <Text style={styles.ketentuanItem}>2. Pastikan HP BUKAN bypass-an.</Text>
-                  <Text style={styles.ketentuanItem}>3. IC Baseband sehat (Muncul &quot;Tidak ada layanan&quot; saat SIM masuk).</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* STEP 2: Pilih Paket Roaming Dinamis, Kecepatan, dan Diskon */}
-        {currentStep === 2 && (
           <View>
             {/* Package Selector */}
             <View style={styles.sectionWrap}>
@@ -861,6 +733,134 @@ export default function AddRoamerScreen() {
           </View>
         )}
 
+        {/* STEP 2: Input & Validasi Nomor HP + IMEI */}
+        {currentStep === 2 && (
+          <View>
+            {/* Wholesale Banner */}
+            <View style={styles.wholesaleBanner}>
+              <View style={styles.wholesaleIconWrap}>
+                <Tag size={18} color="#10b981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.wholesaleTitle}>Promo Diskon Multi-IMEI Otomatis</Text>
+                <Text style={styles.wholesaleDesc}>
+                  Daftarkan 2 IMEI atau lebih (Dual SIM), otomatis dapat harga grosir spesial mulai dari Rp 160.000 / IMEI.
+                </Text>
+              </View>
+            </View>
+
+            {/* Input IMEI Box */}
+            <View style={styles.sectionWrap}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={[styles.fieldLabel, { color: colors.ink }]}>Nomor IMEI Target (15 Digit)</Text>
+                {imei.trim().length > 0 && (
+                  <View style={[styles.badgeValid, { backgroundColor: validImeiCount > 0 ? 'rgba(30, 215, 96, 0.12)' : 'rgba(255, 69, 58, 0.12)' }]}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: validImeiCount > 0 ? colors.primary : '#ff453a' }}>
+                      {validImeiCount} / {imeiCount} Valid Luhn
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={[styles.textInputWrap, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+                <TextInput
+                  style={[styles.textInputArea, { color: colors.ink }]}
+                  placeholder="Masukkan 15 digit IMEI (Bisa banyak sekaligus, pisahkan dengan enter atau spasi)"
+                  placeholderTextColor={colors.inkMuted}
+                  multiline
+                  numberOfLines={3}
+                  value={imei}
+                  onChangeText={(val) => setImei(val.replace(/[^0-9,\n\r ]/g, ''))}
+                />
+              </View>
+              <Text style={{ fontSize: 11, color: colors.inkMuted, marginTop: 4 }}>
+                💡 Masukkan IMEI 1 & IMEI 2 di baris terpisah untuk aktivasi Dual SIM.
+              </Text>
+            </View>
+
+            {/* WhatsApp Notification Input */}
+            <View style={[styles.sectionCard, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Smartphone size={16} color="#10b981" />
+                  <Text style={[styles.fieldLabel, { color: colors.ink }]}>WhatsApp Penerima Nota</Text>
+                </View>
+                <View style={[styles.badgeValid, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#10b981' }}>Auto Kirim Nota</Text>
+                </View>
+              </View>
+              <TextInput
+                style={[styles.phoneInput, { backgroundColor: colors.canvas, borderColor: colors.hairline, color: colors.ink }]}
+                placeholder="Contoh: 081234567890"
+                placeholderTextColor={colors.inkMuted}
+                keyboardType="phone-pad"
+                value={targetPhone}
+                onChangeText={(val) => setTargetPhone(val.replace(/[^0-9+]/g, ''))}
+              />
+            </View>
+
+            {/* Upload Dokumen Bukti */}
+            <View style={styles.uploadRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 6 }]}>
+                  Screenshot *#06# <Text style={{ color: '#ff453a' }}>*</Text>
+                </Text>
+                <Pressable
+                  style={[styles.uploadBox, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}
+                  onPress={() => handlePickImage('screenshot')}
+                >
+                  {screenshotUri ? (
+                    <Image source={{ uri: screenshotUri }} style={styles.uploadedThumb} />
+                  ) : (
+                    <View style={{ alignItems: 'center', gap: 4 }}>
+                      <Camera size={20} color={colors.primary} />
+                      <Text style={{ fontSize: 11, color: colors.inkMuted, fontWeight: '600' }}>Pilih Foto</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 6 }]}>
+                  Cek CEIR <Text style={{ fontSize: 11, color: colors.inkMuted }}>(Opsional)</Text>
+                </Text>
+                <Pressable
+                  style={[styles.uploadBox, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}
+                  onPress={() => handlePickImage('ceir')}
+                >
+                  {ceirUri ? (
+                    <Image source={{ uri: ceirUri }} style={styles.uploadedThumb} />
+                  ) : (
+                    <View style={{ alignItems: 'center', gap: 4 }}>
+                      <ImageIcon size={20} color={colors.inkMuted} />
+                      <Text style={{ fontSize: 11, color: colors.inkMuted, fontWeight: '600' }}>Pilih Foto</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Ketentuan Layanan Accordion */}
+            <View style={styles.ketentuanCard}>
+              <Pressable
+                style={styles.ketentuanHeader}
+                onPress={() => setKetentuanOpen(!ketentuanOpen)}
+              >
+                <AlertTriangle size={16} color="#d97706" style={{ marginRight: 8 }} />
+                <Text style={styles.ketentuanTitle}>Syarat & Ketentuan Layanan</Text>
+                {ketentuanOpen ? <ChevronUp size={16} color="#d97706" /> : <ChevronDown size={16} color="#d97706" />}
+              </Pressable>
+              {ketentuanOpen && (
+                <View style={styles.ketentuanList}>
+                  <Text style={styles.ketentuanItem}>1. Khusus untuk HP Inter (Internasional).</Text>
+                  <Text style={styles.ketentuanItem}>2. Pastikan HP BUKAN bypass-an.</Text>
+                  <Text style={styles.ketentuanItem}>3. IC Baseband sehat (Muncul &quot;Tidak ada layanan&quot; saat SIM masuk).</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* STEP 3: Review Ringkasan Biaya, Metode Pembayaran & Konfirmasi */}
         {currentStep === 3 && (
           <View>
@@ -993,7 +993,7 @@ export default function AddRoamerScreen() {
               onPress={handleNextStep}
             >
               <Text style={styles.nextStepBtnText}>
-                {currentStep === 1 ? 'Pilih Paket' : 'Lanjut ke Review'}
+                {currentStep === 1 ? 'Lanjut ke Data HP' : 'Lanjut ke Review'}
               </Text>
               <ArrowRight size={16} color="#000" />
             </Pressable>

@@ -64,7 +64,7 @@ function UnblockImeiContent() {
   const [speedPricing, setSpeedPricing] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
-  // Progressive 3-Step Wizard State: 1 = Data Perangkat, 2 = Pilih Paket, 3 = Pembayaran
+  // Progressive 3-Step Wizard State: 1 = Pilih Paket & Harga, 2 = Data HP & IMEI, 3 = Pembayaran & Checkout
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   const [imei, setImei] = useState("");
@@ -270,6 +270,19 @@ function UnblockImeiContent() {
 
   // Validation functions per Step
   const validateStep1 = () => {
+    if (!selectedPkgId) {
+      Swal.fire({
+        title: "Pilih Paket Masa Aktif",
+        text: "Silakan pilih salah satu paket masa aktif (1 Bulan atau 3 Bulan) untuk melanjutkan.",
+        icon: "warning",
+        confirmButtonColor: "#0071e3",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep2 = () => {
     const missing: string[] = [];
 
     if (imeiList.length === 0) {
@@ -289,7 +302,7 @@ function UnblockImeiContent() {
         title: "Lengkapi Data Perangkat",
         html: `
           <div class="text-left text-xs space-y-2 py-1">
-            <p class="font-bold text-slate-700 dark:text-slate-200">Mohon lengkapi data berikut sebelum lanjut ke pilihan paket:</p>
+            <p class="font-bold text-slate-700 dark:text-slate-200">Mohon lengkapi data berikut sebelum lanjut ke pembayaran:</p>
             <ul class="list-disc pl-5 text-rose-600 dark:text-rose-400 space-y-1.5 font-medium">
               ${missing.map((item) => `<li>${item}</li>`).join("")}
             </ul>
@@ -297,19 +310,6 @@ function UnblockImeiContent() {
         `,
         icon: "warning",
         confirmButtonText: "Siap, Lengkapi Sekarang",
-        confirmButtonColor: "#0071e3",
-      });
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep2 = () => {
-    if (!selectedPkgId) {
-      Swal.fire({
-        title: "Pilih Paket Masa Aktif",
-        text: "Silakan pilih salah satu paket masa aktif (1 Bulan atau 3 Bulan) untuk melanjutkan.",
-        icon: "warning",
         confirmButtonColor: "#0071e3",
       });
       return false;
@@ -784,7 +784,7 @@ function UnblockImeiContent() {
         {/* 1. PROGRESSIVE 3-STEP WIZARD PROGRESS BAR */}
         <div className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs select-none">
           <div className="flex items-center justify-between relative">
-            {/* Step 1 Pill */}
+            {/* Step 1 Pill: Pilih Paket */}
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
@@ -809,9 +809,9 @@ function UnblockImeiContent() {
               </div>
               <div>
                 <p className={`text-xs font-bold transition-colors ${currentStep === 1 ? "text-primary" : currentStep > 1 ? "text-ink" : "text-ink-muted"}`}>
-                  Data HP &amp; IMEI
+                  Pilih Paket
                 </p>
-                <p className="text-[10px] text-ink-muted hidden sm:block">Perangkat &amp; Foto</p>
+                <p className="text-[10px] text-ink-muted hidden sm:block">Durasi &amp; Tarif</p>
               </div>
             </button>
 
@@ -823,7 +823,7 @@ function UnblockImeiContent() {
               />
             </div>
 
-            {/* Step 2 Pill */}
+            {/* Step 2 Pill: Data HP & IMEI */}
             <button
               type="button"
               onClick={() => {
@@ -850,9 +850,9 @@ function UnblockImeiContent() {
               </div>
               <div>
                 <p className={`text-xs font-bold transition-colors ${currentStep === 2 ? "text-primary" : currentStep > 2 ? "text-ink" : "text-ink-muted"}`}>
-                  Pilih Paket
+                  Data HP &amp; IMEI
                 </p>
-                <p className="text-[10px] text-ink-muted hidden sm:block">Durasi &amp; Kecepatan</p>
+                <p className="text-[10px] text-ink-muted hidden sm:block">Perangkat &amp; Foto</p>
               </div>
             </button>
 
@@ -864,7 +864,7 @@ function UnblockImeiContent() {
               />
             </div>
 
-            {/* Step 3 Pill */}
+            {/* Step 3 Pill: Pembayaran */}
             <button
               type="button"
               onClick={() => {
@@ -933,238 +933,17 @@ function UnblockImeiContent() {
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* ======================================================== */}
-            {/* STEP 1: INPUT NOMOR HP & IMEI DENGAN VALIDASI INSTAN     */}
+            {/* STEP 1: PILIHAN PAKET ROAMING & KECEPATAN PROSES         */}
             {/* ======================================================== */}
             {currentStep === 1 && (
               <div className="space-y-5 animate-in fade-in duration-200">
                 <div className="border-b border-hairline pb-2 flex items-center justify-between">
                   <div>
-                    <h2 className="text-base font-extrabold text-ink">Langkah 1: Data Perangkat &amp; Nomor WhatsApp</h2>
-                    <p className="text-xs text-ink-muted">Masukkan IMEI target dan nomor WA untuk pengiriman nota.</p>
+                    <h2 className="text-base font-extrabold text-ink">Langkah 1: Pilih Paket &amp; Kecepatan Proses</h2>
+                    <p className="text-xs text-ink-muted">Pilih durasi garansi dan opsi kecepatan untuk melihat rincian harga paket.</p>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs">
                     Tahap 1 dari 3
-                  </span>
-                </div>
-
-                {/* WhatsApp Recipient Phone Input */}
-                <div className="space-y-1.5 p-3.5 bg-emerald-500/10 rounded-2xl border border-emerald-500/30">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-ink flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                      </svg>
-                      <span>Nomor WhatsApp Penerima Nota</span>
-                    </label>
-                    {targetPhone.replace(/\D/g, "").length >= 9 ? (
-                      <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-300/40">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                        <span>WA Valid</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-emerald-800 dark:text-emerald-300 font-medium">
-                        Auto Kirim Nota via WA
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="tel"
-                    placeholder="Contoh: 081234567890 (Nomor WhatsApp Anda atau Pembeli)"
-                    value={targetPhone}
-                    onChange={e => setTargetPhone(e.target.value.replace(/[^0-9+]/g, ''))}
-                    className="w-full rounded-xl border border-hairline bg-canvas px-4 py-2.5 text-xs sm:text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-mono"
-                    required
-                  />
-                  <p className="text-[11px] text-ink-muted leading-relaxed">
-                    Bot WhatsApp kami akan otomatis mengirimkan nota digital &amp; link garansi resmi begitu pesanan sukses.
-                  </p>
-                </div>
-
-                {/* IMEI Input & Luhn Validator */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs sm:text-sm font-bold text-ink">Nomor IMEI Target (15 Digit)</label>
-                    {imei.trim().length > 0 && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          {validImeiCount} Valid GSMA
-                        </span>
-                        {warnImeiCount > 0 && (
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                            {warnImeiCount} Cek Ulang
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <textarea 
-                    placeholder="Ketik atau tempel 15 digit IMEI disini (Bisa banyak sekaligus, pisahkan dengan enter atau koma)" 
-                    value={imei} 
-                    onChange={e => {
-                      const val = e.target.value;
-                      const sanitized = val.replace(/[^0-9,\n\r ]/g, '');
-                      setImei(sanitized);
-                    }}
-                    className="w-full rounded-2xl border border-hairline bg-canvas px-4 py-3 text-xs sm:text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all min-h-[110px] leading-relaxed font-mono"
-                    required 
-                  />
-
-                  {/* Panduan Multi-IMEI / Dual SIM */}
-                  <div className="flex items-start gap-2 p-3 rounded-2xl bg-primary/5 border border-primary/10 text-xs text-ink-muted">
-                    <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                    </svg>
-                    <p className="text-[11px] leading-relaxed">
-                      <span className="font-bold text-ink">Punya HP Dual SIM (IMEI 1 &amp; 2)?</span> Masukkan tiap 15 digit IMEI di baris baru. Pembelian minimal 2 IMEI otomatis mendapatkan harga diskon grosir!
-                    </p>
-                  </div>
-
-                  {/* Interactive Multi-IMEI Tag Badges & Live Device Auto-Detect */}
-                  {imei.trim().length > 0 && (
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center justify-between px-1 text-xs">
-                        <span className="font-bold text-ink">Perangkat Terdeteksi ({parsedImeis.length})</span>
-                        <button
-                          type="button"
-                          onClick={() => setImei("")}
-                          className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline font-semibold"
-                        >
-                          Hapus Semua
-                        </button>
-                      </div>
-
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                        {parsedImeis.map((analysis, idx) => {
-                          if (!analysis) return null;
-                          const cleanStr = analysis.clean || analysis.raw || "";
-                          const isFullyValid = analysis.isValidLength && analysis.isValidLuhn;
-                          const isLuhnTypo = analysis.isValidLength && !analysis.isValidLuhn;
-
-                          return (
-                            <div 
-                              key={idx} 
-                              className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
-                                isFullyValid 
-                                  ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200' 
-                                  : isLuhnTypo
-                                  ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200'
-                                  : 'bg-canvas border-hairline text-ink-muted'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span className="w-5 h-5 rounded-full bg-parchment font-bold text-[10px] text-ink-muted flex items-center justify-center shrink-0 border border-hairline">
-                                  {idx + 1}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="font-black text-ink truncate text-xs">
-                                    {analysis.brand ? `${analysis.brand} ${analysis.model || ''}`.trim() : `Perangkat #${idx + 1}`}
-                                  </p>
-                                  <p className="text-[11px] opacity-80 font-mono font-bold tracking-wider truncate">
-                                    {cleanStr}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                {isFullyValid ? (
-                                  <span className="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md border border-emerald-300/40">
-                                    <svg className="w-3 h-3 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                    GSMA Valid
-                                  </span>
-                                ) : isLuhnTypo ? (
-                                  <span className="inline-flex items-center gap-1 font-bold text-[10px] text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-md border border-amber-300/40" title="Digit checksum luhn tidak cocok">
-                                    Typo Checksum
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] text-ink-muted font-mono">
-                                    {cleanStr.length}/15 digit
-                                  </span>
-                                )}
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const lines = imei.split(/[\n,]+/).map(i => i.trim()).filter(Boolean);
-                                    setImei(lines.filter((_, i) => i !== idx).join("\n"));
-                                  }}
-                                  className="w-5 h-5 rounded-full bg-slate-200/80 dark:bg-white/10 hover:bg-rose-100 dark:hover:bg-rose-900/40 hover:text-rose-600 flex items-center justify-center text-[10px] transition-colors"
-                                  title="Hapus IMEI ini"
-                                >
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Upload Section */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1.5 p-3 rounded-2xl bg-canvas border border-hairline">
-                    <label className="text-xs font-bold text-ink block">
-                      Upload Screenshot *#06# <span className="text-rose-500">*</span>
-                    </label>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      multiple
-                      onChange={e => setFiles(Array.from(e.target.files || []))}
-                      className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                      required
-                    />
-                    <p className="text-[10px] text-ink-muted">Foto layar dial *#06# yang memuat IMEI asli.</p>
-                  </div>
-
-                  <div className="space-y-1.5 p-3 rounded-2xl bg-canvas border border-hairline">
-                    <label className="text-xs font-bold text-ink block">
-                      Upload Cek CEIR <span className="text-ink-muted text-[10px] font-normal">(Opsional)</span>
-                    </label>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      multiple
-                      onChange={e => setCeirFiles(Array.from(e.target.files || []))}
-                      className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                    />
-                    <p className="text-[10px] text-ink-muted">Screenshot status CEIR Kemenperin jika ada.</p>
-                  </div>
-                </div>
-
-                {/* Step 1 Next Button */}
-                <div className="pt-2">
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      if (validateStep1()) {
-                        setCurrentStep(2);
-                      }
-                    }}
-                    className="w-full h-12 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-md shadow-primary/25 btn-press btn-glow flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>Lanjut ke Pilih Paket (Langkah 2)</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* ======================================================== */}
-            {/* STEP 2: PILIHAN PAKET ROAMING & KECEPATAN PROSES         */}
-            {/* ======================================================== */}
-            {currentStep === 2 && (
-              <div className="space-y-5 animate-in fade-in duration-200">
-                <div className="border-b border-hairline pb-2 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-base font-extrabold text-ink">Langkah 2: Pilih Paket &amp; Kecepatan Proses</h2>
-                    <p className="text-xs text-ink-muted">Tentukan durasi garansi dan opsi kecepatan server.</p>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs">
-                    Tahap 2 dari 3
                   </span>
                 </div>
 
@@ -1374,14 +1153,235 @@ function UnblockImeiContent() {
                   </div>
                 )}
 
-                {/* Step 2 Navigation Buttons */}
+                                {/* Step 1 Next Button */}
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (validateStep1()) {
+                        setCurrentStep(2);
+                      }
+                    }}
+                    className="w-full h-12 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-md shadow-primary/25 btn-press btn-glow flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Lanjut ke Data HP &amp; IMEI (Langkah 2)</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* STEP 2: INPUT NOMOR HP & IMEI DENGAN VALIDASI INSTAN     */}
+            {/* ======================================================== */}
+            {currentStep === 2 && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="border-b border-hairline pb-2 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-extrabold text-ink">Langkah 2: Data Perangkat &amp; Nomor WhatsApp</h2>
+                    <p className="text-xs text-ink-muted">Masukkan IMEI target dan nomor WA untuk pengiriman nota.</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                    Tahap 2 dari 3
+                  </span>
+                </div>
+
+                {/* WhatsApp Recipient Phone Input */}
+                <div className="space-y-1.5 p-3.5 bg-emerald-500/10 rounded-2xl border border-emerald-500/30">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-ink flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                      </svg>
+                      <span>Nomor WhatsApp Penerima Nota</span>
+                    </label>
+                    {targetPhone.replace(/\D/g, "").length >= 9 ? (
+                      <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-300/40">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                        <span>WA Valid</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-emerald-800 dark:text-emerald-300 font-medium">
+                        Auto Kirim Nota via WA
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder="Contoh: 081234567890 (Nomor WhatsApp Anda atau Pembeli)"
+                    value={targetPhone}
+                    onChange={e => setTargetPhone(e.target.value.replace(/[^0-9+]/g, ''))}
+                    className="w-full rounded-xl border border-hairline bg-canvas px-4 py-2.5 text-xs sm:text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-mono"
+                    required
+                  />
+                  <p className="text-[11px] text-ink-muted leading-relaxed">
+                    Bot WhatsApp kami akan otomatis mengirimkan nota digital &amp; link garansi resmi begitu pesanan sukses.
+                  </p>
+                </div>
+
+                {/* IMEI Input & Luhn Validator */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs sm:text-sm font-bold text-ink">Nomor IMEI Target (15 Digit)</label>
+                    {imei.trim().length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          {validImeiCount} Valid GSMA
+                        </span>
+                        {warnImeiCount > 0 && (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            {warnImeiCount} Cek Ulang
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <textarea 
+                    placeholder="Ketik atau tempel 15 digit IMEI disini (Bisa banyak sekaligus, pisahkan dengan enter atau koma)" 
+                    value={imei} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      const sanitized = val.replace(/[^0-9,\n\r ]/g, '');
+                      setImei(sanitized);
+                    }}
+                    className="w-full rounded-2xl border border-hairline bg-canvas px-4 py-3 text-xs sm:text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all min-h-[110px] leading-relaxed font-mono"
+                    required 
+                  />
+
+                  {/* Panduan Multi-IMEI / Dual SIM */}
+                  <div className="flex items-start gap-2 p-3 rounded-2xl bg-primary/5 border border-primary/10 text-xs text-ink-muted">
+                    <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <p className="text-[11px] leading-relaxed">
+                      <span className="font-bold text-ink">Punya HP Dual SIM (IMEI 1 &amp; 2)?</span> Masukkan tiap 15 digit IMEI di baris baru. Pembelian minimal 2 IMEI otomatis mendapatkan harga diskon grosir!
+                    </p>
+                  </div>
+
+                  {/* Interactive Multi-IMEI Tag Badges & Live Device Auto-Detect */}
+                  {imei.trim().length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between px-1 text-xs">
+                        <span className="font-bold text-ink">Perangkat Terdeteksi ({parsedImeis.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setImei("")}
+                          className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline font-semibold"
+                        >
+                          Hapus Semua
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        {parsedImeis.map((analysis, idx) => {
+                          if (!analysis) return null;
+                          const cleanStr = analysis.clean || analysis.raw || "";
+                          const isFullyValid = analysis.isValidLength && analysis.isValidLuhn;
+                          const isLuhnTypo = analysis.isValidLength && !analysis.isValidLuhn;
+
+                          return (
+                            <div 
+                              key={idx} 
+                              className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                                isFullyValid 
+                                  ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200' 
+                                  : isLuhnTypo
+                                  ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200'
+                                  : 'bg-canvas border-hairline text-ink-muted'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="w-5 h-5 rounded-full bg-parchment font-bold text-[10px] text-ink-muted flex items-center justify-center shrink-0 border border-hairline">
+                                  {idx + 1}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-black text-ink truncate text-xs">
+                                    {analysis.brand ? `${analysis.brand} ${analysis.model || ''}`.trim() : `Perangkat #${idx + 1}`}
+                                  </p>
+                                  <p className="text-[11px] opacity-80 font-mono font-bold tracking-wider truncate">
+                                    {cleanStr}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {isFullyValid ? (
+                                  <span className="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md border border-emerald-300/40">
+                                    <svg className="w-3 h-3 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                    GSMA Valid
+                                  </span>
+                                ) : isLuhnTypo ? (
+                                  <span className="inline-flex items-center gap-1 font-bold text-[10px] text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-md border border-amber-300/40" title="Digit checksum luhn tidak cocok">
+                                    Typo Checksum
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-ink-muted font-mono">
+                                    {cleanStr.length}/15 digit
+                                  </span>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const lines = imei.split(/[\n,]+/).map(i => i.trim()).filter(Boolean);
+                                    setImei(lines.filter((_, i) => i !== idx).join("\n"));
+                                  }}
+                                  className="w-5 h-5 rounded-full bg-slate-200/80 dark:bg-white/10 hover:bg-rose-100 dark:hover:bg-rose-900/40 hover:text-rose-600 flex items-center justify-center text-[10px] transition-colors"
+                                  title="Hapus IMEI ini"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Section */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5 p-3 rounded-2xl bg-canvas border border-hairline">
+                    <label className="text-xs font-bold text-ink block">
+                      Upload Screenshot *#06# <span className="text-rose-500">*</span>
+                    </label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      multiple
+                      onChange={e => setFiles(Array.from(e.target.files || []))}
+                      className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                      required
+                    />
+                    <p className="text-[10px] text-ink-muted">Foto layar dial *#06# yang memuat IMEI asli.</p>
+                  </div>
+
+                  <div className="space-y-1.5 p-3 rounded-2xl bg-canvas border border-hairline">
+                    <label className="text-xs font-bold text-ink block">
+                      Upload Cek CEIR <span className="text-ink-muted text-[10px] font-normal">(Opsional)</span>
+                    </label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      multiple
+                      onChange={e => setCeirFiles(Array.from(e.target.files || []))}
+                      className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-ink-muted">Screenshot status CEIR Kemenperin jika ada.</p>
+                  </div>
+                </div>
+
+                                {/* Step 2 Navigation Buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
                   <Button
                     type="button"
                     onClick={() => setCurrentStep(1)}
                     className="w-full h-12 rounded-2xl bg-canvas border border-hairline font-bold text-xs hover:bg-parchment transition-all btn-press"
                   >
-                    &larr; Kembali ke Data HP
+                    &larr; Kembali ke Pilih Paket
                   </Button>
                   <Button
                     type="button"
@@ -1424,7 +1424,7 @@ function UnblockImeiContent() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setCurrentStep(1)}
+                      onClick={() => setCurrentStep(2)}
                       className="text-xs font-bold text-primary hover:underline"
                     >
                       Ubah Data
@@ -1462,7 +1462,7 @@ function UnblockImeiContent() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setCurrentStep(2)}
+                      onClick={() => setCurrentStep(1)}
                       className="text-xs font-bold text-primary hover:underline"
                     >
                       Ganti Paket
@@ -1707,7 +1707,7 @@ function UnblockImeiContent() {
                     onClick={() => setCurrentStep(2)}
                     className="w-full h-12 rounded-2xl bg-canvas border border-hairline font-bold text-xs hover:bg-parchment transition-all btn-press sm:col-span-1"
                   >
-                    &larr; Ubah Paket
+                    &larr; Ubah Data HP
                   </Button>
 
                   <Button
