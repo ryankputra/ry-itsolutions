@@ -1,0 +1,63 @@
+<svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ry-icon-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="ry-icon-sheen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.28" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+    <filter id="ry-icon-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#0c4a6e" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Base Tile with Shadow -->
+  <rect
+    x="32"
+    y="32"
+    width="448"
+    height="448"
+    rx="112"
+    fill="url(#ry-icon-bg)"
+    filter="url(#ry-icon-shadow)"
+    stroke="rgba(255, 255, 255, 0.25)"
+    stroke-width="8"
+  />
+  <rect
+    x="32"
+    y="32"
+    width="448"
+    height="448"
+    rx="112"
+    fill="url(#ry-icon-sheen)"
+  />
+
+  <!-- Monogram R: Vertical Stem -->
+  <rect x="128" y="122" width="52" height="268" rx="26" fill="#ffffff" />
+
+  <!-- Monogram R: Upper Loop -->
+  <path
+    d="M 144 122 H 286 C 344 122 380 158 380 208 C 380 258 344 294 286 294 H 144"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="52"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Monogram R: Dynamic Diagonal Leg -->
+  <path
+    d="M 236 272 L 344 390"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="52"
+    stroke-linecap="round"
+  />
+
+  <!-- IT Solutions Signal Node Accent -->
+  <circle cx="380" cy="122" r="40" fill="#38bdf8" opacity="0.35" />
+  <circle cx="380" cy="122" r="24" fill="#ffffff" />
+</svg>
