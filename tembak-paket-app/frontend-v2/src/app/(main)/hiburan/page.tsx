@@ -248,7 +248,9 @@ export default function RyToneMusicPage() {
 
       if (selectedCategory === "favorites") {
         return merged.filter((t) => favorites.includes(t.id));
-      } else if (selectedCategory !== "all") {
+      } else if (selectedCategory === "all") {
+        return merged.filter((t) => t.category !== "podcast");
+      } else {
         return merged.filter((t) => t.category === selectedCategory);
       }
       return merged;
@@ -258,7 +260,9 @@ export default function RyToneMusicPage() {
       // Category filter
       if (selectedCategory === "favorites") {
         if (!favorites.includes(track.id)) return false;
-      } else if (selectedCategory !== "all") {
+      } else if (selectedCategory === "all") {
+        if (track.category === "podcast") return false;
+      } else {
         if (track.category !== selectedCategory) return false;
       }
 
@@ -724,7 +728,7 @@ export default function RyToneMusicPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-1.5">
-              {filteredTracks.map((track) => {
+              {filteredTracks.map((track, idx) => {
                 const trackIndex = tracks.findIndex((t) => t.id === track.id);
                 const isThisTrackPlaying = isPlaying && (currentTrack?.id === track.id || (trackIndex !== -1 && currentTrackIndex === trackIndex));
                 const isThisTrackActive = currentTrack?.id === track.id || (trackIndex !== -1 && currentTrackIndex === trackIndex);
@@ -750,7 +754,7 @@ export default function RyToneMusicPage() {
                         </div>
                       ) : (
                         <span className="text-xs font-mono font-bold text-ink-muted dark:text-zinc-500 group-hover:text-ink dark:group-hover:text-zinc-300">
-                          {track.rank}
+                          {idx + 1}
                         </span>
                       )}
                     </div>
