@@ -101,7 +101,9 @@ export default function RyToneMusicPage() {
         const res = await fetch(`/api/music/search?q=${encodeURIComponent(trimmed)}`);
         if (res.ok) {
           const json = await res.json();
-          const results: Track[] = json?.data?.tracks || [];
+          const results: Track[] = Array.isArray(json?.data)
+            ? json.data
+            : (Array.isArray(json?.tracks) ? json.tracks : (json?.data?.tracks || []));
           setLiveSearchResults(results);
         }
       } catch (err) {

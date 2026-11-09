@@ -117,44 +117,10 @@ router.get('/stream', async (req, res) => {
         return res.status(400).json({ success: false, message: "Parameter id lagu diperlukan." });
     }
 
-    // 1. Cek apakah ini file lokal di folder audio (misal komang.mp3, djalay.mp3, dll)
-    const localFilename = rawId.endsWith('.mp3') ? rawId : `${rawId}.mp3`;
-    const localPath = path.join(AUDIO_DIR, localFilename);
-    if (fs.existsSync(localPath)) {
-        const stat = fs.statSync(localPath);
-        // BUG FIX: Hanya layani file lokal jika ukurannya >= 1MB (lagu full durasi 3-5 menit).
-        // File berukuran ~470KB adalah cuplikan iTunes preview 29 detik yang harus dialihkan ke full YouTube audio.
-        if (stat.size >= 1000000) {
-            const range = req.headers.range;
-            if (range) {
-                const parts = range.replace(/bytes=/, "").split("-");
-                const start = parseInt(parts[0], 10);
-                const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-                const chunksize = (end - start) + 1;
-                const file = fs.createReadStream(localPath, { start, end });
-                res.writeHead(206, {
-                    'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-                    'Accept-Ranges': 'bytes',
-                    'Content-Length': chunksize,
-                    'Content-Type': 'audio/mpeg',
-                });
-                return file.pipe(res);
-            } else {
-                res.writeHead(200, {
-                    'Content-Length': stat.size,
-                    'Content-Type': 'audio/mpeg',
-                    'Accept-Ranges': 'bytes'
-                });
-                return fs.createReadStream(localPath).pipe(res);
-            }
-        } else {
-            console.warn(`[Stream] File lokal ${localFilename} terdeteksi sebagai preview/cuplikan pendek (${stat.size} bytes). Mengalihkan ke YouTube audio full via yt-dlp...`);
-            if (rawId.endsWith('.mp3')) {
-                rawId = rawId.slice(0, -4);
-            }
-        }
-    }
-    // 2. Ekstraksi audio stream YouTube via yt-dlp (Mendukung ID YouTube langsung maupun pencarian judul lagu)
+    // Catatan Arsitektur: File di folder AUDIO_DIR (/audio/tiktok/*.mp3) adalah aset internal
+    // khusus generator testimoni Story WA & IG bot (tiktokDJService.js).
+    // Layanan musik RyTone 100% mengekstrak dan memutar official song berdurasi penuh via yt-dlp.
+    // Ekstraksi audio stream YouTube via yt-dlp (Mendukung ID YouTube langsung maupun pencarian judul lagu):
     try {
         let streamUrl = streamUrlCache.get(rawId);
         const cachedAt = streamUrlCache.get(`${rawId}_time`) || 0;

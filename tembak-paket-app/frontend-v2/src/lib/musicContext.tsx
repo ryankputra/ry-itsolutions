@@ -423,42 +423,25 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Helper to resolve clean audio stream URL (Full duration playback)
+  // Catatan: File di /audio/tiktok/*.mp3 adalah aset internal khusus pembuatan Story WA & IG bot (tiktokDJService),
+  // sedangkan RyTone memutar lagu original resmi berdurasi penuh via /api/music/stream.
   const getAudioStreamUrl = useCallback((track: Track) => {
     if (!track) return "/api/music/stream?id=8Ebqe2Dbzls";
 
-    // 1. Jika track memiliki audioUrl valid (bukan link watch YouTube, bukan cuplikan iTunes, dan bukan file lokal sample 30s)
+    // 1. Jika track memiliki audioUrl eksternal yang valid (bukan link watch YouTube, bukan cuplikan iTunes, dan bukan file internal story /audio/tiktok/)
     if (
       track.audioUrl &&
-      (track.audioUrl.startsWith("http") || track.audioUrl.startsWith("/")) &&
+      track.audioUrl.startsWith("http") &&
       !track.audioUrl.includes("youtube.com") &&
       !track.audioUrl.includes("youtu.be") &&
       !isItunesPreview(track.audioUrl) &&
-      (!track.audioUrl.startsWith("/") || isFullLocalAudio(track.audioUrl))
+      !track.audioUrl.includes("/audio/tiktok/")
     ) {
       return track.audioUrl;
     }
 
-    // 2. Jika previewUrl merupakan file audio lokal full (> 1MB / 3-4 menit)
-    if (
-      track.previewUrl &&
-      track.previewUrl.startsWith("/") &&
-      !isItunesPreview(track.previewUrl) &&
-      isFullLocalAudio(track.previewUrl)
-    ) {
-      return track.previewUrl;
-    }
-
-    // 3. Jika previewUrl valid HTTP dan BUKAN cuplikan iTunes (misal file audio eksternal full)
-    if (
-      track.previewUrl &&
-      track.previewUrl.startsWith("http") &&
-      !isItunesPreview(track.previewUrl)
-    ) {
-      return track.previewUrl;
-    }
-
-    // 4. Jika track berasal dari pencarian live / feed online (cuplikan iTunes) ATAU file lokal sample pendek (apt.mp3, diewithasmile.mp3, dll),
-    // alihkan audio streaming ke endpoint backend /api/music/stream agar diputar full duration
+    // 2. Seluruh katalog lagu RyTone (track statis, live feed chart, dan search)
+    // dialirkan langsung melalui backend /api/music/stream agar berputar full version original (3-5 menit)
     const identifier = track.youtubeId || `${track.title} ${track.artist}`;
     return `/api/music/stream?id=${encodeURIComponent(identifier)}`;
   }, []);

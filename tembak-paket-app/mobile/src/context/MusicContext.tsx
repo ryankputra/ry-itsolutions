@@ -210,69 +210,27 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const FULL_LOCAL_AUDIO_FILES = new Set([
-    'bohongihati.mp3',
-    'cikini.mp3',
-    'cupid.mp3',
-    'djalay.mp3',
-    'galabungamatahari.mp3',
-    'karnasusayang.mp3',
-    'komang.mp3',
-    'malampagi.mp3',
-    'nadinamizah.mp3',
-    'sial.mp3',
-    'stecustecu.mp3',
-    'tabraktabrak.mp3',
-  ]);
-
-  const isFullLocalAudio = (url?: string): boolean => {
-    if (!url) return false;
-    const filename = url.split('/').pop()?.toLowerCase();
-    return filename ? FULL_LOCAL_AUDIO_FILES.has(filename) : false;
-  };
-
   /**
    * Mengembalikan URL audio stream penuh (Paritas dengan Web & RyTone Desktop)
-   * Jika previewUrl merupakan cuplikan iTunes (30s) atau file lokal sample pendek (apt.mp3, diewithasmile.mp3),
-   * stream dialihkan ke backend (/api/music/stream?id=...) agar lagu berputar full-duration (3-5 menit).
+   * Catatan: File di /audio/tiktok/*.mp3 adalah aset internal khusus pembuatan Story WA & IG bot (tiktokDJService),
+   * sedangkan RyTone memutar lagu original resmi berdurasi penuh via /api/music/stream.
    */
   const getAudioStreamUrl = (track: Track): string => {
     const baseUrl = getApiBaseUrl();
-    const rootOrigin = baseUrl.replace(/\/api\/?$/, '');
 
-    // 1. Jika ada audioUrl penuh dan BUKAN cuplikan iTunes serta bukan link watch YouTube
+    // 1. Jika ada audioUrl penuh eksternal yang valid (bukan cuplikan iTunes, bukan watch YouTube, dan bukan aset internal /audio/tiktok/)
     if (
       track.audioUrl &&
+      track.audioUrl.startsWith('http') &&
       !isItunesPreview(track.audioUrl) &&
       !track.audioUrl.includes('youtube.com') &&
       !track.audioUrl.includes('youtu.be') &&
-      (!track.audioUrl.startsWith('/') || isFullLocalAudio(track.audioUrl))
+      !track.audioUrl.includes('/audio/tiktok/')
     ) {
-      if (track.audioUrl.startsWith('http')) {
-        return track.audioUrl;
-      }
-      if (track.audioUrl.startsWith('/')) {
-        return `${rootOrigin}${track.audioUrl}`;
-      }
+      return track.audioUrl;
     }
 
-    // 2. Jika previewUrl merupakan file audio lokal server (/audio/tiktok/...) berdurasi penuh (> 1MB)
-    if (
-      track.previewUrl &&
-      track.previewUrl.startsWith('/') &&
-      !isItunesPreview(track.previewUrl) &&
-      isFullLocalAudio(track.previewUrl)
-    ) {
-      return `${rootOrigin}${track.previewUrl}`;
-    }
-
-    // 3. Jika previewUrl valid HTTP dan BUKAN cuplikan iTunes (misal mp3 external full)
-    if (track.previewUrl && track.previewUrl.startsWith('http') && !isItunesPreview(track.previewUrl)) {
-      return track.previewUrl;
-    }
-
-    // 4. Paritas Web: Cuplikan iTunes preview (30s) atau file lokal sample pendek diarahkan ke backend /api/music/stream
-    // agar backend mengekstrak audio full durasi utuh (3-5 menit).
+    // 2. Seluruh katalog lagu RyTone diarahkan ke endpoint backend /api/music/stream agar berputar full version original (3-5 menit)
     const identifier = track.youtubeId || `${track.title} ${track.artist}`;
     return `${baseUrl}/music/stream?id=${encodeURIComponent(identifier)}`;
   };
@@ -441,7 +399,9 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
     if (!trimmed) return tracks;
     try {
       const res = await apiClient.get('/music/search', { params: { q: trimmed } });
-      const rawTracks = res.data?.data?.tracks || res.data?.tracks;
+      const rawTracks = Array.isArray(res.data?.data)
+        ? res.data.data
+        : (Array.isArray(res.data?.tracks) ? res.data.tracks : (res.data?.data?.tracks || []));
       if (Array.isArray(rawTracks)) {
         return rawTracks.map((t: any, idx: number) => ({
           id: t.id || `search-${idx + 1}`,
