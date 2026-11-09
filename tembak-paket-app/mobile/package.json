@@ -47,7 +47,14 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "export": "expo export",
+    "export:android": "expo export -p android",
+    "update:publish": "eas update --auto || expo export -p android",
+    "build:apk": "eas build -p android --profile preview",
+    "build:apk:local": "eas build -p android --profile preview --local",
+    "bundle:android": "expo export -p android --output-dir dist"
   },
   "private": true
 }

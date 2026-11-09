@@ -4,5 +4,5 @@
 4:I[57121,[],""]
 5:I[61920,["8500","static/chunks/8500-f62a38ff68ab7f42.js","5956","static/chunks/app/(main)/error-d5bea5137e9d16df.js"],"default"]
 6:I[74581,[],""]
-0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"Component":"$3","slots":{"children":["$","$L4",null,{"parallelRouterKey":"children","error":"$5","errorStyles":[],"errorScripts":[],"template":["$","$L6",null,{}]}]},"serverProvidedParams":{"params":{},"promises":["$@7"]}}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"5ARR1BXC1m5vemB2JvgxX"}
+0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"Component":"$3","slots":{"children":["$","$L4",null,{"parallelRouterKey":"children","error":"$5","errorStyles":[],"errorScripts":[],"template":["$","$L6",null,{}]}]},"serverProvidedParams":{"params":{},"promises":["$@7"]}}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"bhMZDJtCq_1cssth5IHnt"}
 7:"$0:rsc:props:children:1:props:serverProvidedParams:params"

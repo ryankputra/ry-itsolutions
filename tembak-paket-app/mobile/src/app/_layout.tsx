@@ -22,14 +22,24 @@ function RootNavigator() {
   useEffect(() => {
     async function checkOtaUpdates() {
       try {
-        if (__DEV__) return;
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
+        if (__DEV__) {
+          console.log('[OTA Updates] Development mode detected, skipping automatic update check.');
+          return;
         }
-      } catch (e) {
-        // Silent catch for network unavailability
+        if (Updates.isEnabled) {
+          console.log('[OTA Updates] Checking for latest release updates...');
+          const update = await Updates.checkForUpdateAsync();
+          if (update.isAvailable) {
+            console.log('[OTA Updates] New update bundle found. Downloading...');
+            await Updates.fetchUpdateAsync();
+            console.log('[OTA Updates] Update ready. Reloading app to apply latest version...');
+            await Updates.reloadAsync();
+          } else {
+            console.log('[OTA Updates] App is up to date.');
+          }
+        }
+      } catch (e: any) {
+        console.warn('[OTA Updates] Unable to check or fetch update:', e?.message || e);
       }
     }
     checkOtaUpdates();
