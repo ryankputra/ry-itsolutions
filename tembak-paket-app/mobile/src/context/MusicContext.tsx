@@ -285,37 +285,10 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
         );
         soundInstance = sound;
       } catch (streamErr) {
-        console.warn('[MusicContext] Backend full stream failed, attempting fallback preview audio:', streamErr);
-        const fallbackUrl = targetTrack.previewUrl?.startsWith('http')
-          ? targetTrack.previewUrl
-          : targetTrack.previewUrl?.startsWith('/')
-          ? `${getApiBaseUrl().replace(/\/api\/?$/, '')}${targetTrack.previewUrl}`
-          : null;
-
-        if (fallbackUrl && fallbackUrl !== streamUrl) {
-          const { sound } = await Audio.Sound.createAsync(
-            { uri: fallbackUrl },
-            {
-              shouldPlay: true,
-              rate: playbackSpeed,
-              shouldCorrectPitch: true,
-              progressUpdateIntervalMillis: 500,
-            },
-            (status) => {
-              if (!status.isLoaded) return;
-              setCurrentTimeSec(Math.floor((status.positionMillis || 0) / 1000));
-              if (status.durationMillis) {
-                setDurationSec(Math.floor(status.durationMillis / 1000));
-              }
-              if (status.didJustFinish) {
-                nextTrack();
-              }
-            }
-          );
-          soundInstance = sound;
-        } else {
-          throw streamErr;
-        }
+        console.warn('[MusicContext] Backend full stream failed:', streamErr);
+        // RyTone mendedikasikan 100% pemutaran lagu berdurasi penuh resmi.
+        // Dilarang beralih ke previewUrl (30 detik).
+        throw streamErr;
       }
 
       soundRef.current = soundInstance;

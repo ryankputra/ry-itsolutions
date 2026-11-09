@@ -689,7 +689,19 @@ export default function RyToneMusicPage() {
             <span className="hidden sm:inline">Pilih lagu untuk memutar versi penuh</span>
           </div>
 
-          {filteredTracks.length === 0 ? (
+          {isLiveSearching ? (
+            <div className="p-12 text-center bg-parchment dark:bg-[#121216] border border-hairline rounded-2xl space-y-4 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-[#1ed760]/10 border border-[#1ed760]/30 mx-auto flex items-center justify-center text-[#1ed760]">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-sm text-ink dark:text-white">Sedang mencari lagu di RyTone...</h3>
+                <p className="text-xs text-ink-muted dark:text-zinc-400 max-w-sm mx-auto">
+                  Menjelajahi miliaran katalog musik resmi dari seluruh dunia untuk &quot;{searchQuery}&quot;
+                </p>
+              </div>
+            </div>
+          ) : filteredTracks.length === 0 ? (
             <div className="p-12 text-center bg-parchment dark:bg-[#121216] border border-hairline rounded-2xl space-y-3 transition-colors">
               <div className="w-12 h-12 rounded-xl bg-canvas dark:bg-zinc-900 border border-hairline mx-auto flex items-center justify-center text-ink-muted dark:text-zinc-400">
                 <Search className="w-5 h-5" />

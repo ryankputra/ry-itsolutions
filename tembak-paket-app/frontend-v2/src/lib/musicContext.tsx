@@ -1054,51 +1054,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         onError={(e) => {
           console.warn("[RyTone Audio Element Error]:", e);
           setIsBuffering(false);
-          const audio = audioRef.current;
-          const track = tracks[currentTrackIndex] || currentTrack;
 
-          // Fallback otomatis beralih ke track.previewUrl jika URL stream gagal
-          if (audio && track) {
-            const fallbackPreview =
-              track.previewUrl ||
-              (track.audioUrl &&
-              !track.audioUrl.includes("youtube.com") &&
-              !track.audioUrl.includes("youtu.be")
-                ? track.audioUrl
-                : null);
-
-            if (fallbackPreview) {
-              const currentSrc = audio.currentSrc || audio.src || "";
-              const isAlreadyFallback =
-                currentSrc.includes(fallbackPreview) ||
-                (fallbackPreview.startsWith("/") && currentSrc.endsWith(fallbackPreview));
-
-              if (!isAlreadyFallback) {
-                console.info("[RyTone Audio] Stream URL gagal, beralih ke previewUrl fallback:", fallbackPreview);
-                audio.src = fallbackPreview;
-                audio
-                  .play()
-                  .then(() => {
-                    setIsPlaying(true);
-                  })
-                  .catch((err) => {
-                    console.warn("[RyTone Audio Fallback Error]:", err);
-                    setTimeout(() => {
-                      if (tracks.length > 1) {
-                        handleNextTrackRef.current();
-                      }
-                    }, 1500);
-                  });
-                return;
-              }
-            }
-          }
-
+          // PENTING: Dilarang beralih ke previewUrl (30 detik iTunes)
+          // RyTone mendedikasikan 100% pemutaran lagu berdurasi penuh resmi via stream proxy.
+          // Jika terjadi error koneksi sementara / stall, lewati ke trek berikutnya setelah delay.
           setTimeout(() => {
             if (tracks.length > 1) {
               handleNextTrackRef.current();
             }
-          }, 1500);
+          }, 2000);
         }}
       />
 
