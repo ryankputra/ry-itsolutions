@@ -29,34 +29,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isActive = (path: string) => pathname === path;
 
-  React.useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      (window as any).deferredPrompt = e;
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const handleInstallPWA = () => {
-    if (typeof window !== "undefined" && (window as any).deferredPrompt) {
-      const promptEvent = (window as any).deferredPrompt;
-      promptEvent.prompt();
-      promptEvent.userChoice.then((choiceResult: any) => {
-        if (choiceResult.outcome === "accepted") console.log("PWA Installed");
-        (window as any).deferredPrompt = null;
-      });
-    } else {
-      Swal.fire({
-        title: 'Tidak Dapat Menginstall Aplikasi',
-        text: 'Kayaknya aplikasi ini udah ter-install di HP lo, atau browser lo emang kurang support (coba pake Chrome/Edge ya!).',
-        icon: 'info',
-        confirmButtonText: 'Oke Ngab',
-        confirmButtonColor: '#3085d6',
-      });
-    }
-  };
-
   const menuItems = [
     {
       name: "Dashboard",
@@ -225,10 +197,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </nav>
 
       <div className="p-4 border-t border-hairline flex flex-col gap-4 bg-canvas/50">
-        <button onClick={handleInstallPWA} className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl text-sm font-bold hover:bg-primary-focus transition-all shadow-sm">
+        <a
+          href="/Ry-ITSolutions.apk"
+          download
+          className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl text-sm font-bold hover:bg-primary-focus transition-all shadow-sm"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-          Install Aplikasi
-        </button>
+          Download APK Android
+        </a>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary">
             {user?.name?.charAt(0).toUpperCase()}

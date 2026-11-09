@@ -26,19 +26,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
-    // Listen for PWA Install Prompt
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      (window as any).deferredPrompt = e;
-    };
+    // Unregister legacy Service Worker if lingering from older PWA installations
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const reg of registrations) {
+          reg.unregister();
+        }
+      });
+    }
 
     const handleOpenTour = () => setShowTour(true);
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('open_app_tour', handleOpenTour);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('open_app_tour', handleOpenTour);
     };
   }, []);

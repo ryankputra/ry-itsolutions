@@ -1,15 +1,7 @@
 import type { NextConfig } from "next";
-import withPWAInit from "@ducanh2912/next-pwa";
-
 import path from "path";
 
 const rootDir = path.resolve(process.cwd(), process.cwd().endsWith('frontend-v2') ? '../..' : '.');
-
-const withPWA = withPWAInit({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  register: true,
-});
 
 const nextConfig: NextConfig = {
   // Explicitly specify workspace root to avoid inference warning and path mismatch
@@ -89,4 +81,4 @@ const nextConfig: NextConfig = {
   }
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;

@@ -32,16 +32,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Ry-ITSolutions",
   description: "Cepat. Ringkas. Beli paket dalam hitungan detik.",
-  manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
     apple: "/icon.svg",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Ry-ITSolutions",
   },
   formatDetection: {
     telephone: false,
