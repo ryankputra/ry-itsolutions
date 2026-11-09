@@ -2,24 +2,40 @@
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { ShieldAlert, ShieldCheck, Eye, EyeOff, Lock, AlertTriangle } from "lucide-react";
 
 export function AntiScreenshotGuard() {
+  const pathname = usePathname();
   const { user } = useApp();
   const isAdmin = user?.role === "admin";
+  const isAdminRoute = Boolean(pathname && (pathname === "/admin" || pathname.startsWith("/admin/")));
   const [adminTestMode, setAdminTestMode] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      setAdminTestMode(sessionStorage.getItem("admin_test_mode") === "true");
+    }
+  }, []);
+
+  const handleToggleTestMode = () => {
+    setAdminTestMode((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("admin_test_mode", String(next));
+      }
+      return next;
+    });
+  };
 
   // Status proteksi aktif jika BUKAN admin, ATAU jika admin sedang mengaktifkan mode simulasi testing
   const isProtectionActive = !isAdmin || adminTestMode;
 
   const shieldRef = useRef<HTMLDivElement>(null);
   const autoDismissTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Identitas akun rapi untuk watermark / nota keamanan (Bersih, elegan, tidak bikin pusing)
   const userIdentifier = useMemo(() => {
@@ -345,14 +361,14 @@ export function AntiScreenshotGuard() {
       {/* Portal Layar Pelindung Privasi Langsung di Body: Menghindari bug pewarisan blur parent */}
       {mounted && createPortal(shieldOverlayJSX, document.body)}
 
-      {/* Khusus Akun Admin: Kontrol Floating Pill dengan Warna Kontras Tinggi (Jelas di Darkmode & Lightmode) */}
-      {isAdmin && (
-        <div className="fixed top-20 right-3.5 md:top-auto md:bottom-5 md:right-5 z-[99999] flex items-center gap-2 rounded-full border border-slate-300 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 px-3 py-1.5 shadow-xl backdrop-blur-md text-[11px] font-bold text-slate-800 dark:text-neutral-100">
+      {/* Khusus Akun Admin: Hanya tampil di route /admin agar tidak mengganggu pengguna biasa atau admin di halaman lain */}
+      {isAdmin && isAdminRoute && (
+        <div className="fixed bottom-6 right-4 sm:bottom-6 sm:right-6 z-[60] flex items-center gap-2 rounded-full border border-slate-300 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 px-3 py-1.5 shadow-xl backdrop-blur-md text-[11px] font-bold text-slate-800 dark:text-neutral-100">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
           <span>Admin</span>
           <button
             type="button"
-            onClick={() => setAdminTestMode(!adminTestMode)}
+            onClick={handleToggleTestMode}
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black transition-all cursor-pointer ${
               adminTestMode
                 ? "bg-rose-500 text-white shadow-sm"
