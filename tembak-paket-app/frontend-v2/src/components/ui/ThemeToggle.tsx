@@ -20,8 +20,12 @@ export function ThemeToggle({ className = "", variant = "icon" }: ThemeTogglePro
     setIsDark(isDarkMode);
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.documentElement.style.colorScheme = "dark";
     } else {
       document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+      document.documentElement.style.colorScheme = "light";
     }
 
     const handleThemeChange = () => {
@@ -38,9 +42,13 @@ export function ThemeToggle({ className = "", variant = "icon" }: ThemeTogglePro
     setIsDark(nextDark);
     if (nextDark) {
       document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.documentElement.style.colorScheme = "dark";
       localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+      document.documentElement.style.colorScheme = "light";
       localStorage.setItem("theme", "light");
     }
     window.dispatchEvent(new Event("theme-changed"));

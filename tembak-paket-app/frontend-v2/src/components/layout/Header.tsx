@@ -118,9 +118,21 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     setIsDark(shouldBeDark);
     if (shouldBeDark) {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      document.documentElement.style.colorScheme = 'dark';
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.style.colorScheme = 'light';
     }
+
+    const handleThemeChange = () => {
+      const currentDark = document.documentElement.classList.contains('dark');
+      setIsDark(currentDark);
+    };
+
+    window.addEventListener('theme-changed', handleThemeChange);
+    return () => window.removeEventListener('theme-changed', handleThemeChange);
   }, []);
 
   const toggleDarkMode = () => {
@@ -128,11 +140,16 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     setIsDark(nextDark);
     if (nextDark) {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      document.documentElement.style.colorScheme = 'dark';
       localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.style.colorScheme = 'light';
       localStorage.setItem('theme', 'light');
     }
+    window.dispatchEvent(new Event('theme-changed'));
   };
 
   return (

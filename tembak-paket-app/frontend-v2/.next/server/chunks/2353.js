@@ -1,29 +1,77 @@
 exports.id=2353,exports.ids=[2353],exports.modules={1143:(a,b,c)=>{"use strict";c.r(b),c.d(b,{default:()=>h});var d=c(5735);c(91986);var e=c(63059),f=c.n(e);function g({className:a="",iconOnly:b=!1,size:c=32}){return(0,d.jsxs)("div",{className:`flex items-center gap-2.5 ${a}`,children:[(0,d.jsxs)("svg",{width:c,height:c,viewBox:"0 0 100 100",fill:"none",xmlns:"http://www.w3.org/2000/svg",className:"shrink-0 drop-shadow-md",children:[(0,d.jsxs)("defs",{children:[(0,d.jsxs)("linearGradient",{id:"logo-bg-grad",x1:"0%",y1:"0%",x2:"100%",y2:"100%",children:[(0,d.jsx)("stop",{offset:"0%",stopColor:"#2563eb"}),(0,d.jsx)("stop",{offset:"55%",stopColor:"#0ea5e9"}),(0,d.jsx)("stop",{offset:"100%",stopColor:"#06b6d4"})]}),(0,d.jsxs)("linearGradient",{id:"logo-sheen",x1:"0%",y1:"0%",x2:"100%",y2:"100%",children:[(0,d.jsx)("stop",{offset:"0%",stopColor:"#ffffff",stopOpacity:"0.28"}),(0,d.jsx)("stop",{offset:"45%",stopColor:"#ffffff",stopOpacity:"0"})]})]}),(0,d.jsx)("rect",{x:"4",y:"4",width:"92",height:"92",rx:"23",fill:"url(#logo-bg-grad)"}),(0,d.jsx)("rect",{x:"4",y:"4",width:"92",height:"92",rx:"23",fill:"url(#logo-sheen)"}),(0,d.jsx)("path",{d:"M36 22 H53 C64 22 71 28 71 38 C71 47 66 53 58 55 L75 76 H62 L48 56 H50 V76 H36 Z M50 30 V46 H59 C64 46 67 43 67 39 C67 35 64 30 59 30 H50 Z",fill:"#ffffff"})]}),!b&&(0,d.jsxs)("span",{className:"font-bold tracking-tight text-ink font-sans",children:["Ry-",(0,d.jsx)("span",{className:"text-primary font-extrabold",children:"ITSolutions"})]})]})}function h(){return(0,d.jsx)("main",{className:"min-h-screen w-full flex flex-col justify-center items-center p-4 bg-[#f8fafc] dark:bg-black text-slate-800 dark:text-neutral-100",children:(0,d.jsxs)("div",{className:"w-full max-w-[420px] text-center space-y-4",children:[(0,d.jsx)(f(),{href:"/",className:"inline-flex items-center justify-center hover:opacity-90 transition-opacity",children:(0,d.jsx)(g,{size:48})}),(0,d.jsxs)("div",{className:"space-y-2",children:[(0,d.jsx)("h1",{className:"text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight",children:"404"}),(0,d.jsx)("h2",{className:"text-lg font-bold text-slate-800 dark:text-neutral-200",children:"Halaman Tidak Ditemukan"}),(0,d.jsx)("p",{className:"text-xs text-slate-500 dark:text-neutral-400",children:"Maaf, halaman yang Anda cari tidak ada atau telah dipindahkan."})]}),(0,d.jsx)("div",{className:"pt-2",children:(0,d.jsx)(f(),{href:"/",className:"inline-flex items-center justify-center h-10 px-6 rounded-xl bg-[#0066cc] hover:bg-[#0052a3] text-white text-xs font-semibold transition-colors shadow-xs",children:"Kembali ke Beranda"})})]})})}},9082:(a,b,c)=>{Promise.resolve().then(c.t.bind(c,2116,23))},21883:(a,b,c)=>{"use strict";c.d(b,{H$:()=>e,gI:()=>i,iD:()=>h,oi:()=>f});let d=process.env.NEXT_PUBLIC_API_URL||process.env.BACKEND_INTERNAL_URL||"http://127.0.0.1:3001",e=d?`${d.replace(/\/$/,"")}/api`:"/api";async function f(a){try{let b=await a;if(!b)return null;let c=b.headers?.get("content-type");if(!c||!c.includes("application/json"))return b.ok||console.warn(`[API Warning] Received non-JSON response with HTTP ${b.status} from ${b.url}`),null;let d=await b.json(),e=function(a){if(!a||"object"!=typeof a)return a;let b=!0===a.status||!0===a.success,c=!1===a.status||!1===a.success;return b?(a.status=!0,a.success=!0):c&&(a.status=!1,a.success=!1),a}(d);return b.ok||console.error(`[API Error ${b.status}] ${b.url}:`,e?.message||e),e}catch(a){return console.error("[API JSON Parse Error]:",a),null}}async function g(a,b={}){let c=a.startsWith("http")?a:a.startsWith("/api")?`${d?d.replace(/\/$/,""):""}${a}`:`${e}${a.startsWith("/")?"":"/"}${a}`,h={Accept:"application/json",...b.headers||{}};try{let a=await fetch(c,{credentials:"include",...b,headers:h}),d=await f(a);if(!a.ok){let b=d?.message||`Request failed with HTTP status ${a.status}`;console.error(`[API Network Error] ${a.status} ${c}:`,b);let e=Error(b);throw e.status=a.status,e.data=d,e}return d}catch(a){throw a.status||console.error(`[API Connection Failed] ${c}:`,a.message||a),a}}async function h(a,b){return await g("/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:a,password:b})})}async function i(){try{let a=await g(`/user/packages?t=${Date.now()}`,{cache:"no-store"});return Array.isArray(a?.data)?a.data:Array.isArray(a)?a:[]}catch(a){return console.error("[API] fetchPackages failed:",a),[]}}},23936:(a,b,c)=>{"use strict";c.d(b,{DynamicThemeProvider:()=>l,G:()=>m});var d=c(48249),e=c(67484),f=c(21883),g=c(73142),h=c.n(g);function i({config:a}){let[b,c]=(0,e.useState)([]),[f,g]=(0,e.useState)(!1);return f&&a?.enabled&&0!==b.length?(0,d.jsxs)("div",{"aria-hidden":"true",className:"jsx-59675e8bc51853ac fixed inset-0 pointer-events-none overflow-hidden z-20 select-none",children:[b.map(a=>(0,d.jsx)("img",{src:a.svgUrl,alt:"",style:{left:`${a.left}%`,top:"-24px",width:`${a.size}px`,height:`${a.size}px`,animation:`floatingDriftDown ${a.duration}s cubic-bezier(0.4, 0, 0.2, 1) infinite`,animationDelay:`${a.delay}s`,transform:`rotate(${a.rotation}deg)`},className:"jsx-59675e8bc51853ac absolute will-change-transform opacity-25 dark:opacity-20 select-none pointer-events-none"},a.id)),(0,d.jsx)(h(),{id:"59675e8bc51853ac",children:"@-webkit-keyframes floatingDriftDown{0%{-webkit-transform:translatey(-24px)rotate(0deg)translatex(0);transform:translatey(-24px)rotate(0deg)translatex(0);opacity:0}15%{opacity:.28}85%{opacity:.28}100%{-webkit-transform:translatey(105vh)rotate(360deg)translatex(20px);transform:translatey(105vh)rotate(360deg)translatex(20px);opacity:0}}@-moz-keyframes floatingDriftDown{0%{-moz-transform:translatey(-24px)rotate(0deg)translatex(0);transform:translatey(-24px)rotate(0deg)translatex(0);opacity:0}15%{opacity:.28}85%{opacity:.28}100%{-moz-transform:translatey(105vh)rotate(360deg)translatex(20px);transform:translatey(105vh)rotate(360deg)translatex(20px);opacity:0}}@-o-keyframes floatingDriftDown{0%{-o-transform:translatey(-24px)rotate(0deg)translatex(0);transform:translatey(-24px)rotate(0deg)translatex(0);opacity:0}15%{opacity:.28}85%{opacity:.28}100%{-o-transform:translatey(105vh)rotate(360deg)translatex(20px);transform:translatey(105vh)rotate(360deg)translatex(20px);opacity:0}}@keyframes floatingDriftDown{0%{-webkit-transform:translatey(-24px)rotate(0deg)translatex(0);-moz-transform:translatey(-24px)rotate(0deg)translatex(0);-o-transform:translatey(-24px)rotate(0deg)translatex(0);transform:translatey(-24px)rotate(0deg)translatex(0);opacity:0}15%{opacity:.28}85%{opacity:.28}100%{-webkit-transform:translatey(105vh)rotate(360deg)translatex(20px);-moz-transform:translatey(105vh)rotate(360deg)translatex(20px);-o-transform:translatey(105vh)rotate(360deg)translatex(20px);transform:translatey(105vh)rotate(360deg)translatex(20px);opacity:0}}"})]}):null}let j={id:"default-obsidian",name:"Apple Obsidian (Default)",category:"default",tokens:{"--theme-primary":"#0071E3","--theme-primary-hover":"#0077ED","--theme-accent":"#34C759","--theme-canvas":"#F5F5F7","--theme-parchment":"#FFFFFF","--theme-hairline":"rgba(0, 0, 0, 0.08)","--theme-header-bg":"#1D1D1F","--theme-header-text":"#FFFFFF","--theme-surface-glow":"rgba(0, 113, 227, 0.08)","--theme-card-border":"rgba(0, 0, 0, 0.08)","--theme-dark-canvas":"#000000","--theme-dark-parchment":"#161617","--theme-dark-header-bg":"#1C1C1E","--theme-dark-hairline":"rgba(255, 255, 255, 0.08)"},assets:{pattern_svg_url:"none",theme_badge_text:"Default"},ornaments:{enabled:!1,particle_svgs:[]},meta:{mode:"default_fallback",auto_schedule_enabled:!0}},k=(0,e.createContext)({theme:j,isLoading:!1,refreshTheme:async()=>{},previewTheme:()=>{}});function l({children:a}){let[b,c]=(0,e.useState)(j),[g,h]=(0,e.useState)(null),[m,n]=(0,e.useState)(!0),o=g||b,p=async()=>{try{let a=await fetch(`${f.H$}/theme/active`,{cache:"no-store",headers:{Accept:"application/json"}});if(a.ok){let b=await a.json();b.success&&b.data&&c(b.data)}}catch(a){console.warn("Could not fetch active theme, using obsidian fallback:",a)}finally{n(!1)}},q=(0,e.useMemo)(()=>{if(!o?.tokens)return"";let a=o.tokens,b="default-obsidian"===o.id,c=a["--theme-primary"]||"#0071E3",d=a["--theme-primary-hover"]||"#0077ED",e=a["--theme-accent"]||"#34C759",f=a["--theme-canvas"]||"#F5F5F7",g=a["--theme-parchment"]||"#FFFFFF",h=a["--theme-hairline"]||"rgba(0, 0, 0, 0.08)",i=a["--theme-header-bg"]||"#1D1D1F",j=a["--theme-header-text"]||"#FFFFFF",k=a["--theme-surface-glow"]||"rgba(0, 113, 227, 0.08)",l=a["--theme-card-border"]||"rgba(0, 0, 0, 0.08)",m=a["--theme-dark-canvas"]||"#000000",n=a["--theme-dark-parchment"]||"#161617",p=a["--theme-dark-header-bg"]||"#1C1C1E",q=a["--theme-dark-hairline"]||"rgba(255, 255, 255, 0.08)";return b?`
-        :root {
+        :root, html.light, html:not(.dark) {
           --color-primary: #0071E3;
           --color-primary-hover: #0077ED;
+          --color-primary-focus: #0055C6;
+          --color-primary-on-dark: #F5F5F7;
+          --color-canvas: #F5F5F7;
+          --color-parchment: #FFFFFF;
+          --color-surface-pearl: #FFFFFF;
+          --color-surface-tile: #FFFFFF;
+          --color-ink: #1D1D1F;
+          --color-ink-muted: #86868B;
+          --color-hairline: rgba(0, 0, 0, 0.08);
+          --color-divider: #E5E5EA;
           --theme-primary: #0071E3;
           --theme-accent: #34C759;
           --theme-canvas: #F5F5F7;
           --theme-parchment: #FFFFFF;
           --theme-header-bg: #1D1D1F;
           --theme-header-text: #FFFFFF;
+          --background: #F5F5F7;
+          --foreground: #1D1D1F;
         }
-        .dark {
+        .dark, html.dark {
           --color-primary: #2997FF;
           --color-primary-hover: #52A9FF;
+          --color-primary-focus: #0071E3;
+          --color-primary-on-dark: #1D1D1F;
+          --color-canvas: #000000;
+          --color-parchment: #161617;
+          --color-surface-pearl: #1C1C1E;
+          --color-surface-tile: #2C2C2E;
+          --color-ink: #F5F5F7;
+          --color-ink-muted: #A1A1A6;
+          --color-hairline: rgba(255, 255, 255, 0.08);
+          --color-divider: #2D2D2F;
+          --theme-canvas: #000000;
+          --theme-parchment: #161617;
+          --theme-header-bg: #1C1C1E;
+          --background: #000000;
+          --foreground: #F5F5F7;
+        }
+        html:not(.dark) .bg-parchment,
+        html.light .bg-parchment {
+          background-color: #FFFFFF !important;
+        }
+        html:not(.dark) .text-ink,
+        html.light .text-ink {
+          color: #1D1D1F !important;
+        }
+        .dark .bg-parchment,
+        html.dark .bg-parchment {
+          background-color: #161617 !important;
+        }
+        .dark .text-ink,
+        html.dark .text-ink {
+          color: #F5F5F7 !important;
         }
       `:`
-      :root {
+      :root, html.light, html:not(.dark) {
         --color-primary: ${c} !important;
         --color-primary-hover: ${d} !important;
         --color-primary-focus: ${d} !important;
         --color-primary-on-dark: ${c} !important;
         --color-canvas: ${f} !important;
         --color-parchment: ${g} !important;
+        --color-surface-pearl: ${g} !important;
         --color-surface-tile: ${i} !important;
         --color-hairline: ${h} !important;
+        --color-ink: #1D1D1F !important;
+        --color-ink-muted: #86868B !important;
+        --color-divider: #E5E5EA !important;
         --background: ${f} !important;
+        --foreground: #1D1D1F !important;
         --theme-primary: ${c} !important;
         --theme-primary-hover: ${d} !important;
         --theme-accent: ${e} !important;
@@ -35,14 +83,19 @@ exports.id=2353,exports.ids=[2353],exports.modules={1143:(a,b,c)=>{"use strict";
         --theme-header-text: ${j} !important;
       }
 
-      .dark {
+      .dark, html.dark {
         --color-primary: ${c} !important;
         --color-primary-hover: ${d} !important;
         --color-canvas: ${m} !important;
         --color-parchment: ${n} !important;
+        --color-surface-pearl: #1C1C1E !important;
         --color-surface-tile: ${p} !important;
         --color-hairline: ${q} !important;
+        --color-ink: #F5F5F7 !important;
+        --color-ink-muted: #A1A1A6 !important;
+        --color-divider: #2D2D2F !important;
         --background: ${m} !important;
+        --foreground: #F5F5F7 !important;
         --theme-canvas: ${m} !important;
         --theme-parchment: ${n} !important;
         --theme-header-bg: ${p} !important;
@@ -53,33 +106,49 @@ exports.id=2353,exports.ids=[2353],exports.modules={1143:(a,b,c)=>{"use strict";
         background-color: ${f} !important;
         transition: background-color 0.4s ease;
       }
-      .dark body {
+      .dark body, html.dark body {
         background-color: ${m} !important;
       }
 
       html:not(.dark) .bg-canvas,
+      html.light .bg-canvas,
       :not(.dark) .bg-canvas {
         background-color: ${f} !important;
       }
-      .dark .bg-canvas {
+      .dark .bg-canvas,
+      html.dark .bg-canvas {
         background-color: ${m} !important;
       }
 
       /* 2. Global Card & Container Surfaces: Light vs Dark Isolation */
       html:not(.dark) .bg-parchment,
+      html.light .bg-parchment,
       :not(.dark) .bg-parchment,
       html:not(.dark) .bg-white,
+      html.light .bg-white,
       :not(.dark) .bg-white {
         background-color: ${g} !important;
       }
       .dark .bg-parchment,
+      html.dark .bg-parchment,
       .dark .bg-white,
+      html.dark .bg-white,
       .dark .bg-slate-900,
+      html.dark .bg-slate-900,
       .dark [class*="dark:bg-[#161617]"],
       .dark [class*="dark:bg-[#1C1C1E]"],
       .dark [class*="dark:bg-[#1c1c1e]"],
       .dark [class*="dark:bg-[#2C2C2E]"] {
         background-color: ${n} !important;
+      }
+
+      html:not(.dark) .text-ink,
+      html.light .text-ink {
+        color: #1D1D1F !important;
+      }
+      .dark .text-ink,
+      html.dark .text-ink {
+        color: #F5F5F7 !important;
       }
 
       /* 3. Global Hairlines & Borders */

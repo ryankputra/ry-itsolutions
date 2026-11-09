@@ -14,18 +14,26 @@
   --color-hairline: rgba(0, 0, 0, 0.08);
   --color-canvas: #f5f5f7;
   --color-parchment: #ffffff;
-  --color-surface-pearl: #f5f5f7;
-  --color-surface-tile: #1d1d1f;
+  --color-surface-pearl: #ffffff;
+  --color-surface-tile: #ffffff;
   
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 }
 
 @layer base {
-  :root {
-    color-scheme: light dark;
+  :root, html.light {
+    color-scheme: light;
     --background: #f5f5f7;
     --foreground: #1d1d1f;
+    --color-canvas: #f5f5f7;
+    --color-parchment: #ffffff;
+    --color-surface-pearl: #ffffff;
+    --color-surface-tile: #ffffff;
+    --color-ink: #1d1d1f;
+    --color-ink-muted: #86868b;
+    --color-hairline: rgba(0, 0, 0, 0.08);
+    --color-divider: #e5e5ea;
     --theme-primary: #0071e3;
     --theme-primary-hover: #0077ed;
     --theme-accent: #34c759;
@@ -37,19 +45,7 @@
     --theme-badge-text: #ffffff;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root:not(.light) {
-      color-scheme: dark;
-      --background: #000000;
-      --foreground: #f5f5f7;
-      --color-canvas: #000000;
-      --color-parchment: #161617;
-      --color-surface-pearl: #1c1c1e;
-      --color-surface-tile: #2c2c2e;
-    }
-  }
-
-  .dark {
+  .dark, html.dark {
     color-scheme: dark;
     --color-primary: #2997ff;
     --color-primary-hover: #52a9ff;

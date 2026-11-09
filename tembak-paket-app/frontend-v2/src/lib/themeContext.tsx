@@ -128,34 +128,82 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
 
     if (isDefault) {
       return `
-        :root {
+        :root, html.light, html:not(.dark) {
           --color-primary: #0071E3;
           --color-primary-hover: #0077ED;
+          --color-primary-focus: #0055C6;
+          --color-primary-on-dark: #F5F5F7;
+          --color-canvas: #F5F5F7;
+          --color-parchment: #FFFFFF;
+          --color-surface-pearl: #FFFFFF;
+          --color-surface-tile: #FFFFFF;
+          --color-ink: #1D1D1F;
+          --color-ink-muted: #86868B;
+          --color-hairline: rgba(0, 0, 0, 0.08);
+          --color-divider: #E5E5EA;
           --theme-primary: #0071E3;
           --theme-accent: #34C759;
           --theme-canvas: #F5F5F7;
           --theme-parchment: #FFFFFF;
           --theme-header-bg: #1D1D1F;
           --theme-header-text: #FFFFFF;
+          --background: #F5F5F7;
+          --foreground: #1D1D1F;
         }
-        .dark {
+        .dark, html.dark {
           --color-primary: #2997FF;
           --color-primary-hover: #52A9FF;
+          --color-primary-focus: #0071E3;
+          --color-primary-on-dark: #1D1D1F;
+          --color-canvas: #000000;
+          --color-parchment: #161617;
+          --color-surface-pearl: #1C1C1E;
+          --color-surface-tile: #2C2C2E;
+          --color-ink: #F5F5F7;
+          --color-ink-muted: #A1A1A6;
+          --color-hairline: rgba(255, 255, 255, 0.08);
+          --color-divider: #2D2D2F;
+          --theme-canvas: #000000;
+          --theme-parchment: #161617;
+          --theme-header-bg: #1C1C1E;
+          --background: #000000;
+          --foreground: #F5F5F7;
+        }
+        html:not(.dark) .bg-parchment,
+        html.light .bg-parchment {
+          background-color: #FFFFFF !important;
+        }
+        html:not(.dark) .text-ink,
+        html.light .text-ink {
+          color: #1D1D1F !important;
+        }
+        .dark .bg-parchment,
+        html.dark .bg-parchment {
+          background-color: #161617 !important;
+        }
+        .dark .text-ink,
+        html.dark .text-ink {
+          color: #F5F5F7 !important;
         }
       `;
     }
 
     return `
-      :root {
+      :root, html.light, html:not(.dark) {
         --color-primary: ${primary} !important;
         --color-primary-hover: ${primaryHover} !important;
         --color-primary-focus: ${primaryHover} !important;
         --color-primary-on-dark: ${primary} !important;
         --color-canvas: ${canvas} !important;
         --color-parchment: ${parchment} !important;
+        --color-surface-pearl: ${parchment} !important;
         --color-surface-tile: ${headerBg} !important;
         --color-hairline: ${hairline} !important;
+        --color-ink: #1D1D1F !important;
+        --color-ink-muted: #86868B !important;
+        --color-divider: #E5E5EA !important;
         --background: ${canvas} !important;
+        --foreground: #1D1D1F !important;
         --theme-primary: ${primary} !important;
         --theme-primary-hover: ${primaryHover} !important;
         --theme-accent: ${accent} !important;
@@ -167,14 +215,19 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
         --theme-header-text: ${headerText} !important;
       }
 
-      .dark {
+      .dark, html.dark {
         --color-primary: ${primary} !important;
         --color-primary-hover: ${primaryHover} !important;
         --color-canvas: ${darkCanvas} !important;
         --color-parchment: ${darkParchment} !important;
+        --color-surface-pearl: #1C1C1E !important;
         --color-surface-tile: ${darkHeaderBg} !important;
         --color-hairline: ${darkHairline} !important;
+        --color-ink: #F5F5F7 !important;
+        --color-ink-muted: #A1A1A6 !important;
+        --color-divider: #2D2D2F !important;
         --background: ${darkCanvas} !important;
+        --foreground: #F5F5F7 !important;
         --theme-canvas: ${darkCanvas} !important;
         --theme-parchment: ${darkParchment} !important;
         --theme-header-bg: ${darkHeaderBg} !important;
@@ -185,33 +238,49 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
         background-color: ${canvas} !important;
         transition: background-color 0.4s ease;
       }
-      .dark body {
+      .dark body, html.dark body {
         background-color: ${darkCanvas} !important;
       }
 
       html:not(.dark) .bg-canvas,
+      html.light .bg-canvas,
       :not(.dark) .bg-canvas {
         background-color: ${canvas} !important;
       }
-      .dark .bg-canvas {
+      .dark .bg-canvas,
+      html.dark .bg-canvas {
         background-color: ${darkCanvas} !important;
       }
 
       /* 2. Global Card & Container Surfaces: Light vs Dark Isolation */
       html:not(.dark) .bg-parchment,
+      html.light .bg-parchment,
       :not(.dark) .bg-parchment,
       html:not(.dark) .bg-white,
+      html.light .bg-white,
       :not(.dark) .bg-white {
         background-color: ${parchment} !important;
       }
       .dark .bg-parchment,
+      html.dark .bg-parchment,
       .dark .bg-white,
+      html.dark .bg-white,
       .dark .bg-slate-900,
+      html.dark .bg-slate-900,
       .dark [class*="dark:bg-[#161617]"],
       .dark [class*="dark:bg-[#1C1C1E]"],
       .dark [class*="dark:bg-[#1c1c1e]"],
       .dark [class*="dark:bg-[#2C2C2E]"] {
         background-color: ${darkParchment} !important;
+      }
+
+      html:not(.dark) .text-ink,
+      html.light .text-ink {
+        color: #1D1D1F !important;
+      }
+      .dark .text-ink,
+      html.dark .text-ink {
+        color: #F5F5F7 !important;
       }
 
       /* 3. Global Hairlines & Borders */
