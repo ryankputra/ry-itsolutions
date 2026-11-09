@@ -23,6 +23,18 @@ export interface Track {
   verifiedOriginal?: boolean;
 }
 
+export const isItunesPreview = (url?: string): boolean => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("itunes.apple.com") ||
+    lower.includes("apple.com") ||
+    lower.includes("itunes-assets") ||
+    lower.includes("audio-ssl.itunes.apple.com") ||
+    lower.includes("mzstatic.com")
+  );
+};
+
 export const DEFAULT_TRACKS: Track[] = [
   {
     id: "track-1",
@@ -389,29 +401,41 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  // Helper to resolve clean audio stream URL (Paritas dengan Mobile & responsif < 100ms)
+  // Helper to resolve clean audio stream URL (Full duration playback)
   const getAudioStreamUrl = useCallback((track: Track) => {
     if (!track) return "/api/music/stream?id=8Ebqe2Dbzls";
 
-    // 1. Prioritaskan track.previewUrl jika ada dan valid HTTP(S) atau file lokal (/audio/...)
-    // Ini audio CDN streaming cepat dan stabil dari Apple Music/iTunes atau file lokal yang selalu responsif < 100ms
-    if (track.previewUrl) {
-      if (track.previewUrl.startsWith("http") || track.previewUrl.startsWith("/")) {
-        return track.previewUrl;
-      }
-    }
-
-    // 2. Jika ada track.audioUrl valid http/lokal (bukan link watch YouTube)
+    // 1. Jika track memiliki audioUrl valid (bukan link watch YouTube dan bukan cuplikan iTunes preview)
     if (
       track.audioUrl &&
       (track.audioUrl.startsWith("http") || track.audioUrl.startsWith("/")) &&
       !track.audioUrl.includes("youtube.com") &&
-      !track.audioUrl.includes("youtu.be")
+      !track.audioUrl.includes("youtu.be") &&
+      !isItunesPreview(track.audioUrl)
     ) {
       return track.audioUrl;
     }
 
-    // 3. Fallback terakhir baru gunakan /api/music/stream (ekstraksi YouTube via backend)
+    // 2. Jika previewUrl merupakan file audio lokal full (/audio/tiktok/*.mp3 atau /audio/...)
+    if (
+      track.previewUrl &&
+      track.previewUrl.startsWith("/") &&
+      !isItunesPreview(track.previewUrl)
+    ) {
+      return track.previewUrl;
+    }
+
+    // 3. Jika previewUrl valid HTTP dan BUKAN cuplikan iTunes (misal file audio eksternal full)
+    if (
+      track.previewUrl &&
+      track.previewUrl.startsWith("http") &&
+      !isItunesPreview(track.previewUrl)
+    ) {
+      return track.previewUrl;
+    }
+
+    // 4. Jika track berasal dari pencarian live / feed online (yang previewUrl-nya berupa cuplikan iTunes apple.com),
+    // atau jika audioUrl kosong / watch YouTube, arahkan audio streaming ke endpoint backend full duration
     const identifier = track.youtubeId || `${track.title} ${track.artist}`;
     return `/api/music/stream?id=${encodeURIComponent(identifier)}`;
   }, []);
@@ -944,9 +968,20 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
           if (audioRef.current) {
             const curr = audioRef.current.currentTime;
             setCurrentTime(curr);
+
+            // Sinkronisasi companion YouTube player agar tetap selaras dengan audio full duration
+            if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === "function") {
+              try {
+                const ytTime = ytPlayerRef.current.getCurrentTime();
+                if (typeof ytTime === "number" && !isNaN(ytTime) && Math.abs(ytTime - curr) > 1.5) {
+                  ytPlayerRef.current.seekTo(curr, true);
+                }
+              } catch {}
+            }
+
             if (typeof navigator !== "undefined" && "mediaSession" in navigator && "setPositionState" in navigator.mediaSession) {
               const dur = audioRef.current.duration;
-              if (dur > 0 && !isNaN(dur)) {
+              if (dur > 0 && !isNaN(dur) && isFinite(dur)) {
                 try {
                   navigator.mediaSession.setPositionState({
                     duration: dur,
@@ -961,7 +996,15 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         onLoadedMetadata={() => {
           if (audioRef.current) {
             const dur = audioRef.current.duration;
-            if (dur > 0 && !isNaN(dur)) {
+            if (dur > 0 && !isNaN(dur) && isFinite(dur)) {
+              setDuration(dur);
+            }
+          }
+        }}
+        onDurationChange={() => {
+          if (audioRef.current) {
+            const dur = audioRef.current.duration;
+            if (dur > 0 && !isNaN(dur) && isFinite(dur)) {
               setDuration(dur);
             }
           }
@@ -971,12 +1014,29 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
           if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
             navigator.mediaSession.playbackState = "playing";
           }
+          if (ytPlayerRef.current?.playVideo) {
+            try {
+              ytPlayerRef.current.mute();
+              if (audioRef.current && typeof ytPlayerRef.current.getCurrentTime === "function") {
+                const ytTime = ytPlayerRef.current.getCurrentTime();
+                if (typeof ytTime === "number" && Math.abs(ytTime - audioRef.current.currentTime) > 1) {
+                  ytPlayerRef.current.seekTo(audioRef.current.currentTime, true);
+                }
+              }
+              ytPlayerRef.current.playVideo();
+            } catch {}
+          }
         }}
         onPause={() => {
           if (audioRef.current?.paused) {
             setIsPlaying(false);
             if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
               navigator.mediaSession.playbackState = "paused";
+            }
+            if (ytPlayerRef.current?.pauseVideo) {
+              try {
+                ytPlayerRef.current.pauseVideo();
+              } catch {}
             }
           }
         }}
