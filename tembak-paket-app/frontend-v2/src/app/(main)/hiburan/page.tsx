@@ -16,6 +16,7 @@ import {
   Sparkles,
   Headphones,
   Zap,
+  Mic,
   Search,
   Share2,
   RotateCw,
@@ -40,6 +41,7 @@ interface CategoryItem {
 
 const CATEGORIES: CategoryItem[] = [
   { key: "all", label: "Semua Lagu", Icon: Music },
+  { key: "podcast", label: "Podcast & Talk", Icon: Mic },
   { key: "global", label: "Top Hits Global", Icon: Globe },
   { key: "kpop", label: "K-Pop Hits", Icon: Sparkles },
   { key: "indo", label: "Pop & R&B Indo", Icon: Headphones },
