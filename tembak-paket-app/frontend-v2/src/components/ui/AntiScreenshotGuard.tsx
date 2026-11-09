@@ -347,7 +347,7 @@ export function AntiScreenshotGuard() {
 
       {/* Khusus Akun Admin: Kontrol Floating Pill dengan Warna Kontras Tinggi (Jelas di Darkmode & Lightmode) */}
       {isAdmin && (
-        <div className="fixed bottom-4 right-4 z-[99999] flex items-center gap-2 rounded-full border border-slate-300 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 px-3 py-1.5 shadow-xl backdrop-blur-md text-[11px] font-bold text-slate-800 dark:text-neutral-100">
+        <div className="fixed top-20 right-3.5 md:top-auto md:bottom-5 md:right-5 z-[99999] flex items-center gap-2 rounded-full border border-slate-300 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 px-3 py-1.5 shadow-xl backdrop-blur-md text-[11px] font-bold text-slate-800 dark:text-neutral-100">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
           <span>Admin</span>
           <button

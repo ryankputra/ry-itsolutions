@@ -12,6 +12,7 @@ export interface Track {
   durationSec: number;
   youtubeId?: string;
   audioUrl: string;
+  previewUrl?: string;
   streamsCount?: string;
   tiktokUsage?: string;
   rank: number;
@@ -32,6 +33,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 173,
     youtubeId: "8Ebqe2Dbzls",
     audioUrl: "https://www.youtube.com/watch?v=8Ebqe2Dbzls",
+    previewUrl: "/audio/tiktok/apt.mp3",
     streamsCount: "145.2M streams",
     rank: 1,
     tags: ["#apt", "#rosé", "#brunomars", "#tophits"],
@@ -49,6 +51,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 251,
     youtubeId: "kPa7bsKwL-c",
     audioUrl: "https://www.youtube.com/watch?v=kPa7bsKwL-c",
+    previewUrl: "/audio/tiktok/diewithasmile.mp3",
     streamsCount: "162.5M streams",
     rank: 2,
     tags: ["#diewithasmile", "#ladygaga", "#brunomars"],
@@ -66,6 +69,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 193,
     youtubeId: "d5gf9dXbPi0",
     audioUrl: "https://www.youtube.com/watch?v=d5gf9dXbPi0",
+    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/a4/f5/6f/a4f56fa8-6796-4cc8-e988-58311a280c7c/mzaf_10179182957796315027.plus.aac.p.m4a",
     streamsCount: "185.4M streams",
     rank: 3,
     tags: ["#birdsofafeather", "#billieeilish"],
@@ -83,6 +87,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 200,
     youtubeId: "7Jm2Il2U-c0",
     audioUrl: "https://www.youtube.com/watch?v=7Jm2Il2U-c0",
+    previewUrl: "/audio/tiktok/satubulan.mp3",
     streamsCount: "81.3M streams",
     rank: 4,
     tags: ["#satubulan", "#bernadya"],
@@ -100,6 +105,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 250,
     youtubeId: "sdnDInjdWjw",
     audioUrl: "https://www.youtube.com/watch?v=sdnDInjdWjw",
+    previewUrl: "/audio/tiktok/untungnya.mp3",
     streamsCount: "62.0M streams",
     rank: 5,
     tags: ["#kitabuatmenyenangkan", "#bernadya"],
@@ -117,6 +123,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 245,
     youtubeId: "GAf2DQPYvGE",
     audioUrl: "https://www.youtube.com/watch?v=GAf2DQPYvGE",
+    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/84/e5/1f/84e51f2f-4a32-411a-12fc-3fac6b9a8329/mzaf_8383091391619561609.plus.aac.p.m4a",
     streamsCount: "69.1M streams",
     rank: 6,
     tags: ["#bermuara", "#rizkyfebian", "#mahalini"],
@@ -134,6 +141,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 214,
     youtubeId: "mlmcRW3s5TY",
     audioUrl: "https://www.youtube.com/watch?v=mlmcRW3s5TY",
+    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/dd/1d/49/dd1d4944-fc29-f58c-27cf-cab5c85093c4/mzaf_18430277536357850019.plus.aac.p.m4a",
     streamsCount: "38.4M streams",
     rank: 7,
     tags: ["#ceritakitasingkat", "#njan"],
@@ -150,6 +158,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 272,
     youtubeId: "54u_qDsqJv4",
     audioUrl: "https://www.youtube.com/watch?v=54u_qDsqJv4",
+    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/2b/99/f7/2b99f72a-725a-bb86-759b-4ef8cc7f8d4d/mzaf_17364749597227640171.plus.aac.p.m4a",
     streamsCount: "91.0M streams",
     rank: 8,
     tags: ["#sialan", "#adriankhalif", "#juicyluicy"],
@@ -166,6 +175,7 @@ export const DEFAULT_TRACKS: Track[] = [
     durationSec: 285,
     youtubeId: "s525A0Bc3z4",
     audioUrl: "https://www.youtube.com/watch?v=s525A0Bc3z4",
+    previewUrl: "/audio/tiktok/sigar.mp3",
     streamsCount: "66.5M streams",
     rank: 9,
     tags: ["#sigar", "#dennycaknan"],
@@ -325,9 +335,29 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         const serverTracks = json?.data?.tracks || json?.tracks;
         if (Array.isArray(serverTracks) && serverTracks.length > 0) {
           setTracks(serverTracks);
+        } else {
+          // Fallback ke tracks.json lokal statis
+          fetch(`/audio/tiktok/tracks.json`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((staticJson) => {
+              if (Array.isArray(staticJson?.tracks) && staticJson.tracks.length > 0) {
+                setTracks(staticJson.tracks);
+              }
+            })
+            .catch(() => {});
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        // Fallback jika API backend belum aktif/timeout
+        fetch(`/audio/tiktok/tracks.json`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((staticJson) => {
+            if (Array.isArray(staticJson?.tracks) && staticJson.tracks.length > 0) {
+              setTracks(staticJson.tracks);
+            }
+          })
+          .catch(() => {});
+      });
 
     try {
       const savedFavs = localStorage.getItem("ry_music_favs") || localStorage.getItem("ry_tiktok_music_favs");
@@ -359,29 +389,31 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  // Helper to resolve clean audio stream URL (Full Song Streaming for RyTone)
+  // Helper to resolve clean audio stream URL (Paritas dengan Mobile & responsif < 100ms)
   const getAudioStreamUrl = useCallback((track: Track) => {
     if (!track) return "/api/music/stream?id=8Ebqe2Dbzls";
 
-    // 1. Deteksi apakah audioUrl adalah preview iTunes (29s), file lokal backsound story IG/WA (30s), atau link YouTube mentah:
-    // RyTone adalah layanan streaming musik murni (bukan pemutar backsound story).
-    // Selalu route ke /api/music/stream untuk streaming audio utuh (3-5 menit) dari YouTube
-    const isRestrictedOrPreview =
-      !track.audioUrl ||
-      track.audioUrl.length === 0 ||
-      track.audioUrl.includes("itunes.apple.com") ||
-      track.audioUrl.includes("AudioPreview") ||
-      track.audioUrl.includes("preview") ||
-      track.audioUrl.includes("/audio/tiktok/") ||
-      track.audioUrl.includes("youtube.com") ||
-      track.audioUrl.endsWith(".mp3");
-
-    if (isRestrictedOrPreview) {
-      return `/api/music/stream?id=${encodeURIComponent(track.youtubeId || `${track.title} ${track.artist}`)}`;
+    // 1. Prioritaskan track.previewUrl jika ada dan valid HTTP(S) atau file lokal (/audio/...)
+    // Ini audio CDN streaming cepat dan stabil dari Apple Music/iTunes atau file lokal yang selalu responsif < 100ms
+    if (track.previewUrl) {
+      if (track.previewUrl.startsWith("http") || track.previewUrl.startsWith("/")) {
+        return track.previewUrl;
+      }
     }
 
-    // 2. Jika ada direct audio stream murni pihak ketiga
-    return track.audioUrl;
+    // 2. Jika ada track.audioUrl valid http/lokal (bukan link watch YouTube)
+    if (
+      track.audioUrl &&
+      (track.audioUrl.startsWith("http") || track.audioUrl.startsWith("/")) &&
+      !track.audioUrl.includes("youtube.com") &&
+      !track.audioUrl.includes("youtu.be")
+    ) {
+      return track.audioUrl;
+    }
+
+    // 3. Fallback terakhir baru gunakan /api/music/stream (ekstraksi YouTube via backend)
+    const identifier = track.youtubeId || `${track.title} ${track.artist}`;
+    return `/api/music/stream?id=${encodeURIComponent(identifier)}`;
   }, []);
 
   // Update MediaSession metadata for lock screen & notifications
@@ -790,12 +822,24 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   const refreshTracks = useCallback(async () => {
     try {
-      const res = await fetch("/api/tiktok-music");
+      let res = await fetch(`/api/music?_t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) {
+        res = await fetch(`/api/tiktok-music?_t=${Date.now()}`, { cache: "no-store" });
+      }
       if (res.ok) {
         const json = await res.json();
         const serverTracks = json?.data?.tracks || json?.tracks;
         if (Array.isArray(serverTracks) && serverTracks.length > 0) {
           setTracks(serverTracks);
+          return;
+        }
+      }
+      // Fallback ke file katalog statis jika API server offline/lambat
+      const staticRes = await fetch("/audio/tiktok/tracks.json");
+      if (staticRes.ok) {
+        const staticJson = await staticRes.json();
+        if (Array.isArray(staticJson?.tracks) && staticJson.tracks.length > 0) {
+          setTracks(staticJson.tracks);
         }
       }
     } catch {}
@@ -933,6 +977,46 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         onError={(e) => {
           console.warn("[RyTone Audio Element Error]:", e);
           setIsBuffering(false);
+          const audio = audioRef.current;
+          const track = tracks[currentTrackIndex] || currentTrack;
+
+          // Fallback otomatis beralih ke track.previewUrl jika URL stream gagal
+          if (audio && track) {
+            const fallbackPreview =
+              track.previewUrl ||
+              (track.audioUrl &&
+              !track.audioUrl.includes("youtube.com") &&
+              !track.audioUrl.includes("youtu.be")
+                ? track.audioUrl
+                : null);
+
+            if (fallbackPreview) {
+              const currentSrc = audio.currentSrc || audio.src || "";
+              const isAlreadyFallback =
+                currentSrc.includes(fallbackPreview) ||
+                (fallbackPreview.startsWith("/") && currentSrc.endsWith(fallbackPreview));
+
+              if (!isAlreadyFallback) {
+                console.info("[RyTone Audio] Stream URL gagal, beralih ke previewUrl fallback:", fallbackPreview);
+                audio.src = fallbackPreview;
+                audio
+                  .play()
+                  .then(() => {
+                    setIsPlaying(true);
+                  })
+                  .catch((err) => {
+                    console.warn("[RyTone Audio Fallback Error]:", err);
+                    setTimeout(() => {
+                      if (tracks.length > 1) {
+                        handleNextTrackRef.current();
+                      }
+                    }, 1500);
+                  });
+                return;
+              }
+            }
+          }
+
           setTimeout(() => {
             if (tracks.length > 1) {
               handleNextTrackRef.current();
