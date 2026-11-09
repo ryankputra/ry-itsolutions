@@ -28,6 +28,7 @@ import {
   Zap,
   Coins,
   Wallet,
+  Download,
 } from "lucide-react";
 
 function AdminDashboardContent() {
@@ -315,6 +316,35 @@ function AdminDashboardContent() {
           <RotateCw className={`w-3.5 h-3.5 ${loadingMetrics ? "animate-spin" : ""}`} />
           Segarkan
         </Button>
+      </div>
+
+      {/* BETA Admin APK Download Banner */}
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <Smartphone className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-bold text-sm text-ink">[BETA ADMIN] Download APK Native</h3>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider">
+                BETA Testing
+              </span>
+              <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 rounded font-mono font-bold">2.7 MB</span>
+            </div>
+            <p className="text-xs text-ink-muted mt-0.5">
+              Paket instalasi Android (APK) khusus administrator untuk pengujian langsung di perangkat fisik.
+            </p>
+          </div>
+        </div>
+        <a
+          href="/download/apk"
+          download="Ry-ITSolutions.apk"
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all shrink-0 flex items-center gap-2 active:scale-95"
+        >
+          <Download className="w-4 h-4" />
+          <span>Unduh File APK</span>
+        </a>
       </div>
 
       {/* Feature Navigation Grid */}
