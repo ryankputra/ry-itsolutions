@@ -54,6 +54,7 @@ export function BottomNav() {
             <Link
               key={idx}
               href={item.href}
+              prefetch={true}
               className={`flex flex-col items-center justify-center py-1.5 px-3 transition-colors duration-150 relative touch-manipulation select-none ${
                 isActive
                   ? "text-primary font-bold"

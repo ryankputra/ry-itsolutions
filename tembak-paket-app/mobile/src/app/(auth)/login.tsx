@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,18 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound, CheckCircle2, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/api';
+import { storage } from '../../utils/storage';
 import { Colors } from '../../theme/colors';
+
+const SAVED_EMAIL_KEY = 'ry_saved_email';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -25,9 +30,55 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  // Forgot Password Modal State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'request' | 'verify'>('request');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPass, setForgotNewPass] = useState('');
+  const [forgotConfirmPass, setForgotConfirmPass] = useState('');
+  const [showForgotNewPass, setShowForgotNewPass] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotTimer, setForgotTimer] = useState(60);
+  const [canResendForgot, setCanResendForgot] = useState(false);
+
   const colors = Colors.dark;
+
+  useEffect(() => {
+    async function loadSavedEmail() {
+      try {
+        const saved = await storage.getItem(SAVED_EMAIL_KEY);
+        if (saved) {
+          setEmail(saved);
+          setRememberMe(true);
+        }
+      } catch {}
+    }
+    loadSavedEmail();
+  }, []);
+
+  // Countdown timer for forgot password OTP resend
+  useEffect(() => {
+    let interval: any = null;
+    if (showForgotModal && forgotStep === 'verify' && forgotTimer > 0) {
+      setCanResendForgot(false);
+      interval = setInterval(() => {
+        setForgotTimer((prev) => {
+          if (prev <= 1) {
+            setCanResendForgot(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showForgotModal, forgotStep, forgotTimer]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -37,14 +88,94 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const result = await login(email, password);
+      const result = await login(email.trim().toLowerCase(), password);
       if (result.success) {
+        if (rememberMe) {
+          await storage.setItem(SAVED_EMAIL_KEY, email.trim().toLowerCase());
+        } else {
+          await storage.removeItem(SAVED_EMAIL_KEY);
+        }
         router.replace('/(tabs)');
       } else {
         Alert.alert('Login Gagal', result.message);
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestForgotOtp = async () => {
+    if (!forgotEmail.trim()) {
+      Alert.alert('Perhatian', 'Masukkan alamat email Anda.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const res = await apiClient.post('/auth/forgot-password-request', {
+        email: forgotEmail.trim().toLowerCase(),
+      });
+      if (res.data?.status) {
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        setForgotStep('verify');
+        setForgotTimer(60);
+        setCanResendForgot(false);
+        Alert.alert('Kode Terkirim! 📬', res.data.message || 'Cek kotak masuk atau folder spam email Anda.');
+      } else {
+        Alert.alert('Gagal', res.data?.message || 'Email tidak ditemukan.');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Gagal menghubungi server untuk reset password.';
+      Alert.alert('Gagal', msg);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleVerifyForgotOtp = async () => {
+    if (!forgotOtp.trim() || forgotOtp.trim().length < 6) {
+      Alert.alert('Perhatian', 'Masukkan 6 digit kode OTP verifikasi.');
+      return;
+    }
+    if (!forgotNewPass || forgotNewPass.length < 6) {
+      Alert.alert('Perhatian', 'Password baru minimal 6 karakter.');
+      return;
+    }
+    if (forgotNewPass !== forgotConfirmPass) {
+      Alert.alert('Perhatian', 'Konfirmasi password tidak cocok.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const res = await apiClient.post('/auth/forgot-password-verify', {
+        email: forgotEmail.trim().toLowerCase(),
+        otp: forgotOtp.trim(),
+        newPassword: forgotNewPass,
+      });
+
+      if (res.data?.status) {
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        Alert.alert('Berhasil! 🎉', 'Password Anda berhasil diperbarui. Silakan login kembali.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowForgotModal(false);
+              setEmail(forgotEmail.trim().toLowerCase());
+              setPassword(forgotNewPass);
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('Gagal', res.data?.message || 'Kode OTP tidak valid.');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Terjadi kesalahan saat memverifikasi reset password.';
+      Alert.alert('Gagal', msg);
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -111,7 +242,20 @@ export default function LoginScreen() {
 
             {/* Password Field */}
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Kata Sandi</Text>
+              <View style={styles.passwordHeaderRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Kata Sandi</Text>
+                <Pressable
+                  onPress={() => {
+                    setForgotEmail(email);
+                    setForgotStep('request');
+                    setShowForgotModal(true);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text style={[styles.forgotText, { color: colors.primary }]}>Lupa Kata Sandi?</Text>
+                </Pressable>
+              </View>
+
               <View
                 style={[
                   styles.inputContainer,
@@ -141,6 +285,28 @@ export default function LoginScreen() {
                 </Pressable>
               </View>
             </View>
+
+            {/* Remember Me Toggle */}
+            <Pressable
+              style={styles.rememberRow}
+              onPress={() => setRememberMe(!rememberMe)}
+              hitSlop={6}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: rememberMe ? colors.primary : colors.border,
+                    backgroundColor: rememberMe ? colors.primary : 'transparent',
+                  },
+                ]}
+              >
+                {rememberMe && <CheckCircle2 size={13} color="#fff" />}
+              </View>
+              <Text style={[styles.rememberLabel, { color: colors.textMuted }]}>
+                Ingat alamat email saya
+              </Text>
+            </Pressable>
 
             {/* Login Button (Min 44dp height) */}
             <Pressable
@@ -187,6 +353,138 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={showForgotModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowForgotModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <KeyRound size={20} color={colors.primary} />
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {forgotStep === 'request' ? 'Lupa Kata Sandi' : 'Reset Kata Sandi'}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setShowForgotModal(false)}
+                hitSlop={8}
+                style={[styles.closeBtn, { backgroundColor: colors.background }]}
+              >
+                <X size={18} color={colors.textMuted} />
+              </Pressable>
+            </View>
+
+            {forgotStep === 'request' ? (
+              <View style={{ gap: 14, marginTop: 12 }}>
+                <Text style={[styles.modalDesc, { color: colors.textMuted }]}>
+                  Masukkan alamat email yang terdaftar. Kami akan mengirimkan 6 digit kode OTP verifikasi untuk mengatur ulang password Anda.
+                </Text>
+
+                <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Mail size={18} color={colors.textDim} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="nama@email.com"
+                    placeholderTextColor={colors.textDim}
+                    value={forgotEmail}
+                    onChangeText={setForgotEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleRequestForgotOtp}
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.actionBtnText}>Kirim Kode OTP</Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : (
+              <View style={{ gap: 14, marginTop: 12 }}>
+                <Text style={[styles.modalDesc, { color: colors.textMuted }]}>
+                  Kode OTP telah dikirim ke <Text style={{ color: colors.text, fontWeight: '700' }}>{forgotEmail}</Text>. Masukkan kode dan kata sandi baru.
+                </Text>
+
+                <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.input, { color: colors.text, textAlign: 'center', letterSpacing: 6, fontWeight: '800', fontSize: 18 }]}
+                    placeholder="123456"
+                    placeholderTextColor={colors.textDim}
+                    value={forgotOtp}
+                    onChangeText={setForgotOtp}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                  />
+                </View>
+
+                <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Lock size={18} color={colors.textDim} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="Kata sandi baru (min 6 karakter)"
+                    placeholderTextColor={colors.textDim}
+                    value={forgotNewPass}
+                    onChangeText={setForgotNewPass}
+                    secureTextEntry={!showForgotNewPass}
+                  />
+                  <Pressable onPress={() => setShowForgotNewPass(!showForgotNewPass)} hitSlop={8}>
+                    {showForgotNewPass ? <EyeOff size={18} color={colors.textDim} /> : <Eye size={18} color={colors.textDim} />}
+                  </Pressable>
+                </View>
+
+                <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Lock size={18} color={colors.textDim} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="Konfirmasi kata sandi baru"
+                    placeholderTextColor={colors.textDim}
+                    value={forgotConfirmPass}
+                    onChangeText={setForgotConfirmPass}
+                    secureTextEntry={!showForgotNewPass}
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Pressable
+                    disabled={!canResendForgot || forgotLoading}
+                    onPress={handleRequestForgotOtp}
+                  >
+                    <Text style={{ color: canResendForgot ? colors.primary : colors.textDim, fontSize: 12, fontWeight: '600' }}>
+                      {canResendForgot ? 'Kirim Ulang Kode' : `Kirim Ulang (${forgotTimer}s)`}
+                    </Text>
+                  </Pressable>
+                  <Pressable onPress={() => setForgotStep('request')}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>Ganti Email</Text>
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleVerifyForgotOtp}
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.actionBtnText}>Simpan Kata Sandi Baru</Text>
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -237,6 +535,15 @@ const styles = StyleSheet.create({
   inputGroup: {
     gap: 8,
   },
+  passwordHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  forgotText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   label: {
     fontSize: 13,
     fontWeight: '600',
@@ -244,10 +551,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 52,
     borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 14,
-    height: 52, // >= 44dp touch target
   },
   inputIcon: {
     marginRight: 10,
@@ -258,16 +565,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   eyeButton: {
-    padding: 8,
-    justifyContent: 'center',
+    padding: 6,
+  },
+  rememberRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    marginTop: -4,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rememberLabel: {
+    fontSize: 13,
   },
   loginButton: {
-    flexDirection: 'row',
-    height: 52, // >= 44dp touch target
+    height: 52,
     borderRadius: 14,
-    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 8,
   },
   loginButtonText: {
@@ -276,11 +598,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   guestButton: {
-    height: 48,
+    height: 50,
     borderRadius: 14,
     borderWidth: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   guestButtonText: {
     fontSize: 14,
@@ -290,12 +612,61 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 36,
   },
   footerText: {
     fontSize: 14,
   },
   registerLink: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  modalDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBtn: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  actionBtnText: {
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },

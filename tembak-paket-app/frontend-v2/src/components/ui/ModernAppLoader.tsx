@@ -117,7 +117,7 @@ export function ModernAppLoader({
   }, [category, themeId]);
 
   return (
-    <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-black/20 dark:bg-black/50 backdrop-blur-2xl text-ink select-none transition-all duration-300 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','Segoe_UI',Roboto,sans-serif]">
+    <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-black/10 dark:bg-black/35 backdrop-blur-md text-ink select-none transition-opacity duration-150 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','Segoe_UI',Roboto,sans-serif]">
       {/* 1. Atmospheric Ambient Diffusion (Subtle Liquid Glow) */}
       <div
         className="absolute inset-0 pointer-events-none opacity-50 dark:opacity-40 transition-opacity duration-700"

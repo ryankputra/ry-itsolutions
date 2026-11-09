@@ -268,7 +268,7 @@ export default function BeliPaketPage() {
             <Card 
               key={prov.id} 
               glass 
-              className="cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all flex flex-col items-center justify-center p-6 gap-4 relative overflow-hidden group"
+              className="cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all flex flex-col items-center justify-center p-6 gap-4 relative overflow-hidden group card-hover btn-press"
               onClick={() => setSelectedProvider(prov.id)}
             >
               {prov.badge && (
@@ -303,7 +303,7 @@ export default function BeliPaketPage() {
               setSearch("");
             }
           }}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-canvas border border-hairline hover:bg-parchment transition-colors btn-press cursor-pointer shrink-0"
         >
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -338,7 +338,7 @@ export default function BeliPaketPage() {
               {filteredPackages.map(p => (
                 <Card 
                   key={p.package_code}
-                  className="cursor-pointer hover:border-primary transition-colors flex flex-col justify-between p-5"
+                  className="cursor-pointer hover:border-primary transition-all flex flex-col justify-between p-5 card-hover btn-press select-none"
                   onClick={() => setSelectedPkg(p)}
                 >
                   <div className="mb-4">
@@ -470,7 +470,7 @@ export default function BeliPaketPage() {
                       </div>
                     </div>
                   )}
-                  <Button className="w-full h-12" type="button" onClick={handleRequestOtp} isLoading={purchasing}>Kirim OTP Baru</Button>
+                  <Button className="w-full h-12 btn-press btn-glow" type="button" onClick={handleRequestOtp} isLoading={purchasing}>Kirim OTP Baru</Button>
                 </div>
               ) : requiresOtp && otpRequested ? (
                 <div className="space-y-4 p-4 border border-primary/20 bg-primary/5 rounded-2xl">
@@ -484,17 +484,17 @@ export default function BeliPaketPage() {
                       required 
                     />
                   )}
-                  <Button className="w-full h-12" type="submit" isLoading={purchasing}>
+                  <Button className="w-full h-12 btn-press btn-glow" type="submit" isLoading={purchasing}>
                     {accessToken ? "Beli Sekarang (Menggunakan Sesi)" : "Verifikasi & Beli"}
                   </Button>
                   {accessToken && (
-                    <button type="button" className="text-xs text-rose-500 underline font-medium block mx-auto pt-1" onClick={() => { setAccessToken(""); setOtpRequested(false); setPhone(""); }}>
+                    <button type="button" className="text-xs text-rose-500 underline font-medium block mx-auto pt-1 btn-press" onClick={() => { setAccessToken(""); setOtpRequested(false); setPhone(""); }}>
                       Batalkan & Gunakan Nomor Lain
                     </button>
                   )}
                 </div>
               ) : (
-                <Button className="w-full h-12" type="submit" isLoading={purchasing}>Beli Sekarang</Button>
+                <Button className="w-full h-12 btn-press btn-glow" type="submit" isLoading={purchasing}>Beli Sekarang</Button>
               )}
             </form>
           )}

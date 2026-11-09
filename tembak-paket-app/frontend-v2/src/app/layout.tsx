@@ -23,7 +23,10 @@ import type { Viewport } from "next";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0066cc",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0071e3" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -53,9 +56,15 @@ export default function RootLayout({
   return (
     <html
       lang="id"
+      suppressHydrationWarning
       className={`${inter.variable} antialiased`}
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{const t=localStorage.getItem('theme');const dark=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(dark){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';}}catch(e){}})();`,
+          }}
+        />
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"

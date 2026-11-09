@@ -15,8 +15,9 @@ export const getApiBaseUrl = (): string => {
     return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
   }
 
-  // 2. Default to active STB Backend for 100% real database & API parity on Expo Go
-  return 'http://192.168.0.203:3001/api';
+  // 2. Production Domain (https://ry-itsolutionts.web.id/api)
+  // Backend STB Cloudflare Tunnel aktif 24 jam & dapat diakses langsung oleh HP/Expo Go
+  return 'https://ry-itsolutionts.web.id/api';
 };
 
 /**

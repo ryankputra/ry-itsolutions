@@ -241,11 +241,18 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [isLoop, setIsLoop] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [isPlayerVisible, setPlayerVisible] = useState<boolean>(false);
+  const [isPlayerVisible, setPlayerVisibleState] = useState<boolean>(true);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [isResuming, setIsResuming] = useState<boolean>(false);
   const [videoSlotPos, setVideoSlotPos] = useState<VideoSlotPos | null>(null);
+
+  const setPlayerVisible = useCallback((visible: boolean) => {
+    setPlayerVisibleState(visible);
+    try {
+      localStorage.setItem("ry_music_visible", visible ? "true" : "false");
+    } catch {}
+  }, []);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
@@ -332,6 +339,21 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         const parsed = parseFloat(savedVol);
         if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
           setVolumeState(parsed);
+        }
+      }
+      const savedVisible = localStorage.getItem("ry_music_visible");
+      if (savedVisible !== null) {
+        setPlayerVisibleState(savedVisible === "true");
+      }
+      const savedMini = localStorage.getItem("ry_music_minimized");
+      if (savedMini !== null) {
+        setIsMinimized(savedMini === "true");
+      }
+      const savedTrackIdx = localStorage.getItem("ry_music_track_idx");
+      if (savedTrackIdx !== null) {
+        const parsedIdx = parseInt(savedTrackIdx, 10);
+        if (!isNaN(parsedIdx) && parsedIdx >= 0) {
+          setCurrentTrackIndex(parsedIdx);
         }
       }
     } catch {}
@@ -480,6 +502,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
       // Switching to a DIFFERENT track:
       setCurrentTrackIndex(index);
+      try {
+        localStorage.setItem("ry_music_track_idx", index.toString());
+        localStorage.setItem("ry_music_visible", "true");
+      } catch {}
       setCurrentTime(0);
       setIsPlaying(true);
       setDuration(targetTrack.durationSec || 200);
@@ -746,7 +772,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   );
 
   const toggleMinimize = useCallback(() => {
-    setIsMinimized((prev) => !prev);
+    setIsMinimized((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("ry_music_minimized", next ? "true" : "false");
+      } catch {}
+      return next;
+    });
   }, []);
 
   const formatTime = useCallback((secs: number) => {

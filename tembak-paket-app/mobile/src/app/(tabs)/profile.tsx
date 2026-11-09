@@ -35,7 +35,9 @@ import {
   Zap,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { Sun, Moon, Laptop } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useAppTheme } from '../../context/ThemeContext';
 import { storage, STORAGE_KEYS } from '../../utils/storage';
 import { CartItem } from '../../types';
 import { apiClient } from '../../services/api';
@@ -46,7 +48,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, logout, isAuthenticated, refreshUser } = useAuth();
-  const colors = Colors.dark;
+  const { theme, preference, setPreference, colors } = useAppTheme();
 
   const [cartCount, setCartCount] = useState(0);
   const [vouchersCount, setVouchersCount] = useState(0);
@@ -579,6 +581,46 @@ export default function ProfileScreen() {
             <Text style={styles.logoutBtnText}>Keluar dari Akun</Text>
           </Pressable>
         </View>
+
+        {/* ============================================================ */}
+        {/* 7. PENGATURAN TEMA (Dark / Light / Sistem)                  */}
+        {/* ============================================================ */}
+        <View style={[styles.sectionCard, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+          <Text style={[styles.sectionTitle, { color: colors.ink, marginBottom: 12 }]}>
+            Tampilan & Tema Aplikasi
+          </Text>
+
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {[
+              { id: 'dark', label: 'Gelap', icon: Moon },
+              { id: 'light', label: 'Terang', icon: Sun },
+              { id: 'system', label: 'Sistem', icon: Laptop },
+            ].map((t) => {
+              const active = preference === t.id;
+              return (
+                <Pressable
+                  key={t.id}
+                  style={[
+                    styles.themePrefBtn,
+                    {
+                      borderColor: active ? colors.primary : colors.hairline,
+                      backgroundColor: active ? 'rgba(30, 215, 96, 0.12)' : colors.canvas,
+                    },
+                  ]}
+                  onPress={() => {
+                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                    setPreference(t.id as any);
+                  }}
+                >
+                  <t.icon size={16} color={active ? colors.primary : colors.inkMuted} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: active ? colors.primary : colors.ink, marginTop: 4 }}>
+                    {t.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -880,5 +922,13 @@ const styles = StyleSheet.create({
     color: '#ff453a',
     fontSize: 13,
     fontWeight: '700',
+  },
+  themePrefBtn: {
+    flex: 1,
+    height: 54,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

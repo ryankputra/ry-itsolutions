@@ -23,6 +23,7 @@
 
 @layer base {
   :root {
+    color-scheme: light dark;
     --background: #f5f5f7;
     --foreground: #1d1d1f;
     --theme-primary: #0071e3;
@@ -34,6 +35,18 @@
     --theme-header-text: #ffffff;
     --theme-badge-bg: #1d1d1f;
     --theme-badge-text: #ffffff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      color-scheme: dark;
+      --background: #000000;
+      --foreground: #f5f5f7;
+      --color-canvas: #000000;
+      --color-parchment: #161617;
+      --color-surface-pearl: #1c1c1e;
+      --color-surface-tile: #2c2c2e;
+    }
   }
 
   .dark {
@@ -55,6 +68,8 @@
   }
 
   html {
+    background-color: var(--background);
+    color: var(--foreground);
     scroll-behavior: smooth;
     overflow-x: hidden !important;
     max-width: 100vw !important;

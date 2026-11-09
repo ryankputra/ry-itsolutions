@@ -76,11 +76,11 @@ export function SpotifyPlayerBar() {
   // Minimized Compact Pill Mode
   if (isMinimized) {
     return (
-      <div className="fixed bottom-[65px] lg:bottom-4 right-4 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="fixed bottom-[calc(65px+env(safe-area-inset-bottom,0px))] lg:bottom-4 right-4 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200">
         <div className="bg-parchment/95 dark:bg-[#121212]/95 border border-hairline dark:border-white/10 backdrop-blur-xl rounded-full pl-2 pr-4 py-1.5 shadow-2xl flex items-center gap-3 text-ink dark:text-white">
           <button
             onClick={toggleMinimize}
-            className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 cursor-pointer shadow relative group border border-hairline dark:border-white/20"
+            className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 cursor-pointer shadow relative group border border-hairline dark:border-white/20 btn-press"
             title="Perbesar Player"
           >
             {currentTrack?.coverImage ? (
@@ -100,13 +100,13 @@ export function SpotifyPlayerBar() {
           </div>
           <button
             onClick={togglePlayPause}
-            className="w-8 h-8 rounded-full bg-ink dark:bg-white text-canvas dark:text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer shadow"
+            className="w-8 h-8 rounded-full bg-ink dark:bg-white text-canvas dark:text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer shadow btn-press"
           >
             {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current translate-x-0.5" />}
           </button>
           <button
             onClick={toggleMinimize}
-            className="text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition-colors cursor-pointer"
+            className="text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition-colors cursor-pointer btn-press"
             title="Buka Player Penuh"
           >
             <ChevronUp className="w-4 h-4" />
@@ -131,7 +131,7 @@ export function SpotifyPlayerBar() {
 
       {/* Main Spotify-style Player Bar */}
       <footer
-        className="fixed bottom-[56px] lg:bottom-0 left-0 right-0 z-40 bg-parchment/95 dark:bg-[#121212]/95 border-t border-hairline dark:border-white/10 backdrop-blur-2xl text-ink dark:text-white select-none transition-all duration-200 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)]"
+        className="fixed bottom-[calc(56px+env(safe-area-inset-bottom,0px))] lg:bottom-0 left-0 right-0 z-40 bg-parchment/95 dark:bg-[#121212]/95 border-t border-hairline dark:border-white/10 backdrop-blur-2xl text-ink dark:text-white select-none transition-all duration-200 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)]"
         aria-label="RyTone Music Player"
       >
         {/* Mobile thin top progress indicator */}
@@ -195,7 +195,7 @@ export function SpotifyPlayerBar() {
             {/* Spotify Heart / Like Button */}
             <button
               onClick={() => toggleFavorite(currentTrack?.id || "")}
-              className={`p-1.5 rounded-full transition-all cursor-pointer shrink-0 hover:scale-110 active:scale-90 ${
+              className={`p-1.5 rounded-full transition-all cursor-pointer shrink-0 btn-press hover:scale-110 active:scale-90 ${
                 isLiked ? "text-[#1ed760]" : "text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white"
               }`}
               title={isLiked ? "Hapus dari Favorit" : "Simpan ke Lagu yang Disukai"}
@@ -213,7 +213,7 @@ export function SpotifyPlayerBar() {
               {/* Shuffle (Desktop only) */}
               <button
                 onClick={toggleShuffle}
-                className={`hidden sm:flex relative p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition cursor-pointer ${
+                className={`hidden sm:flex relative p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition cursor-pointer btn-press ${
                   isShuffle ? "text-[#1ed760] hover:text-[#1ed760] dark:text-[#1ed760] dark:hover:text-[#1ed760]" : ""
                 }`}
                 title={isShuffle ? "Acak Aktif" : "Aktifkan Putar Acak"}
@@ -227,7 +227,7 @@ export function SpotifyPlayerBar() {
               {/* Prev */}
               <button
                 onClick={prevTrack}
-                className="p-1.5 sm:p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:scale-105 active:scale-95 transition cursor-pointer"
+                className="p-1.5 sm:p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:scale-105 active:scale-95 transition cursor-pointer btn-press"
                 title="Lagu Sebelumnya"
               >
                 <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
@@ -236,7 +236,7 @@ export function SpotifyPlayerBar() {
               {/* Circular Play / Pause (Spotify Signature Button) */}
               <button
                 onClick={togglePlayPause}
-                className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full bg-ink dark:bg-white text-canvas dark:text-black hover:scale-105 active:scale-95 flex items-center justify-center shadow-lg transition-transform cursor-pointer"
+                className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full bg-ink dark:bg-white text-canvas dark:text-black hover:scale-105 active:scale-95 flex items-center justify-center shadow-lg transition-transform cursor-pointer btn-press"
                 title={isPlaying ? "Jeda" : "Putar"}
               >
                 {isBuffering ? (
@@ -251,7 +251,7 @@ export function SpotifyPlayerBar() {
               {/* Next */}
               <button
                 onClick={nextTrack}
-                className="p-1.5 sm:p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:scale-105 active:scale-95 transition cursor-pointer"
+                className="p-1.5 sm:p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:scale-105 active:scale-95 transition cursor-pointer btn-press"
                 title="Lagu Berikutnya"
               >
                 <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
@@ -260,7 +260,7 @@ export function SpotifyPlayerBar() {
               {/* Repeat / Loop (Desktop only) */}
               <button
                 onClick={toggleLoop}
-                className={`hidden sm:flex relative p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition cursor-pointer ${
+                className={`hidden sm:flex relative p-2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition cursor-pointer btn-press ${
                   isLoop ? "text-[#1ed760] hover:text-[#1ed760] dark:text-[#1ed760] dark:hover:text-[#1ed760]" : ""
                 }`}
                 title={isLoop ? "Ulangi Lagu Aktif" : "Ulangi Lagu"}
@@ -319,7 +319,7 @@ export function SpotifyPlayerBar() {
             {/* Speed Badge Button */}
             <button
               onClick={cyclePlaybackSpeed}
-              className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+              className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 btn-press ${
                 playbackSpeed !== 1.0
                   ? "bg-[#1ed760] text-black border-[#1ed760] shadow-sm shadow-[#1ed760]/40"
                   : "bg-canvas dark:bg-white/5 border-hairline dark:border-white/10 text-ink-muted dark:text-zinc-300 hover:text-ink dark:hover:text-white"
@@ -334,7 +334,7 @@ export function SpotifyPlayerBar() {
             {!isHiburanPage && (
               <Link
                 href="/hiburan"
-                className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-canvas dark:bg-white/5 hover:bg-parchment dark:hover:bg-white/10 border border-hairline dark:border-white/10 text-ink-muted dark:text-zinc-300 hover:text-ink dark:hover:text-white text-xs font-semibold transition cursor-pointer"
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-canvas dark:bg-white/5 hover:bg-parchment dark:hover:bg-white/10 border border-hairline dark:border-white/10 text-ink-muted dark:text-zinc-300 hover:text-ink dark:hover:text-white text-xs font-semibold transition cursor-pointer btn-press"
                 title="Buka Playlist RyTone"
               >
                 <Music className="w-3.5 h-3.5 text-[#1ed760]" />
@@ -346,7 +346,7 @@ export function SpotifyPlayerBar() {
             <div className="hidden lg:flex items-center gap-2 group relative">
               <button
                 onClick={toggleMute}
-                className="text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition cursor-pointer p-1"
+                className="text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white transition cursor-pointer p-1 btn-press"
                 title={isMuted ? "Bunyikan" : "Bisukan"}
               >
                 {isMuted || volume === 0 ? (
@@ -372,7 +372,7 @@ export function SpotifyPlayerBar() {
             {/* Minimize / Down Arrow */}
             <button
               onClick={toggleMinimize}
-              className="p-1.5 rounded-full text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-canvas dark:hover:bg-white/10 transition cursor-pointer"
+              className="p-1.5 rounded-full text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-canvas dark:hover:bg-white/10 transition cursor-pointer btn-press"
               title="Perkecil Player"
             >
               <ChevronDown className="w-4 h-4" />

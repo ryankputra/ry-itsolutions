@@ -38,6 +38,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { apiClient } from '../../services/api';
 import { InvoiceModal, InvoiceData } from '../../components/ui/InvoiceModal';
 import { InstantQrisModal } from '../../components/ui/InstantQrisModal';
+import { WriteReviewModal } from '../../components/ui/WriteReviewModal';
 import { parseCeirResponse } from '../../utils/ceirParser';
 import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../theme/colors';
@@ -55,6 +56,7 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
   const [resumePayment, setResumePayment] = useState<{ id: string; amount: number; title: string } | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<any | null>(null);
 
   // Sync tab from params if provided
   useEffect(() => {
@@ -616,6 +618,13 @@ export default function HistoryScreen() {
                         ) : null}
 
                         <Pressable
+                          style={[styles.actionOutlineBtn, { borderColor: 'rgba(245, 158, 11, 0.4)' }]}
+                          onPress={() => setReviewTarget(item)}
+                        >
+                          <Text style={[styles.actionOutlineText, { color: colors.warning }]}>⭐ Ulas</Text>
+                        </Pressable>
+
+                        <Pressable
                           style={[styles.buyAgainBtn, { backgroundColor: colors.primary }]}
                           onPress={() => router.push('/(screens)/add-roamer')}
                         >
@@ -674,6 +683,15 @@ export default function HistoryScreen() {
           }}
         />
       )}
+
+      {/* Review Modal */}
+      <WriteReviewModal
+        isOpen={Boolean(reviewTarget)}
+        onClose={() => setReviewTarget(null)}
+        orderId={String(reviewTarget?.id || '')}
+        packageName={reviewTarget?.package_name || reviewTarget?.packageName || 'Aktivasi IMEI'}
+        onSuccess={() => fetchTransactions()}
+      />
     </SafeAreaView>
   );
 }

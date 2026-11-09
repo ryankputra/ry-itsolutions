@@ -322,9 +322,10 @@ export default function DashboardPage() {
         <div className="block sm:hidden space-y-3.5">
           {/* Top Row: RyPay (Spacious & Never Wraps) + Direct Top Up Button */}
           <div className="flex items-center justify-between gap-3">
-            <div
-              onClick={() => router.push("/topup")}
-              className="flex-1 min-w-0 cursor-pointer group"
+            <Link
+              href="/topup"
+              prefetch={true}
+              className="flex-1 min-w-0 group block select-none"
             >
               <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -340,7 +341,11 @@ export default function DashboardPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={toggleShowBalance}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleShowBalance();
+                  }}
                   aria-label={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
                   className="w-8 h-8 rounded-full flex items-center justify-center text-ink-muted hover:text-ink hover:bg-canvas/80 active:scale-90 transition-all cursor-pointer shrink-0"
                   title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
@@ -357,19 +362,19 @@ export default function DashboardPage() {
                   )}
                 </button>
               </div>
-            </div>
+            </Link>
 
             {/* Top Up Pill Button */}
-            <button
-              type="button"
-              onClick={() => router.push("/topup")}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs btn-press btn-glow shrink-0 cursor-pointer"
+            <Link
+              href="/topup"
+              prefetch={true}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs btn-press btn-glow shrink-0 cursor-pointer select-none"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               <span>Top Up</span>
-            </button>
+            </Link>
           </div>
 
           {/* Subtle Hairline Divider */}
@@ -378,9 +383,10 @@ export default function DashboardPage() {
           {/* Bottom Row: RyPoints & Voucher Promo (Clean 50-50 Split) */}
           <div className="grid grid-cols-2 divide-x divide-hairline items-center pt-0.5">
             {/* RyPoints */}
-            <div
-              onClick={() => router.push("/games")}
-              className="flex items-center justify-between pr-3 cursor-pointer group"
+            <Link
+              href="/games"
+              prefetch={true}
+              className="flex items-center justify-between pr-3 group select-none"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-7 h-7 rounded-lg bg-[#FF9500]/10 text-[#FF9500] flex items-center justify-center shrink-0">
@@ -400,12 +406,13 @@ export default function DashboardPage() {
               <span className="text-[10px] font-semibold text-primary group-hover:underline shrink-0 ml-1">
                 Klaim &rarr;
               </span>
-            </div>
+            </Link>
 
             {/* Voucher Promo */}
-            <div
-              onClick={() => router.push("/vouchers")}
-              className="flex items-center justify-between pl-3 cursor-pointer group"
+            <Link
+              href="/vouchers"
+              prefetch={true}
+              className="flex items-center justify-between pl-3 group select-none"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-7 h-7 rounded-lg bg-[#FF2D55]/10 text-[#FF2D55] flex items-center justify-center shrink-0">
@@ -423,16 +430,17 @@ export default function DashboardPage() {
               <span className="text-[10px] font-semibold text-primary group-hover:underline shrink-0 ml-1">
                 Promo &rarr;
               </span>
-            </div>
+            </Link>
           </div>
         </div>
 
         {/* DESKTOP VIEW (sm:grid): Original sleek 4-column strip */}
         <div className="hidden sm:grid sm:grid-cols-4 divide-x divide-hairline items-center text-center">
           {/* Section 1: Saldo Dompet */}
-          <div
-            onClick={() => router.push("/topup")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
+          <Link
+            href="/topup"
+            prefetch={true}
+            className="flex flex-col items-center justify-center px-1.5 group select-none"
           >
             <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
               <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -448,7 +456,11 @@ export default function DashboardPage() {
               </span>
               <button
                 type="button"
-                onClick={toggleShowBalance}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleShowBalance();
+                }}
                 aria-label={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-ink-muted hover:text-ink hover:bg-canvas/80 active:scale-90 transition-all cursor-pointer shrink-0"
                 title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
@@ -468,12 +480,13 @@ export default function DashboardPage() {
             <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
               + Isi Saldo
             </span>
-          </div>
+          </Link>
 
           {/* Section 2: RyPoints */}
-          <div
-            onClick={() => router.push("/games")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
+          <Link
+            href="/games"
+            prefetch={true}
+            className="flex flex-col items-center justify-center px-1.5 group select-none"
           >
             <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
               <span className="w-6 h-6 rounded-full bg-[#FF9500]/10 text-[#FF9500] flex items-center justify-center shrink-0">
@@ -491,12 +504,13 @@ export default function DashboardPage() {
             <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
               Klaim Koin
             </span>
-          </div>
+          </Link>
 
           {/* Section 3: Voucher Promo */}
-          <div
-            onClick={() => router.push("/vouchers")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group"
+          <Link
+            href="/vouchers"
+            prefetch={true}
+            className="flex flex-col items-center justify-center px-1.5 group select-none"
           >
             <div className="flex items-center gap-1.5 text-ink-muted font-medium text-xs">
               <span className="w-6 h-6 rounded-full bg-[#FF2D55]/10 text-[#FF2D55] flex items-center justify-center shrink-0">
@@ -512,12 +526,13 @@ export default function DashboardPage() {
             <span className="text-[10px] text-ink-muted font-medium mt-0.5 block group-hover:text-primary transition-colors">
               Cek Promo
             </span>
-          </div>
+          </Link>
 
           {/* Section 4: Instant Top Up Button */}
-          <div
-            onClick={() => router.push("/topup")}
-            className="flex flex-col items-center justify-center px-1.5 cursor-pointer group btn-press"
+          <Link
+            href="/topup"
+            prefetch={true}
+            className="flex flex-col items-center justify-center px-1.5 group btn-press select-none"
           >
             <div className="w-9 h-9 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xs btn-glow transition-all">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -527,7 +542,7 @@ export default function DashboardPage() {
             <span className="text-[10px] font-medium text-ink-muted mt-1 group-hover:text-ink transition-colors">
               Top Up
             </span>
-          </div>
+          </Link>
         </div>
       </div>
 
@@ -625,27 +640,49 @@ export default function DashboardPage() {
                 </svg>
               ),
             },
-          ].map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
-              data-tour={item.tourKey}
-              onClick={item.onClick || (() => router.push(item.href!))}
-              className="flex flex-col items-center justify-start group p-0.5 focus:outline-none btn-press"
-            >
-              <div className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 group-hover:shadow-[0_4px_16px_rgba(0,113,227,0.2)] transition-all ${item.iconBg}`}>
-                {item.icon}
-                {(item as any).badge && (
-                  <span className="absolute -top-1.5 -right-1 px-1.5 py-0.2 bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-semibold text-[7px] rounded-full uppercase tracking-wider shadow-xs border border-white/40 dark:border-black/20">
-                    {(item as any).badge}
-                  </span>
-                )}
-              </div>
-              <span className="text-[11px] sm:text-xs font-medium text-ink group-hover:text-primary transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
-                {item.name}
-              </span>
-            </button>
-          ))}
+          ].map((item, idx) => {
+            const content = (
+              <>
+                <div className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-2xl border flex items-center justify-center shadow-2xs group-hover:scale-105 group-hover:shadow-[0_4px_16px_rgba(0,113,227,0.2)] transition-all ${item.iconBg}`}>
+                  {item.icon}
+                  {(item as any).badge && (
+                    <span className="absolute -top-1.5 -right-1 px-1.5 py-0.2 bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-semibold text-[7px] rounded-full uppercase tracking-wider shadow-xs border border-white/40 dark:border-black/20">
+                      {(item as any).badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] sm:text-xs font-medium text-ink group-hover:text-primary transition-colors mt-2 text-center tracking-tight leading-tight line-clamp-1">
+                  {item.name}
+                </span>
+              </>
+            );
+
+            if (item.href) {
+              return (
+                <Link
+                  key={idx}
+                  href={item.href}
+                  prefetch={true}
+                  data-tour={item.tourKey}
+                  className="flex flex-col items-center justify-start group p-0.5 focus:outline-none btn-press select-none"
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={idx}
+                type="button"
+                data-tour={item.tourKey}
+                onClick={item.onClick}
+                className="flex flex-col items-center justify-start group p-0.5 focus:outline-none btn-press select-none cursor-pointer"
+              >
+                {content}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -803,12 +840,13 @@ export default function DashboardPage() {
               </div>
 
               <div className="relative z-10 pt-3 flex items-center justify-between">
-                <button
-                  onClick={() => router.push(heroSlides[currentSlide].ctaLink)}
-                  className="px-4 py-1.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1 border border-white/40"
+                <Link
+                  href={heroSlides[currentSlide].ctaLink}
+                  prefetch={true}
+                  className="px-4 py-1.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1 border border-white/40 select-none"
                 >
                   <span>{heroSlides[currentSlide].ctaText}</span>
-                </button>
+                </Link>
 
                 {/* Slide Indicators */}
                 <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
@@ -832,9 +870,10 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       <div className="grid grid-cols-2 gap-3">
         {/* Left Discovery: Sinyal Live & Layanan */}
-        <div
-          onClick={() => router.push("/add-roamer")}
-          className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer hover:border-gray-400 transition-all"
+        <Link
+          href="/add-roamer"
+          prefetch={true}
+          className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-gray-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer hover:border-gray-400 transition-all select-none"
         >
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-ink flex items-center gap-1">
@@ -860,12 +899,13 @@ export default function DashboardPage() {
               <p className="text-[9px] text-ink-muted truncate">Semua Operator</p>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Right Discovery: Status Garansi & Lacak Nota */}
-        <div
-          onClick={() => router.push("/cek-garansi")}
-          className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs flex flex-col justify-between cursor-pointer hover:border-emerald-500/40 transition-all"
+        <Link
+          href="/cek-garansi"
+          prefetch={true}
+          className="p-3 sm:p-4 rounded-2xl bg-canvas border border-hairline shadow-2xs flex flex-col justify-between cursor-pointer hover:border-emerald-500/40 transition-all select-none"
         >
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-ink flex items-center gap-1">
@@ -890,7 +930,7 @@ export default function DashboardPage() {
               <p className="text-[9px] text-ink-muted truncate">Cetak Nota Digital</p>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* ============================================================ */}
@@ -898,11 +938,12 @@ export default function DashboardPage() {
       {/* ============================================================ */}
       <div className="grid grid-cols-2 gap-3">
         {/* Left Column: VOUCHER CARD (Clean Obsidian Accent) */}
-        <div
-          onClick={() => router.push("/vouchers")}
-          className="rounded-xl p-4 bg-gray-900 text-white border border-gray-800 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:bg-gray-800 transition-colors"
+        <Link
+          href="/vouchers"
+          prefetch={true}
+          className="rounded-xl p-4 bg-gray-900 text-white border border-gray-800 shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:bg-gray-800 transition-colors select-none"
         >
-                    <div className="space-y-1 relative z-10">
+          <div className="space-y-1 relative z-10">
             <span className="inline-block bg-white text-primary text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">
               VOUCHER DISKON
             </span>
@@ -913,19 +954,20 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-3">
-            <button className="w-full py-1.5 rounded-xl bg-white text-primary font-bold text-[10px] sm:text-xs shadow-xs group-hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
+            <span className="w-full py-1.5 rounded-xl bg-white text-primary font-bold text-[10px] sm:text-xs shadow-xs group-hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
               <span>LIHAT KUPON</span>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
-            </button>
+            </span>
           </div>
-        </div>
+        </Link>
 
         {/* Right Column: BEST-SELLER PRODUCT CARD */}
-        <div
-          onClick={() => router.push("/add-roamer")}
-          className="rounded-2xl p-3 bg-canvas border border-hairline shadow-sm flex flex-col justify-between cursor-pointer group hover:border-primary/40 transition-all"
+        <Link
+          href="/add-roamer"
+          prefetch={true}
+          className="rounded-2xl p-3 bg-canvas border border-hairline shadow-sm flex flex-col justify-between cursor-pointer group hover:border-primary/40 transition-all select-none"
         >
           <div className="space-y-1">
             <div className="w-full h-14 sm:h-16 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -951,16 +993,17 @@ export default function DashboardPage() {
               Mulai Rp 155RB
             </span>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Referral Program Banner */}
-      <div
+      <Link
+        href="/referral"
+        prefetch={true}
         data-tour="service-referral"
-        onClick={() => router.push("/referral")}
-        className="rounded-2xl p-3.5 sm:p-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-md flex items-center justify-between cursor-pointer group hover:opacity-95 transition-opacity relative overflow-hidden"
+        className="rounded-2xl p-3.5 sm:p-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-md flex items-center justify-between cursor-pointer group hover:opacity-95 transition-opacity relative overflow-hidden select-none"
       >
-                <div className="space-y-0.5 relative z-10">
+        <div className="space-y-0.5 relative z-10">
           <span className="inline-block bg-white text-amber-900 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
             BONUS REFERRAL
           </span>
@@ -970,7 +1013,7 @@ export default function DashboardPage() {
         <span className="relative z-10 px-3 py-1.5 rounded-xl bg-white text-amber-950 font-black text-xs shrink-0 shadow-sm border border-white/40 group-hover:scale-105 transition-transform">
           Klaim Cuan &gt;
         </span>
-      </div>
+      </Link>
 
       {/* ============================================================ */}
       {/* 6. INSTANT SEARCH BAR / IMEI SCANNER                        */}
@@ -1016,18 +1059,20 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={() => router.push(`/cek-garansi?imei=${cleanSearch}`)}
-                    className="px-2.5 py-1 rounded-lg bg-canvas border border-hairline font-bold text-xs hover:bg-parchment transition-colors"
+                  <Link
+                    href={`/cek-garansi?imei=${cleanSearch}`}
+                    prefetch={true}
+                    className="px-2.5 py-1 rounded-lg bg-canvas border border-hairline font-bold text-xs hover:bg-parchment transition-colors select-none"
                   >
                     Cek Garansi
-                  </button>
-                  <button
-                    onClick={() => router.push(`/add-roamer?imei=${cleanSearch}`)}
-                    className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors"
+                  </Link>
+                  <Link
+                    href={`/add-roamer?imei=${cleanSearch}`}
+                    prefetch={true}
+                    className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors select-none"
                   >
                     Unblock
-                  </button>
+                  </Link>
                 </div>
               </div>
             )}

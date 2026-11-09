@@ -25,7 +25,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         className={
           isAiPage
             ? "flex-1 w-full max-w-3xl mx-auto flex flex-col overflow-hidden p-0 pb-[64px] lg:pb-0 relative"
-            : "flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-12"
+            : "flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36 lg:pb-28"
         }
       >
         {children}

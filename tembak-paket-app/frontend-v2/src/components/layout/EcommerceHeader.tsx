@@ -233,6 +233,7 @@ export function EcommerceHeader() {
           {/* Notification Bell (Hidden on small mobile as it is already in Bottom Navigation) */}
           <Link
             href="/notifications"
+            prefetch={true}
             className="hidden sm:block relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             title="Notifikasi & Promo"
           >
@@ -247,6 +248,7 @@ export function EcommerceHeader() {
           {/* Cart Icon with real Cart Count */}
           <Link
             href="/cart"
+            prefetch={true}
             className="relative p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             title="Keranjang Belanja"
           >
@@ -266,6 +268,7 @@ export function EcommerceHeader() {
           {/* Chat / CS WhatsApp Icon (Hidden on small mobile since permanent floating WhatsApp widget is active) */}
           <Link
             href="/tickets"
+            prefetch={true}
             className="hidden sm:block p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             title="Pusat Bantuan CS"
           >
@@ -305,15 +308,16 @@ export function EcommerceHeader() {
                 </svg>
                 <span>Panduan Aplikasi</span>
               </button>
-              <Link href="/cek-garansi" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+              <Link href="/cek-garansi" prefetch={true} className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Lacak Pesanan
               </Link>
-              <Link href="/tickets" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+              <Link href="/tickets" prefetch={true} className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Pusat Bantuan
               </Link>
               {user?.role === "admin" && (
                 <Link
                   href="/admin"
+                  prefetch={true}
                   className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-85 px-2.5 py-0.5 rounded-full font-semibold transition-opacity flex items-center gap-1 text-[10px]"
                 >
                   <span>Admin Panel</span>
@@ -330,7 +334,7 @@ export function EcommerceHeader() {
 
         {/* 2. Main Desktop Header Bar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-4 sm:gap-8 justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
+          <Link href="/dashboard" prefetch={true} className="flex items-center gap-2.5 shrink-0 group">
             <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900 font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -375,6 +379,7 @@ export function EcommerceHeader() {
             {/* Desktop Notification Bell */}
             <Link
               href="/notifications"
+              prefetch={true}
               className="relative p-2 text-ink hover:text-primary transition-colors"
               title="Notifikasi & Promo"
             >
@@ -389,6 +394,7 @@ export function EcommerceHeader() {
             {/* Desktop Cart Icon */}
             <Link
               href="/cart"
+              prefetch={true}
               className="relative p-2 text-ink hover:text-primary transition-colors"
               title="Keranjang Belanja"
             >
@@ -404,6 +410,7 @@ export function EcommerceHeader() {
 
             <Link
               href="/games"
+              prefetch={true}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-900 hover:bg-gray-100/80 dark:hover:bg-slate-800 border border-gray-200/80 dark:border-slate-800 text-gray-700 dark:text-gray-300 text-xs transition-all group"
             >
               <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9h-5v6h5"/><path d="M12 7v10"/></svg>
@@ -417,6 +424,7 @@ export function EcommerceHeader() {
 
             <Link
               href="/topup"
+              prefetch={true}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-900 hover:bg-gray-100/80 dark:hover:bg-slate-800 border border-gray-200/80 dark:border-slate-800 text-gray-700 dark:text-gray-300 text-xs transition-all group"
             >
               <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -433,6 +441,7 @@ export function EcommerceHeader() {
             {user?.role === "admin" && (
               <Link
                 href="/admin"
+                prefetch={true}
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-xs hover:bg-gray-800 transition-colors shadow-xs"
                 title="Buka Panel Admin (Owner)"
               >
@@ -486,6 +495,7 @@ export function EcommerceHeader() {
                       {user.role === "admin" && (
                         <Link
                           href="/admin"
+                          prefetch={true}
                           className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-amber-400/15 border border-amber-400/40 text-amber-900 dark:text-amber-300 font-bold hover:bg-amber-400/25 transition-colors mb-1"
                         >
                           <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -494,31 +504,31 @@ export function EcommerceHeader() {
                           <span>Panel Kontrol Admin</span>
                         </Link>
                       )}
-                      <Link href="/saya" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
+                      <Link href="/saya" prefetch={true} className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                         </svg>
                         <span>Akun Saya</span>
                       </Link>
-                      <Link href="/cart" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
+                      <Link href="/cart" prefetch={true} className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                         </svg>
                         <span>Keranjang Belanja</span>
                       </Link>
-                      <Link href="/topup" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
+                      <Link href="/topup" prefetch={true} className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
                         </svg>
                         <span>Isi Saldo</span>
                       </Link>
-                      <Link href="/games" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
+                      <Link href="/games" prefetch={true} className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>Game &amp; RyPoints</span>
                       </Link>
-                      <Link href="/history" className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
+                      <Link href="/history" prefetch={true} className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-parchment font-semibold text-ink">
                         <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
                         </svg>

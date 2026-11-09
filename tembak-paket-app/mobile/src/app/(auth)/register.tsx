@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User as UserIcon, Mail, Lock, Gift, ArrowLeft } from 'lucide-react-native';
+import { User as UserIcon, Mail, Lock, Gift, ArrowLeft, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { apiClient } from '../../services/api';
 import { Colors } from '../../theme/colors';
@@ -22,13 +22,43 @@ export default function RegisterScreen() {
   const router = useRouter();
   const colors = Colors.dark;
 
+  // Step state: 'form' | 'otp'
+  const [step, setStep] = useState<'form' | 'otp'>('form');
+
+  // Form Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
+
+  // OTP State
+  const [otp, setOtp] = useState('');
+  const [resendTimer, setResendTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = async () => {
+  // Timer countdown for OTP resend
+  useEffect(() => {
+    let interval: any = null;
+    if (step === 'otp' && resendTimer > 0) {
+      setCanResend(false);
+      interval = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, resendTimer]);
+
+  // Step 1: Request OTP from backend (/auth/register-request-otp)
+  const handleRequestOtp = async () => {
     if (!name.trim() || !email.trim() || !password) {
       Alert.alert('Perhatian', 'Nama, email, dan kata sandi wajib diisi.');
       return;
@@ -41,7 +71,8 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const response = await apiClient.post('/auth/register', {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const response = await apiClient.post('/auth/register-request-otp', {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
@@ -53,23 +84,68 @@ export default function RegisterScreen() {
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {}
+        setStep('otp');
+        setResendTimer(60);
+        setCanResend(false);
         Alert.alert(
-          'Pendaftaran Berhasil',
-          data.message || 'Akun Anda berhasil dibuat. Silakan login.',
-          [{ text: 'Masuk Sekarang', onPress: () => router.replace('/(auth)/login') }]
+          'Kode OTP Terkirim! 📬',
+          data.message || `Kode verifikasi 6 digit telah dikirim ke ${email}. Cek inbox atau folder spam.`
         );
       } else {
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         } catch {}
-        Alert.alert('Gagal Mendaftar', data.message || 'Terjadi kesalahan saat membuat akun.');
+        Alert.alert('Gagal Mengirim OTP', data.message || 'Terjadi kesalahan saat meminta kode verifikasi.');
       }
     } catch (error: any) {
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } catch {}
       const errMsg = error.response?.data?.message || error.message || 'Gagal terhubung ke server.';
-      Alert.alert('Gagal Mendaftar', errMsg);
+      Alert.alert('Gagal Mengirim OTP', errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP & Complete Registration (/auth/register-verify-otp)
+  const handleVerifyOtp = async () => {
+    const cleanOtp = otp.trim();
+    if (!cleanOtp || cleanOtp.length < 6) {
+      Alert.alert('Perhatian', 'Masukkan 6 digit kode OTP verifikasi.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const response = await apiClient.post('/auth/register-verify-otp', {
+        email: email.trim().toLowerCase(),
+        otp: cleanOtp,
+      });
+
+      const data = response.data;
+      if (data.status) {
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch {}
+        Alert.alert(
+          'Pendaftaran Berhasil! 🎉',
+          data.message || 'Akun Anda berhasil diverifikasi & diaktifkan.',
+          [{ text: 'Masuk Sekarang', onPress: () => router.replace('/(auth)/login') }]
+        );
+      } else {
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        } catch {}
+        Alert.alert('Verifikasi Gagal', data.message || 'Kode verifikasi salah atau kedaluwarsa.');
+      }
+    } catch (error: any) {
+      try {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } catch {}
+      const errMsg = error.response?.data?.message || error.message || 'Gagal memverifikasi OTP.';
+      Alert.alert('Verifikasi Gagal', errMsg);
     } finally {
       setLoading(false);
     }
@@ -89,7 +165,7 @@ export default function RegisterScreen() {
           {/* Back Button */}
           <Pressable
             style={[styles.backButton, { backgroundColor: colors.surface }]}
-            onPress={() => router.back()}
+            onPress={() => (step === 'otp' ? setStep('form') : router.back())}
             hitSlop={10}
           >
             <ArrowLeft size={20} color={colors.text} />
@@ -97,126 +173,204 @@ export default function RegisterScreen() {
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Buat Akun Baru</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {step === 'form' ? 'Buat Akun Baru' : 'Verifikasi Email'}
+            </Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              Bergabunglah dengan RY IT Solutions untuk kemudahan transaksi digital
+              {step === 'form'
+                ? 'Bergabunglah dengan RY IT Solutions untuk kemudahan transaksi digital'
+                : `Masukkan 6 digit kode OTP yang telah dikirim ke ${email}`}
             </Text>
           </View>
 
-          {/* Form */}
-          <View style={styles.form}>
-            {/* Nama */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Nama Lengkap</Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <UserIcon size={20} color={colors.textDim} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Nama lengkap Anda"
-                  placeholderTextColor={colors.textDim}
-                  value={name}
-                  onChangeText={setName}
-                />
+          {/* Form Step */}
+          {step === 'form' ? (
+            <View style={styles.form}>
+              {/* Nama */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Nama Lengkap</Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
+                  <UserIcon size={20} color={colors.textDim} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="Nama lengkap Anda"
+                    placeholderTextColor={colors.textDim}
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                  />
+                </View>
               </View>
-            </View>
 
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Email</Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <Mail size={20} color={colors.textDim} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="nama@email.com"
-                  placeholderTextColor={colors.textDim}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoCorrect={false}
-                />
+              {/* Email */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Email Aktif</Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
+                  <Mail size={20} color={colors.textDim} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="nama@email.com"
+                    placeholderTextColor={colors.textDim}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoCorrect={false}
+                  />
+                </View>
               </View>
-            </View>
 
-            {/* Password */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Kata Sandi</Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <Lock size={20} color={colors.textDim} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Minimal 6 karakter"
-                  placeholderTextColor={colors.textDim}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
+              {/* Password */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Kata Sandi</Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
+                  <Lock size={20} color={colors.textDim} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="Minimal 6 karakter"
+                    placeholderTextColor={colors.textDim}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                </View>
               </View>
-            </View>
 
-            {/* Referral Code */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>
-                Kode Referral (Opsional)
-              </Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <Gift size={20} color={colors.textDim} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Masukkan kode referral jika ada"
-                  placeholderTextColor={colors.textDim}
-                  value={referralCode}
-                  onChangeText={setReferralCode}
-                  autoCapitalize="characters"
-                />
+              {/* Kode Referral (Opsional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>
+                  Kode Referral (Opsional)
+                </Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
+                  <Gift size={20} color={colors.textDim} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder="Contoh: RYVIP"
+                    placeholderTextColor={colors.textDim}
+                    value={referralCode}
+                    onChangeText={(val) => setReferralCode(val.toUpperCase())}
+                    autoCapitalize="characters"
+                  />
+                </View>
               </View>
+
+              {/* Submit Request OTP Button */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.registerButton,
+                  { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+                ]}
+                onPress={handleRequestOtp}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.registerButtonText}>Lanjutkan & Kirim OTP</Text>
+                    <ArrowRight size={18} color="#fff" style={{ marginLeft: 8 }} />
+                  </>
+                )}
+              </Pressable>
             </View>
+          ) : (
+            /* OTP Verification Step */
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Kode Verifikasi OTP</Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    { backgroundColor: colors.surface, borderColor: colors.border, height: 60 },
+                  ]}
+                >
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        color: colors.text,
+                        textAlign: 'center',
+                        fontSize: 24,
+                        letterSpacing: 8,
+                        fontWeight: '800',
+                      },
+                    ]}
+                    placeholder="123456"
+                    placeholderTextColor={colors.textDim}
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoFocus
+                  />
+                </View>
+              </View>
 
-            {/* Submit Button */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.submitButton,
-                { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
-              ]}
-              onPress={handleRegister}
-              disabled={loading}
-              android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.submitButtonText}>Daftar Sekarang</Text>
-              )}
-            </Pressable>
-          </View>
+              {/* Countdown & Resend */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Pressable
+                  disabled={!canResend || loading}
+                  onPress={handleRequestOtp}
+                  hitSlop={8}
+                >
+                  <Text style={{ color: canResend ? colors.primary : colors.textDim, fontSize: 13, fontWeight: '600' }}>
+                    {canResend ? 'Kirim Ulang Kode OTP' : `Kirim Ulang (${resendTimer}s)`}
+                  </Text>
+                </Pressable>
 
-          {/* Footer */}
+                <Pressable onPress={() => setStep('form')} hitSlop={8}>
+                  <Text style={{ color: colors.textMuted, fontSize: 13 }}>Ubah Data</Text>
+                </Pressable>
+              </View>
+
+              {/* Submit Verify Button */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.registerButton,
+                  { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+                ]}
+                onPress={handleVerifyOtp}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <ShieldCheck size={18} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.registerButtonText}>Verifikasi & Aktivasi Akun</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          )}
+
+          {/* Footer Login Link */}
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.textMuted }]}>
               Sudah memiliki akun?{' '}
             </Text>
-            <Pressable onPress={() => router.push('/(auth)/login')} hitSlop={10}>
+            <Pressable onPress={() => router.replace('/(auth)/login')} hitSlop={10}>
               <Text style={[styles.loginLink, { color: colors.primary }]}>Masuk di sini</Text>
             </Pressable>
           </View>
@@ -240,12 +394,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   header: {
     marginBottom: 28,
@@ -264,7 +418,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   inputGroup: {
-    gap: 6,
+    gap: 8,
   },
   label: {
     fontSize: 13,
@@ -273,10 +427,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 52,
     borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 14,
-    height: 52, // >= 44dp touch target
   },
   inputIcon: {
     marginRight: 10,
@@ -286,14 +440,15 @@ const styles = StyleSheet.create({
     height: '100%',
     fontSize: 15,
   },
-  submitButton: {
+  registerButton: {
     height: 52,
     borderRadius: 14,
-    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 12,
+    alignItems: 'center',
+    marginTop: 8,
   },
-  submitButtonText: {
+  registerButtonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '700',
@@ -302,7 +457,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 32,
   },
   footerText: {
     fontSize: 14,

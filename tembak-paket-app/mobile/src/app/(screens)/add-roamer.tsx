@@ -9,11 +9,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   Switch,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
   ShieldCheck,
@@ -34,6 +33,11 @@ import {
   Info,
   Sparkles,
   Check,
+  Tag,
+  Wallet,
+  QrCode,
+  ArrowRight,
+  Receipt,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -43,6 +47,8 @@ import { storage, STORAGE_KEYS } from '../../utils/storage';
 import { CartItem } from '../../types';
 import { Colors } from '../../theme/colors';
 import { parseMultipleImeis } from '../../utils/imeiHelper';
+import { InstantQrisModal } from '../../components/ui/InstantQrisModal';
+import { DraggableBottomSheet } from '../../components/ui/DraggableBottomSheet';
 
 interface ImeiPackage {
   id: string;
@@ -54,65 +60,75 @@ interface ImeiPackage {
   allowed_speeds?: any;
   isVisible?: boolean | number;
   is_active?: boolean | number;
+  is_open_now?: boolean;
+  open_hour?: number | null;
+  close_hour?: number | null;
   status?: string;
 }
 
-const SPEED_OPTIONS_CONFIG = [
-  { id: 'slow', label: 'Reguler (Slow)', key: 'imei_speed_slow', defaultRange: 'Max kirim 15:00 WIB, selesai max 00:00 WIB' },
-  { id: 'semi', label: 'Semi Express', key: 'imei_speed_semi', defaultRange: '2 - 6 Jam Proses Kerja' },
-  { id: 'fast', label: 'Super Express', key: 'imei_speed_fast', defaultRange: '30 Menit - 2 Jam Super Cepat' },
-];
-
 export default function AddRoamerScreen() {
   const router = useRouter();
+  const searchParams = useLocalSearchParams<{ imei?: string; q?: string }>();
   const insets = useSafeAreaInsets();
   const { user, updateUserBalance } = useAuth();
   const colors = Colors.dark;
 
-  // Data states
+  // Wizard state: 1 = IMEI & HP, 2 = Paket & Kecepatan, 3 = Konfirmasi & Bayar
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  // Backend Data
   const [packages, setPackages] = useState<ImeiPackage[]>([]);
   const [speedPricing, setSpeedPricing] = useState<any>({});
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [publicCoupons, setPublicCoupons] = useState<any[]>([]);
+  const [serviceStatus, setServiceStatus] = useState({ isOpen: true, note: '' });
   const [loading, setLoading] = useState(true);
 
-  // Form states
-  const [imei, setImei] = useState('');
+  // Form Fields
+  const [imei, setImei] = useState(searchParams.imei || searchParams.q || '');
   const [selectedPkgId, setSelectedPkgId] = useState('');
   const [selectedSpeed, setSelectedSpeed] = useState<string>('slow');
   const [targetPhone, setTargetPhone] = useState(user?.phone || user?.verifiedPhone || '');
   const [screenshotUri, setScreenshotUri] = useState<string | null>(null);
+  const [ceirUri, setCeirUri] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [ketentuanOpen, setKetentuanOpen] = useState(false);
 
-  // Discount & Coins states
+  // Discounts, Coins & Bottom Sheet Modals
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [showVoucherSheet, setShowVoucherSheet] = useState(false);
+  const [showSummarySheet, setShowSummarySheet] = useState(false);
   const [useCoins, setUseCoins] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'balance' | 'qris'>('balance');
+  const [paymentMethod, setPaymentMethod] = useState<'qris' | 'balance'>('qris');
+  const [showInstantQris, setShowInstantQris] = useState(false);
 
   // Submit states
   const [submitting, setSubmitting] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
 
-  // 1. Fetch initial data
+  // Load backend data
   useEffect(() => {
     Promise.all([
       apiClient.get('/imei-packages').catch(() => null),
       apiClient.get('/manual-services-pricing').catch(() => null),
+      apiClient.get('/imei-service-status').catch(() => null),
       apiClient.get('/user/announcement').catch(() => null),
       apiClient.get('/coupons/public').catch(() => null),
-    ]).then(([pkgRes, prcRes, annRes, coupRes]) => {
+    ]).then(([pkgRes, prcRes, statusRes, annRes, coupRes]) => {
       if (pkgRes?.data?.status && Array.isArray(pkgRes.data.data)) {
         const visible = pkgRes.data.data.filter((p: any) => p && p.isVisible !== false && p.is_active !== false);
         setPackages(visible);
-        if (visible.length > 0) {
+        if (visible.length > 0 && !selectedPkgId) {
           setSelectedPkgId(visible[0].id);
         }
       }
       if (prcRes?.data?.status && prcRes.data.data) {
         setSpeedPricing(prcRes.data.data);
+      }
+      if (statusRes?.data?.status) {
+        const isOpen = typeof statusRes.data.isOpen === 'boolean' ? statusRes.data.isOpen : statusRes.data.service_status !== 'closed';
+        setServiceStatus({ isOpen, note: statusRes.data.note || '' });
       }
       if (annRes?.data?.status) {
         if (Array.isArray(annRes.data.announcements)) {
@@ -128,20 +144,33 @@ export default function AddRoamerScreen() {
     });
   }, []);
 
-  // Set default phone
+  // Update default target phone
   useEffect(() => {
     if ((user?.phone || user?.verifiedPhone) && !targetPhone) {
       setTargetPhone(user.phone || user.verifiedPhone || '');
     }
   }, [user, targetPhone]);
 
-  // IMEI parsing & analysis
+  // Unique Packages
+  const uniquePackages = useMemo(() => {
+    const map = new Map<string, ImeiPackage>();
+    packages.forEach((p) => {
+      if (!p) return;
+      const dur = (p.duration || '').trim().toLowerCase();
+      if (!map.has(dur)) {
+        map.set(dur, p);
+      }
+    });
+    return Array.from(map.values());
+  }, [packages]);
+
+  // IMEI parsing & Luhn validation
   const parsedImeis = useMemo(() => parseMultipleImeis(imei), [imei]);
   const validImeiCount = parsedImeis.filter((i) => i.isValidLength && i.isValidLuhn).length;
   const imeiCount = parsedImeis.length > 0 ? parsedImeis.length : 1;
 
-  // Selected package
-  const selectedPkg = packages.find((p) => p.id === selectedPkgId) || packages[0];
+  // Selected package details
+  const selectedPkg = uniquePackages.find((p) => p.id === selectedPkgId) || packages.find((p) => p.id === selectedPkgId) || packages[0];
 
   const pkgSpeedPrices: any = useMemo(() => {
     if (!selectedPkg?.speed_prices) return {};
@@ -149,7 +178,7 @@ export default function AddRoamerScreen() {
       return typeof selectedPkg.speed_prices === 'string'
         ? JSON.parse(selectedPkg.speed_prices)
         : selectedPkg.speed_prices;
-    } catch (e) {
+    } catch {
       return {};
     }
   }, [selectedPkg]);
@@ -182,89 +211,139 @@ export default function AddRoamerScreen() {
   const regularTotalPrice = regularPricePerImei * imeiCount;
   const wholesaleSavings = isWholesaleActive ? Math.max(0, regularTotalPrice - rawTotalPrice) : 0;
 
-  // Coupon discount
+  // Discounts
   const discountAmount = appliedCoupon ? Math.min(Number(appliedCoupon.discount_amount || 0), rawTotalPrice) : 0;
   const priceAfterCoupon = Math.max(0, rawTotalPrice - discountAmount);
 
-  // Coins discount
+  // Coins
   const userCoins = Number(user?.coins || 0);
+  const userBalance = Number(user?.balance || 0);
   const maxCoinsAllowed = priceAfterCoupon >= 50000 ? Math.min(Math.floor(priceAfterCoupon * 0.02), 5000) : 0;
   const coinsDiscount = useCoins && maxCoinsAllowed > 0 ? Math.min(userCoins, maxCoinsAllowed, priceAfterCoupon) : 0;
   const totalPrice = Math.max(0, priceAfterCoupon - coinsDiscount);
 
+  // Speed options
+  const cutoffTimeStr = (speedPricing?.rivera_slow_cutoff_time || '15:00').replace('.', ':');
+  const speedOptions = [
+    { id: 'fast', label: 'Fast (Super Cepat)', key: 'imei_speed_fast', defaultRange: '30 Menit - 2 Jam' },
+    { id: 'semi', label: 'Semi Fast', key: 'imei_speed_semi', defaultRange: '2 - 6 Jam Proses' },
+    { id: 'slow', label: 'Slow (Reguler)', key: 'imei_speed_slow', defaultRange: `Max kirim ${cutoffTimeStr} WIB` },
+  ].map((opt) => {
+    const hasSpecificPrice = pkgSpeedPrices[opt.id] !== undefined && Number(pkgSpeedPrices[opt.id]) > 0;
+    const displayPrice = hasSpecificPrice
+      ? Number(pkgSpeedPrices[opt.id])
+      : ((speedPricing && parseInt(speedPricing[opt.key])) || 0);
+    return {
+      ...opt,
+      hasSpecificPrice,
+      price: displayPrice,
+    };
+  });
+
   // Pick Image Handler
-  const handlePickImage = async () => {
+  const handlePickImage = async (type: 'screenshot' | 'ceir') => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Alert.alert('Unggah Bukti Screenshot *#06#', 'Pilih sumber gambar:', [
-        {
-          text: 'Buka Kamera',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert('Izin Ditolak', 'Izin kamera dibutuhkan untuk memotret bukti layar.');
-              return;
-            }
-            const res = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
-              quality: 0.8,
-            });
-            if (!res.canceled && res.assets[0]?.uri) {
-              setScreenshotUri(res.assets[0].uri);
-            }
+      Alert.alert(
+        type === 'screenshot' ? 'Unggah Bukti Layar *#06#' : 'Unggah Bukti Cek CEIR',
+        'Pilih sumber dokumen gambar:',
+        [
+          {
+            text: 'Buka Kamera',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Izin Ditolak', 'Izin kamera dibutuhkan.');
+                return;
+              }
+              const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
+              if (!res.canceled && res.assets[0]?.uri) {
+                if (type === 'screenshot') setScreenshotUri(res.assets[0].uri);
+                else setCeirUri(res.assets[0].uri);
+              }
+            },
           },
-        },
-        {
-          text: 'Pilih dari Galeri',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert('Izin Ditolak', 'Izin galeri foto dibutuhkan.');
-              return;
-            }
-            const res = await ImagePicker.launchImageLibraryAsync({
-              allowsEditing: true,
-              quality: 0.8,
-            });
-            if (!res.canceled && res.assets[0]?.uri) {
-              setScreenshotUri(res.assets[0].uri);
-            }
+          {
+            text: 'Pilih dari Galeri',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Izin Ditolak', 'Izin galeri foto dibutuhkan.');
+                return;
+              }
+              const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.8 });
+              if (!res.canceled && res.assets[0]?.uri) {
+                if (type === 'screenshot') setScreenshotUri(res.assets[0].uri);
+                else setCeirUri(res.assets[0].uri);
+              }
+            },
           },
-        },
-        { text: 'Batal', style: 'cancel' },
-      ]);
-    } catch (e) {
+          { text: 'Batal', style: 'cancel' },
+        ]
+      );
+    } catch {
       Alert.alert('Error', 'Gagal membuka pemilih gambar.');
     }
   };
 
-  const validateForm = () => {
+  // Step Validation
+  const validateStep1 = () => {
     if (parsedImeis.length === 0) {
-      Alert.alert('Data Belum Lengkap', 'Nomor IMEI target belum diisi (minimal 15 digit angka).');
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      Alert.alert('IMEI Belum Diisi', 'Masukkan minimal satu nomor IMEI (15 digit angka).');
       return false;
     }
-    if (!selectedPkgId) {
-      Alert.alert('Data Belum Lengkap', 'Pilih Paket Masa Aktif / Garansi IMEI.');
-      return false;
-    }
-    if (!screenshotUri) {
-      Alert.alert('Data Belum Lengkap', 'Unggah bukti screenshot *#06# HP target Anda.');
+    if (validImeiCount === 0) {
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      Alert.alert('Format IMEI Tidak Valid', 'Nomor IMEI harus 15 digit dan lolos uji checksum Luhn.');
       return false;
     }
     if (!targetPhone.trim() || targetPhone.replace(/\D/g, '').length < 9) {
-      Alert.alert('Data Belum Lengkap', 'Nomor WhatsApp penerima nota minimal 9 digit angka.');
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      Alert.alert('Nomor HP Belum Lengkap', 'Nomor WhatsApp penerima nota minimal 9 digit angka.');
       return false;
     }
-    if (!agreed) {
-      Alert.alert('Persetujuan Layanan', 'Centang persetujuan Syarat & Ketentuan Layanan untuk melanjutkan.');
+    if (!screenshotUri) {
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      Alert.alert('Screenshot Wajib', 'Unggah bukti foto screenshot *#06# HP target Anda.');
       return false;
     }
+    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
     return true;
+  };
+
+  const validateStep2 = () => {
+    if (!selectedPkgId) {
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      Alert.alert('Paket Belum Dipilih', 'Silakan pilih paket masa aktif roamer Anda.');
+      return false;
+    }
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      if (!validateStep1()) return;
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!validateStep2()) return;
+      setCurrentStep(3);
+    }
+  };
+
+  const handlePrevStep = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    if (currentStep === 3) setCurrentStep(2);
+    else if (currentStep === 2) setCurrentStep(1);
   };
 
   // Add to cart
   const handleAddToCart = async () => {
-    if (!validateForm()) return;
+    if (!agreed) {
+      Alert.alert('Persetujuan Layanan', 'Centang persetujuan Syarat & Ketentuan Layanan.');
+      return;
+    }
     setAddingCart(true);
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -295,568 +374,776 @@ export default function AddRoamerScreen() {
           { text: 'Lihat Keranjang', onPress: () => router.push('/(screens)/cart' as any) },
         ]
       );
-    } catch (e) {
+    } catch {
       Alert.alert('Gagal', 'Terjadi kesalahan saat menyimpan ke keranjang.');
     } finally {
       setAddingCart(false);
     }
   };
 
-  // Direct checkout
-  const handleDirectCheckout = async () => {
-    if (!validateForm()) return;
+  // Checkout Execution
+  const executeOrderSubmission = async (paymentType: 'balance' | 'qris' = 'balance') => {
+    setSubmitting(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      const formData = new FormData();
+      formData.append('service_type', 'imei');
+      formData.append('imei', imei.trim());
+      formData.append('duration', selectedPkg.duration || '1 Bulan');
+      formData.append('amount', totalPrice.toString());
+      formData.append('package_id', selectedPkg.id);
+      formData.append('price_key', selectedPkg.id);
+      formData.append('speed', selectedSpeed);
+      formData.append('speed_option', selectedSpeed);
+      formData.append('speedPrice', speedCost.toString());
+      formData.append('targetPhone', targetPhone.trim());
+      formData.append('target_phone', targetPhone.trim());
+      if (appliedCoupon) {
+        formData.append('couponCode', appliedCoupon.code);
+        formData.append('coupon_code', appliedCoupon.code);
+      }
+      if (useCoins) {
+        formData.append('use_coins', 'true');
+        formData.append('useCoins', 'true');
+      }
 
-    if (paymentMethod === 'balance' && (user?.balance || 0) < totalPrice) {
-      Alert.alert(
-        'Saldo Tidak Mencukupi',
-        `Biaya pengerjaan Rp ${totalPrice.toLocaleString('id-ID')}. Saldo Anda saat ini Rp ${Number(user?.balance || 0).toLocaleString('id-ID')}.\n\nIngin Top Up Saldo sekarang?`,
-        [
-          { text: 'Batal', style: 'cancel' },
-          { text: 'Top Up Saldo', onPress: () => router.push('/(screens)/topup' as any) },
-        ]
-      );
-      return;
+      if (screenshotUri) {
+        const filename = screenshotUri.split('/').pop() || 'screenshot.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+        formData.append('screenshot', {
+          uri: screenshotUri,
+          name: filename,
+          type,
+        } as any);
+        formData.append('image', {
+          uri: screenshotUri,
+          name: filename,
+          type,
+        } as any);
+      }
+
+      if (ceirUri) {
+        const filename = ceirUri.split('/').pop() || 'ceir.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+        formData.append('ceir_screenshot', {
+          uri: ceirUri,
+          name: filename,
+          type,
+        } as any);
+      }
+
+      const res = await apiClient.post('/transactions/manual', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (res.data?.status) {
+        if (typeof res.data.newBalance === 'number') {
+          updateUserBalance(res.data.newBalance);
+        }
+        setShowInstantQris(false);
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        Alert.alert(
+          'Pesanan Berhasil Dibuat! 🎉',
+          'Pesanan Add Roamer Anda telah berhasil diteruskan ke Admin untuk diproses.',
+          [{ text: 'Lihat Riwayat Pesanan', onPress: () => router.push('/(tabs)/history' as any) }]
+        );
+      } else {
+        Alert.alert('Gagal Membuat Pesanan', res.data?.message || 'Terjadi kesalahan sistem.');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Kesalahan jaringan saat memproses pesanan.';
+      Alert.alert('Gagal', msg);
+    } finally {
+      setSubmitting(false);
     }
-
-    Alert.alert(
-      'Konfirmasi Checkout',
-      `Yakin mau lanjut bayar untuk ${imeiCount} IMEI? ${appliedCoupon ? `(Diskon: -Rp ${discountAmount.toLocaleString('id-ID')}) ` : ''}Total Rp ${totalPrice.toLocaleString('id-ID')}.`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Lanjutkan Bayar',
-          onPress: async () => {
-            setSubmitting(true);
-            try {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              const formData = new FormData();
-              formData.append('service_type', 'imei');
-              formData.append('imei', imei.trim());
-              formData.append('duration', selectedPkg.duration || '1 Bulan');
-              formData.append('amount', totalPrice.toString());
-              formData.append('package_id', selectedPkg.id);
-              formData.append('speed', selectedSpeed);
-              formData.append('targetPhone', targetPhone.trim());
-              if (appliedCoupon) {
-                formData.append('couponCode', appliedCoupon.code);
-              }
-
-              if (screenshotUri) {
-                const filename = screenshotUri.split('/').pop() || 'screenshot.jpg';
-                const match = /\.(\w+)$/.exec(filename);
-                const type = match ? `image/${match[1]}` : `image/jpeg`;
-                formData.append('screenshot', {
-                  uri: screenshotUri,
-                  name: filename,
-                  type,
-                } as any);
-              }
-
-              const res = await apiClient.post('/transactions/manual', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-              });
-
-              if (res.data?.status) {
-                if (typeof res.data.newBalance === 'number') {
-                  updateUserBalance(res.data.newBalance);
-                }
-                try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-                Alert.alert(
-                  'Pesanan Berhasil Dibuat! 🎉',
-                  'Pesanan Add Roamer Anda telah berhasil diteruskan ke sistem untuk diproses tim teknis.',
-                  [
-                    { text: 'Lihat Riwayat', onPress: () => router.push('/(tabs)/history' as any) },
-                  ]
-                );
-              } else {
-                Alert.alert('Gagal', res.data?.message || 'Gagal memproses pesanan.');
-              }
-            } catch (err: any) {
-              Alert.alert('Error', err?.response?.data?.message || 'Terjadi kesalahan sistem saat memproses pesanan.');
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        },
-      ]
-    );
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-        <View style={styles.centerLoading}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textMuted }]}>Memuat Layanan Add Roamer...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const handleApplyCoupon = async (code: string) => {
+    if (!code.trim()) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const res = await apiClient.post('/coupon/validate', {
+        code: code.trim().toUpperCase(),
+        order_amount: rawTotalPrice,
+      });
+      if (res.data?.status && res.data.data) {
+        setAppliedCoupon(res.data.data);
+        setShowVoucherSheet(false);
+        Alert.alert('Voucher Terpasang! 🎉', `Potongan hemat Rp ${Number(res.data.data.discount_amount || 0).toLocaleString('id-ID')}`);
+      } else {
+        Alert.alert('Voucher Tidak Valid', res.data?.message || 'Kupon tidak dapat digunakan.');
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.response?.data?.message || 'Gagal memvalidasi kupon.');
+    }
+  };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Top Header */}
-      <View style={[styles.topNav, { borderBottomColor: colors.border }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.canvas }]} edges={['top']}>
+      {/* Top Bar */}
+      <View style={styles.topBar}>
         <Pressable
-          style={[styles.backBtn, { backgroundColor: colors.surface }]}
-          onPress={() => router.back()}
+          style={[styles.backBtn, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}
+          onPress={() => {
+            if (currentStep > 1) handlePrevStep();
+            else router.back();
+          }}
           hitSlop={10}
         >
-          <ArrowLeft size={20} color={colors.text} />
+          <ArrowLeft size={18} color={colors.ink} />
         </Pressable>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <View style={styles.rowAlign}>
-            <Text style={[styles.navTitle, { color: colors.text }]}>Add Roamer</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[styles.headerTitle, { color: colors.ink }]}>Add Roamer</Text>
             <View style={styles.starSellerBadge}>
               <Text style={styles.starSellerText}>STAR SELLER</Text>
             </View>
           </View>
-          <Text style={[styles.navSubtitle, { color: colors.textMuted }]}>
-            Aktivasi sinyal All Operator resmi & 100% bergaransi
+          <Text style={[styles.headerSub, { color: colors.inkMuted }]}>
+            Step {currentStep} dari 3 • Aktivasi Sinyal All Operator
           </Text>
         </View>
       </View>
 
+      {/* Step Wizard Progress Indicator */}
+      <View style={styles.wizardIndicatorRow}>
+        <View style={styles.wizardStepCol}>
+          <View
+            style={[
+              styles.stepNumberBadge,
+              {
+                backgroundColor: currentStep >= 1 ? colors.primary : colors.parchment,
+                borderColor: currentStep >= 1 ? colors.primary : colors.hairline,
+              },
+            ]}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '800', color: currentStep >= 1 ? '#000' : colors.inkMuted }}>
+              1
+            </Text>
+          </View>
+          <Text style={[styles.stepLabel, { color: currentStep === 1 ? colors.primary : colors.inkMuted }]}>
+            Data IMEI & HP
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.stepConnector,
+            { backgroundColor: currentStep >= 2 ? colors.primary : colors.hairline },
+          ]}
+        />
+
+        <View style={styles.wizardStepCol}>
+          <View
+            style={[
+              styles.stepNumberBadge,
+              {
+                backgroundColor: currentStep >= 2 ? colors.primary : colors.parchment,
+                borderColor: currentStep >= 2 ? colors.primary : colors.hairline,
+              },
+            ]}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '800', color: currentStep >= 2 ? '#000' : colors.inkMuted }}>
+              2
+            </Text>
+          </View>
+          <Text style={[styles.stepLabel, { color: currentStep === 2 ? colors.primary : colors.inkMuted }]}>
+            Pilih Paket
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.stepConnector,
+            { backgroundColor: currentStep >= 3 ? colors.primary : colors.hairline },
+          ]}
+        />
+
+        <View style={styles.wizardStepCol}>
+          <View
+            style={[
+              styles.stepNumberBadge,
+              {
+                backgroundColor: currentStep >= 3 ? colors.primary : colors.parchment,
+                borderColor: currentStep >= 3 ? colors.primary : colors.hairline,
+              },
+            ]}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '800', color: currentStep >= 3 ? '#000' : colors.inkMuted }}>
+              3
+            </Text>
+          </View>
+          <Text style={[styles.stepLabel, { color: currentStep === 3 ? colors.primary : colors.inkMuted }]}>
+            Review & Bayar
+          </Text>
+        </View>
+      </View>
+
+      {/* Main Wizard Form Body */}
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 150 + insets.bottom }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Broadcast Announcement Banner */}
-        {announcements.length > 0 && announcements[0]?.message && (
-          <View style={[styles.annBanner, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '44' }]}>
-            <Sparkles size={16} color={colors.primary} style={{ marginTop: 2 }} />
-            <Text style={[styles.annText, { color: colors.text }]}>
-              {announcements[0].message}
-            </Text>
+        {/* STEP 1: Input & Validasi Nomor HP + IMEI */}
+        {currentStep === 1 && (
+          <View>
+            {/* Wholesale Banner */}
+            <View style={styles.wholesaleBanner}>
+              <View style={styles.wholesaleIconWrap}>
+                <Tag size={18} color="#10b981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.wholesaleTitle}>Promo Diskon Multi-IMEI Otomatis</Text>
+                <Text style={styles.wholesaleDesc}>
+                  Daftarkan 2 IMEI atau lebih (Dual SIM), otomatis dapat harga grosir spesial mulai dari Rp 160.000 / IMEI.
+                </Text>
+              </View>
+            </View>
+
+            {/* Input IMEI Box */}
+            <View style={styles.sectionWrap}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={[styles.fieldLabel, { color: colors.ink }]}>Nomor IMEI Target (15 Digit)</Text>
+                {imei.trim().length > 0 && (
+                  <View style={[styles.badgeValid, { backgroundColor: validImeiCount > 0 ? 'rgba(30, 215, 96, 0.12)' : 'rgba(255, 69, 58, 0.12)' }]}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: validImeiCount > 0 ? colors.primary : '#ff453a' }}>
+                      {validImeiCount} / {imeiCount} Valid Luhn
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={[styles.textInputWrap, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+                <TextInput
+                  style={[styles.textInputArea, { color: colors.ink }]}
+                  placeholder="Masukkan 15 digit IMEI (Bisa banyak sekaligus, pisahkan dengan enter atau spasi)"
+                  placeholderTextColor={colors.inkMuted}
+                  multiline
+                  numberOfLines={3}
+                  value={imei}
+                  onChangeText={(val) => setImei(val.replace(/[^0-9,\n\r ]/g, ''))}
+                />
+              </View>
+              <Text style={{ fontSize: 11, color: colors.inkMuted, marginTop: 4 }}>
+                💡 Masukkan IMEI 1 & IMEI 2 di baris terpisah untuk aktivasi Dual SIM.
+              </Text>
+            </View>
+
+            {/* WhatsApp Notification Input */}
+            <View style={[styles.sectionCard, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Smartphone size={16} color="#10b981" />
+                  <Text style={[styles.fieldLabel, { color: colors.ink }]}>WhatsApp Penerima Nota</Text>
+                </View>
+                <View style={[styles.badgeValid, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#10b981' }}>Auto Kirim Nota</Text>
+                </View>
+              </View>
+              <TextInput
+                style={[styles.phoneInput, { backgroundColor: colors.canvas, borderColor: colors.hairline, color: colors.ink }]}
+                placeholder="Contoh: 081234567890"
+                placeholderTextColor={colors.inkMuted}
+                keyboardType="phone-pad"
+                value={targetPhone}
+                onChangeText={(val) => setTargetPhone(val.replace(/[^0-9+]/g, ''))}
+              />
+            </View>
+
+            {/* Upload Dokumen Bukti */}
+            <View style={styles.uploadRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 6 }]}>
+                  Screenshot *#06# <Text style={{ color: '#ff453a' }}>*</Text>
+                </Text>
+                <Pressable
+                  style={[styles.uploadBox, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}
+                  onPress={() => handlePickImage('screenshot')}
+                >
+                  {screenshotUri ? (
+                    <Image source={{ uri: screenshotUri }} style={styles.uploadedThumb} />
+                  ) : (
+                    <View style={{ alignItems: 'center', gap: 4 }}>
+                      <Camera size={20} color={colors.primary} />
+                      <Text style={{ fontSize: 11, color: colors.inkMuted, fontWeight: '600' }}>Pilih Foto</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 6 }]}>
+                  Cek CEIR <Text style={{ fontSize: 11, color: colors.inkMuted }}>(Opsional)</Text>
+                </Text>
+                <Pressable
+                  style={[styles.uploadBox, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}
+                  onPress={() => handlePickImage('ceir')}
+                >
+                  {ceirUri ? (
+                    <Image source={{ uri: ceirUri }} style={styles.uploadedThumb} />
+                  ) : (
+                    <View style={{ alignItems: 'center', gap: 4 }}>
+                      <ImageIcon size={20} color={colors.inkMuted} />
+                      <Text style={{ fontSize: 11, color: colors.inkMuted, fontWeight: '600' }}>Pilih Foto</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Ketentuan Layanan Accordion */}
+            <View style={styles.ketentuanCard}>
+              <Pressable
+                style={styles.ketentuanHeader}
+                onPress={() => setKetentuanOpen(!ketentuanOpen)}
+              >
+                <AlertTriangle size={16} color="#d97706" style={{ marginRight: 8 }} />
+                <Text style={styles.ketentuanTitle}>Syarat & Ketentuan Layanan</Text>
+                {ketentuanOpen ? <ChevronUp size={16} color="#d97706" /> : <ChevronDown size={16} color="#d97706" />}
+              </Pressable>
+              {ketentuanOpen && (
+                <View style={styles.ketentuanList}>
+                  <Text style={styles.ketentuanItem}>1. Khusus untuk HP Inter (Internasional).</Text>
+                  <Text style={styles.ketentuanItem}>2. Pastikan HP BUKAN bypass-an.</Text>
+                  <Text style={styles.ketentuanItem}>3. IC Baseband sehat (Muncul &quot;Tidak ada layanan&quot; saat SIM masuk).</Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
 
-        {/* Promo Diskon Multi-IMEI Banner */}
-        <View style={[styles.promoBanner, { backgroundColor: '#10b98115', borderColor: '#10b98144' }]}>
-          <View style={styles.rowSpace}>
-            <View style={styles.rowAlign}>
-              <View style={[styles.iconCircle, { backgroundColor: '#10b98133' }]}>
-                <Zap size={16} color="#10b981" />
+        {/* STEP 2: Pilih Paket Roaming Dinamis, Kecepatan, dan Diskon */}
+        {currentStep === 2 && (
+          <View>
+            {/* Package Selector */}
+            <View style={styles.sectionWrap}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={[styles.fieldLabel, { color: colors.ink }]}>Pilih Paket Masa Aktif</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>Garansi Resmi RY</Text>
               </View>
-              <View style={{ marginLeft: 10 }}>
-                <View style={styles.rowAlign}>
-                  <Text style={[styles.promoTitle, { color: colors.text }]}>Promo Diskon Multi-IMEI</Text>
-                  <View style={styles.promoPill}>
-                    <Text style={styles.promoPillText}>Hemat Otomatis</Text>
-                  </View>
-                </View>
-                <Text style={[styles.promoDesc, { color: colors.textMuted }]}>
-                  Daftarkan 2 IMEI / Dual SIM otomatis dapat potongan grosir.
-                </Text>
+
+              <View style={styles.packageGrid}>
+                {loading ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  uniquePackages.map((opt) => {
+                    const active = selectedPkgId === opt.id;
+                    let optSp: any = {};
+                    if (opt.speed_prices) {
+                      try {
+                        optSp = typeof opt.speed_prices === 'string' ? JSON.parse(opt.speed_prices) : opt.speed_prices;
+                      } catch {}
+                    }
+                    const activeCardPrice = active && selectedSpeed && optSp[selectedSpeed] && Number(optSp[selectedSpeed]) >= 1000
+                      ? Number(optSp[selectedSpeed])
+                      : Number(opt.price || 0);
+
+                    return (
+                      <Pressable
+                        key={opt.id}
+                        style={[
+                          styles.packageCard,
+                          {
+                            backgroundColor: active ? 'rgba(30, 215, 96, 0.08)' : colors.parchment,
+                            borderColor: active ? colors.primary : colors.hairline,
+                          },
+                        ]}
+                        onPress={() => {
+                          try { Haptics.selectionAsync(); } catch {}
+                          setSelectedPkgId(opt.id);
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={[styles.pkgDuration, { color: colors.ink }]}>{opt.duration}</Text>
+                          {active && <CheckCircle2 size={16} color={colors.primary} />}
+                        </View>
+                        <Text style={[styles.pkgPrice, { color: colors.primary }]}>
+                          Rp {activeCardPrice.toLocaleString('id-ID')}
+                        </Text>
+                        {optSp.wholesale_enabled && (
+                          <Text style={styles.pkgGrosirBadge}>
+                            Grosir &ge;{optSp.wholesale_min_qty || 2} IMEI
+                          </Text>
+                        )}
+                      </Pressable>
+                    );
+                  })
+                )}
               </View>
             </View>
-            <View style={[styles.minImeiTag, { backgroundColor: '#10b98122', borderColor: '#10b981' }]}>
-              <Text style={[styles.minImeiTagText, { color: '#10b981' }]}>Min. 2 IMEI</Text>
-            </View>
-          </View>
-        </View>
 
-        {/* Collapsible Ketentuan Layanan Card */}
-        <Pressable
-          style={[styles.ketentuanCard, { backgroundColor: '#f59e0b12', borderColor: '#f59e0b44' }]}
-          onPress={() => setKetentuanOpen(!ketentuanOpen)}
-        >
-          <View style={styles.rowSpace}>
-            <View style={styles.rowAlign}>
-              <AlertTriangle size={18} color="#f59e0b" />
-              <Text style={[styles.ketentuanTitle, { color: '#f59e0b', marginLeft: 8 }]}>
-                Ketentuan Layanan Penting
+            {/* Kecepatan Proses Server */}
+            <View style={styles.sectionWrap}>
+              <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 8 }]}>
+                Pilih Kecepatan Proses Server
               </Text>
-            </View>
-            {ketentuanOpen ? <ChevronUp size={18} color="#f59e0b" /> : <ChevronDown size={18} color="#f59e0b" />}
-          </View>
-
-          {ketentuanOpen && (
-            <View style={styles.ketentuanBody}>
-              <Text style={[styles.ketentuanItem, { color: colors.text }]}>
-                1. Khusus untuk unit <Text style={{ fontWeight: '800' }}>HP Inter (Internasional)</Text>.
-              </Text>
-              <Text style={[styles.ketentuanItem, { color: colors.text }]}>
-                2. Untuk pengguna iPhone, pastikan HP <Text style={{ fontWeight: '800' }}>bukan barang bypass</Text>.
-              </Text>
-              <Text style={[styles.ketentuanItem, { color: colors.text }]}>
-                3. Pastikan IC Baseband sehat: masukkan SIM Card jika muncul <Text style={{ color: '#ef4444', fontWeight: '800' }}>"Tidak ada layanan" (No Service)</Text> berarti aman.
-              </Text>
-              <Text style={[styles.ketentuanItem, { color: colors.text }]}>
-                4. Jika status simlock, wajib terpasang rsim / sim sticker dari awal.
-              </Text>
-            </View>
-          )}
-        </Pressable>
-
-        {/* Form Section: IMEI Input */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.rowSpace}>
-            <Text style={[styles.label, { color: colors.text }]}>Nomor IMEI (15 Digit)</Text>
-            {imei.trim().length > 0 && (
-              <View style={[styles.tagBadge, { backgroundColor: colors.primary + '22' }]}>
-                <Text style={[styles.tagBadgeText, { color: colors.primary }]}>
-                  {validImeiCount} Siap Proses
-                </Text>
+              <View style={styles.speedRow}>
+                {speedOptions.map((opt) => {
+                  const active = selectedSpeed === opt.id;
+                  return (
+                    <Pressable
+                      key={opt.id}
+                      style={[
+                        styles.speedCard,
+                        {
+                          backgroundColor: active ? 'rgba(30, 215, 96, 0.08)' : colors.parchment,
+                          borderColor: active ? colors.primary : colors.hairline,
+                        },
+                      ]}
+                      onPress={() => {
+                        try { Haptics.selectionAsync(); } catch {}
+                        setSelectedSpeed(opt.id);
+                      }}
+                    >
+                      <Text style={[styles.speedName, { color: colors.ink }]}>{opt.label.split(' ')[0]}</Text>
+                      <Text style={[styles.speedPriceText, { color: colors.primary }]}>
+                        {opt.hasSpecificPrice
+                          ? `Rp ${Number(opt.price).toLocaleString('id-ID')}`
+                          : opt.price === 0
+                          ? 'Gratis'
+                          : `+Rp ${Number(opt.price).toLocaleString('id-ID')}`}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
-            )}
-          </View>
-
-          <TextInput
-            style={[styles.textArea, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.text }]}
-            placeholder="Masukkan 15 digit nomor IMEI (Bisa banyak sekaligus, pisahkan dengan baris baru atau koma)"
-            placeholderTextColor={colors.textDim}
-            value={imei}
-            onChangeText={(val) => setImei(val.replace(/[^0-9,\n\r ]/g, ''))}
-            multiline
-          />
-
-          <View style={[styles.guideBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-            <Info size={14} color={colors.primary} style={{ marginTop: 2 }} />
-            <Text style={[styles.guideText, { color: colors.textMuted }]}>
-              <Text style={{ fontWeight: '800', color: colors.text }}>HP Dual SIM (IMEI 1 & 2)? </Text>
-              Masukkan tiap 15 digit IMEI di baris baru. Pembelian 2 IMEI otomatis dapat harga grosir.
-            </Text>
-          </View>
-
-          {/* Interactive Parsed IMEI Cards */}
-          {parsedImeis.length > 0 && (
-            <View style={styles.imeiListWrap}>
-              {parsedImeis.map((item, idx) => (
-                <View
-                  key={idx}
-                  style={[
-                    styles.imeiItemCard,
-                    {
-                      backgroundColor: item.isValidLength && item.isValidLuhn ? '#10b98112' : '#f59e0b12',
-                      borderColor: item.isValidLength && item.isValidLuhn ? '#10b98144' : '#f59e0b44',
-                    },
-                  ]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.imeiDeviceName, { color: colors.text }]}>
-                      {item.brand ? `${item.brand} ${item.model}` : `Perangkat #${idx + 1}`}
-                    </Text>
-                    <Text style={[styles.imeiDigits, { color: colors.textMuted }]}>{item.clean}</Text>
-                  </View>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() => {
-                      const lines = imei.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-                      setImei(lines.filter((_, i) => i !== idx).join('\n'));
-                    }}
-                  >
-                    <X size={16} color={colors.danger} />
-                  </Pressable>
-                </View>
-              ))}
             </View>
-          )}
-        </View>
 
-        {/* Form Section: Package Duration Selection */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Pilih Paket Masa Aktif / Garansi</Text>
-          <View style={styles.packageGrid}>
-            {packages.map((pkg) => {
-              const selected = selectedPkgId === pkg.id;
-              return (
-                <Pressable
-                  key={pkg.id}
-                  style={[
-                    styles.packageCard,
-                    selected
-                      ? { borderColor: colors.primary, backgroundColor: colors.primary + '18' }
-                      : { borderColor: colors.border, backgroundColor: colors.surfaceElevated },
-                  ]}
-                  onPress={() => {
-                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-                    setSelectedPkgId(pkg.id);
-                  }}
-                >
-                  <View style={styles.rowSpace}>
-                    <Text style={[styles.pkgName, { color: colors.text }]}>{pkg.name || pkg.duration}</Text>
-                    {selected && <CheckCircle2 size={16} color={colors.primary} />}
-                  </View>
-                  <Text style={[styles.pkgPrice, { color: colors.primary }]}>
-                    Rp {Number(pkg.price || 0).toLocaleString('id-ID')}
-                  </Text>
-                  <Text style={[styles.pkgDesc, { color: colors.textMuted }]}>
-                    {pkg.description || `Garansi Sinyal ${pkg.duration}`}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Form Section: Speed / Kecepatan */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Kecepatan Pengerjaan</Text>
-          <View style={styles.speedCol}>
-            {SPEED_OPTIONS_CONFIG.map((opt) => {
-              const selected = selectedSpeed === opt.id;
-              const hasSpecific = pkgSpeedPrices[opt.id] !== undefined && Number(pkgSpeedPrices[opt.id]) > 0;
-              const displayPrc = hasSpecific
-                ? Number(pkgSpeedPrices[opt.id])
-                : (speedPricing && Number(speedPricing[opt.key])) || 0;
-
-              return (
-                <Pressable
-                  key={opt.id}
-                  style={[
-                    styles.speedCard,
-                    selected
-                      ? { borderColor: colors.primary, backgroundColor: colors.primary + '18' }
-                      : { borderColor: colors.border, backgroundColor: colors.surfaceElevated },
-                  ]}
-                  onPress={() => {
-                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-                    setSelectedSpeed(opt.id);
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.speedLabel, { color: colors.text }]}>{opt.label}</Text>
-                    <Text style={[styles.speedRange, { color: colors.textMuted }]}>{opt.defaultRange}</Text>
-                  </View>
-                  <Text style={[styles.speedPriceTag, { color: colors.primary }]}>
-                    {displayPrc > 0 ? `+Rp ${displayPrc.toLocaleString('id-ID')}` : 'Termasuk'}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Form Section: Recipient WhatsApp Phone */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Nomor WhatsApp Penerima Nota</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.text }]}
-            placeholder="Contoh: 081234567890"
-            placeholderTextColor={colors.textDim}
-            value={targetPhone}
-            onChangeText={setTargetPhone}
-            keyboardType="phone-pad"
-          />
-          <Text style={[styles.fieldHint, { color: colors.textMuted }]}>
-            Nota pengerjaan dan notifikasi sinyal aktif akan dikirim otomatis ke nomor ini.
-          </Text>
-        </View>
-
-        {/* Form Section: Screenshot Upload */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Bukti Screenshot *#06#</Text>
-          <Text style={[styles.fieldHint, { color: colors.textMuted, marginTop: 0 }]}>
-            Wajib melampirkan screenshot layar saat menekan *#06# pada HP target.
-          </Text>
-
-          {screenshotUri ? (
-            <View style={styles.previewContainer}>
-              <Image source={{ uri: screenshotUri }} style={styles.previewImage} resizeMode="cover" />
-              <Pressable
-                style={styles.changeImageBtn}
-                onPress={handlePickImage}
-              >
-                <Text style={styles.changeImageText}>Ganti Foto</Text>
-              </Pressable>
-            </View>
-          ) : (
+            {/* Voucher Promo Selector Button */}
             <Pressable
-              style={[styles.uploadBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-              onPress={handlePickImage}
+              style={[styles.voucherBar, { backgroundColor: colors.parchment, borderColor: colors.hairline }]
+              }
+              onPress={() => setShowVoucherSheet(true)}
             >
-              <Camera size={28} color={colors.primary} />
-              <Text style={[styles.uploadHeading, { color: colors.text }]}>Unggah Bukti Screenshot *#06#</Text>
-              <Text style={[styles.uploadSub, { color: colors.textMuted }]}>
-                Tekan untuk ambil dari kamera atau galeri foto
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Ticket size={20} color={colors.primary} />
+                <View>
+                  <Text style={[styles.voucherTitle, { color: colors.ink }]}>
+                    {appliedCoupon ? `Voucher ${appliedCoupon.code} Aktif` : 'Gunakan Voucher Promo'}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.inkMuted }}>
+                    {appliedCoupon ? `Hemat -Rp ${discountAmount.toLocaleString('id-ID')}` : 'Pilih kupon diskon Shopee-style'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
+                {appliedCoupon ? 'Ubah' : 'Pilih'}
               </Text>
             </Pressable>
-          )}
-        </View>
 
-        {/* Form Section: Coupon & Coins */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.text }]}>Voucher & Koin Promo</Text>
-
-          {/* Voucher Button */}
-          <Pressable
-            style={[styles.voucherTrigger, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-            onPress={() => setShowVoucherModal(true)}
-          >
-            <View style={styles.rowAlign}>
-              <Ticket size={18} color="#f59e0b" />
-              <Text style={[styles.voucherTriggerText, { color: appliedCoupon ? colors.primary : colors.text }]}>
-                {appliedCoupon ? `Voucher: ${appliedCoupon.code} (-Rp ${discountAmount.toLocaleString('id-ID')})` : 'Pilih atau Masukkan Voucher'}
-              </Text>
-            </View>
-            {appliedCoupon ? (
-              <Pressable
-                hitSlop={8}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  setAppliedCoupon(null);
-                }}
-              >
-                <X size={16} color={colors.textMuted} />
-              </Pressable>
-            ) : (
-              <ChevronDown size={16} color={colors.textMuted} />
-            )}
-          </Pressable>
-
-          {/* Coins Toggle */}
-          <View style={[styles.switchRow, { borderTopColor: colors.border }]}>
-            <View style={{ flex: 1 }}>
-              <View style={styles.rowAlign}>
-                <Coins size={16} color="#eab308" />
-                <Text style={[styles.switchTitle, { color: colors.text, marginLeft: 6 }]}>
-                  Tukarkan RyPoints / Koin
-                </Text>
+            {/* RyPoints Coins Bar */}
+            <View style={[styles.coinsBar, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Coins size={20} color="#f59e0b" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.voucherTitle, { color: colors.ink }]}>
+                    Tukarkan Koin ({userCoins.toLocaleString('id-ID')} RyPoints)
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.inkMuted }}>
+                    {priceAfterCoupon < 50000
+                      ? 'Min. belanja Rp 50.000 untuk tukar koin'
+                      : maxCoinsAllowed > 0
+                      ? `Hemat maks. Rp ${maxCoinsAllowed.toLocaleString('id-ID')}`
+                      : 'Kumpulkan koin dari mini game'}
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.switchDesc, { color: colors.textMuted }]}>
-                Saldo Koin: {userCoins} Koin (Maks. potong Rp {maxCoinsAllowed.toLocaleString('id-ID')})
-              </Text>
+              {userCoins > 0 && maxCoinsAllowed > 0 && (
+                <Switch
+                  value={useCoins}
+                  onValueChange={setUseCoins}
+                  trackColor={{ false: '#3f3f46', true: colors.primary }}
+                />
+              )}
             </View>
-            <Switch
-              value={useCoins}
-              onValueChange={setUseCoins}
-              disabled={userCoins <= 0 || maxCoinsAllowed <= 0}
-              trackColor={{ false: '#334155', true: colors.primary }}
-              thumbColor="#ffffff"
-            />
           </View>
-        </View>
+        )}
 
-        {/* Agreement Checkbox */}
-        <Pressable
-          style={styles.checkboxRow}
-          onPress={() => setAgreed(!agreed)}
-        >
-          <View
-            style={[
-              styles.checkbox,
-              agreed
-                ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                : { borderColor: colors.border, backgroundColor: colors.surfaceElevated },
-            ]}
-          >
-            {agreed && <Check size={14} color="#fff" />}
+        {/* STEP 3: Review Ringkasan Biaya, Metode Pembayaran & Konfirmasi */}
+        {currentStep === 3 && (
+          <View>
+            {/* Review Card */}
+            <View style={[styles.sectionCard, { backgroundColor: colors.parchment, borderColor: colors.hairline }]}>
+              <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 8 }]}>Detail Permintaan Roamer</Text>
+              <View style={{ gap: 6 }}>
+                <View style={styles.detailRow}>
+                  <Text style={{ fontSize: 12, color: colors.inkMuted }}>Paket Dipilih:</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>{selectedPkg?.duration}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={{ fontSize: 12, color: colors.inkMuted }}>Jumlah IMEI:</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>{imeiCount} IMEI</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={{ fontSize: 12, color: colors.inkMuted }}>Kecepatan Proses:</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>{selectedSpeed.toUpperCase()}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={{ fontSize: 12, color: colors.inkMuted }}>WhatsApp Nota:</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>{targetPhone}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Metode Pembayaran */}
+            <View style={styles.sectionWrap}>
+              <Text style={[styles.fieldLabel, { color: colors.ink, marginBottom: 8 }]}>Metode Pembayaran</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable
+                  style={[
+                    styles.methodTile,
+                    {
+                      borderColor: paymentMethod === 'qris' ? colors.primary : colors.hairline,
+                      backgroundColor: paymentMethod === 'qris' ? 'rgba(30, 215, 96, 0.08)' : colors.parchment,
+                    },
+                  ]}
+                  onPress={() => {
+                    try { Haptics.selectionAsync(); } catch {}
+                    setPaymentMethod('qris');
+                  }}
+                >
+                  <QrCode size={18} color={paymentMethod === 'qris' ? colors.primary : colors.inkMuted} />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}>Direct QRIS</Text>
+                    <Text style={{ fontSize: 11, color: colors.inkMuted }}>Otomatis 24 Jam</Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.methodTile,
+                    {
+                      borderColor: paymentMethod === 'balance' ? colors.primary : colors.hairline,
+                      backgroundColor: paymentMethod === 'balance' ? 'rgba(30, 215, 96, 0.08)' : colors.parchment,
+                    },
+                  ]}
+                  onPress={() => {
+                    try { Haptics.selectionAsync(); } catch {}
+                    setPaymentMethod('balance');
+                  }}
+                >
+                  <Wallet size={18} color={paymentMethod === 'balance' ? colors.primary : colors.inkMuted} />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}>Saldo RyPay</Text>
+                    <Text style={{ fontSize: 11, color: colors.inkMuted }}>Rp {userBalance.toLocaleString('id-ID')}</Text>
+                  </View>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Syarat Persetujuan */}
+            <Pressable
+              style={styles.agreedRow}
+              onPress={() => {
+                try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                setAgreed(!agreed);
+              }}
+              hitSlop={8}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: agreed ? colors.primary : colors.hairline,
+                    backgroundColor: agreed ? colors.primary : 'transparent',
+                  },
+                ]}
+              >
+                {agreed && <Check size={12} color="#fff" strokeWidth={3} />}
+              </View>
+              <Text style={[styles.agreedText, { color: colors.inkMuted }]}>
+                Saya menyatakan data IMEI HP target sudah benar dan setuju dengan syarat & ketentuan layanan.
+              </Text>
+            </Pressable>
           </View>
-          <Text style={[styles.checkboxLabel, { color: colors.text }]}>
-            Saya menyetujui <Text style={{ fontWeight: '800', color: colors.primary }}>Syarat & Ketentuan Layanan</Text> IMEI All Operator.
-          </Text>
-        </Pressable>
+        )}
       </ScrollView>
 
-      {/* Sticky Bottom Checkout Bar */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <View style={styles.bottomBarInfo}>
-          <Text style={[styles.bottomBarLabel, { color: colors.textMuted }]}>Total Biaya</Text>
-          <View style={styles.rowAlign}>
-            <Text style={[styles.bottomBarPrice, { color: colors.primary }]}>
-              Rp {totalPrice.toLocaleString('id-ID')}
-            </Text>
-            {wholesaleSavings > 0 && (
-              <View style={styles.savingBadge}>
-                <Text style={styles.savingBadgeText}>Hemat Rp {wholesaleSavings.toLocaleString('id-ID')}</Text>
-              </View>
-            )}
+      {/* Sticky Bottom Bar Ringkasan Biaya + Bayar */}
+      <View
+        style={[
+          styles.stickyBottomBar,
+          {
+            backgroundColor: colors.parchment,
+            borderTopColor: colors.hairline,
+            paddingBottom: Math.max(insets.bottom, 12),
+          },
+        ]}
+      >
+        <Pressable
+          style={styles.stickyPriceCol}
+          onPress={() => setShowSummarySheet(true)}
+          hitSlop={10}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 11, color: colors.inkMuted }}>Total Tagihan ({imeiCount} IMEI)</Text>
+            <Receipt size={12} color={colors.primary} />
           </View>
-        </View>
+          <Text style={[styles.stickyTotalPrice, { color: colors.primary }]}>
+            Rp {totalPrice.toLocaleString('id-ID')}
+          </Text>
+        </Pressable>
 
-        <View style={styles.bottomBarActions}>
-          <Pressable
-            style={[styles.cartBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-            onPress={handleAddToCart}
-            disabled={addingCart}
-          >
-            {addingCart ? <ActivityIndicator size="small" color={colors.primary} /> : <ShoppingCart size={18} color={colors.text} />}
-          </Pressable>
+        <View style={styles.stickyActionsRow}>
+          {currentStep < 3 ? (
+            <Pressable
+              style={[styles.nextStepBtn, { backgroundColor: colors.primary }]}
+              onPress={handleNextStep}
+            >
+              <Text style={styles.nextStepBtnText}>
+                {currentStep === 1 ? 'Pilih Paket' : 'Lanjut ke Review'}
+              </Text>
+              <ArrowRight size={16} color="#000" />
+            </Pressable>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                style={[styles.cartBtnCompact, { borderColor: colors.primary }]}
+                onPress={handleAddToCart}
+                disabled={addingCart || submitting}
+              >
+                {addingCart ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <ShoppingCart size={16} color={colors.primary} />
+                )}
+              </Pressable>
 
-          <Pressable
-            style={[styles.checkoutBtn, { backgroundColor: colors.primary }]}
-            onPress={handleDirectCheckout}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.checkoutBtnText}>Bayar Sekarang</Text>
-            )}
-          </Pressable>
+              <Pressable
+                style={[styles.payNowBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  if (!agreed) {
+                    Alert.alert('Persetujuan Layanan', 'Centang kotak persetujuan sebelum melanjutkan pembayaran.');
+                    return;
+                  }
+                  if (paymentMethod === 'qris') {
+                    setShowInstantQris(true);
+                  } else {
+                    executeOrderSubmission('balance');
+                  }
+                }}
+                disabled={submitting || addingCart}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#000" size="small" />
+                ) : (
+                  <>
+                    <Zap size={16} color="#000" fill="#000" />
+                    <Text style={styles.payNowBtnText}>
+                      {paymentMethod === 'qris' ? 'Bayar QRIS' : 'Bayar Saldo'}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          )}
         </View>
       </View>
 
-      {/* Voucher Selection Modal */}
-      <Modal visible={showVoucherModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.rowSpace}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Pilih Voucher Toko</Text>
-              <Pressable onPress={() => setShowVoucherModal(false)}>
-                <X size={20} color={colors.textMuted} />
-              </Pressable>
+      {/* Draggable Bottom Sheet: Rincian Lengkap Biaya */}
+      <DraggableBottomSheet
+        visible={showSummarySheet}
+        onClose={() => setShowSummarySheet(false)}
+        title="Rincian Tagihan Pembayaran"
+        subtitle="Transparan tanpa biaya tersembunyi"
+      >
+        <View style={{ gap: 10, paddingVertical: 12 }}>
+          <View style={styles.summaryRow}>
+            <Text style={{ color: colors.inkMuted, fontSize: 13 }}>Subtotal ({imeiCount} IMEI)</Text>
+            <Text style={{ color: colors.ink, fontWeight: '700', fontSize: 13 }}>
+              Rp {rawTotalPrice.toLocaleString('id-ID')}
+            </Text>
+          </View>
+          {isWholesaleActive && (
+            <View style={styles.summaryRow}>
+              <Text style={{ color: '#10b981', fontSize: 13 }}>Hemat Grosir Multi-IMEI</Text>
+              <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 13 }}>
+                -Rp {wholesaleSavings.toLocaleString('id-ID')}
+              </Text>
             </View>
-
-            <View style={styles.voucherInputRow}>
-              <TextInput
-                style={[styles.input, { flex: 1, backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.text }]}
-                placeholder="Punya kode voucher?"
-                placeholderTextColor={colors.textDim}
-                value={couponCode}
-                onChangeText={setCouponCode}
-                autoCapitalize="characters"
-              />
-              <Pressable
-                style={[styles.applyBtn, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  if (!couponCode.trim()) return;
-                  const match = publicCoupons.find((c) => c.code?.toUpperCase() === couponCode.trim().toUpperCase());
-                  if (match) {
-                    setAppliedCoupon(match);
-                    setShowVoucherModal(false);
-                    Alert.alert('Voucher Digunakan! 🎉', `Diskon -Rp ${Number(match.discount_amount || 0).toLocaleString('id-ID')}`);
-                  } else {
-                    setAppliedCoupon({ code: couponCode.trim().toUpperCase(), discount_amount: 10000 });
-                    setShowVoucherModal(false);
-                    Alert.alert('Voucher Digunakan! 🎉', `Kode ${couponCode.toUpperCase()} diterapkan.`);
-                  }
-                }}
-              >
-                <Text style={styles.applyBtnText}>Pakai</Text>
-              </Pressable>
+          )}
+          {appliedCoupon && (
+            <View style={styles.summaryRow}>
+              <Text style={{ color: '#10b981', fontSize: 13 }}>Kupon Diskon ({appliedCoupon.code})</Text>
+              <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 13 }}>
+                -Rp {discountAmount.toLocaleString('id-ID')}
+              </Text>
             </View>
-
-            <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
-              {publicCoupons.length === 0 ? (
-                <Text style={{ color: colors.textMuted, fontSize: 12, paddingVertical: 12, textAlign: 'center' }}>
-                  Tidak ada voucher publik yang tersedia saat ini.
-                </Text>
-              ) : (
-                publicCoupons.map((c) => (
-                  <Pressable
-                    key={c.id || c.code}
-                    style={[styles.couponCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-                    onPress={() => {
-                      setAppliedCoupon(c);
-                      setShowVoucherModal(false);
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.couponCode, { color: colors.primary }]}>{c.code}</Text>
-                      <Text style={[styles.couponDesc, { color: colors.textMuted }]}>
-                        Potongan Rp {Number(c.discount_amount || 0).toLocaleString('id-ID')}
-                      </Text>
-                    </View>
-                    <Text style={[styles.applyText, { color: colors.primary }]}>Gunakan</Text>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
+          )}
+          {useCoins && coinsDiscount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={{ color: '#f59e0b', fontSize: 13 }}>Potongan Koin RyPoints</Text>
+              <Text style={{ color: '#f59e0b', fontWeight: '700', fontSize: 13 }}>
+                -Rp {coinsDiscount.toLocaleString('id-ID')}
+              </Text>
+            </View>
+          )}
+          <View style={[styles.summaryRow, { borderTopWidth: 1, borderColor: colors.hairline, paddingTop: 10, marginTop: 4 }]}>
+            <Text style={{ color: colors.ink, fontWeight: '800', fontSize: 15 }}>Total Pembayaran</Text>
+            <Text style={{ color: colors.primary, fontWeight: '900', fontSize: 17 }}>
+              Rp {totalPrice.toLocaleString('id-ID')}
+            </Text>
           </View>
         </View>
-      </Modal>
+      </DraggableBottomSheet>
+
+      {/* Draggable Bottom Sheet: Voucher Promo */}
+      <DraggableBottomSheet
+        visible={showVoucherSheet}
+        onClose={() => setShowVoucherSheet(false)}
+        title="Voucher Promo Diskon"
+        subtitle="Pilih atau masukkan kode voucher Anda"
+      >
+        <View style={{ paddingVertical: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.canvas, borderColor: colors.hairline, color: colors.ink }]}
+              placeholder="Masukkan kode promo"
+              placeholderTextColor={colors.inkMuted}
+              value={couponCode}
+              onChangeText={(val) => setCouponCode(val.toUpperCase())}
+            />
+            <Pressable
+              style={[styles.applyBtn, { backgroundColor: colors.primary }]}
+              onPress={() => handleApplyCoupon(couponCode)}
+            >
+              <Text style={{ color: '#000', fontWeight: '800', fontSize: 13 }}>Pakai</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={false}>
+            {publicCoupons.map((c) => (
+              <Pressable
+                key={c.id || c.code}
+                style={[styles.couponTile, { backgroundColor: colors.canvas, borderColor: colors.hairline }]}
+                onPress={() => handleApplyCoupon(c.code)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink }}>{c.code}</Text>
+                  <Text style={{ fontSize: 11, color: colors.inkMuted }}>
+                    {c.title || c.description || 'Diskon spesial pengguna'}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: colors.primary }}>Gunakan</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      </DraggableBottomSheet>
+
+      {/* Direct Instant QRIS Modal */}
+      <InstantQrisModal
+        isOpen={showInstantQris}
+        onClose={() => setShowInstantQris(false)}
+        amount={totalPrice}
+        orderTitle={`Add Roamer ${selectedPkg?.duration || '1 Bulan'} (${imeiCount} IMEI)`}
+        onSuccess={() => {
+          setShowInstantQris(false);
+          executeOrderSubmission('qris');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -865,453 +1152,375 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  centerLoading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  topNav: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navTitle: {
-    fontSize: 16,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '800',
   },
+  headerSub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
   starSellerBadge: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#ff453a',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 10,
-    marginLeft: 6,
+    borderRadius: 6,
   },
   starSellerText: {
     color: '#ffffff',
     fontSize: 9,
     fontWeight: '900',
   },
-  navSubtitle: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    gap: 14,
-  },
-  annBanner: {
+  wizardIndicatorRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    padding: 12,
-    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  wizardStepCol: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  stepNumberBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 1,
-  },
-  annText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '600',
-  },
-  promoBanner: {
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  promoTitle: {
+  stepLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  stepConnector: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 8,
+    marginBottom: 16,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  wholesaleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  wholesaleIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wholesaleTitle: {
     fontSize: 12,
     fontWeight: '800',
+    color: '#10b981',
   },
-  promoPill: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginLeft: 6,
-  },
-  promoPillText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  promoDesc: {
-    fontSize: 10,
+  wholesaleDesc: {
+    fontSize: 11,
+    color: '#a1a1aa',
     marginTop: 2,
-  },
-  minImeiTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  minImeiTagText: {
-    fontSize: 10,
-    fontWeight: '800',
+    lineHeight: 15,
   },
   ketentuanCard: {
-    padding: 12,
-    borderRadius: 14,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 10,
+  },
+  ketentuanHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   ketentuanTitle: {
-    fontSize: 12,
-    fontWeight: '800',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#d97706',
   },
-  ketentuanBody: {
-    marginTop: 10,
-    gap: 6,
+  ketentuanList: {
+    marginTop: 8,
+    gap: 4,
     borderTopWidth: 1,
-    borderTopColor: '#f59e0b22',
+    borderTopColor: 'rgba(245, 158, 11, 0.2)',
     paddingTop: 8,
   },
   ketentuanItem: {
     fontSize: 11,
+    color: '#d97706',
     lineHeight: 16,
   },
-  card: {
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 8,
+  sectionWrap: {
+    marginBottom: 14,
   },
-  label: {
-    fontSize: 12,
-    fontWeight: '800',
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
   },
-  tagBadge: {
+  badgeValid: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: 6,
   },
-  tagBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  textArea: {
-    minHeight: 80,
-    borderRadius: 12,
+  textInputWrap: {
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    fontSize: 12,
+    padding: 10,
+  },
+  textInputArea: {
+    height: 70,
+    fontSize: 13,
     textAlignVertical: 'top',
   },
-  guideBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    padding: 10,
-    borderRadius: 10,
+  sectionCard: {
+    borderRadius: 14,
     borderWidth: 1,
-  },
-  guideText: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  imeiListWrap: {
-    gap: 6,
-    marginTop: 4,
-  },
-  imeiItemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  imeiDeviceName: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  imeiDigits: {
-    fontSize: 10,
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  packageGrid: {
-    gap: 8,
-  },
-  packageCard: {
     padding: 12,
+    marginBottom: 14,
+  },
+  phoneInput: {
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 13,
+  },
+  uploadRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  uploadBox: {
+    height: 72,
     borderRadius: 12,
     borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  uploadedThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  packageGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  packageCard: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 12,
     gap: 4,
   },
-  pkgName: {
+  pkgDuration: {
     fontSize: 13,
     fontWeight: '800',
   },
   pkgPrice: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
-  pkgDesc: {
-    fontSize: 10,
+  pkgGrosirBadge: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#10b981',
+    marginTop: 2,
   },
-  speedCol: {
+  speedRow: {
+    flexDirection: 'row',
     gap: 8,
   },
   speedCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    padding: 10,
+    alignItems: 'center',
+  },
+  speedName: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  speedPriceText: {
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  voucherBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
+    marginBottom: 10,
   },
-  speedLabel: {
+  voucherTitle: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
-  speedRange: {
-    fontSize: 10,
+  coinsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  methodTile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  agreedRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 14,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 2,
   },
-  speedPriceTag: {
-    fontSize: 12,
+  agreedText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  stickyBottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 12,
+  },
+  stickyPriceCol: {
+    flex: 1,
+  },
+  stickyTotalPrice: {
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  stickyActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nextStepBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  nextStepBtnText: {
+    color: '#000000',
+    fontSize: 13,
     fontWeight: '800',
   },
-  input: {
+  cartBtnCompact: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  payNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  payNowBtnText: {
+    color: '#000000',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalInput: {
+    flex: 1,
     height: 44,
     borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 12,
     fontSize: 13,
   },
-  fieldHint: {
-    fontSize: 10,
-    lineHeight: 14,
-  },
-  previewContainer: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-    height: 140,
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-  },
-  changeImageBtn: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: '#000000aa',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  changeImageText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  uploadBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    gap: 6,
-  },
-  uploadHeading: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  uploadSub: {
-    fontSize: 10,
-  },
-  voucherTrigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  voucherTriggerText: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginLeft: 8,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    marginTop: 4,
-  },
-  switchTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  switchDesc: {
-    fontSize: 10,
-    marginTop: 2,
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 4,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxLabel: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-  },
-  bottomBarInfo: {
-    flex: 1,
-  },
-  bottomBarLabel: {
-    fontSize: 10,
-  },
-  bottomBarPrice: {
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  savingBadge: {
-    backgroundColor: '#10b98122',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginLeft: 6,
-  },
-  savingBadgeText: {
-    color: '#10b981',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  bottomBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cartBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  checkoutBtn: {
-    paddingHorizontal: 18,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkoutBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  rowAlign: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rowSpace: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: '#00000088',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  modalBox: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 18,
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  voucherInputRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   applyBtn: {
+    height: 44,
     paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  applyBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  couponCard: {
+  couponTile: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     marginBottom: 8,
-  },
-  couponCode: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  couponDesc: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  applyText: {
-    fontSize: 12,
-    fontWeight: '800',
   },
 });

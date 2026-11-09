@@ -276,6 +276,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   data-active={isActive ? "true" : "false"}
                   className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 shrink-0 border select-none cursor-pointer ${
                     isActive

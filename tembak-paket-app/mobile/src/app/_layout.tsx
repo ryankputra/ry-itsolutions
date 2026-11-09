@@ -1,12 +1,15 @@
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Updates from 'expo-updates';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { ThemeProvider, useAppTheme } from '../context/ThemeContext';
+import { MusicProvider } from '../context/MusicContext';
+import { FullMusicPlayerModal } from '../components/ui/FullMusicPlayerModal';
 import { Colors } from '../theme/colors';
 
 // Keep the splash screen visible while loading resources
@@ -14,9 +17,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { loading } = useAuth();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme !== 'light';
-  const themeColors = isDark ? Colors.dark : Colors.light;
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     async function checkOtaUpdates() {
@@ -41,14 +42,14 @@ function RootNavigator() {
   }, [loading]);
 
   if (loading) {
-    return <View style={{ flex: 1, backgroundColor: themeColors.background }} />;
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: themeColors.background },
+        contentStyle: { backgroundColor: colors.background },
         animation: 'slide_from_right',
         animationDuration: 200,
       }}
@@ -73,9 +74,9 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme !== 'light';
+function MainLayout() {
+  const { theme, colors } = useAppTheme();
+  const isDark = theme === 'dark';
 
   const customDarkTheme = {
     ...DarkTheme,
@@ -102,12 +103,23 @@ export default function RootLayout() {
   };
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider value={isDark ? customDarkTheme : customLightTheme}>
-        <AuthProvider>
+    <NavigationThemeProvider value={isDark ? customDarkTheme : customLightTheme}>
+      <AuthProvider>
+        <MusicProvider>
           <StatusBar style={isDark ? 'light' : 'dark'} />
           <RootNavigator />
-        </AuthProvider>
+          <FullMusicPlayerModal />
+        </MusicProvider>
+      </AuthProvider>
+    </NavigationThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <MainLayout />
       </ThemeProvider>
     </SafeAreaProvider>
   );
