@@ -32,6 +32,7 @@ function SettingsContent() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const [savingName, setSavingName] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -89,6 +90,7 @@ function SettingsContent() {
       });
       const data = await safeJson(res);
       if (data?.status && data.avatar) {
+        setAvatarError(false);
         if (user) setUser({ ...user, avatar: data.avatar });
         Swal.fire({
           icon: "success",
@@ -385,10 +387,15 @@ function SettingsContent() {
             <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-parchment/40 border border-hairline">
               <div className="relative shrink-0">
                 <div className="w-16 h-16 rounded-full bg-canvas border border-hairline overflow-hidden flex items-center justify-center font-bold text-xl text-primary">
-                  {user?.avatar ? (
-                    <img src={user.avatar} alt={username} className="w-full h-full object-cover" />
+                  {user?.avatar && !avatarError ? (
+                    <img
+                      src={user.avatar}
+                      alt={username}
+                      className="w-full h-full object-cover"
+                      onError={() => setAvatarError(true)}
+                    />
                   ) : (
-                    username[0]
+                    (username[0] || "U").toUpperCase()
                   )}
                 </div>
                 {uploadingAvatar && (

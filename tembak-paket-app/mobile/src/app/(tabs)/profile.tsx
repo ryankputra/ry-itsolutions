@@ -42,6 +42,7 @@ import { storage, STORAGE_KEYS } from '../../utils/storage';
 import { CartItem } from '../../types';
 import { apiClient } from '../../services/api';
 import { Colors } from '../../theme/colors';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import { useFocusEffect } from 'expo-router';
 
 export default function ProfileScreen() {
@@ -174,13 +175,14 @@ export default function ProfileScreen() {
           <View style={styles.userInfoRow}>
             <Pressable
               onPress={() => router.push('/(screens)/profile-settings' as any)}
-              style={[styles.avatarCircle, { backgroundColor: colors.canvas, borderColor: colors.hairline }]}
+              accessibilityLabel="Pengaturan Foto Profil & Akun"
             >
-              {user?.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.avatarImg} />
-              ) : (
-                <Text style={[styles.avatarText, { color: colors.primary }]}>{initialChar}</Text>
-              )}
+              <UserAvatar
+                uri={user?.avatar}
+                name={username}
+                size={58}
+                style={{ borderWidth: 1.5 }}
+              />
             </Pressable>
 
             <View style={styles.userDetails}>

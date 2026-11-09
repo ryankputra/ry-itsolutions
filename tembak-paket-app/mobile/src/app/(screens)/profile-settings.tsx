@@ -31,6 +31,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../services/api';
 import { Colors } from '../../theme/colors';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 
 type TabType = 'profile' | 'whatsapp' | 'email' | 'password';
 
@@ -351,11 +352,12 @@ export default function ProfileSettingsScreen() {
                 onPress={handlePickAvatar}
                 disabled={uploadingAvatar}
               >
-                {user?.avatar ? (
-                  <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
-                ) : (
-                  <Text style={[styles.avatarText, { color: colors.primary }]}>{initialChar}</Text>
-                )}
+                <UserAvatar
+                  uri={user?.avatar}
+                  name={user?.name || 'User'}
+                  size={96}
+                  style={{ borderWidth: 0 }}
+                />
                 <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
                   {uploadingAvatar ? (
                     <ActivityIndicator size="small" color="#fff" />

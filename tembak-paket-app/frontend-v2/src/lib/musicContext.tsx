@@ -208,7 +208,7 @@ export interface MusicContextType {
   isPlayerVisible: boolean;
   isMinimized: boolean;
   isBuffering: boolean;
-  playTrack: (indexOrId: number | string) => void;
+  playTrack: (indexOrId: number | string | Track) => void;
   togglePlayPause: () => void;
   seekTo: (seconds: number) => void;
   seek: (seconds: number) => void;
@@ -512,22 +512,33 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   // Handle Play Track (100% Native HTML5 audio stream with lock screen & background resilience)
   const playTrack = useCallback(
-    (indexOrId: number | string) => {
-      let index: number;
-      if (typeof indexOrId === "string") {
+    (indexOrId: number | string | Track) => {
+      let targetTrack: Track | undefined;
+      let index = -1;
+
+      if (typeof indexOrId === "object" && indexOrId !== null && "id" in indexOrId) {
+        targetTrack = indexOrId as Track;
+        index = tracks.findIndex((t) => t.id === targetTrack!.id);
+        if (index === -1) {
+          // Tambahkan track live search ke antrean tracks agar playlist & next/prev sync
+          setTracks((prev) => [targetTrack!, ...prev.filter((p) => p.id !== targetTrack!.id)]);
+          index = 0;
+        }
+      } else if (typeof indexOrId === "string") {
         index = tracks.findIndex((t) => t.id === indexOrId);
+        if (index >= 0) targetTrack = tracks[index];
       } else {
         index = indexOrId;
+        if (index >= 0 && index < tracks.length) targetTrack = tracks[index];
       }
-      if (index < 0 || index >= tracks.length) return;
-      const targetTrack = tracks[index];
-      if (!targetTrack) return;
+
+      if (!targetTrack || index < 0) return;
 
       setPlayerVisible(true);
       setIsMinimized(false);
 
       // Same track clicked: Toggle Pause/Play
-      if (index === currentTrackIndex) {
+      if (index === currentTrackIndex && targetTrack.id === (tracks[currentTrackIndex]?.id)) {
         togglePlayPause();
         return;
       }

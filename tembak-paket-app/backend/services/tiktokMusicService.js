@@ -565,6 +565,67 @@ class TikTokMusicService {
     }
 
     /**
+     * Live search music via iTunes Search API mapped to RyTone Track format
+     */
+    async searchMusic(query, limit = 20) {
+        const cleanQuery = String(query || "").trim();
+        if (!cleanQuery) return [];
+
+        const maxLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 50);
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=music&limit=${maxLimit}`;
+
+        try {
+            const rawData = await this.fetchJson(url);
+            if (!rawData || !Array.isArray(rawData.results)) {
+                return [];
+            }
+
+            const results = [];
+            const seen = new Set();
+
+            for (const r of rawData.results) {
+                if (!r.trackName || !r.artistName) continue;
+                const uniqueKey = `${r.trackName.toLowerCase().replace(/[^a-z0-9]/g, "")}-${r.artistName.toLowerCase().slice(0, 5)}`;
+                if (seen.has(uniqueKey)) continue;
+                seen.add(uniqueKey);
+
+                const rawImg = r.artworkUrl100 || r.artworkUrl60 || "";
+                const coverImage = rawImg ? rawImg.replace(/\/\d+x\d+bb\.(png|jpg)/, "/400x400bb.jpg") : undefined;
+                const catInfo = this.detectCategory(r.trackName, r.artistName, r.primaryGenreName || "", "indo");
+                const durationSec = Math.round((r.trackTimeMillis || 210000) / 1000);
+                const trackId = `itunes-${r.trackId || Math.random().toString(36).substring(2, 9)}`;
+
+                const cleanTagTerm = cleanQuery.toLowerCase().replace(/[^a-z0-9]/g, "");
+                const tags = ["#rytonesearch", `#${catInfo.category}`];
+                if (cleanTagTerm) tags.unshift(`#${cleanTagTerm}`);
+
+                results.push({
+                    id: trackId,
+                    title: r.trackName,
+                    artist: r.artistName,
+                    album: r.collectionName || undefined,
+                    category: catInfo.category,
+                    categoryLabel: catInfo.categoryLabel,
+                    durationSec: durationSec,
+                    previewUrl: r.previewUrl || "",
+                    audioUrl: "", // Cuplikan preview ada di previewUrl; audio full ditangani oleh /api/music/stream jika diputar
+                    coverImage: coverImage,
+                    coverGradient: SPOTIFY_GRADIENTS[results.length % SPOTIFY_GRADIENTS.length],
+                    accentColor: "#1ed760",
+                    verifiedOriginal: true,
+                    rank: results.length + 1,
+                    tags: tags
+                });
+            }
+
+            return results;
+        } catch (err) {
+            console.error('[MusicService] searchMusic error:', err.message);
+            return [];
+        }
+    }
+
+    /**
      * Fetch Live Multi-Genre Songs across Indonesia & Global RSS feeds and target artists
      */
     async fetchLiveCharts() {

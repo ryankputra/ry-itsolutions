@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingMiniPlayer } from '../../components/ui/FloatingMiniPlayer';
+import { FloatingWhatsAppSpeedDial } from '../../components/ui/FloatingWhatsAppSpeedDial';
 import { Colors } from '../../theme/colors';
 
 export default function TabLayout() {
@@ -107,6 +108,7 @@ export default function TabLayout() {
         />
       </Tabs>
       <FloatingMiniPlayer />
+      <FloatingWhatsAppSpeedDial />
     </View>
   );
 }

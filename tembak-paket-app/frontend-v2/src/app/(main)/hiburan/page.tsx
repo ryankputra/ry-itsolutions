@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Video,
+  Loader2,
 } from "lucide-react";
 import { useMusic, Track } from "@/lib/musicContext";
 import { RyToneIcon } from "@/components/music/RyToneIcon";
@@ -78,10 +79,40 @@ export default function RyToneMusicPage() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>("Baru Saja");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [liveSearchResults, setLiveSearchResults] = useState<Track[]>([]);
+  const [isLiveSearching, setIsLiveSearching] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [toast, setToast] = useState<{ message: string; type: "success" | "loading" | "info" } | null>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [scrubValue, setScrubValue] = useState<number>(0);
+
+  // Live Global Music Search via /api/music/search?q=... with debounce
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setLiveSearchResults([]);
+      setIsLiveSearching(false);
+      return;
+    }
+
+    setIsLiveSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/music/search?q=${encodeURIComponent(trimmed)}`);
+        if (res.ok) {
+          const json = await res.json();
+          const results: Track[] = json?.data?.tracks || [];
+          setLiveSearchResults(results);
+        }
+      } catch (err) {
+        console.warn("[RyTone Live Search Error]:", err);
+      } finally {
+        setIsLiveSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Synchronize slot position for seamless video playback positioning
   useEffect(() => {
@@ -181,8 +212,44 @@ export default function RyToneMusicPage() {
     }
   };
 
-  // Filter tracks
+  // Filter tracks (Local catalogue + Live Global Search merged)
   const filteredTracks = useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+
+    // Jika pencarian live global menghasilkan lagu, gabungkan dan prioritaskan
+    if (trimmed && liveSearchResults.length > 0) {
+      const merged: Track[] = [];
+      const seen = new Set<string>();
+
+      for (const t of liveSearchResults) {
+        const key = `${(t.title || "").toLowerCase()}-${(t.artist || "").toLowerCase()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(t);
+        }
+      }
+
+      for (const t of tracks) {
+        const key = `${(t.title || "").toLowerCase()}-${(t.artist || "").toLowerCase()}`;
+        if (!seen.has(key)) {
+          const matchesTitle = t.title.toLowerCase().includes(trimmed);
+          const matchesArtist = t.artist.toLowerCase().includes(trimmed);
+          const matchesTag = t.tags?.some((tag) => tag.toLowerCase().includes(trimmed));
+          if (matchesTitle || matchesArtist || matchesTag) {
+            seen.add(key);
+            merged.push(t);
+          }
+        }
+      }
+
+      if (selectedCategory === "favorites") {
+        return merged.filter((t) => favorites.includes(t.id));
+      } else if (selectedCategory !== "all") {
+        return merged.filter((t) => t.category === selectedCategory);
+      }
+      return merged;
+    }
+
     return tracks.filter((track) => {
       // Category filter
       if (selectedCategory === "favorites") {
@@ -192,17 +259,16 @@ export default function RyToneMusicPage() {
       }
 
       // Search query filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = track.title.toLowerCase().includes(query);
-        const matchesArtist = track.artist.toLowerCase().includes(query);
-        const matchesTag = track.tags?.some((t) => t.toLowerCase().includes(query));
-        const matchesCategory = track.categoryLabel?.toLowerCase().includes(query);
+      if (trimmed) {
+        const matchesTitle = track.title.toLowerCase().includes(trimmed);
+        const matchesArtist = track.artist.toLowerCase().includes(trimmed);
+        const matchesTag = track.tags?.some((t) => t.toLowerCase().includes(trimmed));
+        const matchesCategory = track.categoryLabel?.toLowerCase().includes(trimmed);
         return matchesTitle || matchesArtist || matchesTag || matchesCategory;
       }
       return true;
     });
-  }, [selectedCategory, searchQuery, favorites, tracks]);
+  }, [selectedCategory, searchQuery, favorites, tracks, liveSearchResults]);
 
   return (
     <div className="min-h-screen bg-canvas dark:bg-[#0a0a0c] text-ink dark:text-zinc-100 pb-24 transition-colors">
@@ -568,10 +634,14 @@ export default function RyToneMusicPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari lagu, artis (Bernadya, Rizky Febian, Njan, Adrian Khalif), atau genre..."
-              className="w-full pl-11 pr-10 py-3 bg-parchment dark:bg-[#121216] border border-hairline focus:border-[#1ed760] text-xs sm:text-sm rounded-xl outline-none text-ink dark:text-white placeholder:text-ink-muted transition-all"
+              placeholder="Cari lagu apa pun di dunia (artis, judul, genre, atau lirik)..."
+              className="w-full pl-11 pr-12 py-3 bg-parchment dark:bg-[#121216] border border-hairline focus:border-[#1ed760] text-xs sm:text-sm rounded-xl outline-none text-ink dark:text-white placeholder:text-ink-muted transition-all"
             />
-            {searchQuery && (
+            {isLiveSearching ? (
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                <Loader2 className="w-4 h-4 text-[#1ed760] animate-spin" />
+              </div>
+            ) : searchQuery ? (
               <button
                 onClick={() => setSearchQuery("")}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-white p-1 cursor-pointer"
@@ -579,7 +649,7 @@ export default function RyToneMusicPage() {
               >
                 <X className="w-3.5 h-3.5" />
               </button>
-            )}
+            ) : null}
           </div>
 
           {/* Category Pills */}
@@ -640,14 +710,14 @@ export default function RyToneMusicPage() {
             <div className="grid grid-cols-1 gap-1.5">
               {filteredTracks.map((track) => {
                 const trackIndex = tracks.findIndex((t) => t.id === track.id);
-                const isThisTrackPlaying = isPlaying && currentTrackIndex === trackIndex;
-                const isThisTrackActive = currentTrackIndex === trackIndex;
+                const isThisTrackPlaying = isPlaying && (currentTrack?.id === track.id || (trackIndex !== -1 && currentTrackIndex === trackIndex));
+                const isThisTrackActive = currentTrack?.id === track.id || (trackIndex !== -1 && currentTrackIndex === trackIndex);
                 const isFav = favorites.includes(track.id);
 
                 return (
                   <div
                     key={track.id}
-                    onClick={() => playTrack(track.id)}
+                    onClick={() => playTrack(track)}
                     className={`group relative p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer flex items-center gap-3.5 ${
                       isThisTrackActive
                         ? "bg-emerald-500/10 dark:bg-zinc-900/90 border-emerald-500/30 dark:border-[#1ed760]/40 shadow-sm"

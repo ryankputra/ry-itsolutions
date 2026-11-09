@@ -116,6 +116,7 @@ interface MusicContextType {
   openFullPlayer: () => void;
   closeFullPlayer: () => void;
   syncTracks: () => Promise<void>;
+  searchServerTracks: (q: string) => Promise<Track[]>;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -329,6 +330,42 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const searchServerTracks = async (q: string): Promise<Track[]> => {
+    const trimmed = q.trim();
+    if (!trimmed) return tracks;
+    try {
+      const res = await apiClient.get('/music/search', { params: { q: trimmed } });
+      const rawTracks = res.data?.data?.tracks || res.data?.tracks;
+      if (Array.isArray(rawTracks)) {
+        return rawTracks.map((t: any, idx: number) => ({
+          id: t.id || `search-${idx + 1}`,
+          title: t.title,
+          artist: t.artist,
+          category: t.category || 'indo',
+          categoryLabel: t.categoryLabel || 'Pencarian RyTone',
+          durationSec: t.durationSec || 200,
+          durationFormatted: formatSeconds(t.durationSec || 200),
+          audioUrl: t.audioUrl,
+          previewUrl: t.previewUrl,
+          youtubeId: t.youtubeId,
+          streamsCount: t.streamsCount || '10M+ streams',
+          rank: t.rank || idx + 1,
+          tags: t.tags || ['#rytone'],
+          coverImage: t.coverImage || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
+          accentColor: t.accentColor || '#1ed760',
+        }));
+      }
+    } catch (e) {
+      console.warn('[MusicContext] Global search endpoint error, using local fallback:', e);
+    }
+    // Fallback: local filtering
+    return tracks.filter((t) =>
+      t.title.toLowerCase().includes(trimmed.toLowerCase()) ||
+      t.artist.toLowerCase().includes(trimmed.toLowerCase()) ||
+      (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(trimmed.toLowerCase())))
+    );
+  };
+
   const openFullPlayer = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -364,6 +401,7 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
         openFullPlayer,
         closeFullPlayer,
         syncTracks,
+        searchServerTracks,
       }}
     >
       {children}

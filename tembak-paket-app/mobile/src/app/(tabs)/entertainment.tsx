@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -66,11 +66,38 @@ export default function EntertainmentScreen() {
     toggleFavorite,
     openFullPlayer,
     syncTracks,
+    searchServerTracks,
   } = useMusic();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Live global search via /api/music/search?q=... with debounce
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const handler = setTimeout(async () => {
+      try {
+        const results = await searchServerTracks(trimmed);
+        setSearchResults(results);
+      } catch (err) {
+        console.warn('[Entertainment] Live search error:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery, searchServerTracks]);
 
   const formatSeconds = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -98,18 +125,13 @@ export default function EntertainmentScreen() {
   };
 
   const filteredTracks = useMemo(() => {
-    return tracks.filter((t) => {
-      const matchSearch =
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())));
-
-      if (!matchSearch) return false;
+    const sourceList = searchResults !== null ? searchResults : tracks;
+    return sourceList.filter((t) => {
       if (selectedCategory === 'all') return true;
       if (selectedCategory === 'favorites') return favorites.includes(t.id);
       return t.category === selectedCategory;
     });
-  }, [tracks, searchQuery, selectedCategory, favorites]);
+  }, [tracks, searchResults, selectedCategory, favorites]);
 
   const progressPercent = durationSec > 0
     ? Math.min(100, Math.max(0, (currentTimeSec / durationSec) * 100))
@@ -165,7 +187,9 @@ export default function EntertainmentScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          {searchQuery ? (
+          {isSearching ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 6 }} />
+          ) : searchQuery ? (
             <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
               <X size={16} color={colors.inkMuted} />
             </Pressable>

@@ -15,7 +15,6 @@ import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { ProductReviewsSection } from "@/components/ui/ProductReviewsSection";
 import IGTestiPreview from "@/components/ui/IGTestiPreview";
 import WAGroupPopup from "@/components/ui/WAGroupPopup";
-import WAGroupChip from "@/components/ui/WAGroupChip";
 import { safeJson } from "@/lib/api";
 
 function PackageCountdown({ openHour }: { openHour: number }) {
@@ -1788,7 +1787,6 @@ function UnblockImeiContent() {
       />
 
       <WAGroupPopup />
-      <WAGroupChip />
     </div>
   );
 }

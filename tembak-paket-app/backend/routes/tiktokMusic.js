@@ -32,6 +32,68 @@ router.get('/', (req, res) => {
     }
 });
 
+/**
+ * GET /api/music/search or /api/tiktok-music/search
+ * Global live search endpoint for RyTone music catalog
+ */
+router.get('/search', async (req, res) => {
+    try {
+        const query = (req.query.q || req.query.query || '').trim().toLowerCase();
+        const catalog = tiktokMusicService.getTracks();
+        const tracks = catalog.tracks || [];
+        if (!query) {
+            return res.json({
+                success: true,
+                status: true,
+                message: "Hasil pencarian musik RyTone",
+                data: { tracks, total: tracks.length }
+            });
+        }
+        let filtered = tracks.filter(t => 
+            (t.title && t.title.toLowerCase().includes(query)) ||
+            (t.artist && t.artist.toLowerCase().includes(query)) ||
+            (t.category && t.category.toLowerCase().includes(query)) ||
+            (Array.isArray(t.tags) && t.tags.some(tag => tag.toLowerCase().includes(query)))
+        );
+
+        // Live global search via iTunes API to discover any song in the world
+        if (typeof tiktokMusicService.searchMusic === 'function') {
+            try {
+                const liveTracks = await tiktokMusicService.searchMusic(query, 25);
+                if (Array.isArray(liveTracks) && liveTracks.length > 0) {
+                    const seenKeys = new Set(filtered.map(t => `${(t.title || '').toLowerCase()}-${(t.artist || '').toLowerCase()}`));
+                    for (const lt of liveTracks) {
+                        const key = `${(lt.title || '').toLowerCase()}-${(lt.artist || '').toLowerCase()}`;
+                        if (!seenKeys.has(key)) {
+                            filtered.push(lt);
+                            seenKeys.add(key);
+                        }
+                    }
+                }
+            } catch (searchErr) {
+                console.warn('[Route: /api/music/search] Live search fallback warning:', searchErr.message);
+            }
+        }
+
+        res.json({
+            success: true,
+            status: true,
+            message: `Ditemukan ${filtered.length} lagu untuk kata kunci '${query}'`,
+            total: filtered.length,
+            tracks: filtered,
+            data: filtered
+        });
+    } catch (err) {
+        console.error('[Route: /api/music/search] Error:', err);
+        res.status(500).json({
+            success: false,
+            status: false,
+            message: "Gagal mencari musik RyTone",
+            error: err.message
+        });
+    }
+});
+
 const path = require('path');
 const fs = require('fs');
 const https = require('https');

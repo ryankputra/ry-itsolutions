@@ -13,6 +13,7 @@ export default function ProfilePage() {
   const router = useRouter();
 
   const [vouchersCount, setVouchersCount] = useState(0);
+  const [avatarError, setAvatarError] = useState(false);
   const [orderCounts, setOrderCounts] = useState({
     pending: 0,
     waiting: 0,
@@ -99,14 +100,15 @@ export default function ProfilePage() {
             className="w-16 h-16 rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white flex items-center justify-center font-bold text-2xl shadow-xs uppercase shrink-0 relative cursor-pointer border border-black/[0.08] dark:border-white/[0.1] overflow-hidden hover:opacity-90 transition-opacity"
             title="Pengaturan Foto Profil & Akun"
           >
-            {user?.avatar ? (
+            {user?.avatar && !avatarError ? (
               <img
                 src={user.avatar.startsWith("http") || user.avatar.startsWith("data:") ? user.avatar : `${user.avatar}`}
                 alt={username}
                 className="w-full h-full object-cover"
+                onError={() => setAvatarError(true)}
               />
             ) : (
-              username[0]
+              (username[0] || "U").toUpperCase()
             )}
           </Link>
 

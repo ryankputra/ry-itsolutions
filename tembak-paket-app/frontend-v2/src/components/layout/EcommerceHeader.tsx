@@ -19,6 +19,7 @@ export function EcommerceHeader() {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [announcement, setAnnouncement] = useState<any>(null);
   const [unread, setUnread] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const [pendingOrders, setPendingOrders] = useState(0);
   const [showBarcodeMenu, setShowBarcodeMenu] = useState(true);
 
@@ -463,14 +464,15 @@ export function EcommerceHeader() {
                   className="flex items-center gap-2 p-1.5 pl-2 rounded-xl bg-parchment/60 hover:bg-parchment border border-hairline transition-colors"
                 >
                   <div className="w-7 h-7 rounded-lg bg-slate-900 text-white font-black text-xs flex items-center justify-center uppercase overflow-hidden">
-                    {user.avatar ? (
+                    {user.avatar && !avatarError ? (
                       <img
                         src={user.avatar.startsWith("http") || user.avatar.startsWith("data:") ? user.avatar : `${user.avatar}`}
                         alt={user.name}
                         className="w-full h-full object-cover"
+                        onError={() => setAvatarError(true)}
                       />
                     ) : (
-                      user.name ? (stripEmojis(user.name)[0] || "U") : "U"
+                      user.name ? (stripEmojis(user.name)[0] || "U").toUpperCase() : "U"
                     )}
                   </div>
                   <span className="font-bold text-xs text-ink max-w-[90px] truncate">
