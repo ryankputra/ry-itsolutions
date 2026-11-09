@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 12.0.0"
+    "version": ">= 12.0.0",
+    "promptToConfigurePushNotifications": false
   },
   "build": {
     "development": {
@@ -14,6 +15,12 @@
       }
     },
     "production": {
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "standalone": {
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       }

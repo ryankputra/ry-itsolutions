@@ -53,6 +53,8 @@
     "export:android": "expo export -p android",
     "update:publish": "eas update --auto || expo export -p android",
     "build:apk": "eas build -p android --profile preview",
+    "build:apk:prod": "eas build -p android --profile production",
+    "build:apk:standalone": "eas build -p android --profile standalone",
     "build:apk:local": "eas build -p android --profile preview --local",
     "bundle:android": "expo export -p android --output-dir dist"
   },
