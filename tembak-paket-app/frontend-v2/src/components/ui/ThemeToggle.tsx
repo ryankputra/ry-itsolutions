@@ -51,6 +51,10 @@ export function ThemeToggle({ className = "", variant = "icon" }: ThemeTogglePro
       document.documentElement.style.colorScheme = "light";
       localStorage.setItem("theme", "light");
     }
+    // Set theme cookie for immediate SSR match
+    try {
+      document.cookie = `theme=${nextDark ? 'dark' : 'light'}; path=/; max-age=31536000; SameSite=Lax`;
+    } catch (e) {}
     window.dispatchEvent(new Event("theme-changed"));
   };
 
