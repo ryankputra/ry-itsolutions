@@ -1,12 +1,16 @@
 const express = require('express');
 const ceirgoClient = require('./ceirgoClient');
+const ceirMaintenanceService = require('./services/ceirMaintenanceService');
 
 const ceirgoRoutes = express.Router();
 
-let dbGet, dbAll, isAuthenticated, isAdmin;
+let dbGet, dbAll, dbRun, isAuthenticated, isAdmin;
 
 function setDependencies(deps) {
-    ({ dbGet, dbAll, isAuthenticated, isAdmin } = deps);
+    ({ dbGet, dbAll, dbRun, isAuthenticated, isAdmin } = deps);
+    if (dbGet || dbRun || dbAll) {
+        ceirMaintenanceService.setDatabase({ dbGet, dbRun, dbAll });
+    }
 }
 
 function readModalPrice(detail, svc) {
@@ -60,7 +64,16 @@ function initCeirgoRoutes() {
                 } catch (e) {}
             }
 
-            const ceirgoRes = await ceirgoClient.getServices({ limit: 50 });
+            const [ceirgoRes, maintStatus] = await Promise.all([
+                ceirgoClient.getServices({ limit: 50 }),
+                ceirMaintenanceService.getCeirSystemStatus().catch(() => ({
+                    isMaintenance: false,
+                    mode: 'auto',
+                    ceirgoBalance: 0,
+                    minRequiredBalance: 1000,
+                    reason: 'Normal'
+                }))
+            ]);
             const rawServices = !ceirgoRes.status ? DEFAULT_FALLBACK_SERVICES : normalizeServices(ceirgoRes);
             const finalRaw = Array.isArray(rawServices) && rawServices.length > 0 ? rawServices : DEFAULT_FALLBACK_SERVICES;
 
@@ -70,7 +83,15 @@ function initCeirgoRoutes() {
                 customName: customNames[svc.code] || svc.customName || svc.name
             }));
 
-            res.json({ status: true, data: services, services, customNames, fallback: !ceirgoRes.status });
+            res.json({
+                status: true,
+                data: services,
+                services,
+                customNames,
+                fallback: !ceirgoRes.status,
+                maintenance: maintStatus,
+                isMaintenance: maintStatus.isMaintenance
+            });
         } catch (error) {
             console.warn("[API Warning] CeirGO live server offline/timed out. Using fallback diagnostic catalog:", error.message);
             let customNames = {};
@@ -85,7 +106,22 @@ function initCeirgoRoutes() {
                 name: customNames[svc.code] || svc.name,
                 customName: customNames[svc.code] || svc.name
             }));
-            res.json({ status: true, data: fallbackSvcs, services: fallbackSvcs, customNames, fallback: true });
+            const maintStatus = await ceirMaintenanceService.getCeirSystemStatus().catch(() => ({
+                isMaintenance: false,
+                mode: 'auto',
+                ceirgoBalance: 0,
+                minRequiredBalance: 1000,
+                reason: 'Normal'
+            }));
+            res.json({
+                status: true,
+                data: fallbackSvcs,
+                services: fallbackSvcs,
+                customNames,
+                fallback: true,
+                maintenance: maintStatus,
+                isMaintenance: maintStatus.isMaintenance
+            });
         }
     });
 
@@ -183,6 +219,65 @@ function initCeirgoRoutes() {
         } catch (error) {
             console.warn("[API Warning] CeirGO admin server offline/timed out. Serving fallback catalog:", error.message);
             res.json({ status: true, data: DEFAULT_FALLBACK_SERVICES, fallback: true });
+        }
+    });
+
+    // Public endpoint for CEIR system maintenance status & balance requirements
+    ceirgoRoutes.get(['/ceir-system-status', '/ceir-maintenance-status', '/ceir/status'], async (req, res) => {
+        try {
+            const status = await ceirMaintenanceService.getCeirSystemStatus();
+            res.json({
+                status: true,
+                success: true,
+                data: status,
+                ...status
+            });
+        } catch (e) {
+            res.status(500).json({
+                status: false,
+                success: false,
+                message: e.message || 'Gagal memeriksa status maintenance CEIR.'
+            });
+        }
+    });
+
+    // Admin endpoint to get & update CEIR maintenance mode
+    ceirgoRoutes.get('/admin/ceir-maintenance-mode', isAuthenticated, isAdmin, async (req, res) => {
+        try {
+            const status = await ceirMaintenanceService.getCeirSystemStatus();
+            res.json({
+                status: true,
+                success: true,
+                data: status,
+                ...status
+            });
+        } catch (e) {
+            res.status(500).json({ status: false, message: e.message });
+        }
+    });
+
+    ceirgoRoutes.post('/admin/ceir-maintenance-mode', isAuthenticated, isAdmin, async (req, res) => {
+        try {
+            const { mode } = req.body;
+            if (!mode) {
+                return res.status(400).json({
+                    status: false,
+                    message: "Parameter 'mode' wajib diisi ('auto' | 'manual_on' | 'manual_off')."
+                });
+            }
+
+            const updatedMode = await ceirMaintenanceService.setCeirMaintenanceMode(mode);
+            const status = await ceirMaintenanceService.getCeirSystemStatus();
+
+            res.json({
+                status: true,
+                success: true,
+                message: `Mode maintenance CEIR berhasil diubah menjadi '${updatedMode}'.`,
+                data: status,
+                ...status
+            });
+        } catch (e) {
+            res.status(400).json({ status: false, message: e.message });
         }
     });
 }

@@ -11,7 +11,7 @@ import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
 import Link from "next/link";
-import { Wallet, AlertCircle } from "lucide-react";
+import { Wallet, AlertCircle, RotateCw, ShieldAlert, Activity, Clock } from "lucide-react";
 
 const ceirgoNameMapping: Record<string, string> = {
   'cek_imei': 'Cek Status IMEI',
@@ -53,14 +53,75 @@ export default function CekCeirPage() {
   const [paymentMethod, setPaymentMethod] = useState<"balance" | "qris">("balance");
   const [showInstantQris, setShowInstantQris] = useState(false);
 
+  const [maintenanceStatus, setMaintenanceStatus] = useState<{
+    isMaintenance: boolean;
+    mode?: string;
+    ceirgoBalance?: number;
+    minRequiredBalance?: number;
+    reason?: string;
+  } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  const checkMaintenanceStatus = async (showFeedback = true) => {
+    setCheckingStatus(true);
+    try {
+      const res = await fetch('/api/ceir-system-status').then(r => safeJson(r));
+      const statusData = res?.data || (res?.status !== undefined ? res : null);
+      if (statusData && typeof statusData.isMaintenance === 'boolean') {
+        setMaintenanceStatus(statusData);
+        if (showFeedback) {
+          if (!statusData.isMaintenance) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Server Normal',
+              text: 'Layanan CEIR beroperasi normal dan siap digunakan.',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } else {
+            Swal.fire({
+              icon: 'info',
+              title: 'Status Pemeliharaan',
+              text: statusData.reason || 'Layanan CEIR saat ini masih dalam pemeliharaan.',
+              timer: 2500,
+              showConfirmButton: false
+            });
+          }
+        }
+        return statusData;
+      }
+    } catch (e) {
+      if (showFeedback) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Memeriksa',
+          text: 'Tidak dapat memeriksa status server CEIR saat ini.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    } finally {
+      setCheckingStatus(false);
+    }
+    return null;
+  };
+
   useEffect(() => {
     Promise.all([
       fetch('/api/ceirgo-pricing').then(res => safeJson(res)).catch(() => null),
       fetch('/api/ceirgo-services').then(res => safeJson(res)).catch(() => ({ status: false })),
       fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false })),
-      fetch('/api/ceirgo-custom-names').then(res => safeJson(res)).catch(() => null)
-    ]).then(([ceirPrcData, ceirSvcData, displayData, customNamesData]) => {
+      fetch('/api/ceirgo-custom-names').then(res => safeJson(res)).catch(() => null),
+      fetch('/api/ceir-system-status').then(res => safeJson(res)).catch(() => null)
+    ]).then(([ceirPrcData, ceirSvcData, displayData, customNamesData, maintData]) => {
       const customNames: Record<string, string> = customNamesData?.data || customNamesData?.customNames || ceirSvcData?.customNames || {};
+
+      if (maintData) {
+        const statusData = maintData.data || (maintData.isMaintenance !== undefined ? maintData : null);
+        if (statusData && typeof statusData.isMaintenance === 'boolean') {
+          setMaintenanceStatus(statusData);
+        }
+      }
 
       if (ceirPrcData?.status && ceirPrcData.data) {
         setCeirgoPricing(ceirPrcData.data);
@@ -197,6 +258,15 @@ export default function CekCeirPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (maintenanceStatus?.isMaintenance) {
+      Swal.fire({
+        title: "Layanan Dalam Pemeliharaan",
+        text: maintenanceStatus.reason || "Layanan database CEIR sedang dalam pemeliharaan berkala.",
+        icon: "warning",
+        confirmButtonColor: "#f59e0b"
+      });
+      return;
+    }
     if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
 
     const price = getPrice(option);
@@ -250,13 +320,17 @@ export default function CekCeirPage() {
     return ceirgoServices.map(svc => {
       const isSelected = option === svc.code;
       const price = getPrice(svc.code);
+      const isMaint = Boolean(maintenanceStatus?.isMaintenance);
       return (
         <button
           key={svc.code}
           type="button"
+          disabled={isMaint}
           onClick={() => setOption(svc.code)}
           className={`p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between gap-2 ${
-            isSelected
+            isMaint
+              ? 'opacity-60 cursor-not-allowed border-hairline bg-canvas'
+              : isSelected
               ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary'
               : 'border-hairline bg-canvas hover:bg-parchment hover:border-primary/40'
           }`}
@@ -305,6 +379,52 @@ export default function CekCeirPage() {
         </div>
       </div>
 
+      {/* Ambient Animated Maintenance Banner */}
+      {maintenanceStatus?.isMaintenance && (
+        <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-600/15 p-5 sm:p-6 shadow-xl shadow-amber-500/5 backdrop-blur-md transition-all animate-fade-in">
+          {/* Radial glow background effect */}
+          <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-amber-400/25 blur-3xl animate-pulse" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-orange-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_60%)]" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+            <div className="space-y-2.5">
+              {/* Animated radar beacon status pill */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold shadow-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+                <span className="tracking-wide">PEMELIHARAAN SISTEM TERJADWAL</span>
+              </div>
+
+              {/* Shimmering gradient text */}
+              <h2 className="text-base sm:text-lg font-extrabold bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 dark:from-amber-200 dark:via-orange-300 dark:to-amber-300 bg-clip-text text-transparent animate-shimmer-text">
+                Layanan Verifikasi CEIR Sementara Dijeda
+              </h2>
+
+              {/* Explanatory text */}
+              <p className="text-xs sm:text-[13px] text-ink-muted leading-relaxed max-w-xl">
+                {maintenanceStatus?.reason || "Layanan verifikasi database CEIR & IMEI Bea Cukai sedang dalam pemeliharaan berkala untuk menjamin stabilitas data nasional. Pemesanan akan dibuka kembali secara otomatis setelah sinkronisasi selesai."}
+              </p>
+            </div>
+
+            {/* Interactive reload button */}
+            <div className="sm:self-center shrink-0">
+              <button
+                type="button"
+                onClick={() => checkMaintenanceStatus(true)}
+                disabled={checkingStatus}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-amber-500/20 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${checkingStatus ? "animate-spin" : ""}`} />
+                <span>{checkingStatus ? "Memeriksa..." : "Periksa Status Server"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Card glass className="p-5 sm:p-6 space-y-6">
         {error && (
           <div className="p-3.5 bg-rose-50 text-rose-700 rounded-xl text-xs border border-rose-200 flex items-center gap-2">
@@ -335,11 +455,12 @@ export default function CekCeirPage() {
             <div>
               <Input
                 label="Nomor IMEI (15 Digit)"
-                placeholder="Contoh: 358921098765432"
+                placeholder={maintenanceStatus?.isMaintenance ? "Layanan CEIR sedang dalam masa pemeliharaan..." : "Contoh: 358921098765432"}
                 value={imei}
                 onChange={e => setImei(e.target.value.replace(/\D/g, ''))}
                 maxLength={15}
                 required
+                disabled={Boolean(maintenanceStatus?.isMaintenance)}
               />
               {imei.length >= 8 && (() => {
                 const analysis = analyzeImei(imei);
@@ -429,13 +550,15 @@ export default function CekCeirPage() {
           </div>
 
           <Button
-            className="w-full h-12 text-sm font-bold shadow-md shadow-primary/20 mt-4"
+            className="w-full h-12 text-sm font-bold shadow-md shadow-primary/20 mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
             type="submit"
             isLoading={submitting}
-            disabled={Boolean(user && user.balance < getPrice(option))}
+            disabled={Boolean(maintenanceStatus?.isMaintenance || (user && user.balance < getPrice(option)))}
           >
             {submitting
               ? "Memproses Server..."
+              : maintenanceStatus?.isMaintenance
+              ? "Layanan CEIR Sedang Dalam Pemeliharaan"
               : user && user.balance < getPrice(option)
               ? `Saldo Kurang (Biaya: Rp ${getPrice(option).toLocaleString('id-ID')})`
               : `Bayar via Saldo Akun (Rp ${getPrice(option).toLocaleString('id-ID')})`}

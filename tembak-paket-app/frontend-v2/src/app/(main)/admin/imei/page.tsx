@@ -81,6 +81,51 @@ export default function AdminImeiPage() {
   const [ceirgoDisplayCodes, setCeirgoDisplayCodes] = useState<Set<string>>(new Set());
   const [ceirgoCustomNames, setCeirgoCustomNames] = useState<Record<string, string>>({});
 
+  // Mode Pemeliharaan CEIR
+  const [ceirMaintenance, setCeirMaintenance] = useState<{
+    isMaintenance: boolean;
+    mode: 'auto' | 'manual_on' | 'manual_off';
+    ceirgoBalance: number;
+    minRequiredBalance: number;
+    reason: string;
+  } | null>(null);
+  const [updatingCeirMode, setUpdatingCeirMode] = useState(false);
+
+  const handleUpdateCeirMode = async (mode: 'auto' | 'manual_on' | 'manual_off') => {
+    setUpdatingCeirMode(true);
+    try {
+      const res = await fetch("/api/admin/ceir-maintenance-mode", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      });
+      const data = await res.json();
+      if (data.status && (data.data || data.mode)) {
+        const nextData = data.data || data;
+        setCeirMaintenance(nextData);
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: data.message || `Mode maintenance CEIR diubah ke '${mode}'`,
+          showConfirmButton: false,
+          timer: 2500,
+        });
+      } else {
+        throw new Error(data.message || "Gagal mengubah mode maintenance CEIR.");
+      }
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Mengubah Mode",
+        text: err.message || "Terjadi kesalahan saat memperbarui mode maintenance.",
+      });
+    } finally {
+      setUpdatingCeirMode(false);
+    }
+  };
+
   const autoSavePricing = (p: any, instant = false) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const doSave = async () => {
@@ -116,13 +161,14 @@ export default function AdminImeiPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pricingRes, statusRes, imeiRes, ceirSvcRes, dispRes, ceirPriceRes] = await Promise.all([
+      const [pricingRes, statusRes, imeiRes, ceirSvcRes, dispRes, ceirPriceRes, ceirMaintRes] = await Promise.all([
         fetch("/api/manual-services-pricing", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/imei-service-status", { credentials: "include" }).catch(() => null),
         fetch("/api/imei-packages?all=true", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/ceirgo-services", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/ceirgo-display-settings", { credentials: "include" }).catch(() => null),
         fetch("/api/admin/ceirgo-pricing", { credentials: "include" }).catch(() => null),
+        fetch("/api/admin/ceir-maintenance-mode", { credentials: "include" }).catch(() => null),
       ]);
 
       if (pricingRes?.ok) {
@@ -166,9 +212,10 @@ export default function AdminImeiPage() {
         setCeirgoPricing(prc);
       }
 
-      if (ceirPriceRes?.ok) {
-        const d = await ceirPriceRes.json();
-        if (d?.status && d.pricing) setCeirgoPricing(d.pricing);
+      if (ceirMaintRes?.ok) {
+        const d = await ceirMaintRes.json();
+        const mData = d?.data || (d?.status && d?.mode ? d : null);
+        if (mData) setCeirMaintenance(mData);
       }
     } catch (e) {
       // ignore
@@ -1101,6 +1148,127 @@ export default function AdminImeiPage() {
                   Layanan CEIR & Server Pusat
                 </h3>
                 <p className="text-xs text-ink-muted mt-0.5">Atur harga jual dan visibilitas cek database CEIR, Bea Cukai, & Barcode.</p>
+              </div>
+            </div>
+
+            {/* Panel Kontrol Mode Pemeliharaan CEIR */}
+            <div className="p-4 rounded-2xl border border-hairline bg-canvas/60 space-y-3.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-ink">Mode Pemeliharaan CEIR</h4>
+                    <p className="text-[11px] text-ink-muted">Kontrol operasional otomatis & manual layanan CEIR</p>
+                  </div>
+                </div>
+
+                {/* Status Live Indicator Badge */}
+                <div className="flex items-center gap-2">
+                  {ceirMaintenance?.isMaintenance ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                      </span>
+                      Maintenance Aktif
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      Layanan Normal
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Info Badges: Saldo Ceirgo Admin vs Minimal Modal Produk */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-2.5 rounded-xl border border-hairline bg-canvas flex flex-col gap-0.5">
+                  <span className="text-[10px] text-ink-muted font-medium">Saldo Ceirgo Admin (Live)</span>
+                  <span className="text-xs font-mono font-bold text-ink">
+                    Rp {Number(ceirMaintenance?.ceirgoBalance ?? 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl border border-hairline bg-canvas flex flex-col gap-0.5">
+                  <span className="text-[10px] text-ink-muted font-medium">Batas Modal Minimum</span>
+                  <span className="text-xs font-mono font-bold text-primary">
+                    Rp {Number(ceirMaintenance?.minRequiredBalance ?? 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+
+              {ceirMaintenance?.reason && (
+                <p className="text-[11px] text-ink-muted bg-parchment/60 p-2.5 rounded-xl border border-hairline leading-relaxed">
+                  <span className="font-semibold text-ink">Keterangan:</span> {ceirMaintenance.reason}
+                </p>
+              )}
+
+              {/* 3 Opsi Mode: Otomatis, Paksa Maintenance (ON), Layanan Normal (OFF) */}
+              <div className="space-y-1.5 pt-0.5">
+                <span className="text-[11px] font-semibold text-ink">Pilihan Mode Pemeliharaan:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* Opsi 1: Otomatis */}
+                  <button
+                    type="button"
+                    disabled={updatingCeirMode}
+                    onClick={() => handleUpdateCeirMode("auto")}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      (ceirMaintenance?.mode || "auto") === "auto"
+                        ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-1 ring-primary"
+                        : "border-hairline bg-canvas hover:bg-parchment text-ink"
+                    } ${updatingCeirMode ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    <div className="text-xs font-bold flex items-center justify-between">
+                      <span>Otomatis</span>
+                      {(ceirMaintenance?.mode || "auto") === "auto" && <Check className="w-3.5 h-3.5" />}
+                    </div>
+                    <p className="text-[10px] text-ink-muted mt-1 leading-snug">
+                      Auto aktif jika saldo &lt; modal min
+                    </p>
+                  </button>
+
+                  {/* Opsi 2: Paksa Maintenance (ON) */}
+                  <button
+                    type="button"
+                    disabled={updatingCeirMode}
+                    onClick={() => handleUpdateCeirMode("manual_on")}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      ceirMaintenance?.mode === "manual_on"
+                        ? "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold shadow-xs ring-1 ring-amber-500"
+                        : "border-hairline bg-canvas hover:bg-parchment text-ink"
+                    } ${updatingCeirMode ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    <div className="text-xs font-bold flex items-center justify-between">
+                      <span>Paksa (ON)</span>
+                      {ceirMaintenance?.mode === "manual_on" && <Check className="w-3.5 h-3.5" />}
+                    </div>
+                    <p className="text-[10px] text-ink-muted mt-1 leading-snug">
+                      Kunci maintenance manual
+                    </p>
+                  </button>
+
+                  {/* Opsi 3: Layanan Normal (OFF) */}
+                  <button
+                    type="button"
+                    disabled={updatingCeirMode}
+                    onClick={() => handleUpdateCeirMode("manual_off")}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      ceirMaintenance?.mode === "manual_off"
+                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold shadow-xs ring-1 ring-emerald-500"
+                        : "border-hairline bg-canvas hover:bg-parchment text-ink"
+                    } ${updatingCeirMode ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    <div className="text-xs font-bold flex items-center justify-between">
+                      <span>Normal (OFF)</span>
+                      {ceirMaintenance?.mode === "manual_off" && <Check className="w-3.5 h-3.5" />}
+                    </div>
+                    <p className="text-[10px] text-ink-muted mt-1 leading-snug">
+                      Buka layanan terlepas saldo
+                    </p>
+                  </button>
+                </div>
               </div>
             </div>
 

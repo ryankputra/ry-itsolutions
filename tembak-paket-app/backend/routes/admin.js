@@ -20,6 +20,7 @@ const getImeiServiceSettingsPublic = servicesRoutes.getImeiServiceSettings;
 const ceirgoClient = require('../ceirgoClient');
 const waBot = require('../services/waBot');
 const { getOnlineStats, isUserOnline } = require('../utils/presenceManager');
+const ceirMaintenanceService = require('../services/ceirMaintenanceService');
 
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
 const CEIRGO_API_KEY = process.env.CEIRGO_API_KEY;
@@ -646,6 +647,46 @@ router.post('/admin/ceirgo-display-settings', isAuthenticated, isAdmin, async (r
         res.json({ status: true, message: "Pengaturan tampilan CeirGO berhasil disimpan." });
     } catch (e) {
         res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+// 8b. CeirGO Maintenance Mode Settings (GET & POST)
+router.get('/admin/ceir-maintenance-mode', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const status = await ceirMaintenanceService.getCeirSystemStatus();
+        res.json({
+            status: true,
+            success: true,
+            data: status,
+            ...status
+        });
+    } catch (e) {
+        res.status(500).json({ status: false, message: e.message });
+    }
+});
+
+router.post('/admin/ceir-maintenance-mode', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const { mode } = req.body;
+        if (!mode) {
+            return res.status(400).json({
+                status: false,
+                message: "Parameter 'mode' wajib diisi ('auto' | 'manual_on' | 'manual_off')."
+            });
+        }
+
+        const updatedMode = await ceirMaintenanceService.setCeirMaintenanceMode(mode);
+        const status = await ceirMaintenanceService.getCeirSystemStatus();
+
+        res.json({
+            status: true,
+            success: true,
+            message: `Mode maintenance CEIR berhasil diubah menjadi '${updatedMode}'.`,
+            data: status,
+            ...status
+        });
+    } catch (e) {
+        res.status(400).json({ status: false, message: e.message });
     }
 });
 

@@ -16,6 +16,7 @@ const ceirgoClient = require('../ceirgoClient');
 const { sendTelegramNotification } = require('../telegramService');
 const { notifyNewOrder } = require('../services/waBot');
 const { logUserActivity } = require('../utils/activityLogger');
+const ceirMaintenanceService = require('../services/ceirMaintenanceService');
 
 // Categorized service codes mapping
 const DIAGNOSTIC_SERVICE_CODES = new Set([
@@ -148,6 +149,21 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
     const cleanImei2 = imei2 ? imei2.replace(/\D/g, '') : null;
     if (cleanImei2 && cleanImei2.length < 15) {
         return res.status(400).json({ status: false, message: "IMEI Kedua tidak valid (minimal 15 digit angka)." });
+    }
+
+    // Check if CEIR system is under maintenance (Auto by balance or Manual toggle)
+    try {
+        const maintStatus = await ceirMaintenanceService.getCeirSystemStatus();
+        if (maintStatus && maintStatus.isMaintenance) {
+            return res.status(503).json({
+                status: false,
+                isMaintenance: true,
+                maintenance: maintStatus,
+                message: `Layanan CEIR sedang dalam pemeliharaan sistem (${maintStatus.reason}). Silakan coba beberapa saat lagi.`
+            });
+        }
+    } catch (maintErr) {
+        console.warn("[Order CeirGO] Gagal mengecek status maintenance CEIR:", maintErr.message);
     }
 
     // Check if the service is currently enabled in Admin Settings

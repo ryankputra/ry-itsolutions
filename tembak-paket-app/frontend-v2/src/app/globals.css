@@ -426,6 +426,24 @@
   color: #ff453a !important;
 }
 
+/* Shimmer Gradient Text Animation */
+@keyframes textShimmerWave {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-shimmer-text {
+  background-size: 200% auto;
+  animation: textShimmerWave 4s ease-in-out infinite;
+}
+
 /* Mobile: tombol aksi full-width, tap target aman */
 @media (max-width: 640px) {
   .swal2-actions {

@@ -20,6 +20,7 @@ const { notifyNewOrder, notifyPaymentSuccessToAdmin } = require('../services/waB
 const { getPaymentGatewaySelection, advancePaymentCounter } = require('../services/paymentRouter');
 const { logUserActivity } = require('../utils/activityLogger');
 const ceirgoClient = require('../ceirgoClient');
+const ceirMaintenanceService = require('../services/ceirMaintenanceService');
 const { DEFAULT_QRIS_NOBU, DEFAULT_QRIS_GOPAY, generateDynamicQRIS, generateQrisDataUrl } = require('../config/qrisGenerator');
 
 const KMSP_API_KEY = process.env.KMSP_API_KEY;
@@ -910,6 +911,22 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
             const { service_type, imei, duration, price_key, speed_option } = req.body;
             if (!['imei', 'ceir'].includes(service_type)) return res.status(400).json({ status: false, message: "Tipe layanan tidak valid" });
             if (!imei) return res.status(400).json({ status: false, message: "IMEI harus diisi" });
+
+            if (service_type === 'ceir') {
+                try {
+                    const maintStatus = await ceirMaintenanceService.getCeirSystemStatus();
+                    if (maintStatus && maintStatus.isMaintenance) {
+                        return res.status(503).json({
+                            status: false,
+                            isMaintenance: true,
+                            maintenance: maintStatus,
+                            message: `Layanan CEIR sedang dalam pemeliharaan sistem (${maintStatus.reason}). Silakan coba beberapa saat lagi.`
+                        });
+                    }
+                } catch (maintErr) {
+                    console.warn("[Transaction CeirGO] Gagal mengecek status maintenance CEIR:", maintErr.message);
+                }
+            }
 
             const imeiList = imei.split(/[\n,]+/).map(i => i.replace(/\s+/g, '').trim()).filter(i => i.length >= 15);
             if (imeiList.length === 0) return res.status(400).json({ status: false, message: "Tidak ada IMEI valid yang dimasukkan" });
