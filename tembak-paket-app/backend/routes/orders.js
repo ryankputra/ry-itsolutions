@@ -153,13 +153,14 @@ async function handleCeirgoOrderExecution(req, res, forcedType = null) {
 
     // Check if CEIR system is under maintenance (Auto by balance or Manual toggle)
     try {
-        const maintStatus = await ceirMaintenanceService.getCeirSystemStatus();
+        const maintStatus = await ceirMaintenanceService.getCeirSystemStatus(false);
         if (maintStatus && maintStatus.isMaintenance) {
+            const displayReason = maintStatus.publicReason || maintStatus.reason || "Sistem Sinkronisasi Jalur Server Pusat CEIR & Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi.";
             return res.status(503).json({
                 status: false,
                 isMaintenance: true,
                 maintenance: maintStatus,
-                message: `Layanan CEIR sedang dalam pemeliharaan sistem (${maintStatus.reason}). Silakan coba beberapa saat lagi.`
+                message: `Layanan sedang dalam pemeliharaan sistem (${displayReason}). Silakan coba beberapa saat lagi.`
             });
         }
     } catch (maintErr) {
@@ -592,11 +593,25 @@ router.get('/orders/catalog', async (req, res) => {
             active: activeBarcode.has(code)
         }));
 
+        let maintStatus = {
+            isMaintenance: false,
+            mode: 'auto',
+            reason: 'Layanan beroperasi normal.',
+            publicReason: 'Layanan beroperasi normal.'
+        };
+        try {
+            maintStatus = await ceirMaintenanceService.getCeirSystemStatus(false);
+        } catch (mErr) {}
+
         res.json({
             status: true,
+            maintenance: maintStatus,
+            isMaintenance: maintStatus.isMaintenance,
             data: {
                 diagnostic: diagnosticProducts,
-                barcode: barcodeProducts
+                barcode: barcodeProducts,
+                maintenance: maintStatus,
+                isMaintenance: maintStatus.isMaintenance
             }
         });
     } catch (e) {

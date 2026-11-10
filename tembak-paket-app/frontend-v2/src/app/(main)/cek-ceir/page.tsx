@@ -82,7 +82,7 @@ export default function CekCeirPage() {
             Swal.fire({
               icon: 'info',
               title: 'Status Pemeliharaan',
-              text: statusData.reason || 'Layanan CEIR saat ini masih dalam pemeliharaan.',
+              text: 'Sistem Sinkronisasi Jalur Server Pusat CEIR & Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi. Layanan akan segera aktif kembali.',
               timer: 2500,
               showConfirmButton: false
             });
@@ -261,7 +261,7 @@ export default function CekCeirPage() {
     if (maintenanceStatus?.isMaintenance) {
       Swal.fire({
         title: "Layanan Dalam Pemeliharaan",
-        text: maintenanceStatus.reason || "Layanan database CEIR sedang dalam pemeliharaan berkala.",
+        text: "Sistem Sinkronisasi Jalur Server Pusat CEIR & Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi. Layanan akan segera aktif kembali.",
         icon: "warning",
         confirmButtonColor: "#f59e0b"
       });
@@ -405,7 +405,7 @@ export default function CekCeirPage() {
 
               {/* Explanatory text */}
               <p className="text-xs sm:text-[13px] text-ink-muted leading-relaxed max-w-xl">
-                {maintenanceStatus?.reason || "Layanan verifikasi database CEIR & IMEI Bea Cukai sedang dalam pemeliharaan berkala untuk menjamin stabilitas data nasional. Pemesanan akan dibuka kembali secara otomatis setelah sinkronisasi selesai."}
+                Sistem Sinkronisasi Jalur Server Pusat CEIR &amp; Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi. Layanan akan segera aktif kembali.
               </p>
             </div>
 

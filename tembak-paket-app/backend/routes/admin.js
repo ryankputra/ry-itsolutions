@@ -653,7 +653,7 @@ router.post('/admin/ceirgo-display-settings', isAuthenticated, isAdmin, async (r
 // 8b. CeirGO Maintenance Mode Settings (GET & POST)
 router.get('/admin/ceir-maintenance-mode', isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const status = await ceirMaintenanceService.getCeirSystemStatus();
+        const status = await ceirMaintenanceService.getCeirSystemStatus(true);
         res.json({
             status: true,
             success: true,
@@ -676,7 +676,7 @@ router.post('/admin/ceir-maintenance-mode', isAuthenticated, isAdmin, async (req
         }
 
         const updatedMode = await ceirMaintenanceService.setCeirMaintenanceMode(mode);
-        const status = await ceirMaintenanceService.getCeirSystemStatus();
+        const status = await ceirMaintenanceService.getCeirSystemStatus(true);
 
         res.json({
             status: true,

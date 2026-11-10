@@ -66,12 +66,11 @@ function initCeirgoRoutes() {
 
             const [ceirgoRes, maintStatus] = await Promise.all([
                 ceirgoClient.getServices({ limit: 50 }),
-                ceirMaintenanceService.getCeirSystemStatus().catch(() => ({
+                ceirMaintenanceService.getCeirSystemStatus(false).catch(() => ({
                     isMaintenance: false,
                     mode: 'auto',
-                    ceirgoBalance: 0,
-                    minRequiredBalance: 1000,
-                    reason: 'Normal'
+                    reason: 'Layanan beroperasi normal.',
+                    publicReason: 'Layanan beroperasi normal.'
                 }))
             ]);
             const rawServices = !ceirgoRes.status ? DEFAULT_FALLBACK_SERVICES : normalizeServices(ceirgoRes);
@@ -106,12 +105,11 @@ function initCeirgoRoutes() {
                 name: customNames[svc.code] || svc.name,
                 customName: customNames[svc.code] || svc.name
             }));
-            const maintStatus = await ceirMaintenanceService.getCeirSystemStatus().catch(() => ({
+            const maintStatus = await ceirMaintenanceService.getCeirSystemStatus(false).catch(() => ({
                 isMaintenance: false,
                 mode: 'auto',
-                ceirgoBalance: 0,
-                minRequiredBalance: 1000,
-                reason: 'Normal'
+                reason: 'Layanan beroperasi normal.',
+                publicReason: 'Layanan beroperasi normal.'
             }));
             res.json({
                 status: true,
@@ -222,10 +220,10 @@ function initCeirgoRoutes() {
         }
     });
 
-    // Public endpoint for CEIR system maintenance status & balance requirements
+    // Public endpoint for CEIR system maintenance status (sanitized professional message, NO balance figures)
     ceirgoRoutes.get(['/ceir-system-status', '/ceir-maintenance-status', '/ceir/status'], async (req, res) => {
         try {
-            const status = await ceirMaintenanceService.getCeirSystemStatus();
+            const status = await ceirMaintenanceService.getCeirSystemStatus(false);
             res.json({
                 status: true,
                 success: true,
@@ -241,10 +239,10 @@ function initCeirgoRoutes() {
         }
     });
 
-    // Admin endpoint to get & update CEIR maintenance mode
+    // Admin endpoint to get & update CEIR maintenance mode (includes nominal balance and adminReason)
     ceirgoRoutes.get('/admin/ceir-maintenance-mode', isAuthenticated, isAdmin, async (req, res) => {
         try {
-            const status = await ceirMaintenanceService.getCeirSystemStatus();
+            const status = await ceirMaintenanceService.getCeirSystemStatus(true);
             res.json({
                 status: true,
                 success: true,
@@ -267,7 +265,7 @@ function initCeirgoRoutes() {
             }
 
             const updatedMode = await ceirMaintenanceService.setCeirMaintenanceMode(mode);
-            const status = await ceirMaintenanceService.getCeirSystemStatus();
+            const status = await ceirMaintenanceService.getCeirSystemStatus(true);
 
             res.json({
                 status: true,

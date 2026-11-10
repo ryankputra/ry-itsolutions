@@ -914,13 +914,14 @@ router.post(['/transactions/manual', '/order/ceir', '/order/manual'], isAuthenti
 
             if (service_type === 'ceir') {
                 try {
-                    const maintStatus = await ceirMaintenanceService.getCeirSystemStatus();
+                    const maintStatus = await ceirMaintenanceService.getCeirSystemStatus(false);
                     if (maintStatus && maintStatus.isMaintenance) {
+                        const displayReason = maintStatus.publicReason || maintStatus.reason || "Sistem Sinkronisasi Jalur Server Pusat CEIR & Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi.";
                         return res.status(503).json({
                             status: false,
                             isMaintenance: true,
                             maintenance: maintStatus,
-                            message: `Layanan CEIR sedang dalam pemeliharaan sistem (${maintStatus.reason}). Silakan coba beberapa saat lagi.`
+                            message: `Layanan CEIR sedang dalam pemeliharaan sistem (${displayReason}). Silakan coba beberapa saat lagi.`
                         });
                     }
                 } catch (maintErr) {

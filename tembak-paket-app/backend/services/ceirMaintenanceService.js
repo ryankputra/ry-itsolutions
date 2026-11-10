@@ -172,16 +172,21 @@ async function getCeirMaintenanceMode() {
     }
 }
 
+const PUBLIC_MAINTENANCE_REASON = "Sistem Sinkronisasi Jalur Server Pusat CEIR & Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi.";
+const PUBLIC_NORMAL_REASON = "Layanan beroperasi normal.";
+
 /**
  * Check full CEIR system status & maintenance decision
  * 
  * Logic:
- * - mode === 'manual_on'  => isMaintenance = true (Alasan: "Pemeliharaan Manual oleh Admin")
+ * - mode === 'manual_on'  => isMaintenance = true
  * - mode === 'manual_off' => isMaintenance = false
  * - mode === 'auto'       => if (ceirgoBalance < minRequiredBalance) => isMaintenance = true
  *                            else => isMaintenance = false
+ * 
+ * @param {boolean} isAdmin - If false, strips internal balance details and returns professional publicReason
  */
-async function getCeirSystemStatus() {
+async function getCeirSystemStatus(isAdmin = false) {
     const mode = await getCeirMaintenanceMode();
     const [ceirgoBalance, minRequiredBalance] = await Promise.all([
         getCeirgoBalance(),
@@ -189,31 +194,48 @@ async function getCeirSystemStatus() {
     ]);
 
     let isMaintenance = false;
-    let reason = "Layanan beroperasi normal.";
+    let adminReason = "Layanan beroperasi normal.";
+    let publicReason = PUBLIC_NORMAL_REASON;
 
     if (mode === 'manual_on') {
         isMaintenance = true;
-        reason = "Pemeliharaan Manual oleh Admin";
+        adminReason = "Pemeliharaan Manual oleh Admin";
+        publicReason = PUBLIC_MAINTENANCE_REASON;
     } else if (mode === 'manual_off') {
         isMaintenance = false;
-        reason = "Layanan dibuka secara manual oleh Admin.";
+        adminReason = "Layanan dibuka secara manual oleh Admin.";
+        publicReason = PUBLIC_NORMAL_REASON;
     } else {
         // Auto mode
         if (ceirgoBalance < minRequiredBalance) {
             isMaintenance = true;
-            reason = `Saldo server pusat di bawah batas minimal pemrosesan (Saldo: Rp ${Number(ceirgoBalance).toLocaleString('id-ID')}, Minimal: Rp ${Number(minRequiredBalance).toLocaleString('id-ID')})`;
+            adminReason = `Saldo server pusat di bawah batas minimal pemrosesan (Saldo: Rp ${Number(ceirgoBalance).toLocaleString('id-ID')}, Minimal: Rp ${Number(minRequiredBalance).toLocaleString('id-ID')})`;
+            publicReason = PUBLIC_MAINTENANCE_REASON;
         } else {
             isMaintenance = false;
-            reason = "Layanan beroperasi normal (Saldo mencukupi).";
+            adminReason = "Layanan beroperasi normal (Saldo mencukupi).";
+            publicReason = PUBLIC_NORMAL_REASON;
         }
     }
 
+    if (isAdmin) {
+        return {
+            isMaintenance,
+            mode,
+            ceirgoBalance,
+            minRequiredBalance,
+            reason: adminReason,
+            adminReason,
+            publicReason
+        };
+    }
+
+    // Public sanitized payload: NO internal balance figures or internal calculation details
     return {
         isMaintenance,
         mode,
-        ceirgoBalance,
-        minRequiredBalance,
-        reason
+        reason: publicReason,
+        publicReason
     };
 }
 

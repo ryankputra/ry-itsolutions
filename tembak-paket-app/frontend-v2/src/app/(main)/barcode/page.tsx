@@ -11,7 +11,7 @@ import InstantQrisPaymentModal from "@/components/ui/InstantQrisPaymentModal";
 import { analyzeImei } from "@/lib/imeiHelper";
 import { safeJson } from "@/lib/api";
 import Link from "next/link";
-import { Wallet, AlertCircle } from "lucide-react";
+import { Wallet, AlertCircle, RotateCw } from "lucide-react";
 
 const ceirgoNameMapping: Record<string, string> = {
   'create_barcode': 'Create Barcode Universal',
@@ -48,14 +48,75 @@ export default function BarcodePage() {
   const [paymentMethod, setPaymentMethod] = useState<"balance" | "qris">("balance");
   const [showInstantQris, setShowInstantQris] = useState(false);
 
+  const [maintenanceStatus, setMaintenanceStatus] = useState<{
+    isMaintenance: boolean;
+    mode?: string;
+    ceirgoBalance?: number;
+    minRequiredBalance?: number;
+    reason?: string;
+  } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  const checkMaintenanceStatus = async (showFeedback = true) => {
+    setCheckingStatus(true);
+    try {
+      const res = await fetch('/api/ceir-system-status').then(r => safeJson(r));
+      const statusData = res?.data || (res?.status !== undefined ? res : null);
+      if (statusData && typeof statusData.isMaintenance === 'boolean') {
+        setMaintenanceStatus(statusData);
+        if (showFeedback) {
+          if (!statusData.isMaintenance) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Server Normal',
+              text: 'Layanan Generator Barcode beroperasi normal dan siap digunakan.',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } else {
+            Swal.fire({
+              icon: 'info',
+              title: 'Status Pemeliharaan',
+              text: 'Sistem Sinkronisasi Jalur Server Pusat CEIR & Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi. Layanan akan segera aktif kembali.',
+              timer: 2500,
+              showConfirmButton: false
+            });
+          }
+        }
+        return statusData;
+      }
+    } catch (e) {
+      if (showFeedback) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Memeriksa',
+          text: 'Tidak dapat memeriksa status server saat ini.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    } finally {
+      setCheckingStatus(false);
+    }
+    return null;
+  };
+
   useEffect(() => {
     Promise.all([
       fetch('/api/ceirgo-pricing').then(res => safeJson(res)).catch(() => null),
       fetch('/api/ceirgo-services').then(res => safeJson(res)).catch(() => ({ status: false })),
       fetch('/api/admin/ceirgo-display-settings', { credentials: 'include' }).then(res => safeJson(res)).catch(() => ({ status: false })),
-      fetch('/api/ceirgo-custom-names').then(res => safeJson(res)).catch(() => null)
-    ]).then(([ceirPrcData, ceirSvcData, displayData, customNamesData]) => {
+      fetch('/api/ceirgo-custom-names').then(res => safeJson(res)).catch(() => null),
+      fetch('/api/ceir-system-status').then(res => safeJson(res)).catch(() => null)
+    ]).then(([ceirPrcData, ceirSvcData, displayData, customNamesData, maintData]) => {
       const customNames: Record<string, string> = customNamesData?.data || customNamesData?.customNames || ceirSvcData?.customNames || {};
+
+      if (maintData) {
+        const statusData = maintData.data || (maintData.isMaintenance !== undefined ? maintData : null);
+        if (statusData && typeof statusData.isMaintenance === 'boolean') {
+          setMaintenanceStatus(statusData);
+        }
+      }
 
       if (ceirPrcData?.status && ceirPrcData.data) {
         setCeirgoPricing(ceirPrcData.data);
@@ -189,6 +250,15 @@ export default function BarcodePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (maintenanceStatus?.isMaintenance) {
+      Swal.fire({
+        title: "Layanan Dalam Pemeliharaan",
+        text: "Sistem Sinkronisasi Jalur Server Pusat CEIR & Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi. Layanan akan segera aktif kembali.",
+        icon: "warning",
+        confirmButtonColor: "#9333ea"
+      });
+      return;
+    }
     if (!option) return setError("Pilih varian barcode terlebih dahulu.");
     if (!imei || imei.length < 15) return setError("IMEI Utama tidak valid (minimal 15 digit angka).");
     if (imei2 && imei2.length < 15) return setError("IMEI Kedua tidak valid (minimal 15 digit angka).");
@@ -243,15 +313,19 @@ export default function BarcodePage() {
     return barcodeServices.map(svc => {
       const isSelected = option === svc.code;
       const price = getPrice(svc.code);
+      const isMaint = Boolean(maintenanceStatus?.isMaintenance);
       return (
         <button
           key={svc.code}
           type="button"
+          disabled={isMaint}
           onClick={() => setOption(svc.code)}
           className={`p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between gap-2 ${
-            isSelected
-              ? 'border-purple-600 bg-purple-500/5 shadow-md shadow-purple-500/10 ring-1 ring-purple-600'
-              : 'border-hairline bg-canvas hover:bg-parchment hover:border-purple-400/40'
+            isMaint
+              ? 'opacity-60 cursor-not-allowed border-hairline bg-canvas'
+              : isSelected
+              ? 'border-purple-600 bg-purple-500/5 shadow-md shadow-purple-500/10 ring-1 ring-purple-600 cursor-pointer'
+              : 'border-hairline bg-canvas hover:bg-parchment hover:border-purple-400/40 cursor-pointer'
           }`}
         >
           <div>
@@ -298,6 +372,47 @@ export default function BarcodePage() {
         </div>
       </div>
 
+      {/* Ambient Animated Maintenance Banner */}
+      {maintenanceStatus?.isMaintenance && (
+        <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-600/15 p-5 sm:p-6 shadow-xl shadow-amber-500/5 backdrop-blur-md transition-all animate-fade-in">
+          <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-amber-400/25 blur-3xl animate-pulse" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-orange-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_60%)]" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+            <div className="space-y-2.5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold shadow-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+                <span className="tracking-wide">PEMELIHARAAN SISTEM TERJADWAL</span>
+              </div>
+
+              <h2 className="text-base sm:text-lg font-extrabold bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 dark:from-amber-200 dark:via-orange-300 dark:to-amber-300 bg-clip-text text-transparent animate-shimmer-text">
+                Layanan Generator Barcode Sementara Dijeda
+              </h2>
+
+              <p className="text-xs sm:text-[13px] text-ink-muted leading-relaxed max-w-xl">
+                Sistem Sinkronisasi Jalur Server Pusat CEIR &amp; Bea Cukai sedang dalam pemeliharaan berkala untuk optimalisasi kestabilan koneksi. Layanan akan segera aktif kembali.
+              </p>
+            </div>
+
+            <div className="sm:self-center shrink-0">
+              <button
+                type="button"
+                onClick={() => checkMaintenanceStatus(true)}
+                disabled={checkingStatus}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-amber-500/20 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${checkingStatus ? "animate-spin" : ""}`} />
+                <span>{checkingStatus ? "Memeriksa..." : "Periksa Status Server"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Card glass className="p-5 sm:p-6 space-y-6">
         {error && (
           <div className="p-3.5 bg-rose-50 text-rose-700 rounded-xl text-xs border border-rose-200 flex items-center gap-2">
@@ -328,10 +443,11 @@ export default function BarcodePage() {
             <div>
               <Input
                 label="Nomor IMEI Utama (SIM 1)"
-                placeholder="Masukkan 15 digit IMEI"
+                placeholder={maintenanceStatus?.isMaintenance ? "Layanan Generator Barcode sedang pemeliharaan..." : "Masukkan 15 digit IMEI"}
                 value={imei}
                 onChange={e => setImei(e.target.value.replace(/\D/g, ''))}
                 maxLength={15}
+                disabled={Boolean(maintenanceStatus?.isMaintenance)}
                 required
               />
               {imei.length >= 8 && (() => {
@@ -382,18 +498,21 @@ export default function BarcodePage() {
             <div>
               <Input
                 label="Nomor IMEI Kedua (SIM 2) - Opsional"
-                placeholder="Contoh: 358921098765433 (Dual SIM)"
+                placeholder={maintenanceStatus?.isMaintenance ? "Layanan Generator Barcode sedang pemeliharaan..." : "Contoh: 358921098765433 (Dual SIM)"}
                 value={imei2}
                 onChange={e => setImei2(e.target.value.replace(/\D/g, ''))}
                 maxLength={15}
+                disabled={Boolean(maintenanceStatus?.isMaintenance)}
               />
             </div>
 
-            <div className="p-3.5 bg-canvas border border-hairline rounded-xl space-y-2">
+            <div className={`p-3.5 bg-canvas border border-hairline rounded-xl space-y-2 ${maintenanceStatus?.isMaintenance ? 'opacity-60 pointer-events-none' : ''}`}>
               <label className="text-xs font-bold text-ink">Pilihan Tema Barcode</label>
               <div className="grid grid-cols-2 gap-3">
-                <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                  theme === 'dark' ? 'border-purple-600 bg-purple-500/10 text-purple-700 font-bold' : 'border-hairline hover:bg-parchment'
+                <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                  maintenanceStatus?.isMaintenance
+                    ? 'cursor-not-allowed border-hairline'
+                    : 'cursor-pointer ' + (theme === 'dark' ? 'border-purple-600 bg-purple-500/10 text-purple-700 font-bold' : 'border-hairline hover:bg-parchment')
                 }`}>
                   <input
                     type="radio"
@@ -401,12 +520,15 @@ export default function BarcodePage() {
                     value="dark"
                     checked={theme === 'dark'}
                     onChange={() => setTheme('dark')}
+                    disabled={Boolean(maintenanceStatus?.isMaintenance)}
                     className="w-4 h-4 text-purple-600"
                   />
                   <span className="text-xs">Dark Mode (Hitam)</span>
                 </label>
-                <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                  theme === 'light' ? 'border-purple-600 bg-purple-500/10 text-purple-700 font-bold' : 'border-hairline hover:bg-parchment'
+                <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
+                  maintenanceStatus?.isMaintenance
+                    ? 'cursor-not-allowed border-hairline'
+                    : 'cursor-pointer ' + (theme === 'light' ? 'border-purple-600 bg-purple-500/10 text-purple-700 font-bold' : 'border-hairline hover:bg-parchment')
                 }`}>
                   <input
                     type="radio"
@@ -414,6 +536,7 @@ export default function BarcodePage() {
                     value="light"
                     checked={theme === 'light'}
                     onChange={() => setTheme('light')}
+                    disabled={Boolean(maintenanceStatus?.isMaintenance)}
                     className="w-4 h-4 text-purple-600"
                   />
                   <span className="text-xs">Light Mode (Putih)</span>
@@ -467,10 +590,12 @@ export default function BarcodePage() {
             className="w-full h-12 text-sm font-bold shadow-md shadow-purple-500/20 mt-4 bg-purple-600 hover:bg-purple-700 text-white"
             type="submit"
             isLoading={submitting}
-            disabled={Boolean(user && user.balance < getPrice(option))}
+            disabled={Boolean(maintenanceStatus?.isMaintenance || (user && user.balance < getPrice(option)))}
           >
             {submitting
               ? "Membuat Barcode..."
+              : maintenanceStatus?.isMaintenance
+              ? "Layanan Sedang Pemeliharaan"
               : user && user.balance < getPrice(option)
               ? `Saldo Kurang (Biaya: Rp ${getPrice(option).toLocaleString('id-ID')})`
               : `Generate Barcode (Rp ${getPrice(option).toLocaleString('id-ID')})`}
