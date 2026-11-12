@@ -1499,19 +1499,26 @@ async function publishNewServiceStory(serviceName, speed = "fast") {
 }
 
 /**
- * Parser Pesan Rivera Group menggunakan Gemini 3.5 Flash dengan Fallback Heuristik Lokal
+ * Parser Pesan Rivera Group & Story WA menggunakan Gemini AI (Multimodal) dengan Fallback Heuristik Per-Baris
+ * @param {string} rawText
+ * @param {object} options - { imageBuffer?: Buffer|null, mimeType?: string, source?: string }
  */
-async function parseRiveraMessage(rawText) {
-    // 0. Cek apakah ada indikasi intake / pesanan dibuka (OPEN / ON / READY / SENT SAMPE / DONE MALEM)
-    // Jika ada kata seperti "ON", "OPEN", "READY", "SENT SAMPE SORE", "DONE MALEM SENT SAMPE SORE", ini BUKAN DONE_NOTIFICATION, melainkan SLOT_UPDATE!
-    const upperText = rawText.toUpperCase();
-    const hasOpenKeywords = /\b(ON|OPEN|READY)\b|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE))/i.test(rawText);
+async function parseRiveraMessage(rawText = '', options = {}) {
+    const safeText = String(rawText || '').trim();
+    const { imageBuffer = null, mimeType = 'image/jpeg', source = '' } = options || {};
 
-    // 1. Deteksi Cepat untuk Pesan Penyelesaian Antrean (HANYA JIKA TIDAK ADA KATA BUKA/INTAKE/ETA)
-    const isStrictDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\b(done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b|\bslow\s*(?:3b\s*)?done\s*all\b|\bfast\s*done\s*all\b|\bkloter\s*(?:ini\s*)?(?:sudah\s*)?done\b)/i.test(rawText);
+    if (!safeText && !imageBuffer) {
+        return { type: "IRRELEVANT" };
+    }
+
+    // 0. Cek apakah ada indikasi intake / pesanan dibuka (OPEN / ON / READY / LAST LIST / SENT SAMPE / DONE BESOK / DONE MALEM)
+    const hasOpenKeywords = /\b(ON|OPEN|READY|GAS|LANJUT)\b|(?:LAST\s*LIST)|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE|PAGI|SIANG))/i.test(safeText);
+
+    // 1. Deteksi Cepat untuk Pesan Penyelesaian Antrean (HANYA jika tidak ada gambar & tidak ada kata buka/intake/ETA)
+    const isStrictDoneAll = !imageBuffer && !hasOpenKeywords && /(\bdone\s*all\b|\b(done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b|\bslow\s*(?:3b\s*)?done\s*all\b|\bfast\s*done\s*all\b|\bkloter\s*(?:ini\s*)?(?:sudah\s*)?done\b)/i.test(safeText);
 
     if (isStrictDoneAll) {
-        const upper = rawText.toUpperCase();
+        const upper = safeText.toUpperCase();
         const isFast = upper.includes("FAST");
         const isSlow = upper.includes("SLOW") || upper.includes("3B") || !isFast;
 
@@ -1541,57 +1548,77 @@ async function parseRiveraMessage(rawText) {
             title: doneTitle,
             badge: "BATCH COMPLETED • SELESAI",
             services: services,
+            cutoffTime: null,
+            cutoffDay: null,
             note: "3B SF Slow Selesai Diproses • Cek Status Resmi di Web"
         };
     }
 
-    // 2. Coba Analisa dengan Google Gemini 3.5 Flash
+    // 2. Coba Analisa dengan Google Gemini AI (Mendukung Multimodal Teks + Gambar Story)
     try {
         const { dbGet } = require('../config/db');
         const row = await dbGet("SELECT value FROM settings WHERE key = 'gemini_api_key'");
         const geminiApiKey = row?.value || process.env.GEMINI_API_KEY;
 
         if (geminiApiKey) {
-            const prompt = `Kamu adalah AI parser pesan server provider sinyal/roamer.
-Tugasmu adalah menganalisis pesan update status/slot berikut dan mengonversinya menjadi data JSON terstruktur.
+            const prompt = `Kamu adalah AI parser pesan & gambar Story WA server provider sinyal/roamer${source ? ` (Sumber: ${source})` : ''}.
+Tugasmu adalah menganalisis pesan teks dan/atau gambar Story WA berikut lalu mengonversinya menjadi data JSON terstruktur.
+Jika ada gambar terlampir, baca seluruh teks/informasi open/close/jam cut-off yang ada di dalam gambar tersebut.
 
 ATURAN WAJIB (SANGAT KETAT):
 1. DILARANG KERAS menyebutkan nama atau kata "Rivera" dalam nama layanan, deskripsi, atau catatan.
-2. DILARANG KERAS menyebutkan nama "Smartfren". Gunakan SELALU istilah "SF" (contoh: "3B SF Slow", "3B SF Fast"). Jika ada penyebutan "IND" atau "EXE", gunakan "3B IND EXE" (DILARANG KERAS mengubah menjadi Indosat).
-3. Jika pesan menyebutkan "EXE CLOSE" atau "EXE OFF" atau "EXE AKUN MODAR", HANYA layanan "3B IND EXE" yang berstatus "CLOSED". Layanan 3B SF Fast dan Slow TIDAK BOLEH ditutup dan tipe pesan HARUS "PARTIAL_CLOSE", BUKAN "FULL_CLOSE"!
-4. DILARANG KERAS menyertakan nominal harga, angka rupiah (Rp/k/rb/ribu). Hapus total semua info harga!
-5. Tentukan type pesan:
-   - "SLOT_UPDATE": jika ada layanan yang buka/on/ready (termasuk "DONE MALEM SENT SAMPE SORE", "ON", "READY", "OPEN", "SENT SAMPAI SORE").
-   - "PARTIAL_CLOSE": jika salah satu layanan full/off sementara layanan lain masih open (misal EXE close, tapi SF Fast/Slow ready).
+2. DILARANG KERAS menyebutkan nama "Smartfren". Gunakan SELALU istilah "SF" (contoh: "3B SF SLOW", "3B SF FAST"). Jika ada penyebutan "IND" atau "EXE", gunakan "3B IND EXE" (DILARANG KERAS mengubah menjadi Indosat).
+3. Jika pesan menyebut "3B" saja tanpa kata "FAST" atau "EXE" (contoh: "3B done besok malam last list besok pagijam 11:00 wib ya"), petakan ke "3B SF SLOW".
+4. ATURAN BAHASA SANTAI / TYPO:
+   - Kata "done besok", "done malem", "done malam", "last list", "open", "gas", "lanjut", "sent sampe" menandakan layanan BUKA ("READY"), BUKAN selesai antrean ("DONE_NOTIFICATION")!
+   - Contoh nyata: "3B done besok malam last list besok pagijam 11:00 wib ya" -> type: "SLOT_UPDATE", services: [{ name: "3B SF SLOW", status: "READY", desc: "Done Besok Malam • Last List Besok 11:00 WIB" }], cutoffTime: "11:00", cutoffDay: "tomorrow".
+5. Jika pesan menyebutkan "EXE CLOSE" atau "EXE OFF" atau "EXE AKUN MODAR", HANYA layanan "3B IND EXE" yang berstatus "CLOSED". Layanan 3B SF Fast dan Slow TIDAK BOLEH ditutup dan tipe pesan HARUS "PARTIAL_CLOSE", BUKAN "FULL_CLOSE"!
+6. DILARANG KERAS menyertakan nominal harga, angka rupiah (Rp/k/rb/ribu). Hapus total semua info harga!
+7. Tentukan type pesan:
+   - "SLOT_UPDATE": jika ada layanan yang buka/on/ready (termasuk "DONE MALEM", "DONE BESOK", "LAST LIST", "ON", "READY", "OPEN", "GAS", "LANJUT", "SENT SAMPAI").
+   - "PARTIAL_CLOSE": jika salah satu layanan full/off sementara layanan lain masih open (misal "FAST ON\n1B CLOSE" atau "EXE CLOSE").
    - "FULL_CLOSE": HANYA jika SEMUA layanan ditutup/off/selesai secara eksplisit (seperti "CLOSE ALL", "OFF SEMUA").
    - "DONE_NOTIFICATION": HANYA jika berisi pengumuman antrean pesanan kloter ini sudah selesai semua (contoh: "DONE ALL", "SLOW 3B DONE ALL").
-   - "IRRELEVANT": jika hanya obrolan umum tanpa info status layanan.
-6. Ekstrak daftar layanan (services):
-   - "name": nama layanan (contoh: "3B SF SLOW", "3B SF FAST", "1B DIGIPOS", "3B IND EXE").
+   - "IRRELEVANT": jika hanya obrolan umum / stiker / promosi non-status tanpa info status layanan.
+8. Ekstrak batas waktu list / cut-off jika disebutkan:
+   - "cutoffTime": string format "HH:MM" (24 jam, misal "11:00" atau "15:00") atau null jika tidak disebutkan.
+   - "cutoffDay": "today" | "tomorrow" | null (gunakan "tomorrow" jika menyebut "besok", atau "today" jika hari ini/tidak menyebut besok tapi ada jam cut-off).
+9. Ekstrak daftar layanan (services):
+   - "name": nama layanan (contoh: "3B SF SLOW", "3B SF FAST", "1B DIGIPOS / INBOUND", "3B IND EXE").
    - "status": "READY" atau "FULL_SLOT" atau "CLOSED".
    - "desc": deskripsi singkat status/waktu pengerjaan tanpa harga.
-7. Output HANYA JSON murni tanpa blok markdown/backticks:
+10. Output HANYA JSON murni tanpa blok markdown/backticks:
 {
   "type": "PARTIAL_CLOSE",
   "title": "UPDATE SLOT",
   "badge": "UPDATE STATUS LAYANAN",
+  "cutoffTime": null,
+  "cutoffDay": null,
   "services": [
-    { "name": "3B SF FAST", "status": "READY", "desc": "Proses Cepat Under 15 Menit" },
-    { "name": "3B SF SLOW", "status": "READY", "desc": "Done Malam • Sent s/d Sore" },
-    { "name": "3B IND EXE", "status": "CLOSED", "desc": "Full Slot / Ditutup Sementara" }
+    { "name": "3B SF FAST", "status": "READY", "desc": "Proses Cepat Under 15 Menit" }
   ],
-  "note": "3B SF Fast & Slow Ready • Jalur EXE Ditutup Sementara"
+  "note": "3B SF Fast Ready"
 }
 
-Pesan:
-${rawText}`;
+Pesan / Caption:
+${safeText || '(Tidak ada teks caption, analisa isi gambar terlampir)'}`;
+
+            const contentParts = [{ text: prompt }];
+            if (imageBuffer && Buffer.isBuffer(imageBuffer)) {
+                contentParts.push({
+                    inlineData: {
+                        mimeType: mimeType || 'image/jpeg',
+                        data: imageBuffer.toString('base64')
+                    }
+                });
+            }
 
             for (const model of ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-flash-latest"]) {
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        body: JSON.stringify({ contents: [{ parts: contentParts }] })
                     });
                     const data = await res.json();
                     let text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -1605,6 +1632,14 @@ ${rawText}`;
                                     if (s.desc) s.desc = s.desc.replace(/smartfren/gi, 'SF').replace(/rivera/gi, '').replace(/rp\s*\d+[\d.,]*/gi, '').trim();
                                 });
                             }
+                            if (parsed.cutoffTime && /^\d{1,2}[.:]\d{2}$/.test(String(parsed.cutoffTime).trim())) {
+                                const [hh, mm] = String(parsed.cutoffTime).trim().replace('.', ':').split(':');
+                                parsed.cutoffTime = `${hh.padStart(2, '0')}:${mm}`;
+                            } else {
+                                parsed.cutoffTime = null;
+                            }
+                            parsed.cutoffDay = ['today', 'tomorrow'].includes(parsed.cutoffDay) ? parsed.cutoffDay : (parsed.cutoffTime ? 'today' : null);
+
                             if (parsed.type === "SLOT_UPDATE" || parsed.type === "PARTIAL_CLOSE" || parsed.type === "FULL_CLOSE") {
                                 const isCloseAll = parsed.type === "FULL_CLOSE";
                                 const syncd = syncRiveraDailyServices(parsed.services || [], isCloseAll);
@@ -1619,7 +1654,6 @@ ${rawText}`;
                                     parsed.type = "FULL_CLOSE";
                                     parsed.title = "CLOSED";
                                     parsed.badge = "ORDERAN KLOTER CLOSED";
-                                    // Munculkan closed tanpa informasi 3B Slow karena 3B Slow buka 24 jam
                                     parsed.services = syncd.filter(s => !s.name.toUpperCase().includes("SLOW"));
                                     if (parsed.services.length === 0) {
                                         parsed.services = [{ name: "3B SF FAST", status: "CLOSED", desc: "Kloter Ditutup Sementara" }];
@@ -1648,49 +1682,94 @@ ${rawText}`;
         console.warn('[parseRiveraMessage] Gemini parsing fallback:', e.message);
     }
 
-    // 3. Fallback Heuristik Lokal Lengkap (Zero failure risk)
-    const upper = rawText.toUpperCase();
-    const isCloseAll = /(CLOSE\s*ALL|OFF\s*SEMUA|TUTUP\s*SEMUA|FULL\s*SEMUA|STOP\s*ORDER|KLOTER\s*CLOSED|SEMUA\s*OFF)/i.test(upper) && !upper.includes("EXE");
-    const isExeOnlyClose = upper.includes("EXE") && /(OFF|FULL|TUTUP|CLOSE|STOP|MODAR)/i.test(upper) && !/(FAST|SF.*CLOSE|SLOW.*CLOSE)/i.test(upper);
+    // 3. Fallback Heuristik Lokal Per-Baris (Zero failure risk)
+    if (!safeText) {
+        return { type: "IRRELEVANT" };
+    }
+
+    const upper = safeText.toUpperCase();
+    const lines = safeText.split(/\r?\n|[;,]+/).map(l => l.trim()).filter(Boolean);
+
+    // Ekstrak jam cut-off / last list
+    let fallbackCutoffTime = null;
+    let fallbackCutoffDay = null;
+    const cutoffMatch = safeText.match(/(?:cut\s*off|close\s*list|last\s*list|list\s*sampai)\s*(?:besok\s*(?:pagi|siang|sore|malem|malam)?\s*)?(?:jam\s*)?(\d{1,2})[.:](\d{2})/i)
+        || safeText.match(/(?:jam\s*)(\d{1,2})[.:](\d{2})\s*wib/i);
+    if (cutoffMatch) {
+        fallbackCutoffTime = `${cutoffMatch[1].padStart(2, '0')}:${cutoffMatch[2]}`;
+        fallbackCutoffDay = /besok/i.test(safeText) ? 'tomorrow' : 'today';
+    }
+
+    const isCloseAll = /(CLOSE\s*ALL|OFF\s*SEMUA|TUTUP\s*SEMUA|FULL\s*SEMUA|STOP\s*ORDER|KLOTER\s*CLOSED|SEMUA\s*OFF)/i.test(upper);
+    const isExeOnlyClose = upper.includes("EXE") && /(OFF|FULL|TUTUP|CLOSE|STOP|MODAR)/i.test(upper) && !/(FAST|1B|DIGIPOS|SLOW)/i.test(upper) && !isCloseAll;
     const services = [];
 
-    // Deteksi SLOW (ON vs CLOSED)
-    if (upper.includes("3B SF SLOW") || upper.includes("SLOW") || upper.includes("3B SLOW")) {
-        const isClosed = /(SLOW.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*SLOW)/i.test(upper);
+    const CLOSED_RE = /\b(OFF|FULL|TUTUP|CLOSE|CLOSED|STOP|PENDING|MODAR)\b/i;
+    const OPEN_RE = /\b(ON|OPEN|READY|GAS|LANJUT)\b|(?:LAST\s*LIST)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE|PAGI|SIANG))/i;
+
+    const evalServiceInLines = (matcherRe) => {
+        const matchedLines = lines.filter(l => matcherRe.test(l));
+        if (matchedLines.length === 0) return null;
+        // Jika ada kata buka di baris yang sama, prioritaskan OPEN kecuali ada kata tutup tanpa kata buka
+        let hasClosed = false;
+        let hasOpen = false;
+        for (const l of matchedLines) {
+            if (CLOSED_RE.test(l)) hasClosed = true;
+            if (OPEN_RE.test(l)) hasOpen = true;
+        }
+        if (hasClosed && !hasOpen) return 'CLOSED';
+        return 'READY';
+    };
+
+    // Deteksi SLOW (termasuk sebutan "3B" saja tanpa FAST/EXE/1B yang disertai kata buka)
+    const slowStatus = evalServiceInLines(/\b(3B\s*SF\s*SLOW|3B\s*SLOW|SLOW)\b/i);
+    const generic3BOnly = /\b3B\b/i.test(upper) && !/\b(FAST|EXE|1B|DIGIPOS|INBOUND)\b/i.test(upper);
+    if (slowStatus) {
         services.push({
             name: "3B SF SLOW",
-            status: isClosed ? "CLOSED" : "READY",
-            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Done Malam • Sent s/d Sore"
+            status: slowStatus,
+            desc: slowStatus === 'CLOSED'
+                ? "Full Slot / Ditutup Sementara"
+                : (fallbackCutoffTime ? `Done Malam • Last List ${fallbackCutoffDay === 'tomorrow' ? 'Besok ' : ''}${fallbackCutoffTime} WIB` : "Done Malam • Sent s/d Sore")
+        });
+    } else if (generic3BOnly && (hasOpenKeywords || fallbackCutoffTime)) {
+        const isClosedGeneric = CLOSED_RE.test(upper) && !hasOpenKeywords;
+        services.push({
+            name: "3B SF SLOW",
+            status: isClosedGeneric ? "CLOSED" : "READY",
+            desc: isClosedGeneric
+                ? "Full Slot / Ditutup Sementara"
+                : (fallbackCutoffTime ? `Done Malam • Last List ${fallbackCutoffDay === 'tomorrow' ? 'Besok ' : ''}${fallbackCutoffTime} WIB` : "Done Malam • Sent s/d Sore")
         });
     }
 
-    // Deteksi FAST (ON vs CLOSED)
-    if (upper.includes("3B SF FAST") || upper.includes("FAST") || upper.includes("3B FAST")) {
-        const isClosed = /(FAST.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*FAST)/i.test(upper);
+    // Deteksi FAST (evaluasi per baris agar "FAST ON\n1B CLOSE" tidak tertimpa)
+    const fastStatus = evalServiceInLines(/\b(3B\s*SF\s*FAST|3B\s*FAST|FAST)\b/i);
+    if (fastStatus) {
         services.push({
             name: "3B SF FAST",
-            status: isClosed ? "CLOSED" : "READY",
-            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Proses Cepat Under 15 Menit"
+            status: fastStatus,
+            desc: fastStatus === 'CLOSED' ? "Full Slot / Ditutup Sementara" : "Proses Cepat Under 15 Menit"
         });
     }
 
     // Deteksi 1B / DIGIPOS
-    if (upper.includes("1B") || upper.includes("DIGIPOS") || upper.includes("INBOUND")) {
-        const isClosed = /(DIGIPOS.*(OFF|FULL|TUTUP|CLOSE|STOP|PENDING)|(OFF|FULL|TUTUP|CLOSE|STOP|PENDING).*DIGIPOS|1B.*(OFF|FULL|TUTUP|CLOSE)|(OFF|FULL|TUTUP|CLOSE).*1B)/i.test(upper);
+    const oneBStatus = evalServiceInLines(/\b(1B|DIGIPOS|INBOUND)\b/i);
+    if (oneBStatus) {
         services.push({
             name: "1B DIGIPOS / INBOUND",
-            status: isClosed ? "CLOSED" : "READY",
-            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Inbound • On"
+            status: oneBStatus,
+            desc: oneBStatus === 'CLOSED' ? "Full Slot / Ditutup Sementara" : "Inbound • On"
         });
     }
 
     // Deteksi 3B IND EXE / INB EXE
-    if (upper.includes("EXE") || (upper.includes("3B") && (upper.includes("IND") || upper.includes("INB")))) {
-        const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP|PENDING|MODAR)/i.test(upper);
+    const exeStatus = evalServiceInLines(/\b(EXE|3B\s*IND|3B\s*INB)\b/i);
+    if (exeStatus) {
         services.push({
             name: "3B IND EXE",
-            status: isClosed ? "CLOSED" : "READY",
-            desc: isClosed ? "Full Slot / Ditutup Sementara" : "Jalur Khusus 3B IND EXE • Ready"
+            status: exeStatus,
+            desc: exeStatus === 'CLOSED' ? "Full Slot / Ditutup Sementara" : "Jalur Khusus 3B IND EXE • Ready"
         });
     }
 
@@ -1712,9 +1791,9 @@ ${rawText}`;
         }
     }
 
-    // Jika ada kata umum 3B tanpa sebut fast/slow, tapi ada indikasi open
-    if (services.length === 0 && (upper.includes("3B") || upper.includes("KLOTER") || upper.includes("SLOT"))) {
-        const isClosed = /(OFF|FULL|TUTUP|CLOSE|STOP)/i.test(upper);
+    // Jika ada kata umum KLOTER / SLOT tanpa menyebut nama layanan spesifik
+    if (services.length === 0 && (upper.includes("KLOTER") || upper.includes("SLOT")) && !isCloseAll) {
+        const isClosed = CLOSED_RE.test(upper) && !hasOpenKeywords;
         services.push({
             name: "3B SF",
             status: isClosed ? "CLOSED" : "READY",
@@ -1745,7 +1824,6 @@ ${rawText}`;
         finalType = "FULL_CLOSE";
         finalTitle = "CLOSED";
         finalBadge = "ORDERAN KLOTER CLOSED";
-        // Closed order ditampilkan tanpa 3 Bulan Slow karena 3B Slow buka 24 jam
         finalServices = synchronizedServices.filter(s => !s.name.toUpperCase().includes("SLOW"));
         if (finalServices.length === 0) {
             finalServices = [{ name: "3B SF FAST", status: "CLOSED", desc: "Kloter Ditutup Sementara" }];
@@ -1755,7 +1833,7 @@ ${rawText}`;
         finalType = "PARTIAL_CLOSE";
         finalTitle = "UPDATE SLOT";
         finalBadge = "UPDATE STATUS LAYANAN";
-        finalNote = isExeOnlyClose 
+        finalNote = isExeOnlyClose
             ? "3B SF Fast & Slow Ready • Jalur EXE Ditutup Sementara"
             : "Sebagian Jalur Tutup • Jalur Lain Ready";
     } else {
@@ -1769,6 +1847,8 @@ ${rawText}`;
         title: finalTitle,
         badge: finalBadge,
         services: finalServices,
+        cutoffTime: fallbackCutoffTime,
+        cutoffDay: fallbackCutoffDay,
         note: finalNote
     };
 }

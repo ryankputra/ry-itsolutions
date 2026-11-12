@@ -145,22 +145,23 @@ async function autoCompleteSlowOrders(triggerText = '') {
 }
 
 /**
- * Handler Khusus untuk Pesan dari Grup "3B & REKBER by RIVERA" (Rivera Group)
+ * Handler Khusus untuk Pesan dari Grup "3B & REKBER by RIVERA" & Story WA Rivera
  */
-async function handleRiveraGroupMessage(messageText, senderName, groupName) {
+async function handleRiveraGroupMessage(messageText, senderName, groupName, parseOptions = {}) {
+    const safeText = String(messageText || "").trim();
     const timestampWIB = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
     const dateWIB = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-    // 0. Cek apakah ada indikasi intake / pesanan dibuka (OPEN / ON / READY / SENT SAMPE / DONE MALEM)
-    const hasOpenKeywords = /\b(ON|OPEN|READY)\b|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE))/i.test(messageText);
+    // 0. Cek apakah ada indikasi intake / pesanan dibuka (OPEN / ON / READY / LAST LIST / SENT SAMPE / DONE MALEM / DONE BESOK)
+    const hasOpenKeywords = /\b(ON|OPEN|READY|GAS|LANJUT)\b|(?:LAST\s*LIST)|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE|PAGI|SIANG))/i.test(safeText);
 
-    // 1. Cek apakah ini pengumuman penyelesaian (DONE ALL)
-    const isStrictDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\bslow\s*3b\s*done\s*all\b|\bfast\s*done\s*all\b|\b(?:done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b)/i.test(messageText);
+    // 1. Cek apakah ini pengumuman penyelesaian (DONE ALL) - hanya jika tidak ada gambar & tidak ada kata buka
+    const isStrictDoneAll = !parseOptions?.imageBuffer && !hasOpenKeywords && /(\bdone\s*all\b|\bslow\s*3b\s*done\s*all\b|\bfast\s*done\s*all\b|\b(?:done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b)/i.test(safeText);
     if (isStrictDoneAll) {
         console.log('[RiveraListener] 🔔 Terdeteksi pengumuman DONE ALL. Menyelesaikan pesanan web 3B Slow & Mengirimkan notifikasi ke Admin...');
         
         // Selesaikan otomatis transaksi 3B Slow yang sedang diproses di web
-        const autoDoneResult = await autoCompleteSlowOrders(messageText);
+        const autoDoneResult = await autoCompleteSlowOrders(safeText);
 
         const adminPhones = await getAdminPhoneNumbers();
         let autoDoneSummary = "";
@@ -204,20 +205,25 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
                     note: "3B SF Slow Selesai Diproses • Cek Status Resmi di Web"
                 };
                 await publishRiveraStory(doneParsed);
-                await notifyAddRoamerGroup("DONE_ALL", { text: messageText });
             }
         } catch (storyErr) {
             console.warn('[RiveraListener] Gagal terbitkan story DONE:', storyErr.message);
         }
 
+        try {
+            await notifyAddRoamerGroup("DONE_ALL", { text: safeText });
+        } catch (grpErr) {
+            console.warn('[RiveraListener] Gagal notif grup Addroamer (DONE_ALL):', grpErr.message);
+        }
+
         return;
     }
 
-    // 2. Parse status / slot update menggunakan parseRiveraMessage (Gemini + Local Fallback)
-    const parsed = await parseRiveraMessage(messageText);
+    // 2. Parse status / slot update menggunakan parseRiveraMessage (Gemini AI Multimodal + Local Fallback)
+    const parsed = await parseRiveraMessage(safeText, parseOptions);
 
     if (!parsed || parsed.type === "IRRELEVANT") {
-        console.log('[RiveraListener] Pesan diabaikan karena obrolan umum.');
+        console.log('[RiveraListener] Pesan diabaikan karena obrolan umum / tidak relevan.');
         return;
     }
 
@@ -227,7 +233,12 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
         const isAutoSync = !autoSyncRow || autoSyncRow.value !== 'false';
 
         if (isAutoSync && parsed) {
-            if (Array.isArray(parsed.services)) {
+            if (parsed.type === "FULL_CLOSE") {
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'closed')");
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'closed')");
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_exe_realtime_status', 'closed')");
+                console.log("[RiveraSync] Auto-Sync Web: Semua layanan Fast, 1B, & EXE diset CLOSED.");
+            } else if (Array.isArray(parsed.services)) {
                 for (const s of parsed.services) {
                     const sName = (s.name || '').toUpperCase();
                     const isReady = s.status === 'READY';
@@ -247,18 +258,29 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
                         console.log(`[RiveraSync] Auto-Sync Web: 3B IND EXE diset ${newStatus.toUpperCase()}.`);
                     }
                 }
-            } else if (parsed.type === "FULL_CLOSE") {
-                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_fast_realtime_status', 'closed')");
-                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_1b_realtime_status', 'closed')");
-                console.log("[RiveraSync] Auto-Sync Web: Semua layanan Fast & 1B diset CLOSED.");
             }
 
-            // Deteksi jam cut-off jika provider menginfokan di grup (misal: "cut off jam 15.00" atau "close list jam 14.30")
-            const cutoffMatch = messageText.match(/(?:cut\s*off|close\s*list|list\s*sampai)\s*(?:jam\s*)?(\d{1,2})[.:](\d{2})/i);
-            if (cutoffMatch) {
-                const detectedCutoff = `${cutoffMatch[1].padStart(2, '0')}:${cutoffMatch[2]}`;
-                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_slow_cutoff_time', ?)", [detectedCutoff]);
-                console.log(`[RiveraSync] Auto-Sync Web: Jam Cut-off 3B Slow terdeteksi & diperbarui ke ${detectedCutoff} WIB.`);
+            // Deteksi jam cut-off / last list dari hasil Gemini maupun regex fallback
+            let detectedCutoff = parsed.cutoffTime || null;
+            let detectedCutoffDay = parsed.cutoffDay || null;
+            if (!detectedCutoff) {
+                const cutoffMatch = safeText.match(/(?:cut\s*off|close\s*list|last\s*list|list\s*sampai)\s*(?:besok\s*(?:pagi|siang|sore|malem|malam)?\s*)?(?:jam\s*)?(\d{1,2})[.:](\d{2})/i);
+                if (cutoffMatch) {
+                    detectedCutoff = `${cutoffMatch[1].padStart(2, '0')}:${cutoffMatch[2]}`;
+                    detectedCutoffDay = /besok/i.test(safeText) ? 'tomorrow' : 'today';
+                }
+            }
+            if (detectedCutoff) {
+                if (detectedCutoffDay === 'tomorrow') {
+                    const tomorrowDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+                    await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_slow_cutoff_pending_time', ?)", [detectedCutoff]);
+                    await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_slow_cutoff_pending_date', ?)", [tomorrowDate]);
+                    console.log(`[RiveraSync] Auto-Sync Web: Cut-off BESOK (${tomorrowDate}) dijadwalkan ke ${detectedCutoff} WIB.`);
+                } else {
+                    await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_slow_cutoff_time', ?)", [detectedCutoff]);
+                    await dbRun("DELETE FROM settings WHERE key IN ('rivera_slow_cutoff_pending_time', 'rivera_slow_cutoff_pending_date')").catch(() => {});
+                    console.log(`[RiveraSync] Auto-Sync Web: Jam Cut-off 3B Slow diperbarui ke ${detectedCutoff} WIB.`);
+                }
             }
         }
     } catch (syncErr) {
@@ -408,15 +430,25 @@ async function handleRiveraGroupMessage(messageText, senderName, groupName) {
         return;
     }
 
+    const isFullClose = parsed.type === "FULL_CLOSE";
+    const isDone = parsed.type === "DONE_NOTIFICATION";
+
     // 3. Terbitkan Story (Live Status / Update Slot / Done) ke IG dan WA Story
     console.log(`[RiveraListener] 🚀 Mempublikasikan Story (${parsed.type}) ke Instagram & WA Story...`);
-    await publishRiveraStory(parsed);
-    await notifyAddRoamerGroup(isDone ? "DONE_ALL" : "SLOT_UPDATE", { parsed, text: messageText });
+    try {
+        await publishRiveraStory(parsed);
+    } catch (storyErr) {
+        console.warn(`[RiveraListener] Gagal terbitkan Story (${parsed.type}), lanjut ke grup Addroamer & Admin:`, storyErr.message);
+    }
+
+    try {
+        await notifyAddRoamerGroup(isDone ? "DONE_ALL" : "SLOT_UPDATE", { parsed, text: safeText });
+    } catch (grpErr) {
+        console.warn(`[RiveraListener] Gagal notif grup Addroamer:`, grpErr.message);
+    }
 
     // 4. Kirim notifikasi ringkasan ke Admin WhatsApp
     const adminPhones = await getAdminPhoneNumbers();
-    const isFullClose = parsed.type === "FULL_CLOSE";
-    const isDone = parsed.type === "DONE_NOTIFICATION";
     let autoDoneSummary = "";
     if (isDone) {
         const autoDoneResult = await autoCompleteSlowOrders(messageText);
@@ -1580,6 +1612,7 @@ async function initWABot(forceNew = false) {
                             msg.message?.conversation ||
                             msg.message?.extendedTextMessage?.text ||
                             msg.message?.imageMessage?.caption ||
+                            msg.message?.videoMessage?.caption ||
                             ""
                         ).trim();
 
@@ -1594,19 +1627,18 @@ async function initWABot(forceNew = false) {
                                                /rivera/i.test(pushName);
 
                         // 2. Filter Chat Santai / Obrolan Biasa:
-                        // Jika pesan merupakan quote reply ke chat anggota grup lain, abaikan agar obrolan biasa tidak memicu story
                         const isQuotedReply = Boolean(
                             msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
                             msg.message?.extendedTextMessage?.contextInfo?.participant
                         );
 
-                        // 3. Pre-filter Kata Kunci Wajib (Paket + Status)
                         const hasPackageKeyword = /(3B|1B|SF|DIGIPOS|SLOW|FAST|ROAMER|EXE|IND|INB)/i.test(messageText);
-                        const hasStatusKeyword = /(ON|OFF|DONE|READY|FULL|CLOSE|OPEN|SLOT|SENT|TURUN|HARGA|BERGARANSI|KLOTER|MURAH|GAS|ORDER|TEST|EXEC)/i.test(messageText);
-                        const hasOpenKeywords = /\b(ON|OPEN|READY)\b|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE))/i.test(messageText);
+                        const hasStatusKeyword = /(ON|OFF|DONE|READY|FULL|CLOSE|OPEN|SLOT|SENT|TURUN|HARGA|BERGARANSI|KLOTER|MURAH|GAS|ORDER|TEST|EXEC|LAST|LIST|BESOK|LANJUT)/i.test(messageText);
+                        const hasOpenKeywords = /\b(ON|OPEN|READY|GAS|LANJUT)\b|(?:LAST\s*LIST)|(?:SENT|KIRIM)\s*(?:SAMPE|SAMPAI|S\/D)|(?:DONE\s*(?:MALEM|MALAM|BESOK|NANTI|SORE|PAGI|SIANG))/i.test(messageText);
                         const isDoneAll = !hasOpenKeywords && /(\bdone\s*all\b|\bslow\s*3b\s*done\s*all\b|\bfast\s*done\s*all\b|\b(?:done|selesai)\s*semua\b|\bsemua\s*(?:sudah\s*)?done\b)/i.test(messageText);
+                        const hasImage = Boolean(msg.message?.imageMessage);
 
-                        if (messageText && (isRiveraSender || hasPackageKeyword || isDoneAll)) {
+                        if ((messageText || (isRiveraSender && hasImage)) && (isRiveraSender || hasPackageKeyword || isDoneAll)) {
                             let groupName = groupSubjectCache.get(remoteJid);
                             if (!groupName) {
                                 try {
@@ -1619,22 +1651,98 @@ async function initWABot(forceNew = false) {
                             const isTargetGroup = groupName && (/3B\s*&\s*REKBER/i.test(groupName) || /RIVERA/i.test(groupName));
 
                             if (isTargetGroup) {
-                                // Jika ini obrolan santai yang me-reply pesan orang lain dan tidak memuat format status lengkap, abaikan
-                                if (isQuotedReply && !(hasPackageKeyword && hasStatusKeyword)) {
+                                if (isRiveraSender) {
+                                    // Untuk pengirim Rivera: biarkan Gemini AI menilai, kecuali obrolan quote-reply sangat pendek tanpa kata kunci
+                                    const isCasualReply = isQuotedReply && !hasPackageKeyword && !hasStatusKeyword && messageText.length < 40;
+                                    if (isCasualReply) {
+                                        console.log(`[RiveraListener] ⏩ Reply santai Rivera diabaikan: "${messageText.substring(0, 40)}..."`);
+                                    } else if (messageText.length >= 3 || hasImage) {
+                                        let imageBuffer = null;
+                                        let mimeType = 'image/jpeg';
+                                        if (hasImage) {
+                                            try {
+                                                imageBuffer = await downloadMediaMessage(
+                                                    msg,
+                                                    'buffer',
+                                                    {},
+                                                    { logger: pino({ level: 'silent' }), reuploadRequest: sock?.updateMediaMessage }
+                                                );
+                                                mimeType = msg.message.imageMessage.mimetype || 'image/jpeg';
+                                            } catch (imgErr) {
+                                                console.warn(`[RiveraListener] Gagal unduh gambar grup Rivera:`, imgErr.message);
+                                            }
+                                        }
+                                        console.log(`[RiveraListener] 🤖 Pesan Rivera (${pushName || rawSenderDigits}) dikirim ke Gemini AI: "${messageText.substring(0, 80)}"${imageBuffer ? ' [+Gambar]' : ''}`);
+                                        await handleRiveraGroupMessage(messageText, pushName || "Rivera Group", groupName, {
+                                            imageBuffer,
+                                            mimeType,
+                                            source: `Grup ${groupName}`
+                                        });
+                                    }
+                                } else if (isQuotedReply && !(hasPackageKeyword && hasStatusKeyword)) {
                                     console.log(`[RiveraListener] ⏩ Pesan diabaikan karena merupakan reply obrolan: "${messageText.substring(0, 40)}..."`);
-                                } else if (isDoneAll) {
-                                    console.log(`[RiveraListener] 🔔 Pesan DONE ALL masuk dari ${pushName} (${rawSenderDigits}) di "${groupName}": ${messageText}`);
-                                    await handleRiveraGroupMessage(messageText, pushName || "Rivera Group", groupName);
-                                } else if (hasPackageKeyword && hasStatusKeyword) {
-                                    console.log(`[RiveraListener] 📩 Pesan broadcast status masuk dari ${pushName} (${rawSenderDigits}) di "${groupName}": ${messageText}`);
+                                } else if (isDoneAll || (hasPackageKeyword && hasStatusKeyword)) {
+                                    console.log(`[RiveraListener] 📩 Pesan status grup masuk dari ${pushName} (${rawSenderDigits}) di "${groupName}": ${messageText}`);
                                     await handleRiveraGroupMessage(messageText, pushName || "Rivera Group", groupName);
                                 } else {
-                                    console.log(`[RiveraListener] ⏩ Obrolan umum Rivera tanpa info slot: "${messageText.substring(0, 40)}..."`);
+                                    console.log(`[RiveraListener] ⏩ Obrolan umum anggota tanpa info slot: "${messageText.substring(0, 40)}..."`);
                                 }
                             }
                         }
                     } catch (gErr) {
                         console.warn("[RiveraListener] Error:", gErr.message);
+                    }
+                    continue;
+                }
+
+                // --- SPECIAL LISTENER: STORY WA RIVERA (status@broadcast) ---
+                if (remoteJid === "status@broadcast") {
+                    try {
+                        const participant = msg.key.participant || msg.participant || "";
+                        const rawSenderDigits = participant.replace(/@(s\.whatsapp\.net|lid)/g, "").split(":")[0].replace(/\D/g, "");
+                        const pushName = (msg.pushName || "").trim();
+
+                        const isRiveraStory = participant.includes("628987710248") ||
+                                              participant.includes("242898352214137") ||
+                                              rawSenderDigits === "628987710248" ||
+                                              /rivera/i.test(pushName);
+
+                        if (isRiveraStory) {
+                            const storyText = (
+                                msg.message?.conversation ||
+                                msg.message?.extendedTextMessage?.text ||
+                                msg.message?.imageMessage?.caption ||
+                                msg.message?.videoMessage?.caption ||
+                                ""
+                            ).trim();
+
+                            let imageBuffer = null;
+                            let mimeType = 'image/jpeg';
+                            if (msg.message?.imageMessage) {
+                                try {
+                                    imageBuffer = await downloadMediaMessage(
+                                        msg,
+                                        'buffer',
+                                        {},
+                                        { logger: pino({ level: 'silent' }), reuploadRequest: sock?.updateMediaMessage }
+                                    );
+                                    mimeType = msg.message.imageMessage.mimetype || 'image/jpeg';
+                                } catch (dlErr) {
+                                    console.warn("[RiveraStory] Gagal unduh gambar Story WA Rivera:", dlErr.message);
+                                }
+                            }
+
+                            if (storyText.length >= 3 || (imageBuffer && imageBuffer.length > 0)) {
+                                console.log(`[RiveraStory] 📸 Story WA Rivera terdeteksi (${pushName || rawSenderDigits}): "${storyText.substring(0, 80)}"${imageBuffer ? ' [+Gambar]' : ''}`);
+                                await handleRiveraGroupMessage(storyText, pushName || "Rivera Story", "Story WA Rivera", {
+                                    imageBuffer,
+                                    mimeType,
+                                    source: "WA Story Rivera"
+                                });
+                            }
+                        }
+                    } catch (stErr) {
+                        console.warn("[RiveraStory] Error memproses Story WA Rivera:", stErr.message);
                     }
                     continue;
                 }
@@ -3039,7 +3147,7 @@ let lastAddRoamerGroupTime = 0;
 
 function isAddRoamerGroupName(subject) {
     if (!subject) return false;
-    const s = subject.toLowerCase().replace(/\s+/g, ' ');
+    const s = subject.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
     const hasAddRoamer = s.includes("add roamer") || s.includes("addroamer");
     const hasProvider = s.includes("privider") || s.includes("provider") || s.includes("all");
     return hasAddRoamer && hasProvider;
@@ -3130,10 +3238,24 @@ async function notifyAddRoamerGroup(type, data = {}) {
                     const sName = s.name || "";
                     let desc = "";
                     if (sName.includes("FAST")) desc = " (proses kilat under 15 mnt)";
-                    else if (sName.includes("SLOW")) desc = " (done malem, list s/d sore)";
+                    else if (sName.includes("SLOW")) {
+                        if (parsed.cutoffTime) {
+                            const dayLabel = parsed.cutoffDay === 'tomorrow' ? 'besok ' : '';
+                            desc = ` (last list ${dayLabel}jam ${parsed.cutoffTime} WIB)`;
+                        } else {
+                            desc = " (done malem, list s/d sore)";
+                        }
+                    }
                     else if (sName.includes("DIGIPOS") || sName.includes("1B")) desc = " (on)";
+                    else if (sName.includes("EXE") || sName.includes("IND")) desc = " (ready)";
                     return `• ${sName} ON${desc}`;
                 });
+
+                let cutoffNote = "";
+                if (parsed.cutoffTime && !activeServices.some(s => (s.name || "").includes("SLOW"))) {
+                    const dayLabel = parsed.cutoffDay === 'tomorrow' ? 'besok ' : '';
+                    cutoffNote = `\n⏰ Last list 3B Slow ${dayLabel}jam ${parsed.cutoffTime} WIB\n`;
+                }
 
                 let closedNote = "";
                 if (closedServices.length > 0) {
@@ -3143,6 +3265,7 @@ async function notifyAddRoamerGroup(type, data = {}) {
 
                 msgText = "Info update jalur ya guys:\n\n" +
                     lines.join("\n") + "\n" +
+                    cutoffNote +
                     closedNote +
                     "\nBagi yang mau order:\n" +
                     dualOrderFooter;
@@ -3155,7 +3278,8 @@ async function notifyAddRoamerGroup(type, data = {}) {
                 "• 1B Digipos ON\n\n" +
                 dualOrderFooter;
         } else if (type === "CLOSE_LIST") {
-            msgText = "Reminder ya guys, list 3B Slow kloter hari ini mau di cut-off sore ini.\n\n" +
+            const timeStr = data.scheduledTime ? ` jam ${data.scheduledTime} WIB` : " sore ini";
+            msgText = `Reminder ya guys, list 3B Slow kloter hari ini mau di cut-off${timeStr}.\n\n` +
                 "Yang masih ada data segera submit biar ikut kloter malam ini:\n" +
                 dualOrderFooter;
         } else if (type === "TESTIMONIAL") {

@@ -410,10 +410,19 @@ function initSchedulers() {
             const isEnabled = (enabledRow?.value ?? 'true') === 'true';
             if (!isEnabled) return;
 
+            const now = new Date();
+            const todayIsoWIB = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+            const pendingDateRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_slow_cutoff_pending_date'");
+            const pendingTimeRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_slow_cutoff_pending_time'");
+            if (pendingDateRow?.value && pendingTimeRow?.value && pendingDateRow.value <= todayIsoWIB) {
+                await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('rivera_slow_cutoff_time', ?)", [pendingTimeRow.value]);
+                await dbRun("DELETE FROM settings WHERE key IN ('rivera_slow_cutoff_pending_time', 'rivera_slow_cutoff_pending_date')");
+                console.log(`[Scheduler][RiveraCloseListSlow] ✅ Cut-off terjadwal (${pendingDateRow.value}) diaktifkan ke ${pendingTimeRow.value} WIB.`);
+            }
+
             const cutoffRow = await dbGet("SELECT value FROM settings WHERE key = 'rivera_slow_cutoff_time'");
             const scheduledTime = (cutoffRow?.value || '15:00').replace('.', ':');
 
-            const now = new Date();
             const nowTimeWIB = now.toLocaleTimeString('id-ID', {
                 timeZone: 'Asia/Jakarta',
                 hour: '2-digit',
