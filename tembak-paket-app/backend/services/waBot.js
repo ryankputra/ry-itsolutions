@@ -2383,12 +2383,12 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             : 'Baru saja';
 
         await replyWhatsApp(replyJid,
-            `🎧 *KATALOG LAGU VIRAL DJ REMIX TIKTOK (RETENSI 3 HARI)*\n` +
+            `🎧 *KATALOG LAGU VIRAL DJ REMIX TIKTOK (ROTASI HARIAN 24 JAM)*\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
             `⚡ *Kebijakan Lagu Fresh:*\n` +
             `• Wajib lagu *DJ Remix / Jedag-Jedug Full Bass / Koplo TikTok*.\n` +
             `• Otomatis langsung lompat ke bagian *Drop Bass / Reff* saat video berputar.\n` +
-            `• *Retensi Ketat 3 Hari (72 Jam)*: Lagu > 3 hari otomatis dihapus permanen agar selalu fresh.\n` +
+            `• *Rotasi Harian (24 Jam)*: Lagu berganti setiap hari dengan riwayat anti-ulang agar selalu fresh.\n` +
             `• Diperbarui otomatis setiap hari jam *03:30 WIB*.\n\n` +
             `📊 *Status Saat Ini:*\n` +
             `• Total Lagu Aktif: *${summary.total} lagu*\n` +
@@ -2396,7 +2396,7 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             `🎶 *Daftar Lagu Aktif Terbaru:*\n` +
             `${topTracks}\n\n` +
             `━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `Ketik *#refreshlagu* untuk mencari & memperbarui lagu viral DJ Remix TikTok sekarang juga!` +
+            `Ketik *#refreshlagu* untuk mencari & mengganti lagu DJ Remix TikTok dengan yang baru sekarang!` +
             BOT_FOOTER
         );
         return;
@@ -2404,19 +2404,19 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
 
     // Command Khusus: Paksa Refresh & Download Lagu DJ Remix TikTok Baru (#refreshlagu / .refreshlagu)
     if (rawCleanText === "#refreshlagu" || rawCleanText === ".refreshlagu" || rawCleanText === "refreshlagu") {
-        await replyWhatsApp(replyJid, "⏳ *Sedang mencari lagu DJ Remix viral terbaru di TikTok & mengunduh audio jedag-jedug...*\nMohon tunggu sebentar...");
+        await replyWhatsApp(replyJid, "⏳ *Sedang mencari lagu DJ Remix viral terbaru di TikTok & mengunduh audio jedag-jedug baru...*\nMohon tunggu sebentar...");
         try {
-            const rotResult = await rotateAndRefreshDJTracks();
+            const rotResult = await rotateAndRefreshDJTracks({ forceReplace: true });
             if (rotResult.success) {
                 const addedList = (rotResult.tracks || []).map((t, idx) => `• ${idx + 1}. *${t.title}* (${t.artist})`).join("\n");
                 await replyWhatsApp(replyJid,
-                    `✅ *ROTASI LAGU DJ REMIX TIKTOK BERHASIL!*\n` +
+                    `✅ *ROTASI HARIAN LAGU DJ REMIX TIKTOK BERHASIL!*\n` +
                     `━━━━━━━━━━━━━━━━━━━━━━\n` +
                     `📥 *Lagu Baru Diunduh:* ${rotResult.addedCount} lagu\n` +
-                    `🎧 *Total Lagu Aktif (< 3 Hari):* ${rotResult.totalActive} lagu\n\n` +
+                    `🎧 *Total Lagu Aktif Hari Ini:* ${rotResult.totalActive} lagu\n\n` +
                     `🎶 *Contoh Lagu Baru:*\n` +
                     `${addedList || 'Semua lagu aktif sudah up to date.'}\n\n` +
-                    `Semua lagu lama (> 3 hari) telah otomatis dibersihkan dari server.` +
+                    `Lagu lama telah otomatis diganti & dibersihkan dari server agar tidak berulang.` +
                     BOT_FOOTER
                 );
             } else {
@@ -2586,9 +2586,9 @@ async function handleAdminCommand(replyJid, text, rawMsg = null) {
             `• *#jadwalopen* ➔ Cek status & jam posting Story Open\n` +
             `• *#stopopen* / *#startopen* ➔ Nonaktifkan/Aktifkan jadwal otomatis\n` +
             `• Kirim Foto Bukti ➔ Auto-sensor data sensitif & siap publish ke Story/Feed\n\n` +
-            `🎧 *MUSIK DJ REMIX VIRAL TIKTOK (RETENSI 3 HARI):*\n` +
-            `• *#ceklagu* ➔ Cek daftar lagu DJ Remix TikTok aktif & sisa masa berlaku (72 jam)\n` +
-            `• *#refreshlagu* ➔ Cari & unduh lagu DJ Remix TikTok baru sekarang` +
+            `🎧 *MUSIK DJ REMIX VIRAL TIKTOK (ROTASI HARIAN):*\n` +
+            `• *#ceklagu* ➔ Cek daftar lagu DJ Remix TikTok aktif & sisa masa berlaku (24 jam)\n` +
+            `• *#refreshlagu* ➔ Cari & ganti lagu DJ Remix TikTok baru sekarang` +
             BOT_FOOTER;
         await replyWhatsApp(replyJid, helpMsg);
         return;

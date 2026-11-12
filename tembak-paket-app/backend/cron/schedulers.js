@@ -325,13 +325,13 @@ function initSchedulers() {
         }
     }, { scheduled: true, timezone: 'Asia/Jakarta' });
 
-    // 5b. Rotasi Harian Lagu DJ Remix TikTok (Hapus lagu > 3 hari & perbarui lagu viral baru)
+    // 5b. Rotasi Harian Lagu DJ Remix TikTok (Siklus 24 jam & ganti lagu baru anti-ulang)
     // Dijalankan setiap hari pukul 03:30 WIB
     cron.schedule('30 3 * * *', async () => {
         try {
-            console.log('[Scheduler][TikTokDJ] 🔄 Menjalankan rotasi lagu DJ Remix TikTok harian (Pembersihan > 3 hari & Update lagu baru)...');
+            console.log('[Scheduler][TikTokDJ] 🔄 Menjalankan rotasi harian lagu DJ Remix TikTok (Siklus 24 Jam & Ganti Lagu Baru)...');
             const { rotateAndRefreshDJTracks } = require('../services/tiktokDJService');
-            await rotateAndRefreshDJTracks();
+            await rotateAndRefreshDJTracks({ forceReplace: true });
         } catch (e) {
             console.error('[Scheduler][TikTokDJ] Error:', e.message);
         }

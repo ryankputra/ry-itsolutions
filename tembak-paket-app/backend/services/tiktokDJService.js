@@ -1,10 +1,10 @@
 /**
- * TikTok DJ Remix Manager & Automated 3-Day Lifecycle Rotator
+ * TikTok DJ Remix Manager & Automated Daily Lifecycle Rotator
  * Mengelola lagu viral DJ Remix TikTok untuk bahan Story IG, Story WA, dan Feed
  * Aturan:
  * 1. Khusus lagu DJ Remix viral di TikTok (Jedag-Jedug, Full Bass, Koplo, Slow Bass).
  * 2. Lagu otomatis dimulai langsung dari reff / drop bass jedag-jedug.
- * 3. Retensi ketat 3 HARI (72 JAM): Lagu > 3 hari otomatis dihapus dari database & disk.
+ * 3. Rotasi Harian (24 JAM): Lagu berganti setiap hari dengan lagu baru & anti-ulang (history 14 hari).
  * 4. Pembaruan otomatis setiap hari pukul 03:30 WIB atau on-demand via bot WhatsApp (#refreshlagu).
  */
 
@@ -13,16 +13,45 @@ const path = require('path');
 const https = require('https');
 const os = require('os');
 const { execFile } = require('child_process');
-const util = require('util');
-const execFileAsync = util.promisify(execFile);
 
 const DATA_FILE = path.resolve(__dirname, '../data/tiktok_dj_tracks.json');
 const AUDIO_DIR = path.resolve(__dirname, '../../frontend-v2/public/audio/tiktok');
-const RETENTION_MS = 3 * 24 * 60 * 60 * 1000; // Tepat 3 Hari (72 Jam)
+const RETENTION_MS = 24 * 60 * 60 * 1000; // Rotasi Harian (24 Jam)
+const HISTORY_RETENTION_MS = 14 * 24 * 60 * 60 * 1000; // Simpan riwayat 14 hari agar tidak berulang
+const MAX_HISTORY_ITEMS = 120;
+const TARGET_DAILY_TRACKS = 9; // 8-10 lagu baru per hari
 
 const FFMPEG_BIN = process.env.FFMPEG_PATH || (fs.existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg');
 
-// Starter Katalog DJ Remix Viral TikTok dengan Titik Reff / Drop Bass Terverifikasi
+// Pool query yang luas & beragam untuk pencarian iTunes API
+const DJ_SEARCH_QUERY_POOL = [
+    "DJ Jedag Jedug TikTok Viral",
+    "DJ Remix TikTok Full Bass",
+    "DJ Koplo TikTok Viral",
+    "DJ TikTok Mengkane",
+    "DJ Slow Bass TikTok",
+    "DJ FYP TikTok Terpopuler",
+    "DJ Remix Jedug Jedug",
+    "DJ Breakbeat TikTok",
+    "DJ Remix Indo Viral 2025",
+    "DJ Remix Indo Viral 2026",
+    "DJ Phonk Speed Up TikTok",
+    "DJ Funkot TikTok Remix",
+    "DJ Bass Horeg Viral",
+    "DJ Dugem TikTok Remix",
+    "DJ Remix Santuy TikTok",
+    "DJ Slowed Reverb TikTok",
+    "DJ Remix Timur Viral",
+    "DJ Dangdut Koplo Remix",
+    "DJ Viral Sound TikTok",
+    "DJ Party Remix Indonesia",
+    "DJ Remix Galau TikTok",
+    "DJ Trap Remix Indonesia",
+    "DJ Clubbing TikTok Bass",
+    "DJ Remix Barat Viral TikTok"
+];
+
+// Starter / Fallback Katalog DJ Remix Viral TikTok
 const BASE_CORE_DJ_TRACKS = [
     { title: 'DJ Alay Gaya Kaya Artis (Viral TikTok Remix)', artist: 'DJ Desa', filename: 'djalay.mp3', reffSec: 40, isCore: true },
     { title: 'Stecu Stecu (Jedag Jedug TikTok Remix)', artist: 'Faris Adam', filename: 'stecustecu.mp3', reffSec: 15, isCore: true },
@@ -41,9 +70,25 @@ const BASE_CORE_DJ_TRACKS = [
     { title: 'Komang (DJ Santuy Remix TikTok)', artist: 'Raim Laode', filename: 'komang.mp3', reffSec: 55, isCore: true }
 ];
 
+function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+function normalizeTrackKey(title, artist = '') {
+    const cleanTitle = String(title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanArtist = String(artist || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return cleanTitle || cleanArtist;
+}
+
 class TikTokDJService {
     constructor() {
         this.tracks = [];
+        this.recentHistory = [];
         this.lastRotated = 0;
         this.init();
     }
@@ -60,6 +105,12 @@ class TikTokDJService {
         try {
             if (fs.existsSync(DATA_FILE)) {
                 const raw = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+                if (Array.isArray(raw.recentHistory)) {
+                    const cutoff = Date.now() - HISTORY_RETENTION_MS;
+                    this.recentHistory = raw.recentHistory
+                        .filter(h => h && h.key && (!h.usedAt || h.usedAt >= cutoff))
+                        .slice(0, MAX_HISTORY_ITEMS);
+                }
                 if (Array.isArray(raw.tracks) && raw.tracks.length > 0) {
                     const coreMap = new Map(BASE_CORE_DJ_TRACKS.map(t => [t.filename, t.reffSec]));
                     this.tracks = raw.tracks.map(t => {
@@ -93,11 +144,18 @@ class TikTokDJService {
             const dataDir = path.dirname(DATA_FILE);
             if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
+            const cutoff = Date.now() - HISTORY_RETENTION_MS;
+            this.recentHistory = (this.recentHistory || [])
+                .filter(h => h && h.key && (!h.usedAt || h.usedAt >= cutoff))
+                .slice(0, MAX_HISTORY_ITEMS);
+
             fs.writeFileSync(DATA_FILE, JSON.stringify({
                 lastRotated: this.lastRotated || Date.now(),
-                retentionDays: 3,
-                retentionHours: 72,
+                retentionDays: 1,
+                retentionHours: 24,
                 totalActive: this.tracks.length,
+                recentHistoryCount: this.recentHistory.length,
+                recentHistory: this.recentHistory,
                 tracks: this.tracks
             }, null, 2), 'utf8');
         } catch (e) {
@@ -105,8 +163,21 @@ class TikTokDJService {
         }
     }
 
+    deletePhysicalFileIfDynamic(track) {
+        if (track && track.isDynamic && track.filename) {
+            const filePath = path.join(AUDIO_DIR, track.filename);
+            if (fs.existsSync(filePath)) {
+                try {
+                    fs.unlinkSync(filePath);
+                    return true;
+                } catch {}
+            }
+        }
+        return false;
+    }
+
     /**
-     * Hapus lagu yang berusia > 3 hari (72 jam) secara otomatis
+     * Hapus lagu yang berusia > 1 hari (24 jam) secara otomatis
      * File audio fisik yang tidak lagi dipakai juga dihapus dari disk
      */
     cleanExpiredTracks() {
@@ -120,25 +191,18 @@ class TikTokDJService {
             const isExpired = ageMs > RETENTION_MS;
 
             if (isExpired) {
-                // Hapus file fisik jika file merupakan hasil download dinamis
-                if (track.isDynamic && track.filename) {
-                    const filePath = path.join(AUDIO_DIR, track.filename);
-                    if (fs.existsSync(filePath)) {
-                        try {
-                            fs.unlinkSync(filePath);
-                            deletedFiles++;
-                        } catch {}
-                    }
+                if (this.deletePhysicalFileIfDynamic(track)) {
+                    deletedFiles++;
                 }
-                console.log(`[TikTokDJService] 🗑️ Menghapus lagu kedaluwarsa (> 3 hari): ${track.title}`);
+                console.log(`[TikTokDJService] 🗑️ Menghapus lagu kedaluwarsa (> 24 jam): ${track.title}`);
             } else {
                 remaining.push(track);
             }
         }
 
-        // Jika semua lagu habis terhapus karena lewat 3 hari, hidupkan kembali starter pool agar sistem tidak kosong
+        // Jika semua lagu habis terhapus karena lewat 24 jam, hidupkan kembali fallback starter pool agar sistem tidak kosong
         if (remaining.length === 0) {
-            console.log('[TikTokDJService] 🔄 Semua lagu melewati masa 3 hari, me-refresh starter pool dengan siklus baru...');
+            console.log('[TikTokDJService] 🔄 Semua lagu melewati masa 24 jam, mengaktifkan fallback pool sementara...');
             this.tracks = BASE_CORE_DJ_TRACKS.map((t, idx) => ({
                 id: `dj-core-${idx + 1}-${Date.now()}`,
                 ...t,
@@ -151,13 +215,13 @@ class TikTokDJService {
 
         this.tracks = remaining;
         if (this.tracks.length !== initialCount) {
-            console.log(`[TikTokDJService] Pembersihan 3 hari selesai: ${initialCount - this.tracks.length} lagu kedaluwarsa dibersihkan (${deletedFiles} file dihapus). Sisa aktif: ${this.tracks.length} lagu.`);
+            console.log(`[TikTokDJService] Pembersihan 24 jam selesai: ${initialCount - this.tracks.length} lagu kedaluwarsa dibersihkan (${deletedFiles} file dihapus). Sisa aktif: ${this.tracks.length} lagu.`);
             this.saveRegistry();
         }
     }
 
     /**
-     * Ambil daftar lagu DJ Remix aktif untuk Story & Feed (selalu valid < 3 hari)
+     * Ambil daftar lagu DJ Remix aktif untuk Story & Feed (selalu valid < 24 jam)
      */
     getActiveTracks() {
         this.cleanExpiredTracks();
@@ -168,7 +232,7 @@ class TikTokDJService {
     }
 
     /**
-     * Pilih 1 lagu acak yang masih fresh (< 3 hari)
+     * Pilih 1 lagu acak yang masih fresh (< 24 jam)
      */
     getRandomDJTrack() {
         const active = this.getActiveTracks();
@@ -180,7 +244,7 @@ class TikTokDJService {
      */
     getUniqueDJTracks(count) {
         const active = [...this.getActiveTracks()];
-        const shuffled = active.sort(() => 0.5 - Math.random());
+        const shuffled = shuffleArray(active);
         const result = [];
         for (let i = 0; i < count; i++) {
             result.push(shuffled[i % shuffled.length]);
@@ -189,32 +253,26 @@ class TikTokDJService {
     }
 
     /**
-     * Cari lagu DJ Remix TikTok yang sedang viral hari ini via iTunes API
-     * Menggunakan filter ketat kata kunci jedag-jedug, remix, koplo, slow bass
+     * Cari lagu DJ Remix TikTok yang beragam via iTunes API
+     * Memilih sebagian query secara acak + offset acak (0, 10, 20, 30) + limit=25, lalu mengacak hasilnya
      */
     async searchViralDJRemixes() {
-        const queries = [
-            "DJ Jedag Jedug TikTok Viral",
-            "DJ Remix TikTok Full Bass",
-            "DJ Koplo TikTok Viral",
-            "DJ TikTok Mengkane",
-            "DJ Slow Bass TikTok",
-            "DJ FYP TikTok Terpopuler",
-            "DJ Remix Jedug Jedug"
-        ];
+        const selectedQueries = shuffleArray(DJ_SEARCH_QUERY_POOL).slice(0, 9);
+        const offsetChoices = [0, 10, 20, 30];
 
         const isDJRemix = (trackName, artistName) => {
-            const pattern = /(dj|remix|jedag|jedug|koplo|slow bass|mengkane|full bass|kane)/i;
+            const pattern = /(dj|remix|jedag|jedug|koplo|slow bass|mengkane|full bass|kane|breakbeat|phonk|speed up|funkot|horeg|dugem)/i;
             return pattern.test(trackName || '') || pattern.test(artistName || '');
         };
 
         const discovered = [];
         const seenTitles = new Set();
 
-        for (const q of queries) {
+        for (const q of selectedQueries) {
+            const randomOffset = offsetChoices[Math.floor(Math.random() * offsetChoices.length)];
             try {
                 const res = await new Promise((resolve) => {
-                    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=id&media=music&entity=song&limit=10`;
+                    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=id&media=music&entity=song&limit=25&offset=${randomOffset}`;
                     https.get(url, { timeout: 6000 }, (r) => {
                         let d = '';
                         r.on('data', c => d += c);
@@ -228,10 +286,11 @@ class TikTokDJService {
                     for (const item of res.results) {
                         if (item.trackName && item.artistName && item.previewUrl) {
                             if (isDJRemix(item.trackName, item.artistName)) {
-                                const cleanKey = item.trackName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (!seenTitles.has(cleanKey)) {
+                                const cleanKey = normalizeTrackKey(item.trackName, item.artistName);
+                                if (cleanKey && !seenTitles.has(cleanKey)) {
                                     seenTitles.add(cleanKey);
                                     discovered.push({
+                                        key: cleanKey,
                                         title: item.trackName,
                                         artist: item.artistName,
                                         previewUrl: item.previewUrl,
@@ -245,19 +304,40 @@ class TikTokDJService {
                 }
             } catch {}
         }
-        return discovered;
+
+        // Acak urutan hasil sebelum dipilih agar tidak selalu lagu teratas yang sama
+        return shuffleArray(discovered);
     }
 
     /**
      * Download dan konversi audio preview menjadi file MP3 lokal
+     * Memastikan file hasil konversi ada dan berukuran > 0 byte
      */
     async downloadAudioToLocal(previewUrl, targetFilename) {
         return new Promise((resolve) => {
             try {
+                if (!fs.existsSync(AUDIO_DIR)) {
+                    fs.mkdirSync(AUDIO_DIR, { recursive: true });
+                }
+
                 const tempDir = os.tmpdir();
                 const tempExt = path.extname(previewUrl.split('?')[0]) || '.m4a';
                 const tempInput = path.join(tempDir, `preview_${Date.now()}_${Math.random().toString(36).substring(2, 6)}${tempExt}`);
                 const finalOutput = path.join(AUDIO_DIR, targetFilename);
+
+                const verifyOutputFile = () => {
+                    try {
+                        if (!fs.existsSync(finalOutput)) return false;
+                        const stat = fs.statSync(finalOutput);
+                        if (!stat || stat.size <= 0) {
+                            try { fs.unlinkSync(finalOutput); } catch {}
+                            return false;
+                        }
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                };
 
                 const fileStream = fs.createWriteStream(tempInput);
                 const req = https.get(previewUrl, { timeout: 15000 }, (res) => {
@@ -271,22 +351,22 @@ class TikTokDJService {
                         fileStream.close();
                         // Konversi ke MP3 berkualitas standar untuk Instagram
                         execFile(FFMPEG_BIN, ['-y', '-i', tempInput, '-c:a', 'libmp3lame', '-b:a', '128k', finalOutput], (err) => {
-                            try { fs.unlinkSync(tempInput); } catch {}
                             if (err) {
                                 console.warn('[TikTokDJService] FFmpeg conversion failed, trying direct copy:', err.message);
                                 try {
-                                    fs.copyFileSync(tempInput, finalOutput);
-                                    return resolve(true);
-                                } catch {
-                                    return resolve(false);
-                                }
+                                    if (fs.existsSync(tempInput) && fs.statSync(tempInput).size > 0) {
+                                        fs.copyFileSync(tempInput, finalOutput);
+                                    }
+                                } catch {}
                             }
-                            resolve(true);
+                            try { fs.unlinkSync(tempInput); } catch {}
+                            resolve(verifyOutputFile());
                         });
                     });
                 });
 
                 req.on('error', () => {
+                    fileStream.close();
                     try { fs.unlinkSync(tempInput); } catch {}
                     resolve(false);
                 });
@@ -297,49 +377,113 @@ class TikTokDJService {
     }
 
     /**
-     * Rotasi harian: Hapus lagu > 3 hari & perbarui dengan DJ Remix baru
+     * Rotasi harian: Cari lagu DJ Remix baru yang belum pernah dipakai,
+     * lalu gantikan lagu lama (bersihkan file fisik lama) agar tiap hari lagunya berbeda-beda.
      */
-    async rotateAndRefreshDJTracks() {
-        console.log('[TikTokDJService] 🔄 Menjalankan rotasi lagu DJ Remix TikTok (Retensi 3 Hari)...');
-        this.cleanExpiredTracks();
+    async rotateAndRefreshDJTracks(options = {}) {
+        const { forceReplace = true } = options;
+        console.log('[TikTokDJService] 🔄 Menjalankan rotasi harian lagu DJ Remix TikTok (Siklus 24 Jam & Anti-Ulang)...');
+
+        const previousTracks = [...this.tracks];
+        const previousKeys = new Set(previousTracks.map(t => normalizeTrackKey(t.title, t.artist)));
+        const historyKeys = new Set((this.recentHistory || []).map(h => h.key));
 
         try {
             const discovered = await this.searchViralDJRemixes();
             const now = Date.now();
-            let addedCount = 0;
 
-            for (const item of discovered) {
-                // Hindari duplikasi judul
-                const exists = this.tracks.some(t => t.title.toLowerCase() === item.title.toLowerCase());
-                if (!exists && addedCount < 8) {
-                    const randId = Math.random().toString(36).substring(2, 8);
-                    const filename = `dj_remix_${randId}.mp3`;
+            // Prioritas 1: Belum ada di recentHistory DAN tidak dipakai kemarin
+            let candidates = discovered.filter(item => {
+                const key = item.key || normalizeTrackKey(item.title, item.artist);
+                return !historyKeys.has(key) && !previousKeys.has(key);
+            });
 
-                    // Download audio langsung dari previewUrl
-                    const downloaded = await this.downloadAudioToLocal(item.previewUrl, filename);
-                    if (downloaded) {
-                        const newTrack = {
-                            id: `dj-viral-${randId}`,
-                            title: item.title,
-                            artist: item.artist,
-                            filename: filename,
-                            reffSec: 0, // Audio preview langsung di bagian drop bass jedag-jedug
-                            addedAt: now,
-                            isCore: false,
-                            isDynamic: true
-                        };
-                        this.tracks.unshift(newTrack); // Lagu terbaru ditaruh paling depan
-                        addedCount++;
+            // Prioritas 2 (jika kandidat fresh terlalu sedikit): minimal tidak dipakai kemarin
+            if (candidates.length < TARGET_DAILY_TRACKS) {
+                const extra = discovered.filter(item => {
+                    const key = item.key || normalizeTrackKey(item.title, item.artist);
+                    return !previousKeys.has(key) && !candidates.some(c => c.key === key);
+                });
+                candidates = [...candidates, ...extra];
+            }
+
+            const newTracks = [];
+            for (const item of candidates) {
+                if (newTracks.length >= TARGET_DAILY_TRACKS) break;
+
+                const randId = Math.random().toString(36).substring(2, 8);
+                const filename = `dj_remix_${Date.now()}_${randId}.mp3`;
+
+                const downloaded = await this.downloadAudioToLocal(item.previewUrl, filename);
+                if (downloaded) {
+                    const key = item.key || normalizeTrackKey(item.title, item.artist);
+                    newTracks.push({
+                        id: `dj-viral-${randId}`,
+                        key,
+                        title: item.title,
+                        artist: item.artist,
+                        filename,
+                        reffSec: 0,
+                        addedAt: now,
+                        isCore: false,
+                        isDynamic: true
+                    });
+                }
+            }
+
+            let deletedOldFiles = 0;
+            if (newTracks.length > 0) {
+                if (forceReplace) {
+                    // Bersihkan file fisik lagu lama agar disk STB tidak penuh
+                    for (const oldTrack of previousTracks) {
+                        if (this.deletePhysicalFileIfDynamic(oldTrack)) {
+                            deletedOldFiles++;
+                        }
                     }
+                    this.tracks = newTracks;
+                } else {
+                    this.tracks = [...newTracks, ...this.tracks];
+                }
+
+                // Catat ke recentHistory agar tidak terulang di hari berikutnya
+                const newHistoryEntries = newTracks.map(t => ({
+                    key: t.key || normalizeTrackKey(t.title, t.artist),
+                    title: t.title,
+                    artist: t.artist,
+                    usedAt: now
+                }));
+                const mergedHistory = [...newHistoryEntries, ...(this.recentHistory || [])];
+                const dedupedHistory = [];
+                const seenHistoryKeys = new Set();
+                for (const h of mergedHistory) {
+                    if (h.key && !seenHistoryKeys.has(h.key)) {
+                        seenHistoryKeys.add(h.key);
+                        dedupedHistory.push(h);
+                    }
+                }
+                this.recentHistory = dedupedHistory.slice(0, MAX_HISTORY_ITEMS);
+            } else {
+                // Jika unduhan baru gagal total (0 lagu), pertahankan fallback agar bot tidak error kosong
+                console.warn('[TikTokDJService] ⚠️ Tidak ada lagu baru yang berhasil diunduh, mempertahankan fallback minimal.');
+                this.cleanExpiredTracks();
+                if (this.tracks.length === 0) {
+                    this.tracks = BASE_CORE_DJ_TRACKS.map((t, idx) => ({
+                        id: `dj-core-${idx + 1}-${now}`,
+                        ...t,
+                        addedAt: now,
+                        isCore: true
+                    }));
                 }
             }
 
             this.lastRotated = now;
             this.saveRegistry();
-            console.log(`[TikTokDJService] ✅ Rotasi sukses: ${addedCount} lagu DJ Remix TikTok baru berhasil diunduh. Total aktif (< 3 hari): ${this.tracks.length} lagu.`);
+            console.log(`[TikTokDJService] ✅ Rotasi harian selesai: ${newTracks.length} lagu baru aktif (${deletedOldFiles} file lama dibersihkan). Total aktif: ${this.tracks.length} lagu.`);
             return {
                 success: true,
-                addedCount,
+                addedCount: newTracks.length,
+                deletedOldFiles,
+                replacedOld: forceReplace && newTracks.length > 0,
                 totalActive: this.tracks.length,
                 tracks: this.tracks.slice(0, 5).map(t => ({ title: t.title, artist: t.artist }))
             };
@@ -371,7 +515,9 @@ class TikTokDJService {
 
         return {
             total: this.tracks.length,
-            retentionDays: 3,
+            retentionDays: 1,
+            retentionHours: 24,
+            historyCount: (this.recentHistory || []).length,
             lastRotated: this.lastRotated,
             items
         };
@@ -383,10 +529,10 @@ const djServiceInstance = new TikTokDJService();
 module.exports = {
     TikTokDJService,
     djService: djServiceInstance,
+    DJ_SEARCH_QUERY_POOL,
     getActiveDJTracks: () => djServiceInstance.getActiveTracks(),
     getRandomDJTrack: () => djServiceInstance.getRandomDJTrack(),
     getUniqueDJTracks: (count) => djServiceInstance.getUniqueDJTracks(count),
-    rotateAndRefreshDJTracks: () => djServiceInstance.rotateAndRefreshDJTracks(),
+    rotateAndRefreshDJTracks: (options) => djServiceInstance.rotateAndRefreshDJTracks(options),
     getDJTracksStatusSummary: () => djServiceInstance.getStatusSummary()
 };
-
