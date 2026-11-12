@@ -49,18 +49,22 @@ export const PushSettingsCard: React.FC<{ className?: string }> = ({ className =
         // Auto test
         await testPushNotification();
       } else {
-        if (Notification.permission === "denied") {
+        if (getNotificationPermission() === "denied") {
           Swal.fire({
             title: "Izin Diblokir",
             text: "Izin notifikasi diblokir di browser. Ketuk ikon gembok 🔒 di sebelah alamat web browser Anda -> Izin -> Izinkan Notifikasi.",
             icon: "warning"
           });
         } else {
-          Swal.fire("Perhatian", res.message, "info");
+          Swal.fire({
+            title: "Gagal Mengaktifkan",
+            text: res.message || "Gagal mengaktifkan notifikasi di perangkat ini.",
+            icon: "warning"
+          });
         }
       }
     } catch (e: any) {
-      Swal.fire("Error", e.message, "error");
+      Swal.fire("Error", e?.message || "Terjadi kesalahan saat mengaktifkan notifikasi.", "error");
     } finally {
       setLoading(false);
     }

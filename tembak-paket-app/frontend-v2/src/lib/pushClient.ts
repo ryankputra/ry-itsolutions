@@ -32,9 +32,11 @@ export function getNotificationPermission(): NotificationPermission | 'unsupport
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
   try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    console.log('Service Worker registered successfully:', reg);
-    return reg;
+    const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+    await reg.update().catch(() => {});
+    const readyReg = await navigator.serviceWorker.ready;
+    console.log('Service Worker registered and ready:', readyReg);
+    return readyReg;
   } catch (err) {
     console.error('Service Worker registration failed:', err);
     return null;
@@ -57,31 +59,40 @@ export async function subscribeToPushNotifications(): Promise<{
   }
 
   try {
+    if (Notification.permission === 'denied') {
+      return {
+        success: false,
+        message: 'Izin notifikasi diblokir di browser. Ketuk ikon gembok 🔒 di sebelah alamat web browser Anda -> Izin -> Izinkan Notifikasi.'
+      };
+    }
+
     // 1. Request user permission
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
       return {
         success: false,
-        message: 'Izin notifikasi belum diberikan. Silakan izinkan notifikasi pada pop-up browser.'
+        message: perm === 'denied'
+          ? 'Izin notifikasi diblokir di browser. Ketuk ikon gembok 🔒 di sebelah alamat web browser Anda -> Izin -> Izinkan Notifikasi.'
+          : 'Izin notifikasi belum diberikan. Silakan izinkan notifikasi pada pop-up browser.'
       };
     }
 
-    // 2. Ensure Service Worker is registered
+    // 2. Ensure Service Worker is registered and active
     const reg = await registerServiceWorker();
     if (!reg) {
       return {
         success: false,
-        message: 'Gagal mengaktifkan Service Worker di browser Anda.'
+        message: 'Gagal mengaktifkan Service Worker notifikasi di browser Anda. Muat ulang halaman lalu coba lagi.'
       };
     }
 
     // 3. Fetch VAPID public key
     const keyRes = await fetch('/api/push/vapid-public-key');
-    const keyData = await keyRes.json();
-    if (!keyData?.status || !keyData.publicKey) {
+    const keyData = await keyRes.json().catch(() => null);
+    if (!keyRes.ok || !keyData?.status || !keyData.publicKey) {
       return {
         success: false,
-        message: 'Kunci VAPID push notifikasi server tidak tersedia.'
+        message: keyData?.message || 'Kunci VAPID push notifikasi server tidak tersedia.'
       };
     }
 
@@ -102,9 +113,9 @@ export async function subscribeToPushNotifications(): Promise<{
       credentials: 'include',
       body: JSON.stringify({ subscription })
     });
-    const saveData = await saveRes.json();
+    const saveData = await saveRes.json().catch(() => null);
 
-    if (saveData?.status) {
+    if (saveRes.ok && saveData?.status) {
       return {
         success: true,
         message: 'Notifikasi status bar HP berhasil diaktifkan!',
@@ -176,10 +187,10 @@ export async function testPushNotification(): Promise<{ success: boolean; messag
       credentials: 'include',
       body: JSON.stringify({ endpoint: sub?.endpoint })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
     return {
-      success: !!data.status,
-      message: data.message || (data.status ? 'Notifikasi tes terkirim!' : 'Gagal mengirim')
+      success: !!(res.ok && data?.status),
+      message: data?.message || (res.ok && data?.status ? 'Notifikasi tes terkirim!' : 'Gagal mengirim notifikasi uji coba.')
     };
   } catch (err: any) {
     return {

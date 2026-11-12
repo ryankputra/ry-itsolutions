@@ -75,7 +75,7 @@ export const PushNotificationBanner: React.FC = () => {
           showConfirmButton: false
         });
       } else {
-        if (Notification.permission === 'denied') {
+        if (getNotificationPermission() === 'denied') {
           setShowBanner(false);
           Swal.fire({
             title: 'Izin Notifikasi Diblokir',
@@ -84,14 +84,19 @@ export const PushNotificationBanner: React.FC = () => {
           });
         } else {
           Swal.fire({
-            title: 'Perhatian',
-            text: res.message,
-            icon: 'info'
+            title: 'Gagal Mengaktifkan',
+            text: res.message || 'Gagal mengaktifkan notifikasi di perangkat ini.',
+            icon: 'warning'
           });
         }
       }
     } catch (err: any) {
       console.error('[PushBanner] Subscribe error:', err);
+      Swal.fire({
+        title: 'Gagal Mengaktifkan',
+        text: err?.message || 'Terjadi gangguan saat mengaktifkan notifikasi.',
+        icon: 'error'
+      });
     } finally {
       setSubscribing(false);
     }

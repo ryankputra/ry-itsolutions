@@ -33,7 +33,7 @@
   "app\\(main)\\admin\\broadcast\\page.tsx -> @/lib/pushClient": {
     "id": 51016,
     "files": [
-      "static/chunks/1016.a37de2638d9b4fa1.js"
+      "static/chunks/1016.b8e44d6cb02f905a.js"
     ]
   },
   "app\\(main)\\layout.tsx -> @/lib/sweetalert": {
